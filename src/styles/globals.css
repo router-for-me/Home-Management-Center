@@ -1,0 +1,25 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import './theme-tokens.css';
+@import './effects.css';
+
+* {
+  border-color: var(--border);
+}
+
+:where(button:not(:disabled), [role='button']:not([aria-disabled='true'])) {
+  cursor: pointer;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--background), var(--card) 8%),
+      var(--background)
+    )
+    fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
