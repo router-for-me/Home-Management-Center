@@ -1,0 +1,25 @@
+{
+  "entry": ["src/routes/**/*.tsx"],
+  "project": ["src/**/*.{ts,tsx}", "*.{ts,js,mjs,json}"],
+  "ignore": ["src/env.d.ts", "src/routeTree.gen.ts"],
+  "ignoreIssues": {
+    "src/components/ui/button.tsx": ["exports"],
+    "src/components/ui/dropdown-menu.tsx": ["exports"],
+    "src/components/ui/sheet.tsx": ["exports"],
+    "src/components/ui/sidebar.tsx": ["exports"]
+  },
+  "ignoreDependencies": [
+    "@radix-ui/react-slot",
+    "@hookform/resolvers",
+    "@tanstack/react-table",
+    "@tanstack/react-virtual",
+    "input-otp",
+    "motion",
+    "qrcode.react",
+    "react-hook-form",
+    "recharts",
+    "tw-animate-css",
+    "vaul",
+    "zod"
+  ]
+}

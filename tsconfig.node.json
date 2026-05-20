@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["node"]
+  },
+  "include": [
+    "eslint.config.js",
+    "knip.json",
+    "prettier.config.mjs",
+    "rsbuild.config.ts",
+    "tsr.config.json"
+  ]
+}

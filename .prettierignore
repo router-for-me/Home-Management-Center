@@ -1,0 +1,14 @@
+dist
+coverage
+node_modules
+.bun
+.rsbuild
+.cache
+.playwright-mcp
+.tanstack
+.agents
+.workbench
+.impeccable/critique
+src/routeTree.gen.ts
+bun.lock
+*.tsbuildinfo
