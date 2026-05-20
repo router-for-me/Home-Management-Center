@@ -1,0 +1,426 @@
+import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import type { ManagementSessionInput } from '@/lib/api/management/types'
+
+type UnknownRecord = Record<string, unknown>
+
+export type CredentialStatusFilter = 'all' | 'active' | 'disabled' | 'unavailable'
+
+export type CredentialMetadataInput = {
+  prefix: string
+  proxyUrl: string
+  priority: string
+  note: string
+}
+
+export type CredentialOAuthProvider = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'kimi'
+export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
+
+export type CredentialOAuthStartInput = {
+  provider: CredentialOAuthProvider
+  projectId?: string
+}
+
+export type CredentialOAuthStatus = {
+  status: string
+  error: string | null
+}
+
+export type CredentialOAuthCallbackInput = {
+  provider: CredentialOAuthCallbackProvider
+  redirectUrl: string
+  code: string
+  state: string
+  error: string
+}
+
+export type VertexImportInput = {
+  file: File
+  location: string
+}
+
+export type VertexImportResult = {
+  status: string
+  authFile: string | null
+  projectId: string | null
+  email: string | null
+  location: string | null
+}
+
+export type CredentialResource = {
+  id: string
+  index: number
+  identifier: string
+  name: string | null
+  authIndex: string | null
+  provider: string
+  type: string
+  label: string | null
+  status: string
+  statusMessage: string | null
+  disabled: boolean
+  unavailable: boolean
+  runtimeOnly: boolean
+  source: string
+  size: number | null
+  email: string | null
+  accountType: string | null
+  account: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  modifiedAt: string | null
+  lastRefresh: string | null
+  nextRetryAfter: string | null
+  success: number | null
+  failed: number | null
+  path: string | null
+  priority: number | null
+  note: string | null
+  prefix: string | null
+  proxyUrl: string | null
+  selector: UnknownRecord
+  raw: UnknownRecord
+}
+
+type CredentialsResponse = {
+  files?: unknown[]
+}
+
+type OAuthUrlResponse = {
+  status?: string
+  url?: string
+  state?: string
+}
+
+type OAuthStatusResponse = {
+  status?: string
+  error?: string
+}
+
+type VertexImportResponse = {
+  status?: string
+  'auth-file'?: string
+  auth_file?: string
+  project_id?: string
+  email?: string
+  location?: string
+}
+
+type CredentialModelResponse = {
+  models?: unknown[]
+}
+
+type CredentialModel = {
+  id: string
+  displayName: string | null
+  type: string | null
+  ownedBy: string | null
+}
+
+type CredentialsSnapshot = {
+  fetchedAt: string
+  resources: CredentialResource[]
+}
+
+type CredentialOAuthStartResult = {
+  provider: CredentialOAuthProvider
+  url: string
+  state: string | null
+}
+
+const oauthRoutes: Record<CredentialOAuthProvider, string> = {
+  claude: '/anthropic-auth-url',
+  codex: '/codex-auth-url',
+  gemini: '/gemini-cli-auth-url',
+  antigravity: '/antigravity-auth-url',
+  kimi: '/kimi-auth-url',
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readString(record: UnknownRecord, key: string): string | null {
+  const value = record[key]
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+function readBoolean(record: UnknownRecord, key: string): boolean {
+  return record[key] === true
+}
+
+function readNumber(record: UnknownRecord, key: string): number | null {
+  const value = record[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function readFiles(responseData: unknown): UnknownRecord[] {
+  const response = responseData as CredentialsResponse
+  return Array.isArray(response.files) ? response.files.filter(isRecord) : []
+}
+
+function createSelector(record: UnknownRecord, index: number) {
+  const id = readString(record, 'id')
+  const uuid = readString(record, 'uuid')
+  const authIndex = readString(record, 'auth_index')
+  const name = readString(record, 'name')
+
+  if (id) return { id }
+  if (uuid) return { uuid }
+  if (authIndex) return { auth_index: authIndex }
+  if (name) return { name }
+
+  return { index }
+}
+
+function getStatusSelector(resource: CredentialResource) {
+  return (
+    resource.name ??
+    resource.authIndex ??
+    (typeof resource.selector.id === 'string' ? resource.selector.id : null) ??
+    resource.identifier
+  )
+}
+
+function getDownloadFileName(resource: CredentialResource) {
+  const rawName = resource.name ?? `${resource.identifier}.json`
+  return rawName.endsWith('.json') ? rawName : `${rawName}.json`
+}
+
+function normalizeCredentialResource(record: UnknownRecord, index: number): CredentialResource {
+  const id = readString(record, 'id')
+  const authIndex = readString(record, 'auth_index')
+  const name = readString(record, 'name')
+  const provider = readString(record, 'provider') ?? readString(record, 'type') ?? 'unknown'
+  const identifier = id ?? authIndex ?? name ?? `${provider}-${index + 1}`
+
+  return {
+    id: `${provider}:${identifier}`,
+    index,
+    identifier,
+    name,
+    authIndex,
+    provider,
+    type: readString(record, 'type') ?? provider,
+    label: readString(record, 'label'),
+    status: readString(record, 'status') ?? 'unknown',
+    statusMessage: readString(record, 'status_message'),
+    disabled: readBoolean(record, 'disabled'),
+    unavailable: readBoolean(record, 'unavailable'),
+    runtimeOnly: readBoolean(record, 'runtime_only'),
+    source: readString(record, 'source') ?? 'unknown',
+    size: readNumber(record, 'size'),
+    email: readString(record, 'email'),
+    accountType: readString(record, 'account_type'),
+    account: readString(record, 'account'),
+    createdAt: readString(record, 'created_at'),
+    updatedAt: readString(record, 'updated_at'),
+    modifiedAt: readString(record, 'modtime'),
+    lastRefresh: readString(record, 'last_refresh'),
+    nextRetryAfter: readString(record, 'next_retry_after'),
+    success: readNumber(record, 'success'),
+    failed: readNumber(record, 'failed'),
+    path: readString(record, 'path'),
+    priority: readNumber(record, 'priority'),
+    note: readString(record, 'note'),
+    prefix: readString(record, 'prefix'),
+    proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
+    selector: createSelector(record, index),
+    raw: record,
+  }
+}
+
+function createFieldsPayload(resource: CredentialResource, input: CredentialMetadataInput) {
+  const payload: UnknownRecord = {
+    name: getStatusSelector(resource),
+    ...resource.selector,
+    prefix: input.prefix.trim(),
+    proxy_url: input.proxyUrl.trim(),
+    'proxy-url': input.proxyUrl.trim(),
+    note: input.note.trim(),
+  }
+
+  const priority = Number(input.priority)
+  if (input.priority.trim() && Number.isFinite(priority)) {
+    payload.priority = priority
+  }
+
+  return payload
+}
+
+function createDownloadParams(resource: CredentialResource) {
+  return resource.selector
+}
+
+export async function fetchCredentialSnapshot(
+  session: ManagementSessionInput,
+): Promise<CredentialsSnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/auth-files')
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    resources: readFiles(response.data).map((record, index) =>
+      normalizeCredentialResource(record, index),
+    ),
+  }
+}
+
+export async function updateCredentialStatus(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+  disabled: boolean,
+) {
+  const client = createManagementClient(session)
+  await client.patch('/auth-files/status', {
+    name: getStatusSelector(resource),
+    disabled,
+  })
+}
+
+export async function updateCredentialMetadata(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+  input: CredentialMetadataInput,
+) {
+  const client = createManagementClient(session)
+  await client.patch('/auth-files/fields', createFieldsPayload(resource, input))
+}
+
+export async function deleteCredentialResource(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+) {
+  const client = createManagementClient(session)
+  await client.delete('/auth-files', {
+    params: resource.selector,
+  })
+}
+
+export async function uploadCredentialFiles(session: ManagementSessionInput, files: File[]) {
+  const client = createManagementClient(session)
+  const formData = new FormData()
+
+  files.forEach((file) => formData.append('file', file))
+  await client.post('/auth-files', formData)
+}
+
+export async function downloadCredentialResource(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+) {
+  const client = createManagementClient(session)
+  const response = await client.get<Blob>('/auth-files/download', {
+    params: createDownloadParams(resource),
+    responseType: 'blob',
+  })
+
+  return {
+    blob: response.data,
+    fileName: getDownloadFileName(resource),
+  }
+}
+
+export async function fetchCredentialModels(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+): Promise<CredentialModel[]> {
+  const client = createManagementClient(session)
+  const response = await client.get<CredentialModelResponse>('/auth-files/models', {
+    params: {
+      name: getStatusSelector(resource),
+    },
+  })
+
+  return Array.isArray(response.data.models)
+    ? response.data.models.filter(isRecord).map((record) => ({
+        id: readString(record, 'id') ?? 'unknown',
+        displayName: readString(record, 'display_name'),
+        type: readString(record, 'type'),
+        ownedBy: readString(record, 'owned_by'),
+      }))
+    : []
+}
+
+export async function startCredentialOAuth(
+  session: ManagementSessionInput,
+  input: CredentialOAuthStartInput,
+): Promise<CredentialOAuthStartResult> {
+  const client = createManagementClient(session)
+  const projectId = input.projectId?.trim()
+  const response = await client.get<OAuthUrlResponse>(oauthRoutes[input.provider], {
+    params: {
+      is_webui: true,
+      project_id: input.provider === 'gemini' && projectId ? projectId : undefined,
+    },
+  })
+
+  if (!response.data.url) {
+    throw new Error('OAuth URL was not returned')
+  }
+
+  return {
+    provider: input.provider,
+    url: response.data.url,
+    state: response.data.state ?? null,
+  }
+}
+
+export async function fetchCredentialOAuthStatus(
+  session: ManagementSessionInput,
+  state?: string,
+): Promise<CredentialOAuthStatus> {
+  const client = createManagementClient(session)
+  const response = await client.get<OAuthStatusResponse>('/get-auth-status', {
+    params: {
+      state: state?.trim() || undefined,
+    },
+  })
+
+  return {
+    status: response.data.status ?? 'unknown',
+    error: response.data.error ?? null,
+  }
+}
+
+export async function submitCredentialOAuthCallback(
+  session: ManagementSessionInput,
+  input: CredentialOAuthCallbackInput,
+) {
+  const client = createManagementClient(session)
+  await client.post('/oauth-callback', {
+    provider: input.provider,
+    redirect_url: input.redirectUrl.trim(),
+    code: input.code.trim(),
+    state: input.state.trim(),
+    error: input.error.trim(),
+  })
+}
+
+export async function importVertexCredential(
+  session: ManagementSessionInput,
+  input: VertexImportInput,
+): Promise<VertexImportResult> {
+  const client = createManagementClient(session)
+  const formData = new FormData()
+  const location = input.location.trim()
+
+  formData.append('file', input.file)
+  if (location) {
+    formData.append('location', location)
+  }
+
+  const response = await client.post<VertexImportResponse>('/vertex/import', formData)
+
+  return {
+    status: response.data.status ?? 'unknown',
+    authFile: response.data['auth-file'] ?? response.data.auth_file ?? null,
+    projectId: response.data.project_id ?? null,
+    email: response.data.email ?? null,
+    location: response.data.location ?? (location || null),
+  }
+}
+
+export function toCredentialApiError(error: unknown) {
+  const apiError = toManagementApiError(error)
+  return new Error(apiError.message, { cause: error })
+}
