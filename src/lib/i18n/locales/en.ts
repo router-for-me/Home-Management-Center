@@ -702,20 +702,21 @@ export const en = {
         new: 'New access key',
         create: 'Create key',
         save: 'Save key',
+        view: 'View',
         edit: 'Edit',
         delete: 'Delete',
         copy: 'Copy',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
-        replace: 'Replace list',
+        replace: 'Replace all',
       },
       list: {
         title: 'Access keys',
         description: 'Keys returned by GET /api-keys. Server-side metadata is not assumed.',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
-        index: 'Index',
+        index: 'No.',
         key: 'Key',
         length: 'Length',
         status: 'Status',
@@ -737,10 +738,8 @@ export const en = {
       detail: {
         title: 'Key detail',
         empty: 'Select a key or create a new one.',
-        keyNumber: 'Key #{{index}}',
         secret: 'Secret value',
         fields: {
-          index: 'Index',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',
@@ -761,8 +760,11 @@ export const en = {
         title: 'Replace all access keys',
         description:
           'This uses PUT /api-keys and replaces the entire downstream key list. Enter one key per line.',
+        warning:
+          'Submitting this will overwrite all current client access keys with the entered list. Confirm the list is complete first.',
         textarea: 'Keys',
-        confirm: 'Replace the entire access key list?',
+        confirm:
+          'Replace all access keys with the entered list? The current list will be overwritten.',
       },
       delete: {
         title: 'Delete access key?',

@@ -704,20 +704,21 @@ export const ru = {
         new: 'Новый ключ',
         create: 'Создать ключ',
         save: 'Сохранить ключ',
+        view: 'Просмотр',
         edit: 'Изменить',
         delete: 'Удалить',
         copy: 'Копировать',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',
-        replace: 'Заменить список',
+        replace: 'Заменить все',
       },
       list: {
         title: 'Access keys',
         description: 'Keys из GET /api-keys. Server-side metadata не предполагается.',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
-        index: 'Index',
+        index: 'N',
         key: 'Key',
         length: 'Длина',
         status: 'Статус',
@@ -739,10 +740,8 @@ export const ru = {
       detail: {
         title: 'Детали key',
         empty: 'Выберите key или создайте новый.',
-        keyNumber: 'Key #{{index}}',
         secret: 'Secret value',
         fields: {
-          index: 'Index',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',
@@ -763,8 +762,10 @@ export const ru = {
         title: 'Заменить все access keys',
         description:
           'Использует PUT /api-keys и заменяет весь список downstream keys. Один key на строку.',
+        warning:
+          'После отправки введенный список перезапишет все текущие клиентские ключи доступа. Сначала проверьте, что список полный.',
         textarea: 'Keys',
-        confirm: 'Заменить весь список access keys?',
+        confirm: 'Заменить все access keys введенным списком? Текущий список будет перезаписан.',
       },
       delete: {
         title: 'Удалить access key?',
