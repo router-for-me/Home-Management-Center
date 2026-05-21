@@ -794,10 +794,13 @@ export const ru = {
       },
       header: {
         title: 'Рабочая область конфигурации',
+        description:
+          'Visual mode подходит для безопасных частых изменений. Config file mode полностью заменяет config.yaml.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Обновлено {{time}}',
       },
       modes: {
+        label: 'Режим редактирования config',
         structured: 'Визуально',
         yaml: 'Файл config',
       },
@@ -996,25 +999,27 @@ export const ru = {
           description: 'Принудительно применять model mappings ниже.',
         },
         ampcodeModelMappingsJson: {
-          label: 'Model mappings JSON',
-          description: 'JSON array с полями from, to и regex для перезаписи Amp model names.',
+          label: 'Model mappings',
+          description:
+            'Сопоставляет запрошенные Amp models с upstream target models, с optional regex matching.',
           placeholder: '[{"from":"claude-opus-4.5","to":"claude-sonnet-4","regex":false}]',
         },
         ampcodeUpstreamApiKeysJson: {
-          label: 'Multiple upstream keys JSON',
-          description: 'JSON array сопоставляет client keys с конкретными Amp upstream keys.',
+          label: 'Multiple upstream keys',
+          description:
+            'Сопоставляет client keys с конкретными Amp upstream keys для управления request forwarding.',
           placeholder: '[{"upstream-api-key":"upstream-key","api-keys":["client-key"]}]',
         },
         oauthExcludedModelsJson: {
-          label: 'Excluded models JSON',
+          label: 'Disabled models',
           description:
-            'JSON object по model provider, со списком model IDs, исключенных из OAuth или file-backed credentials.',
+            'Выберите auth channel и модели, которые нужно исключить из OAuth или file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
         oauthModelAliasJson: {
-          label: 'Model aliases JSON',
+          label: 'Model aliases',
           description:
-            'JSON object по channel, сопоставляющий клиентские alias с upstream model names.',
+            'Настройте client-visible model aliases по channel и сопоставьте их с upstream model names.',
           placeholder: '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true}]}',
         },
       },
@@ -1024,7 +1029,83 @@ export const ru = {
       },
       validation: {
         invalidField: 'Введите корректное значение.',
+        jsonParseError: 'JSON не удалось разобрать: {{message}}',
         summary: 'Полей требуют внимания: {{count}}',
+      },
+      json: {
+        remove: 'Удалить',
+        unsupportedStructure:
+          'Эта config содержит структуру, которую visual editor пока не поддерживает. Поддерживайте ее в config file mode.',
+        emptyRows: 'Правила не настроены.',
+        addProvider: 'Добавить provider',
+        addChannel: 'Добавить channel',
+        addAlias: 'Добавить alias',
+        addMapping: 'Добавить mapping',
+        addUpstreamKey: 'Добавить upstream key',
+        removeChannel: 'Удалить channel',
+        channelRuleCount: 'Правил: {{count}}',
+        columns: {
+          provider: 'Model provider',
+          models: 'Model IDs',
+          channel: 'Channel',
+          name: 'Upstream model',
+          alias: 'Client alias',
+          fork: 'Fork',
+          from: 'Requested model',
+          to: 'Upstream model',
+          regex: 'Regex',
+          actions: 'Действия',
+          upstreamApiKey: 'Upstream API key',
+          clientKeys: 'Client keys',
+        },
+        columnDescriptions: {
+          channel: 'Auth channel key, например claude, gemini или codex.',
+          name: 'Model ID, который фактически отправляется upstream provider.',
+          alias: 'Model alias, который может запросить клиент.',
+          fork: 'Advanced option. API определяет это только как fork alias behavior; оставьте выключенным, если не нужно.',
+          from: 'Amp model name в client request. При включенном Regex обрабатывается как regular expression.',
+          to: 'Target upstream model name после совпадения.',
+          regex:
+            'Выключено: точное имя модели. Включено: requested model обрабатывается как regular expression.',
+        },
+        modelMappings: {
+          description:
+            'Переписывайте upstream models для Amp CLI по requested model. Включайте Regex только когда нужен pattern matching.',
+        },
+        placeholders: {
+          provider: 'claude',
+          models: 'claude-opus-4.5, claude-sonnet-4',
+          channel: 'claude',
+          name: 'claude-sonnet-4',
+          alias: 'sonnet',
+          from: 'claude-opus-4.5',
+          to: 'claude-sonnet-4',
+          upstreamApiKey: 'upstream-key',
+          clientKeys: 'client-key-1, client-key-2',
+        },
+      },
+      oauthExcluded: {
+        title: 'OAuth model disable list',
+        channelLabel: 'Auth channel',
+        reloadModels: 'Перезагрузить модели',
+        searchPlaceholder: 'Искать model ID, name или owner',
+        selectedCount: 'Выбрано моделей: {{count}}',
+        clearChannel: 'Очистить channel',
+        emptyModels: 'Для этого channel не возвращены model definitions.',
+        emptyFiltered: 'Нет подходящих моделей.',
+        customTitle: 'Custom provider rules',
+        customDescription:
+          'Эти providers не входят в текущий visual channel list. Поддерживайте их в config file mode.',
+        channels: {
+          claude: 'Claude',
+          gemini: 'Gemini',
+          vertex: 'Vertex',
+          'gemini-cli': 'Gemini CLI',
+          aistudio: 'AI Studio',
+          codex: 'Codex',
+          kimi: 'Kimi',
+          antigravity: 'Antigravity',
+        },
       },
       diff: {
         title: 'Изменения перед сохранением',

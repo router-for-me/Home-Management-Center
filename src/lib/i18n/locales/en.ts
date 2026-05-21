@@ -793,10 +793,13 @@ export const en = {
       },
       header: {
         title: 'Configuration workspace',
+        description:
+          'Use visual mode for safe common edits. Use config file mode for full config.yaml replacement.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Updated {{time}}',
       },
       modes: {
+        label: 'Config editing mode',
         structured: 'Visual',
         yaml: 'Config file',
       },
@@ -994,25 +997,27 @@ export const en = {
           description: 'Force the model mappings below when enabled.',
         },
         ampcodeModelMappingsJson: {
-          label: 'Model mappings JSON',
-          description: 'JSON array with from, to, and regex fields for rewriting Amp model names.',
+          label: 'Model mappings',
+          description:
+            'Map requested Amp models to upstream target models, with optional regex matching.',
           placeholder: '[{"from":"claude-opus-4.5","to":"claude-sonnet-4","regex":false}]',
         },
         ampcodeUpstreamApiKeysJson: {
-          label: 'Multiple upstream keys JSON',
-          description: 'JSON array mapping client keys to specific Amp upstream keys.',
+          label: 'Multiple upstream keys',
+          description:
+            'Map client keys to specific Amp upstream keys to control request forwarding.',
           placeholder: '[{"upstream-api-key":"upstream-key","api-keys":["client-key"]}]',
         },
         oauthExcludedModelsJson: {
-          label: 'Excluded models JSON',
+          label: 'Disabled models',
           description:
-            'JSON object keyed by model provider, listing model IDs excluded from OAuth or file-backed credentials.',
+            'Choose an auth channel and select models to exclude from OAuth or file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
         oauthModelAliasJson: {
-          label: 'Model aliases JSON',
+          label: 'Model aliases',
           description:
-            'JSON object keyed by channel, mapping client-visible aliases to upstream model names.',
+            'Configure client-visible model aliases by channel and map them to upstream model names.',
           placeholder: '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true}]}',
         },
       },
@@ -1022,7 +1027,83 @@ export const en = {
       },
       validation: {
         invalidField: 'Enter a valid value.',
+        jsonParseError: 'JSON could not be parsed: {{message}}',
         summary: '{{count}} fields need attention',
+      },
+      json: {
+        remove: 'Remove',
+        unsupportedStructure:
+          'This config contains a structure that is not supported by the visual editor. Maintain it in config file mode.',
+        emptyRows: 'No rules configured.',
+        addProvider: 'Add provider',
+        addChannel: 'Add channel',
+        addAlias: 'Add alias',
+        addMapping: 'Add mapping',
+        addUpstreamKey: 'Add upstream key',
+        removeChannel: 'Remove channel',
+        channelRuleCount: '{{count}} rules',
+        columns: {
+          provider: 'Model provider',
+          models: 'Model IDs',
+          channel: 'Channel',
+          name: 'Upstream model',
+          alias: 'Client alias',
+          fork: 'Fork',
+          from: 'Requested model',
+          to: 'Upstream model',
+          regex: 'Regex',
+          actions: 'Actions',
+          upstreamApiKey: 'Upstream API key',
+          clientKeys: 'Client keys',
+        },
+        columnDescriptions: {
+          channel: 'Auth channel key, such as claude, gemini, or codex.',
+          name: 'Model ID actually sent to the upstream provider.',
+          alias: 'Model alias that clients can request.',
+          fork: 'Advanced option. The API only defines this as fork alias behavior; leave it off unless you need it.',
+          from: 'Amp model name in the client request. When Regex is enabled, this is treated as a regular expression.',
+          to: 'Target upstream model name after a match.',
+          regex:
+            'Off matches the full model name. On treats the requested model as a regular expression.',
+        },
+        modelMappings: {
+          description:
+            'Rewrite Amp CLI upstream models by requested model. Enable Regex only when pattern matching is needed.',
+        },
+        placeholders: {
+          provider: 'claude',
+          models: 'claude-opus-4.5, claude-sonnet-4',
+          channel: 'claude',
+          name: 'claude-sonnet-4',
+          alias: 'sonnet',
+          from: 'claude-opus-4.5',
+          to: 'claude-sonnet-4',
+          upstreamApiKey: 'upstream-key',
+          clientKeys: 'client-key-1, client-key-2',
+        },
+      },
+      oauthExcluded: {
+        title: 'OAuth model disable list',
+        channelLabel: 'Auth channel',
+        reloadModels: 'Reload models',
+        searchPlaceholder: 'Search model ID, name, or owner',
+        selectedCount: '{{count}} models selected',
+        clearChannel: 'Clear channel',
+        emptyModels: 'No model definitions were returned for this channel.',
+        emptyFiltered: 'No matching models.',
+        customTitle: 'Custom provider rules',
+        customDescription:
+          'These providers are not in the current visual channel list. Maintain them in config file mode.',
+        channels: {
+          claude: 'Claude',
+          gemini: 'Gemini',
+          vertex: 'Vertex',
+          'gemini-cli': 'Gemini CLI',
+          aistudio: 'AI Studio',
+          codex: 'Codex',
+          kimi: 'Kimi',
+          antigravity: 'Antigravity',
+        },
       },
       diff: {
         title: 'Changes before save',
