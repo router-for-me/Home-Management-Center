@@ -1079,6 +1079,8 @@ export const ru = {
       },
       header: {
         title: 'Usage & Logs',
+        description:
+          'Просмотр счетчиков запросов model services, API key usage, runtime logs и скачиваемых request error logs.',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
@@ -1086,6 +1088,8 @@ export const ru = {
         syncing: 'Синхронизация',
         clearLogs: 'Очистить журналы',
         download: 'Скачать',
+        downloadRequestLog: 'Скачать request log',
+        fetchQueue: 'Получить записи очереди',
       },
       capabilities: {
         usage: 'Usage stats',
@@ -1109,45 +1113,68 @@ export const ru = {
         clearLogs: 'Очистить журналы',
       },
       summary: {
-        usage: 'Запросов',
-        usageDetail: '{{success}} успешно / {{failed}} с ошибкой',
-        queue: 'Записи очереди',
-        queueDetail: 'До 20 записей за обновление',
+        keys: 'Usage keys',
+        keysDetail: 'Окон recent requests: {{count}}',
+        requests: 'Запросов',
+        requestsDetail: '{{success}} успешно / {{failed}} с ошибкой',
         logs: 'Строк журналов',
         logsDetail: 'Файлов error logs: {{count}}',
       },
       usage: {
         title: 'API key usage',
-        empty: 'API key usage records не возвращены.',
+        description:
+          'Группирует успешные и ошибочные запросы по model provider, upstream Base URL и API key.',
+        empty:
+          'API key usage records не возвращены. Проверьте, что usage statistics включены и runtime уже обрабатывал запросы.',
         provider: 'Провайдер модели',
         baseUrl: 'Base URL',
         key: 'Ключ',
         success: 'Успешно',
         failed: 'Ошибки',
+        recentWindows: 'Recent windows',
       },
       queue: {
         title: 'Usage queue',
-        empty: 'Usage queue records не возвращены.',
+        description:
+          'Читает runtime usage queue по запросу. Этот маршрут извлекает самые ранние записи, поэтому автообновление здесь не подходит.',
+        consumes:
+          'Получение записей очереди потребляет записи из server queue. Запускайте это только при разборе usage records.',
+        unavailable: 'Этот runtime не предоставляет маршрут usage queue.',
+        notLoaded: 'Очередь еще не читалась. Получение записей потребит до 20 записей из очереди.',
+        empty: 'В этот раз usage queue records не получены.',
+        raw: 'Сырая запись',
+        columns: {
+          request: 'Request ID',
+          model: 'Модель',
+          endpoint: 'Endpoint',
+          status: 'Статус',
+          actions: 'Действия',
+        },
       },
       logs: {
         title: 'Runtime logs',
-        empty: 'Нет строк runtime log для отображения.',
+        description:
+          'Читает последние строки file logging. Пустой результат обычно означает, что file logging выключен или записей еще нет.',
+        unavailable: 'Этот runtime не предоставляет маршрут runtime logs.',
+        empty:
+          'Нет строк runtime log для отображения. Проверьте, что file logging включен и runtime уже записывал журналы.',
+        lineCount: '{{count}} строк',
         latest: 'Последнее время: {{time}}',
+        latestUnavailable: 'Последнее время недоступно',
       },
       errorLogs: {
         title: 'Файлы error logs',
+        description:
+          'Показывает файлы error-*.log, созданные при выключенном request logging, и позволяет скачать файл.',
+        unavailable: 'Этот runtime не предоставляет маршрут файлов error logs.',
         empty: 'Файлы error logs не возвращены.',
         meta: '{{size}} bytes · {{time}}',
         searchPlaceholder: 'Искать имя log file, нажмите Enter',
         columns: {
           name: 'Журнал',
-          type: 'Тип',
           modified: 'Обновлено',
           size: 'Размер',
           actions: 'Действия',
-        },
-        types: {
-          error: 'Error log',
         },
       },
       status: {
@@ -1164,6 +1191,7 @@ export const ru = {
       toast: {
         logsCleared: 'Журналы очищены.',
         logDownloaded: 'Журнал скачан.',
+        queueFetched: 'Получено записей очереди: {{count}}.',
       },
     },
     systemNodesPage: {

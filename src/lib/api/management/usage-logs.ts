@@ -51,7 +51,6 @@ export type RequestErrorLogFile = {
 type UsageLogsSnapshot = {
   fetchedAt: string
   apiKeyUsage: ApiKeyUsageResource[]
-  usageQueue: UsageQueueRecord[]
   runtimeLogs: RuntimeLogSnapshot | null
   requestErrorLogs: RequestErrorLogFile[]
   issues: UsageLogIssue[]
@@ -239,7 +238,7 @@ export async function fetchUsageLogsSnapshot(
   const client = createManagementClient(session)
   const issues: UsageLogIssue[] = []
 
-  const [apiKeyUsage, usageQueue, runtimeLogs, requestErrorLogs] = await Promise.all([
+  const [apiKeyUsage, runtimeLogs, requestErrorLogs] = await Promise.all([
     capabilities.usage
       ? readOptional(
           issues,
@@ -247,19 +246,6 @@ export async function fetchUsageLogsSnapshot(
           async () => {
             const response = await client.get<unknown>('/api-key-usage')
             return normalizeApiKeyUsage(response.data)
-          },
-          [],
-        )
-      : Promise.resolve([]),
-    capabilities.usageQueue
-      ? readOptional(
-          issues,
-          'usageQueue',
-          async () => {
-            const response = await client.get<unknown>('/usage-queue', {
-              params: { count: 20 },
-            })
-            return normalizeUsageQueue(response.data)
           },
           [],
         )
@@ -293,11 +279,22 @@ export async function fetchUsageLogsSnapshot(
   return {
     fetchedAt: new Date().toISOString(),
     apiKeyUsage,
-    usageQueue,
     runtimeLogs,
     requestErrorLogs,
     issues,
   }
+}
+
+export async function fetchUsageQueueRecords(
+  session: ManagementSessionInput,
+  count = 20,
+): Promise<UsageQueueRecord[]> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/usage-queue', {
+    params: { count },
+  })
+
+  return normalizeUsageQueue(response.data)
 }
 
 export async function clearRuntimeLogs(session: ManagementSessionInput): Promise<ClearLogsResult> {

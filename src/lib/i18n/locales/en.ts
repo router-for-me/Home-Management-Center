@@ -1076,6 +1076,8 @@ export const en = {
       },
       header: {
         title: 'Usage & Logs',
+        description:
+          'Review model service request counts, API key usage, runtime logs, and downloadable request error logs.',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
@@ -1083,6 +1085,8 @@ export const en = {
         syncing: 'Syncing',
         clearLogs: 'Clear logs',
         download: 'Download',
+        downloadRequestLog: 'Download request log',
+        fetchQueue: 'Pull queue records',
       },
       capabilities: {
         usage: 'Usage stats',
@@ -1106,45 +1110,68 @@ export const en = {
         clearLogs: 'Clear logs',
       },
       summary: {
-        usage: 'Request count',
-        usageDetail: '{{success}} success / {{failed}} failed',
-        queue: 'Queue records',
-        queueDetail: 'Reads up to 20 records per refresh',
+        keys: 'Usage keys',
+        keysDetail: '{{count}} recent request windows',
+        requests: 'Request count',
+        requestsDetail: '{{success}} success / {{failed}} failed',
         logs: 'Log lines',
         logsDetail: '{{count}} error log files',
       },
       usage: {
         title: 'API key usage',
-        empty: 'No API key usage records were returned.',
+        description:
+          'Groups successful and failed requests by model provider, upstream Base URL, and API key.',
+        empty:
+          'No API key usage records were returned. Confirm usage statistics are enabled and the runtime has handled requests.',
         provider: 'Model provider',
         baseUrl: 'Base URL',
         key: 'Key',
         success: 'Success',
         failed: 'Failed',
+        recentWindows: 'Recent windows',
       },
       queue: {
         title: 'Usage queue',
-        empty: 'No usage queue records were returned.',
+        description:
+          'Read the runtime usage queue on demand. This route pops the earliest records, so it should not auto-refresh.',
+        consumes:
+          'Pulling queue records consumes records from the server queue. Run it only when investigating usage records.',
+        unavailable: 'This runtime does not expose the usage queue route.',
+        notLoaded: 'The queue has not been read. Pulling records consumes up to 20 queued records.',
+        empty: 'No usage queue records were pulled.',
+        raw: 'Raw record',
+        columns: {
+          request: 'Request ID',
+          model: 'Model',
+          endpoint: 'Endpoint',
+          status: 'Status',
+          actions: 'Actions',
+        },
       },
       logs: {
         title: 'Runtime logs',
-        empty: 'No runtime log lines are available.',
+        description:
+          'Reads recent lines from file logging. Empty content usually means file logging is disabled or nothing has been written yet.',
+        unavailable: 'This runtime does not expose the runtime logs route.',
+        empty:
+          'No runtime log lines are available. Confirm file logging is enabled and the runtime has written logs.',
+        lineCount: '{{count}} lines',
         latest: 'Latest timestamp: {{time}}',
+        latestUnavailable: 'Latest timestamp unavailable',
       },
       errorLogs: {
         title: 'Error log files',
+        description:
+          'Lists error-*.log files generated when request logging is disabled, with file download support.',
+        unavailable: 'This runtime does not expose the error log file route.',
         empty: 'No error log files were returned.',
         meta: '{{size}} bytes · {{time}}',
         searchPlaceholder: 'Search log file name, press Enter',
         columns: {
           name: 'Log',
-          type: 'Type',
           modified: 'Updated',
           size: 'Size',
           actions: 'Actions',
-        },
-        types: {
-          error: 'Error log',
         },
       },
       status: {
@@ -1160,6 +1187,7 @@ export const en = {
       toast: {
         logsCleared: 'Logs cleared.',
         logDownloaded: 'Log downloaded.',
+        queueFetched: '{{count}} queue records pulled.',
       },
     },
     systemNodesPage: {
