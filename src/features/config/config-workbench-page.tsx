@@ -41,6 +41,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -964,18 +971,25 @@ function ConfigField({
           </div>
         ) : null}
         {field.kind === 'select' ? (
-          <select
+          <Select
             value={String(value)}
             disabled={disabled}
-            className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:min-w-56"
-            onChange={(event) => onChange(field.key, event.target.value)}
+            onValueChange={(nextValue) => onChange(field.key, nextValue)}
           >
-            {field.options?.map((option) => (
-              <option key={option} value={option}>
-                {t(`configPage.routingStrategies.${option}`)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              className="md:w-56"
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options?.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {t(`configPage.routingStrategies.${option}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ) : null}
       </div>
     </div>
@@ -1138,21 +1152,27 @@ function ExcludedModelsEditor({
     <div className="grid gap-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <select
+          <Select
             value={channel}
             disabled={disabled || !catalog}
-            className="border-input bg-background ring-offset-background focus-visible:ring-ring h-9 rounded-md border px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:min-w-44"
-            aria-label={t('configPage.oauthExcluded.channelLabel')}
-            onChange={(event) => {
-              catalog?.onChannelChange(event.target.value as ProviderModelChannel)
+            onValueChange={(nextChannel) => {
+              catalog?.onChannelChange(nextChannel as ProviderModelChannel)
             }}
           >
-            {modelDefinitionChannels.map((nextChannel) => (
-              <option key={nextChannel} value={nextChannel}>
-                {t(`configPage.oauthExcluded.channels.${nextChannel}`)}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              className="sm:w-44"
+              aria-label={t('configPage.oauthExcluded.channelLabel')}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {modelDefinitionChannels.map((nextChannel) => (
+                <SelectItem key={nextChannel} value={nextChannel}>
+                  {t(`configPage.oauthExcluded.channels.${nextChannel}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs">

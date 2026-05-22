@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   Eye,
   Loader2,
   Network,
@@ -35,6 +34,13 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Sheet,
   SheetContent,
@@ -532,24 +538,25 @@ function ProviderModelCatalog({
                   })
                 : t('providersPage.modelCatalog.notLoaded')}
             </span>
-            <div className="relative min-w-44">
-              <select
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring text-foreground h-9 w-full appearance-none rounded-md border bg-none py-2 pr-10 pl-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            <div className="min-w-44">
+              <Select
                 value={channel}
                 disabled={loading}
-                aria-label={t('providersPage.modelCatalog.channelLabel')}
-                onChange={(event) => onChannelChange(event.target.value as ProviderModelChannel)}
+                onValueChange={(nextChannel) =>
+                  onChannelChange(nextChannel as ProviderModelChannel)
+                }
               >
-                {modelDefinitionChannels.map((item) => (
-                  <option key={item} value={item}>
-                    {t(`providersPage.modelCatalog.channels.${item}`)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="text-muted-foreground pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
+                <SelectTrigger aria-label={t('providersPage.modelCatalog.channelLabel')}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelDefinitionChannels.map((item) => (
+                    <SelectItem key={item} value={item}>
+                      {t(`providersPage.modelCatalog.channels.${item}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
