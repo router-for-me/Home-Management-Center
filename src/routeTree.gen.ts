@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsageLogsRouteImport } from './routes/usage-logs'
+import { Route as SystemNodesRouteImport } from './routes/system-nodes'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CredentialsRouteImport } from './routes/credentials'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const UsageLogsRoute = UsageLogsRouteImport.update({
   id: '/usage-logs',
   path: '/usage-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SystemNodesRoute = SystemNodesRouteImport.update({
+  id: '/system-nodes',
+  path: '/system-nodes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProvidersRoute = ProvidersRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
   '/providers': typeof ProvidersRoute
+  '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
   '/providers': typeof ProvidersRoute
+  '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
   '/providers': typeof ProvidersRoute
+  '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/credentials'
     | '/dashboard'
     | '/providers'
+    | '/system-nodes'
     | '/usage-logs'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/credentials'
     | '/dashboard'
     | '/providers'
+    | '/system-nodes'
     | '/usage-logs'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/credentials'
     | '/dashboard'
     | '/providers'
+    | '/system-nodes'
     | '/usage-logs'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   CredentialsRoute: typeof CredentialsRoute
   DashboardRoute: typeof DashboardRoute
   ProvidersRoute: typeof ProvidersRoute
+  SystemNodesRoute: typeof SystemNodesRoute
   UsageLogsRoute: typeof UsageLogsRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/usage-logs'
       fullPath: '/usage-logs'
       preLoaderRoute: typeof UsageLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/system-nodes': {
+      id: '/system-nodes'
+      path: '/system-nodes'
+      fullPath: '/system-nodes'
+      preLoaderRoute: typeof SystemNodesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/providers': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   CredentialsRoute: CredentialsRoute,
   DashboardRoute: DashboardRoute,
   ProvidersRoute: ProvidersRoute,
+  SystemNodesRoute: SystemNodesRoute,
   UsageLogsRoute: UsageLogsRoute,
 }
 export const routeTree = rootRouteImport

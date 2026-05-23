@@ -1297,6 +1297,41 @@ export const ru = {
       actions: {
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
+        openDiagnostics: 'Диагностика',
+      },
+      verdict: {
+        ready: {
+          title: 'Системная информация синхронизирована',
+          badge: 'Норма',
+          description:
+            'Версия, конфигурация и состояние подключений узлов синхронизированы для оценки текущего runtime.',
+        },
+        limited: {
+          title: 'Системная информация синхронизирована',
+          badge: 'Узлы недоступны',
+          description:
+            'Этот runtime не предоставляет маршрут запроса узлов. Используйте версию и сводку конфигурации как основные сигналы.',
+        },
+        degraded: {
+          title: 'Системная информация синхронизирована частично',
+          badge: 'Частичный сбой',
+          description:
+            'Страница продолжит показывать загруженную информацию. Исправьте сбои перед полной оценкой.',
+        },
+        unavailable: {
+          title: 'Системная информация недоступна',
+          badge: 'Недоступно',
+          description:
+            'Ключевые диагностические маршруты не вернули пригодные данные. Проверьте Management API, management key и диагностические возможности runtime.',
+        },
+        facts: {
+          config: 'Сводка конфигурации: {{status}}',
+          version: 'Информация о версии: {{status}}',
+          nodes: 'Записи узлов: {{count}}',
+          nodesUnsupported: 'Маршрут узлов: недоступен',
+          issues: 'Ошибки загрузки: {{count}}',
+          noIssues: 'Нет ошибок загрузки',
+        },
       },
       config: {
         empty: 'Сводка конфигурации не возвращена.',
@@ -1320,8 +1355,9 @@ export const ru = {
       },
       nodes: {
         title: 'Подключения узлов',
-        unavailable: 'Этот runtime не предоставляет маршрут nodes.',
+        unavailable: 'Текущий runtime {{runtime}} не предоставляет маршрут запроса узлов.',
         empty: 'Записи подключений узлов не возвращены.',
+        emptySupported: 'Маршрут узлов доступен, но записи подключений не возвращены.',
         connectedTime: 'Подключено: {{time}}',
       },
       issues: {
@@ -1335,15 +1371,24 @@ export const ru = {
       },
       apiCall: {
         title: 'Диагностический запрос Management API',
+        description:
+          'Отправляет один upstream-запрос с сервера для диагностики подключения, учетных данных или upstream API.',
+        riskTitle: 'Диагностическое действие с повышенными правами',
         warning:
           'Инструмент отправляет один upstream-запрос с сервера. Используйте его только для диагностики подключения, учетных данных или upstream API. Не отправляйте production-sensitive данные.',
         method: 'Метод',
         url: 'Target URL',
+        urlPlaceholder: 'https://api.example.com/v1/ping',
         authIndex: 'Индекс учетных данных',
+        authIndexPlaceholder:
+          'Необязательно, пустое значение использует учетные данные по умолчанию',
         headers: 'Headers JSON',
         body: 'Body',
+        bodyPlaceholder: 'Необязательно, тело отправляется как введено',
         validation: {
           urlRequired: 'Введите target URL.',
+          headersJsonInvalid: 'Headers должны быть валидным JSON.',
+          headersObjectRequired: 'Headers JSON должен быть объектом.',
         },
         run: 'Отправить диагностический запрос',
         responseStatus: 'Статус ответа: {{status}}',
@@ -1352,8 +1397,13 @@ export const ru = {
         version: 'Версия сервиса',
         latestVersion: 'Последняя версия: {{version}}',
         nodes: 'Узлы',
-        nodesAvailable: 'Этот runtime поддерживает запросы nodes',
+        nodesAvailable: 'Маршрут узлов доступен',
+        nodesEmpty: 'Маршрут узлов доступен, записей подключений пока нет',
+        nodesConnected: 'Возвращено узлов: {{count}}',
         nodesUnavailable: 'Этот runtime не предоставляет запросы nodes',
+        config: 'Сводка конфигурации',
+        configAvailable: 'Сводка конфигурации runtime загружена',
+        configUnavailable: 'Маршрут сводки конфигурации не вернул пригодные данные',
         apiCall: 'API диагностика',
         apiCallDetail: 'Используйте /api-call для проверки upstream connectivity',
       },

@@ -27,7 +27,7 @@ export type SystemIssue = {
   code?: string
 }
 
-type SystemNodesSnapshot = {
+export type SystemNodesSnapshot = {
   fetchedAt: string
   latestVersion: string | null
   config: SystemConfigSummary | null

@@ -1248,6 +1248,38 @@ export const zhCN = {
       actions: {
         refresh: '同步数据',
         syncing: '同步中',
+        openDiagnostics: '诊断工具',
+      },
+      verdict: {
+        ready: {
+          title: '系统信息已同步',
+          badge: '正常',
+          description: '版本、配置和节点连接状态已同步，可用于确认当前运行状态。',
+        },
+        limited: {
+          title: '系统信息已同步',
+          badge: '节点未开放',
+          description: '当前运行时未暴露节点查询接口，版本和配置摘要可作为主要判断依据。',
+        },
+        degraded: {
+          title: '系统信息部分同步失败',
+          badge: '部分失败',
+          description: '页面会继续展示已加载的信息，请优先处理失败项后再做完整判断。',
+        },
+        unavailable: {
+          title: '系统信息不可用',
+          badge: '不可用',
+          description:
+            '关键诊断接口未能返回可用数据。请检查 Management API、management key 和运行时诊断能力。',
+        },
+        facts: {
+          config: '配置摘要：{{status}}',
+          version: '版本信息：{{status}}',
+          nodes: '节点记录：{{count}}',
+          nodesUnsupported: '节点接口：未开放',
+          issues: '加载异常：{{count}}',
+          noIssues: '无加载异常',
+        },
       },
       config: {
         empty: '当前没有返回配置摘要。',
@@ -1271,8 +1303,9 @@ export const zhCN = {
       },
       nodes: {
         title: '节点连接',
-        unavailable: '当前运行时不提供节点接口。',
+        unavailable: '当前 {{runtime}} 运行时未开放节点查询接口。',
         empty: '当前没有返回节点连接记录。',
+        emptySupported: '节点接口可用，当前没有返回连接记录。',
         connectedTime: '连接时间：{{time}}',
       },
       issues: {
@@ -1286,15 +1319,22 @@ export const zhCN = {
       },
       apiCall: {
         title: 'Management API 诊断请求',
+        description: '从服务端发起一次上游请求，用于定位连通性、凭证或上游 API 问题。',
+        riskTitle: '高权限诊断操作',
         warning:
           '该工具会从服务端发起一次上游请求，仅用于定位连接、凭证或上游 API 问题。避免发送生产敏感数据。',
         method: '请求方法',
         url: '目标 URL',
+        urlPlaceholder: 'https://api.example.com/v1/ping',
         authIndex: '凭证索引',
+        authIndexPlaceholder: '可选，留空使用默认凭证',
         headers: '请求头 JSON',
         body: '请求体',
+        bodyPlaceholder: '可选，请求体会按原文发送',
         validation: {
           urlRequired: '请输入目标 URL。',
+          headersJsonInvalid: '请求头必须是有效的 JSON。',
+          headersObjectRequired: '请求头 JSON 必须是对象格式。',
         },
         run: '发送诊断请求',
         responseStatus: '响应状态：{{status}}',
@@ -1303,8 +1343,13 @@ export const zhCN = {
         version: '服务版本',
         latestVersion: '最新版本：{{version}}',
         nodes: '节点',
-        nodesAvailable: '当前运行时支持节点查询',
-        nodesUnavailable: '当前运行时未暴露节点查询',
+        nodesAvailable: '节点接口可用',
+        nodesEmpty: '节点接口可用，暂无连接记录',
+        nodesConnected: '已返回 {{count}} 个节点',
+        nodesUnavailable: '当前运行时未开放节点查询接口',
+        config: '配置摘要',
+        configAvailable: '已读取运行时配置摘要',
+        configUnavailable: '配置摘要接口未返回可用数据',
         apiCall: 'API 诊断',
         apiCallDetail: '可通过 /api-call 验证上游连通性',
       },

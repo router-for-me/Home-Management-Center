@@ -1248,6 +1248,38 @@ export const zhTW = {
       actions: {
         refresh: '同步資料',
         syncing: '同步中',
+        openDiagnostics: '診斷工具',
+      },
+      verdict: {
+        ready: {
+          title: '系統資訊已同步',
+          badge: '正常',
+          description: '版本、設定和節點連線狀態已同步，可用於確認目前執行狀態。',
+        },
+        limited: {
+          title: '系統資訊已同步',
+          badge: '節點未開放',
+          description: '目前執行環境未暴露節點查詢介面，版本和設定摘要可作為主要判斷依據。',
+        },
+        degraded: {
+          title: '系統資訊部分同步失敗',
+          badge: '部分失敗',
+          description: '頁面會繼續展示已載入的資訊，請優先處理失敗項後再做完整判斷。',
+        },
+        unavailable: {
+          title: '系統資訊不可用',
+          badge: '不可用',
+          description:
+            '關鍵診斷介面未能回傳可用資料。請檢查 Management API、management key 和執行環境診斷能力。',
+        },
+        facts: {
+          config: '設定摘要：{{status}}',
+          version: '版本資訊：{{status}}',
+          nodes: '節點記錄：{{count}}',
+          nodesUnsupported: '節點介面：未開放',
+          issues: '載入異常：{{count}}',
+          noIssues: '無載入異常',
+        },
       },
       config: {
         empty: '目前沒有回傳設定摘要。',
@@ -1271,8 +1303,9 @@ export const zhTW = {
       },
       nodes: {
         title: '節點連線',
-        unavailable: '目前執行環境不提供節點介面。',
+        unavailable: '目前 {{runtime}} 執行環境未開放節點查詢介面。',
         empty: '目前沒有回傳節點連線記錄。',
+        emptySupported: '節點介面可用，目前沒有回傳連線記錄。',
         connectedTime: '連線時間：{{time}}',
       },
       issues: {
@@ -1286,15 +1319,22 @@ export const zhTW = {
       },
       apiCall: {
         title: 'Management API 診斷請求',
+        description: '從服務端發起一次上游請求，用於定位連通性、憑證或上游 API 問題。',
+        riskTitle: '高權限診斷操作',
         warning:
           '該工具會從服務端發起一次上游請求，僅用於定位連線、憑證或上游 API 問題。避免送出生產敏感資料。',
         method: '請求方法',
         url: '目標 URL',
+        urlPlaceholder: 'https://api.example.com/v1/ping',
         authIndex: '憑證索引',
+        authIndexPlaceholder: '選填，留空使用預設憑證',
         headers: '請求頭 JSON',
         body: '請求體',
+        bodyPlaceholder: '選填，請求體會依原文送出',
         validation: {
           urlRequired: '請輸入目標 URL。',
+          headersJsonInvalid: '請求頭必須是有效的 JSON。',
+          headersObjectRequired: '請求頭 JSON 必須是物件格式。',
         },
         run: '送出診斷請求',
         responseStatus: '回應狀態：{{status}}',
@@ -1303,8 +1343,13 @@ export const zhTW = {
         version: '服務版本',
         latestVersion: '最新版本：{{version}}',
         nodes: '節點',
-        nodesAvailable: '目前執行環境支援節點查詢',
-        nodesUnavailable: '目前執行環境未暴露節點查詢',
+        nodesAvailable: '節點介面可用',
+        nodesEmpty: '節點介面可用，暫無連線記錄',
+        nodesConnected: '已回傳 {{count}} 個節點',
+        nodesUnavailable: '目前執行環境未開放節點查詢介面',
+        config: '設定摘要',
+        configAvailable: '已讀取執行環境設定摘要',
+        configUnavailable: '設定摘要介面未回傳可用資料',
         apiCall: 'API 診斷',
         apiCallDetail: '可透過 /api-call 驗證上游連通性',
       },

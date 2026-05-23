@@ -4,6 +4,7 @@ import {
   KeyRound,
   type LucideIcon,
   Network,
+  ServerCog,
   ShieldCheck,
   SlidersHorizontal,
 } from 'lucide-react'
@@ -17,6 +18,7 @@ type NavigationRoute =
   | '/access-keys'
   | '/config'
   | '/usage-logs'
+  | '/system-nodes'
 
 type NavigationItem = {
   to: NavigationRoute
@@ -89,6 +91,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.config',
         metaKey: 'navigationMeta.config',
         icon: SlidersHorizontal,
+      },
+      {
+        to: '/system-nodes',
+        labelKey: 'navigation.systemNodes',
+        metaKey: 'navigationMeta.systemNodes',
+        icon: ServerCog,
       },
     ],
   },

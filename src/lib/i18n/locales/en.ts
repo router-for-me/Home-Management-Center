@@ -1292,6 +1292,41 @@ export const en = {
       actions: {
         refresh: 'Sync data',
         syncing: 'Syncing',
+        openDiagnostics: 'Diagnostics',
+      },
+      verdict: {
+        ready: {
+          title: 'System information is synced',
+          badge: 'Normal',
+          description:
+            'Version, config, and node connection state are synced for the current runtime assessment.',
+        },
+        limited: {
+          title: 'System information is synced',
+          badge: 'Nodes unavailable',
+          description:
+            'This runtime does not expose the node query route. Use version and config summary as the primary signals.',
+        },
+        degraded: {
+          title: 'System information partially failed to sync',
+          badge: 'Partial failure',
+          description:
+            'The page continues to show loaded information. Resolve failed items before making a full assessment.',
+        },
+        unavailable: {
+          title: 'System information is unavailable',
+          badge: 'Unavailable',
+          description:
+            'Key diagnostic routes did not return usable data. Check the Management API, management key, and runtime diagnostic capabilities.',
+        },
+        facts: {
+          config: 'Config summary: {{status}}',
+          version: 'Version info: {{status}}',
+          nodes: 'Node records: {{count}}',
+          nodesUnsupported: 'Node route: unavailable',
+          issues: 'Load issues: {{count}}',
+          noIssues: 'No load issues',
+        },
       },
       config: {
         empty: 'No config summary was returned.',
@@ -1315,8 +1350,9 @@ export const en = {
       },
       nodes: {
         title: 'Node connections',
-        unavailable: 'This runtime does not expose the nodes route.',
+        unavailable: 'The current {{runtime}} runtime does not expose the node query route.',
         empty: 'No node connection records were returned.',
+        emptySupported: 'The node route is available, but no connection records were returned.',
         connectedTime: 'Connected at {{time}}',
       },
       issues: {
@@ -1330,15 +1366,23 @@ export const en = {
       },
       apiCall: {
         title: 'Management API diagnostic request',
+        description:
+          'Send one upstream request from the server to diagnose connectivity, credential, or upstream API issues.',
+        riskTitle: 'High-privilege diagnostic action',
         warning:
           'This tool sends one upstream request from the server. Use it only to diagnose connection, credential, or upstream API issues. Avoid sending production-sensitive data.',
         method: 'Method',
         url: 'Target URL',
+        urlPlaceholder: 'https://api.example.com/v1/ping',
         authIndex: 'Credential index',
+        authIndexPlaceholder: 'Optional, leave blank to use the default credential',
         headers: 'Headers JSON',
         body: 'Body',
+        bodyPlaceholder: 'Optional, body is sent as written',
         validation: {
           urlRequired: 'Enter a target URL.',
+          headersJsonInvalid: 'Headers must be valid JSON.',
+          headersObjectRequired: 'Headers JSON must be an object.',
         },
         run: 'Send diagnostic request',
         responseStatus: 'Response status: {{status}}',
@@ -1347,8 +1391,13 @@ export const en = {
         version: 'Service version',
         latestVersion: 'Latest version: {{version}}',
         nodes: 'Nodes',
-        nodesAvailable: 'This runtime supports node queries',
+        nodesAvailable: 'Node route is available',
+        nodesEmpty: 'Node route is available, no connection records yet',
+        nodesConnected: '{{count}} nodes returned',
         nodesUnavailable: 'This runtime does not expose node queries',
+        config: 'Config summary',
+        configAvailable: 'Runtime config summary has been loaded',
+        configUnavailable: 'Config summary route did not return usable data',
         apiCall: 'API diagnostics',
         apiCallDetail: 'Use /api-call to verify upstream connectivity',
       },
