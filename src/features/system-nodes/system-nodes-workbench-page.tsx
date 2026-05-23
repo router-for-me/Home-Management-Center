@@ -30,6 +30,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
 import {
   type SystemNodesOperationalLevel,
   type SystemNodesOperationalStatus,
@@ -417,7 +418,12 @@ function ConfigSummaryPanel({ config }: { config: SystemConfigSummary | null }) 
       <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
         <span className="text-sm">{t('systemNodesPage.config.fields.routingStrategy')}</span>
         <span className="bg-muted text-muted-foreground rounded-md border px-2 py-1 text-xs">
-          {config.routingStrategy}
+          {t(`configPage.routingStrategies.${config.routingStrategy}`, {
+            defaultValue:
+              config.routingStrategy === 'unknown'
+                ? t('systemNodesPage.status.unknown')
+                : config.routingStrategy,
+          })}
         </span>
       </div>
     </div>
@@ -643,8 +649,8 @@ function ApiCallTool({
         </label>
         <label className="grid gap-2 text-sm font-medium">
           <span>{t('systemNodesPage.apiCall.headers')}</span>
-          <textarea
-            className="border-input bg-background min-h-28 rounded-md border px-3 py-2 font-mono text-xs"
+          <Textarea
+            className="min-h-28 font-mono text-xs"
             value={input.headers}
             disabled={pending}
             placeholder='{"Content-Type":"application/json"}'
@@ -655,8 +661,8 @@ function ApiCallTool({
         </label>
         <label className="grid gap-2 text-sm font-medium">
           <span>{t('systemNodesPage.apiCall.body')}</span>
-          <textarea
-            className="border-input bg-background min-h-28 rounded-md border px-3 py-2 font-mono text-xs"
+          <Textarea
+            className="min-h-28 font-mono text-xs"
             value={input.data}
             disabled={pending}
             placeholder={t('systemNodesPage.apiCall.bodyPlaceholder')}

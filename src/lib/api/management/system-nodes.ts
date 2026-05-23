@@ -62,6 +62,12 @@ function readString(record: UnknownRecord, key: string): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
+function readRoutingStrategy(record: UnknownRecord): string {
+  const strategy = readString(record, 'strategy')
+
+  return strategy && strategy.toLowerCase() !== 'unknown' ? strategy : 'unknown'
+}
+
 function readBoolean(record: UnknownRecord, key: string): boolean {
   return record[key] === true
 }
@@ -105,7 +111,7 @@ function normalizeConfigSummary(responseData: unknown): SystemConfigSummary {
     requestLog: readBoolean(config, 'request-log'),
     usageStatistics: readBoolean(config, 'usage-statistics-enabled'),
     loggingToFile: readBoolean(config, 'logging-to-file'),
-    routingStrategy: readString(routing, 'strategy') ?? 'unknown',
+    routingStrategy: readRoutingStrategy(routing),
     proxyConfigured: Boolean(readString(config, 'proxy-url')),
   }
 }

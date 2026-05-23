@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Database,
   Gauge,
+  Info,
   KeyRound,
   KeySquare,
   Loader2,
@@ -39,7 +40,7 @@ import { cn } from '@/lib/utils'
 import { useSessionStore } from '@/stores/session-store'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
-type DashboardTagTone = DashboardTone | 'info'
+type DashboardTagTone = DashboardTone
 
 const metricIcons: Record<DashboardMetric['id'], LucideIcon> = {
   providers: KeySquare,
@@ -111,6 +112,10 @@ function toneBadgeClassName(tone: DashboardTone) {
     return 'border-success/30 bg-success/10 text-success'
   }
 
+  if (tone === 'info') {
+    return 'border-info/30 bg-info/10 text-info dark:text-info'
+  }
+
   if (tone === 'warning') {
     return 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
   }
@@ -123,12 +128,12 @@ function tagClassName(tone: DashboardTagTone) {
     return 'border-success/30 bg-success/10 text-success'
   }
 
-  if (tone === 'warning') {
-    return 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-  }
-
   if (tone === 'info') {
     return 'border-info/30 bg-info/10 text-info dark:text-info'
+  }
+
+  if (tone === 'warning') {
+    return 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
   }
 
   return 'border-border bg-card text-foreground'
@@ -335,7 +340,12 @@ export function DashboardConsolePage() {
   }
 
   const { viewModel } = overview
-  const HealthIcon = viewModel.healthSummary.tone === 'positive' ? CheckCircle2 : AlertTriangle
+  const HealthIcon =
+    viewModel.healthSummary.tone === 'positive'
+      ? CheckCircle2
+      : viewModel.healthSummary.tone === 'info'
+        ? Info
+        : AlertTriangle
 
   return (
     <section className="grid w-full gap-4">
@@ -543,7 +553,10 @@ export function DashboardConsolePage() {
                 const Icon = configIcons[check.id]
                 const value =
                   check.id === 'routing'
-                    ? check.value
+                    ? t(`configPage.routingStrategies.${check.value}`, {
+                        defaultValue:
+                          check.value === 'unknown' ? t('dashboard.status.unknown') : check.value,
+                      })
                     : t(`dashboard.status.${check.enabled ? 'enabled' : 'disabled'}`)
 
                 return (

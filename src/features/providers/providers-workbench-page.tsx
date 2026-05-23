@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle2,
+  ChevronDown,
   Eye,
   Loader2,
   Network,
@@ -33,6 +34,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -49,6 +52,14 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
 import type {
   ProviderDescriptor,
@@ -249,11 +260,12 @@ function ProviderCategoryList({
           const activeCount = group.resources.filter((resource) => !resource.disabled).length
 
           return (
-            <button
+            <Button
               key={group.id}
               type="button"
+              variant="ghost"
               className={cn(
-                'flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-3 text-left transition-colors',
+                'h-auto min-w-0 justify-between gap-3 rounded-md border px-3 py-3 text-left',
                 active
                   ? 'border-primary/30 bg-primary/10 text-primary'
                   : 'hover:border-border hover:bg-accent border-transparent',
@@ -291,7 +303,7 @@ function ProviderCategoryList({
                   {group.resources.length}
                 </span>
               )}
-            </button>
+            </Button>
           )
         })}
       </div>
@@ -331,7 +343,7 @@ function ProviderResourceTable({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] table-fixed text-sm">
+        <Table className="min-w-[960px] table-fixed">
           <colgroup>
             <col className="w-[20%]" />
             <col className="w-[22%]" />
@@ -340,56 +352,52 @@ function ProviderResourceTable({
             <col className="w-[9%]" />
             <col className="w-[26%]" />
           </colgroup>
-          <thead className="bg-muted/70 text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium">{t('providersPage.table.key')}</th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('providersPage.table.baseUrl')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">{t('providersPage.table.prefix')}</th>
-              <th className="px-3 py-2 text-left font-medium">{t('providersPage.table.models')}</th>
-              <th className="px-3 py-2 text-left font-medium">{t('providersPage.table.status')}</th>
-              <th className="px-3 py-2 text-right font-medium">
-                {t('providersPage.table.actions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+          <TableHeader className="bg-muted/70 text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>{t('providersPage.table.key')}</TableHead>
+              <TableHead>{t('providersPage.table.baseUrl')}</TableHead>
+              <TableHead>{t('providersPage.table.prefix')}</TableHead>
+              <TableHead>{t('providersPage.table.models')}</TableHead>
+              <TableHead>{t('providersPage.table.status')}</TableHead>
+              <TableHead className="text-right">{t('providersPage.table.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {resources.map((resource) => (
-              <tr
+              <TableRow
                 key={resource.id}
                 className={cn(
-                  'hover:bg-accent/40 border-t transition-colors',
+                  'hover:bg-accent/40 transition-colors',
                   resource.id === selectedResourceId ? 'bg-primary/8' : null,
                 )}
               >
-                <td className="px-3 py-3">
+                <TableCell>
                   <p className="max-w-[220px] truncate font-medium">
                     {resource.name ?? resource.identifier}
                   </p>
                   <p className="text-muted-foreground mt-1 font-mono text-xs">
                     {resource.apiKeyPreview ?? resource.authIndex ?? resource.identifier}
                   </p>
-                </td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>
                   <p className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
                     {resource.baseUrl ?? t('providersPage.status.notSet')}
                   </p>
-                </td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>
                   <span className="rounded-md border px-2 py-1 text-xs">
                     {resource.prefix ?? t('providersPage.status.none')}
                   </span>
-                </td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>
                   <span className="text-muted-foreground text-xs">
                     {t('providersPage.table.modelSummary', {
                       models: resource.modelCount,
                       headers: resource.headerCount,
                     })}
                   </span>
-                </td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>
                   <span
                     className={cn(
                       'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
@@ -407,8 +415,8 @@ function ProviderResourceTable({
                       ? t('providersPage.status.disabled')
                       : t('providersPage.status.active')}
                   </span>
-                </td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>
                   <div className="flex justify-end gap-1.5">
                     <Button
                       type="button"
@@ -453,11 +461,11 @@ function ProviderResourceTable({
                       {t('providersPage.actions.delete')}
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
@@ -826,21 +834,27 @@ function ProviderFormPanel({
           ))}
         </dl>
 
-        <details className="mt-5 rounded-md border px-3 py-2.5 text-sm">
-          <summary className="cursor-pointer text-sm font-medium">
+        <Collapsible className="mt-5 rounded-md border px-3 py-2.5 text-sm">
+          <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">
             {t('providersPage.detail.metadataTitle')}
-          </summary>
-          <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
-            {metadataFields.map(([key, value]) => (
-              <div key={key} className="min-w-0">
-                <dt className="text-muted-foreground text-xs">
-                  {t(`providersPage.detail.fields.${key}`)}
-                </dt>
-                <dd className="mt-1 font-mono text-xs break-words">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </details>
+            <ChevronDown
+              className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
+              aria-hidden="true"
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent asChild>
+            <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2">
+              {metadataFields.map(([key, value]) => (
+                <div key={key} className="min-w-0">
+                  <dt className="text-muted-foreground text-xs">
+                    {t(`providersPage.detail.fields.${key}`)}
+                  </dt>
+                  <dd className="mt-1 font-mono text-xs break-words">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     )
   }
@@ -935,12 +949,11 @@ function ProviderFormPanel({
 
         {descriptor.supportsDisabled ? (
           <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="border-input text-primary focus:ring-ring mt-1 size-4 rounded"
+            <Checkbox
+              className="mt-1"
               checked={form.disabled}
               disabled={mutating}
-              onChange={(event) => updateField('disabled', event.target.checked)}
+              onCheckedChange={(checked) => updateField('disabled', checked === true)}
             />
             <span className="grid gap-1">
               <span className="font-medium">{t('providersPage.form.disabled')}</span>

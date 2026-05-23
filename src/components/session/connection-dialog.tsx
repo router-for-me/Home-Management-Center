@@ -4,6 +4,7 @@ import { Loader2, PlugZap, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   connectManagementSession,
@@ -136,12 +137,11 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
           </label>
 
           <label className="flex items-start gap-3 text-sm">
-            <input
-              type="checkbox"
-              className="border-input text-primary focus:ring-ring mt-1 size-4 rounded"
+            <Checkbox
+              className="mt-1"
               checked={draftRememberConnection}
               disabled={checking}
-              onChange={(event) => setDraftRememberConnection(event.target.checked)}
+              onCheckedChange={(checked) => setDraftRememberConnection(checked === true)}
             />
             <span className="grid gap-1">
               <span className="font-medium">{t('connectionDialog.remember')}</span>

@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Sheet,
@@ -39,6 +40,15 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 import { useAccessKeyWorkbench } from '@/features/access-keys/use-access-key-workbench'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
 import { cn } from '@/lib/utils'
@@ -187,54 +197,48 @@ function AccessKeyList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-sm">
-          <thead className="bg-muted/70 text-muted-foreground">
-            <tr>
-              <th className="w-10 px-3 py-2 text-left font-medium">
-                <input
-                  type="checkbox"
-                  className="border-input text-primary focus:ring-ring size-4 rounded"
-                  checked={allSelected}
-                  ref={(element) => {
-                    if (element) element.indeterminate = partiallySelected
-                  }}
+        <Table className="min-w-[860px]">
+          <TableHeader className="bg-muted/70 text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={partiallySelected ? 'indeterminate' : allSelected}
                   aria-label={t('accessKeysPage.bulk.selectAll')}
-                  onChange={onToggleAll}
+                  onCheckedChange={onToggleAll}
                 />
-              </th>
-              <th className="px-3 py-2 text-left font-medium">{t('accessKeysPage.list.index')}</th>
-              <th className="px-3 py-2 text-left font-medium">{t('accessKeysPage.list.key')}</th>
-              <th className="px-3 py-2 text-left font-medium">{t('accessKeysPage.list.length')}</th>
-              <th className="px-3 py-2 text-left font-medium">{t('accessKeysPage.list.status')}</th>
-              <th className="w-[360px] px-3 py-2 text-right font-medium">
+              </TableHead>
+              <TableHead>{t('accessKeysPage.list.index')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.key')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.length')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.status')}</TableHead>
+              <TableHead className="w-[360px] text-right">
                 {t('accessKeysPage.list.actions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {resources.map((resource) => (
-              <tr
+              <TableRow
                 key={resource.id}
                 className={cn(
-                  'hover:bg-accent/70 cursor-pointer border-t transition-colors',
+                  'hover:bg-accent/40 transition-colors',
                   selectedKeyId === resource.id ? 'bg-primary/8' : null,
                 )}
-                onClick={() => onSelectKey(resource)}
               >
-                <td className="px-3 py-3">
-                  <input
-                    type="checkbox"
-                    className="border-input text-primary focus:ring-ring size-4 rounded"
+                <TableCell>
+                  <Checkbox
                     checked={selectedKeyIds.has(resource.id)}
                     aria-label={t('accessKeysPage.bulk.selectOne', {
                       key: resource.maskedValue,
                     })}
-                    onChange={() => onToggleSelection(resource)}
+                    onCheckedChange={() => onToggleSelection(resource)}
                     onClick={(event) => event.stopPropagation()}
                   />
-                </td>
-                <td className="px-3 py-3 font-mono text-xs">{formatAccessKeySequence(resource)}</td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell className="font-mono text-xs">
+                  {formatAccessKeySequence(resource)}
+                </TableCell>
+                <TableCell>
                   <p className="font-mono text-xs">{resource.maskedValue}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     {t('accessKeysPage.list.prefixSuffix', {
@@ -242,15 +246,15 @@ function AccessKeyList({
                       suffix: resource.suffix,
                     })}
                   </p>
-                </td>
-                <td className="px-3 py-3">{resource.length}</td>
-                <td className="px-3 py-3">
+                </TableCell>
+                <TableCell>{resource.length}</TableCell>
+                <TableCell>
                   <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
                     <CheckCircle2 className="size-3" aria-hidden="true" />
                     {t('accessKeysPage.status.accepted')}
                   </span>
-                </td>
-                <td className="px-3 py-3 text-right">
+                </TableCell>
+                <TableCell className="text-right">
                   <div className="flex justify-end gap-1.5">
                     <Button
                       type="button"
@@ -309,11 +313,11 @@ function AccessKeyList({
                       {t('accessKeysPage.actions.delete')}
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
@@ -558,8 +562,8 @@ function ReplaceAccessKeysContent({
       <form className="mt-5 grid gap-4" onSubmit={handleReplace}>
         <label className="grid gap-2 text-sm font-medium">
           <span>{t('accessKeysPage.replace.textarea')}</span>
-          <textarea
-            className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-72 rounded-md border px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          <Textarea
+            className="min-h-72 font-mono text-xs"
             value={replacementValue}
             disabled={mutating}
             onChange={(event) => setReplacementValue(event.target.value)}

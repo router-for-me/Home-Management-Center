@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BarChart3,
   CheckCircle2,
+  ChevronDown,
   Download,
   Loader2,
   RefreshCw,
@@ -24,8 +25,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { useUsageLogsWorkbench } from '@/features/usage-logs/use-usage-logs-workbench'
 import type {
   ApiKeyUsageResource,
@@ -255,44 +265,34 @@ function ApiKeyUsageTable({ resources }: { resources: ApiKeyUsageResource[] }) {
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-sm">
-          <thead className="bg-muted/70 text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('usageLogsPage.usage.provider')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('usageLogsPage.usage.baseUrl')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">{t('usageLogsPage.usage.key')}</th>
-              <th className="px-3 py-2 text-right font-medium">
-                {t('usageLogsPage.usage.success')}
-              </th>
-              <th className="px-3 py-2 text-right font-medium">
-                {t('usageLogsPage.usage.failed')}
-              </th>
-              <th className="px-3 py-2 text-right font-medium">
-                {t('usageLogsPage.usage.recentWindows')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="min-w-[860px]">
+          <TableHeader className="bg-muted/70 text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>{t('usageLogsPage.usage.provider')}</TableHead>
+              <TableHead>{t('usageLogsPage.usage.baseUrl')}</TableHead>
+              <TableHead>{t('usageLogsPage.usage.key')}</TableHead>
+              <TableHead className="text-right">{t('usageLogsPage.usage.success')}</TableHead>
+              <TableHead className="text-right">{t('usageLogsPage.usage.failed')}</TableHead>
+              <TableHead className="text-right">{t('usageLogsPage.usage.recentWindows')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {resources.map((resource) => (
-              <tr key={resource.id} className="border-t">
-                <td className="px-3 py-3 font-medium">{resource.provider}</td>
-                <td className="text-muted-foreground max-w-[300px] truncate px-3 py-3 font-mono text-xs">
+              <TableRow key={resource.id}>
+                <TableCell className="font-medium">{resource.provider}</TableCell>
+                <TableCell className="text-muted-foreground max-w-[300px] truncate font-mono text-xs">
                   {resource.baseUrl || t('usageLogsPage.status.notAvailable')}
-                </td>
-                <td className="px-3 py-3 font-mono text-xs">{resource.apiKeyPreview}</td>
-                <td className="text-primary px-3 py-3 text-right">{resource.success}</td>
-                <td className="px-3 py-3 text-right">{resource.failed}</td>
-                <td className="text-muted-foreground px-3 py-3 text-right">
+                </TableCell>
+                <TableCell className="font-mono text-xs">{resource.apiKeyPreview}</TableCell>
+                <TableCell className="text-primary text-right">{resource.success}</TableCell>
+                <TableCell className="text-right">{resource.failed}</TableCell>
+                <TableCell className="text-muted-foreground text-right">
                   {resource.recentRequestCount}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
@@ -372,27 +372,21 @@ function UsageQueuePanel({
         ) : (
           <div className="overflow-hidden rounded-md border">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-sm">
-                <thead className="bg-muted/70 text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">
-                      {t('usageLogsPage.queue.columns.request')}
-                    </th>
-                    <th className="px-3 py-2 text-left font-medium">
-                      {t('usageLogsPage.queue.columns.model')}
-                    </th>
-                    <th className="px-3 py-2 text-left font-medium">
-                      {t('usageLogsPage.queue.columns.endpoint')}
-                    </th>
-                    <th className="px-3 py-2 text-right font-medium">
+              <Table className="min-w-[860px]">
+                <TableHeader className="bg-muted/70 text-muted-foreground">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t('usageLogsPage.queue.columns.request')}</TableHead>
+                    <TableHead>{t('usageLogsPage.queue.columns.model')}</TableHead>
+                    <TableHead>{t('usageLogsPage.queue.columns.endpoint')}</TableHead>
+                    <TableHead className="text-right">
                       {t('usageLogsPage.queue.columns.status')}
-                    </th>
-                    <th className="px-3 py-2 text-right font-medium">
+                    </TableHead>
+                    <TableHead className="text-right">
                       {t('usageLogsPage.queue.columns.actions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {records.map((record) => {
                     const requestId = record.requestId
                     const downloading =
@@ -401,27 +395,33 @@ function UsageQueuePanel({
                       downloadingRequestLogId === requestId
 
                     return (
-                      <tr key={record.id} className="border-t align-top">
-                        <td className="max-w-[280px] px-3 py-3">
+                      <TableRow key={record.id} className="align-top">
+                        <TableCell className="max-w-[280px]">
                           <p className="truncate font-mono text-xs">
                             {requestId ?? t('usageLogsPage.status.unknownRequest')}
                           </p>
-                          <details className="text-muted-foreground mt-2 text-xs">
-                            <summary className="cursor-pointer">
+                          <Collapsible className="text-muted-foreground mt-2 text-xs">
+                            <CollapsibleTrigger className="group hover:text-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 text-left outline-none focus-visible:ring-[3px]">
                               {t('usageLogsPage.queue.raw')}
-                            </summary>
-                            <pre className="bg-muted/50 mt-2 max-h-40 overflow-auto rounded-md border p-2 font-mono text-xs whitespace-pre-wrap">
-                              {formatRawRecord(record.raw)}
-                            </pre>
-                          </details>
-                        </td>
-                        <td className="text-muted-foreground px-3 py-3">
+                              <ChevronDown
+                                className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+                                aria-hidden="true"
+                              />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <pre className="bg-muted/50 mt-2 max-h-40 overflow-auto rounded-md border p-2 font-mono text-xs whitespace-pre-wrap">
+                                {formatRawRecord(record.raw)}
+                              </pre>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {record.model ?? t('usageLogsPage.status.notAvailable')}
-                        </td>
-                        <td className="text-muted-foreground max-w-[260px] truncate px-3 py-3 font-mono text-xs">
+                        </TableCell>
+                        <TableCell className="text-muted-foreground max-w-[260px] truncate font-mono text-xs">
                           {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
-                        </td>
-                        <td className="px-3 py-3 text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <span
                             className={cn(
                               'inline-flex rounded-md border px-2 py-1 text-xs font-medium',
@@ -438,8 +438,8 @@ function UsageQueuePanel({
                                 ? t('usageLogsPage.status.success')
                                 : t('usageLogsPage.status.notAvailable')}
                           </span>
-                        </td>
-                        <td className="px-3 py-3 text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           {requestId ? (
                             <Button
                               type="button"
@@ -460,12 +460,12 @@ function UsageQueuePanel({
                               {t('usageLogsPage.status.notAvailable')}
                             </span>
                           )}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
         )}
@@ -616,39 +616,35 @@ function ErrorLogFilesPanel({
           </p>
         ) : logRows.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-sm">
-              <thead className="bg-muted/70 text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium">
-                    {t('usageLogsPage.errorLogs.columns.name')}
-                  </th>
-                  <th className="px-3 py-2 text-left font-medium">
-                    {t('usageLogsPage.errorLogs.columns.modified')}
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium">
+            <Table className="min-w-[680px]">
+              <TableHeader className="bg-muted/70 text-muted-foreground">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t('usageLogsPage.errorLogs.columns.name')}</TableHead>
+                  <TableHead>{t('usageLogsPage.errorLogs.columns.modified')}</TableHead>
+                  <TableHead className="text-right">
                     {t('usageLogsPage.errorLogs.columns.size')}
-                  </th>
-                  <th className="px-3 py-2 text-right font-medium">
+                  </TableHead>
+                  <TableHead className="text-right">
                     {t('usageLogsPage.errorLogs.columns.actions')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {logRows.map((row) => {
                   const downloading = isDownloadingErrorLog && downloadingErrorLogName === row.name
 
                   return (
-                    <tr key={row.name} className="border-t">
-                      <td className="max-w-[340px] truncate px-3 py-3 font-mono text-xs">
+                    <TableRow key={row.name}>
+                      <TableCell className="max-w-[340px] truncate font-mono text-xs">
                         {row.name}
-                      </td>
-                      <td className="text-muted-foreground px-3 py-3">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
                         {formatTimestamp(row.modified) ?? t('usageLogsPage.status.notAvailable')}
-                      </td>
-                      <td className="text-muted-foreground px-3 py-3 text-right">
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right">
                         {formatBytes(row.size) ?? t('usageLogsPage.status.notAvailable')}
-                      </td>
-                      <td className="px-3 py-3 text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <Button
                           type="button"
                           variant="text"
@@ -663,12 +659,12 @@ function ErrorLogFilesPanel({
                           )}
                           {t('usageLogsPage.actions.download')}
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <p className="text-muted-foreground px-3 py-8 text-sm">

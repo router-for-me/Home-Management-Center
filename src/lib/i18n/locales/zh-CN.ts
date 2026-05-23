@@ -154,10 +154,15 @@ export const zhCN = {
           title: '需要创建客户端访问密钥',
           description: '服务端已有模型接入信息，但还没有客户端可用于调用服务端接口的访问密钥。',
         },
+        limited: {
+          title: '服务已连接，部分能力受限',
+          description:
+            '核心数据已加载，但当前运行时没有开放全部观测接口。可继续管理模型、凭证和配置。',
+        },
         degraded: {
           title: '服务已连接，部分状态需要检查',
           description:
-            '核心数据已加载，但存在不可用能力、Debug 模式或未知路由配置。建议先处理下方建议操作。',
+            '核心数据已加载，但存在请求异常、Debug 模式或未知路由配置。建议先处理下方建议操作。',
         },
       },
       header: {
@@ -995,6 +1000,7 @@ export const zhCN = {
       routingStrategies: {
         'round-robin': '轮询',
         'fill-first': '优先填满',
+        unknown: '未知',
       },
       validation: {
         invalidField: '请填写有效值。',

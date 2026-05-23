@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -55,6 +56,10 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import type {
@@ -743,24 +748,22 @@ function ModeSwitch({
   const { t } = useTranslation()
 
   return (
-    <div
-      className="bg-background inline-flex rounded-lg border p-1 shadow-xs"
-      role="tablist"
+    <ToggleGroup
+      type="single"
+      value={mode}
+      onValueChange={(value) => {
+        if (value) onModeChange(value as ConfigMode)
+      }}
+      className="bg-background"
       aria-label={t('configPage.modes.label')}
     >
       {(['structured', 'yaml'] as const).map((nextMode) => (
-        <button
+        <ToggleGroupItem
           key={nextMode}
-          type="button"
-          role="tab"
-          aria-selected={mode === nextMode}
-          className={cn(
-            'inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors',
-            mode === nextMode
-              ? 'border-primary/35 bg-primary/12 text-primary shadow-sm'
-              : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground border-transparent',
-          )}
-          onClick={() => onModeChange(nextMode)}
+          value={nextMode}
+          size="sm"
+          variant="outline"
+          className="gap-1.5"
         >
           {nextMode === 'structured' ? (
             <Settings2 className="size-3.5" aria-hidden="true" />
@@ -768,9 +771,9 @@ function ModeSwitch({
             <Code2 className="size-3.5" aria-hidden="true" />
           )}
           {t(`configPage.modes.${nextMode}`)}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   )
 }
 
@@ -800,10 +803,11 @@ function SectionNavigation({
               )
 
               return (
-                <button
+                <Button
                   key={section.id}
                   type="button"
-                  className="hover:bg-accent flex min-w-0 items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm"
+                  variant="ghost"
+                  className="h-auto min-w-0 justify-between gap-2 px-2 py-2 text-left"
                   onClick={() => scrollToSection(section.id)}
                 >
                   <span className="min-w-0 truncate">
@@ -815,7 +819,7 @@ function SectionNavigation({
                     ) : null}
                     {changed ? <span className="bg-primary size-1.5 rounded-full" /> : null}
                   </span>
-                </button>
+                </Button>
               )
             })}
           </div>
@@ -854,27 +858,12 @@ function BooleanControl({
   const { t } = useTranslation()
 
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
+    <Switch
+      checked={checked}
       disabled={disabled}
-      className={cn(
-        'inline-flex h-8 w-14 shrink-0 items-center rounded-full border px-1 transition-colors disabled:cursor-not-allowed disabled:opacity-60',
-        checked ? 'border-primary/50 bg-primary/75' : 'bg-muted border-border',
-      )}
-      onClick={() => onChange(!checked)}
-    >
-      <span
-        className={cn(
-          'bg-background size-6 rounded-full border shadow-sm transition-transform',
-          checked ? 'border-primary/30 translate-x-5' : 'translate-x-0',
-        )}
-      />
-      <span className="sr-only">
-        {checked ? t('configPage.status.enabled') : t('configPage.status.disabled')}
-      </span>
-    </button>
+      onCheckedChange={onChange}
+      aria-label={checked ? t('configPage.status.enabled') : t('configPage.status.disabled')}
+    />
   )
 }
 
@@ -1051,13 +1040,15 @@ function FieldHelp({ label, description }: { label: string; description: string 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <Button
           type="button"
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-5 items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
+          variant="ghost"
+          size="icon-xs"
+          className="text-muted-foreground hover:text-foreground size-5"
           aria-label={label}
         >
           <Info className="size-3.5" aria-hidden="true" />
-        </button>
+        </Button>
       </TooltipTrigger>
       <TooltipContent side="top" className="max-w-72 text-left leading-5">
         {description}
@@ -1249,12 +1240,11 @@ function ExcludedModelsEditor({
                 key={model.id}
                 className="hover:bg-accent/70 flex cursor-pointer items-start gap-3 border-b px-3 py-2 last:border-b-0"
               >
-                <input
-                  type="checkbox"
+                <Checkbox
                   className="mt-1"
                   checked={checked}
                   disabled={disabled}
-                  onChange={() => toggleModel(model.id)}
+                  onCheckedChange={() => toggleModel(model.id)}
                 />
                 <span className="grid min-w-0 gap-1">
                   <span className="truncate text-sm font-medium">{getModelDisplayName(model)}</span>
@@ -1447,12 +1437,11 @@ function ModelAliasEditor({
                   />
                 </label>
                 <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={Boolean(item.fork)}
                     disabled={disabled}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { fork: event.target.checked } })
+                    onCheckedChange={(checked) =>
+                      updateRow(rowIndex, { item: { fork: checked === true } })
                     }
                   />
                   <span>{t('configPage.json.columns.fork')}</span>
@@ -1559,11 +1548,10 @@ function ModelMappingsEditor({
                   />
                 </label>
                 <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     checked={Boolean(item.regex)}
                     disabled={disabled}
-                    onChange={(event) => updateItem(index, { regex: event.target.checked })}
+                    onCheckedChange={(checked) => updateItem(index, { regex: checked === true })}
                   />
                   <span>{t('configPage.json.columns.regex')}</span>
                 </label>
@@ -1864,62 +1852,69 @@ function ConfigActionBar({
   const dirty = mode === 'structured' ? changeCount > 0 : yamlDirty
 
   return (
-    <div className="bg-background/95 before:bg-background/95 sticky top-[4.75rem] z-20 rounded-lg border p-3 shadow-sm backdrop-blur before:pointer-events-none before:absolute before:inset-x-[-1px] before:-top-3 before:h-3 before:backdrop-blur before:content-['']">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium">
-            <CheckCircle2 className="size-3" aria-hidden="true" />
-            {t('configPage.header.runtime', {
-              mode: t(`runtimeMode.${runtimeMode}`),
-            })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('configPage.header.updatedAt', {
-              time: formatDateTime(fetchedAt),
-            })}
-          </span>
-          <span
-            className={cn(
-              'rounded-md border px-2.5 py-1 text-xs font-medium',
-              dirty
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {mode === 'structured'
-              ? t('configPage.status.visualChangeCount', { count: changeCount })
-              : yamlDirty
-                ? t('configPage.status.fileChanged')
-                : t('configPage.status.clean')}
-          </span>
-          {validationCount > 0 ? (
-            <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-              {t('configPage.validation.summary', { count: validationCount })}
+    <div className="bg-background/95 sticky top-16 z-20 -mx-4 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+      <div className="bg-card rounded-lg border p-3 shadow-sm">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium">
+              <CheckCircle2 className="size-3" aria-hidden="true" />
+              {t('configPage.header.runtime', {
+                mode: t(`runtimeMode.${runtimeMode}`),
+              })}
             </span>
-          ) : null}
-        </div>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('configPage.header.updatedAt', {
+                time: formatDateTime(fetchedAt),
+              })}
+            </span>
+            <span
+              className={cn(
+                'rounded-md border px-2.5 py-1 text-xs font-medium',
+                dirty
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'bg-muted text-muted-foreground',
+              )}
+            >
+              {mode === 'structured'
+                ? t('configPage.status.visualChangeCount', { count: changeCount })
+                : yamlDirty
+                  ? t('configPage.status.fileChanged')
+                  : t('configPage.status.clean')}
+            </span>
+            {validationCount > 0 ? (
+              <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                {t('configPage.validation.summary', { count: validationCount })}
+              </span>
+            ) : null}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-          <Button variant="outline" size="sm" disabled={!dirty} onClick={onOpenChanges}>
-            <FileDiff className="size-4" aria-hidden="true" />
-            {t('configPage.actions.viewChanges')}
-          </Button>
-          <Button variant="outline" size="sm" disabled={isFetching || mutating} onClick={onReload}>
-            {isFetching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {t('configPage.actions.reload')}
-          </Button>
-          <Button size="sm" disabled={saveDisabled} onClick={onSave}>
-            {mutating ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Save className="size-4" aria-hidden="true" />
-            )}
-            {t('configPage.actions.save')}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+            <Button variant="outline" size="sm" disabled={!dirty} onClick={onOpenChanges}>
+              <FileDiff className="size-4" aria-hidden="true" />
+              {t('configPage.actions.viewChanges')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isFetching || mutating}
+              onClick={onReload}
+            >
+              {isFetching ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="size-4" aria-hidden="true" />
+              )}
+              {t('configPage.actions.reload')}
+            </Button>
+            <Button size="sm" disabled={saveDisabled} onClick={onSave}>
+              {mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Save className="size-4" aria-hidden="true" />
+              )}
+              {t('configPage.actions.save')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -1950,19 +1945,28 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
 
       <div className="bg-card overflow-hidden rounded-md border">
         <div className="max-h-[70dvh] overflow-auto">
-          <table className="w-full border-collapse font-mono text-xs">
-            <tbody>
+          <Table className="border-collapse font-mono text-xs">
+            <TableBody>
               {diff.lines.map((line, index) => {
                 if (line.type === 'omitted') {
                   return (
-                    <tr key={`omitted-${index}`} className="bg-muted/50 text-muted-foreground">
-                      <td className="w-12 border-r px-2 py-1 text-right select-none">...</td>
-                      <td className="w-12 border-r px-2 py-1 text-right select-none">...</td>
-                      <td className="w-7 border-r px-2 py-1 text-center select-none">...</td>
-                      <td className="px-2 py-1 italic">
+                    <TableRow
+                      key={`omitted-${index}`}
+                      className="bg-muted/50 text-muted-foreground"
+                    >
+                      <TableCell className="w-12 border-r px-2 py-1 text-right select-none">
+                        ...
+                      </TableCell>
+                      <TableCell className="w-12 border-r px-2 py-1 text-right select-none">
+                        ...
+                      </TableCell>
+                      <TableCell className="w-7 border-r px-2 py-1 text-center select-none">
+                        ...
+                      </TableCell>
+                      <TableCell className="px-2 py-1 italic">
                         {t('configPage.diff.omittedLines', { count: line.skipped })}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 }
 
@@ -1970,10 +1974,9 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
                 const isRemoved = line.type === 'removed'
 
                 return (
-                  <tr
+                  <TableRow
                     key={`${line.type}-${line.oldLineNumber ?? 'new'}-${line.newLineNumber ?? 'old'}-${index}`}
                     className={cn(
-                      'border-b last:border-b-0',
                       isAdded
                         ? 'bg-emerald-500/10 text-emerald-950 dark:text-emerald-50'
                         : isRemoved
@@ -1981,23 +1984,23 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
                           : 'bg-background text-muted-foreground',
                     )}
                   >
-                    <td
+                    <TableCell
                       className={cn(
                         'text-muted-foreground w-12 border-r px-2 py-1 text-right select-none',
                         isRemoved ? 'bg-red-500/10' : null,
                       )}
                     >
                       {line.oldLineNumber ?? ''}
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={cn(
                         'text-muted-foreground w-12 border-r px-2 py-1 text-right select-none',
                         isAdded ? 'bg-emerald-500/10' : null,
                       )}
                     >
                       {line.newLineNumber ?? ''}
-                    </td>
-                    <td
+                    </TableCell>
+                    <TableCell
                       className={cn(
                         'w-7 border-r px-2 py-1 text-center font-semibold select-none',
                         isAdded
@@ -2008,15 +2011,15 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
                       )}
                     >
                       {isAdded ? '+' : isRemoved ? '-' : ' '}
-                    </td>
-                    <td className="min-w-[28rem] px-2 py-1 break-words whitespace-pre-wrap">
+                    </TableCell>
+                    <TableCell className="min-w-[28rem] px-2 py-1 break-words whitespace-pre-wrap">
                       {line.content || ' '}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>
@@ -2073,10 +2076,11 @@ function ChangeDetailSheet({
                 const field = fieldDefinitionByKey[change.key]
 
                 return (
-                  <button
+                  <Button
                     key={change.key}
                     type="button"
-                    className="hover:bg-accent grid gap-2 rounded-md border px-3 py-2 text-left text-sm transition-colors"
+                    variant="ghost"
+                    className="grid h-auto justify-stretch gap-2 rounded-md border px-3 py-2 text-left text-sm"
                     onClick={() => {
                       onOpenChange(false)
                       onJumpToField(change.key)
@@ -2097,7 +2101,7 @@ function ChangeDetailSheet({
                         {formatConfigValue(change.nextValue, t('configPage.status.emptyValue'))}
                       </span>
                     </span>
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -2163,8 +2167,8 @@ function YamlWorkspace({
         </div>
       </div>
 
-      <textarea
-        className="border-input bg-card ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[620px] rounded-lg border p-4 font-mono text-xs leading-5 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+      <Textarea
+        className="bg-card min-h-[620px] rounded-lg p-4 font-mono text-xs leading-5 disabled:opacity-60"
         value={yaml}
         disabled={disabled}
         spellCheck={false}

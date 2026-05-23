@@ -154,10 +154,15 @@ export const zhTW = {
           title: '需要建立用戶端存取金鑰',
           description: '服務端已有模型接入資訊，但還沒有用戶端可用於呼叫服務端介面的存取金鑰。',
         },
+        limited: {
+          title: '服務已連線，部分能力受限',
+          description:
+            '核心資料已載入，但目前執行環境沒有開放全部觀測介面。可繼續管理模型、憑證和設定。',
+        },
         degraded: {
           title: '服務已連線，部分狀態需要檢查',
           description:
-            '核心資料已載入，但存在不可用能力、Debug 模式或未知路由設定。建議先處理下方建議操作。',
+            '核心資料已載入，但存在請求異常、Debug 模式或未知路由設定。建議先處理下方建議操作。',
         },
       },
       header: {
@@ -994,6 +999,7 @@ export const zhTW = {
       routingStrategies: {
         'round-robin': '輪詢',
         'fill-first': '優先填滿',
+        unknown: '未知',
       },
       validation: {
         invalidField: '請填寫有效值。',

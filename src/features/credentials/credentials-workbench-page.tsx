@@ -42,6 +42,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
 import type {
   CredentialMetadataInput,
@@ -273,93 +283,84 @@ function FilterPanel({
         <p className="text-muted-foreground text-xs font-medium uppercase">
           {t('credentialsPage.filters.status')}
         </p>
-        <div className="mt-3 grid gap-1">
+        <ToggleGroup
+          type="single"
+          value={statusFilter}
+          className="mt-3 grid gap-1 border-0 bg-transparent p-0 shadow-none"
+          onValueChange={(value) => {
+            if (value) onStatusFilterChange(value as CredentialStatusFilter)
+          }}
+        >
           {statusFilters.map((filter) => (
-            <button
+            <ToggleGroupItem
               key={filter}
-              type="button"
-              className={cn(
-                'rounded-md border px-3 py-2 text-left text-sm transition-colors',
-                statusFilter === filter
-                  ? 'border-primary/30 bg-primary/10 text-primary'
-                  : 'hover:border-border hover:bg-accent border-transparent',
-              )}
-              onClick={() => onStatusFilterChange(filter)}
+              value={filter}
+              className="data-[state=on]:border-primary/30 data-[state=off]:text-foreground h-auto justify-start border px-3 py-2 data-[state=off]:border-transparent"
             >
               {t(`credentialsPage.statusFilters.${filter}`)}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
 
       <div className="mt-6">
         <p className="text-muted-foreground text-xs font-medium uppercase">
           {t('credentialsPage.filters.source')}
         </p>
-        <div className="mt-3 grid gap-1">
-          <button
-            type="button"
-            className={cn(
-              'rounded-md border px-3 py-2 text-left text-sm transition-colors',
-              sourceFilter === 'all'
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'hover:border-border hover:bg-accent border-transparent',
-            )}
-            onClick={() => onSourceFilterChange('all')}
+        <ToggleGroup
+          type="single"
+          value={sourceFilter}
+          className="mt-3 grid gap-1 border-0 bg-transparent p-0 shadow-none"
+          onValueChange={(value) => {
+            if (value) onSourceFilterChange(value)
+          }}
+        >
+          <ToggleGroupItem
+            value="all"
+            className="data-[state=on]:border-primary/30 data-[state=off]:text-foreground h-auto justify-start border px-3 py-2 data-[state=off]:border-transparent"
           >
             {t('credentialsPage.filters.allSources')}
-          </button>
+          </ToggleGroupItem>
           {sources.map((source) => (
-            <button
+            <ToggleGroupItem
               key={source}
-              type="button"
-              className={cn(
-                'rounded-md border px-3 py-2 text-left text-sm transition-colors',
-                sourceFilter === source
-                  ? 'border-primary/30 bg-primary/10 text-primary'
-                  : 'hover:border-border hover:bg-accent border-transparent',
-              )}
-              onClick={() => onSourceFilterChange(source)}
+              value={source}
+              className="data-[state=on]:border-primary/30 data-[state=off]:text-foreground h-auto justify-start border px-3 py-2 data-[state=off]:border-transparent"
             >
               {getCredentialSourceLabel(t, source)}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
 
       <div className="mt-6">
         <p className="text-muted-foreground text-xs font-medium uppercase">
           {t('credentialsPage.filters.provider')}
         </p>
-        <div className="mt-3 grid gap-1">
-          <button
-            type="button"
-            className={cn(
-              'rounded-md border px-3 py-2 text-left text-sm transition-colors',
-              providerFilter === 'all'
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'hover:border-border hover:bg-accent border-transparent',
-            )}
-            onClick={() => onProviderFilterChange('all')}
+        <ToggleGroup
+          type="single"
+          value={providerFilter}
+          className="mt-3 grid gap-1 border-0 bg-transparent p-0 shadow-none"
+          onValueChange={(value) => {
+            if (value) onProviderFilterChange(value)
+          }}
+        >
+          <ToggleGroupItem
+            value="all"
+            className="data-[state=on]:border-primary/30 data-[state=off]:text-foreground h-auto justify-start border px-3 py-2 data-[state=off]:border-transparent"
           >
             {t('credentialsPage.filters.allProviders')}
-          </button>
+          </ToggleGroupItem>
           {providers.map((provider) => (
-            <button
+            <ToggleGroupItem
               key={provider}
-              type="button"
-              className={cn(
-                'rounded-md border px-3 py-2 text-left text-sm transition-colors',
-                providerFilter === provider
-                  ? 'border-primary/30 bg-primary/10 text-primary'
-                  : 'hover:border-border hover:bg-accent border-transparent',
-              )}
-              onClick={() => onProviderFilterChange(provider)}
+              value={provider}
+              className="data-[state=on]:border-primary/30 data-[state=off]:text-foreground h-auto justify-start border px-3 py-2 data-[state=off]:border-transparent"
             >
               {getCredentialProviderLabel(t, provider)}
-            </button>
+            </ToggleGroupItem>
           ))}
-        </div>
+        </ToggleGroup>
       </div>
     </aside>
   )
@@ -834,10 +835,11 @@ function JsonUploadPanel({
 
   return (
     <div className="grid gap-3">
-      <button
+      <Button
         type="button"
+        variant="ghost"
         className={cn(
-          'focus-visible:border-ring focus-visible:ring-ring/50 rounded-lg border border-dashed p-5 text-left transition-colors outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50',
+          'h-auto justify-start rounded-lg border border-dashed p-5 text-left',
           dragActive
             ? 'border-primary/60 bg-primary/5'
             : 'hover:border-primary/40 hover:bg-primary/5',
@@ -874,7 +876,7 @@ function JsonUploadPanel({
             </span>
           </span>
         </div>
-      </button>
+      </Button>
       <input
         ref={fileInputRef}
         type="file"
@@ -934,23 +936,24 @@ function CreateCredentialSheet({
         </SheetHeader>
 
         <div className="grid gap-5 px-5 pb-5">
-          <div className="bg-muted grid grid-cols-3 gap-1 rounded-lg p-1">
+          <ToggleGroup
+            type="single"
+            value={mode}
+            className="grid grid-cols-3"
+            onValueChange={(value) => {
+              if (value) onModeChange(value as CreateCredentialMode)
+            }}
+          >
             {modes.map((item) => (
-              <button
+              <ToggleGroupItem
                 key={item}
-                type="button"
-                className={cn(
-                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  mode === item
-                    ? 'bg-background text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                onClick={() => onModeChange(item)}
+                value={item}
+                className="data-[state=on]:bg-background data-[state=on]:text-foreground"
               >
                 {t(`credentialsPage.create.modes.${item}`)}
-              </button>
+              </ToggleGroupItem>
             ))}
-          </div>
+          </ToggleGroup>
 
           {mode === 'oauth' ? (
             <OAuthStartPanel
@@ -1013,7 +1016,7 @@ function CredentialList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1040px] table-fixed text-sm">
+        <Table className="min-w-[1040px] table-fixed">
           <colgroup>
             <col className="w-[23%]" />
             <col className="w-[12%]" />
@@ -1023,30 +1026,18 @@ function CredentialList({
             <col className="w-[13%]" />
             <col className="w-[22%]" />
           </colgroup>
-          <thead className="bg-muted/70 text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('credentialsPage.list.credential')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('credentialsPage.list.provider')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('credentialsPage.list.source')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">{t('credentialsPage.list.type')}</th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('credentialsPage.list.status')}
-              </th>
-              <th className="px-3 py-2 text-left font-medium">
-                {t('credentialsPage.list.updatedAt')}
-              </th>
-              <th className="px-3 py-2 text-right font-medium">
-                {t('credentialsPage.list.actions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+          <TableHeader className="bg-muted/70 text-muted-foreground">
+            <TableRow className="hover:bg-transparent">
+              <TableHead>{t('credentialsPage.list.credential')}</TableHead>
+              <TableHead>{t('credentialsPage.list.provider')}</TableHead>
+              <TableHead>{t('credentialsPage.list.source')}</TableHead>
+              <TableHead>{t('credentialsPage.list.type')}</TableHead>
+              <TableHead>{t('credentialsPage.list.status')}</TableHead>
+              <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
+              <TableHead className="text-right">{t('credentialsPage.list.actions')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {resources.map((resource) => {
               const statusTone = getStatusTone(resource)
               const displayName = getCredentialDisplayName(resource)
@@ -1057,14 +1048,14 @@ function CredentialList({
                 t('credentialsPage.status.notAvailable')
 
               return (
-                <tr
+                <TableRow
                   key={resource.id}
                   className={cn(
-                    'hover:bg-accent/40 border-t transition-colors',
+                    'hover:bg-accent/40 transition-colors',
                     resource.id === selectedResourceId ? 'bg-primary/8' : null,
                   )}
                 >
-                  <td className="px-3 py-3">
+                  <TableCell>
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
                         <FileJson className="size-4" aria-hidden="true" />
@@ -1076,21 +1067,21 @@ function CredentialList({
                         </p>
                       </div>
                     </div>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <p className="truncate">{providerLabel}</p>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <span className="inline-flex rounded-md border px-2 py-1 text-xs">
                       {sourceLabel}
                     </span>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <span className="text-muted-foreground truncate font-mono text-xs">
                       {resource.type ?? t('credentialsPage.status.notAvailable')}
                     </span>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <span
                       className={cn(
                         'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
@@ -1114,11 +1105,11 @@ function CredentialList({
                               defaultValue: resource.status,
                             })}
                     </span>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
-                  </td>
-                  <td className="px-3 py-3">
+                  </TableCell>
+                  <TableCell>
                     <div className="flex justify-end gap-1.5">
                       <Button
                         type="button"
@@ -1167,12 +1158,12 @@ function CredentialList({
                         {t('credentialsPage.actions.delete')}
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   )
@@ -1296,8 +1287,8 @@ function CredentialDetailContent({
           </label>
           <label className="grid gap-2 text-sm font-medium">
             <span>{t('credentialsPage.form.note')}</span>
-            <textarea
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-24 rounded-md border px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            <Textarea
+              className="min-h-24"
               value={form.note}
               disabled={mutating}
               onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}

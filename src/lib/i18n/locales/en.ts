@@ -158,10 +158,15 @@ export const en = {
           description:
             'The server has model access information, but no client key is available for callers to use the server API.',
         },
+        limited: {
+          title: 'Service is connected with limited capabilities',
+          description:
+            'Core data loaded, but this runtime does not expose every observability route. Model, credential, and config management remain available.',
+        },
         degraded: {
           title: 'Service is connected with items to review',
           description:
-            'Core data loaded, but some capabilities, Debug mode, or routing configuration need review. Start with the suggested actions below.',
+            'Core data loaded, but request failures, Debug mode, or routing configuration need review. Start with the suggested actions below.',
         },
       },
       header: {
@@ -1024,6 +1029,7 @@ export const en = {
       routingStrategies: {
         'round-robin': 'Round robin',
         'fill-first': 'Fill first',
+        unknown: 'Unknown',
       },
       validation: {
         invalidField: 'Enter a valid value.',

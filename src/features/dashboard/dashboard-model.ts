@@ -5,10 +5,10 @@ type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' |
 
 type DashboardCapabilityId = 'nodes' | 'usage' | 'usageQueue' | 'logs' | 'requestErrorLogs'
 
-export type DashboardTone = 'neutral' | 'positive' | 'warning'
+export type DashboardTone = 'neutral' | 'positive' | 'info' | 'warning'
 
 export type DashboardHealthSummary = {
-  id: 'ready' | 'needsModelService' | 'needsCredential' | 'needsClientKey' | 'degraded'
+  id: 'ready' | 'needsModelService' | 'needsCredential' | 'needsClientKey' | 'limited' | 'degraded'
   tone: DashboardTone
 }
 
@@ -89,7 +89,12 @@ function readRoutingStrategy(config: Record<string, unknown>): string {
   }
 
   const strategy = (routing as Record<string, unknown>).strategy
-  return typeof strategy === 'string' && strategy.trim() ? strategy : 'unknown'
+  if (typeof strategy !== 'string') return 'unknown'
+
+  const normalizedStrategy = strategy.trim()
+  return normalizedStrategy && normalizedStrategy.toLowerCase() !== 'unknown'
+    ? normalizedStrategy
+    : 'unknown'
 }
 
 function createHealthSummary({
@@ -97,6 +102,7 @@ function createHealthSummary({
   activeCredentials,
   clientKeys,
   issueCount,
+  unavailableCapabilityCount,
   debugEnabled,
   routingStrategy,
 }: {
@@ -104,6 +110,7 @@ function createHealthSummary({
   activeCredentials: number
   clientKeys: number
   issueCount: number
+  unavailableCapabilityCount: number
   debugEnabled: boolean
   routingStrategy: string
 }): DashboardHealthSummary {
@@ -121,6 +128,10 @@ function createHealthSummary({
 
   if (issueCount > 0 || debugEnabled || routingStrategy === 'unknown') {
     return { id: 'degraded', tone: 'warning' }
+  }
+
+  if (unavailableCapabilityCount > 0) {
+    return { id: 'limited', tone: 'info' }
   }
 
   return { id: 'ready', tone: 'positive' }
@@ -251,7 +262,8 @@ export function createDashboardOverviewViewModel(
     activeProviders,
     activeCredentials,
     clientKeys: snapshot.clientKeys.length,
-    issueCount: dataStatusItems.length,
+    issueCount: snapshot.issues.length,
+    unavailableCapabilityCount: unavailableCapabilityStatuses.length,
     debugEnabled,
     routingStrategy,
   })

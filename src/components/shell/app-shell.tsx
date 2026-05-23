@@ -68,11 +68,12 @@ function ConnectionStatusIndicator() {
 
   if (collapsed) {
     return (
-      <button
+      <Button
         type="button"
+        variant="ghost"
         aria-label={buttonLabel}
         className={cn(
-          'mx-auto flex size-9 items-center justify-center rounded-md border transition-colors',
+          'mx-auto size-9 rounded-md border p-0',
           connected
             ? 'border-sidebar-primary/40 bg-sidebar-primary/12 text-sidebar-primary hover:bg-sidebar-primary/18'
             : errored
@@ -91,7 +92,7 @@ function ConnectionStatusIndicator() {
         ) : (
           <Unplug className="size-4" aria-hidden="true" />
         )}
-      </button>
+      </Button>
     )
   }
 
@@ -99,10 +100,11 @@ function ConnectionStatusIndicator() {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="ghost"
             aria-label={buttonLabel}
-            className="hover:bg-sidebar-accent/70 focus-visible:ring-sidebar-ring group/status grid w-full min-w-0 gap-1.5 rounded-md px-2.5 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            className="group/status hover:bg-sidebar-accent/70 focus-visible:ring-sidebar-ring grid h-auto w-full min-w-0 justify-stretch gap-1.5 rounded-md px-2.5 py-2 text-left"
             onClick={openConnectionDialog}
           >
             <span className="flex min-w-0 items-center gap-2">
@@ -130,7 +132,7 @@ function ConnectionStatusIndicator() {
                 {endpoint}
               </span>
             </span>
-          </button>
+          </Button>
         </TooltipTrigger>
         <TooltipContent
           side="right"
@@ -146,11 +148,12 @@ function ConnectionStatusIndicator() {
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       aria-label={buttonLabel}
       className={cn(
-        'group/status grid w-full gap-2 rounded-md border px-3 py-2.5 text-left transition-colors',
+        'group/status grid h-auto w-full justify-stretch gap-2 rounded-md border px-3 py-2.5 text-left',
         errored
           ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/14'
           : 'border-sidebar-border bg-sidebar-accent/45 hover:bg-sidebar-accent',
@@ -183,7 +186,7 @@ function ConnectionStatusIndicator() {
       <span className="text-sidebar-muted-foreground text-[11px] leading-snug">
         {statusDescription}
       </span>
-    </button>
+    </Button>
   )
 }
 
