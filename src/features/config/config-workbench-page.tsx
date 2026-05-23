@@ -2047,7 +2047,7 @@ function ChangeDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full max-w-full overflow-hidden sm:max-w-xl">
         <SheetHeader className="border-b">
           <SheetTitle>{t('configPage.diff.title')}</SheetTitle>
           <SheetDescription>
@@ -2080,7 +2080,7 @@ function ChangeDetailSheet({
                     key={change.key}
                     type="button"
                     variant="ghost"
-                    className="grid h-auto justify-stretch gap-2 rounded-md border px-3 py-2 text-left text-sm"
+                    className="grid h-auto w-full min-w-0 justify-stretch gap-2 rounded-md border px-3 py-2 text-left text-sm whitespace-normal"
                     onClick={() => {
                       onOpenChange(false)
                       onJumpToField(change.key)
@@ -2094,7 +2094,7 @@ function ChangeDetailSheet({
                         {t(`configPage.sections.${field.sectionId}.shortTitle`)}
                       </span>
                     </span>
-                    <span className="text-muted-foreground min-w-0 font-mono text-xs break-words">
+                    <span className="text-muted-foreground min-w-0 font-mono text-xs break-all whitespace-normal">
                       {formatConfigValue(change.previousValue, t('configPage.status.emptyValue'))}
                       {' -> '}
                       <span className="text-foreground">

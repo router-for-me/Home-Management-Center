@@ -592,8 +592,8 @@ function ErrorLogFilesPanel({
             {t('usageLogsPage.errorLogs.description')}
           </p>
         </div>
-        <form className="min-w-0" onSubmit={handleSearchLogs}>
-          <div className="relative min-w-0 sm:w-96">
+        <form className="min-w-0 lg:w-72 xl:w-96" onSubmit={handleSearchLogs}>
+          <div className="relative min-w-0">
             <Search
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
               aria-hidden="true"

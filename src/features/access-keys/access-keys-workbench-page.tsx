@@ -430,7 +430,7 @@ function AccessKeyDetailContent({
           ) : null}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="ghost" disabled={mutating} onClick={onCancel}>
+            <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
               {t('common.cancel')}
             </Button>
             <Button type="submit" disabled={mutating}>
@@ -577,7 +577,7 @@ function ReplaceAccessKeysContent({
         ) : null}
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" disabled={mutating} onClick={onCancel}>
+          <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
             {t('common.cancel')}
           </Button>
           <Button type="submit" variant="warning" disabled={mutating}>

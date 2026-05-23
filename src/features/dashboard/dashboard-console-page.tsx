@@ -457,12 +457,7 @@ export function DashboardConsolePage() {
         ) : null}
       </div>
 
-      <div
-        className={cn(
-          'grid gap-4 sm:grid-cols-2',
-          viewModel.metrics.length >= 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3',
-        )}
-      >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,14rem),1fr))] gap-4">
         {viewModel.metrics.map((metric) => (
           <MetricCard key={metric.id} metric={metric} />
         ))}
