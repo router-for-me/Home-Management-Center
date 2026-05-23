@@ -4,6 +4,7 @@ import {
   KeyRound,
   type LucideIcon,
   Network,
+  ShieldCheck,
   SlidersHorizontal,
 } from 'lucide-react'
 
@@ -12,6 +13,7 @@ type NavigationGroupId = 'operate' | 'gateway' | 'observe' | 'control'
 type NavigationRoute =
   | '/dashboard'
   | '/providers'
+  | '/credentials'
   | '/access-keys'
   | '/config'
   | '/usage-logs'
@@ -51,6 +53,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.providers',
         metaKey: 'navigationMeta.providers',
         icon: Network,
+      },
+      {
+        to: '/credentials',
+        labelKey: 'navigation.credentials',
+        metaKey: 'navigationMeta.credentials',
+        icon: ShieldCheck,
       },
       {
         to: '/access-keys',
