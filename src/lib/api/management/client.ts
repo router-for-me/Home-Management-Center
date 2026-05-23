@@ -3,7 +3,59 @@ import axios, { type AxiosError, type AxiosInstance } from 'axios'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 const MANAGEMENT_PATH = '/v0/management'
-const DEFAULT_MANAGEMENT_BASE_URL = `http://localhost:8327${MANAGEMENT_PATH}`
+const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
+const DEFAULT_MANAGEMENT_BASE_URL = `${getCurrentHttpOrigin() ?? DEFAULT_MANAGEMENT_ORIGIN}${MANAGEMENT_PATH}`
+
+function getCurrentHttpOrigin() {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') {
+    return null
+  }
+
+  return window.location.origin
+}
+
+function isLoopbackHost(hostname: string) {
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '[::1]'
+  )
+}
+
+function parseManagementBaseUrl(rawBaseUrl: string) {
+  if (rawBaseUrl.startsWith('/')) {
+    return new URL(rawBaseUrl, getCurrentHttpOrigin() ?? DEFAULT_MANAGEMENT_ORIGIN)
+  }
+
+  const withProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(rawBaseUrl)
+    ? rawBaseUrl
+    : `http://${rawBaseUrl}`
+
+  return new URL(withProtocol)
+}
+
+function shouldUseSameOriginProxy(parsed: URL) {
+  const currentOrigin = getCurrentHttpOrigin()
+
+  if (!currentOrigin) {
+    return false
+  }
+
+  const currentUrl = new URL(currentOrigin)
+
+  return (
+    parsed.origin !== currentUrl.origin &&
+    parsed.protocol === 'http:' &&
+    parsed.port === '8327' &&
+    isLoopbackHost(parsed.hostname) &&
+    isLoopbackHost(currentUrl.hostname)
+  )
+}
 
 export function normalizeManagementBaseUrl(rawBaseUrl: string) {
   const trimmed = rawBaseUrl.trim()
@@ -12,8 +64,12 @@ export function normalizeManagementBaseUrl(rawBaseUrl: string) {
     return DEFAULT_MANAGEMENT_BASE_URL
   }
 
-  const withProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`
-  const parsed = new URL(withProtocol)
+  const parsed = parseManagementBaseUrl(trimmed)
+
+  if (shouldUseSameOriginProxy(parsed)) {
+    return DEFAULT_MANAGEMENT_BASE_URL
+  }
+
   const managementPathIndex = parsed.pathname.indexOf(MANAGEMENT_PATH)
 
   if (managementPathIndex >= 0) {
