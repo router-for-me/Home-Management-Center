@@ -788,8 +788,8 @@ function SectionNavigation({
 
   return (
     <>
-      <aside className="bg-card hidden min-w-0 rounded-lg border p-3 shadow-sm xl:block">
-        <div className="sticky top-[9.75rem] max-h-[calc(100dvh-10.75rem)] overflow-y-auto">
+      <aside className="bg-card sticky top-[10.25rem] hidden max-h-[calc(100dvh-11.25rem)] min-w-0 self-start overflow-y-auto rounded-lg border p-3 shadow-sm xl:block">
+        <div>
           <p className="text-muted-foreground px-2 pb-2 text-xs font-medium uppercase">
             {t('configPage.outline.title')}
           </p>
@@ -826,7 +826,7 @@ function SectionNavigation({
         </div>
       </aside>
 
-      <div className="bg-background/95 sticky top-[9.75rem] z-10 -mx-1 overflow-x-auto border-y px-1 py-2 backdrop-blur xl:hidden">
+      <div className="bg-background/95 sticky top-[10.25rem] z-10 -mx-1 overflow-x-auto border-y px-1 py-2 backdrop-blur xl:hidden">
         <div className="flex min-w-max gap-2">
           {sectionDefinitions.map((section) => (
             <Button
