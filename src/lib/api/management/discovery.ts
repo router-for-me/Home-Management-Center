@@ -12,10 +12,10 @@ function getCandidateBaseUrls() {
   const candidates = [
     envBaseUrl,
     typeof window === 'undefined' ? null : window.location.origin,
-    'http://127.0.0.1:8317',
-    'http://localhost:8317',
     'http://127.0.0.1:8327',
     'http://localhost:8327',
+    'http://127.0.0.1:8317',
+    'http://localhost:8317',
     'http://127.0.0.1:8137',
     'http://localhost:8137',
   ].filter((candidate): candidate is string => Boolean(candidate))

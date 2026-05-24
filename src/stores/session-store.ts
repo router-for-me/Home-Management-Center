@@ -98,7 +98,7 @@ export const useSessionStore = create<SessionState>((set) => ({
         detectedAt: new Date().toISOString(),
       }
 
-      if (state.status === 'connected' || state.status === 'checking') {
+      if (state.managementKey || state.status === 'connected' || state.status === 'checking') {
         return detectedState
       }
 

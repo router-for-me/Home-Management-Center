@@ -51,43 +51,24 @@ export async function bootstrapManagementSession() {
     return null
   }
 
-  const discoveredRuntime = await detectLocalManagementRuntime()
   const normalizedBaseUrl = normalizeManagementBaseUrl(baseUrl)
-  const candidates: ConnectManagementSessionInput[] = []
 
-  if (discoveredRuntime) {
-    useSessionStore.getState().setDetectedRuntime(discoveredRuntime.baseUrl)
-
-    if (managementKey) {
-      candidates.push({
-        baseUrl: discoveredRuntime.baseUrl,
+  if (managementKey) {
+    try {
+      return await connectManagementSession({
+        baseUrl: normalizedBaseUrl,
         managementKey,
         rememberConnection,
       })
-    }
-  }
-
-  if (!managementKey) {
-    return null
-  }
-
-  if (
-    !discoveredRuntime ||
-    normalizeManagementBaseUrl(discoveredRuntime.baseUrl) !== normalizedBaseUrl
-  ) {
-    candidates.push({
-      baseUrl: normalizedBaseUrl,
-      managementKey,
-      rememberConnection,
-    })
-  }
-
-  for (const candidate of candidates) {
-    try {
-      return await connectManagementSession(candidate)
     } catch {
       // Keep boot non-blocking; the connection dialog owns the visible error.
     }
+  }
+
+  const discoveredRuntime = await detectLocalManagementRuntime()
+
+  if (discoveredRuntime) {
+    useSessionStore.getState().setDetectedRuntime(discoveredRuntime.baseUrl)
   }
 
   return null
