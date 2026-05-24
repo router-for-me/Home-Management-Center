@@ -36,6 +36,11 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
 
   const connected = status === 'connected'
   const checking = status === 'checking'
+  const hasConnectionChanges =
+    draftBaseUrl.trim() !== baseUrl ||
+    draftManagementKey.trim() !== managementKey ||
+    draftRememberConnection !== rememberConnection
+  const submitDisabled = checking || (connected && !hasConnectionChanges)
   const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
   const detectedEndpointLabel =
     detectedSource === 'same-origin'
@@ -184,9 +189,13 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
               {t('connectionDialog.cancel')}
             </Button>
-            <Button type="submit" disabled={checking}>
+            <Button type="submit" disabled={submitDisabled}>
               {checking ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-              {checking ? t('connectionDialog.connecting') : t('connectionDialog.connect')}
+              {checking
+                ? t('connectionDialog.connecting')
+                : connected
+                  ? t('connectionDialog.update')
+                  : t('connectionDialog.connect')}
             </Button>
           </div>
         </div>

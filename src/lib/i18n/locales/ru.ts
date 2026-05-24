@@ -61,8 +61,8 @@ export const ru = {
         disconnected: 'Нет подключения',
         error: 'Сбой подключения',
         checking: 'Проверка…',
-        hint: 'Используйте подсказку на странице для endpoint и management key',
-        errorHint: 'Проверьте management endpoint и management key',
+        hint: 'Настройте endpoint и management key',
+        errorHint: 'Проверьте endpoint и management key',
         runtime: 'Режим',
         endpoint: 'Endpoint',
         connectedAction: 'Настроить подключение {{mode}}',
@@ -117,6 +117,7 @@ export const ru = {
       rememberHint:
         'Сохраняет endpoint и key в этом браузере. Оставьте выключенным, чтобы хранить их только в сессии этой вкладки.',
       connect: 'Подключить',
+      update: 'Обновить подключение',
       connecting: 'Подключение',
       disconnect: 'Отключить',
       connectedAs: 'Подключено к {{mode}}.',

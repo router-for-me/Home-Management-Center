@@ -61,8 +61,8 @@ export const en = {
         disconnected: 'Not connected',
         error: 'Connection failed',
         checking: 'Checking…',
-        hint: 'Use the page prompt to configure the endpoint and management key',
-        errorHint: 'Check the management endpoint and management key',
+        hint: 'Configure endpoint and management key',
+        errorHint: 'Check endpoint and management key',
         runtime: 'Mode',
         endpoint: 'Endpoint',
         connectedAction: 'Manage {{mode}} connection',
@@ -117,6 +117,7 @@ export const en = {
       rememberHint:
         'Keeps the endpoint and key in this browser. Leave unchecked to keep them only for this tab session.',
       connect: 'Connect',
+      update: 'Update connection',
       connecting: 'Connecting',
       disconnect: 'Disconnect',
       connectedAs: 'Connected to {{mode}}.',

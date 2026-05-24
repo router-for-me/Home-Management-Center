@@ -123,11 +123,7 @@ function ConnectionStatusIndicator() {
                 aria-hidden="true"
               />
             </span>
-            <span className="flex min-w-0 items-center gap-1.5 pl-4">
-              <span
-                className="bg-sidebar-border h-3 w-px shrink-0 rounded-full"
-                aria-hidden="true"
-              />
+            <span className="flex min-w-0">
               <span className="text-sidebar-muted-foreground min-w-0 truncate font-mono text-[10.5px] leading-4">
                 {endpoint}
               </span>
@@ -153,7 +149,7 @@ function ConnectionStatusIndicator() {
       variant="ghost"
       aria-label={buttonLabel}
       className={cn(
-        'group/status grid h-auto w-full justify-stretch gap-2 rounded-md border px-3 py-2.5 text-left',
+        'group/status grid h-auto w-full min-w-0 justify-stretch gap-2 overflow-hidden rounded-md border px-3 py-2.5 text-left',
         errored
           ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/14'
           : 'border-sidebar-border bg-sidebar-accent/45 hover:bg-sidebar-accent',
@@ -183,7 +179,7 @@ function ConnectionStatusIndicator() {
           aria-hidden="true"
         />
       </span>
-      <span className="text-sidebar-muted-foreground text-[11px] leading-snug">
+      <span className="text-sidebar-muted-foreground min-w-0 truncate text-[11px] leading-snug">
         {statusDescription}
       </span>
     </Button>
