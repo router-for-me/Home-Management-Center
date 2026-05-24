@@ -231,6 +231,12 @@ function DashboardDisconnectedState() {
   const { t } = useTranslation()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
   const detectedBaseUrl = useSessionStore((state) => state.detectedBaseUrl)
+  const detectedSource = useSessionStore((state) => state.detectedSource)
+  const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
+  const detectedEndpointLabel =
+    detectedSource === 'same-origin'
+      ? 'dashboard.disconnected.detectedProxyEndpoint'
+      : 'dashboard.disconnected.detectedRuntime'
 
   return (
     <section className="mx-auto grid w-full max-w-5xl gap-4">
@@ -249,8 +255,8 @@ function DashboardDisconnectedState() {
               </p>
               {detectedBaseUrl ? (
                 <p className="text-primary mt-3 max-w-2xl text-sm leading-6">
-                  {t('dashboard.disconnected.detectedRuntime', {
-                    endpoint: detectedBaseUrl,
+                  {t(detectedEndpointLabel, {
+                    endpoint: detectedEndpoint,
                   })}
                 </p>
               ) : null}

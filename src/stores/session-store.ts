@@ -22,11 +22,15 @@ type SessionState = {
   managementKey: string
   rememberConnection: boolean
   detectedBaseUrl: string | null
+  detectedSource: 'runtime' | 'same-origin' | null
   detectedAt: string | null
   status: ConnectionStatus
   error: ManagementApiError | null
   connectedAt: string | null
-  setDetectedRuntime: (baseUrl: string) => void
+  setDetectedRuntime: (
+    baseUrl: string,
+    source?: NonNullable<SessionState['detectedSource']>,
+  ) => void
   setChecking: (session: StoredSession) => void
   setConnected: (session: StoredSession) => void
   setError: (error: ManagementApiError) => void
@@ -85,20 +89,27 @@ export const useSessionStore = create<SessionState>((set) => ({
   managementKey: initialSession?.managementKey ?? '',
   rememberConnection: initialSession?.rememberConnection ?? false,
   detectedBaseUrl: null,
+  detectedSource: null,
   detectedAt: null,
   status: 'disconnected',
   error: null,
   connectedAt: null,
-  setDetectedRuntime: (baseUrl) => {
+  setDetectedRuntime: (baseUrl, source = 'runtime') => {
     const normalizedBaseUrl = normalizeManagementBaseUrl(baseUrl)
 
     set((state) => {
       const detectedState = {
         detectedBaseUrl: normalizedBaseUrl,
+        detectedSource: source,
         detectedAt: new Date().toISOString(),
       }
 
-      if (state.managementKey || state.status === 'connected' || state.status === 'checking') {
+      if (
+        source !== 'runtime' ||
+        state.managementKey ||
+        state.status === 'connected' ||
+        state.status === 'checking'
+      ) {
         return detectedState
       }
 

@@ -68,7 +68,9 @@ export async function bootstrapManagementSession() {
   const discoveredRuntime = await detectLocalManagementRuntime()
 
   if (discoveredRuntime) {
-    useSessionStore.getState().setDetectedRuntime(discoveredRuntime.baseUrl)
+    useSessionStore
+      .getState()
+      .setDetectedRuntime(discoveredRuntime.baseUrl, discoveredRuntime.source)
   }
 
   return null

@@ -24,6 +24,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
   const managementKey = useSessionStore((state) => state.managementKey)
   const rememberConnection = useSessionStore((state) => state.rememberConnection)
   const detectedBaseUrl = useSessionStore((state) => state.detectedBaseUrl)
+  const detectedSource = useSessionStore((state) => state.detectedSource)
   const status = useSessionStore((state) => state.status)
   const error = useSessionStore((state) => state.error)
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
@@ -35,6 +36,11 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
 
   const connected = status === 'connected'
   const checking = status === 'checking'
+  const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
+  const detectedEndpointLabel =
+    detectedSource === 'same-origin'
+      ? 'connectionDialog.detectedProxyEndpoint'
+      : 'connectionDialog.detectedRuntime'
 
   useEffect(() => {
     if (!open) return
@@ -117,8 +123,8 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
             </span>
             {detectedBaseUrl ? (
               <span className="text-primary text-xs leading-5">
-                {t('connectionDialog.detectedRuntime', {
-                  endpoint: detectedBaseUrl,
+                {t(detectedEndpointLabel, {
+                  endpoint: detectedEndpoint,
                 })}
               </span>
             ) : null}

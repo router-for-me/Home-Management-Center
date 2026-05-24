@@ -109,7 +109,8 @@ export const ru = {
       baseUrl: 'Management endpoint',
       baseUrlHint:
         'Можно указать origin сервиса или endpoint /v0/management. Консоль нормализует адрес автоматически.',
-      detectedRuntime: 'Локальный runtime обнаружен: {{endpoint}}',
+      detectedRuntime: 'Доступный management endpoint обнаружен: {{endpoint}}',
+      detectedProxyEndpoint: 'Обнаружен same-origin proxy endpoint: {{endpoint}}',
       managementKey: 'Management key',
       managementKeyPlaceholder: 'Вставьте management key',
       remember: 'Запомнить подключение',
@@ -129,7 +130,9 @@ export const ru = {
         description:
           'Подключите Home Center Management API, чтобы увидеть состояние сервера, модельные сервисы, учетные данные аккаунтов, клиентские ключи и узлы.',
         detectedRuntime:
-          'Локальный Management API найден. Введите management key, чтобы завершить подключение: {{endpoint}}',
+          'Доступный Management API найден. Введите management key, чтобы завершить подключение: {{endpoint}}',
+        detectedProxyEndpoint:
+          'Same-origin proxy endpoint найден. Введите management key, чтобы завершить подключение: {{endpoint}}',
         action: 'Подключить runtime',
       },
       error: {

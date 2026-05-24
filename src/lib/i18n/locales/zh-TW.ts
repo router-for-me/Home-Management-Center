@@ -107,7 +107,8 @@ export const zhTW = {
       close: '關閉連線視窗',
       baseUrl: '管理端位址',
       baseUrlHint: '可以輸入服務 origin 或 /v0/management 位址，控制台會自動規範化。',
-      detectedRuntime: '已偵測到本機執行環境：{{endpoint}}',
+      detectedRuntime: '已偵測到可用管理端：{{endpoint}}',
+      detectedProxyEndpoint: '已偵測到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
       managementKeyPlaceholder: '貼上 management key',
       remember: '記住此連線',
@@ -126,7 +127,9 @@ export const zhTW = {
         description:
           '控制台需要先連線 Home Center 管理介面，才能展示服務端狀態、模型服務、帳號憑證、用戶端金鑰和節點資訊。',
         detectedRuntime:
-          '已發現本機 Management API，可直接輸入 management key 完成連線：{{endpoint}}',
+          '已發現可用 Management API，可直接輸入 management key 完成連線：{{endpoint}}',
+        detectedProxyEndpoint:
+          '已發現同源代理入口，可直接輸入 management key 完成連線：{{endpoint}}',
         action: '連線執行環境',
       },
       error: {

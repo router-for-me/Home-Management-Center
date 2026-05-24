@@ -107,7 +107,8 @@ export const zhCN = {
       close: '关闭连接弹窗',
       baseUrl: '管理端地址',
       baseUrlHint: '可以输入服务 origin 或 /v0/management 地址，控制台会自动规范化。',
-      detectedRuntime: '已检测到本地运行时：{{endpoint}}',
+      detectedRuntime: '已检测到可用管理端：{{endpoint}}',
+      detectedProxyEndpoint: '已检测到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
       managementKeyPlaceholder: '粘贴 management key',
       remember: '记住此连接',
@@ -126,7 +127,9 @@ export const zhCN = {
         description:
           '控制台需要先连接 Home Center 管理接口，才能展示服务端状态、模型服务、账号凭证、客户端密钥和节点信息。',
         detectedRuntime:
-          '已发现本地 Management API，可直接输入 management key 完成连接：{{endpoint}}',
+          '已发现可用 Management API，可直接输入 management key 完成连接：{{endpoint}}',
+        detectedProxyEndpoint:
+          '已发现同源代理入口，可直接输入 management key 完成连接：{{endpoint}}',
         action: '连接运行时',
       },
       error: {

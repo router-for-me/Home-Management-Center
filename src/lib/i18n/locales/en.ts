@@ -109,7 +109,8 @@ export const en = {
       baseUrl: 'Management endpoint',
       baseUrlHint:
         'You can enter the service origin or /v0/management endpoint. The console normalizes it automatically.',
-      detectedRuntime: 'Local runtime detected: {{endpoint}}',
+      detectedRuntime: 'Available management endpoint detected: {{endpoint}}',
+      detectedProxyEndpoint: 'Same-origin proxy endpoint detected: {{endpoint}}',
       managementKey: 'Management key',
       managementKeyPlaceholder: 'Paste management key',
       remember: 'Remember this connection',
@@ -129,7 +130,9 @@ export const en = {
         description:
           'Connect the Home Center management API to view server status, model services, account credentials, client keys, and node information.',
         detectedRuntime:
-          'A local Management API was found. Enter the management key to finish connecting: {{endpoint}}',
+          'An available Management API was found. Enter the management key to finish connecting: {{endpoint}}',
+        detectedProxyEndpoint:
+          'A same-origin proxy endpoint was found. Enter the management key to finish connecting: {{endpoint}}',
         action: 'Connect runtime',
       },
       error: {
