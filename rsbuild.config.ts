@@ -6,9 +6,19 @@ import tailwindcss from '@tailwindcss/postcss'
 import { fileURLToPath } from 'node:url'
 
 const srcPath = fileURLToPath(new URL('./src', import.meta.url))
+const managementProxyTarget =
+  process.env.MANAGEMENT_DEV_PROXY_TARGET?.trim() || 'http://127.0.0.1:8327'
 
 export default defineConfig({
   plugins: [pluginReact()],
+  server: {
+    proxy: {
+      '/v0/management': {
+        target: managementProxyTarget,
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': srcPath,
