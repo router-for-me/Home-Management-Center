@@ -20,18 +20,12 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import ampcodeLogo from '@/assets/icons/amp.svg'
-import claudeLogo from '@/assets/icons/claude.svg'
-import codexLogo from '@/assets/icons/codex.svg'
-import geminiLogo from '@/assets/icons/gemini.svg'
-import openaiLogo from '@/assets/icons/openai-light.svg'
-import vertexLogo from '@/assets/icons/vertex.svg'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type {
   DashboardConfigCheck,
   DashboardMetric,
-  DashboardProviderRow,
   DashboardRecommendedAction,
   DashboardTone,
 } from '@/features/dashboard/dashboard-model'
@@ -55,39 +49,6 @@ const configIcons: Record<DashboardConfigCheck['id'], LucideIcon> = {
   fileLogging: Settings2,
   debug: AlertTriangle,
   routing: Route,
-}
-
-const providerMarks: Record<
-  string,
-  {
-    label: string
-    className: string
-  }
-> = {
-  gemini: {
-    label: 'G',
-    className: 'border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300',
-  },
-  claude: {
-    label: 'C',
-    className: 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-  },
-  codex: {
-    label: 'Cx',
-    className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  },
-  vertex: {
-    label: 'V',
-    className: 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  },
-  openaiCompatibility: {
-    label: 'AI',
-    className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-  },
-  ampcode: {
-    label: 'Amp',
-    className: 'border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300',
-  },
 }
 
 const credentialSourceNameKeys = {
@@ -137,46 +98,6 @@ function tagClassName(tone: DashboardTagTone) {
   }
 
   return 'border-border bg-card text-foreground'
-}
-
-const providerLogos: Record<string, { src: string; className?: string }> = {
-  gemini: { src: geminiLogo },
-  claude: { src: claudeLogo },
-  codex: { src: codexLogo },
-  vertex: { src: vertexLogo },
-  openaiCompatibility: { src: openaiLogo, className: 'dark:invert' },
-  ampcode: { src: ampcodeLogo },
-}
-
-function ProviderMark({ provider }: { provider: DashboardProviderRow }) {
-  const logo = providerLogos[provider.id]
-  if (logo) {
-    return (
-      <img
-        src={logo.src}
-        alt={provider.id}
-        className={cn('size-7 shrink-0 rounded-md object-contain', logo.className)}
-        aria-hidden="true"
-      />
-    )
-  }
-
-  const mark = providerMarks[provider.id] ?? {
-    label: provider.id.slice(0, 2).toUpperCase(),
-    className: 'border-border bg-muted text-muted-foreground',
-  }
-
-  return (
-    <span
-      className={cn(
-        'flex size-7 shrink-0 items-center justify-center rounded-md border text-[10px] font-semibold',
-        mark.className,
-      )}
-      aria-hidden="true"
-    >
-      {mark.label}
-    </span>
-  )
 }
 
 function formatDateTime(value: string) {
@@ -478,7 +399,7 @@ export function DashboardConsolePage() {
           </div>
           {viewModel.allProvidersEmpty ? (
             <div className="bg-muted/20 mt-3 flex min-h-[18rem] flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center xl:flex-1">
-              <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md border border-primary/20">
+              <div className="bg-primary/10 text-primary border-primary/20 flex size-10 items-center justify-center rounded-md border">
                 <Network className="size-5" aria-hidden="true" />
               </div>
               <h3 className="mt-4 text-sm font-semibold">{t('dashboard.providers.emptyTitle')}</h3>
@@ -503,7 +424,7 @@ export function DashboardConsolePage() {
                   className="grid min-h-16 gap-3 border-b px-3.5 py-3 text-sm last:border-b-0 md:grid-cols-[minmax(0,1fr)_72px_72px_72px] xl:flex-1 xl:items-center"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <ProviderMark provider={provider} />
+                    <ProviderLogo providerId={provider.id} size="lg" />
                     <div className="min-w-0">
                       <p className="truncate font-medium">
                         {t(`dashboard.providerNames.${provider.id}`)}

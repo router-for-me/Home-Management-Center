@@ -17,12 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import ampcodeLogo from '@/assets/icons/amp.svg'
-import claudeLogo from '@/assets/icons/claude.svg'
-import codexLogo from '@/assets/icons/codex.svg'
-import geminiLogo from '@/assets/icons/gemini.svg'
-import openaiLogo from '@/assets/icons/openai-light.svg'
-import vertexLogo from '@/assets/icons/vertex.svg'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -72,15 +67,6 @@ import type {
 } from '@/lib/api/management/providers'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
-
-const providerLogos: Record<string, { src: string; className?: string }> = {
-  gemini: { src: geminiLogo },
-  claude: { src: claudeLogo },
-  codex: { src: codexLogo },
-  vertex: { src: vertexLogo },
-  openaiCompatibility: { src: openaiLogo, className: 'dark:invert' },
-  ampcode: { src: ampcodeLogo },
-}
 
 type PanelMode = 'detail' | 'create' | 'edit'
 
@@ -273,17 +259,7 @@ function ProviderCategoryList({
               onClick={() => onSelectProvider(group.id)}
             >
               <div className="flex min-w-0 items-center gap-2.5">
-                {(() => {
-                  const logo = providerLogos[group.id]
-                  return logo ? (
-                    <img
-                      src={logo.src}
-                      alt={group.id}
-                      className={cn('size-6 shrink-0 rounded-md object-contain', logo.className)}
-                      aria-hidden="true"
-                    />
-                  ) : null
-                })()}
+                <ProviderLogo providerId={group.id} />
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">
                     {t(`providersPage.providerNames.${group.id}`)}
@@ -1207,17 +1183,7 @@ export function ProvidersWorkbenchPage() {
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <h2 className="flex items-center gap-2 text-base font-semibold">
-                {(() => {
-                  const logo = providerLogos[activeGroup.id]
-                  return logo ? (
-                    <img
-                      src={logo.src}
-                      alt={activeGroup.id}
-                      className={cn('size-5 shrink-0 rounded-md object-contain', logo.className)}
-                      aria-hidden="true"
-                    />
-                  ) : null
-                })()}
+                <ProviderLogo providerId={activeGroup.id} size="sm" />
                 {t(`providersPage.providerNames.${activeGroup.id}`)}
               </h2>
               <p className="text-muted-foreground mt-1 text-sm leading-6">
