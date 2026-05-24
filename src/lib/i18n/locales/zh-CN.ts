@@ -245,6 +245,7 @@ export const zhCN = {
         emptyTitle: '尚未配置模型服务',
         emptyDescription:
           '当前没有返回任何模型服务密钥。添加模型服务后，网关才能把请求转发到上游模型。',
+        emptySupportedProviders: '支持 Gemini、Claude、Codex、Vertex、OpenAI 兼容服务和 AMP。',
         configureAction: '配置模型服务',
         total: '总数',
         active: '可用',

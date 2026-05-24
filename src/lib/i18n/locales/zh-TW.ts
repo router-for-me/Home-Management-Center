@@ -245,6 +245,7 @@ export const zhTW = {
         emptyTitle: '尚未設定模型服務',
         emptyDescription:
           '目前沒有回傳任何模型服務金鑰。新增模型服務後，閘道才能把請求轉發到上游模型。',
+        emptySupportedProviders: '支援 Gemini、Claude、Codex、Vertex、OpenAI 相容服務和 AMP。',
         configureAction: '設定模型服務',
         total: '總數',
         active: '可用',

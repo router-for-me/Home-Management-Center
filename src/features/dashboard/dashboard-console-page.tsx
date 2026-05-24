@@ -477,32 +477,23 @@ export function DashboardConsolePage() {
             </div>
           </div>
           {viewModel.allProvidersEmpty ? (
-            <div className="border-warning/35 bg-warning/8 mt-3 flex flex-col rounded-md border p-4 xl:flex-1 xl:justify-center">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold">{t('dashboard.providers.emptyTitle')}</h3>
-                  <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-6">
-                    {t('dashboard.providers.emptyDescription')}
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {viewModel.providerRows.slice(0, 6).map((provider) => (
-                      <span
-                        key={provider.id}
-                        className="bg-card inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs"
-                      >
-                        <ProviderMark provider={provider} />
-                        {t(`dashboard.providerNames.${provider.id}`)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <Button asChild className="md:shrink-0">
-                  <Link to="/providers">
-                    <Network className="size-4" aria-hidden="true" />
-                    {t('dashboard.providers.configureAction')}
-                  </Link>
-                </Button>
+            <div className="bg-muted/20 mt-3 flex min-h-[18rem] flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center xl:flex-1">
+              <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md border border-primary/20">
+                <Network className="size-5" aria-hidden="true" />
               </div>
+              <h3 className="mt-4 text-sm font-semibold">{t('dashboard.providers.emptyTitle')}</h3>
+              <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
+                {t('dashboard.providers.emptyDescription')}
+              </p>
+              <Button asChild className="mt-5">
+                <Link to="/providers">
+                  <Network className="size-4" aria-hidden="true" />
+                  {t('dashboard.providers.configureAction')}
+                </Link>
+              </Button>
+              <p className="text-muted-foreground mt-3 max-w-md text-xs leading-5">
+                {t('dashboard.providers.emptySupportedProviders')}
+              </p>
             </div>
           ) : (
             <div className="mt-3 overflow-hidden rounded-md border xl:flex xl:flex-1 xl:flex-col">

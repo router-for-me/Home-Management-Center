@@ -249,6 +249,8 @@ export const en = {
         emptyTitle: 'No model services configured',
         emptyDescription:
           'No model service keys were returned. Add a model service before the gateway can forward requests upstream.',
+        emptySupportedProviders:
+          'Supports Gemini, Claude, Codex, Vertex, OpenAI-compatible services, and AMP.',
         configureAction: 'Configure model service',
         total: 'Total',
         active: 'Available',

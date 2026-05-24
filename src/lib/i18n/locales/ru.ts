@@ -250,6 +250,8 @@ export const ru = {
         emptyTitle: 'Модельные сервисы не настроены',
         emptyDescription:
           'Модельные ключи не возвращены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
+        emptySupportedProviders:
+          'Поддерживаются Gemini, Claude, Codex, Vertex, OpenAI-compatible сервисы и AMP.',
         configureAction: 'Настроить модельный сервис',
         total: 'Всего',
         active: 'Доступно',
