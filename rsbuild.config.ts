@@ -19,6 +19,9 @@ export default defineConfig({
       },
     },
   },
+  dev: {
+    lazyCompilation: false,
+  },
   resolve: {
     alias: {
       '@': srcPath,
