@@ -623,6 +623,7 @@ export const ru = {
       },
       status: {
         active: 'Активно',
+        enabled: 'Включено',
         disabled: 'Отключено',
         unavailable: 'Недоступно',
         notSet: 'Не задано',
@@ -649,6 +650,7 @@ export const ru = {
           path: 'Путь',
           size: 'Размер',
           priority: 'Приоритет',
+          websockets: 'WebSocket',
           success: 'Успешно',
           failed: 'Ошибки',
           updatedAt: 'Обновлено',
@@ -661,6 +663,8 @@ export const ru = {
         contextTitle: 'Текущий credential',
         editableHint:
           'Здесь можно изменить только Prefix, Proxy URL, приоритет и заметку. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
+        editableHintWithWebsockets:
+          'Здесь можно изменить Prefix, Proxy URL, приоритет, Codex WebSocket и заметку. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
         context: {
           provider: 'Поставщик моделей',
           source: 'Источник',
@@ -670,6 +674,9 @@ export const ru = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Приоритет',
+        websockets: 'Поддержка WebSocket',
+        websocketsHint:
+          'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
         note: 'Заметка',
       },
       delete: {

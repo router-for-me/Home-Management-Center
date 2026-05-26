@@ -42,6 +42,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -53,21 +54,25 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
-import type {
-  CredentialMetadataInput,
-  CredentialOAuthCallbackInput,
-  CredentialOAuthCallbackProvider,
-  CredentialOAuthProvider,
-  CredentialOAuthStatus,
-  CredentialResource,
-  CredentialStatusFilter,
-  VertexImportResult,
+import {
+  type CredentialMetadataInput,
+  type CredentialOAuthCallbackInput,
+  type CredentialOAuthCallbackProvider,
+  type CredentialOAuthProvider,
+  type CredentialOAuthStatus,
+  type CredentialResource,
+  type CredentialStatusFilter,
+  type VertexImportResult,
+  isCodexCredentialResource,
 } from '@/lib/api/management/credentials'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
 type MetadataPanelMode = 'detail' | 'edit'
 type CreateCredentialMode = 'oauth' | 'upload' | 'vertex'
+type CredentialMetadataForm = Omit<CredentialMetadataInput, 'websockets'> & {
+  websockets: boolean
+}
 type OAuthSessionSummary = {
   provider: CredentialOAuthProvider
   state: string | null
@@ -139,7 +144,7 @@ function formatBytes(value: number | null) {
   return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
-function createMetadataForm(resource: CredentialResource | null): CredentialMetadataInput {
+function createMetadataForm(resource: CredentialResource | null): CredentialMetadataForm {
   return {
     prefix: resource?.prefix ?? '',
     proxyUrl: resource?.proxyUrl ?? '',
@@ -147,6 +152,7 @@ function createMetadataForm(resource: CredentialResource | null): CredentialMeta
       resource?.priority === null || resource?.priority === undefined
         ? ''
         : String(resource.priority),
+    websockets: resource?.websockets ?? false,
     note: resource?.note ?? '',
   }
 }
@@ -1194,7 +1200,7 @@ function CredentialDetailContent({
   onFetchModels: () => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [form, setForm] = useState<CredentialMetadataInput>(() => createMetadataForm(resource))
+  const [form, setForm] = useState<CredentialMetadataForm>(() => createMetadataForm(resource))
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -1211,7 +1217,13 @@ function CredentialDetailContent({
 
     try {
       setLocalError(null)
-      await onUpdateMetadata(form)
+      await onUpdateMetadata({
+        prefix: form.prefix,
+        proxyUrl: form.proxyUrl,
+        priority: form.priority,
+        note: form.note,
+        ...(isCodexCredential ? { websockets: form.websockets } : {}),
+      })
       onModeChange('detail')
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
@@ -1221,6 +1233,7 @@ function CredentialDetailContent({
   const providerLabel = getCredentialProviderLabel(t, resource.provider)
   const sourceLabel = getCredentialSourceLabel(t, resource.source)
   const resourceIdentifier = resource.name ?? resource.authIndex ?? resource.identifier
+  const isCodexCredential = isCodexCredentialResource(resource)
 
   if (mode === 'edit') {
     return (
@@ -1249,7 +1262,9 @@ function CredentialDetailContent({
             ))}
           </div>
           <p className="text-muted-foreground mt-3 text-xs leading-5">
-            {t('credentialsPage.form.editableHint')}
+            {isCodexCredential
+              ? t('credentialsPage.form.editableHintWithWebsockets')
+              : t('credentialsPage.form.editableHint')}
           </p>
         </div>
         <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
@@ -1285,6 +1300,26 @@ function CredentialDetailContent({
               }
             />
           </label>
+          {isCodexCredential ? (
+            <div className="rounded-md border px-3 py-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{t('credentialsPage.form.websockets')}</p>
+                  <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    {t('credentialsPage.form.websocketsHint')}
+                  </p>
+                </div>
+                <Switch
+                  checked={form.websockets}
+                  disabled={mutating}
+                  onCheckedChange={(checked) =>
+                    setForm((current) => ({ ...current, websockets: checked }))
+                  }
+                  aria-label={t('credentialsPage.form.websockets')}
+                />
+              </div>
+            </div>
+          ) : null}
           <label className="grid gap-2 text-sm font-medium">
             <span>{t('credentialsPage.form.note')}</span>
             <Textarea
@@ -1363,6 +1398,16 @@ function CredentialDetailContent({
               ? t('credentialsPage.status.notSet')
               : String(resource.priority),
           ],
+          ...(isCodexCredential
+            ? [
+                [
+                  'websockets',
+                  resource.websockets
+                    ? t('credentialsPage.status.enabled')
+                    : t('credentialsPage.status.disabled'),
+                ],
+              ]
+            : []),
           [
             'success',
             resource.success === null

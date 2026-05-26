@@ -10,6 +10,7 @@ export type CredentialMetadataInput = {
   proxyUrl: string
   priority: string
   note: string
+  websockets?: boolean
 }
 
 export type CredentialOAuthProvider = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'kimi'
@@ -77,6 +78,7 @@ export type CredentialResource = {
   note: string | null
   prefix: string | null
   proxyUrl: string | null
+  websockets: boolean
   selector: UnknownRecord
   raw: UnknownRecord
 }
@@ -148,6 +150,22 @@ function readBoolean(record: UnknownRecord, key: string): boolean {
   return record[key] === true
 }
 
+function readFlexibleBoolean(record: UnknownRecord, key: string): boolean | null {
+  const value = record[key]
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') {
+    if (value === 1) return true
+    if (value === 0) return false
+  }
+  if (typeof value === 'string') {
+    const normalizedValue = value.trim().toLowerCase()
+    if (['true', '1', 'yes', 'on'].includes(normalizedValue)) return true
+    if (['false', '0', 'no', 'off'].includes(normalizedValue)) return false
+  }
+
+  return null
+}
+
 function readNumber(record: UnknownRecord, key: string): number | null {
   const value = record[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
@@ -186,11 +204,29 @@ function getDownloadFileName(resource: CredentialResource) {
   return rawName.endsWith('.json') ? rawName : `${rawName}.json`
 }
 
+function normalizeCredentialProvider(value: string | null | undefined) {
+  return value?.trim().toLowerCase() ?? ''
+}
+
+export function isCodexCredentialResource(resource: Pick<CredentialResource, 'provider' | 'type'>) {
+  return (
+    normalizeCredentialProvider(resource.provider) === 'codex' ||
+    normalizeCredentialProvider(resource.type) === 'codex'
+  )
+}
+
+function readCodexWebsockets(record: UnknownRecord) {
+  return (
+    readFlexibleBoolean(record, 'websockets') ?? readFlexibleBoolean(record, 'websocket') ?? false
+  )
+}
+
 function normalizeCredentialResource(record: UnknownRecord, index: number): CredentialResource {
   const id = readString(record, 'id')
   const authIndex = readString(record, 'auth_index')
   const name = readString(record, 'name')
   const provider = readString(record, 'provider') ?? readString(record, 'type') ?? 'unknown'
+  const type = readString(record, 'type') ?? provider
   const identifier = id ?? authIndex ?? name ?? `${provider}-${index + 1}`
 
   return {
@@ -200,7 +236,7 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     name,
     authIndex,
     provider,
-    type: readString(record, 'type') ?? provider,
+    type,
     label: readString(record, 'label'),
     status: readString(record, 'status') ?? 'unknown',
     statusMessage: readString(record, 'status_message'),
@@ -224,6 +260,11 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     note: readString(record, 'note'),
     prefix: readString(record, 'prefix'),
     proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
+    websockets:
+      normalizeCredentialProvider(provider) === 'codex' ||
+      normalizeCredentialProvider(type) === 'codex'
+        ? readCodexWebsockets(record)
+        : false,
     selector: createSelector(record, index),
     raw: record,
   }
@@ -242,6 +283,10 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
   const priority = Number(input.priority)
   if (input.priority.trim() && Number.isFinite(priority)) {
     payload.priority = priority
+  }
+
+  if (isCodexCredentialResource(resource) && typeof input.websockets === 'boolean') {
+    payload.websockets = input.websockets
   }
 
   return payload

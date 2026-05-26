@@ -608,6 +608,7 @@ export const zhCN = {
       },
       status: {
         active: '活跃',
+        enabled: '已启用',
         disabled: '禁用',
         unavailable: '不可用',
         notSet: '未设置',
@@ -632,6 +633,7 @@ export const zhCN = {
           path: '路径',
           size: '大小',
           priority: '优先级',
+          websockets: 'WebSocket',
           success: '成功',
           failed: '失败',
           updatedAt: '更新时间',
@@ -644,6 +646,8 @@ export const zhCN = {
         contextTitle: '当前凭证',
         editableHint:
           '当前仅支持修改 Prefix、Proxy URL、优先级和备注。账号、来源和模型供应商来自运行时返回的凭证记录。',
+        editableHintWithWebsockets:
+          '当前支持修改 Prefix、Proxy URL、优先级、Codex WebSocket 和备注。账号、来源和模型供应商来自运行时返回的凭证记录。',
         context: {
           provider: '模型供应商',
           source: '来源',
@@ -653,6 +657,8 @@ export const zhCN = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: '优先级',
+        websockets: 'WebSocket 支持',
+        websocketsHint: '仅适用于 Codex 凭证。开启后，该凭证可参与需要 WebSocket 的 Codex 请求。',
         note: '备注',
       },
       delete: {

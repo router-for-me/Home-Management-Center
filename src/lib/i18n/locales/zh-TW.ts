@@ -608,6 +608,7 @@ export const zhTW = {
       },
       status: {
         active: '活躍',
+        enabled: '已啟用',
         disabled: '停用',
         unavailable: '不可用',
         notSet: '未設定',
@@ -632,6 +633,7 @@ export const zhTW = {
           path: '路徑',
           size: '大小',
           priority: '優先級',
+          websockets: 'WebSocket',
           success: '成功',
           failed: '失敗',
           updatedAt: '更新時間',
@@ -644,6 +646,8 @@ export const zhTW = {
         contextTitle: '目前憑證',
         editableHint:
           '目前僅支援修改 Prefix、Proxy URL、優先級和備註。帳號、來源和模型供應商來自執行環境回傳的憑證記錄。',
+        editableHintWithWebsockets:
+          '目前支援修改 Prefix、Proxy URL、優先級、Codex WebSocket 和備註。帳號、來源和模型供應商來自執行環境回傳的憑證記錄。',
         context: {
           provider: '模型供應商',
           source: '來源',
@@ -653,6 +657,8 @@ export const zhTW = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: '優先級',
+        websockets: 'WebSocket 支援',
+        websocketsHint: '僅適用於 Codex 憑證。開啟後，該憑證可參與需要 WebSocket 的 Codex 請求。',
         note: '備註',
       },
       delete: {

@@ -621,6 +621,7 @@ export const en = {
       },
       status: {
         active: 'Active',
+        enabled: 'Enabled',
         disabled: 'Disabled',
         unavailable: 'Unavailable',
         notSet: 'Not set',
@@ -647,6 +648,7 @@ export const en = {
           path: 'Path',
           size: 'Size',
           priority: 'Priority',
+          websockets: 'WebSocket',
           success: 'Success',
           failed: 'Failed',
           updatedAt: 'Updated',
@@ -659,6 +661,8 @@ export const en = {
         contextTitle: 'Current credential',
         editableHint:
           'Only Prefix, Proxy URL, priority, and note are editable here. Account, source, and model provider come from the runtime credential record.',
+        editableHintWithWebsockets:
+          'Prefix, Proxy URL, priority, Codex WebSocket, and note are editable here. Account, source, and model provider come from the runtime credential record.',
         context: {
           provider: 'Model provider',
           source: 'Source',
@@ -668,6 +672,9 @@ export const en = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Priority',
+        websockets: 'WebSocket support',
+        websocketsHint:
+          'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
         note: 'Note',
       },
       delete: {
