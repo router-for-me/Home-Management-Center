@@ -90,6 +90,10 @@ function readBoolean(record: UnknownRecord, key: string): boolean | null {
   return typeof value === 'boolean' ? value : null
 }
 
+function readConfigBoolean(record: UnknownRecord, key: string): boolean {
+  return readBoolean(record, key) === true
+}
+
 function maskApiKey(value: string) {
   const trimmed = value.trim()
   if (!trimmed) return ''
@@ -237,6 +241,9 @@ export async function fetchUsageLogsSnapshot(
 ): Promise<UsageLogsSnapshot> {
   const client = createManagementClient(session)
   const issues: UsageLogIssue[] = []
+  const configResponse = await client.get<unknown>('/config')
+  const config = toRecord(configResponse.data)
+  const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
 
   const [apiKeyUsage, runtimeLogs, requestErrorLogs] = await Promise.all([
     capabilities.usage
@@ -250,7 +257,7 @@ export async function fetchUsageLogsSnapshot(
           [],
         )
       : Promise.resolve([]),
-    capabilities.logs
+    capabilities.logs && fileLoggingEnabled
       ? readOptional(
           issues,
           'logs',

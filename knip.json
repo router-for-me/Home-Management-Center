@@ -1,7 +1,7 @@
 {
-  "entry": ["src/routes/**/*.tsx"],
+  "entry": ["src/main.tsx", "src/routes/**/*.tsx"],
   "project": ["src/**/*.{ts,tsx}", "*.{ts,js,mjs,json}"],
-  "ignore": ["src/env.d.ts", "src/routeTree.gen.ts"],
+  "ignore": ["src/env.d.ts"],
   "ignoreIssues": {
     "src/components/ui/button.tsx": ["exports"],
     "src/components/ui/dropdown-menu.tsx": ["exports"],

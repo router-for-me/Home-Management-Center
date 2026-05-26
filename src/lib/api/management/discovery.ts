@@ -43,14 +43,18 @@ function getCandidateBaseUrls() {
 }
 
 function isManagementResponse(response: Response) {
-  const cpaVersion = response.headers.get('x-cpa-version')
-  const homeVersion = response.headers.get('x-cpa-home-version')
-  const contentType = response.headers.get('content-type') ?? ''
+  const allowedMethods = response.headers.get('access-control-allow-methods') ?? ''
 
-  if (cpaVersion || homeVersion) return true
-  if (!contentType.includes('application/json')) return false
+  return response.ok && allowedMethods.split(',').some((method) => method.trim() === 'GET')
+}
 
-  return response.status === 200 || response.status === 401 || response.status === 403
+function isDiscoverableManagementResponse(
+  candidate: Pick<ManagementRuntimeDiscoveryResult, 'source'>,
+  response: Response,
+) {
+  if (!response.ok) return false
+  if (candidate.source === 'runtime') return true
+  return isManagementResponse(response)
 }
 
 async function probeManagementBaseUrl(
@@ -61,14 +65,11 @@ async function probeManagementBaseUrl(
 
   try {
     const response = await window.fetch(`${candidate.baseUrl}/config`, {
-      method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
+      method: 'OPTIONS',
       signal: controller.signal,
     })
 
-    if (!isManagementResponse(response)) {
+    if (!isDiscoverableManagementResponse(candidate, response)) {
       return null
     }
 
@@ -88,11 +89,10 @@ export async function detectLocalManagementRuntime() {
   if (typeof window === 'undefined') return null
 
   const candidates = getCandidateBaseUrls()
-  const results = await Promise.all(
-    candidates.map((candidate) => probeManagementBaseUrl(candidate)),
-  )
+  for (const candidate of candidates) {
+    const result = await probeManagementBaseUrl(candidate)
+    if (result) return result
+  }
 
-  return (
-    results.find((result): result is ManagementRuntimeDiscoveryResult => Boolean(result)) ?? null
-  )
+  return null
 }
