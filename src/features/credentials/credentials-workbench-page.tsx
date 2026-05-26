@@ -22,6 +22,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -87,6 +88,7 @@ const oauthProviders: CredentialOAuthProvider[] = [
   'gemini',
   'antigravity',
   'kimi',
+  'xai',
 ]
 const oauthStatusToneClassNames: Record<string, string> = {
   ok: 'border-primary/30 bg-primary/10 text-primary',
@@ -107,6 +109,10 @@ function isOAuthCallbackProvider(
   provider: CredentialOAuthProvider,
 ): provider is CredentialOAuthCallbackProvider {
   return provider !== 'kimi'
+}
+
+function isXaiOAuthProvider(provider: CredentialOAuthProvider): provider is 'xai' {
+  return provider === 'xai'
 }
 
 function getCredentialSourceLabel(
@@ -423,6 +429,17 @@ function OAuthClosurePanel({
 
     if (!callbackForm) return
 
+    const isXaiCallback = isXaiOAuthProvider(callbackForm.provider)
+
+    if (
+      isXaiCallback &&
+      !callbackForm.state.trim() &&
+      !/(^|[?&#])state=/i.test(callbackForm.redirectUrl)
+    ) {
+      setLocalError(t('credentialsPage.oauth.validation.xaiStateRequired'))
+      return
+    }
+
     if (!callbackForm.state.trim() && !callbackForm.redirectUrl.trim()) {
       setLocalError(t('credentialsPage.oauth.validation.stateRequired'))
       return
@@ -544,10 +561,20 @@ function OAuthClosurePanel({
             </label>
           </div>
           <label className="grid gap-2 text-sm font-medium">
-            <span>{t('credentialsPage.oauth.redirectUrl')}</span>
+            <span>
+              {t(
+                isXaiOAuthProvider(callbackForm.provider)
+                  ? 'credentialsPage.oauth.xaiCallbackInput'
+                  : 'credentialsPage.oauth.redirectUrl',
+              )}
+            </span>
             <Input
               value={callbackForm.redirectUrl}
-              placeholder="http://localhost/callback?code=...&state=..."
+              placeholder={
+                isXaiOAuthProvider(callbackForm.provider)
+                  ? t('credentialsPage.oauth.xaiCallbackPlaceholder')
+                  : 'http://localhost/callback?code=...&state=...'
+              }
               disabled={mutating}
               onChange={(event) =>
                 setCallbackForm((current) =>
@@ -747,7 +774,12 @@ function OAuthStartPanel({
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">
-                    {t(`credentialsPage.oauth.providers.${provider}`)}
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <ProviderLogo providerId={provider} size="sm" />
+                      <span className="truncate">
+                        {t(`credentialsPage.oauth.providers.${provider}`)}
+                      </span>
+                    </span>
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
                     {t(`credentialsPage.oauth.providerHints.${provider}`)}
@@ -840,12 +872,12 @@ function JsonUploadPanel({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 gap-3">
       <Button
         type="button"
         variant="ghost"
         className={cn(
-          'h-auto justify-start rounded-lg border border-dashed p-5 text-left',
+          'h-auto min-w-0 justify-start overflow-hidden rounded-lg border border-dashed p-5 text-left whitespace-normal',
           dragActive
             ? 'border-primary/60 bg-primary/5'
             : 'hover:border-primary/40 hover:bg-primary/5',
@@ -866,7 +898,7 @@ function JsonUploadPanel({
         }}
         onDrop={handleDrop}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex min-w-0 items-start gap-3">
           <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-md">
             <Upload className="size-4" aria-hidden="true" />
           </span>
@@ -935,13 +967,13 @@ function CreateCredentialSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
+      <SheetContent className="w-full overflow-x-hidden overflow-y-auto sm:max-w-xl">
         <SheetHeader className="border-b p-5">
           <SheetTitle>{t('credentialsPage.create.title')}</SheetTitle>
           <SheetDescription>{t('credentialsPage.create.description')}</SheetDescription>
         </SheetHeader>
 
-        <div className="grid gap-5 px-5 pb-5">
+        <div className="grid min-w-0 gap-5 px-5 pb-5">
           <ToggleGroup
             type="single"
             value={mode}
@@ -1022,15 +1054,15 @@ function CredentialList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[1040px] table-fixed">
+        <Table className="min-w-[1230px] table-fixed">
           <colgroup>
-            <col className="w-[23%]" />
-            <col className="w-[12%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[10%]" />
-            <col className="w-[13%]" />
-            <col className="w-[22%]" />
+            <col className="w-[320px]" />
+            <col className="w-[130px]" />
+            <col className="w-[105px]" />
+            <col className="w-[105px]" />
+            <col className="w-[120px]" />
+            <col className="w-[180px]" />
+            <col className="w-[270px]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow className="hover:bg-transparent">
@@ -1112,11 +1144,11 @@ function CredentialList({
                             })}
                     </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-4">
                     <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1.5">
+                  <TableCell className="pl-4">
+                    <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
                       <Button
                         type="button"
                         variant="text"

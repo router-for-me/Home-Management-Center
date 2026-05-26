@@ -79,6 +79,7 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'aistudio',
   'kimi',
   'antigravity',
+  'xai',
 ]
 
 const defaultModelDefinitionChannelByProvider: Partial<Record<ProviderId, ProviderModelChannel>> = {

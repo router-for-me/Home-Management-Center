@@ -2,13 +2,16 @@ import { useEffect, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
-const providerLogoUrls: Record<string, { src: string; className?: string }> = {
+const providerLogoUrls: Record<string, { src: string; darkSrc?: string; className?: string }> = {
   gemini: { src: '/icons/gemini.svg' },
   claude: { src: '/icons/claude.svg' },
   codex: { src: '/icons/codex.svg' },
   vertex: { src: '/icons/vertex.svg' },
+  antigravity: { src: '/icons/antigravity.svg' },
+  kimi: { src: '/icons/kimi-light.svg', darkSrc: '/icons/kimi-dark.svg' },
   openaiCompatibility: { src: '/icons/openai-light.svg', className: 'dark:invert' },
   ampcode: { src: '/icons/amp.svg' },
+  xai: { src: '/icons/grok.svg', className: 'p-0.5 dark:invert' },
 }
 
 const providerMarks: Record<
@@ -42,6 +45,10 @@ const providerMarks: Record<
     label: 'Amp',
     className: 'border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300',
   },
+  xai: {
+    label: 'xAI',
+    className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
+  },
 }
 
 const sizeClassNames = {
@@ -69,6 +76,35 @@ export function ProviderLogo({
   }, [providerId])
 
   if (logo && !failed) {
+    if (logo.darkSrc) {
+      return (
+        <>
+          <img
+            src={logo.src}
+            alt=""
+            className={cn(
+              'shrink-0 rounded-md object-contain dark:hidden',
+              sizeClassNames[size],
+              className,
+            )}
+            aria-hidden="true"
+            onError={() => setFailed(true)}
+          />
+          <img
+            src={logo.darkSrc}
+            alt=""
+            className={cn(
+              'hidden shrink-0 rounded-md object-contain dark:block',
+              sizeClassNames[size],
+              className,
+            )}
+            aria-hidden="true"
+            onError={() => setFailed(true)}
+          />
+        </>
+      )
+    }
+
     return (
       <img
         src={logo.src}

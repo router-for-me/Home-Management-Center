@@ -406,6 +406,7 @@ export const en = {
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       status: {
@@ -541,6 +542,8 @@ export const en = {
         callbackProvider: 'Model provider',
         callbackState: 'Callback status token',
         redirectUrl: 'Full callback URL',
+        xaiCallbackInput: 'Callback URL or page code',
+        xaiCallbackPlaceholder: 'Paste the code shown by Grok, or the full callback URL',
         authorizationCode: 'Authorization code',
         callbackError: 'Error message',
         submitCallback: 'Submit callback URL',
@@ -556,6 +559,7 @@ export const en = {
           gemini: 'Create a Google account credential through Gemini CLI OAuth.',
           antigravity: 'Create a Google account credential through Antigravity OAuth.',
           kimi: 'Create an account credential through Kimi device flow.',
+          xai: 'Create an account credential through xAI/Grok OAuth.',
         },
         statuses: {
           ok: 'Completed',
@@ -566,6 +570,7 @@ export const en = {
         validation: {
           stateRequired: 'Enter the OAuth state.',
           callbackPayloadRequired: 'Enter a callback URL, authorization code, or error message.',
+          xaiStateRequired: 'Start xAI login first, or enter a full callback URL with state.',
         },
         providers: {
           claude: 'Claude',
@@ -573,6 +578,7 @@ export const en = {
           gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
+          xai: 'xAI / Grok',
         },
       },
       vertex: {
@@ -1122,6 +1128,7 @@ export const en = {
           codex: 'Codex',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       diff: {

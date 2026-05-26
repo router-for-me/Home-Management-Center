@@ -13,7 +13,7 @@ export type CredentialMetadataInput = {
   websockets?: boolean
 }
 
-export type CredentialOAuthProvider = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'kimi'
+export type CredentialOAuthProvider = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'kimi' | 'xai'
 export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
 
 export type CredentialOAuthStartInput = {
@@ -135,7 +135,10 @@ const oauthRoutes: Record<CredentialOAuthProvider, string> = {
   gemini: '/gemini-cli-auth-url',
   antigravity: '/antigravity-auth-url',
   kimi: '/kimi-auth-url',
+  xai: '/xai-auth-url',
 }
+
+const xaiCallbackUrl = 'http://127.0.0.1:56121/callback'
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -219,6 +222,95 @@ function readCodexWebsockets(record: UnknownRecord) {
   return (
     readFlexibleBoolean(record, 'websockets') ?? readFlexibleBoolean(record, 'websocket') ?? false
   )
+}
+
+function isAbsoluteUrl(value: string) {
+  try {
+    new URL(value)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function readQueryLikeCallbackInput(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const queryStart = trimmed.indexOf('?')
+  const hashStart = trimmed.indexOf('#')
+  const rawParams =
+    queryStart >= 0
+      ? trimmed.slice(queryStart + 1)
+      : hashStart >= 0
+        ? trimmed.slice(hashStart + 1)
+        : trimmed
+
+  if (!/(^|[&#?])(code|state|error)=/i.test(rawParams)) return null
+
+  return new URLSearchParams(rawParams.replace(/^[?#]/, ''))
+}
+
+function extractDisplayedXaiCode(value: string) {
+  const trimmed = value.trim()
+  const codeMatch = trimmed.match(/\bcode\s*[:=]\s*([^\s&]+)/i)
+
+  return (codeMatch?.[1] ?? trimmed).trim()
+}
+
+function buildXaiCallbackUrl(input: string, state: string) {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+  if (isAbsoluteUrl(trimmed)) return trimmed
+
+  const params = readQueryLikeCallbackInput(trimmed)
+  if (params) {
+    const callbackState = params.get('state')?.trim() || state
+    if (!callbackState) return ''
+
+    const callbackUrl = new URL(xaiCallbackUrl)
+    const code = params.get('code')?.trim()
+    const error = params.get('error')?.trim()
+    const errorDescription = params.get('error_description')?.trim()
+
+    callbackUrl.searchParams.set('state', callbackState)
+    if (code) callbackUrl.searchParams.set('code', code)
+    if (error) callbackUrl.searchParams.set('error', error)
+    if (errorDescription) callbackUrl.searchParams.set('error_description', errorDescription)
+
+    return callbackUrl.toString()
+  }
+
+  const code = extractDisplayedXaiCode(trimmed)
+  if (!code || !state) return ''
+
+  const callbackUrl = new URL(xaiCallbackUrl)
+  callbackUrl.searchParams.set('code', code)
+  callbackUrl.searchParams.set('state', state)
+
+  return callbackUrl.toString()
+}
+
+function createOAuthCallbackPayload(input: CredentialOAuthCallbackInput) {
+  const payload = {
+    provider: input.provider,
+    redirect_url: input.redirectUrl.trim(),
+    code: input.code.trim(),
+    state: input.state.trim(),
+    error: input.error.trim(),
+  }
+
+  if (input.provider !== 'xai') return payload
+
+  const callbackSource = payload.redirect_url || payload.code
+  const redirectUrl = buildXaiCallbackUrl(callbackSource, payload.state)
+  const normalizedCode = payload.code ? extractDisplayedXaiCode(payload.code) : ''
+
+  return {
+    ...payload,
+    redirect_url: redirectUrl || payload.redirect_url,
+    code: redirectUrl ? '' : normalizedCode,
+  }
 }
 
 function normalizeCredentialResource(record: UnknownRecord, index: number): CredentialResource {
@@ -432,13 +524,7 @@ export async function submitCredentialOAuthCallback(
   input: CredentialOAuthCallbackInput,
 ) {
   const client = createManagementClient(session)
-  await client.post('/oauth-callback', {
-    provider: input.provider,
-    redirect_url: input.redirectUrl.trim(),
-    code: input.code.trim(),
-    state: input.state.trim(),
-    error: input.error.trim(),
-  })
+  await client.post('/oauth-callback', createOAuthCallbackPayload(input))
 }
 
 export async function importVertexCredential(

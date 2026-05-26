@@ -407,6 +407,7 @@ export const ru = {
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       status: {
@@ -542,6 +543,8 @@ export const ru = {
         callbackProvider: 'Поставщик моделей',
         callbackState: 'Токен статуса callback',
         redirectUrl: 'Полный callback URL',
+        xaiCallbackInput: 'Callback URL или код со страницы',
+        xaiCallbackPlaceholder: 'Вставьте код, показанный Grok, или полный callback URL',
         authorizationCode: 'Authorization code',
         callbackError: 'Сообщение об ошибке',
         submitCallback: 'Отправить callback URL',
@@ -557,6 +560,7 @@ export const ru = {
           gemini: 'Создать Google account credential через Gemini CLI OAuth.',
           antigravity: 'Создать Google account credential через Antigravity OAuth.',
           kimi: 'Создать account credential через Kimi device flow.',
+          xai: 'Создать account credential через xAI/Grok OAuth.',
         },
         statuses: {
           ok: 'Завершено',
@@ -568,6 +572,7 @@ export const ru = {
           stateRequired: 'Введите OAuth state.',
           callbackPayloadRequired:
             'Введите callback URL, authorization code или сообщение об ошибке.',
+          xaiStateRequired: 'Сначала запустите вход xAI или введите полный callback URL со state.',
         },
         providers: {
           claude: 'Claude',
@@ -575,6 +580,7 @@ export const ru = {
           gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
+          xai: 'xAI / Grok',
         },
       },
       vertex: {
@@ -1124,6 +1130,7 @@ export const ru = {
           codex: 'Codex',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       diff: {

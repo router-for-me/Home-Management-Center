@@ -278,6 +278,7 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'codex',
   'kimi',
   'antigravity',
+  'xai',
 ]
 
 const fieldDefinitions = sectionDefinitions.flatMap((section) => section.fields)

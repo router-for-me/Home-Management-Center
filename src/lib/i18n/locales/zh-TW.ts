@@ -399,6 +399,7 @@ export const zhTW = {
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       status: {
@@ -532,6 +533,8 @@ export const zhTW = {
         callbackProvider: '模型供應商',
         callbackState: '回調狀態識別碼',
         redirectUrl: '完整 callback URL',
+        xaiCallbackInput: 'Callback URL 或頁面 code',
+        xaiCallbackPlaceholder: '貼上 Grok 頁面顯示的 code，或完整 callback URL',
         authorizationCode: '授權 code',
         callbackError: '錯誤資訊',
         submitCallback: '提交回調 URL',
@@ -545,6 +548,7 @@ export const zhTW = {
           gemini: '透過 Gemini CLI OAuth 取得 Google 帳號憑證。',
           antigravity: '透過 Antigravity OAuth 取得 Google 帳號憑證。',
           kimi: '透過 Kimi device flow 取得帳號憑證。',
+          xai: '透過 xAI/Grok OAuth 取得帳號憑證。',
         },
         statuses: {
           ok: '已完成',
@@ -555,6 +559,7 @@ export const zhTW = {
         validation: {
           stateRequired: '請填寫 OAuth state。',
           callbackPayloadRequired: '請填寫 callback URL、授權 code 或錯誤資訊。',
+          xaiStateRequired: '請先啟動 xAI 登入，或填寫包含 state 的完整 callback URL。',
         },
         providers: {
           claude: 'Claude',
@@ -562,6 +567,7 @@ export const zhTW = {
           gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
+          xai: 'xAI / Grok',
         },
       },
       vertex: {
@@ -1086,6 +1092,7 @@ export const zhTW = {
           codex: 'Codex',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       diff: {

@@ -399,6 +399,7 @@ export const zhCN = {
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       status: {
@@ -532,6 +533,8 @@ export const zhCN = {
         callbackProvider: '模型供应商',
         callbackState: '回调状态标识',
         redirectUrl: '完整 callback URL',
+        xaiCallbackInput: 'Callback URL 或页面 code',
+        xaiCallbackPlaceholder: '粘贴 Grok 页面显示的 code，或完整 callback URL',
         authorizationCode: '授权 code',
         callbackError: '错误信息',
         submitCallback: '提交回调 URL',
@@ -545,6 +548,7 @@ export const zhCN = {
           gemini: '通过 Gemini CLI OAuth 获取 Google 账号凭证。',
           antigravity: '通过 Antigravity OAuth 获取 Google 账号凭证。',
           kimi: '通过 Kimi device flow 获取账号凭证。',
+          xai: '通过 xAI/Grok OAuth 获取账号凭证。',
         },
         statuses: {
           ok: '已完成',
@@ -555,6 +559,7 @@ export const zhCN = {
         validation: {
           stateRequired: '请填写 OAuth state。',
           callbackPayloadRequired: '请填写 callback URL、授权 code 或错误信息。',
+          xaiStateRequired: '请先启动 xAI 登录，或填写包含 state 的完整 callback URL。',
         },
         providers: {
           claude: 'Claude',
@@ -562,6 +567,7 @@ export const zhCN = {
           gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
+          xai: 'xAI / Grok',
         },
       },
       vertex: {
@@ -1087,6 +1093,7 @@ export const zhCN = {
           codex: 'Codex',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          xai: 'xAI',
         },
       },
       diff: {

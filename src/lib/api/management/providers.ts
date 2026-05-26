@@ -15,6 +15,7 @@ export type ProviderModelChannel =
   | 'codex'
   | 'kimi'
   | 'antigravity'
+  | 'xai'
 
 export type ProviderDescriptor = {
   id: ProviderId
