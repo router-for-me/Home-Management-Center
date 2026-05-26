@@ -1146,6 +1146,7 @@ export const zhCN = {
       header: {
         title: '用量与日志',
         description: '查看模型服务请求计数、API key 用量、运行日志和可下载的请求错误日志。',
+        runtime: '运行时：{{mode}}',
         updatedAt: '最近同步：{{time}}',
       },
       actions: {
@@ -1167,6 +1168,41 @@ export const zhCN = {
         description:
           '{{mode}} 未暴露运行时日志和用量查询接口。页面会保留能力状态，但不会伪造缺失数据。',
       },
+      verdict: {
+        ready: {
+          title: '用量数据已同步',
+          badge: '可分析',
+          description:
+            '当前运行时已返回 API Key 用量聚合，可用于判断模型服务请求量、失败量和供应商分布。',
+        },
+        idle: {
+          title: '用量统计已启用，暂无请求',
+          badge: '暂无数据',
+          description: '运行时提供用量接口，但当前没有返回请求记录。请在服务处理请求后重新同步。',
+        },
+        disabled: {
+          title: '用量统计未启用',
+          badge: '未启用',
+          description:
+            '当前运行时已开放用量接口，但配置中的 usage-statistics-enabled 为关闭状态。启用后才能持续聚合请求用量。',
+        },
+        partial: {
+          title: '用量数据部分同步失败',
+          badge: '部分失败',
+          description: '页面会继续展示已加载的用量事实，请先查看失败范围再做完整判断。',
+        },
+        limited: {
+          title: '用量分析能力受限',
+          badge: '接口受限',
+          description: '{{mode}} 当前未返回 API Key 用量聚合，只能使用日志和错误文件做排查。',
+        },
+        unsupported: {
+          title: '当前运行时不支持用量分析',
+          badge: '不支持',
+          description:
+            '{{mode}} 未开放用量与日志相关接口。页面保留能力状态，等待后端补齐观测接口。',
+        },
+      },
       issues: {
         title: '部分数据加载失败',
       },
@@ -1184,6 +1220,81 @@ export const zhCN = {
         requestsDetail: '{{success}} 成功 / {{failed}} 失败',
         logs: '日志行数',
         logsDetail: '{{count}} 个错误日志文件',
+      },
+      scope: {
+        title: '当前统计范围',
+        description:
+          '当前后端只返回运行时内存聚合，暂不支持按日期、用户、账号、凭证或模型 Token 维度筛选。页面会先展示真实可用的聚合事实。',
+      },
+      filters: {
+        title: '分析筛选口径',
+        description:
+          '完整用量分析需要支持时间范围、模型、用户、账号、凭证、客户端密钥和请求状态筛选。当前运行时尚未提供这些查询参数，因此这里仅展示后续后端契约需要覆盖的筛选面。',
+        badge: '待后端支持',
+        planned: '规划中',
+        items: {
+          timeRange: '时间范围',
+          provider: '供应商',
+          model: '模型',
+          user: '用户',
+          account: '账号',
+          credential: '账号凭证',
+          clientKey: '客户端密钥',
+          status: '请求状态',
+        },
+      },
+      metrics: {
+        requests: {
+          label: '请求总量',
+          detail: '成功 / 失败：{{value}}',
+        },
+        failureRate: {
+          label: '失败率',
+          detail: '失败 / 总量：{{value}}',
+        },
+        resources: {
+          label: '上游 Key 记录',
+          detail: '供应商数量：{{value}}',
+        },
+        recentWindows: {
+          label: '最近请求窗口',
+          detail: '错误日志文件：{{value}}',
+        },
+      },
+      analytics: {
+        charts: {
+          title: '供应商请求分布',
+          description:
+            '当前接口只能提供模型供应商、上游 Base URL 和 API Key 的成功/失败聚合，因此这里先展示可验证的供应商分布。',
+          empty: '当前没有可绘制的用量数据。',
+        },
+        breakdown: {
+          title: '供应商排行',
+          description: '按请求总量排序，帮助定位主要消耗来自哪些上游模型服务。',
+          meta: '{{success}} 成功 / {{failed}} 失败，{{keys}} 个上游 Key',
+          empty: '当前没有供应商用量排行。',
+        },
+        roadmap: {
+          title: '分析维度覆盖',
+          description:
+            '页面已按完整用量产品形态设计；当前运行时只返回部分聚合维度，Token、成本、用户、账号和凭证维度需要后端继续补齐。',
+          api: '后端接口规划中',
+          current: '当前可用',
+          planned: '待后端支持',
+          none: '暂无可用分析维度',
+        },
+        dimensions: {
+          time: '时间趋势',
+          provider: '供应商',
+          model: '模型',
+          user: '用户',
+          account: '账号',
+          clientKey: '客户端密钥',
+          providerKey: '上游 API Key',
+          credential: '账号凭证',
+          cost: '成本',
+          latency: '延迟',
+        },
       },
       usage: {
         title: 'API Key 用量',
@@ -1211,6 +1322,17 @@ export const zhCN = {
           status: '状态',
           actions: '操作',
         },
+      },
+      operations: {
+        title: '日志与排查工具',
+        description:
+          '请求日志、错误日志和 usage queue 属于排查工具。队列读取会消费服务端记录，因此保持手动触发。',
+      },
+      trace: {
+        title: '按 Request ID 下载日志',
+        description: '如果已经从错误文件或外部告警拿到 Request ID，可以直接下载对应请求日志。',
+        placeholder: '输入 Request ID',
+        unavailable: '当前运行时不支持按 Request ID 下载请求日志。',
       },
       logs: {
         title: '运行日志',

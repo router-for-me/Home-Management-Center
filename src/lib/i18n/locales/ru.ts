@@ -1188,6 +1188,7 @@ export const ru = {
         title: 'Usage & Logs',
         description:
           'Просмотр счетчиков запросов model services, API key usage, runtime logs и скачиваемых request error logs.',
+        runtime: 'Runtime: {{mode}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
@@ -1209,6 +1210,44 @@ export const ru = {
         description:
           '{{mode}} не предоставляет runtime log или usage query routes. Страница показывает состояние capability без выдуманных данных.',
       },
+      verdict: {
+        ready: {
+          title: 'Данные usage синхронизированы',
+          badge: 'Можно анализировать',
+          description:
+            'Runtime вернул агрегаты API key usage для оценки объема запросов model services, ошибок и распределения по провайдерам.',
+        },
+        idle: {
+          title: 'Usage statistics доступны, запросов пока нет',
+          badge: 'Нет данных',
+          description:
+            'Runtime предоставляет usage routes, но не вернул request records. Синхронизируйте снова после обработки трафика.',
+        },
+        disabled: {
+          title: 'Usage statistics отключены',
+          badge: 'Отключено',
+          description:
+            'Runtime предоставляет usage routes, но usage-statistics-enabled отключен в config. Включите его для постоянной агрегации request usage.',
+        },
+        partial: {
+          title: 'Данные usage синхронизированы частично',
+          badge: 'Частично',
+          description:
+            'Страница продолжит показывать загруженные usage facts. Проверьте сбойные области перед полной оценкой.',
+        },
+        limited: {
+          title: 'Usage analytics ограничены',
+          badge: 'Ограничено',
+          description:
+            '{{mode}} не вернул API key usage aggregates, поэтому для расследования доступны только logs и error files.',
+        },
+        unsupported: {
+          title: 'Этот runtime не поддерживает usage analytics',
+          badge: 'Не поддерживается',
+          description:
+            '{{mode}} не открывает usage или log routes. Capability state остается видимым до появления backend observability APIs.',
+        },
+      },
       issues: {
         title: 'Часть данных не загрузилась',
       },
@@ -1226,6 +1265,82 @@ export const ru = {
         requestsDetail: '{{success}} успешно / {{failed}} с ошибкой',
         logs: 'Строк журналов',
         logsDetail: 'Файлов error logs: {{count}}',
+      },
+      scope: {
+        title: 'Текущий диапазон статистики',
+        description:
+          'Текущий backend возвращает только runtime memory aggregates. Фильтры по date, user, account, credential и model tokens пока недоступны, поэтому страница показывает только проверенные агрегаты.',
+      },
+      filters: {
+        title: 'Модель фильтров аналитики',
+        description:
+          'Полная usage analytics требует фильтры по time range, model, user, account, credential, client key и request status. Текущий runtime пока не предоставляет эти query parameters, поэтому блок фиксирует следующий backend contract для продукта.',
+        badge: 'Требует backend support',
+        planned: 'Запланировано',
+        items: {
+          timeRange: 'Time range',
+          provider: 'Provider',
+          model: 'Model',
+          user: 'User',
+          account: 'Account',
+          credential: 'Credential',
+          clientKey: 'Client key',
+          status: 'Request status',
+        },
+      },
+      metrics: {
+        requests: {
+          label: 'Всего запросов',
+          detail: 'Успешно / с ошибкой: {{value}}',
+        },
+        failureRate: {
+          label: 'Доля ошибок',
+          detail: 'Ошибки / всего: {{value}}',
+        },
+        resources: {
+          label: 'Upstream key records',
+          detail: 'Провайдеров: {{value}}',
+        },
+        recentWindows: {
+          label: 'Recent windows',
+          detail: 'Файлов error logs: {{value}}',
+        },
+      },
+      analytics: {
+        charts: {
+          title: 'Распределение запросов по провайдерам',
+          description:
+            'Текущий маршрут возвращает только агрегаты success/failure по model provider, upstream Base URL и API key, поэтому график показывает проверяемое распределение по провайдерам.',
+          empty: 'Нет usage data для построения графика.',
+        },
+        breakdown: {
+          title: 'Рейтинг провайдеров',
+          description:
+            'Сортировка по объему запросов показывает, какие upstream model services несут основную нагрузку.',
+          meta: '{{success}} успешно / {{failed}} с ошибкой, upstream keys: {{keys}}',
+          empty: 'Рейтинг usage по провайдерам недоступен.',
+        },
+        roadmap: {
+          title: 'Покрытие аналитических измерений',
+          description:
+            'Страница спроектирована под полную модель usage. Текущий runtime возвращает только ограниченные агрегаты; аналитика tokens, cost, users, accounts и credentials требует backend support.',
+          api: 'Backend API запланирован',
+          current: 'Доступно сейчас',
+          planned: 'Требует backend support',
+          none: 'Аналитические измерения недоступны',
+        },
+        dimensions: {
+          time: 'Time trend',
+          provider: 'Provider',
+          model: 'Model',
+          user: 'User',
+          account: 'Account',
+          clientKey: 'Client key',
+          providerKey: 'Upstream API key',
+          credential: 'Credential',
+          cost: 'Cost',
+          latency: 'Latency',
+        },
       },
       usage: {
         title: 'API key usage',
@@ -1257,6 +1372,18 @@ export const ru = {
           status: 'Статус',
           actions: 'Действия',
         },
+      },
+      operations: {
+        title: 'Logs и инструменты расследования',
+        description:
+          'Request logs, error logs и usage queue используются для расследования. Чтение очереди потребляет server records, поэтому остается ручным.',
+      },
+      trace: {
+        title: 'Скачать по Request ID',
+        description:
+          'Если error file или внешний alert уже содержит Request ID, скачайте соответствующий request log напрямую.',
+        placeholder: 'Введите Request ID',
+        unavailable: 'Этот runtime не поддерживает скачивание request logs по Request ID.',
       },
       logs: {
         title: 'Runtime logs',

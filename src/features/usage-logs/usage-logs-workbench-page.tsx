@@ -6,12 +6,26 @@ import {
   CheckCircle2,
   ChevronDown,
   Download,
+  FileSearch,
+  Filter,
+  Gauge,
   Loader2,
   RefreshCw,
   Search,
+  Timer,
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { toast } from 'sonner'
 
 import {
@@ -36,7 +50,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { createUsageAnalyticsModel } from '@/features/usage-logs/usage-logs-model'
+import type { UsageAnalyticsModel } from '@/features/usage-logs/usage-logs-model'
 import { useUsageLogsWorkbench } from '@/features/usage-logs/use-usage-logs-workbench'
+import type { RuntimeMode } from '@/lib/api/management/types'
 import type {
   ApiKeyUsageResource,
   RequestErrorLogFile,
@@ -46,6 +63,8 @@ import type {
 } from '@/lib/api/management/usage-logs'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
+
+type UsageMetricTone = UsageAnalyticsModel['metrics'][number]['tone']
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -94,6 +113,18 @@ function downloadBlob(blob: Blob, fileName: string) {
   anchor.download = fileName
   anchor.click()
   window.URL.revokeObjectURL(url)
+}
+
+function metricToneClassName(tone: UsageMetricTone) {
+  if (tone === 'positive') return 'border-success/30 bg-success/10 text-success'
+  if (tone === 'warning') {
+    return 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+  }
+  return 'bg-muted text-muted-foreground'
+}
+
+function getDimensionKey(dimension: string) {
+  return `usageLogsPage.analytics.dimensions.${dimension}`
 }
 
 function UsageLogsDisconnectedState() {
@@ -201,52 +232,237 @@ function CapabilityBadge({ available, label }: { available: boolean; label: stri
   )
 }
 
-function UsageSummaryCards({
-  usage,
-  runtimeLogs,
-  requestErrorLogs,
+function UsageVerdictHeader({
+  analytics,
+  capabilities,
+  runtimeMode,
+  fetchedAt,
+  isFetching,
+  onRefresh,
 }: {
-  usage: ApiKeyUsageResource[]
-  runtimeLogs: RuntimeLogSnapshot | null
-  requestErrorLogs: RequestErrorLogFile[]
+  analytics: UsageAnalyticsModel
+  capabilities: {
+    usage: boolean
+    usageQueue: boolean
+    logs: boolean
+    requestErrorLogs: boolean
+  }
+  runtimeMode: RuntimeMode
+  fetchedAt: string
+  isFetching: boolean
+  onRefresh: () => void
 }) {
   const { t } = useTranslation()
-  const success = usage.reduce((total, item) => total + item.success, 0)
-  const failed = usage.reduce((total, item) => total + item.failed, 0)
-  const recentWindows = usage.reduce((total, item) => total + item.recentRequestCount, 0)
-  const lineCount = runtimeLogs?.lineCount ?? 0
-  const cards = [
-    {
-      id: 'keys',
-      label: t('usageLogsPage.summary.keys'),
-      value: usage.length,
-      detail: t('usageLogsPage.summary.keysDetail', { count: recentWindows }),
-    },
-    {
-      id: 'requests',
-      label: t('usageLogsPage.summary.requests'),
-      value: success + failed,
-      detail: t('usageLogsPage.summary.requestsDetail', { success, failed }),
-    },
-    {
-      id: 'logs',
-      label: t('usageLogsPage.summary.logs'),
-      value: lineCount,
-      detail: t('usageLogsPage.summary.logsDetail', {
-        count: requestErrorLogs.length,
-      }),
-    },
+  const verdict = analytics.verdict
+
+  return (
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div
+            className={cn(
+              'flex size-11 shrink-0 items-center justify-center rounded-md border',
+              verdict === 'ready'
+                ? 'border-success/30 bg-success/10 text-success'
+                : verdict === 'partial'
+                  ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+                  : 'bg-muted text-muted-foreground',
+            )}
+          >
+            {verdict === 'ready' ? (
+              <Gauge className="size-5" aria-hidden="true" />
+            ) : verdict === 'partial' ? (
+              <AlertTriangle className="size-5" aria-hidden="true" />
+            ) : (
+              <BarChart3 className="size-5" aria-hidden="true" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-normal">
+                {t(`usageLogsPage.verdict.${verdict}.title`)}
+              </h1>
+              <span
+                className={cn(
+                  'inline-flex rounded-md border px-2 py-1 text-xs font-medium',
+                  verdict === 'ready'
+                    ? 'border-success/30 bg-success/10 text-success'
+                    : verdict === 'partial'
+                      ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+                      : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {t(`usageLogsPage.verdict.${verdict}.badge`)}
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 max-w-4xl text-sm leading-6">
+              {t(`usageLogsPage.verdict.${verdict}.description`, {
+                mode: t(`runtimeMode.${runtimeMode}`),
+              })}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start xl:shrink-0"
+          disabled={isFetching}
+          onClick={onRefresh}
+          aria-label={
+            isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')
+          }
+          title={
+            isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')
+          }
+        >
+          {isFetching ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <RefreshCw className="size-4" aria-hidden="true" />
+          )}
+          {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
+        </Button>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <CapabilityBadge
+          available={capabilities.usage}
+          label={t('usageLogsPage.capabilities.usage')}
+        />
+        <CapabilityBadge
+          available={capabilities.usageQueue}
+          label={t('usageLogsPage.capabilities.usageQueue')}
+        />
+        <CapabilityBadge
+          available={capabilities.logs}
+          label={t('usageLogsPage.capabilities.logs')}
+        />
+        <CapabilityBadge
+          available={capabilities.requestErrorLogs}
+          label={t('usageLogsPage.capabilities.requestErrorLogs')}
+        />
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.header.runtime', {
+            mode: t(`runtimeMode.${runtimeMode}`),
+          })}
+        </span>
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.header.updatedAt', {
+            time: formatDateTime(fetchedAt),
+          })}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function UsageMetricCards({ analytics }: { analytics: UsageAnalyticsModel }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {analytics.metrics.map((metric) => (
+        <div key={metric.id} className="bg-card rounded-lg border p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t(`usageLogsPage.metrics.${metric.id}.label`)}
+              </p>
+              <p className="mt-1.5 truncate text-2xl font-semibold tracking-normal">
+                {metric.value}
+              </p>
+            </div>
+            <div
+              className={cn(
+                'flex size-8 shrink-0 items-center justify-center rounded-md border',
+                metricToneClassName(metric.tone),
+              )}
+            >
+              {metric.id === 'failureRate' ? (
+                <AlertTriangle className="size-4" aria-hidden="true" />
+              ) : metric.id === 'recentWindows' ? (
+                <FileSearch className="size-4" aria-hidden="true" />
+              ) : metric.id === 'resources' ? (
+                <BarChart3 className="size-4" aria-hidden="true" />
+              ) : (
+                <Gauge className="size-4" aria-hidden="true" />
+              )}
+            </div>
+          </div>
+          <p className="text-muted-foreground mt-2 text-xs leading-5">
+            {t(`usageLogsPage.metrics.${metric.id}.detail`, {
+              value: metric.detail,
+            })}
+          </p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function UsageScopeNotice() {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex min-w-0 gap-3">
+        <div className="border-info/30 bg-info/10 text-info flex size-9 shrink-0 items-center justify-center rounded-md border">
+          <Timer className="size-4" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-sm font-medium">{t('usageLogsPage.scope.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm leading-6">
+            {t('usageLogsPage.scope.description')}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UsageFilterPreview() {
+  const { t } = useTranslation()
+  const filterKeys = [
+    'timeRange',
+    'provider',
+    'model',
+    'user',
+    'account',
+    'credential',
+    'clientKey',
+    'status',
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {cards.map((card) => (
-        <div key={card.id} className="bg-card rounded-lg border p-4 shadow-sm">
-          <p className="text-muted-foreground text-xs font-medium">{card.label}</p>
-          <p className="mt-2 text-2xl font-semibold">{card.value}</p>
-          <p className="text-muted-foreground mt-2 text-xs leading-5">{card.detail}</p>
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-md border">
+            <Filter className="size-4" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold">{t('usageLogsPage.filters.title')}</h2>
+            <p className="text-muted-foreground mt-1 max-w-4xl text-sm leading-6">
+              {t('usageLogsPage.filters.description')}
+            </p>
+          </div>
         </div>
-      ))}
+        <span className="bg-muted text-muted-foreground inline-flex self-start rounded-md border px-2.5 py-1 text-xs font-medium">
+          {t('usageLogsPage.filters.badge')}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {filterKeys.map((key) => (
+          <div
+            key={key}
+            className="bg-muted/35 text-muted-foreground flex min-w-0 items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm"
+          >
+            <span className="min-w-0 truncate">{t(`usageLogsPage.filters.items.${key}`)}</span>
+            <span className="bg-background/70 shrink-0 rounded-md border px-2 py-0.5 text-xs">
+              {t('usageLogsPage.filters.planned')}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -294,6 +510,237 @@ function ApiKeyUsageTable({ resources }: { resources: ApiKeyUsageResource[] }) {
           </TableBody>
         </Table>
       </div>
+    </div>
+  )
+}
+
+function UsageProviderCharts({ analytics }: { analytics: UsageAnalyticsModel }) {
+  const { t } = useTranslation()
+  const chartData = analytics.providerBreakdown.map((item) => ({
+    provider: item.provider,
+    success: item.success,
+    failed: item.failed,
+    total: item.total,
+    keys: item.keyCount,
+  }))
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+      <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="text-base font-semibold">{t('usageLogsPage.analytics.charts.title')}</h2>
+          <p className="text-muted-foreground text-sm leading-6">
+            {t('usageLogsPage.analytics.charts.description')}
+          </p>
+        </div>
+        <div className="mt-4 h-72 min-w-0">
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ left: 0, right: 4, top: 8, bottom: 8 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="provider" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis tickLine={false} axisLine={false} width={42} />
+                <Tooltip
+                  cursor={{ fill: 'var(--muted)', opacity: 0.45 }}
+                  contentStyle={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    color: 'var(--foreground)',
+                  }}
+                />
+                <Legend />
+                <Bar
+                  dataKey="success"
+                  name={t('usageLogsPage.usage.success')}
+                  stackId="requests"
+                  fill="var(--primary)"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="failed"
+                  name={t('usageLogsPage.usage.failed')}
+                  stackId="requests"
+                  fill="var(--warning)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border text-sm">
+              {t('usageLogsPage.analytics.charts.empty')}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+        <h2 className="text-base font-semibold">{t('usageLogsPage.analytics.breakdown.title')}</h2>
+        <p className="text-muted-foreground mt-1 text-sm leading-6">
+          {t('usageLogsPage.analytics.breakdown.description')}
+        </p>
+        <div className="mt-4 grid gap-3">
+          {analytics.providerBreakdown.length > 0 ? (
+            analytics.providerBreakdown.slice(0, 6).map((item) => {
+              const width =
+                analytics.totals.requests > 0
+                  ? Math.max((item.total / analytics.totals.requests) * 100, 3)
+                  : 0
+
+              return (
+                <div key={item.provider} className="grid gap-1.5">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate font-medium">{item.provider}</span>
+                    <span className="text-muted-foreground shrink-0 font-mono text-xs">
+                      {item.total}
+                    </span>
+                  </div>
+                  <div className="bg-muted h-2 overflow-hidden rounded-full">
+                    <div
+                      className="bg-primary h-full rounded-full"
+                      style={{ width: `${width}%` }}
+                    />
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    {t('usageLogsPage.analytics.breakdown.meta', {
+                      success: item.success,
+                      failed: item.failed,
+                      keys: item.keyCount,
+                    })}
+                  </p>
+                </div>
+              )
+            })
+          ) : (
+            <div className="text-muted-foreground rounded-md border px-4 py-8 text-sm">
+              {t('usageLogsPage.analytics.breakdown.empty')}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UsageCapabilityRoadmap({ analytics }: { analytics: UsageAnalyticsModel }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">{t('usageLogsPage.analytics.roadmap.title')}</h2>
+          <p className="text-muted-foreground mt-1 max-w-4xl text-sm leading-6">
+            {t('usageLogsPage.analytics.roadmap.description')}
+          </p>
+        </div>
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.analytics.roadmap.api')}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-md border p-3">
+          <p className="text-sm font-medium">{t('usageLogsPage.analytics.roadmap.current')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {analytics.currentDimensions.length > 0 ? (
+              analytics.currentDimensions.map((dimension) => (
+                <span
+                  key={dimension}
+                  className="border-primary/30 bg-primary/10 text-primary inline-flex rounded-md border px-2.5 py-1 text-xs font-medium"
+                >
+                  {t(getDimensionKey(dimension))}
+                </span>
+              ))
+            ) : (
+              <span className="bg-muted text-muted-foreground inline-flex rounded-md border px-2.5 py-1 text-xs font-medium">
+                {t('usageLogsPage.analytics.roadmap.none')}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="rounded-md border p-3">
+          <p className="text-sm font-medium">{t('usageLogsPage.analytics.roadmap.planned')}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {analytics.plannedDimensions.map((dimension) => (
+              <span
+                key={dimension}
+                className="bg-muted text-muted-foreground inline-flex rounded-md border px-2.5 py-1 text-xs font-medium"
+              >
+                {t(getDimensionKey(dimension))}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RequestTraceLookup({
+  canDownloadRequestLog,
+  downloadingRequestLogId,
+  isDownloadingRequestLog,
+  mutating,
+  onDownloadRequestLog,
+}: {
+  canDownloadRequestLog: boolean
+  downloadingRequestLogId: string | null
+  isDownloadingRequestLog: boolean
+  mutating: boolean
+  onDownloadRequestLog: (requestId: string) => void
+}) {
+  const { t } = useTranslation()
+  const [requestId, setRequestId] = useState('')
+  const normalizedRequestId = requestId.trim()
+  const downloading =
+    isDownloadingRequestLog &&
+    Boolean(normalizedRequestId) &&
+    downloadingRequestLogId === normalizedRequestId
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!normalizedRequestId || !canDownloadRequestLog || mutating) return
+    onDownloadRequestLog(normalizedRequestId)
+  }
+
+  return (
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex min-w-0 gap-3">
+        <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-md border">
+          <FileSearch className="size-4" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold">{t('usageLogsPage.trace.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm leading-6">
+            {t('usageLogsPage.trace.description')}
+          </p>
+        </div>
+      </div>
+      <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={handleSubmit}>
+        <Input
+          value={requestId}
+          className="font-mono"
+          placeholder={t('usageLogsPage.trace.placeholder')}
+          disabled={!canDownloadRequestLog || mutating}
+          onChange={(event) => setRequestId(event.target.value)}
+        />
+        <Button
+          type="submit"
+          variant="outline"
+          className="sm:shrink-0"
+          disabled={!canDownloadRequestLog || !normalizedRequestId || mutating}
+        >
+          {downloading ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Download className="size-4" aria-hidden="true" />
+          )}
+          {t('usageLogsPage.actions.downloadRequestLog')}
+        </Button>
+      </form>
+      {!canDownloadRequestLog ? (
+        <p className="text-muted-foreground mt-3 text-sm">{t('usageLogsPage.trace.unavailable')}</p>
+      ) : null}
     </div>
   )
 }
@@ -700,6 +1147,15 @@ function IssueList({ issues }: { issues: UsageLogIssue[] }) {
   )
 }
 
+function UsageSectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="min-w-0">
+      <h2 className="text-base font-semibold">{title}</h2>
+      <p className="text-muted-foreground mt-1 text-sm leading-6">{description}</p>
+    </div>
+  )
+}
+
 export function UsageLogsWorkbenchPage() {
   const { t } = useTranslation()
   const workbench = useUsageLogsWorkbench()
@@ -722,6 +1178,15 @@ export function UsageLogsWorkbenchPage() {
   if (workbench.isError || !workbench.snapshot) {
     return <UsageLogsErrorState errorMessage={workbench.errorMessage} onRetry={workbench.refetch} />
   }
+
+  const analytics = createUsageAnalyticsModel({
+    usage: workbench.snapshot.apiKeyUsage,
+    runtimeLogs: workbench.snapshot.runtimeLogs,
+    requestErrorLogs: workbench.snapshot.requestErrorLogs,
+    issues: workbench.snapshot.issues,
+    capabilities,
+    settings: workbench.snapshot.settings,
+  })
 
   const handleClearLogs = async () => {
     try {
@@ -764,67 +1229,14 @@ export function UsageLogsWorkbenchPage() {
 
   return (
     <section className="grid w-full gap-4">
-      <div className="bg-card rounded-lg border p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-normal">
-              {t('usageLogsPage.header.title')}
-            </h1>
-            <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
-              {t('usageLogsPage.header.description')}
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="self-start lg:self-auto"
-            disabled={workbench.isFetching}
-            onClick={workbench.refetch}
-            aria-label={
-              workbench.isFetching
-                ? t('usageLogsPage.actions.syncing')
-                : t('usageLogsPage.actions.refresh')
-            }
-            title={
-              workbench.isFetching
-                ? t('usageLogsPage.actions.syncing')
-                : t('usageLogsPage.actions.refresh')
-            }
-          >
-            {workbench.isFetching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {workbench.isFetching
-              ? t('usageLogsPage.actions.syncing')
-              : t('usageLogsPage.actions.refresh')}
-          </Button>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <CapabilityBadge
-            available={capabilities.usage}
-            label={t('usageLogsPage.capabilities.usage')}
-          />
-          <CapabilityBadge
-            available={capabilities.usageQueue}
-            label={t('usageLogsPage.capabilities.usageQueue')}
-          />
-          <CapabilityBadge
-            available={capabilities.logs}
-            label={t('usageLogsPage.capabilities.logs')}
-          />
-          <CapabilityBadge
-            available={capabilities.requestErrorLogs}
-            label={t('usageLogsPage.capabilities.requestErrorLogs')}
-          />
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(workbench.snapshot.fetchedAt),
-            })}
-          </span>
-        </div>
-      </div>
+      <UsageVerdictHeader
+        analytics={analytics}
+        capabilities={capabilities}
+        runtimeMode={workbench.runtimeMode}
+        fetchedAt={workbench.snapshot.fetchedAt}
+        isFetching={workbench.isFetching}
+        onRefresh={workbench.refetch}
+      />
 
       {noRuntimeLogCapabilities ? (
         <div className="bg-card rounded-lg border p-6 shadow-sm">
@@ -846,38 +1258,51 @@ export function UsageLogsWorkbenchPage() {
 
       <IssueList issues={workbench.snapshot.issues} />
 
-      <UsageSummaryCards
-        usage={workbench.snapshot.apiKeyUsage}
-        runtimeLogs={workbench.snapshot.runtimeLogs}
-        requestErrorLogs={workbench.snapshot.requestErrorLogs}
-      />
+      <UsageScopeNotice />
+
+      <UsageFilterPreview />
+
+      <UsageMetricCards analytics={analytics} />
+
+      <UsageCapabilityRoadmap analytics={analytics} />
+
+      <UsageProviderCharts analytics={analytics} />
 
       <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold">{t('usageLogsPage.usage.title')}</h2>
-          <p className="text-muted-foreground mt-1 text-sm leading-6">
-            {t('usageLogsPage.usage.description')}
-          </p>
-        </div>
+        <UsageSectionHeader
+          title={t('usageLogsPage.usage.title')}
+          description={t('usageLogsPage.usage.description')}
+        />
         <div className="mt-3">
           <ApiKeyUsageTable resources={workbench.snapshot.apiKeyUsage} />
         </div>
       </div>
 
-      <UsageQueuePanel
-        records={workbench.usageQueueRecords}
-        loaded={workbench.usageQueueLoaded}
-        canRead={capabilities.usageQueue}
-        canDownloadRequestLog={capabilities.requestErrorLogs}
-        fetching={workbench.isFetchingUsageQueue}
-        downloadingRequestLogId={workbench.downloadingRequestLogId}
-        isDownloadingRequestLog={workbench.isDownloadingRequestLog}
-        mutating={workbench.mutating}
-        onFetch={() => void handleFetchUsageQueue()}
-        onDownloadRequestLog={(requestId) => void handleDownloadRequestLog(requestId)}
+      <UsageSectionHeader
+        title={t('usageLogsPage.operations.title')}
+        description={t('usageLogsPage.operations.description')}
       />
 
       <div className="grid gap-4">
+        <RequestTraceLookup
+          canDownloadRequestLog={capabilities.requestErrorLogs}
+          downloadingRequestLogId={workbench.downloadingRequestLogId}
+          isDownloadingRequestLog={workbench.isDownloadingRequestLog}
+          mutating={workbench.mutating}
+          onDownloadRequestLog={(requestId) => void handleDownloadRequestLog(requestId)}
+        />
+        <UsageQueuePanel
+          records={workbench.usageQueueRecords}
+          loaded={workbench.usageQueueLoaded}
+          canRead={capabilities.usageQueue}
+          canDownloadRequestLog={capabilities.requestErrorLogs}
+          fetching={workbench.isFetchingUsageQueue}
+          downloadingRequestLogId={workbench.downloadingRequestLogId}
+          isDownloadingRequestLog={workbench.isDownloadingRequestLog}
+          mutating={workbench.mutating}
+          onFetch={() => void handleFetchUsageQueue()}
+          onDownloadRequestLog={(requestId) => void handleDownloadRequestLog(requestId)}
+        />
         <RuntimeLogViewer
           runtimeLogs={workbench.snapshot.runtimeLogs}
           canRead={capabilities.logs}

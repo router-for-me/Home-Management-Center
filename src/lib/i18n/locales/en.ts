@@ -1185,6 +1185,7 @@ export const en = {
         title: 'Usage & Logs',
         description:
           'Review model service request counts, API key usage, runtime logs, and downloadable request error logs.',
+        runtime: 'Runtime: {{mode}}',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
@@ -1206,6 +1207,44 @@ export const en = {
         description:
           '{{mode}} does not expose runtime log or usage query routes. The page keeps capability state visible without inventing missing data.',
       },
+      verdict: {
+        ready: {
+          title: 'Usage data is synced',
+          badge: 'Analyzable',
+          description:
+            'The runtime returned API key usage aggregates for reviewing model-service request volume, failures, and provider distribution.',
+        },
+        idle: {
+          title: 'Usage statistics are available, no requests yet',
+          badge: 'No data',
+          description:
+            'The runtime exposes usage routes but returned no request records. Sync again after the service handles traffic.',
+        },
+        disabled: {
+          title: 'Usage statistics are disabled',
+          badge: 'Disabled',
+          description:
+            'The runtime exposes usage routes, but usage-statistics-enabled is disabled in config. Enable it before expecting persistent request usage aggregation.',
+        },
+        partial: {
+          title: 'Usage data synced partially',
+          badge: 'Partial',
+          description:
+            'The page continues to show loaded usage facts. Review the failed scopes before making a full assessment.',
+        },
+        limited: {
+          title: 'Usage analytics are limited',
+          badge: 'Limited',
+          description:
+            '{{mode}} did not return API key usage aggregates, so only logs and error files can be used for investigation.',
+        },
+        unsupported: {
+          title: 'This runtime does not support usage analytics',
+          badge: 'Unsupported',
+          description:
+            '{{mode}} does not expose usage or log routes. Capability state remains visible until backend observability APIs are added.',
+        },
+      },
       issues: {
         title: 'Some data could not be loaded',
       },
@@ -1223,6 +1262,82 @@ export const en = {
         requestsDetail: '{{success}} success / {{failed}} failed',
         logs: 'Log lines',
         logsDetail: '{{count}} error log files',
+      },
+      scope: {
+        title: 'Current statistics scope',
+        description:
+          'The current backend only returns runtime memory aggregates. Date, user, account, credential, and model-token filters are not available yet, so the page shows only verified aggregate facts.',
+      },
+      filters: {
+        title: 'Analytics filter model',
+        description:
+          'Complete usage analytics needs filters for time range, model, user, account, credential, client key, and request status. The current runtime does not expose those query parameters yet, so this area documents the backend contract the product needs next.',
+        badge: 'Backend support required',
+        planned: 'Planned',
+        items: {
+          timeRange: 'Time range',
+          provider: 'Provider',
+          model: 'Model',
+          user: 'User',
+          account: 'Account',
+          credential: 'Credential',
+          clientKey: 'Client key',
+          status: 'Request status',
+        },
+      },
+      metrics: {
+        requests: {
+          label: 'Total requests',
+          detail: 'Success / failed: {{value}}',
+        },
+        failureRate: {
+          label: 'Failure rate',
+          detail: 'Failed / total: {{value}}',
+        },
+        resources: {
+          label: 'Upstream key records',
+          detail: 'Providers: {{value}}',
+        },
+        recentWindows: {
+          label: 'Recent windows',
+          detail: 'Error log files: {{value}}',
+        },
+      },
+      analytics: {
+        charts: {
+          title: 'Provider request distribution',
+          description:
+            'The current route only returns model provider, upstream Base URL, and API key success/failure aggregates, so this chart shows verifiable provider distribution first.',
+          empty: 'No usage data is available for charting.',
+        },
+        breakdown: {
+          title: 'Provider ranking',
+          description:
+            'Sorted by request volume to show which upstream model services carry usage.',
+          meta: '{{success}} success / {{failed}} failed, {{keys}} upstream keys',
+          empty: 'No provider usage ranking is available.',
+        },
+        roadmap: {
+          title: 'Analytics dimension coverage',
+          description:
+            'The page is designed for the complete usage product shape. The current runtime only returns limited aggregate dimensions; token, cost, user, account, and credential analytics require backend support.',
+          api: 'Backend API planned',
+          current: 'Available now',
+          planned: 'Needs backend support',
+          none: 'No analytics dimensions available',
+        },
+        dimensions: {
+          time: 'Time trend',
+          provider: 'Provider',
+          model: 'Model',
+          user: 'User',
+          account: 'Account',
+          clientKey: 'Client key',
+          providerKey: 'Upstream API key',
+          credential: 'Credential',
+          cost: 'Cost',
+          latency: 'Latency',
+        },
       },
       usage: {
         title: 'API key usage',
@@ -1254,6 +1369,18 @@ export const en = {
           status: 'Status',
           actions: 'Actions',
         },
+      },
+      operations: {
+        title: 'Logs and investigation tools',
+        description:
+          'Request logs, error logs, and the usage queue are investigation tools. Queue reads consume server records, so they remain manual.',
+      },
+      trace: {
+        title: 'Download by Request ID',
+        description:
+          'If an error file or external alert already gives you a Request ID, download the matching request log directly.',
+        placeholder: 'Enter Request ID',
+        unavailable: 'This runtime does not support downloading request logs by Request ID.',
       },
       logs: {
         title: 'Runtime logs',

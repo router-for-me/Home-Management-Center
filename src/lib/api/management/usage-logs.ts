@@ -48,8 +48,14 @@ export type RequestErrorLogFile = {
   modified: number | null
 }
 
+export type UsageRuntimeSettings = {
+  usageStatisticsEnabled: boolean
+  fileLoggingEnabled: boolean
+}
+
 type UsageLogsSnapshot = {
   fetchedAt: string
+  settings: UsageRuntimeSettings
   apiKeyUsage: ApiKeyUsageResource[]
   runtimeLogs: RuntimeLogSnapshot | null
   requestErrorLogs: RequestErrorLogFile[]
@@ -244,6 +250,7 @@ export async function fetchUsageLogsSnapshot(
   const configResponse = await client.get<unknown>('/config')
   const config = toRecord(configResponse.data)
   const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
+  const usageStatisticsEnabled = readConfigBoolean(config, 'usage-statistics-enabled')
 
   const [apiKeyUsage, runtimeLogs, requestErrorLogs] = await Promise.all([
     capabilities.usage
@@ -285,6 +292,10 @@ export async function fetchUsageLogsSnapshot(
 
   return {
     fetchedAt: new Date().toISOString(),
+    settings: {
+      usageStatisticsEnabled,
+      fileLoggingEnabled,
+    },
     apiKeyUsage,
     runtimeLogs,
     requestErrorLogs,

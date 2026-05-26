@@ -1146,6 +1146,7 @@ export const zhTW = {
       header: {
         title: '用量與日誌',
         description: '查看模型服務請求計數、API key 用量、執行日誌和可下載的請求錯誤日誌。',
+        runtime: '執行環境：{{mode}}',
         updatedAt: '最近同步：{{time}}',
       },
       actions: {
@@ -1167,6 +1168,41 @@ export const zhTW = {
         description:
           '{{mode}} 未暴露執行日誌和用量查詢介面。頁面會保留能力狀態，但不會虛構缺失資料。',
       },
+      verdict: {
+        ready: {
+          title: '用量資料已同步',
+          badge: '可分析',
+          description:
+            '目前執行環境已回傳 API Key 用量聚合，可用於判斷模型服務請求量、失敗量和供應商分布。',
+        },
+        idle: {
+          title: '用量統計已啟用，暫無請求',
+          badge: '暫無資料',
+          description: '執行環境提供用量介面，但目前沒有回傳請求記錄。請在服務處理請求後重新同步。',
+        },
+        disabled: {
+          title: '用量統計未啟用',
+          badge: '未啟用',
+          description:
+            '目前執行環境已開放用量介面，但設定中的 usage-statistics-enabled 為關閉狀態。啟用後才能持續聚合請求用量。',
+        },
+        partial: {
+          title: '用量資料部分同步失敗',
+          badge: '部分失敗',
+          description: '頁面會繼續展示已載入的用量事實，請先查看失敗範圍再做完整判斷。',
+        },
+        limited: {
+          title: '用量分析能力受限',
+          badge: '介面受限',
+          description: '{{mode}} 目前未回傳 API Key 用量聚合，只能使用日誌和錯誤檔案做排查。',
+        },
+        unsupported: {
+          title: '目前執行環境不支援用量分析',
+          badge: '不支援',
+          description:
+            '{{mode}} 未開放用量與日誌相關介面。頁面保留能力狀態，等待後端補齊觀測介面。',
+        },
+      },
       issues: {
         title: '部分資料載入失敗',
       },
@@ -1184,6 +1220,81 @@ export const zhTW = {
         requestsDetail: '{{success}} 成功 / {{failed}} 失敗',
         logs: '日誌行數',
         logsDetail: '{{count}} 個錯誤日誌檔案',
+      },
+      scope: {
+        title: '目前統計範圍',
+        description:
+          '目前後端只回傳執行環境記憶體聚合，暫不支援按日期、使用者、帳號、憑證或模型 Token 維度篩選。頁面會先展示真實可用的聚合事實。',
+      },
+      filters: {
+        title: '分析篩選口徑',
+        description:
+          '完整用量分析需要支援時間範圍、模型、使用者、帳號、憑證、客戶端金鑰和請求狀態篩選。目前執行環境尚未提供這些查詢參數，因此這裡僅展示後續後端契約需要覆蓋的篩選面。',
+        badge: '待後端支援',
+        planned: '規劃中',
+        items: {
+          timeRange: '時間範圍',
+          provider: '供應商',
+          model: '模型',
+          user: '使用者',
+          account: '帳號',
+          credential: '帳號憑證',
+          clientKey: '客戶端金鑰',
+          status: '請求狀態',
+        },
+      },
+      metrics: {
+        requests: {
+          label: '請求總量',
+          detail: '成功 / 失敗：{{value}}',
+        },
+        failureRate: {
+          label: '失敗率',
+          detail: '失敗 / 總量：{{value}}',
+        },
+        resources: {
+          label: '上游 Key 記錄',
+          detail: '供應商數量：{{value}}',
+        },
+        recentWindows: {
+          label: '最近請求視窗',
+          detail: '錯誤日誌檔案：{{value}}',
+        },
+      },
+      analytics: {
+        charts: {
+          title: '供應商請求分布',
+          description:
+            '目前介面只能提供模型供應商、上游 Base URL 和 API Key 的成功/失敗聚合，因此這裡先展示可驗證的供應商分布。',
+          empty: '目前沒有可繪製的用量資料。',
+        },
+        breakdown: {
+          title: '供應商排行',
+          description: '按請求總量排序，幫助定位主要消耗來自哪些上游模型服務。',
+          meta: '{{success}} 成功 / {{failed}} 失敗，{{keys}} 個上游 Key',
+          empty: '目前沒有供應商用量排行。',
+        },
+        roadmap: {
+          title: '分析維度覆蓋',
+          description:
+            '頁面已按完整用量產品形態設計；目前執行環境只回傳部分聚合維度，Token、成本、使用者、帳號和憑證維度需要後端繼續補齊。',
+          api: '後端介面規劃中',
+          current: '目前可用',
+          planned: '待後端支援',
+          none: '暫無可用分析維度',
+        },
+        dimensions: {
+          time: '時間趨勢',
+          provider: '供應商',
+          model: '模型',
+          user: '使用者',
+          account: '帳號',
+          clientKey: '客戶端金鑰',
+          providerKey: '上游 API Key',
+          credential: '帳號憑證',
+          cost: '成本',
+          latency: '延遲',
+        },
       },
       usage: {
         title: 'API Key 用量',
@@ -1211,6 +1322,17 @@ export const zhTW = {
           status: '狀態',
           actions: '操作',
         },
+      },
+      operations: {
+        title: '日誌與排查工具',
+        description:
+          '請求日誌、錯誤日誌和 usage queue 屬於排查工具。佇列讀取會消費服務端記錄，因此保持手動觸發。',
+      },
+      trace: {
+        title: '按 Request ID 下載日誌',
+        description: '如果已經從錯誤檔案或外部告警拿到 Request ID，可以直接下載對應請求日誌。',
+        placeholder: '輸入 Request ID',
+        unavailable: '目前執行環境不支援按 Request ID 下載請求日誌。',
       },
       logs: {
         title: '執行日誌',
