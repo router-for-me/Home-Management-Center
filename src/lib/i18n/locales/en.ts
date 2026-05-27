@@ -1341,6 +1341,7 @@ export const en = {
         breakdown: {
           requests: 'Requests',
           failed: 'Failed',
+          mobileMeta: '{{requests}} requests / {{failed}} failed',
           providers: 'Provider ranking',
           providersDescription: 'Aggregates request and failure volume by provider.',
           models: 'Model ranking',

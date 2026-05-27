@@ -169,6 +169,15 @@ function formatComparisonValue(id: UsageAnalyticsComparisonId, value: number) {
   return formatCompactNumber(value)
 }
 
+function truncateMiddle(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value
+
+  const keep = Math.max(maxLength - 1, 4)
+  const start = Math.ceil(keep / 2)
+  const end = Math.floor(keep / 2)
+  return `${value.slice(0, start)}…${value.slice(value.length - end)}`
+}
+
 function formatRawRecord(value: unknown) {
   if (typeof value === 'string') return value
 
@@ -488,13 +497,19 @@ function UsageMockScenarioSwitcher({
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="bg-muted/40 flex flex-wrap gap-1.5 rounded-md border p-1">
       {usageAnalyticsScenarioIds.map((scenarioId) => (
         <Button
           key={scenarioId}
           asChild
-          variant={scenarioId === activeScenario ? 'default' : 'outline'}
+          variant={scenarioId === activeScenario ? 'secondary' : 'ghost'}
           size="sm"
+          className={cn(
+            'h-7 px-2.5 text-xs',
+            scenarioId === activeScenario
+              ? 'bg-background shadow-xs'
+              : 'text-muted-foreground hover:text-foreground',
+          )}
         >
           <a href={`/usage-logs?usageMock=${scenarioId}`}>{t(getScenarioKey(scenarioId))}</a>
         </Button>
@@ -547,6 +562,9 @@ function UsageMockHeader({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
           })}
         </span>
       </div>
+      <div className="border-info/30 bg-info/10 text-info mt-4 rounded-md border px-3 py-2.5 text-sm leading-6">
+        {t('usageLogsPage.mock.contractNotice')}
+      </div>
     </div>
   )
 }
@@ -571,7 +589,7 @@ function UsageMockKpis({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
         input: formatCompactNumber(summary.inputTokens),
         output: formatCompactNumber(summary.outputTokens),
       }),
-      tone: summary.totalTokens > 0 ? 'positive' : 'neutral',
+      tone: 'neutral',
     },
     {
       id: 'cost',
@@ -579,7 +597,7 @@ function UsageMockKpis({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
       detail: t('usageLogsPage.mock.kpis.costDetail', {
         count: formatCompactNumber(summary.unpricedRequests),
       }),
-      tone: summary.unpricedRequests > 0 ? 'warning' : summary.cost > 0 ? 'positive' : 'neutral',
+      tone: summary.unpricedRequests > 0 ? 'warning' : 'neutral',
     },
     {
       id: 'latency',
@@ -587,12 +605,7 @@ function UsageMockKpis({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
       detail: t('usageLogsPage.mock.kpis.latencyDetail', {
         firstToken: formatDuration(summary.avgFirstTokenMs),
       }),
-      tone:
-        summary.avgDurationMs > 2500
-          ? 'warning'
-          : summary.avgDurationMs > 0
-            ? 'positive'
-            : 'neutral',
+      tone: summary.avgDurationMs > 2500 ? 'warning' : 'neutral',
     },
   ]
 
@@ -751,7 +764,6 @@ function UsageMockTrendChart({ snapshot }: { snapshot: UsageAnalyticsSnapshot })
                   color: 'var(--foreground)',
                 }}
               />
-              <Legend />
               <Area
                 yAxisId="left"
                 type="monotone"
@@ -824,7 +836,6 @@ function UsageMockStatusChart({ snapshot }: { snapshot: UsageAnalyticsSnapshot }
                   color: 'var(--foreground)',
                 }}
               />
-              <Legend formatter={(value) => t(getStatusKey(value as UsageAnalyticsStatus))} />
             </PieChart>
           </ResponsiveContainer>
         ) : (
@@ -862,6 +873,7 @@ function UsageMockBreakdownChart({
   const { t } = useTranslation()
   const chartData = rows.slice(0, 8).map((row) => ({
     label: row.label,
+    shortLabel: truncateMiddle(row.label, 18),
     requests: row.requests,
     failed: row.failed,
     tokens: row.totalTokens,
@@ -871,7 +883,7 @@ function UsageMockBreakdownChart({
   return (
     <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
       <UsageSectionHeader title={title} description={description} />
-      <div className="mt-4 h-80 min-w-0">
+      <div className="mt-4 hidden h-80 min-w-0 md:block">
         {chartData.length > 0 ? (
           <ResponsiveContainer
             width="100%"
@@ -888,11 +900,10 @@ function UsageMockBreakdownChart({
               <XAxis type="number" tickLine={false} axisLine={false} />
               <YAxis
                 type="category"
-                dataKey="label"
+                dataKey="shortLabel"
                 tickLine={false}
                 axisLine={false}
-                width={120}
-                tickFormatter={(value) => String(value).slice(0, 18)}
+                width={132}
               />
               <Tooltip
                 cursor={{ fill: 'var(--muted)', opacity: 0.35 }}
@@ -924,6 +935,40 @@ function UsageMockBreakdownChart({
           </div>
         )}
       </div>
+      <div className="mt-4 grid gap-3 md:hidden">
+        {chartData.length > 0 ? (
+          chartData.map((row) => {
+            const maxValue = Math.max(...chartData.map((item) => item.requests), 1)
+            const width = Math.max((row.requests / maxValue) * 100, row.requests > 0 ? 4 : 0)
+
+            return (
+              <div key={row.label} className="rounded-md border px-3 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium" title={row.label}>
+                      {row.label}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t('usageLogsPage.mock.breakdown.mobileMeta', {
+                        requests: formatCompactNumber(row.requests),
+                        failed: formatCompactNumber(row.failed),
+                      })}
+                    </p>
+                  </div>
+                  <span className="font-mono text-xs">{formatCompactNumber(row.requests)}</span>
+                </div>
+                <div className="bg-muted mt-2 h-2 overflow-hidden rounded-full">
+                  <div className="bg-primary h-full rounded-full" style={{ width: `${width}%` }} />
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
+            {t('usageLogsPage.mock.emptyChart')}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -939,69 +984,133 @@ function UsageMockRequestTable({ snapshot }: { snapshot: UsageAnalyticsSnapshot 
       />
       <div className="mt-4 overflow-hidden rounded-md border">
         {snapshot.requestSamples.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[1080px]">
-              <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>{t('usageLogsPage.mock.requests.columns.request')}</TableHead>
-                  <TableHead>{t('usageLogsPage.mock.requests.columns.provider')}</TableHead>
-                  <TableHead>{t('usageLogsPage.mock.requests.columns.model')}</TableHead>
-                  <TableHead>{t('usageLogsPage.mock.requests.columns.user')}</TableHead>
-                  <TableHead>{t('usageLogsPage.mock.requests.columns.status')}</TableHead>
-                  <TableHead className="text-right">
-                    {t('usageLogsPage.mock.requests.columns.tokens')}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t('usageLogsPage.mock.requests.columns.cost')}
-                  </TableHead>
-                  <TableHead className="text-right">
-                    {t('usageLogsPage.mock.requests.columns.latency')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {snapshot.requestSamples.map((row) => (
-                  <TableRow key={row.requestId} className="align-top">
-                    <TableCell className="max-w-[240px]">
-                      <p className="truncate font-mono text-xs">{row.requestId}</p>
+          <>
+            <div className="grid gap-3 p-3 lg:hidden">
+              {snapshot.requestSamples.map((row) => (
+                <div key={row.requestId} className="rounded-md border px-3 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-mono text-xs" title={row.requestId}>
+                        {row.requestId}
+                      </p>
                       <p className="text-muted-foreground mt-1 text-xs">
                         {formatDateTime(row.timestamp)}
                       </p>
-                    </TableCell>
-                    <TableCell className="max-w-[180px] truncate">{row.provider}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
-                      {row.model}
-                    </TableCell>
-                    <TableCell className="max-w-[220px]">
-                      <p className="truncate">{row.username}</p>
-                      <p className="text-muted-foreground mt-1 truncate text-xs">
-                        {row.clientKeyName}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={cn(
-                          'inline-flex rounded-md border px-2 py-1 text-xs font-medium',
-                          usageStatusClassNames[row.status],
-                        )}
-                      >
-                        {t(getStatusKey(row.status))}
+                    </div>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-md border px-2 py-1 text-xs font-medium',
+                        usageStatusClassNames[row.status],
+                      )}
+                    >
+                      {t(getStatusKey(row.status))}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 text-sm">
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">
+                        {t('usageLogsPage.mock.requests.columns.provider')}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {formatCompactNumber(row.totalTokens)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {formatCurrency(row.cost)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-xs">
-                      {formatDuration(row.durationMs)}
-                    </TableCell>
+                      <p className="mt-0.5 truncate font-medium" title={row.provider}>
+                        {row.provider}
+                      </p>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-muted-foreground">
+                        {t('usageLogsPage.mock.requests.columns.model')}
+                      </span>
+                      <p className="mt-0.5 truncate font-mono text-xs" title={row.model}>
+                        {row.model}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('usageLogsPage.mock.requests.columns.tokens')}
+                        </span>
+                        <p className="mt-0.5 font-mono">{formatCompactNumber(row.totalTokens)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('usageLogsPage.mock.requests.columns.cost')}
+                        </span>
+                        <p className="mt-0.5 font-mono">{formatCurrency(row.cost)}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">
+                          {t('usageLogsPage.mock.requests.columns.latency')}
+                        </span>
+                        <p className="mt-0.5 font-mono">{formatDuration(row.durationMs)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="hidden overflow-x-auto lg:block">
+              <Table className="min-w-[1080px]">
+                <TableHeader className="bg-muted/70 text-muted-foreground">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead>{t('usageLogsPage.mock.requests.columns.request')}</TableHead>
+                    <TableHead>{t('usageLogsPage.mock.requests.columns.provider')}</TableHead>
+                    <TableHead>{t('usageLogsPage.mock.requests.columns.model')}</TableHead>
+                    <TableHead>{t('usageLogsPage.mock.requests.columns.user')}</TableHead>
+                    <TableHead>{t('usageLogsPage.mock.requests.columns.status')}</TableHead>
+                    <TableHead className="text-right">
+                      {t('usageLogsPage.mock.requests.columns.tokens')}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t('usageLogsPage.mock.requests.columns.cost')}
+                    </TableHead>
+                    <TableHead className="text-right">
+                      {t('usageLogsPage.mock.requests.columns.latency')}
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {snapshot.requestSamples.map((row) => (
+                    <TableRow key={row.requestId} className="align-top">
+                      <TableCell className="max-w-[240px]">
+                        <p className="truncate font-mono text-xs">{row.requestId}</p>
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {formatDateTime(row.timestamp)}
+                        </p>
+                      </TableCell>
+                      <TableCell className="max-w-[180px] truncate">{row.provider}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
+                        {row.model}
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        <p className="truncate">{row.username}</p>
+                        <p className="text-muted-foreground mt-1 truncate text-xs">
+                          {row.clientKeyName}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={cn(
+                            'inline-flex rounded-md border px-2 py-1 text-xs font-medium',
+                            usageStatusClassNames[row.status],
+                          )}
+                        >
+                          {t(getStatusKey(row.status))}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {formatCompactNumber(row.totalTokens)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {formatCurrency(row.cost)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-xs">
+                        {formatDuration(row.durationMs)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         ) : (
           <p className="text-muted-foreground px-4 py-10 text-sm">
             {t('usageLogsPage.mock.requests.empty')}
@@ -1018,9 +1127,6 @@ function UsageMockAnalyticsLab({ snapshot }: { snapshot: UsageAnalyticsSnapshot 
   return (
     <section className="grid w-full gap-4">
       <UsageMockHeader snapshot={snapshot} />
-      <div className="border-info/30 bg-info/10 text-info rounded-md border px-3 py-2.5 text-sm leading-6">
-        {t('usageLogsPage.mock.contractNotice')}
-      </div>
       <UsageMockKpis snapshot={snapshot} />
       <UsageMockComparisonCards comparisons={snapshot.comparisons} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">

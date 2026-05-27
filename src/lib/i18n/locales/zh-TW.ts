@@ -1297,6 +1297,7 @@ export const zhTW = {
         breakdown: {
           requests: '請求',
           failed: '失敗',
+          mobileMeta: '{{requests}} 請求 / {{failed}} 失敗',
           providers: '供應商排行',
           providersDescription: '按供應商聚合請求量和失敗量，驗證多供應商分布。',
           models: '模型排行',

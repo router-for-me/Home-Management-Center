@@ -1297,6 +1297,7 @@ export const zhCN = {
         breakdown: {
           requests: '请求',
           failed: '失败',
+          mobileMeta: '{{requests}} 请求 / {{failed}} 失败',
           providers: '供应商排行',
           providersDescription: '按供应商聚合请求量和失败量，验证多供应商分布。',
           models: '模型排行',
