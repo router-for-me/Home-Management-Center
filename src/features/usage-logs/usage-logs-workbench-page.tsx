@@ -17,10 +17,15 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -50,6 +55,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  readUsageAnalyticsMockScenarioId,
+  usageAnalyticsScenarioIds,
+} from '@/features/usage-logs/usage-logs-future-model'
+import type {
+  UsageAnalyticsComparison,
+  UsageAnalyticsComparisonId,
+  UsageAnalyticsScenarioId,
+  UsageAnalyticsSnapshot,
+  UsageAnalyticsStatus,
+} from '@/features/usage-logs/usage-logs-future-model'
+import { getUsageAnalyticsMockSnapshot } from '@/features/usage-logs/usage-logs-mock-data'
 import { createUsageAnalyticsModel } from '@/features/usage-logs/usage-logs-model'
 import type { UsageAnalyticsModel } from '@/features/usage-logs/usage-logs-model'
 import { useUsageLogsWorkbench } from '@/features/usage-logs/use-usage-logs-workbench'
@@ -65,6 +82,24 @@ import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
 type UsageMetricTone = UsageAnalyticsModel['metrics'][number]['tone']
+
+const usageStatusClassNames: Record<UsageAnalyticsStatus, string> = {
+  success: 'border-primary/30 bg-primary/10 text-primary',
+  failed: 'border-destructive/30 bg-destructive/10 text-destructive',
+  rateLimited: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+  quotaExceeded: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+  timeout: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+}
+
+const usageStatusChartColors: Record<UsageAnalyticsStatus, string> = {
+  success: 'var(--primary)',
+  failed: 'var(--destructive)',
+  rateLimited: 'var(--warning)',
+  quotaExceeded: 'var(--info)',
+  timeout: 'var(--muted-foreground)',
+}
+
+const chartInitialDimension = { width: 1, height: 1 }
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -96,6 +131,44 @@ function formatBytes(value: number | null) {
   }).format(nextValue)} ${units[unitIndex]}`
 }
 
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: value >= 1000 ? 1 : 0,
+  }).format(value)
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: value >= 100 ? 0 : 2,
+  }).format(value)
+}
+
+function formatDuration(value: number) {
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat(undefined, {
+      maximumFractionDigits: 1,
+    }).format(value / 1000)}s`
+  }
+
+  return `${formatCompactNumber(value)}ms`
+}
+
+function formatDateBucket(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value))
+}
+
+function formatComparisonValue(id: UsageAnalyticsComparisonId, value: number) {
+  if (id === 'cost') return formatCurrency(value)
+  if (id === 'latency') return formatDuration(value)
+  return formatCompactNumber(value)
+}
+
 function formatRawRecord(value: unknown) {
   if (typeof value === 'string') return value
 
@@ -125,6 +198,14 @@ function metricToneClassName(tone: UsageMetricTone) {
 
 function getDimensionKey(dimension: string) {
   return `usageLogsPage.analytics.dimensions.${dimension}`
+}
+
+function getStatusKey(status: UsageAnalyticsStatus) {
+  return `usageLogsPage.mock.status.${status}`
+}
+
+function getScenarioKey(scenarioId: UsageAnalyticsScenarioId) {
+  return `usageLogsPage.mock.scenarios.${scenarioId}`
 }
 
 function UsageLogsDisconnectedState() {
@@ -399,6 +480,580 @@ function UsageMetricCards({ analytics }: { analytics: UsageAnalyticsModel }) {
   )
 }
 
+function UsageMockScenarioSwitcher({
+  activeScenario,
+}: {
+  activeScenario: UsageAnalyticsScenarioId
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {usageAnalyticsScenarioIds.map((scenarioId) => (
+        <Button
+          key={scenarioId}
+          asChild
+          variant={scenarioId === activeScenario ? 'default' : 'outline'}
+          size="sm"
+        >
+          <a href={`/usage-logs?usageMock=${scenarioId}`}>{t(getScenarioKey(scenarioId))}</a>
+        </Button>
+      ))}
+    </div>
+  )
+}
+
+function UsageMockHeader({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="flex min-w-0 gap-3">
+          <div className="border-info/30 bg-info/10 text-info flex size-11 shrink-0 items-center justify-center rounded-md border">
+            <BarChart3 className="size-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-normal">
+                {t('usageLogsPage.mock.title')}
+              </h1>
+              <span className="border-info/30 bg-info/10 text-info inline-flex rounded-md border px-2 py-1 text-xs font-medium">
+                {t('usageLogsPage.mock.badge')}
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 max-w-4xl text-sm leading-6">
+              {t('usageLogsPage.mock.description')}
+            </p>
+          </div>
+        </div>
+        <UsageMockScenarioSwitcher activeScenario={snapshot.scenarioId} />
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.mock.currentScenario', {
+            scenario: t(getScenarioKey(snapshot.scenarioId)),
+          })}
+        </span>
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.mock.range', {
+            start: formatDateBucket(snapshot.range.start),
+            end: formatDateBucket(snapshot.range.end),
+          })}
+        </span>
+        <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+          {t('usageLogsPage.header.updatedAt', {
+            time: formatDateTime(snapshot.generatedAt),
+          })}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function UsageMockKpis({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+  const summary = snapshot.summary
+  const metrics = [
+    {
+      id: 'requests',
+      value: formatCompactNumber(summary.requests),
+      detail: t('usageLogsPage.mock.kpis.requestsDetail', {
+        success: formatCompactNumber(summary.success),
+        failed: formatCompactNumber(summary.failed),
+      }),
+      tone: summary.failed > 0 ? 'warning' : summary.requests > 0 ? 'positive' : 'neutral',
+    },
+    {
+      id: 'tokens',
+      value: formatCompactNumber(summary.totalTokens),
+      detail: t('usageLogsPage.mock.kpis.tokensDetail', {
+        input: formatCompactNumber(summary.inputTokens),
+        output: formatCompactNumber(summary.outputTokens),
+      }),
+      tone: summary.totalTokens > 0 ? 'positive' : 'neutral',
+    },
+    {
+      id: 'cost',
+      value: formatCurrency(summary.cost),
+      detail: t('usageLogsPage.mock.kpis.costDetail', {
+        count: formatCompactNumber(summary.unpricedRequests),
+      }),
+      tone: summary.unpricedRequests > 0 ? 'warning' : summary.cost > 0 ? 'positive' : 'neutral',
+    },
+    {
+      id: 'latency',
+      value: formatDuration(summary.avgDurationMs),
+      detail: t('usageLogsPage.mock.kpis.latencyDetail', {
+        firstToken: formatDuration(summary.avgFirstTokenMs),
+      }),
+      tone:
+        summary.avgDurationMs > 2500
+          ? 'warning'
+          : summary.avgDurationMs > 0
+            ? 'positive'
+            : 'neutral',
+    },
+  ]
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {metrics.map((metric) => (
+        <div key={metric.id} className="bg-card rounded-lg border p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t(`usageLogsPage.mock.kpis.${metric.id}`)}
+              </p>
+              <p className="mt-1.5 truncate text-2xl font-semibold tracking-normal">
+                {metric.value}
+              </p>
+            </div>
+            <div
+              className={cn(
+                'flex size-8 shrink-0 items-center justify-center rounded-md border',
+                metricToneClassName(metric.tone as UsageMetricTone),
+              )}
+            >
+              {metric.id === 'latency' ? (
+                <Timer className="size-4" aria-hidden="true" />
+              ) : metric.id === 'cost' ? (
+                <BarChart3 className="size-4" aria-hidden="true" />
+              ) : (
+                <Gauge className="size-4" aria-hidden="true" />
+              )}
+            </div>
+          </div>
+          <p className="text-muted-foreground mt-2 text-xs leading-5">{metric.detail}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function UsageMockComparisonCards({ comparisons }: { comparisons: UsageAnalyticsComparison[] }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {comparisons.map((comparison) => {
+        const maxValue = Math.max(comparison.current, comparison.previous, 1)
+        const currentWidth = Math.max(
+          (comparison.current / maxValue) * 100,
+          comparison.current > 0 ? 4 : 0,
+        )
+        const previousWidth = Math.max(
+          (comparison.previous / maxValue) * 100,
+          comparison.previous > 0 ? 4 : 0,
+        )
+
+        return (
+          <div key={comparison.id} className="bg-card rounded-lg border p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">
+                {t(`usageLogsPage.mock.comparisons.${comparison.id}`)}
+              </p>
+              <span
+                className={cn(
+                  'rounded-md border px-2 py-1 text-xs font-medium',
+                  comparison.favorable
+                    ? 'border-primary/30 bg-primary/10 text-primary'
+                    : 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+                )}
+              >
+                {comparison.deltaPercent > 0 ? '+' : ''}
+                {comparison.deltaPercent}%
+              </span>
+            </div>
+            <div className="mt-4 grid gap-2">
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {t('usageLogsPage.mock.comparisons.current')}
+                  </span>
+                  <span className="font-mono">
+                    {formatComparisonValue(comparison.id, comparison.current)}
+                  </span>
+                </div>
+                <div className="bg-muted h-2 overflow-hidden rounded-full">
+                  <div
+                    className="bg-primary h-full rounded-full"
+                    style={{ width: `${currentWidth}%` }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {t('usageLogsPage.mock.comparisons.previous')}
+                  </span>
+                  <span className="font-mono">
+                    {formatComparisonValue(comparison.id, comparison.previous)}
+                  </span>
+                </div>
+                <div className="bg-muted h-2 overflow-hidden rounded-full">
+                  <div
+                    className="bg-muted-foreground/50 h-full rounded-full"
+                    style={{ width: `${previousWidth}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function UsageMockTrendChart({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+  const chartData = snapshot.timeseries.map((bucket) => ({
+    date: formatDateBucket(bucket.timestamp),
+    requests: bucket.requests,
+    tokens: bucket.totalTokens,
+    cost: bucket.cost,
+    failed: bucket.failed,
+    avgDurationMs: bucket.avgDurationMs,
+  }))
+
+  return (
+    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+      <UsageSectionHeader
+        title={t('usageLogsPage.mock.trend.title')}
+        description={t('usageLogsPage.mock.trend.description')}
+      />
+      <div className="mt-4 h-80 min-w-0">
+        {chartData.length > 0 ? (
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            initialDimension={chartInitialDimension}
+          >
+            <AreaChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 8 }}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+              <YAxis yAxisId="left" tickLine={false} axisLine={false} width={48} />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickLine={false}
+                axisLine={false}
+                width={48}
+              />
+              <Tooltip
+                cursor={{ fill: 'var(--muted)', opacity: 0.35 }}
+                contentStyle={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--foreground)',
+                }}
+              />
+              <Legend />
+              <Area
+                yAxisId="left"
+                type="monotone"
+                dataKey="requests"
+                name={t('usageLogsPage.mock.trend.requests')}
+                stroke="var(--primary)"
+                fill="var(--primary)"
+                fillOpacity={0.18}
+              />
+              <Area
+                yAxisId="right"
+                type="monotone"
+                dataKey="failed"
+                name={t('usageLogsPage.mock.trend.failed')}
+                stroke="var(--warning)"
+                fill="var(--warning)"
+                fillOpacity={0.16}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border text-sm">
+            {t('usageLogsPage.mock.emptyChart')}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UsageMockStatusChart({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+      <UsageSectionHeader
+        title={t('usageLogsPage.mock.statusChart.title')}
+        description={t('usageLogsPage.mock.statusChart.description')}
+      />
+      <div className="mt-4 h-72 min-w-0">
+        {snapshot.statusDistribution.length > 0 ? (
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            initialDimension={chartInitialDimension}
+          >
+            <PieChart>
+              <Pie
+                data={snapshot.statusDistribution}
+                dataKey="requests"
+                nameKey="status"
+                innerRadius="58%"
+                outerRadius="82%"
+                paddingAngle={2}
+              >
+                {snapshot.statusDistribution.map((slice) => (
+                  <Cell key={slice.status} fill={usageStatusChartColors[slice.status]} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value, name) => [
+                  formatCompactNumber(Number(value)),
+                  t(getStatusKey(name as UsageAnalyticsStatus)),
+                ]}
+                contentStyle={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--foreground)',
+                }}
+              />
+              <Legend formatter={(value) => t(getStatusKey(value as UsageAnalyticsStatus))} />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border text-sm">
+            {t('usageLogsPage.mock.emptyChart')}
+          </div>
+        )}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {snapshot.statusDistribution.map((slice) => (
+          <span
+            key={slice.status}
+            className={cn(
+              'inline-flex rounded-md border px-2.5 py-1 text-xs font-medium',
+              usageStatusClassNames[slice.status],
+            )}
+          >
+            {t(getStatusKey(slice.status))}: {formatCompactNumber(slice.requests)}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function UsageMockBreakdownChart({
+  title,
+  description,
+  rows,
+}: {
+  title: string
+  description: string
+  rows: UsageAnalyticsSnapshot['breakdowns']['providers']
+}) {
+  const { t } = useTranslation()
+  const chartData = rows.slice(0, 8).map((row) => ({
+    label: row.label,
+    requests: row.requests,
+    failed: row.failed,
+    tokens: row.totalTokens,
+    cost: row.cost,
+  }))
+
+  return (
+    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+      <UsageSectionHeader title={title} description={description} />
+      <div className="mt-4 h-80 min-w-0">
+        {chartData.length > 0 ? (
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            initialDimension={chartInitialDimension}
+          >
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ left: 12, right: 8, top: 8, bottom: 8 }}
+            >
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} />
+              <XAxis type="number" tickLine={false} axisLine={false} />
+              <YAxis
+                type="category"
+                dataKey="label"
+                tickLine={false}
+                axisLine={false}
+                width={120}
+                tickFormatter={(value) => String(value).slice(0, 18)}
+              />
+              <Tooltip
+                cursor={{ fill: 'var(--muted)', opacity: 0.35 }}
+                contentStyle={{
+                  background: 'var(--card)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  color: 'var(--foreground)',
+                }}
+              />
+              <Legend />
+              <Bar
+                dataKey="requests"
+                name={t('usageLogsPage.mock.breakdown.requests')}
+                fill="var(--primary)"
+                radius={[0, 4, 4, 0]}
+              />
+              <Bar
+                dataKey="failed"
+                name={t('usageLogsPage.mock.breakdown.failed')}
+                fill="var(--warning)"
+                radius={[0, 4, 4, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-muted-foreground flex h-full items-center justify-center rounded-md border text-sm">
+            {t('usageLogsPage.mock.emptyChart')}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UsageMockRequestTable({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+      <UsageSectionHeader
+        title={t('usageLogsPage.mock.requests.title')}
+        description={t('usageLogsPage.mock.requests.description')}
+      />
+      <div className="mt-4 overflow-hidden rounded-md border">
+        {snapshot.requestSamples.length > 0 ? (
+          <div className="overflow-x-auto">
+            <Table className="min-w-[1080px]">
+              <TableHeader className="bg-muted/70 text-muted-foreground">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t('usageLogsPage.mock.requests.columns.request')}</TableHead>
+                  <TableHead>{t('usageLogsPage.mock.requests.columns.provider')}</TableHead>
+                  <TableHead>{t('usageLogsPage.mock.requests.columns.model')}</TableHead>
+                  <TableHead>{t('usageLogsPage.mock.requests.columns.user')}</TableHead>
+                  <TableHead>{t('usageLogsPage.mock.requests.columns.status')}</TableHead>
+                  <TableHead className="text-right">
+                    {t('usageLogsPage.mock.requests.columns.tokens')}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t('usageLogsPage.mock.requests.columns.cost')}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t('usageLogsPage.mock.requests.columns.latency')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {snapshot.requestSamples.map((row) => (
+                  <TableRow key={row.requestId} className="align-top">
+                    <TableCell className="max-w-[240px]">
+                      <p className="truncate font-mono text-xs">{row.requestId}</p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {formatDateTime(row.timestamp)}
+                      </p>
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate">{row.provider}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
+                      {row.model}
+                    </TableCell>
+                    <TableCell className="max-w-[220px]">
+                      <p className="truncate">{row.username}</p>
+                      <p className="text-muted-foreground mt-1 truncate text-xs">
+                        {row.clientKeyName}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={cn(
+                          'inline-flex rounded-md border px-2 py-1 text-xs font-medium',
+                          usageStatusClassNames[row.status],
+                        )}
+                      >
+                        {t(getStatusKey(row.status))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {formatCompactNumber(row.totalTokens)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {formatCurrency(row.cost)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-xs">
+                      {formatDuration(row.durationMs)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <p className="text-muted-foreground px-4 py-10 text-sm">
+            {t('usageLogsPage.mock.requests.empty')}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UsageMockAnalyticsLab({ snapshot }: { snapshot: UsageAnalyticsSnapshot }) {
+  const { t } = useTranslation()
+
+  return (
+    <section className="grid w-full gap-4">
+      <UsageMockHeader snapshot={snapshot} />
+      <div className="border-info/30 bg-info/10 text-info rounded-md border px-3 py-2.5 text-sm leading-6">
+        {t('usageLogsPage.mock.contractNotice')}
+      </div>
+      <UsageMockKpis snapshot={snapshot} />
+      <UsageMockComparisonCards comparisons={snapshot.comparisons} />
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
+        <UsageMockTrendChart snapshot={snapshot} />
+        <UsageMockStatusChart snapshot={snapshot} />
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <UsageMockBreakdownChart
+          title={t('usageLogsPage.mock.breakdown.providers')}
+          description={t('usageLogsPage.mock.breakdown.providersDescription')}
+          rows={snapshot.breakdowns.providers}
+        />
+        <UsageMockBreakdownChart
+          title={t('usageLogsPage.mock.breakdown.models')}
+          description={t('usageLogsPage.mock.breakdown.modelsDescription')}
+          rows={snapshot.breakdowns.models}
+        />
+        <UsageMockBreakdownChart
+          title={t('usageLogsPage.mock.breakdown.users')}
+          description={t('usageLogsPage.mock.breakdown.usersDescription')}
+          rows={snapshot.breakdowns.users}
+        />
+        <UsageMockBreakdownChart
+          title={t('usageLogsPage.mock.breakdown.credentials')}
+          description={t('usageLogsPage.mock.breakdown.credentialsDescription')}
+          rows={snapshot.breakdowns.credentials}
+        />
+      </div>
+      <UsageMockRequestTable snapshot={snapshot} />
+    </section>
+  )
+}
+
 function UsageScopeNotice() {
   const { t } = useTranslation()
 
@@ -535,7 +1190,12 @@ function UsageProviderCharts({ analytics }: { analytics: UsageAnalyticsModel }) 
         </div>
         <div className="mt-4 h-72 min-w-0">
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer
+              width="100%"
+              height="100%"
+              minWidth={0}
+              initialDimension={chartInitialDimension}
+            >
               <BarChart data={chartData} margin={{ left: 0, right: 4, top: 8, bottom: 8 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="provider" tickLine={false} axisLine={false} tickMargin={8} />
@@ -1156,7 +1816,7 @@ function UsageSectionHeader({ title, description }: { title: string; description
   )
 }
 
-export function UsageLogsWorkbenchPage() {
+function UsageLogsLiveWorkbenchPage() {
   const { t } = useTranslation()
   const workbench = useUsageLogsWorkbench()
   const [clearLogsDialogOpen, setClearLogsDialogOpen] = useState(false)
@@ -1349,4 +2009,14 @@ export function UsageLogsWorkbenchPage() {
       </AlertDialog>
     </section>
   )
+}
+
+export function UsageLogsWorkbenchPage() {
+  const mockScenarioId = readUsageAnalyticsMockScenarioId()
+
+  if (mockScenarioId) {
+    return <UsageMockAnalyticsLab snapshot={getUsageAnalyticsMockSnapshot(mockScenarioId)} />
+  }
+
+  return <UsageLogsLiveWorkbenchPage />
 }

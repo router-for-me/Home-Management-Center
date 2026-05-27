@@ -1285,6 +1285,88 @@ export const en = {
           status: 'Request status',
         },
       },
+      mock: {
+        title: 'Usage Analytics Mock Validation',
+        badge: 'Future API draft',
+        description:
+          'This mode renders the complete usage analytics shape from frontend mock data, so trend charts, status share, dimension rankings, period comparison, and request details can be visually reviewed before the backend API exists.',
+        currentScenario: 'Scenario: {{scenario}}',
+        range: 'Range: {{start}} - {{end}}',
+        contractNotice:
+          'The mock data structure is a draft response contract for future Management API endpoints. Open /usage-logs?usageMock=normal, spiky, empty, or long-tail.',
+        emptyChart: 'This scenario has no chartable data.',
+        scenarios: {
+          normal: 'Normal',
+          spiky: 'Spike',
+          empty: 'Empty',
+          'long-tail': 'Long-tail labels',
+        },
+        kpis: {
+          requests: 'Requests',
+          tokens: 'Tokens',
+          cost: 'Cost',
+          latency: 'Avg latency',
+          requestsDetail: '{{success}} success / {{failed}} failed',
+          tokensDetail: 'Input {{input}} / output {{output}}',
+          costDetail: '{{count}} unpriced requests',
+          latencyDetail: 'First token {{firstToken}}',
+        },
+        comparisons: {
+          requests: 'Request comparison',
+          tokens: 'Token comparison',
+          cost: 'Cost comparison',
+          latency: 'Latency comparison',
+          current: 'Current',
+          previous: 'Previous',
+        },
+        trend: {
+          title: 'Request trend',
+          description:
+            'Time buckets show request and failure volume for normal trend and spike readability checks.',
+          requests: 'Requests',
+          failed: 'Failed',
+        },
+        statusChart: {
+          title: 'Request status share',
+          description:
+            'A donut chart shows the split between success, failure, rate limit, quota, and timeout states.',
+        },
+        status: {
+          success: 'Success',
+          failed: 'Failed',
+          rateLimited: 'Rate limited',
+          quotaExceeded: 'Quota exceeded',
+          timeout: 'Timeout',
+        },
+        breakdown: {
+          requests: 'Requests',
+          failed: 'Failed',
+          providers: 'Provider ranking',
+          providersDescription: 'Aggregates request and failure volume by provider.',
+          models: 'Model ranking',
+          modelsDescription: 'Aggregates request and failure volume by model.',
+          users: 'User ranking',
+          usersDescription: 'Aggregates request and failure volume by user.',
+          credentials: 'Credential ranking',
+          credentialsDescription: 'Aggregates request and failure volume by account credential.',
+        },
+        requests: {
+          title: 'Request detail sample',
+          description:
+            'Shows the core columns expected from future /usage/requests responses: Request ID, provider, model, user, status, tokens, cost, and latency.',
+          empty: 'This scenario has no request detail samples.',
+          columns: {
+            request: 'Request ID',
+            provider: 'Provider',
+            model: 'Model',
+            user: 'User',
+            status: 'Status',
+            tokens: 'Tokens',
+            cost: 'Cost',
+            latency: 'Latency',
+          },
+        },
+      },
       metrics: {
         requests: {
           label: 'Total requests',
