@@ -31,6 +31,7 @@ export const en = {
       providers: 'Model services',
       credentials: 'Account credentials',
       accessKeys: 'Access keys',
+      users: 'Users',
       config: 'System config',
       usageLogs: 'Usage & Logs',
       systemNodes: 'System Info',
@@ -46,6 +47,7 @@ export const en = {
       providers: 'Model service config',
       credentials: 'Global credential pool',
       accessKeys: 'Client access control',
+      users: 'Users and quota',
       config: 'Gateway core settings',
       usageLogs: 'Spend and traces',
       systemNodes: 'Runtime and diagnostics',
@@ -282,9 +284,12 @@ export const en = {
       capabilityNames: {
         nodes: 'Node management',
         usage: 'Usage statistics',
+        usageAnalytics: 'Usage analytics',
         usageQueue: 'Usage queue',
         logs: 'Request logs',
         requestErrorLogs: 'Error logs',
+        users: 'User management',
+        quota: 'User quota',
       },
       credentials: {
         title: 'Account credential sources',
@@ -803,6 +808,133 @@ export const en = {
         bulkDeleted: '{{count}} access keys deleted.',
       },
     },
+    usersPage: {
+      disconnected: {
+        title: 'Connect a management runtime',
+        description:
+          'Users and quota data are loaded from the Management API. Connect a runtime before managing administrators and regular users.',
+        action: 'Connect runtime',
+      },
+      unsupported: {
+        title: 'This runtime does not expose user management',
+        description:
+          '{{mode}} did not declare user management support. The page will not request /users or invent user and quota data.',
+      },
+      error: {
+        title: 'User data could not be loaded',
+        description: 'Check the management endpoint, management key, and /users route.',
+        retry: 'Retry',
+      },
+      header: {
+        eyebrow: 'Users and quota',
+        title: 'User Management',
+        description:
+          'Manage administrators and regular users, and review client keys, today usage, and quota status returned by the backend.',
+        total: '{{count}} users',
+        admins: '{{count}} administrators',
+        disabled: '{{count}} disabled',
+        quotaPaused: '{{count}} quota paused',
+        updatedAt: 'Last synced: {{time}}',
+      },
+      actions: {
+        refresh: 'Sync data',
+        syncing: 'Syncing',
+        new: 'New user',
+        create: 'Create user',
+        save: 'Save changes',
+        view: 'View',
+        edit: 'Edit',
+        enable: 'Enable',
+        disable: 'Disable',
+      },
+      roles: {
+        admin: 'Administrator',
+        user: 'Regular user',
+        unknown: 'Unknown role',
+      },
+      status: {
+        active: 'Active',
+        disabled: 'Disabled',
+        quotaPaused: 'Quota paused',
+        notAvailable: 'Not available',
+      },
+      list: {
+        title: 'Users',
+        description:
+          'User dimensions separate regular-user scope, administrator global scope, client key ownership, and quota state.',
+        filterPlaceholder: 'Filter users, email, or role',
+        empty: 'No users match the current filter.',
+        user: 'User',
+        role: 'Role',
+        status: 'Status',
+        keys: 'Client keys',
+        usage: 'Today usage',
+        quota: 'Quota',
+        actions: 'Actions',
+        usageMeta: '{{tokens}} tokens / {{cost}}',
+      },
+      form: {
+        createTitle: 'New user',
+        editTitle: 'Edit user',
+        createDescription:
+          'Create an administrator or regular user for usage isolation and quota control.',
+        username: 'Username',
+        usernamePlaceholder: 'user@example.com',
+        nickname: 'Display name',
+        nicknamePlaceholder: 'Optional',
+        role: 'Role',
+        password: 'Initial password',
+        passwordPlaceholder: 'Required only if the backend policy requires it',
+        validation: {
+          usernameRequired: 'Username is required.',
+        },
+      },
+      detail: {
+        title: 'User detail',
+        empty: 'Select a user to inspect details.',
+        quotaUnavailable: 'The backend did not return quota summary for this user.',
+        sections: {
+          profile: 'Profile',
+          usage: 'Today usage',
+          quota: 'Quota summary',
+        },
+        fields: {
+          id: 'ID',
+          username: 'Username',
+          nickname: 'Display name',
+          createdAt: 'Created',
+          updatedAt: 'Updated',
+          disabledAt: 'Disabled at',
+          requests: 'Requests',
+          tokens: 'Tokens',
+          cost: 'Estimated cost',
+          successRate: 'Success rate',
+          monthlyRemaining: 'Monthly remaining',
+          monthlyUsed: 'Monthly used',
+          lifetimeRemaining: 'Lifetime remaining',
+          quotaMonth: 'Quota month',
+          pauseReason: 'Pause reason',
+          unpricedRecords: 'Unpriced records',
+        },
+      },
+      quota: {
+        unlimited: 'Unlimited',
+      },
+      statusDialog: {
+        disableTitle: 'Disable user?',
+        enableTitle: 'Enable user?',
+        disableDescription:
+          'Disable user "{{name}}"? The backend should prevent this user from using linked client keys.',
+        enableDescription:
+          'Enable user "{{name}}"? The backend will restore this user to an available state.',
+      },
+      toast: {
+        created: 'User created.',
+        updated: 'User updated.',
+        enabled: 'User enabled.',
+        disabled: 'User disabled.',
+      },
+    },
     configPage: {
       disconnected: {
         title: 'Connect a management runtime',
@@ -1197,6 +1329,7 @@ export const en = {
         fetchQueue: 'Pull queue records',
       },
       capabilities: {
+        usageAnalytics: 'Usage analytics',
         usage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1249,6 +1382,8 @@ export const en = {
         title: 'Some data could not be loaded',
       },
       issueScopes: {
+        usageAnalytics: 'Usage analytics',
+        usageAnalyticsOptions: 'Analytics filters',
         apiKeyUsage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1271,9 +1406,9 @@ export const en = {
       filters: {
         title: 'Analytics filter model',
         description:
-          'Complete usage analytics needs filters for time range, model, user, account, credential, client key, and request status. The current runtime does not expose those query parameters yet, so this area documents the backend contract the product needs next.',
-        badge: 'Backend support required',
-        planned: 'Planned',
+          'Complete usage analytics supports time range, model, user, account, credential, client key, and request status filters. When the current runtime has not declared those query capabilities, the page keeps the capability gap visible instead of inventing data.',
+        badge: 'Not declared',
+        planned: 'Unavailable now',
         items: {
           timeRange: 'Time range',
           provider: 'Provider',
@@ -1287,14 +1422,32 @@ export const en = {
       },
       mock: {
         title: 'Usage Analytics Mock Validation',
-        badge: 'Future API draft',
+        badge: 'API sample',
         description:
-          'This mode renders the complete usage analytics shape from frontend mock data, so trend charts, status share, dimension rankings, period comparison, and request details can be visually reviewed before the backend API exists.',
+          'This mode renders the complete usage analytics shape from frontend mock data, so trend charts, status share, dimension rankings, period comparison, and request details can be visually reviewed without touching live runtime data.',
+        validationToolbar: 'Internal validation scenarios',
         currentScenario: 'Scenario: {{scenario}}',
         range: 'Range: {{start}} - {{end}}',
         contractNotice:
-          'The mock data structure is a draft response contract for future Management API endpoints. Open /usage-logs?usageMock=normal, spiky, empty, or long-tail.',
+          'The mock data structure is only for frontend visual review and API sample validation. Open /usage-logs?usageMock=normal, spiky, empty, or long-tail.',
         emptyChart: 'This scenario has no chartable data.',
+        emptyState: {
+          title: 'No usage samples in this scenario',
+          description:
+            '{{scenario}} validates the empty analytics state. It keeps one empty-state panel and a few disabled previews instead of repeating the full chart frame.',
+          trend: {
+            title: 'Trend chart',
+            description: 'Shown after request samples exist.',
+          },
+          breakdown: {
+            title: 'Dimension rankings',
+            description: 'Shown after aggregate dimensions exist.',
+          },
+          requests: {
+            title: 'Request details',
+            description: 'Shown after request records exist.',
+          },
+        },
         scenarios: {
           normal: 'Normal',
           spiky: 'Spike',
@@ -1312,10 +1465,14 @@ export const en = {
           latencyDetail: 'First token {{firstToken}}',
         },
         comparisons: {
+          title: 'Period comparison snapshot',
+          description:
+            'A compact validation panel compares the current and previous periods without turning every check into an equal-weight card.',
           requests: 'Request comparison',
           tokens: 'Token comparison',
           cost: 'Cost comparison',
           latency: 'Latency comparison',
+          meta: 'Current {{current}} / previous {{previous}}',
           current: 'Current',
           previous: 'Previous',
         },
@@ -1351,6 +1508,12 @@ export const en = {
           credentials: 'Credential ranking',
           credentialsDescription: 'Aggregates request and failure volume by account credential.',
         },
+        breakdownSection: {
+          title: 'Dimension drilldown preview',
+          description:
+            'Provider, model, user, and credential rankings validate the future analytics contract. They stay collapsed by default so the main path remains clear.',
+          trigger: 'View dimensions',
+        },
         requests: {
           title: 'Request detail sample',
           description:
@@ -1385,8 +1548,199 @@ export const en = {
           label: 'Recent windows',
           detail: 'Error log files: {{value}}',
         },
+        totalTokens: {
+          label: 'Total tokens',
+          detail: 'Input / output: {{value}}',
+        },
+        estimatedCost: {
+          label: 'Estimated cost',
+          detail: 'Unpriced records: {{value}}',
+        },
+        rpm: {
+          label: 'RPM',
+          detail: 'Requests per minute: {{value}}',
+        },
+        tpm: {
+          label: 'TPM',
+          detail: 'Tokens per minute: {{value}}',
+        },
+      },
+      production: {
+        header: {
+          title: 'Production usage analytics',
+          description:
+            'Database-backed usage facts by request, token, cost, user, client key, model, provider, and endpoint.',
+          badge: 'Live analytics',
+          range: 'Range: {{start}} - {{end}}',
+          rangeUnavailable: 'Range unavailable',
+          successRate: 'Success rate {{value}}',
+          failureRate: 'Failure rate {{value}}',
+        },
+        filters: {
+          title: 'Analytics filters',
+          description:
+            'Query database-backed usage by time range, user, client key, provider, model, credential, endpoint, status, or Request ID.',
+          active: '{{count}} active filters',
+          options: '{{count}} filter values',
+          all: 'All',
+          apply: 'Apply filters',
+          reset: 'Reset',
+          noOptions:
+            'The backend did not return filter options yet. Free-text Request ID and time range remain available.',
+          requestIdPlaceholder: 'Optional Request ID',
+          ranges: {
+            '24h': 'Last 24 hours',
+            '3d': 'Last 3 days',
+            '7d': 'Last 7 days',
+            '30d': 'Last 30 days',
+          },
+          fields: {
+            range: 'Range',
+            user: 'User',
+            clientKey: 'Client key',
+            provider: 'Provider',
+            model: 'Model',
+            credential: 'Credential',
+            endpoint: 'Endpoint',
+            status: 'Status',
+            requestId: 'Request ID',
+          },
+          status: {
+            all: 'All statuses',
+            success: 'Success only',
+            failed: 'Failed only',
+          },
+        },
+        trend: {
+          title: 'Usage trend',
+          description:
+            'Tracks request volume, failures, and token movement across the selected time buckets.',
+          requests: 'Requests',
+          failed: 'Failed',
+          tokens: 'Tokens',
+          empty: 'No trend buckets were returned.',
+        },
+        tokens: {
+          title: 'Token composition',
+          description:
+            'Breaks down input, output, cache, and reasoning tokens for the selected range.',
+          empty: 'No token composition was returned.',
+          total: 'Total tokens: {{value}}',
+          unpriced: 'Unpriced records: {{value}}',
+          items: {
+            input: 'Input',
+            output: 'Output',
+            cached: 'Cached',
+            cacheRead: 'Cache read',
+            cacheCreation: 'Cache creation',
+            reasoning: 'Reasoning',
+          },
+        },
+        activity: {
+          title: 'Hourly activity',
+          description: 'Compares request volume and token usage across recent time buckets.',
+          requests: 'Requests',
+          tokens: 'Tokens',
+          meta: '{{requests}} requests / {{tokens}} tokens',
+          empty: 'No activity buckets were returned.',
+        },
+        exceptions: {
+          title: 'Exception overview',
+          description:
+            'Summarizes failure rate and failed request categories for the selected range.',
+          failureRate: 'Failure rate {{value}}',
+          failed: 'Failed records: {{value}}',
+          success: 'Successful records: {{value}}',
+          meta: '{{tokens}} tokens / {{cost}}',
+          empty: 'No failed requests were returned.',
+          noBreakdown:
+            '{{count}} failed records were returned, but the backend did not include an error breakdown.',
+        },
+        distributions: {
+          providers: 'Provider distribution',
+          providersDescription: 'Shows which model service providers carried the selected traffic.',
+          endpoints: 'Endpoint distribution',
+          endpointsDescription:
+            'Shows request type distribution such as Ve-Response, Ve-Image, and Ve-Message.',
+          empty: 'No distribution data was returned.',
+          meta: '{{tokens}} tokens / {{cost}} / {{failed}} failed',
+        },
+        rankings: {
+          title: 'Usage rankings',
+          description:
+            'Ranks users, client keys, and models by request volume for the selected range.',
+          users: 'Users',
+          clientKeys: 'Client keys',
+          models: 'Models',
+          meta: '{{requests}} requests / {{failed}} failed',
+          empty: 'No ranking data was returned.',
+        },
+        requests: {
+          title: 'Request records',
+          description:
+            'Inspect database-backed request details by user, client key, provider, model, endpoint, status, token count, cost, and latency.',
+          loading: 'Loading records',
+          empty: 'No request records match the current filters.',
+          error: 'Request records could not be loaded.',
+          pageMeta: 'Page {{page}} of {{totalPages}}, {{total}} records',
+          previous: 'Previous',
+          next: 'Next',
+          notAvailable: 'Not available',
+          view: 'View',
+          downloadLog: 'Download log',
+          columns: {
+            request: 'Request',
+            user: 'User / client key',
+            provider: 'Provider / model',
+            endpoint: 'Endpoint',
+            status: 'Status',
+            tokens: 'Tokens',
+            cost: 'Cost',
+            latency: 'Latency',
+            actions: 'Actions',
+          },
+          status: {
+            success: 'Success',
+            failed: 'Failed',
+            unknown: 'Unknown',
+          },
+          detail: {
+            title: 'Request detail',
+            description: 'Request {{request}}',
+            unavailable: 'No request record is selected.',
+            raw: 'Raw payload',
+            fields: {
+              requestId: 'Request ID',
+              timestamp: 'Timestamp',
+              user: 'User',
+              clientKey: 'Client key',
+              provider: 'Provider',
+              model: 'Model',
+              endpoint: 'Endpoint',
+              status: 'Status',
+              totalTokens: 'Total tokens',
+              inputTokens: 'Input tokens',
+              outputTokens: 'Output tokens',
+              cachedTokens: 'Cached tokens',
+              cacheReadTokens: 'Cache read tokens',
+              cacheCreationTokens: 'Cache creation tokens',
+              reasoningTokens: 'Reasoning tokens',
+              cost: 'Estimated cost',
+              latency: 'Latency',
+              firstTokenLatency: 'First token latency',
+              sourceKey: 'Credential source',
+              errorMessage: 'Error message',
+            },
+          },
+        },
       },
       analytics: {
+        preview: {
+          title: 'Analytics capability preview',
+          description:
+            'The live runtime shows real usage facts first. Filter scope and dimension coverage stay collapsed as a backend contract preview.',
+          trigger: 'View preview',
+        },
         charts: {
           title: 'Provider request distribution',
           description:
@@ -1403,10 +1757,10 @@ export const en = {
         roadmap: {
           title: 'Analytics dimension coverage',
           description:
-            'The page is designed for the complete usage product shape. The current runtime only returns limited aggregate dimensions; token, cost, user, account, and credential analytics require backend support.',
-          api: 'Backend API planned',
+            'The page is designed for the complete usage product shape. If the current runtime returns only limited aggregate dimensions, the gap is shown as a capability state and is not filled with frontend dummy data.',
+          api: 'Runtime capability state',
           current: 'Available now',
-          planned: 'Needs backend support',
+          planned: 'Unavailable now',
           none: 'No analytics dimensions available',
         },
         dimensions: {
@@ -1426,6 +1780,10 @@ export const en = {
         title: 'API key usage',
         description:
           'Groups successful and failed requests by model provider, upstream Base URL, and API key.',
+        compatTitle: 'Legacy API key usage',
+        compatDescription:
+          'Older runtime aggregation is still available for comparison. Production analytics remains the primary source.',
+        compatTrigger: 'View legacy usage',
         empty:
           'No API key usage records were returned. Confirm usage statistics are enabled and the runtime has handled requests.',
         provider: 'Model provider',
@@ -1462,6 +1820,7 @@ export const en = {
         title: 'Download by Request ID',
         description:
           'If an error file or external alert already gives you a Request ID, download the matching request log directly.',
+        trigger: 'Manual entry',
         placeholder: 'Enter Request ID',
         unavailable: 'This runtime does not support downloading request logs by Request ID.',
       },

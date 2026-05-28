@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type UsageAnalyticsFilters,
   clearRuntimeLogs,
   downloadRequestErrorLog,
   downloadRequestLogById,
   fetchUsageLogsSnapshot,
   fetchUsageQueueRecords,
+  fetchUsageRequestRecordDetail,
+  fetchUsageRequestRecords,
   toUsageLogsApiError,
 } from '@/lib/api/management/usage-logs'
 import { useCapabilityStore } from '@/stores/capability-store'
@@ -33,7 +36,27 @@ function useManagementSession() {
   }
 }
 
-export function useUsageLogsWorkbench() {
+function getAnalyticsFilterQueryKey(filters: UsageAnalyticsFilters | undefined) {
+  return [
+    filters?.scope ?? null,
+    filters?.start ?? null,
+    filters?.end ?? null,
+    filters?.userId ?? null,
+    filters?.apiKeyDescription ?? null,
+    filters?.provider ?? null,
+    filters?.model ?? null,
+    filters?.sourceKey ?? null,
+    filters?.endpoint ?? null,
+    filters?.failed ?? null,
+    filters?.requestId ?? null,
+  ]
+}
+
+export function useUsageLogsWorkbench(
+  analyticsFilters?: UsageAnalyticsFilters,
+  usageRecordsPage = 1,
+  usageRecordsPageSize = 20,
+) {
   const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
@@ -42,8 +65,19 @@ export function useUsageLogsWorkbench() {
     session.baseUrl,
     connectedAt,
     capabilities.usage,
+    capabilities.usageAnalytics,
     capabilities.logs,
     capabilities.requestErrorLogs,
+    ...getAnalyticsFilterQueryKey(capabilities.usageAnalytics ? analyticsFilters : undefined),
+  ]
+  const recordsQueryKey = [
+    'management-usage-records',
+    session.baseUrl,
+    connectedAt,
+    capabilities.usageAnalytics,
+    usageRecordsPage,
+    usageRecordsPageSize,
+    ...getAnalyticsFilterQueryKey(capabilities.usageAnalytics ? analyticsFilters : undefined),
   ]
 
   const query = useQuery({
@@ -51,7 +85,29 @@ export function useUsageLogsWorkbench() {
     enabled: connected && capabilityReady && Boolean(session.managementKey),
     queryFn: async () => {
       try {
-        return await fetchUsageLogsSnapshot(session, capabilities)
+        return await fetchUsageLogsSnapshot(session, capabilities, analyticsFilters)
+      } catch (error) {
+        throw toUsageLogsApiError(error)
+      }
+    },
+  })
+  const analyticsOverviewReady = Boolean(query.data?.analyticsOverview)
+
+  const recordsQuery = useQuery({
+    queryKey: recordsQueryKey,
+    enabled:
+      connected &&
+      capabilityReady &&
+      capabilities.usageAnalytics &&
+      analyticsOverviewReady &&
+      Boolean(session.managementKey),
+    queryFn: async () => {
+      try {
+        return await fetchUsageRequestRecords(session, {
+          ...analyticsFilters,
+          page: usageRecordsPage,
+          pageSize: usageRecordsPageSize,
+        })
       } catch (error) {
         throw toUsageLogsApiError(error)
       }
@@ -59,7 +115,10 @@ export function useUsageLogsWorkbench() {
   })
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: recordsQueryKey }),
+    ])
   }
 
   const clearLogsMutation = useMutation({
@@ -103,23 +162,44 @@ export function useUsageLogsWorkbench() {
     },
   })
 
+  const usageRequestRecordDetailMutation = useMutation({
+    mutationFn: async (recordId: string) => {
+      try {
+        return await fetchUsageRequestRecordDetail(session, recordId)
+      } catch (error) {
+        throw toUsageLogsApiError(error)
+      }
+    },
+  })
+
   return {
     connected,
     capabilityReady,
     capabilities,
     runtimeMode,
     snapshot: query.data,
+    usageRequestRecords: recordsQuery.data ?? null,
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
     errorMessage: query.error?.message ?? null,
+    isFetchingUsageRequestRecords: recordsQuery.isFetching,
+    isUsageRequestRecordsPending: recordsQuery.isPending,
+    isUsageRequestRecordsError: recordsQuery.isError,
+    usageRequestRecordsErrorMessage: recordsQuery.error?.message ?? null,
     refetch: () => {
       void query.refetch()
     },
+    refetchUsageRequestRecords: () => {
+      void recordsQuery.refetch()
+    },
     clearLogs: clearLogsMutation.mutateAsync,
     fetchUsageQueue: usageQueueMutation.mutateAsync,
+    fetchUsageRequestRecordDetail: usageRequestRecordDetailMutation.mutateAsync,
     downloadRequestErrorLog: downloadRequestErrorLogMutation.mutateAsync,
     downloadRequestLogById: downloadRequestLogByIdMutation.mutateAsync,
+    usageRequestRecordDetail: usageRequestRecordDetailMutation.data ?? null,
+    isFetchingUsageRequestRecordDetail: usageRequestRecordDetailMutation.isPending,
     usageQueueRecords: usageQueueMutation.data ?? [],
     usageQueueLoaded: usageQueueMutation.isSuccess,
     isClearingLogs: clearLogsMutation.isPending,
@@ -131,6 +211,7 @@ export function useUsageLogsWorkbench() {
     mutating:
       clearLogsMutation.isPending ||
       usageQueueMutation.isPending ||
+      usageRequestRecordDetailMutation.isPending ||
       downloadRequestErrorLogMutation.isPending ||
       downloadRequestLogByIdMutation.isPending,
   }

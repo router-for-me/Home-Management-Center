@@ -11,9 +11,12 @@ import type {
 const emptyCapabilities: CapabilityMap = {
   nodes: false,
   usage: false,
+  usageAnalytics: false,
   usageQueue: false,
   logs: false,
   requestErrorLogs: false,
+  users: false,
+  quota: false,
 }
 
 type CapabilityStatus = 'idle' | 'probing' | 'ready' | 'error'

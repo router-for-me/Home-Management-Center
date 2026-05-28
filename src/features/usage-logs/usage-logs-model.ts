@@ -3,6 +3,7 @@ import type {
   ApiKeyUsageResource,
   RequestErrorLogFile,
   RuntimeLogSnapshot,
+  UsageAnalyticsOverview,
   UsageLogIssue,
   UsageRuntimeSettings,
 } from '@/lib/api/management/usage-logs'
@@ -11,6 +12,7 @@ export type UsageAnalyticsDimension =
   | 'time'
   | 'provider'
   | 'model'
+  | 'endpoint'
   | 'user'
   | 'account'
   | 'clientKey'
@@ -37,7 +39,15 @@ export type UsageProviderBreakdown = {
 }
 
 export type UsageOverviewMetric = {
-  id: 'requests' | 'failureRate' | 'resources' | 'recentWindows'
+  id:
+    | 'requests'
+    | 'failureRate'
+    | 'resources'
+    | 'recentWindows'
+    | 'totalTokens'
+    | 'estimatedCost'
+    | 'rpm'
+    | 'tpm'
   value: string
   detail: string
   tone: 'positive' | 'warning' | 'neutral'
@@ -53,6 +63,11 @@ export type UsageAnalyticsModel = {
     usageResources: number
     logLineCount: number
     errorLogFiles: number
+    totalTokens: number
+    estimatedCostUsd: number
+    unpricedRecords: number
+    rpm: number | null
+    tpm: number | null
   }
   failureRate: number
   providerBreakdown: UsageProviderBreakdown[]
@@ -73,6 +88,14 @@ function formatPercent(value: number) {
   }).format(value)
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: value >= 100 ? 0 : 2,
+  }).format(value)
+}
+
 function getVerdict({
   capabilities,
   issues,
@@ -84,8 +107,21 @@ function getVerdict({
   requests: number
   settings: UsageRuntimeSettings
 }): UsageAnalyticsVerdict {
-  if (!capabilities.usage && !capabilities.logs && !capabilities.requestErrorLogs) {
+  if (
+    !capabilities.usageAnalytics &&
+    !capabilities.usage &&
+    !capabilities.logs &&
+    !capabilities.requestErrorLogs
+  ) {
     return 'unsupported'
+  }
+
+  if (issues.length > 0) {
+    return 'partial'
+  }
+
+  if (capabilities.usageAnalytics) {
+    return requests > 0 ? 'ready' : 'idle'
   }
 
   if (!capabilities.usage) {
@@ -94,10 +130,6 @@ function getVerdict({
 
   if (!settings.usageStatisticsEnabled) {
     return 'disabled'
-  }
-
-  if (issues.length > 0) {
-    return 'partial'
   }
 
   return requests > 0 ? 'ready' : 'idle'
@@ -127,7 +159,21 @@ function getProviderBreakdown(resources: ApiKeyUsageResource[]) {
   return [...grouped.values()].sort((left, right) => right.total - left.total)
 }
 
+function getProviderBreakdownFromOverview(overview: UsageAnalyticsOverview) {
+  return overview.distributions.providers
+    .map((item) => ({
+      provider: item.label || item.key,
+      success: Math.max(item.records - item.failedRecords, 0),
+      failed: item.failedRecords,
+      total: item.records,
+      recentRequestCount: 0,
+      keyCount: 0,
+    }))
+    .sort((left, right) => right.total - left.total)
+}
+
 export function createUsageAnalyticsModel({
+  overview,
   usage,
   runtimeLogs,
   requestErrorLogs,
@@ -135,6 +181,7 @@ export function createUsageAnalyticsModel({
   capabilities,
   settings,
 }: {
+  overview: UsageAnalyticsOverview | null
   usage: ApiKeyUsageResource[]
   runtimeLogs: RuntimeLogSnapshot | null
   requestErrorLogs: RequestErrorLogFile[]
@@ -142,17 +189,43 @@ export function createUsageAnalyticsModel({
   capabilities: CapabilityMap
   settings: UsageRuntimeSettings
 }): UsageAnalyticsModel {
-  const success = usage.reduce((total, item) => total + item.success, 0)
-  const failed = usage.reduce((total, item) => total + item.failed, 0)
+  const success = overview
+    ? overview.summary.successRecords
+    : usage.reduce((total, item) => total + item.success, 0)
+  const failed = overview
+    ? overview.summary.failedRecords
+    : usage.reduce((total, item) => total + item.failed, 0)
   const requests = success + failed
   const recentRequestCount = usage.reduce((total, item) => total + item.recentRequestCount, 0)
-  const failureRate = requests > 0 ? (failed / requests) * 100 : 0
-  const providerBreakdown = getProviderBreakdown(usage)
-  const currentDimensions: UsageAnalyticsDimension[] = capabilities.usage ? ['providerKey'] : []
+  const failureRate =
+    overview?.summary.failureRate ?? (requests > 0 ? (failed / requests) * 100 : 0)
+  const providerBreakdown = overview
+    ? getProviderBreakdownFromOverview(overview)
+    : getProviderBreakdown(usage)
+  const currentDimensions: UsageAnalyticsDimension[] = []
 
-  if (providerBreakdown.length > 0) {
+  if (capabilities.usageAnalytics) {
+    currentDimensions.push('time', 'user', 'clientKey', 'model', 'cost')
+  } else if (capabilities.usage) {
+    currentDimensions.push('providerKey')
+  }
+
+  if (providerBreakdown.length > 0 && !currentDimensions.includes('provider')) {
     currentDimensions.push('provider')
   }
+
+  if (overview?.distributions.endpoints.length) {
+    currentDimensions.push('endpoint')
+  }
+
+  const totalTokens = overview?.summary.totalTokens ?? 0
+  const estimatedCostUsd = overview?.summary.estimatedCostUsd ?? 0
+  const unpricedRecords = overview?.summary.unpricedRecords ?? 0
+  const rpm = overview?.summary.rpm ?? null
+  const tpm = overview?.summary.tpm ?? null
+  const plannedDimensions: UsageAnalyticsDimension[] = capabilities.usageAnalytics
+    ? ['account', 'credential', 'latency']
+    : ['time', 'model', 'endpoint', 'user', 'account', 'clientKey', 'credential', 'cost', 'latency']
 
   return {
     verdict: getVerdict({ capabilities, issues, requests, settings }),
@@ -164,20 +237,16 @@ export function createUsageAnalyticsModel({
       usageResources: usage.length,
       logLineCount: runtimeLogs?.lineCount ?? 0,
       errorLogFiles: requestErrorLogs.length,
+      totalTokens,
+      estimatedCostUsd,
+      unpricedRecords,
+      rpm,
+      tpm,
     },
     failureRate,
     providerBreakdown,
     currentDimensions,
-    plannedDimensions: [
-      'time',
-      'model',
-      'user',
-      'account',
-      'clientKey',
-      'credential',
-      'cost',
-      'latency',
-    ],
+    plannedDimensions,
     metrics: [
       {
         id: 'requests',
@@ -191,18 +260,49 @@ export function createUsageAnalyticsModel({
         detail: `${formatCount(failed)} / ${formatCount(requests)}`,
         tone: requests > 0 ? (failureRate > 0 ? 'warning' : 'positive') : 'neutral',
       },
-      {
-        id: 'resources',
-        value: formatCount(usage.length),
-        detail: formatCount(providerBreakdown.length),
-        tone: usage.length > 0 ? 'positive' : 'neutral',
-      },
-      {
-        id: 'recentWindows',
-        value: formatCount(recentRequestCount),
-        detail: formatCount(requestErrorLogs.length),
-        tone: requestErrorLogs.length > 0 ? 'warning' : 'neutral',
-      },
+      ...(overview
+        ? [
+            {
+              id: 'totalTokens' as const,
+              value: formatCount(totalTokens),
+              detail: `${formatCount(overview.summary.inputTokens)} / ${formatCount(
+                overview.summary.outputTokens,
+              )}`,
+              tone: totalTokens > 0 ? ('positive' as const) : ('neutral' as const),
+            },
+            {
+              id: 'estimatedCost' as const,
+              value: formatCurrency(estimatedCostUsd),
+              detail: formatCount(unpricedRecords),
+              tone: unpricedRecords > 0 ? ('warning' as const) : ('neutral' as const),
+            },
+            {
+              id: 'rpm' as const,
+              value: rpm === null ? '-' : formatCount(rpm),
+              detail: rpm === null ? '-' : formatCount(rpm),
+              tone: rpm && rpm > 0 ? ('positive' as const) : ('neutral' as const),
+            },
+            {
+              id: 'tpm' as const,
+              value: tpm === null ? '-' : formatCount(tpm),
+              detail: tpm === null ? '-' : formatCount(tpm),
+              tone: tpm && tpm > 0 ? ('positive' as const) : ('neutral' as const),
+            },
+          ]
+        : [
+            {
+              id: 'resources' as const,
+              value: formatCount(usage.length),
+              detail: formatCount(providerBreakdown.length),
+              tone: usage.length > 0 ? ('positive' as const) : ('neutral' as const),
+            },
+            {
+              id: 'recentWindows' as const,
+              value: formatCount(recentRequestCount),
+              detail: formatCount(requestErrorLogs.length),
+              tone: requestErrorLogs.length > 0 ? ('warning' as const) : ('neutral' as const),
+            },
+          ]),
     ],
   }
 }

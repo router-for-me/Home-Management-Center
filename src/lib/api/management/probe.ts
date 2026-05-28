@@ -11,7 +11,7 @@ import type {
 } from '@/lib/api/management/types'
 
 const capabilityRequests: Record<
-  Exclude<CapabilityKey, 'usageQueue' | 'logs'>,
+  Exclude<CapabilityKey, 'usageAnalytics' | 'usageQueue' | 'logs' | 'users' | 'quota'>,
   {
     path: string
   }
@@ -30,12 +30,127 @@ const capabilityRequests: Record<
 const emptyCapabilities: CapabilityMap = {
   nodes: false,
   usage: false,
+  usageAnalytics: false,
   usageQueue: false,
   logs: false,
   requestErrorLogs: false,
+  users: false,
+  quota: false,
 }
 
 type ProbedCapabilityKey = keyof typeof capabilityRequests
+
+type UnknownRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readBoolean(record: UnknownRecord, key: string) {
+  return typeof record[key] === 'boolean' ? record[key] : null
+}
+
+function readBooleanFromKeys(record: UnknownRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = readBoolean(record, key)
+    if (value !== null) return value
+  }
+  return null
+}
+
+function readDeclaredCapabilityValue(configData: unknown, keys: string[]) {
+  if (!isRecord(configData)) return null
+
+  const directCapability = readBooleanFromKeys(configData, keys)
+  if (directCapability !== null) return directCapability
+
+  for (const key of ['capabilities', 'management_capabilities', 'management-capabilities']) {
+    const capabilities = configData[key]
+    if (!isRecord(capabilities)) continue
+
+    const nestedCapability = readBooleanFromKeys(capabilities, keys)
+    if (nestedCapability !== null) return nestedCapability
+  }
+
+  return null
+}
+
+function readDeclaredCapability(configData: unknown, keys: string[]) {
+  return readDeclaredCapabilityValue(configData, keys) === true
+}
+
+function readDeclaredNodesCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['nodes', 'node_management', 'nodeManagement'])
+}
+
+function readDeclaredUsageCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'usage',
+    'api_key_usage',
+    'apiKeyUsage',
+    'api-key-usage',
+  ])
+}
+
+function readDeclaredUsageQueueCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['usage_queue', 'usageQueue', 'usage-queue'])
+}
+
+function readDeclaredLogsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['logs', 'runtime_logs', 'runtimeLogs'])
+}
+
+function readDeclaredRequestErrorLogsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_error_logs',
+    'requestErrorLogs',
+    'request-error-logs',
+  ])
+}
+
+function readDeclaredUsageAnalyticsCapability(configData: unknown) {
+  return readDeclaredCapability(configData, [
+    'usage_analytics',
+    'usageAnalytics',
+    'usage-analytics',
+    'usage-analytics-enabled',
+  ])
+}
+
+function readDeclaredUsersCapability(configData: unknown) {
+  return readDeclaredCapability(configData, ['users', 'user_management', 'userManagement'])
+}
+
+function readDeclaredQuotaCapability(configData: unknown) {
+  return readDeclaredCapability(configData, ['quota', 'balance', 'billing'])
+}
+
+function readDeclaredCapabilitiesEndpoint(configData: unknown) {
+  return readDeclaredCapability(configData, [
+    'capabilities_endpoint',
+    'capabilitiesEndpoint',
+    'management_capabilities_endpoint',
+    'managementCapabilitiesEndpoint',
+  ])
+}
+
+async function readCapabilitiesPayload(
+  client: AxiosInstance,
+  configData: unknown,
+): Promise<UnknownRecord | null> {
+  if (!readDeclaredCapabilitiesEndpoint(configData)) return null
+
+  const response = await client.request<unknown>({
+    method: 'GET',
+    url: '/capabilities',
+    validateStatus: () => true,
+  })
+
+  if (response.status === 404 || response.status === 405) return null
+  if (response.status >= 400) return null
+
+  return isRecord(response.data) ? response.data : null
+}
 
 function getHeader(response: AxiosResponse, name: string): string | undefined {
   const headers = response.headers as Record<string, unknown>
@@ -67,7 +182,7 @@ function inferRuntimeMode(
     return 'cpa'
   }
 
-  if (capabilities.nodes && !capabilities.usage) {
+  if (capabilities.nodes && !capabilities.usage && !capabilities.usageAnalytics) {
     return 'home-cluster'
   }
 
@@ -80,7 +195,7 @@ function inferRuntimeMode(
 
 async function probeCapability(client: AxiosInstance, key: ProbedCapabilityKey) {
   const request = capabilityRequests[key]
-  const response = await client.request({
+  const response = await client.request<unknown>({
     method: 'GET',
     url: request.path,
     validateStatus: () => true,
@@ -95,8 +210,24 @@ export async function probeManagementRuntime(
   session: ManagementSessionInput,
 ): Promise<CapabilityProbeResult> {
   const client = createManagementClient(session)
-  const configResponse = await client.get('/config')
+  const configResponse = await client.get<unknown>('/config')
+  const capabilitiesPayload = await readCapabilitiesPayload(client, configResponse.data)
+  const capabilitySource = capabilitiesPayload ?? configResponse.data
   const serverInfo = readServerInfo(configResponse)
+  const declaredNodes = capabilitiesPayload ? readDeclaredNodesCapability(capabilitySource) : null
+  const declaredUsage = capabilitiesPayload ? readDeclaredUsageCapability(capabilitySource) : null
+  const declaredUsageQueue = capabilitiesPayload
+    ? readDeclaredUsageQueueCapability(capabilitySource)
+    : null
+  const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
+  const declaredRequestErrorLogs = capabilitiesPayload
+    ? readDeclaredRequestErrorLogsCapability(capabilitySource)
+    : null
+  const declaredUsageAnalytics = capabilitiesPayload
+    ? readDeclaredUsageAnalyticsCapability(capabilitySource)
+    : false
+  const declaredUsers = capabilitiesPayload ? readDeclaredUsersCapability(capabilitySource) : false
+  const declaredQuota = capabilitiesPayload ? readDeclaredQuotaCapability(capabilitySource) : false
 
   const probedCapabilityEntries = await Promise.all(
     (Object.keys(capabilityRequests) as ProbedCapabilityKey[]).map(async (key) => {
@@ -117,14 +248,20 @@ export async function probeManagementRuntime(
   )
   const capabilities: CapabilityMap = {
     ...probedCapabilities,
+    nodes: declaredNodes ?? probedCapabilities.nodes,
+    usage: declaredUsage ?? probedCapabilities.usage,
+    usageAnalytics: declaredUsageAnalytics,
+    users: declaredUsers,
+    quota: declaredQuota,
     // GET /usage-queue is destructive because it pops queue records, while HEAD is not
     // registered by the current runtime. Treat the route as available when the
     // non-destructive usage route exists.
-    usageQueue: probedCapabilities.usage,
+    usageQueue: declaredUsageQueue ?? declaredUsage ?? probedCapabilities.usage,
     // GET /logs returns 400 when file logging is disabled, so probing it would create
     // console noise. Standalone runtimes that expose usage routes also expose the log
     // route family; the usage page decides separately whether config should read lines.
-    logs: probedCapabilities.usage,
+    logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
+    requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
   }
 
   return {

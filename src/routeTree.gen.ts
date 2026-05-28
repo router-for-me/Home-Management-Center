@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UsersRouteImport } from './routes/users'
 import { Route as UsageLogsRouteImport } from './routes/usage-logs'
 import { Route as SystemNodesRouteImport } from './routes/system-nodes'
 import { Route as ProvidersRouteImport } from './routes/providers'
@@ -18,6 +19,11 @@ import { Route as ConfigRouteImport } from './routes/config'
 import { Route as AccessKeysRouteImport } from './routes/access-keys'
 import { Route as IndexRouteImport } from './routes/index'
 
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsageLogsRoute = UsageLogsRouteImport.update({
   id: '/usage-logs',
   path: '/usage-logs',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/providers': typeof ProvidersRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/providers': typeof ProvidersRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/providers': typeof ProvidersRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
+  '/users': typeof UsersRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/providers'
     | '/system-nodes'
     | '/usage-logs'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/providers'
     | '/system-nodes'
     | '/usage-logs'
+    | '/users'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/providers'
     | '/system-nodes'
     | '/usage-logs'
+    | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,10 +144,18 @@ export interface RootRouteChildren {
   ProvidersRoute: typeof ProvidersRoute
   SystemNodesRoute: typeof SystemNodesRoute
   UsageLogsRoute: typeof UsageLogsRoute
+  UsersRoute: typeof UsersRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/usage-logs': {
       id: '/usage-logs'
       path: '/usage-logs'
@@ -204,6 +224,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProvidersRoute: ProvidersRoute,
   SystemNodesRoute: SystemNodesRoute,
   UsageLogsRoute: UsageLogsRoute,
+  UsersRoute: UsersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

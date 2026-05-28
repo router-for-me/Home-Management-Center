@@ -7,6 +7,7 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
+  UsersRound,
 } from 'lucide-react'
 
 type NavigationGroupId = 'operate' | 'gateway' | 'observe' | 'control'
@@ -16,6 +17,7 @@ type NavigationRoute =
   | '/providers'
   | '/credentials'
   | '/access-keys'
+  | '/users'
   | '/config'
   | '/usage-logs'
   | '/system-nodes'
@@ -67,6 +69,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.accessKeys',
         metaKey: 'navigationMeta.accessKeys',
         icon: KeyRound,
+      },
+      {
+        to: '/users',
+        labelKey: 'navigation.users',
+        metaKey: 'navigationMeta.users',
+        icon: UsersRound,
       },
     ],
   },

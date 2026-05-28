@@ -3,7 +3,15 @@ import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 
 type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' | 'debug' | 'routing'
 
-type DashboardCapabilityId = 'nodes' | 'usage' | 'usageQueue' | 'logs' | 'requestErrorLogs'
+type DashboardCapabilityId =
+  | 'nodes'
+  | 'usage'
+  | 'usageAnalytics'
+  | 'usageQueue'
+  | 'logs'
+  | 'requestErrorLogs'
+  | 'users'
+  | 'quota'
 
 export type DashboardTone = 'neutral' | 'positive' | 'info' | 'warning'
 
@@ -236,10 +244,13 @@ export function createDashboardOverviewViewModel(
   }
   const capabilityStatuses: DashboardCapabilityStatus[] = [
     { id: 'nodes', available: capabilities.nodes },
+    { id: 'usageAnalytics', available: capabilities.usageAnalytics },
     { id: 'usage', available: capabilities.usage },
     { id: 'usageQueue', available: capabilities.usageQueue },
     { id: 'logs', available: capabilities.logs },
     { id: 'requestErrorLogs', available: capabilities.requestErrorLogs },
+    { id: 'users', available: capabilities.users },
+    { id: 'quota', available: capabilities.quota },
   ]
   const unavailableCapabilityStatuses = capabilityStatuses.filter(
     (capability) => !capability.available,
