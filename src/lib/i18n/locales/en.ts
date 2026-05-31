@@ -7,6 +7,8 @@ export const en = {
     cancel: 'Cancel',
     common: {
       cancel: 'Cancel',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
     },
     actions: {
       connect: 'Connect',
@@ -31,7 +33,7 @@ export const en = {
       providers: 'Model services',
       credentials: 'Account credentials',
       accessKeys: 'Access keys',
-      users: 'Users',
+      users: 'Users & Access',
       config: 'System config',
       usageLogs: 'Usage & Logs',
       systemNodes: 'System Info',
@@ -47,9 +49,9 @@ export const en = {
       providers: 'Model service config',
       credentials: 'Global credential pool',
       accessKeys: 'Client access control',
-      users: 'Users and quota',
+      users: 'Users and access',
       config: 'Gateway core settings',
-      usageLogs: 'Spend and traces',
+      usageLogs: 'Requests and logs',
       systemNodes: 'Runtime and diagnostics',
     },
     sidebar: {
@@ -284,12 +286,11 @@ export const en = {
       capabilityNames: {
         nodes: 'Node management',
         usage: 'Usage statistics',
-        usageAnalytics: 'Usage analytics',
         usageQueue: 'Usage queue',
         logs: 'Request logs',
         requestErrorLogs: 'Error logs',
         users: 'User management',
-        quota: 'User quota',
+        accessGroups: 'Access scopes',
       },
       credentials: {
         title: 'Account credential sources',
@@ -747,6 +748,11 @@ export const en = {
         empty: 'No access keys match the current filter.',
         index: 'No.',
         key: 'Key',
+        owner: 'Owner',
+        credentialScope: 'Credential scope',
+        modelScope: 'Model scope',
+        unassigned: 'Unassigned',
+        unrestricted: 'Unrestricted',
         length: 'Length',
         status: 'Status',
         actions: 'Actions',
@@ -772,6 +778,9 @@ export const en = {
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',
+          owner: 'Owner',
+          credentialScope: 'Credential scope',
+          modelScope: 'Model scope',
         },
       },
       form: {
@@ -790,10 +799,10 @@ export const en = {
         description:
           'This uses PUT /api-keys and replaces the entire downstream key list. Enter one key per line.',
         warning:
-          'Submitting this will overwrite all current client access keys with the entered list. Confirm the list is complete first.',
+          'Submitting this will overwrite the key list. Existing ownership and access scopes are preserved for unchanged keys; new keys start unrestricted.',
         textarea: 'Keys',
         confirm:
-          'Replace all access keys with the entered list? The current list will be overwritten.',
+          'Replace all access keys with the entered list? Existing scope bindings are preserved only for unchanged keys.',
       },
       delete: {
         title: 'Delete access key?',
@@ -812,13 +821,13 @@ export const en = {
       disconnected: {
         title: 'Connect a management runtime',
         description:
-          'Users and quota data are loaded from the Management API. Connect a runtime before managing administrators and regular users.',
+          'Users, client keys, and access scopes are loaded from the Management API. Connect a runtime before managing basic multi-user access.',
         action: 'Connect runtime',
       },
       unsupported: {
         title: 'This runtime does not expose user management',
         description:
-          '{{mode}} did not declare user management support. The page will not request /users or invent user and quota data.',
+          '{{mode}} did not declare user management support. The page will not load user management tables or invent users, key ownership, or access scopes.',
       },
       error: {
         title: 'User data could not be loaded',
@@ -826,113 +835,187 @@ export const en = {
         retry: 'Retry',
       },
       header: {
-        eyebrow: 'Users and quota',
-        title: 'User Management',
+        eyebrow: 'Users and access',
+        title: 'Users & Access',
         description:
-          'Manage administrators and regular users, and review client keys, today usage, and quota status returned by the backend.',
+          'Manage users, client key ownership, credential scopes, and model scopes from the Home Management API.',
         total: '{{count}} users',
-        admins: '{{count}} administrators',
-        disabled: '{{count}} disabled',
-        quotaPaused: '{{count}} quota paused',
+        users: '{{count}} users',
+        activeUsers: '{{count}} active users',
+        keys: '{{count}} client keys',
+        assignedKeys: '{{count}} assigned keys',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
         refresh: 'Sync data',
         syncing: 'Syncing',
         new: 'New user',
+        newUser: 'New user',
+        newKey: 'New key',
+        newCredentialScope: 'New credential scope',
+        newModelScope: 'New model scope',
         create: 'Create user',
+        createKey: 'Create key',
+        createCredentialScope: 'Create credential scope',
+        createModelScope: 'Create model scope',
         save: 'Save changes',
+        addBinding: 'Add binding',
         view: 'View',
         edit: 'Edit',
-        enable: 'Enable',
-        disable: 'Disable',
-      },
-      roles: {
-        admin: 'Administrator',
-        user: 'Regular user',
-        unknown: 'Unknown role',
+        delete: 'Delete',
       },
       status: {
         active: 'Active',
-        disabled: 'Disabled',
-        quotaPaused: 'Quota paused',
+        deleted: 'Deleted',
         notAvailable: 'Not available',
+        notReturned: 'Not returned',
+        notDeleted: 'Not deleted',
       },
       list: {
         title: 'Users',
-        description:
-          'User dimensions separate regular-user scope, administrator global scope, client key ownership, and quota state.',
-        filterPlaceholder: 'Filter users, email, or role',
+        description: 'Review users, client key ownership, and assigned access scopes.',
+        filterPlaceholder: 'Filter users or keys',
         empty: 'No users match the current filter.',
         user: 'User',
-        role: 'Role',
         status: 'Status',
         keys: 'Client keys',
-        usage: 'Today usage',
-        quota: 'Quota',
+        updatedAt: 'Updated',
         actions: 'Actions',
-        usageMeta: '{{tokens}} tokens / {{cost}}',
       },
       form: {
         createTitle: 'New user',
         editTitle: 'Edit user',
-        createDescription:
-          'Create an administrator or regular user for usage isolation and quota control.',
         username: 'Username',
         usernamePlaceholder: 'user@example.com',
-        nickname: 'Display name',
-        nicknamePlaceholder: 'Optional',
-        role: 'Role',
+        usernameLockedHint:
+          'Username identifies the access subject and is locked after creation. Delete and recreate the user to change it.',
         password: 'Initial password',
-        passwordPlaceholder: 'Required only if the backend policy requires it',
+        passwordOptional: 'New password (optional)',
+        passwordPlaceholder: 'Optional. Leave blank to create the user without a password.',
+        noGroups: 'No selectable scopes have been created yet.',
+        noCredentialGroups: 'No credential scopes have been created yet.',
+        noModelGroups: 'No model scopes have been created yet.',
         validation: {
           usernameRequired: 'Username is required.',
+          keyRequired: 'Key value is required.',
+          groupNameRequired: 'Scope name is required.',
+          groupRequired: 'Select a scope.',
+          authRequired: 'Credential ID is required.',
+          modelRequired: 'Model ID is required.',
         },
+      },
+      keys: {
+        keyValue: 'Key value',
+        owner: 'Owner',
+        unassigned: 'Unassigned',
+        emptyScopeHint:
+          'When no scope is selected, this key does not add credential or model restrictions.',
+        empty: 'No client keys yet.',
+        key: 'Client key',
+        length: 'Length',
+        sequence: 'Sequence {{index}}',
+        createTitle: 'New client key',
+        editTitle: 'Edit key access',
+      },
+      scopes: {
+        credential: 'Credential scope',
+        model: 'Model scope',
+        unrestricted: 'Unrestricted',
+      },
+      groups: {
+        channelName: 'Credential scope name',
+        modelName: 'Model scope name',
+        disabled: 'Disabled',
+        disabledHint: 'Disabled scopes are not used by the backend for access matching.',
+        group: 'Scope',
+        groupPlaceholder: 'Select a scope',
+        authId: 'Credential ID',
+        modelId: 'Model ID',
+        channelEmpty: 'No credential scopes yet.',
+        modelEmpty: 'No model scopes yet.',
+        detailCount: '{{count}} bindings',
+        groupId: 'Scope ID: {{id}}',
+        noDetails: 'No bindings yet.',
+        unsupportedTitle: 'Access scopes are not available',
+        unsupportedDescription:
+          'This runtime does not expose credential scope or model scope routes. Users and client keys remain visible without inventing scope data.',
+        channelCreateTitle: 'New credential scope',
+        modelCreateTitle: 'New model scope',
+        channelEditTitle: 'Edit credential scope',
+        modelEditTitle: 'Edit model scope',
+        channelBindingTitle: 'Add credential binding',
+        modelBindingTitle: 'Add model binding',
       },
       detail: {
         title: 'User detail',
         empty: 'Select a user to inspect details.',
-        quotaUnavailable: 'The backend did not return quota summary for this user.',
+        passwordStored: 'Password stored',
+        userId: 'User ID: {{id}}',
         sections: {
           profile: 'Profile',
-          usage: 'Today usage',
-          quota: 'Quota summary',
+          access: 'Access scope',
         },
         fields: {
           id: 'ID',
           username: 'Username',
-          nickname: 'Display name',
           createdAt: 'Created',
           updatedAt: 'Updated',
-          disabledAt: 'Disabled at',
-          requests: 'Requests',
-          tokens: 'Tokens',
-          cost: 'Estimated cost',
-          successRate: 'Success rate',
-          monthlyRemaining: 'Monthly remaining',
-          monthlyUsed: 'Monthly used',
-          lifetimeRemaining: 'Lifetime remaining',
-          quotaMonth: 'Quota month',
-          pauseReason: 'Pause reason',
-          unpricedRecords: 'Unpriced records',
+          deletedAt: 'Deleted at',
+          mfa: 'MFA',
+          passkeyCount: 'Passkeys',
         },
       },
-      quota: {
-        unlimited: 'Unlimited',
-      },
-      statusDialog: {
-        disableTitle: 'Disable user?',
-        enableTitle: 'Enable user?',
-        disableDescription:
-          'Disable user "{{name}}"? The backend should prevent this user from using linked client keys.',
-        enableDescription:
-          'Enable user "{{name}}"? The backend will restore this user to an available state.',
-      },
       toast: {
-        created: 'User created.',
-        updated: 'User updated.',
-        enabled: 'User enabled.',
-        disabled: 'User disabled.',
+        userCreated: 'User created.',
+        userUpdated: 'User updated.',
+        userDeleted: 'User deleted.',
+        keyCreated: 'Client key created.',
+        keyUpdated: 'Key access updated.',
+        keyDeleted: 'Client key deleted.',
+        groupCreated: 'Scope created.',
+        groupUpdated: 'Scope updated.',
+        groupDeleted: 'Scope deleted.',
+        bindingCreated: 'Binding added.',
+        bindingDeleted: 'Binding deleted.',
+      },
+      workspace: {
+        title: 'Access workspace',
+        description:
+          'Maintain users, key ownership, credential scopes, and model scopes in one workspace.',
+        filterPlaceholder: 'Filter users, keys, or scopes',
+      },
+      tabs: {
+        users: 'Users',
+        keys: 'Client keys',
+        channelGroups: 'Credential scopes',
+        modelGroups: 'Model scopes',
+      },
+      sheet: {
+        userCreateDescription:
+          'Create an access subject that can own client keys. Password can be left blank.',
+        userEditDescription:
+          'Username stays fixed after creation. This only updates password and other maintainable fields.',
+        userDetailDescription:
+          'Review this user profile, client key count, and assigned access scopes.',
+        keyCreateDescription:
+          'Generate a client access key and optionally bind a user, credential scopes, and model scopes.',
+        keyEditDescription:
+          'Adjust this key owner and access scopes. The key value itself is unchanged.',
+        channelGroupCreateDescription: 'Create a credential scope that client keys can reference.',
+        modelGroupCreateDescription: 'Create a model scope that client keys can reference.',
+        channelGroupEditDescription: 'Maintain the credential scope name and enabled state.',
+        modelGroupEditDescription: 'Maintain the model scope name and enabled state.',
+        channelBindingDescription:
+          'Add a credential ID to this credential scope. Client keys bound to this scope can use those credentials.',
+        modelBindingDescription:
+          'Enter a model ID manually to add it to this model scope. Client keys bound to this scope can use those models.',
+      },
+      delete: {
+        title: 'Confirm deletion',
+        user: 'Delete user "{{name}}"? This will not automatically delete global credentials.',
+        key: 'Delete client key {{name}}? Linked clients will stop working immediately.',
+        group: 'Delete scope "{{name}}"? Bound keys will lose this scope reference.',
+        detail: 'Delete binding "{{name}}"?',
       },
     },
     configPage: {
@@ -1329,7 +1412,6 @@ export const en = {
         fetchQueue: 'Pull queue records',
       },
       capabilities: {
-        usageAnalytics: 'Usage analytics',
         usage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1351,7 +1433,7 @@ export const en = {
           title: 'Usage statistics are available, no requests yet',
           badge: 'No data',
           description:
-            'The runtime exposes usage routes but returned no request records. Sync again after the service handles traffic.',
+            'The runtime exposes usage routes but returned no API key usage rows. Sync again after the service handles traffic.',
         },
         disabled: {
           title: 'Usage statistics are disabled',
@@ -1366,13 +1448,13 @@ export const en = {
             'The page continues to show loaded usage facts. Review the failed scopes before making a full assessment.',
         },
         limited: {
-          title: 'Usage analytics are limited',
+          title: 'Usage data is limited',
           badge: 'Limited',
           description:
             '{{mode}} did not return API key usage aggregates, so only logs and error files can be used for investigation.',
         },
         unsupported: {
-          title: 'This runtime does not support usage analytics',
+          title: 'This runtime does not expose usage routes',
           badge: 'Unsupported',
           description:
             '{{mode}} does not expose usage or log routes. Capability state remains visible until backend observability APIs are added.',
@@ -1382,8 +1464,6 @@ export const en = {
         title: 'Some data could not be loaded',
       },
       issueScopes: {
-        usageAnalytics: 'Usage analytics',
-        usageAnalyticsOptions: 'Analytics filters',
         apiKeyUsage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1398,392 +1478,11 @@ export const en = {
         logs: 'Log lines',
         logsDetail: '{{count}} error log files',
       },
-      scope: {
-        title: 'Current statistics scope',
-        description:
-          'The current backend only returns runtime memory aggregates. Date, user, account, credential, and model-token filters are not available yet, so the page shows only verified aggregate facts.',
-      },
-      filters: {
-        title: 'Analytics filter model',
-        description:
-          'Complete usage analytics supports time range, model, user, account, credential, client key, and request status filters. When the current runtime has not declared those query capabilities, the page keeps the capability gap visible instead of inventing data.',
-        badge: 'Not declared',
-        planned: 'Unavailable now',
-        items: {
-          timeRange: 'Time range',
-          provider: 'Provider',
-          model: 'Model',
-          user: 'User',
-          account: 'Account',
-          credential: 'Credential',
-          clientKey: 'Client key',
-          status: 'Request status',
-        },
-      },
-      mock: {
-        title: 'Usage Analytics Mock Validation',
-        badge: 'API sample',
-        description:
-          'This mode renders the complete usage analytics shape from frontend mock data, so trend charts, status share, dimension rankings, period comparison, and request details can be visually reviewed without touching live runtime data.',
-        validationToolbar: 'Internal validation scenarios',
-        currentScenario: 'Scenario: {{scenario}}',
-        range: 'Range: {{start}} - {{end}}',
-        contractNotice:
-          'The mock data structure is only for frontend visual review and API sample validation. Open /usage-logs?usageMock=normal, spiky, empty, or long-tail.',
-        emptyChart: 'This scenario has no chartable data.',
-        emptyState: {
-          title: 'No usage samples in this scenario',
-          description:
-            '{{scenario}} validates the empty analytics state. It keeps one empty-state panel and a few disabled previews instead of repeating the full chart frame.',
-          trend: {
-            title: 'Trend chart',
-            description: 'Shown after request samples exist.',
-          },
-          breakdown: {
-            title: 'Dimension rankings',
-            description: 'Shown after aggregate dimensions exist.',
-          },
-          requests: {
-            title: 'Request details',
-            description: 'Shown after request records exist.',
-          },
-        },
-        scenarios: {
-          normal: 'Normal',
-          spiky: 'Spike',
-          empty: 'Empty',
-          'long-tail': 'Long-tail labels',
-        },
-        kpis: {
-          requests: 'Requests',
-          tokens: 'Tokens',
-          cost: 'Cost',
-          latency: 'Avg latency',
-          requestsDetail: '{{success}} success / {{failed}} failed',
-          tokensDetail: 'Input {{input}} / output {{output}}',
-          costDetail: '{{count}} unpriced requests',
-          latencyDetail: 'First token {{firstToken}}',
-        },
-        comparisons: {
-          title: 'Period comparison snapshot',
-          description:
-            'A compact validation panel compares the current and previous periods without turning every check into an equal-weight card.',
-          requests: 'Request comparison',
-          tokens: 'Token comparison',
-          cost: 'Cost comparison',
-          latency: 'Latency comparison',
-          meta: 'Current {{current}} / previous {{previous}}',
-          current: 'Current',
-          previous: 'Previous',
-        },
-        trend: {
-          title: 'Request trend',
-          description:
-            'Time buckets show request and failure volume for normal trend and spike readability checks.',
-          requests: 'Requests',
-          failed: 'Failed',
-        },
-        statusChart: {
-          title: 'Request status share',
-          description:
-            'A donut chart shows the split between success, failure, rate limit, quota, and timeout states.',
-        },
-        status: {
-          success: 'Success',
-          failed: 'Failed',
-          rateLimited: 'Rate limited',
-          quotaExceeded: 'Quota exceeded',
-          timeout: 'Timeout',
-        },
-        breakdown: {
-          requests: 'Requests',
-          failed: 'Failed',
-          mobileMeta: '{{requests}} requests / {{failed}} failed',
-          providers: 'Provider ranking',
-          providersDescription: 'Aggregates request and failure volume by provider.',
-          models: 'Model ranking',
-          modelsDescription: 'Aggregates request and failure volume by model.',
-          users: 'User ranking',
-          usersDescription: 'Aggregates request and failure volume by user.',
-          credentials: 'Credential ranking',
-          credentialsDescription: 'Aggregates request and failure volume by account credential.',
-        },
-        breakdownSection: {
-          title: 'Dimension drilldown preview',
-          description:
-            'Provider, model, user, and credential rankings validate the future analytics contract. They stay collapsed by default so the main path remains clear.',
-          trigger: 'View dimensions',
-        },
-        requests: {
-          title: 'Request detail sample',
-          description:
-            'Shows the core columns expected from future /usage/requests responses: Request ID, provider, model, user, status, tokens, cost, and latency.',
-          empty: 'This scenario has no request detail samples.',
-          columns: {
-            request: 'Request ID',
-            provider: 'Provider',
-            model: 'Model',
-            user: 'User',
-            status: 'Status',
-            tokens: 'Tokens',
-            cost: 'Cost',
-            latency: 'Latency',
-          },
-        },
-      },
-      metrics: {
-        requests: {
-          label: 'Total requests',
-          detail: 'Success / failed: {{value}}',
-        },
-        failureRate: {
-          label: 'Failure rate',
-          detail: 'Failed / total: {{value}}',
-        },
-        resources: {
-          label: 'Upstream key records',
-          detail: 'Providers: {{value}}',
-        },
-        recentWindows: {
-          label: 'Recent windows',
-          detail: 'Error log files: {{value}}',
-        },
-        totalTokens: {
-          label: 'Total tokens',
-          detail: 'Input / output: {{value}}',
-        },
-        estimatedCost: {
-          label: 'Estimated cost',
-          detail: 'Unpriced records: {{value}}',
-        },
-        rpm: {
-          label: 'RPM',
-          detail: 'Requests per minute: {{value}}',
-        },
-        tpm: {
-          label: 'TPM',
-          detail: 'Tokens per minute: {{value}}',
-        },
-      },
-      production: {
-        header: {
-          title: 'Production usage analytics',
-          description:
-            'Database-backed usage facts by request, token, cost, user, client key, model, provider, and endpoint.',
-          badge: 'Live analytics',
-          range: 'Range: {{start}} - {{end}}',
-          rangeUnavailable: 'Range unavailable',
-          successRate: 'Success rate {{value}}',
-          failureRate: 'Failure rate {{value}}',
-        },
-        filters: {
-          title: 'Analytics filters',
-          description:
-            'Query database-backed usage by time range, user, client key, provider, model, credential, endpoint, status, or Request ID.',
-          active: '{{count}} active filters',
-          options: '{{count}} filter values',
-          all: 'All',
-          apply: 'Apply filters',
-          reset: 'Reset',
-          noOptions:
-            'The backend did not return filter options yet. Free-text Request ID and time range remain available.',
-          requestIdPlaceholder: 'Optional Request ID',
-          ranges: {
-            '24h': 'Last 24 hours',
-            '3d': 'Last 3 days',
-            '7d': 'Last 7 days',
-            '30d': 'Last 30 days',
-          },
-          fields: {
-            range: 'Range',
-            user: 'User',
-            clientKey: 'Client key',
-            provider: 'Provider',
-            model: 'Model',
-            credential: 'Credential',
-            endpoint: 'Endpoint',
-            status: 'Status',
-            requestId: 'Request ID',
-          },
-          status: {
-            all: 'All statuses',
-            success: 'Success only',
-            failed: 'Failed only',
-          },
-        },
-        trend: {
-          title: 'Usage trend',
-          description:
-            'Tracks request volume, failures, and token movement across the selected time buckets.',
-          requests: 'Requests',
-          failed: 'Failed',
-          tokens: 'Tokens',
-          empty: 'No trend buckets were returned.',
-        },
-        tokens: {
-          title: 'Token composition',
-          description:
-            'Breaks down input, output, cache, and reasoning tokens for the selected range.',
-          empty: 'No token composition was returned.',
-          total: 'Total tokens: {{value}}',
-          unpriced: 'Unpriced records: {{value}}',
-          items: {
-            input: 'Input',
-            output: 'Output',
-            cached: 'Cached',
-            cacheRead: 'Cache read',
-            cacheCreation: 'Cache creation',
-            reasoning: 'Reasoning',
-          },
-        },
-        activity: {
-          title: 'Hourly activity',
-          description: 'Compares request volume and token usage across recent time buckets.',
-          requests: 'Requests',
-          tokens: 'Tokens',
-          meta: '{{requests}} requests / {{tokens}} tokens',
-          empty: 'No activity buckets were returned.',
-        },
-        exceptions: {
-          title: 'Exception overview',
-          description:
-            'Summarizes failure rate and failed request categories for the selected range.',
-          failureRate: 'Failure rate {{value}}',
-          failed: 'Failed records: {{value}}',
-          success: 'Successful records: {{value}}',
-          meta: '{{tokens}} tokens / {{cost}}',
-          empty: 'No failed requests were returned.',
-          noBreakdown:
-            '{{count}} failed records were returned, but the backend did not include an error breakdown.',
-        },
-        distributions: {
-          providers: 'Provider distribution',
-          providersDescription: 'Shows which model service providers carried the selected traffic.',
-          endpoints: 'Endpoint distribution',
-          endpointsDescription:
-            'Shows request type distribution such as Ve-Response, Ve-Image, and Ve-Message.',
-          empty: 'No distribution data was returned.',
-          meta: '{{tokens}} tokens / {{cost}} / {{failed}} failed',
-        },
-        rankings: {
-          title: 'Usage rankings',
-          description:
-            'Ranks users, client keys, and models by request volume for the selected range.',
-          users: 'Users',
-          clientKeys: 'Client keys',
-          models: 'Models',
-          meta: '{{requests}} requests / {{failed}} failed',
-          empty: 'No ranking data was returned.',
-        },
-        requests: {
-          title: 'Request records',
-          description:
-            'Inspect database-backed request details by user, client key, provider, model, endpoint, status, token count, cost, and latency.',
-          loading: 'Loading records',
-          empty: 'No request records match the current filters.',
-          error: 'Request records could not be loaded.',
-          pageMeta: 'Page {{page}} of {{totalPages}}, {{total}} records',
-          previous: 'Previous',
-          next: 'Next',
-          notAvailable: 'Not available',
-          view: 'View',
-          downloadLog: 'Download log',
-          columns: {
-            request: 'Request',
-            user: 'User / client key',
-            provider: 'Provider / model',
-            endpoint: 'Endpoint',
-            status: 'Status',
-            tokens: 'Tokens',
-            cost: 'Cost',
-            latency: 'Latency',
-            actions: 'Actions',
-          },
-          status: {
-            success: 'Success',
-            failed: 'Failed',
-            unknown: 'Unknown',
-          },
-          detail: {
-            title: 'Request detail',
-            description: 'Request {{request}}',
-            unavailable: 'No request record is selected.',
-            raw: 'Raw payload',
-            fields: {
-              requestId: 'Request ID',
-              timestamp: 'Timestamp',
-              user: 'User',
-              clientKey: 'Client key',
-              provider: 'Provider',
-              model: 'Model',
-              endpoint: 'Endpoint',
-              status: 'Status',
-              totalTokens: 'Total tokens',
-              inputTokens: 'Input tokens',
-              outputTokens: 'Output tokens',
-              cachedTokens: 'Cached tokens',
-              cacheReadTokens: 'Cache read tokens',
-              cacheCreationTokens: 'Cache creation tokens',
-              reasoningTokens: 'Reasoning tokens',
-              cost: 'Estimated cost',
-              latency: 'Latency',
-              firstTokenLatency: 'First token latency',
-              sourceKey: 'Credential source',
-              errorMessage: 'Error message',
-            },
-          },
-        },
-      },
-      analytics: {
-        preview: {
-          title: 'Analytics capability preview',
-          description:
-            'The live runtime shows real usage facts first. Filter scope and dimension coverage stay collapsed as a backend contract preview.',
-          trigger: 'View preview',
-        },
-        charts: {
-          title: 'Provider request distribution',
-          description:
-            'The current route only returns model provider, upstream Base URL, and API key success/failure aggregates, so this chart shows verifiable provider distribution first.',
-          empty: 'No usage data is available for charting.',
-        },
-        breakdown: {
-          title: 'Provider ranking',
-          description:
-            'Sorted by request volume to show which upstream model services carry usage.',
-          meta: '{{success}} success / {{failed}} failed, {{keys}} upstream keys',
-          empty: 'No provider usage ranking is available.',
-        },
-        roadmap: {
-          title: 'Analytics dimension coverage',
-          description:
-            'The page is designed for the complete usage product shape. If the current runtime returns only limited aggregate dimensions, the gap is shown as a capability state and is not filled with frontend dummy data.',
-          api: 'Runtime capability state',
-          current: 'Available now',
-          planned: 'Unavailable now',
-          none: 'No analytics dimensions available',
-        },
-        dimensions: {
-          time: 'Time trend',
-          provider: 'Provider',
-          model: 'Model',
-          user: 'User',
-          account: 'Account',
-          clientKey: 'Client key',
-          providerKey: 'Upstream API key',
-          credential: 'Credential',
-          cost: 'Cost',
-          latency: 'Latency',
-        },
-      },
       usage: {
         title: 'API key usage',
         description:
           'Groups successful and failed requests by model provider, upstream Base URL, and API key.',
-        compatTitle: 'Legacy API key usage',
-        compatDescription:
-          'Older runtime aggregation is still available for comparison. Production analytics remains the primary source.',
-        compatTrigger: 'View legacy usage',
+        unavailable: 'The current runtime does not expose API key usage.',
         empty:
           'No API key usage records were returned. Confirm usage statistics are enabled and the runtime has handled requests.',
         provider: 'Model provider',
@@ -1805,6 +1504,7 @@ export const en = {
         raw: 'Raw record',
         columns: {
           request: 'Request ID',
+          homeIp: 'Home IP',
           model: 'Model',
           endpoint: 'Endpoint',
           status: 'Status',
@@ -1816,14 +1516,6 @@ export const en = {
         description:
           'Request logs, error logs, and the usage queue are investigation tools. Queue reads consume server records, so they remain manual.',
       },
-      trace: {
-        title: 'Download by Request ID',
-        description:
-          'If an error file or external alert already gives you a Request ID, download the matching request log directly.',
-        trigger: 'Manual entry',
-        placeholder: 'Enter Request ID',
-        unavailable: 'This runtime does not support downloading request logs by Request ID.',
-      },
       logs: {
         title: 'Runtime logs',
         description:
@@ -1834,6 +1526,16 @@ export const en = {
         lineCount: '{{count}} lines',
         latest: 'Latest timestamp: {{time}}',
         latestUnavailable: 'Latest timestamp unavailable',
+        total: '{{count}} total',
+        columns: {
+          time: 'Time',
+          level: 'Level',
+          request: 'Request ID',
+          homeIp: 'Home IP',
+          clientIp: 'Client IP',
+          line: 'Log line',
+          actions: 'Actions',
+        },
       },
       errorLogs: {
         title: 'Error log files',
@@ -1855,6 +1557,7 @@ export const en = {
         failed: 'Failed',
         notAvailable: 'N/A',
         unknownRequest: 'Unknown request',
+        localHome: 'Local Home',
       },
       confirm: {
         clearLogsTitle: 'Clear runtime logs?',

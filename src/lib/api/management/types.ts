@@ -1,12 +1,11 @@
 export type CapabilityKey =
   | 'nodes'
   | 'usage'
-  | 'usageAnalytics'
   | 'usageQueue'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'
-  | 'quota'
+  | 'accessGroups'
 
 export type CapabilityMap = Record<CapabilityKey, boolean>
 

@@ -6,12 +6,11 @@ type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' |
 type DashboardCapabilityId =
   | 'nodes'
   | 'usage'
-  | 'usageAnalytics'
   | 'usageQueue'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'
-  | 'quota'
+  | 'accessGroups'
 
 export type DashboardTone = 'neutral' | 'positive' | 'info' | 'warning'
 
@@ -244,13 +243,12 @@ export function createDashboardOverviewViewModel(
   }
   const capabilityStatuses: DashboardCapabilityStatus[] = [
     { id: 'nodes', available: capabilities.nodes },
-    { id: 'usageAnalytics', available: capabilities.usageAnalytics },
     { id: 'usage', available: capabilities.usage },
     { id: 'usageQueue', available: capabilities.usageQueue },
     { id: 'logs', available: capabilities.logs },
     { id: 'requestErrorLogs', available: capabilities.requestErrorLogs },
     { id: 'users', available: capabilities.users },
-    { id: 'quota', available: capabilities.quota },
+    { id: 'accessGroups', available: capabilities.accessGroups },
   ]
   const unavailableCapabilityStatuses = capabilityStatuses.filter(
     (capability) => !capability.available,

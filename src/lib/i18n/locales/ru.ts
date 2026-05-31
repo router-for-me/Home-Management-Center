@@ -7,6 +7,8 @@ export const ru = {
     cancel: 'Отмена',
     common: {
       cancel: 'Отмена',
+      enabled: 'Включено',
+      disabled: 'Отключено',
     },
     actions: {
       connect: 'Подключить',
@@ -31,7 +33,7 @@ export const ru = {
       providers: 'Модельные сервисы',
       credentials: 'Учетные данные аккаунтов',
       accessKeys: 'Управление ключами',
-      users: 'Пользователи',
+      users: 'Пользователи и доступ',
       config: 'Системная конфигурация',
       usageLogs: 'Использование и журналы',
       systemNodes: 'Сведения о системе',
@@ -47,9 +49,9 @@ export const ru = {
       providers: 'Настройки модельных сервисов',
       credentials: 'Глобальный пул учетных данных',
       accessKeys: 'Контроль клиентского доступа',
-      users: 'Пользователи и quota',
+      users: 'Пользователи и доступ',
       config: 'Основные настройки шлюза',
-      usageLogs: 'Расходы и трассировки',
+      usageLogs: 'Запросы и журналы',
       systemNodes: 'Runtime и диагностика',
     },
     sidebar: {
@@ -285,12 +287,11 @@ export const ru = {
       capabilityNames: {
         nodes: 'Управление узлами',
         usage: 'Статистика использования',
-        usageAnalytics: 'Usage analytics',
         usageQueue: 'Очередь usage',
         logs: 'Журналы запросов',
         requestErrorLogs: 'Журналы ошибок',
         users: 'Управление пользователями',
-        quota: 'Quota пользователей',
+        accessGroups: 'Области доступа',
       },
       credentials: {
         title: 'Источники учетных данных',
@@ -749,6 +750,11 @@ export const ru = {
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
         key: 'Key',
+        owner: 'Владелец',
+        credentialScope: 'Credential scope',
+        modelScope: 'Model scope',
+        unassigned: 'Не назначен',
+        unrestricted: 'Без ограничений',
         length: 'Длина',
         status: 'Статус',
         actions: 'Действия',
@@ -774,6 +780,9 @@ export const ru = {
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',
+          owner: 'Владелец',
+          credentialScope: 'Credential scope',
+          modelScope: 'Model scope',
         },
       },
       form: {
@@ -792,9 +801,10 @@ export const ru = {
         description:
           'Использует PUT /api-keys и заменяет весь список downstream keys. Один key на строку.',
         warning:
-          'После отправки введенный список перезапишет все текущие клиентские ключи доступа. Сначала проверьте, что список полный.',
+          'После отправки список ключей будет перезаписан. Для неизмененных ключей сохраняются владелец и области доступа; новые ключи начинают без ограничений.',
         textarea: 'Keys',
-        confirm: 'Заменить все access keys введенным списком? Текущий список будет перезаписан.',
+        confirm:
+          'Заменить все access keys введенным списком? Привязки областей сохраняются только для неизмененных ключей.',
       },
       delete: {
         title: 'Удалить access key?',
@@ -813,13 +823,13 @@ export const ru = {
       disconnected: {
         title: 'Подключите management runtime',
         description:
-          'Данные пользователей и quota загружаются из Management API. Подключите runtime перед управлением администраторами и обычными пользователями.',
+          'Пользователи, клиентские ключи и области доступа загружаются из Management API. Подключите runtime перед управлением базовым многопользовательским доступом.',
         action: 'Подключить runtime',
       },
       unsupported: {
         title: 'Этот runtime не предоставляет управление пользователями',
         description:
-          '{{mode}} не объявил поддержку управления пользователями. Страница не будет запрашивать /users и не будет подставлять фиктивные данные пользователей или quota.',
+          '{{mode}} не объявил поддержку управления пользователями. Страница не будет загружать таблицы управления пользователями и не будет подставлять пользователей, владельцев ключей или области доступа.',
       },
       error: {
         title: 'Не удалось загрузить пользователей',
@@ -827,113 +837,192 @@ export const ru = {
         retry: 'Повторить',
       },
       header: {
-        eyebrow: 'Пользователи и quota',
-        title: 'Управление пользователями',
+        eyebrow: 'Пользователи и доступ',
+        title: 'Пользователи и доступ',
         description:
-          'Управляйте администраторами и обычными пользователями, смотрите client keys, сегодняшнее использование и quota status от backend.',
+          'Управляйте пользователями, владельцами клиентских ключей, областями учетных данных и областями моделей через Home Management API.',
         total: 'Пользователей: {{count}}',
-        admins: 'Администраторов: {{count}}',
-        disabled: 'Отключено: {{count}}',
-        quotaPaused: 'Quota paused: {{count}}',
+        users: 'Пользователей: {{count}}',
+        activeUsers: 'Активных пользователей: {{count}}',
+        keys: 'Клиентских ключей: {{count}}',
+        assignedKeys: 'Назначенных ключей: {{count}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
         new: 'Новый пользователь',
+        newUser: 'Новый пользователь',
+        newKey: 'Новый ключ',
+        newCredentialScope: 'Новая область учетных данных',
+        newModelScope: 'Новая область моделей',
         create: 'Создать пользователя',
+        createKey: 'Создать ключ',
+        createCredentialScope: 'Создать область учетных данных',
+        createModelScope: 'Создать область моделей',
         save: 'Сохранить изменения',
+        addBinding: 'Добавить связь',
         view: 'Открыть',
         edit: 'Изменить',
-        enable: 'Включить',
-        disable: 'Отключить',
-      },
-      roles: {
-        admin: 'Администратор',
-        user: 'Обычный пользователь',
-        unknown: 'Неизвестная роль',
+        delete: 'Удалить',
       },
       status: {
         active: 'Активен',
-        disabled: 'Отключен',
-        quotaPaused: 'Quota paused',
+        deleted: 'Удален',
         notAvailable: 'Недоступно',
+        notReturned: 'Не возвращено',
+        notDeleted: 'Не удален',
       },
       list: {
         title: 'Пользователи',
         description:
-          'Пользовательское измерение разделяет обычный scope, глобальный scope администратора, владельца client key и состояние quota.',
-        filterPlaceholder: 'Фильтр по пользователю, email или роли',
+          'Проверяйте пользователей, владельцев клиентских ключей и назначенные области доступа.',
+        filterPlaceholder: 'Фильтр по пользователям или ключам',
         empty: 'Нет пользователей для текущего фильтра.',
         user: 'Пользователь',
-        role: 'Роль',
         status: 'Статус',
         keys: 'Client keys',
-        usage: 'Сегодня',
-        quota: 'Quota',
+        updatedAt: 'Обновлено',
         actions: 'Действия',
-        usageMeta: '{{tokens}} tokens / {{cost}}',
       },
       form: {
         createTitle: 'Новый пользователь',
         editTitle: 'Изменить пользователя',
-        createDescription:
-          'Создайте администратора или обычного пользователя для изоляции usage и управления quota.',
         username: 'Username',
         usernamePlaceholder: 'user@example.com',
-        nickname: 'Display name',
-        nicknamePlaceholder: 'Необязательно',
-        role: 'Роль',
+        usernameLockedHint:
+          'Username идентифицирует субъект доступа и блокируется после создания. Чтобы изменить его, удалите пользователя и создайте заново.',
         password: 'Начальный пароль',
-        passwordPlaceholder: 'Требуется только если это требует backend policy',
+        passwordOptional: 'Новый пароль (необязательно)',
+        passwordPlaceholder:
+          'Необязательно. Оставьте пустым, чтобы создать пользователя без пароля.',
+        noGroups: 'Пока нет доступных областей.',
+        noCredentialGroups: 'Области учетных данных еще не созданы.',
+        noModelGroups: 'Области моделей еще не созданы.',
         validation: {
           usernameRequired: 'Username обязателен.',
+          keyRequired: 'Значение ключа обязательно.',
+          groupNameRequired: 'Название области обязательно.',
+          groupRequired: 'Выберите область.',
+          authRequired: 'Credential ID обязателен.',
+          modelRequired: 'Model ID обязателен.',
         },
+      },
+      keys: {
+        keyValue: 'Значение ключа',
+        owner: 'Владелец',
+        unassigned: 'Не назначен',
+        emptyScopeHint:
+          'Если область не выбрана, ключ не добавляет ограничений по учетным данным или моделям.',
+        empty: 'Клиентских ключей пока нет.',
+        key: 'Клиентский ключ',
+        length: 'Длина',
+        sequence: 'Номер {{index}}',
+        createTitle: 'Новый клиентский ключ',
+        editTitle: 'Изменить доступ ключа',
+      },
+      scopes: {
+        credential: 'Область учетных данных',
+        model: 'Область моделей',
+        unrestricted: 'Без ограничений',
+      },
+      groups: {
+        channelName: 'Название области учетных данных',
+        modelName: 'Название области моделей',
+        disabled: 'Отключено',
+        disabledHint: 'Отключенные области не используются backend для проверки доступа.',
+        group: 'Область',
+        groupPlaceholder: 'Выберите область',
+        authId: 'Credential ID',
+        modelId: 'Model ID',
+        channelEmpty: 'Областей учетных данных пока нет.',
+        modelEmpty: 'Областей моделей пока нет.',
+        detailCount: 'Связей: {{count}}',
+        groupId: 'ID области: {{id}}',
+        noDetails: 'Связей пока нет.',
+        unsupportedTitle: 'Области доступа недоступны',
+        unsupportedDescription:
+          'Этот runtime не предоставляет маршруты областей учетных данных или моделей. Пользователи и клиентские ключи остаются видимыми без подстановки данных областей.',
+        channelCreateTitle: 'Новая область учетных данных',
+        modelCreateTitle: 'Новая область моделей',
+        channelEditTitle: 'Изменить область учетных данных',
+        modelEditTitle: 'Изменить область моделей',
+        channelBindingTitle: 'Добавить связь учетных данных',
+        modelBindingTitle: 'Добавить связь модели',
       },
       detail: {
         title: 'Детали пользователя',
         empty: 'Выберите пользователя для просмотра деталей.',
-        quotaUnavailable: 'Backend не вернул quota summary для этого пользователя.',
+        passwordStored: 'Пароль сохранен',
+        userId: 'ID пользователя: {{id}}',
         sections: {
           profile: 'Профиль',
-          usage: 'Сегодняшнее использование',
-          quota: 'Quota summary',
+          access: 'Область доступа',
         },
         fields: {
           id: 'ID',
           username: 'Username',
-          nickname: 'Display name',
           createdAt: 'Создан',
           updatedAt: 'Обновлен',
-          disabledAt: 'Отключен',
-          requests: 'Запросы',
-          tokens: 'Tokens',
-          cost: 'Оценка стоимости',
-          successRate: 'Success rate',
-          monthlyRemaining: 'Monthly remaining',
-          monthlyUsed: 'Monthly used',
-          lifetimeRemaining: 'Lifetime remaining',
-          quotaMonth: 'Quota month',
-          pauseReason: 'Причина паузы',
-          unpricedRecords: 'Unpriced records',
+          deletedAt: 'Удален',
+          mfa: 'MFA',
+          passkeyCount: 'Passkeys',
         },
       },
-      quota: {
-        unlimited: 'Без лимита',
-      },
-      statusDialog: {
-        disableTitle: 'Отключить пользователя?',
-        enableTitle: 'Включить пользователя?',
-        disableDescription:
-          'Отключить пользователя "{{name}}"? Backend должен запретить этому пользователю использовать связанные client keys.',
-        enableDescription:
-          'Включить пользователя "{{name}}"? Backend вернет пользователя в доступное состояние.',
-      },
       toast: {
-        created: 'Пользователь создан.',
-        updated: 'Пользователь обновлен.',
-        enabled: 'Пользователь включен.',
-        disabled: 'Пользователь отключен.',
+        userCreated: 'Пользователь создан.',
+        userUpdated: 'Пользователь обновлен.',
+        userDeleted: 'Пользователь удален.',
+        keyCreated: 'Клиентский ключ создан.',
+        keyUpdated: 'Доступ ключа обновлен.',
+        keyDeleted: 'Клиентский ключ удален.',
+        groupCreated: 'Область создана.',
+        groupUpdated: 'Область обновлена.',
+        groupDeleted: 'Область удалена.',
+        bindingCreated: 'Связь добавлена.',
+        bindingDeleted: 'Связь удалена.',
+      },
+      workspace: {
+        title: 'Рабочая область доступа',
+        description:
+          'Управляйте пользователями, владельцами ключей, областями учетных данных и областями моделей в одном месте.',
+        filterPlaceholder: 'Фильтр по пользователям, ключам или областям',
+      },
+      tabs: {
+        users: 'Пользователи',
+        keys: 'Клиентские ключи',
+        channelGroups: 'Области учетных данных',
+        modelGroups: 'Области моделей',
+      },
+      sheet: {
+        userCreateDescription:
+          'Создайте субъект доступа, которому можно назначать клиентские ключи. Пароль можно оставить пустым.',
+        userEditDescription:
+          'Username остается фиксированным после создания. Здесь обновляются только пароль и другие обслуживаемые поля.',
+        userDetailDescription:
+          'Просмотрите профиль пользователя, количество клиентских ключей и назначенные области доступа.',
+        keyCreateDescription:
+          'Создайте клиентский ключ доступа и при необходимости назначьте пользователя, области учетных данных и области моделей.',
+        keyEditDescription:
+          'Настройте владельца ключа и области доступа. Само значение ключа не меняется.',
+        channelGroupCreateDescription:
+          'Создайте область учетных данных, на которую могут ссылаться клиентские ключи.',
+        modelGroupCreateDescription:
+          'Создайте область моделей, на которую могут ссылаться клиентские ключи.',
+        channelGroupEditDescription:
+          'Измените название области учетных данных и состояние включения.',
+        modelGroupEditDescription: 'Измените название области моделей и состояние включения.',
+        channelBindingDescription:
+          'Добавьте credential ID в эту область учетных данных. Клиентские ключи, связанные с областью, смогут использовать эти учетные данные.',
+        modelBindingDescription:
+          'Введите model ID вручную, чтобы добавить его в эту область моделей. Клиентские ключи, связанные с областью, смогут использовать эти модели.',
+      },
+      delete: {
+        title: 'Подтвердите удаление',
+        user: 'Удалить пользователя "{{name}}"? Это не удалит глобальные учетные данные автоматически.',
+        key: 'Удалить клиентский ключ {{name}}? Связанные клиенты сразу перестанут работать.',
+        group: 'Удалить область "{{name}}"? Назначенные ключи потеряют ссылку на эту область.',
+        detail: 'Удалить связь "{{name}}"?',
       },
     },
     configPage: {
@@ -1332,7 +1421,6 @@ export const ru = {
         fetchQueue: 'Получить записи очереди',
       },
       capabilities: {
-        usageAnalytics: 'Usage analytics',
         usage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1354,7 +1442,7 @@ export const ru = {
           title: 'Usage statistics доступны, запросов пока нет',
           badge: 'Нет данных',
           description:
-            'Runtime предоставляет usage routes, но не вернул request records. Синхронизируйте снова после обработки трафика.',
+            'Runtime предоставляет usage routes, но не вернул строки API key usage. Синхронизируйте снова после обработки трафика.',
         },
         disabled: {
           title: 'Usage statistics отключены',
@@ -1369,13 +1457,13 @@ export const ru = {
             'Страница продолжит показывать загруженные usage facts. Проверьте сбойные области перед полной оценкой.',
         },
         limited: {
-          title: 'Usage analytics ограничены',
+          title: 'Данные usage ограничены',
           badge: 'Ограничено',
           description:
             '{{mode}} не вернул API key usage aggregates, поэтому для расследования доступны только logs и error files.',
         },
         unsupported: {
-          title: 'Этот runtime не поддерживает usage analytics',
+          title: 'Этот runtime не поддерживает usage routes',
           badge: 'Не поддерживается',
           description:
             '{{mode}} не открывает usage или log routes. Capability state остается видимым до появления backend observability APIs.',
@@ -1385,8 +1473,6 @@ export const ru = {
         title: 'Часть данных не загрузилась',
       },
       issueScopes: {
-        usageAnalytics: 'Usage analytics',
-        usageAnalyticsOptions: 'Фильтры аналитики',
         apiKeyUsage: 'Usage stats',
         usageQueue: 'Usage queue',
         logs: 'Runtime logs',
@@ -1401,389 +1487,11 @@ export const ru = {
         logs: 'Строк журналов',
         logsDetail: 'Файлов error logs: {{count}}',
       },
-      scope: {
-        title: 'Текущий диапазон статистики',
-        description:
-          'Текущий backend возвращает только runtime memory aggregates. Фильтры по date, user, account, credential и model tokens пока недоступны, поэтому страница показывает только проверенные агрегаты.',
-      },
-      filters: {
-        title: 'Модель фильтров аналитики',
-        description:
-          'Полная usage analytics поддерживает фильтры по time range, model, user, account, credential, client key и request status. Если текущий runtime не объявил эти query capabilities, страница показывает capability gap и не подставляет фиктивные данные.',
-        badge: 'Не объявлено',
-        planned: 'Сейчас недоступно',
-        items: {
-          timeRange: 'Time range',
-          provider: 'Provider',
-          model: 'Model',
-          user: 'User',
-          account: 'Account',
-          credential: 'Credential',
-          clientKey: 'Client key',
-          status: 'Request status',
-        },
-      },
-      mock: {
-        title: 'Usage Analytics Mock Validation',
-        badge: 'API sample',
-        description:
-          'Этот режим рендерит полную модель usage analytics из frontend mock data, чтобы проверить trend charts, status share, dimension rankings, period comparison и request details без обращения к live runtime data.',
-        validationToolbar: 'Internal validation scenarios',
-        currentScenario: 'Scenario: {{scenario}}',
-        range: 'Range: {{start}} - {{end}}',
-        contractNotice:
-          'Mock data structure используется только для frontend visual review и API sample validation. Откройте /usage-logs?usageMock=normal, spiky, empty или long-tail.',
-        emptyChart: 'В этом сценарии нет данных для графика.',
-        emptyState: {
-          title: 'В этом сценарии нет usage samples',
-          description:
-            '{{scenario}} проверяет empty analytics state. Он оставляет один empty-state panel и несколько disabled previews вместо повторения всех chart blocks.',
-          trend: {
-            title: 'Trend chart',
-            description: 'Появится после появления request samples.',
-          },
-          breakdown: {
-            title: 'Dimension rankings',
-            description: 'Появится после появления aggregate dimensions.',
-          },
-          requests: {
-            title: 'Request details',
-            description: 'Появится после появления request records.',
-          },
-        },
-        scenarios: {
-          normal: 'Normal',
-          spiky: 'Spike',
-          empty: 'Empty',
-          'long-tail': 'Long-tail labels',
-        },
-        kpis: {
-          requests: 'Requests',
-          tokens: 'Tokens',
-          cost: 'Cost',
-          latency: 'Avg latency',
-          requestsDetail: '{{success}} success / {{failed}} failed',
-          tokensDetail: 'Input {{input}} / output {{output}}',
-          costDetail: '{{count}} unpriced requests',
-          latencyDetail: 'First token {{firstToken}}',
-        },
-        comparisons: {
-          title: 'Period comparison snapshot',
-          description:
-            'Компактная validation panel сравнивает current и previous periods, не превращая каждую проверку в отдельную равновесную карточку.',
-          requests: 'Request comparison',
-          tokens: 'Token comparison',
-          cost: 'Cost comparison',
-          latency: 'Latency comparison',
-          meta: 'Current {{current}} / previous {{previous}}',
-          current: 'Current',
-          previous: 'Previous',
-        },
-        trend: {
-          title: 'Request trend',
-          description:
-            'Time buckets показывают request и failure volume для проверки normal trend и spike readability.',
-          requests: 'Requests',
-          failed: 'Failed',
-        },
-        statusChart: {
-          title: 'Request status share',
-          description:
-            'Donut chart показывает доли success, failure, rate limit, quota и timeout states.',
-        },
-        status: {
-          success: 'Success',
-          failed: 'Failed',
-          rateLimited: 'Rate limited',
-          quotaExceeded: 'Quota exceeded',
-          timeout: 'Timeout',
-        },
-        breakdown: {
-          requests: 'Requests',
-          failed: 'Failed',
-          mobileMeta: '{{requests}} requests / {{failed}} failed',
-          providers: 'Provider ranking',
-          providersDescription: 'Aggregates request and failure volume by provider.',
-          models: 'Model ranking',
-          modelsDescription: 'Aggregates request and failure volume by model.',
-          users: 'User ranking',
-          usersDescription: 'Aggregates request and failure volume by user.',
-          credentials: 'Credential ranking',
-          credentialsDescription: 'Aggregates request and failure volume by account credential.',
-        },
-        breakdownSection: {
-          title: 'Dimension drilldown preview',
-          description:
-            'Provider, model, user и credential rankings проверяют будущий analytics contract. По умолчанию они свернуты, чтобы основной путь оставался ясным.',
-          trigger: 'View dimensions',
-        },
-        requests: {
-          title: 'Request detail sample',
-          description:
-            'Показывает core columns для будущего /usage/requests response: Request ID, provider, model, user, status, tokens, cost и latency.',
-          empty: 'В этом сценарии нет request detail samples.',
-          columns: {
-            request: 'Request ID',
-            provider: 'Provider',
-            model: 'Model',
-            user: 'User',
-            status: 'Status',
-            tokens: 'Tokens',
-            cost: 'Cost',
-            latency: 'Latency',
-          },
-        },
-      },
-      metrics: {
-        requests: {
-          label: 'Всего запросов',
-          detail: 'Успешно / с ошибкой: {{value}}',
-        },
-        failureRate: {
-          label: 'Доля ошибок',
-          detail: 'Ошибки / всего: {{value}}',
-        },
-        resources: {
-          label: 'Upstream key records',
-          detail: 'Провайдеров: {{value}}',
-        },
-        recentWindows: {
-          label: 'Recent windows',
-          detail: 'Файлов error logs: {{value}}',
-        },
-        totalTokens: {
-          label: 'Всего tokens',
-          detail: 'Input / output: {{value}}',
-        },
-        estimatedCost: {
-          label: 'Оценочная стоимость',
-          detail: 'Unpriced records: {{value}}',
-        },
-        rpm: {
-          label: 'RPM',
-          detail: 'Запросов в минуту: {{value}}',
-        },
-        tpm: {
-          label: 'TPM',
-          detail: 'Tokens в минуту: {{value}}',
-        },
-      },
-      production: {
-        header: {
-          title: 'Production usage analytics',
-          description:
-            'Database-backed usage facts по requests, tokens, cost, users, client keys, models, providers и endpoints.',
-          badge: 'Live analytics',
-          range: 'Диапазон: {{start}} - {{end}}',
-          rangeUnavailable: 'Диапазон недоступен',
-          successRate: 'Success rate {{value}}',
-          failureRate: 'Failure rate {{value}}',
-        },
-        filters: {
-          title: 'Фильтры аналитики',
-          description:
-            'Запрашивайте database-backed usage records по time range, user, client key, provider, model, credential, endpoint, status или Request ID.',
-          active: 'Активных фильтров: {{count}}',
-          options: 'Значений фильтров: {{count}}',
-          all: 'Все',
-          apply: 'Применить фильтры',
-          reset: 'Сбросить',
-          noOptions:
-            'Backend пока не вернул filter options. Time range и ручной ввод Request ID остаются доступными.',
-          requestIdPlaceholder: 'Optional Request ID',
-          ranges: {
-            '24h': 'Последние 24 часа',
-            '3d': 'Последние 3 дня',
-            '7d': 'Последние 7 дней',
-            '30d': 'Последние 30 дней',
-          },
-          fields: {
-            range: 'Диапазон',
-            user: 'User',
-            clientKey: 'Client key',
-            provider: 'Provider',
-            model: 'Model',
-            credential: 'Credential',
-            endpoint: 'Endpoint',
-            status: 'Status',
-            requestId: 'Request ID',
-          },
-          status: {
-            all: 'Все статусы',
-            success: 'Только успешные',
-            failed: 'Только ошибки',
-          },
-        },
-        trend: {
-          title: 'Usage trend',
-          description: 'Показывает requests, failures и token movement по выбранным time buckets.',
-          requests: 'Requests',
-          failed: 'Failed',
-          tokens: 'Tokens',
-          empty: 'Trend buckets не возвращены.',
-        },
-        tokens: {
-          title: 'Token composition',
-          description: 'Разбивка input, output, cache и reasoning tokens для выбранного диапазона.',
-          empty: 'Token composition не возвращена.',
-          total: 'Всего tokens: {{value}}',
-          unpriced: 'Unpriced records: {{value}}',
-          items: {
-            input: 'Input',
-            output: 'Output',
-            cached: 'Cached',
-            cacheRead: 'Cache read',
-            cacheCreation: 'Cache creation',
-            reasoning: 'Reasoning',
-          },
-        },
-        activity: {
-          title: 'Почасовая активность',
-          description: 'Сравнивает request volume и token usage по недавним time buckets.',
-          requests: 'Requests',
-          tokens: 'Tokens',
-          meta: '{{requests}} requests / {{tokens}} tokens',
-          empty: 'Activity buckets не возвращены.',
-        },
-        exceptions: {
-          title: 'Exception overview',
-          description: 'Сводка failure rate и категорий failed requests для выбранного диапазона.',
-          failureRate: 'Failure rate {{value}}',
-          failed: 'Failed records: {{value}}',
-          success: 'Successful records: {{value}}',
-          meta: '{{tokens}} tokens / {{cost}}',
-          empty: 'Failed requests не возвращены.',
-          noBreakdown: 'Backend вернул {{count}} failed records, но не включил error breakdown.',
-        },
-        distributions: {
-          providers: 'Распределение по провайдерам',
-          providersDescription:
-            'Показывает, какие model service providers обрабатывали выбранный traffic.',
-          endpoints: 'Распределение по endpoints',
-          endpointsDescription:
-            'Показывает request type distribution, например Ve-Response, Ve-Image и Ve-Message.',
-          empty: 'Distribution data не возвращена.',
-          meta: '{{tokens}} tokens / {{cost}} / {{failed}} failed',
-        },
-        rankings: {
-          title: 'Usage rankings',
-          description:
-            'Ранжирует users, client keys и models по request volume для выбранного диапазона.',
-          users: 'Users',
-          clientKeys: 'Client keys',
-          models: 'Models',
-          meta: '{{requests}} requests / {{failed}} failed',
-          empty: 'Ranking data не возвращена.',
-        },
-        requests: {
-          title: 'Request records',
-          description:
-            'Просмотр database-backed request details по user, client key, provider, model, endpoint, status, token count, cost и latency.',
-          loading: 'Загрузка записей',
-          empty: 'Нет request records для текущих фильтров.',
-          error: 'Не удалось загрузить request records.',
-          pageMeta: 'Страница {{page}} из {{totalPages}}, записей: {{total}}',
-          previous: 'Назад',
-          next: 'Далее',
-          notAvailable: 'Недоступно',
-          view: 'View',
-          downloadLog: 'Download log',
-          columns: {
-            request: 'Request',
-            user: 'User / client key',
-            provider: 'Provider / model',
-            endpoint: 'Endpoint',
-            status: 'Status',
-            tokens: 'Tokens',
-            cost: 'Cost',
-            latency: 'Latency',
-            actions: 'Actions',
-          },
-          status: {
-            success: 'Success',
-            failed: 'Failed',
-            unknown: 'Unknown',
-          },
-          detail: {
-            title: 'Request detail',
-            description: 'Request {{request}}',
-            unavailable: 'Request record не выбран.',
-            raw: 'Raw payload',
-            fields: {
-              requestId: 'Request ID',
-              timestamp: 'Timestamp',
-              user: 'User',
-              clientKey: 'Client key',
-              provider: 'Provider',
-              model: 'Model',
-              endpoint: 'Endpoint',
-              status: 'Status',
-              totalTokens: 'Total tokens',
-              inputTokens: 'Input tokens',
-              outputTokens: 'Output tokens',
-              cachedTokens: 'Cached tokens',
-              cacheReadTokens: 'Cache read tokens',
-              cacheCreationTokens: 'Cache creation tokens',
-              reasoningTokens: 'Reasoning tokens',
-              cost: 'Estimated cost',
-              latency: 'Latency',
-              firstTokenLatency: 'First token latency',
-              sourceKey: 'Credential source',
-              errorMessage: 'Error message',
-            },
-          },
-        },
-      },
-      analytics: {
-        preview: {
-          title: 'Analytics capability preview',
-          description:
-            'Live runtime сначала показывает реальные usage facts. Filter scope и dimension coverage свернуты как backend contract preview.',
-          trigger: 'View preview',
-        },
-        charts: {
-          title: 'Распределение запросов по провайдерам',
-          description:
-            'Текущий маршрут возвращает только агрегаты success/failure по model provider, upstream Base URL и API key, поэтому график показывает проверяемое распределение по провайдерам.',
-          empty: 'Нет usage data для построения графика.',
-        },
-        breakdown: {
-          title: 'Рейтинг провайдеров',
-          description:
-            'Сортировка по объему запросов показывает, какие upstream model services несут основную нагрузку.',
-          meta: '{{success}} успешно / {{failed}} с ошибкой, upstream keys: {{keys}}',
-          empty: 'Рейтинг usage по провайдерам недоступен.',
-        },
-        roadmap: {
-          title: 'Покрытие аналитических измерений',
-          description:
-            'Страница спроектирована под полную модель usage. Если текущий runtime возвращает только ограниченные агрегаты, разрыв показывается как capability state и не заполняется frontend dummy data.',
-          api: 'Runtime capability state',
-          current: 'Доступно сейчас',
-          planned: 'Сейчас недоступно',
-          none: 'Аналитические измерения недоступны',
-        },
-        dimensions: {
-          time: 'Time trend',
-          provider: 'Provider',
-          model: 'Model',
-          user: 'User',
-          account: 'Account',
-          clientKey: 'Client key',
-          providerKey: 'Upstream API key',
-          credential: 'Credential',
-          cost: 'Cost',
-          latency: 'Latency',
-        },
-      },
       usage: {
         title: 'API key usage',
         description:
           'Группирует успешные и ошибочные запросы по model provider, upstream Base URL и API key.',
-        compatTitle: 'Legacy API key usage',
-        compatDescription:
-          'Старая runtime aggregation доступна для сравнения. Production analytics остается основным источником.',
-        compatTrigger: 'View legacy usage',
+        unavailable: 'Текущий runtime не предоставляет API key usage.',
         empty:
           'API key usage records не возвращены. Проверьте, что usage statistics включены и runtime уже обрабатывал запросы.',
         provider: 'Провайдер модели',
@@ -1805,6 +1513,7 @@ export const ru = {
         raw: 'Сырая запись',
         columns: {
           request: 'Request ID',
+          homeIp: 'Home IP',
           model: 'Модель',
           endpoint: 'Endpoint',
           status: 'Статус',
@@ -1816,14 +1525,6 @@ export const ru = {
         description:
           'Request logs, error logs и usage queue используются для расследования. Чтение очереди потребляет server records, поэтому остается ручным.',
       },
-      trace: {
-        title: 'Скачать по Request ID',
-        description:
-          'Если error file или внешний alert уже содержит Request ID, скачайте соответствующий request log напрямую.',
-        trigger: 'Manual entry',
-        placeholder: 'Введите Request ID',
-        unavailable: 'Этот runtime не поддерживает скачивание request logs по Request ID.',
-      },
       logs: {
         title: 'Runtime logs',
         description:
@@ -1834,6 +1535,16 @@ export const ru = {
         lineCount: '{{count}} строк',
         latest: 'Последнее время: {{time}}',
         latestUnavailable: 'Последнее время недоступно',
+        total: 'Всего: {{count}}',
+        columns: {
+          time: 'Время',
+          level: 'Уровень',
+          request: 'Request ID',
+          homeIp: 'Home IP',
+          clientIp: 'Client IP',
+          line: 'Строка журнала',
+          actions: 'Действия',
+        },
       },
       errorLogs: {
         title: 'Файлы error logs',
@@ -1855,6 +1566,7 @@ export const ru = {
         failed: 'Ошибка',
         notAvailable: 'Н/Д',
         unknownRequest: 'Неизвестный запрос',
+        localHome: 'Локальный Home',
       },
       confirm: {
         clearLogsTitle: 'Очистить runtime logs?',

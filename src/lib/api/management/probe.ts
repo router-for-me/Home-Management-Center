@@ -11,7 +11,7 @@ import type {
 } from '@/lib/api/management/types'
 
 const capabilityRequests: Record<
-  Exclude<CapabilityKey, 'usageAnalytics' | 'usageQueue' | 'logs' | 'users' | 'quota'>,
+  Exclude<CapabilityKey, 'usageQueue' | 'logs'>,
   {
     path: string
   }
@@ -25,17 +25,22 @@ const capabilityRequests: Record<
   requestErrorLogs: {
     path: '/request-error-logs',
   },
+  users: {
+    path: '/users',
+  },
+  accessGroups: {
+    path: '/channel-groups',
+  },
 }
 
 const emptyCapabilities: CapabilityMap = {
   nodes: false,
   usage: false,
-  usageAnalytics: false,
   usageQueue: false,
   logs: false,
   requestErrorLogs: false,
   users: false,
-  quota: false,
+  accessGroups: false,
 }
 
 type ProbedCapabilityKey = keyof typeof capabilityRequests
@@ -108,21 +113,19 @@ function readDeclaredRequestErrorLogsCapability(configData: unknown) {
   ])
 }
 
-function readDeclaredUsageAnalyticsCapability(configData: unknown) {
-  return readDeclaredCapability(configData, [
-    'usage_analytics',
-    'usageAnalytics',
-    'usage-analytics',
-    'usage-analytics-enabled',
-  ])
-}
-
 function readDeclaredUsersCapability(configData: unknown) {
-  return readDeclaredCapability(configData, ['users', 'user_management', 'userManagement'])
+  return readDeclaredCapabilityValue(configData, ['users', 'user_management', 'userManagement'])
 }
 
-function readDeclaredQuotaCapability(configData: unknown) {
-  return readDeclaredCapability(configData, ['quota', 'balance', 'billing'])
+function readDeclaredAccessGroupsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'access_groups',
+    'accessGroups',
+    'channel_groups',
+    'channelGroups',
+    'model_groups',
+    'modelGroups',
+  ])
 }
 
 function readDeclaredCapabilitiesEndpoint(configData: unknown) {
@@ -182,7 +185,7 @@ function inferRuntimeMode(
     return 'cpa'
   }
 
-  if (capabilities.nodes && !capabilities.usage && !capabilities.usageAnalytics) {
+  if (capabilities.nodes && !capabilities.usage) {
     return 'home-cluster'
   }
 
@@ -223,11 +226,10 @@ export async function probeManagementRuntime(
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
     : null
-  const declaredUsageAnalytics = capabilitiesPayload
-    ? readDeclaredUsageAnalyticsCapability(capabilitySource)
-    : false
-  const declaredUsers = capabilitiesPayload ? readDeclaredUsersCapability(capabilitySource) : false
-  const declaredQuota = capabilitiesPayload ? readDeclaredQuotaCapability(capabilitySource) : false
+  const declaredUsers = capabilitiesPayload ? readDeclaredUsersCapability(capabilitySource) : null
+  const declaredAccessGroups = capabilitiesPayload
+    ? readDeclaredAccessGroupsCapability(capabilitySource)
+    : null
 
   const probedCapabilityEntries = await Promise.all(
     (Object.keys(capabilityRequests) as ProbedCapabilityKey[]).map(async (key) => {
@@ -250,9 +252,7 @@ export async function probeManagementRuntime(
     ...probedCapabilities,
     nodes: declaredNodes ?? probedCapabilities.nodes,
     usage: declaredUsage ?? probedCapabilities.usage,
-    usageAnalytics: declaredUsageAnalytics,
-    users: declaredUsers,
-    quota: declaredQuota,
+    users: declaredUsers ?? probedCapabilities.users,
     // GET /usage-queue is destructive because it pops queue records, while HEAD is not
     // registered by the current runtime. Treat the route as available when the
     // non-destructive usage route exists.
@@ -262,6 +262,7 @@ export async function probeManagementRuntime(
     // route family; the usage page decides separately whether config should read lines.
     logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
+    accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
   }
 
   return {

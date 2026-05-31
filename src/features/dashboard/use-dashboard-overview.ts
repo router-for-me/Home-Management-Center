@@ -43,12 +43,11 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       capabilityStatus,
       capabilities.nodes,
       capabilities.usage,
-      capabilities.usageAnalytics,
       capabilities.usageQueue,
       capabilities.logs,
       capabilities.requestErrorLogs,
       capabilities.users,
-      capabilities.quota,
+      capabilities.accessGroups,
     ],
     enabled: connected && capabilityReady && Boolean(managementKey),
     queryFn: async () => {
