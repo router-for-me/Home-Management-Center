@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { fetchAccessGroupsSnapshot } from '@/lib/api/management/access-groups'
 import {
   type AccessKeyResource,
   createAccessKey,
@@ -9,6 +10,8 @@ import {
   toAccessKeyApiError,
   updateAccessKey,
 } from '@/lib/api/management/access-keys'
+import { fetchUsersSnapshot } from '@/lib/api/management/users'
+import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
 function useManagementSession() {
@@ -16,6 +19,8 @@ function useManagementSession() {
   const managementKey = useSessionStore((state) => state.managementKey)
   const connectedAt = useSessionStore((state) => state.connectedAt)
   const status = useSessionStore((state) => state.status)
+  const capabilityStatus = useCapabilityStore((state) => state.status)
+  const capabilities = useCapabilityStore((state) => state.capabilities)
 
   return {
     session: {
@@ -24,13 +29,31 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    capabilityReady: capabilityStatus === 'ready',
+    capabilities,
   }
 }
 
 export function useAccessKeyWorkbench() {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt } = useManagementSession()
+  const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()
   const queryKey = ['management-access-keys', session.baseUrl, connectedAt]
+  const usersQueryKey = [
+    'management-access-keys-users',
+    session.baseUrl,
+    connectedAt,
+    capabilities.users,
+  ]
+  const groupsQueryKey = [
+    'management-access-keys-groups',
+    session.baseUrl,
+    connectedAt,
+    capabilities.accessGroups,
+  ]
+  const canReadUsers =
+    connected && capabilityReady && capabilities.users && Boolean(session.managementKey)
+  const canReadAccessGroups =
+    connected && capabilityReady && capabilities.accessGroups && Boolean(session.managementKey)
 
   const query = useQuery({
     queryKey,
@@ -40,6 +63,37 @@ export function useAccessKeyWorkbench() {
         return await fetchAccessKeysSnapshot(session)
       } catch (error) {
         throw toAccessKeyApiError(error)
+      }
+    },
+  })
+  const usersQuery = useQuery({
+    queryKey: usersQueryKey,
+    enabled: canReadUsers,
+    queryFn: async () => {
+      try {
+        return await fetchUsersSnapshot(session)
+      } catch {
+        return {
+          fetchedAt: new Date().toISOString(),
+          resources: [],
+        }
+      }
+    },
+  })
+  const groupsQuery = useQuery({
+    queryKey: groupsQueryKey,
+    enabled: canReadAccessGroups,
+    queryFn: async () => {
+      try {
+        return await fetchAccessGroupsSnapshot(session)
+      } catch {
+        return {
+          fetchedAt: new Date().toISOString(),
+          channelGroups: [],
+          channelGroupDetails: [],
+          modelGroups: [],
+          modelGroupDetails: [],
+        }
       }
     },
   })
@@ -109,13 +163,25 @@ export function useAccessKeyWorkbench() {
 
   return {
     connected,
+    capabilityReady,
+    capabilities,
     snapshot: query.data,
-    isPending: query.isPending,
-    isFetching: query.isFetching,
+    users: usersQuery.data?.resources ?? [],
+    groups: groupsQuery.data ?? null,
+    isPending:
+      query.isPending ||
+      (canReadUsers && usersQuery.isPending) ||
+      (canReadAccessGroups && groupsQuery.isPending),
+    isFetching:
+      query.isFetching ||
+      (canReadUsers && usersQuery.isFetching) ||
+      (canReadAccessGroups && groupsQuery.isFetching),
     isError: query.isError,
     errorMessage: query.error?.message ?? null,
     refetch: () => {
       void query.refetch()
+      if (canReadUsers) void usersQuery.refetch()
+      if (canReadAccessGroups) void groupsQuery.refetch()
     },
     createKey: createMutation.mutateAsync,
     updateKey: updateMutation.mutateAsync,

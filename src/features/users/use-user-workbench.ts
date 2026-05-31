@@ -1,11 +1,33 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type AccessGroupDetailInput,
+  type AccessGroupDetailResource,
+  type AccessGroupInput,
+  type AccessGroupKind,
+  type AccessGroupResource,
+  createAccessGroup,
+  createAccessGroupDetail,
+  deleteAccessGroup,
+  deleteAccessGroupDetail,
+  fetchAccessGroupsSnapshot,
+  toAccessGroupsApiError,
+  updateAccessGroup,
+} from '@/lib/api/management/access-groups'
+import {
+  type AccessKeyFormInput,
+  type AccessKeyResource,
+  createAccessKey,
+  deleteAccessKey,
+  fetchAccessKeysSnapshot,
+  toAccessKeyApiError,
+  updateAccessKeyBindings,
+} from '@/lib/api/management/access-keys'
+import {
   type UserFormInput,
   type UserResource,
   createUser,
-  disableUser,
-  enableUser,
+  deleteUser,
   fetchUserDetail,
   fetchUsersSnapshot,
   toUserApiError,
@@ -36,18 +58,32 @@ function useManagementSession() {
   }
 }
 
+function toError(error: unknown) {
+  if (error instanceof Error) return error
+  return new Error(String(error))
+}
+
 export function useUserWorkbench(selectedUserId?: string | null) {
   const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
-  const queryKey = ['management-users', session.baseUrl, connectedAt, capabilities.users]
-  const detailQueryKey = ['management-user-detail', session.baseUrl, connectedAt, selectedUserId]
-  const enabled =
+  const usersEnabled =
     connected && capabilityReady && capabilities.users && Boolean(session.managementKey)
+  const accessGroupsEnabled =
+    connected && capabilityReady && capabilities.accessGroups && Boolean(session.managementKey)
+  const usersQueryKey = ['management-users', session.baseUrl, connectedAt, capabilities.users]
+  const accessKeysQueryKey = ['management-access-keys', session.baseUrl, connectedAt]
+  const groupsQueryKey = [
+    'management-access-groups',
+    session.baseUrl,
+    connectedAt,
+    capabilities.accessGroups,
+  ]
+  const detailQueryKey = ['management-user-detail', session.baseUrl, connectedAt, selectedUserId]
 
-  const query = useQuery({
-    queryKey,
-    enabled,
+  const usersQuery = useQuery({
+    queryKey: usersQueryKey,
+    enabled: usersEnabled,
     queryFn: async () => {
       try {
         return await fetchUsersSnapshot(session)
@@ -57,13 +93,35 @@ export function useUserWorkbench(selectedUserId?: string | null) {
     },
   })
 
+  const accessKeysQuery = useQuery({
+    queryKey: accessKeysQueryKey,
+    enabled: usersEnabled,
+    queryFn: async () => {
+      try {
+        return await fetchAccessKeysSnapshot(session)
+      } catch (error) {
+        throw toAccessKeyApiError(error)
+      }
+    },
+  })
+
+  const groupsQuery = useQuery({
+    queryKey: groupsQueryKey,
+    enabled: accessGroupsEnabled,
+    queryFn: async () => {
+      try {
+        return await fetchAccessGroupsSnapshot(session)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+  })
+
   const detailQuery = useQuery({
     queryKey: detailQueryKey,
-    enabled: enabled && Boolean(selectedUserId),
+    enabled: usersEnabled && Boolean(selectedUserId),
     queryFn: async () => {
-      if (!selectedUserId) {
-        throw new Error('Missing user id')
-      }
+      if (!selectedUserId) throw new Error('Missing user id')
 
       try {
         return await fetchUserDetail(session, selectedUserId)
@@ -73,14 +131,23 @@ export function useUserWorkbench(selectedUserId?: string | null) {
     },
   })
 
-  const invalidate = async () => {
+  const invalidateUsers = async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: usersQueryKey }),
       queryClient.invalidateQueries({ queryKey: detailQueryKey }),
     ])
   }
 
-  const createMutation = useMutation({
+  const invalidateAccess = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: usersQueryKey }),
+      queryClient.invalidateQueries({ queryKey: accessKeysQueryKey }),
+      queryClient.invalidateQueries({ queryKey: groupsQueryKey }),
+      queryClient.invalidateQueries({ queryKey: detailQueryKey }),
+    ])
+  }
+
+  const createUserMutation = useMutation({
     mutationFn: async (input: UserFormInput) => {
       try {
         return await createUser(session, input)
@@ -88,10 +155,10 @@ export function useUserWorkbench(selectedUserId?: string | null) {
         throw toUserApiError(error)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateUsers,
   })
 
-  const updateMutation = useMutation({
+  const updateUserMutation = useMutation({
     mutationFn: async ({ user, input }: { user: UserResource; input: UserFormInput }) => {
       try {
         return await updateUser(session, user, input)
@@ -99,58 +166,180 @@ export function useUserWorkbench(selectedUserId?: string | null) {
         throw toUserApiError(error)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateUsers,
   })
 
-  const enableMutation = useMutation({
+  const deleteUserMutation = useMutation({
     mutationFn: async (user: UserResource) => {
       try {
-        return await enableUser(session, user)
+        return await deleteUser(session, user)
       } catch (error) {
         throw toUserApiError(error)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateAccess,
   })
 
-  const disableMutation = useMutation({
-    mutationFn: async (user: UserResource) => {
+  const createAccessKeyMutation = useMutation({
+    mutationFn: async (input: AccessKeyFormInput) => {
       try {
-        return await disableUser(session, user)
+        return await createAccessKey(session, input)
       } catch (error) {
-        throw toUserApiError(error)
+        throw toAccessKeyApiError(error)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: invalidateAccess,
   })
+
+  const updateAccessKeyBindingsMutation = useMutation({
+    mutationFn: async ({
+      resource,
+      input,
+    }: {
+      resource: AccessKeyResource
+      input: Omit<AccessKeyFormInput, 'value'>
+    }) => {
+      try {
+        return await updateAccessKeyBindings(session, resource, input)
+      } catch (error) {
+        throw toAccessKeyApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const deleteAccessKeyMutation = useMutation({
+    mutationFn: async (resource: AccessKeyResource) => {
+      try {
+        return await deleteAccessKey(session, resource)
+      } catch (error) {
+        throw toAccessKeyApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const createGroupMutation = useMutation({
+    mutationFn: async ({ kind, input }: { kind: AccessGroupKind; input: AccessGroupInput }) => {
+      try {
+        return await createAccessGroup(session, kind, input)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const updateGroupMutation = useMutation({
+    mutationFn: async ({
+      group,
+      input,
+    }: {
+      group: AccessGroupResource
+      input: AccessGroupInput
+    }) => {
+      try {
+        return await updateAccessGroup(session, group, input)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (group: AccessGroupResource) => {
+      try {
+        return await deleteAccessGroup(session, group)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const createGroupDetailMutation = useMutation({
+    mutationFn: async ({
+      kind,
+      input,
+    }: {
+      kind: AccessGroupKind
+      input: AccessGroupDetailInput
+    }) => {
+      try {
+        return await createAccessGroupDetail(session, kind, input)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const deleteGroupDetailMutation = useMutation({
+    mutationFn: async (detail: AccessGroupDetailResource) => {
+      try {
+        return await deleteAccessGroupDetail(session, detail)
+      } catch (error) {
+        throw toAccessGroupsApiError(error)
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
+  const firstError =
+    usersQuery.error ?? accessKeysQuery.error ?? groupsQuery.error ?? detailQuery.error ?? null
+  const mutating =
+    createUserMutation.isPending ||
+    updateUserMutation.isPending ||
+    deleteUserMutation.isPending ||
+    createAccessKeyMutation.isPending ||
+    updateAccessKeyBindingsMutation.isPending ||
+    deleteAccessKeyMutation.isPending ||
+    createGroupMutation.isPending ||
+    updateGroupMutation.isPending ||
+    deleteGroupMutation.isPending ||
+    createGroupDetailMutation.isPending ||
+    deleteGroupDetailMutation.isPending
 
   return {
     connected,
     capabilityReady,
     capabilities,
     runtimeMode,
-    snapshot: query.data,
+    users: usersQuery.data?.resources ?? [],
+    accessKeys: accessKeysQuery.data?.resources ?? [],
+    groups: groupsQuery.data ?? null,
     selectedUser: detailQuery.data ?? null,
-    isPending: query.isPending,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: query.error?.message ?? null,
+    fetchedAt: usersQuery.data?.fetchedAt ?? null,
+    isPending:
+      usersQuery.isPending ||
+      accessKeysQuery.isPending ||
+      (accessGroupsEnabled && groupsQuery.isPending),
+    isFetching:
+      usersQuery.isFetching ||
+      accessKeysQuery.isFetching ||
+      (accessGroupsEnabled && groupsQuery.isFetching),
+    isError:
+      usersQuery.isError || accessKeysQuery.isError || (accessGroupsEnabled && groupsQuery.isError),
+    errorMessage: firstError ? toError(firstError).message : null,
     isFetchingSelectedUser: detailQuery.isFetching,
-    selectedUserErrorMessage: detailQuery.error?.message ?? null,
+    selectedUserErrorMessage: detailQuery.error ? toError(detailQuery.error).message : null,
     refetch: () => {
-      void query.refetch()
+      void usersQuery.refetch()
+      void accessKeysQuery.refetch()
+      if (accessGroupsEnabled) void groupsQuery.refetch()
     },
-    refetchSelectedUser: () => {
-      void detailQuery.refetch()
-    },
-    createUser: createMutation.mutateAsync,
-    updateUser: updateMutation.mutateAsync,
-    enableUser: enableMutation.mutateAsync,
-    disableUser: disableMutation.mutateAsync,
-    mutating:
-      createMutation.isPending ||
-      updateMutation.isPending ||
-      enableMutation.isPending ||
-      disableMutation.isPending,
+    createUser: createUserMutation.mutateAsync,
+    updateUser: updateUserMutation.mutateAsync,
+    deleteUser: deleteUserMutation.mutateAsync,
+    createAccessKey: createAccessKeyMutation.mutateAsync,
+    updateAccessKeyBindings: updateAccessKeyBindingsMutation.mutateAsync,
+    deleteAccessKey: deleteAccessKeyMutation.mutateAsync,
+    createGroup: createGroupMutation.mutateAsync,
+    updateGroup: updateGroupMutation.mutateAsync,
+    deleteGroup: deleteGroupMutation.mutateAsync,
+    createGroupDetail: createGroupDetailMutation.mutateAsync,
+    deleteGroupDetail: deleteGroupDetailMutation.mutateAsync,
+    mutating,
   }
 }

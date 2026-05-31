@@ -3,6 +3,9 @@ import type { ManagementSessionInput } from '@/lib/api/management/types'
 
 type AccessKeysResponse = {
   'api-keys'?: unknown[]
+  api_keys?: unknown[]
+  items?: unknown[]
+  api_key_entries?: unknown[]
 }
 
 export type AccessKeyResource = {
@@ -13,6 +16,17 @@ export type AccessKeyResource = {
   prefix: string
   suffix: string
   length: number
+  userId: number | null
+  channelGroupIds: number[]
+  modelGroupIds: number[]
+  raw: unknown
+}
+
+export type AccessKeyFormInput = {
+  value: string
+  userId?: number | null
+  channelGroupIds?: number[]
+  modelGroupIds?: number[]
 }
 
 type AccessKeysSnapshot = {
@@ -23,9 +37,50 @@ type AccessKeysSnapshot = {
 function readKeys(responseData: unknown): string[] {
   const response = responseData as AccessKeysResponse
 
-  return Array.isArray(response['api-keys'])
-    ? response['api-keys'].filter((item): item is string => typeof item === 'string')
+  const values = response['api-keys'] ?? response.api_keys
+
+  return Array.isArray(values)
+    ? values.filter((item): item is string => typeof item === 'string')
     : []
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function readString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return null
+}
+
+function readNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+  }
+  return null
+}
+
+function readNumberArray(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (!Array.isArray(value)) continue
+
+    return value.filter((item): item is number => typeof item === 'number' && Number.isFinite(item))
+  }
+  return []
+}
+
+function readEntries(responseData: unknown): unknown[] {
+  const response = responseData as AccessKeysResponse
+  const entries = response.api_key_entries ?? response.items
+
+  if (Array.isArray(entries) && entries.length > 0) return entries
+
+  return readKeys(responseData)
 }
 
 function maskAccessKey(value: string) {
@@ -37,8 +92,14 @@ function maskAccessKey(value: string) {
   return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`
 }
 
-function normalizeAccessKey(value: string, index: number): AccessKeyResource {
-  const trimmed = value.trim()
+function normalizeAccessKey(value: unknown, index: number): AccessKeyResource {
+  const record = isRecord(value) ? value : null
+  const keyValue = record
+    ? (readString(record, ['api_key', 'api-key', 'key', 'value']) ?? '')
+    : typeof value === 'string'
+      ? value
+      : ''
+  const trimmed = keyValue.trim()
 
   return {
     id: `${index}:${trimmed}`,
@@ -48,6 +109,23 @@ function normalizeAccessKey(value: string, index: number): AccessKeyResource {
     prefix: trimmed.slice(0, 6),
     suffix: trimmed.slice(-4),
     length: trimmed.length,
+    userId: record ? readNumber(record, ['user_id', 'user-id']) : null,
+    channelGroupIds: record ? readNumberArray(record, ['channels']) : [],
+    modelGroupIds: record ? readNumberArray(record, ['model_groups', 'model-groups']) : [],
+    raw: value,
+  }
+}
+
+function normalizeInput(input: string | AccessKeyFormInput): AccessKeyFormInput {
+  return typeof input === 'string' ? { value: input } : input
+}
+
+function toAccessKeyEntry(input: AccessKeyFormInput) {
+  return {
+    api_key: input.value.trim(),
+    user_id: input.userId ?? 0,
+    channels: input.channelGroupIds ?? [],
+    model_groups: input.modelGroupIds ?? [],
   }
 }
 
@@ -59,19 +137,26 @@ export async function fetchAccessKeysSnapshot(
 
   return {
     fetchedAt: new Date().toISOString(),
-    resources: readKeys(response.data).map((value, index) => normalizeAccessKey(value, index)),
+    resources: readEntries(response.data).map((value, index) => normalizeAccessKey(value, index)),
   }
 }
 
-export async function createAccessKey(session: ManagementSessionInput, value: string) {
+export async function createAccessKey(
+  session: ManagementSessionInput,
+  input: string | AccessKeyFormInput,
+) {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/api-keys')
-  const currentKeys = readKeys(response.data)
-    .map((item) => item.trim())
-    .filter(Boolean)
-  const nextValue = value.trim()
+  const nextInput = normalizeInput(input)
+  const currentEntries = readEntries(response.data)
+    .map((item, index) => normalizeAccessKey(item, index))
+    .filter((item) => item.value)
+    .map((item) => toAccessKeyEntry(item))
+  const nextValue = nextInput.value.trim()
 
-  await client.put('/api-keys', [...currentKeys, nextValue])
+  await client.put('/api-keys', {
+    api_key_entries: [...currentEntries, toAccessKeyEntry({ ...nextInput, value: nextValue })],
+  })
 }
 
 export async function updateAccessKey(
@@ -83,13 +168,52 @@ export async function updateAccessKey(
 
   await client.patch('/api-keys', {
     index: resource.index,
-    value: value.trim(),
+    value: {
+      api_key: value.trim(),
+      user_id: resource.userId ?? 0,
+      channels: resource.channelGroupIds,
+      model_groups: resource.modelGroupIds,
+    },
+  })
+}
+
+export async function updateAccessKeyBindings(
+  session: ManagementSessionInput,
+  resource: AccessKeyResource,
+  input: Omit<AccessKeyFormInput, 'value'>,
+) {
+  const client = createManagementClient(session)
+
+  await client.patch('/api-keys', {
+    api_key: resource.value,
+    user_id: input.userId ?? 0,
+    channels: input.channelGroupIds ?? [],
+    model_groups: input.modelGroupIds ?? [],
   })
 }
 
 export async function replaceAccessKeys(session: ManagementSessionInput, values: string[]) {
   const client = createManagementClient(session)
-  await client.put('/api-keys', values.map((value) => value.trim()).filter(Boolean))
+  const response = await client.get<unknown>('/api-keys')
+  const currentEntries = readEntries(response.data)
+    .map((item, index) => normalizeAccessKey(item, index))
+    .filter((item) => item.value)
+  const currentByValue = new Map(currentEntries.map((entry) => [entry.value, entry]))
+  const nextEntries = values
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => {
+      const currentEntry = currentByValue.get(value)
+
+      return toAccessKeyEntry({
+        value,
+        userId: currentEntry?.userId ?? null,
+        channelGroupIds: currentEntry?.channelGroupIds ?? [],
+        modelGroupIds: currentEntry?.modelGroupIds ?? [],
+      })
+    })
+
+  await client.put('/api-keys', { api_key_entries: nextEntries })
 }
 
 export async function deleteAccessKey(

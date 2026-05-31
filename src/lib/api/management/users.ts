@@ -3,59 +3,25 @@ import type { ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
 
-export type UserRole = 'admin' | 'user' | 'unknown'
-
-export type UserQuotaSummary = {
-  unlimited: boolean
-  lifetimeQuotaUsd: number | null
-  lifetimeRemainingUsd: number | null
-  monthlyQuotaUsd: number | null
-  monthlyUsedUsd: number | null
-  monthlyRemainingUsd: number | null
-  quotaMonth: string | null
-  paused: boolean
-  pausedAt: string | null
-  pauseReason: string | null
-  unpricedRecords: number
-  canCreateKeys: boolean | null
-  raw: unknown
-}
-
-export type UserUsageSummary = {
-  todayRecords: number
-  todayTotalTokens: number
-  todayEstimatedCostUsd: number
-  successRate: number | null
-  rpm: number | null
-  tpm: number | null
-}
-
 export type UserResource = {
   id: string
   numericId: number | null
   username: string
-  nickname: string | null
-  label: string
-  role: UserRole
-  isAdmin: boolean
-  disabled: boolean
-  disabledAt: string | null
+  hasPassword: boolean
+  mfaConfigured: boolean
+  passkeyCount: number
+  deletedAt: string | null
   createdAt: string | null
   updatedAt: string | null
-  keyCount: number
-  usage: UserUsageSummary
-  quota: UserQuotaSummary | null
   raw: unknown
 }
 
 export type UserFormInput = {
   username: string
-  nickname: string
-  role: 'admin' | 'user'
   password?: string
 }
 
-export type UsersSnapshot = {
+type UsersSnapshot = {
   fetchedAt: string
   resources: UserResource[]
 }
@@ -68,49 +34,18 @@ function toRecord(value: unknown): UnknownRecord {
   return isRecord(value) ? value : {}
 }
 
-function readString(record: UnknownRecord, key: string): string | null {
-  const value = record[key]
-  return typeof value === 'string' && value.trim() ? value : null
-}
-
-function readStringFromKeys(record: UnknownRecord, keys: string[]) {
-  for (const key of keys) {
-    const value = readString(record, key)
-    if (value) return value
-  }
-  return null
-}
-
-function readNumber(record: UnknownRecord, key: string): number | null {
-  const value = record[key]
-  return typeof value === 'number' && Number.isFinite(value) ? value : null
-}
-
-function readNumberFromKeys(record: UnknownRecord, keys: string[]) {
-  for (const key of keys) {
-    const value = readNumber(record, key)
-    if (value !== null) return value
-  }
-  return null
-}
-
-function readBoolean(record: UnknownRecord, key: string): boolean | null {
-  const value = record[key]
-  return typeof value === 'boolean' ? value : null
-}
-
-function readBooleanFromKeys(record: UnknownRecord, keys: string[]) {
-  for (const key of keys) {
-    const value = readBoolean(record, key)
-    if (value !== null) return value
-  }
-  return null
-}
-
-function readRecordFromKeys(record: UnknownRecord, keys: string[]) {
+function readString(record: UnknownRecord, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
-    if (isRecord(value)) return value
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return null
+}
+
+function readNumber(record: UnknownRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
   }
   return null
 }
@@ -127,138 +62,30 @@ function readArrayRecords(value: unknown): UnknownRecord[] {
   return []
 }
 
-function normalizeRole(record: UnknownRecord): UserRole {
-  const role = readStringFromKeys(record, ['role', 'group', 'user_role', 'userRole'])
-  const normalizedRole = role?.trim().toLowerCase()
-  const isAdmin = readBooleanFromKeys(record, ['is_admin', 'isAdmin', 'admin'])
-
-  if (normalizedRole === 'admin' || normalizedRole === 'administrator' || isAdmin === true) {
-    return 'admin'
-  }
-
-  if (normalizedRole === 'user' || normalizedRole === 'member' || isAdmin === false) {
-    return 'user'
-  }
-
-  return 'unknown'
-}
-
-function normalizeQuota(value: unknown): UserQuotaSummary | null {
-  if (!isRecord(value)) return null
-
-  return {
-    unlimited: readBooleanFromKeys(value, ['unlimited', 'is_unlimited', 'isUnlimited']) ?? false,
-    lifetimeQuotaUsd: readNumberFromKeys(value, [
-      'lifetime_quota_usd',
-      'lifetimeQuotaUsd',
-      'lifetime_quota',
-      'lifetimeQuota',
-    ]),
-    lifetimeRemainingUsd: readNumberFromKeys(value, [
-      'lifetime_remaining_usd',
-      'lifetimeRemainingUsd',
-      'lifetime_remaining',
-      'lifetimeRemaining',
-    ]),
-    monthlyQuotaUsd: readNumberFromKeys(value, [
-      'monthly_quota_usd',
-      'monthlyQuotaUsd',
-      'monthly_quota',
-      'monthlyQuota',
-    ]),
-    monthlyUsedUsd: readNumberFromKeys(value, [
-      'monthly_used_usd',
-      'monthlyUsedUsd',
-      'monthly_used',
-      'monthlyUsed',
-    ]),
-    monthlyRemainingUsd: readNumberFromKeys(value, [
-      'monthly_remaining_usd',
-      'monthlyRemainingUsd',
-      'monthly_remaining',
-      'monthlyRemaining',
-    ]),
-    quotaMonth: readStringFromKeys(value, ['quota_month', 'quotaMonth']),
-    paused: readBooleanFromKeys(value, ['paused', 'quota_paused', 'quotaPaused']) ?? false,
-    pausedAt: readStringFromKeys(value, [
-      'paused_at',
-      'pausedAt',
-      'quota_paused_at',
-      'quotaPausedAt',
-    ]),
-    pauseReason: readStringFromKeys(value, [
-      'pause_reason',
-      'pauseReason',
-      'quota_pause_reason',
-      'quotaPauseReason',
-    ]),
-    unpricedRecords:
-      readNumberFromKeys(value, [
-        'unpriced_records',
-        'unpricedRecords',
-        'quota_unpriced_records',
-      ]) ?? 0,
-    canCreateKeys: readBooleanFromKeys(value, ['can_create_keys', 'canCreateKeys']),
-    raw: value,
-  }
-}
-
-function normalizeUsage(record: UnknownRecord): UserUsageSummary {
-  const usage = readRecordFromKeys(record, ['usage', 'usage_summary', 'usageSummary']) ?? record
-
-  return {
-    todayRecords:
-      readNumberFromKeys(usage, ['today_records', 'todayRecords', 'records', 'request_count']) ?? 0,
-    todayTotalTokens:
-      readNumberFromKeys(usage, [
-        'today_total_tokens',
-        'todayTotalTokens',
-        'total_tokens',
-        'totalTokens',
-      ]) ?? 0,
-    todayEstimatedCostUsd:
-      readNumberFromKeys(usage, [
-        'today_estimated_cost_usd',
-        'todayEstimatedCostUsd',
-        'estimated_cost_usd',
-        'estimatedCostUsd',
-      ]) ?? 0,
-    successRate: readNumberFromKeys(usage, ['success_rate', 'successRate']),
-    rpm: readNumberFromKeys(usage, ['rpm', 'avg_rpm', 'avgRpm']),
-    tpm: readNumberFromKeys(usage, ['tpm', 'avg_tpm', 'avgTpm']),
-  }
+function hasStructuredValue(value: unknown) {
+  if (Array.isArray(value)) return value.length > 0
+  if (isRecord(value)) return Object.keys(value).length > 0
+  return typeof value === 'string' && value.trim().length > 0
 }
 
 function normalizeUser(record: UnknownRecord, index: number): UserResource {
-  const numericId = readNumberFromKeys(record, ['id', 'user_id', 'userId'])
+  const numericId = readNumber(record, ['id', 'user_id', 'userId'])
   const id =
-    readStringFromKeys(record, ['id', 'user_id', 'userId', 'uuid']) ??
+    readString(record, ['id', 'user_id', 'userId', 'uuid']) ??
     (numericId !== null ? String(numericId) : `user-${index + 1}`)
-  const username =
-    readStringFromKeys(record, ['username', 'name', 'email', 'user_name', 'userName']) ?? id
-  const nickname = readStringFromKeys(record, ['nickname', 'display_name', 'displayName', 'label'])
-  const role = normalizeRole(record)
-  const disabledAt = readStringFromKeys(record, ['disabled_at', 'disabledAt'])
-  const disabled =
-    readBooleanFromKeys(record, ['disabled', 'is_disabled', 'isDisabled']) ?? Boolean(disabledAt)
-  const quota = normalizeQuota(readRecordFromKeys(record, ['quota', 'balance', 'billing']))
+  const username = readString(record, ['username', 'user_name', 'userName', 'name']) ?? id
+  const passkey = record.passkey
 
   return {
     id,
     numericId,
     username,
-    nickname,
-    label: nickname ?? username,
-    role,
-    isAdmin: role === 'admin',
-    disabled,
-    disabledAt,
-    createdAt: readStringFromKeys(record, ['created_at', 'createdAt']),
-    updatedAt: readStringFromKeys(record, ['updated_at', 'updatedAt']),
-    keyCount:
-      readNumberFromKeys(record, ['key_count', 'keyCount', 'api_key_count', 'apiKeyCount']) ?? 0,
-    usage: normalizeUsage(record),
-    quota,
+    hasPassword: typeof record.password === 'string' && record.password.length > 0,
+    mfaConfigured: hasStructuredValue(record.mfa),
+    passkeyCount: Array.isArray(passkey) ? passkey.length : hasStructuredValue(passkey) ? 1 : 0,
+    deletedAt: readString(record, ['deleted_at', 'deletedAt']),
+    createdAt: readString(record, ['created_at', 'createdAt']),
+    updatedAt: readString(record, ['updated_at', 'updatedAt']),
     raw: record,
   }
 }
@@ -266,9 +93,6 @@ function normalizeUser(record: UnknownRecord, index: number): UserResource {
 function toUserPayload(input: UserFormInput) {
   return {
     username: input.username.trim(),
-    nickname: input.nickname.trim() || undefined,
-    role: input.role,
-    is_admin: input.role === 'admin',
     password: input.password?.trim() || undefined,
   }
 }
@@ -306,14 +130,9 @@ export async function updateUser(
   await client.patch(`/users/${encodeURIComponent(user.id)}`, toUserPayload(input))
 }
 
-export async function enableUser(session: ManagementSessionInput, user: UserResource) {
+export async function deleteUser(session: ManagementSessionInput, user: UserResource) {
   const client = createManagementClient(session)
-  await client.post(`/users/${encodeURIComponent(user.id)}/enable`)
-}
-
-export async function disableUser(session: ManagementSessionInput, user: UserResource) {
-  const client = createManagementClient(session)
-  await client.post(`/users/${encodeURIComponent(user.id)}/disable`)
+  await client.delete(`/users/${encodeURIComponent(user.id)}`)
 }
 
 export function toUserApiError(error: unknown) {

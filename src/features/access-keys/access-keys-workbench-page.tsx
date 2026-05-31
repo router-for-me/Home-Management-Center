@@ -50,7 +50,9 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { useAccessKeyWorkbench } from '@/features/access-keys/use-access-key-workbench'
+import type { AccessGroupResource } from '@/lib/api/management/access-groups'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
+import type { UserResource } from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -77,6 +79,20 @@ function generateAccessKey() {
 
 function formatAccessKeySequence(resource: AccessKeyResource) {
   return `#${resource.index + 1}`
+}
+
+function groupLabel(groups: AccessGroupResource[], id: number) {
+  return groups.find((group) => group.numericId === id)?.name ?? `#${id}`
+}
+
+function groupListLabel(groups: AccessGroupResource[], ids: number[], emptyLabel: string) {
+  if (ids.length === 0) return emptyLabel
+  return ids.map((id) => groupLabel(groups, id)).join(', ')
+}
+
+function userLabel(users: UserResource[], userId: number | null) {
+  if (!userId) return null
+  return users.find((user) => user.numericId === userId)?.username ?? `#${userId}`
 }
 
 async function copyToClipboard(value: string) {
@@ -161,6 +177,9 @@ function AccessKeysErrorState({
 
 function AccessKeyList({
   resources,
+  users,
+  channelGroups,
+  modelGroups,
   selectedKeyId,
   selectedKeyIds,
   onSelectKey,
@@ -171,6 +190,9 @@ function AccessKeyList({
   onCopy,
 }: {
   resources: AccessKeyResource[]
+  users: UserResource[]
+  channelGroups: AccessGroupResource[]
+  modelGroups: AccessGroupResource[]
   selectedKeyId: string | null
   selectedKeyIds: Set<string>
   onSelectKey: (resource: AccessKeyResource) => void
@@ -197,7 +219,7 @@ function AccessKeyList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[860px]">
+        <Table className="min-w-[1120px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10">
@@ -209,9 +231,12 @@ function AccessKeyList({
               </TableHead>
               <TableHead>{t('accessKeysPage.list.index')}</TableHead>
               <TableHead>{t('accessKeysPage.list.key')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
               <TableHead>{t('accessKeysPage.list.length')}</TableHead>
               <TableHead>{t('accessKeysPage.list.status')}</TableHead>
-              <TableHead className="w-[360px] text-right">
+              <TableHead className="bg-muted sticky right-0 z-10 w-[168px] text-right sm:w-[360px]">
                 {t('accessKeysPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -221,7 +246,7 @@ function AccessKeyList({
               <TableRow
                 key={resource.id}
                 className={cn(
-                  'hover:bg-accent/40 transition-colors',
+                  'hover:bg-accent/40 group transition-colors',
                   selectedKeyId === resource.id ? 'bg-primary/8' : null,
                 )}
               >
@@ -247,6 +272,27 @@ function AccessKeyList({
                     })}
                   </p>
                 </TableCell>
+                <TableCell>
+                  {userLabel(users, resource.userId) ?? (
+                    <span className="text-muted-foreground">
+                      {t('accessKeysPage.list.unassigned')}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {groupListLabel(
+                    channelGroups,
+                    resource.channelGroupIds,
+                    t('accessKeysPage.list.unrestricted'),
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {groupListLabel(
+                    modelGroups,
+                    resource.modelGroupIds,
+                    t('accessKeysPage.list.unrestricted'),
+                  )}
+                </TableCell>
                 <TableCell>{resource.length}</TableCell>
                 <TableCell>
                   <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
@@ -254,7 +300,7 @@ function AccessKeyList({
                     {t('accessKeysPage.status.accepted')}
                   </span>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 w-[168px] text-right transition-colors sm:w-[360px]">
                   <div className="flex justify-end gap-1.5">
                     <Button
                       type="button"
@@ -268,7 +314,7 @@ function AccessKeyList({
                       }}
                     >
                       <Eye className="size-4" aria-hidden="true" />
-                      {t('accessKeysPage.actions.view')}
+                      <span className="hidden sm:inline">{t('accessKeysPage.actions.view')}</span>
                     </Button>
                     <Button
                       type="button"
@@ -282,7 +328,7 @@ function AccessKeyList({
                       }}
                     >
                       <Pencil className="size-4" aria-hidden="true" />
-                      {t('accessKeysPage.actions.edit')}
+                      <span className="hidden sm:inline">{t('accessKeysPage.actions.edit')}</span>
                     </Button>
                     <Button
                       type="button"
@@ -296,7 +342,7 @@ function AccessKeyList({
                       }}
                     >
                       <Copy className="size-4" aria-hidden="true" />
-                      {t('accessKeysPage.actions.copy')}
+                      <span className="hidden sm:inline">{t('accessKeysPage.actions.copy')}</span>
                     </Button>
                     <Button
                       type="button"
@@ -310,7 +356,7 @@ function AccessKeyList({
                       }}
                     >
                       <Trash2 className="size-4" aria-hidden="true" />
-                      {t('accessKeysPage.actions.delete')}
+                      <span className="hidden sm:inline">{t('accessKeysPage.actions.delete')}</span>
                     </Button>
                   </div>
                 </TableCell>
@@ -326,6 +372,9 @@ function AccessKeyList({
 function AccessKeyDetailContent({
   mode,
   resource,
+  users,
+  channelGroups,
+  modelGroups,
   mutating,
   onModeChange,
   onCancel,
@@ -336,6 +385,9 @@ function AccessKeyDetailContent({
 }: {
   mode: DetailMode
   resource: AccessKeyResource | null
+  users: UserResource[]
+  channelGroups: AccessGroupResource[]
+  modelGroups: AccessGroupResource[]
   mutating: boolean
   onModeChange: (mode: DetailMode) => void
   onCancel: () => void
@@ -489,6 +541,23 @@ function AccessKeyDetailContent({
           ['prefix', resource.prefix],
           ['suffix', resource.suffix],
           ['length', String(resource.length)],
+          ['owner', userLabel(users, resource.userId) ?? t('accessKeysPage.list.unassigned')],
+          [
+            'credentialScope',
+            groupListLabel(
+              channelGroups,
+              resource.channelGroupIds,
+              t('accessKeysPage.list.unrestricted'),
+            ),
+          ],
+          [
+            'modelScope',
+            groupListLabel(
+              modelGroups,
+              resource.modelGroupIds,
+              t('accessKeysPage.list.unrestricted'),
+            ),
+          ],
         ].map(([key, value]) => (
           <div key={key} className="rounded-md border px-3 py-2.5">
             <dt className="text-muted-foreground text-xs">
@@ -603,6 +672,9 @@ export function AccessKeysWorkbenchPage() {
   const [confirmation, setConfirmation] = useState<PendingAccessKeyConfirmation | null>(null)
 
   const resources = workbench.snapshot?.resources ?? []
+  const users = workbench.users
+  const channelGroups = workbench.groups?.channelGroups ?? []
+  const modelGroups = workbench.groups?.modelGroups ?? []
   const filteredResources = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
     if (!normalizedSearch) return resources
@@ -614,9 +686,12 @@ export function AccessKeysWorkbenchPage() {
         resource.prefix,
         resource.suffix,
         String(resource.index),
+        userLabel(users, resource.userId) ?? '',
+        groupListLabel(channelGroups, resource.channelGroupIds, ''),
+        groupListLabel(modelGroups, resource.modelGroupIds, ''),
       ].some((value) => value.toLowerCase().includes(normalizedSearch)),
     )
-  }, [resources, search])
+  }, [channelGroups, modelGroups, resources, search, users])
   const selectedResource =
     filteredResources.find((resource) => resource.id === selectedKeyId) ??
     resources.find((resource) => resource.id === selectedKeyId) ??
@@ -933,6 +1008,9 @@ export function AccessKeysWorkbenchPage() {
           ) : null}
           <AccessKeyList
             resources={filteredResources}
+            users={users}
+            channelGroups={channelGroups}
+            modelGroups={modelGroups}
             selectedKeyId={selectedKeyId}
             selectedKeyIds={selectedKeyIds}
             onSelectKey={(resource) => {
@@ -964,6 +1042,9 @@ export function AccessKeysWorkbenchPage() {
           <AccessKeyDetailContent
             mode={detailMode}
             resource={selectedResource}
+            users={users}
+            channelGroups={channelGroups}
+            modelGroups={modelGroups}
             mutating={workbench.mutating}
             onModeChange={setDetailMode}
             onCancel={() => {
