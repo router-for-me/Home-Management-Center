@@ -43,6 +43,7 @@ export type RuntimeLogRecord = {
   clientIp: string | null
   requestId: string | null
   homeIp: string | null
+  requestLogAvailable: boolean
   level: string | null
   line: string
   createdAt: string | null
@@ -57,6 +58,11 @@ export type RuntimeLogSnapshot = {
   total: number | null
   limit: number | null
   offset: number | null
+}
+
+export type RuntimeLogQuery = {
+  limit: number
+  offset: number
 }
 
 export type RequestErrorLogFile = {
@@ -219,13 +225,16 @@ function normalizeRuntimeLogRecord(record: unknown, index: number): RuntimeLogRe
   const idValue = readNumber(recordValue, 'id') ?? readString(recordValue, 'id')
   const timestamp = readString(recordValue, 'timestamp')
   const line = readString(recordValue, 'line') ?? ''
+  const requestId = readString(recordValue, 'request_id') ?? readString(recordValue, 'request-id')
+  const homeIp = readString(recordValue, 'home_ip') ?? readString(recordValue, 'home-ip')
 
   return {
     id: idValue !== null ? String(idValue) : `runtime-log-${index + 1}`,
     timestamp,
     clientIp: readString(recordValue, 'client_ip') ?? readString(recordValue, 'client-ip'),
-    requestId: readString(recordValue, 'request_id') ?? readString(recordValue, 'request-id'),
-    homeIp: readString(recordValue, 'home_ip') ?? readString(recordValue, 'home-ip'),
+    requestId,
+    homeIp,
+    requestLogAvailable: Boolean(requestId && homeIp),
     level: readString(recordValue, 'level'),
     line,
     createdAt: readString(recordValue, 'created_at') ?? readString(recordValue, 'createdAt'),
@@ -239,20 +248,24 @@ function timestampToMilliseconds(value: string | null) {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-function normalizeRuntimeLogs(responseData: unknown): RuntimeLogSnapshot {
+function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogSnapshot {
   const record = toRecord(responseData)
   const lines = record.lines
-  const records = readLogArray(record).map(normalizeRuntimeLogRecord)
+  const records = readLogArray(record).map((item, index) =>
+    normalizeRuntimeLogRecord(item, indexBase + index),
+  )
+  const normalizedLines = Array.isArray(lines)
+    ? lines.filter((line): line is string => typeof line === 'string')
+    : records.map((item) => item.line).filter(Boolean)
   const latestRecordTimestamp = records
     .map((item) => timestampToMilliseconds(item.timestamp))
     .find((value): value is number => value !== null)
 
   return {
-    lines: Array.isArray(lines)
-      ? lines.filter((line): line is string => typeof line === 'string')
-      : records.map((item) => item.line).filter(Boolean),
+    lines: normalizedLines,
     records,
-    lineCount: readNumber(record, 'line-count') ?? records.length,
+    lineCount:
+      readNumber(record, 'line-count') ?? readNumber(record, 'total') ?? normalizedLines.length,
     latestTimestamp: readNumber(record, 'latest-timestamp') ?? latestRecordTimestamp ?? null,
     total: readNumber(record, 'total'),
     limit: readNumber(record, 'limit'),
@@ -302,9 +315,13 @@ function getAttachmentFileName(headers: unknown, fallback: string) {
 export async function fetchUsageLogsSnapshot(
   session: ManagementSessionInput,
   capabilities: CapabilityMap,
+  options?: {
+    runtimeLogs?: RuntimeLogQuery
+  },
 ): Promise<UsageLogsSnapshot> {
   const client = createManagementClient(session)
   const issues: UsageLogIssue[] = []
+  const runtimeLogQuery = options?.runtimeLogs ?? { limit: 50, offset: 0 }
   const configResponse = await client.get<unknown>('/config')
   const config = toRecord(configResponse.data)
   const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
@@ -328,9 +345,9 @@ export async function fetchUsageLogsSnapshot(
           'logs',
           async () => {
             const response = await client.get<unknown>('/logs', {
-              params: { limit: 80 },
+              params: runtimeLogQuery,
             })
-            return normalizeRuntimeLogs(response.data)
+            return normalizeRuntimeLogs(response.data, runtimeLogQuery.offset)
           },
           null,
         )
@@ -408,10 +425,14 @@ export async function downloadRequestLogById(
   const client = createManagementClient(session)
   const normalizedRequestId = requestId.trim()
   const normalizedHomeIp = homeIp?.trim()
+  if (!normalizedHomeIp) {
+    throw new Error('home_ip is required to download a request log')
+  }
+
   const response = await client.get<Blob>(
     `/request-log-by-id/${encodeURIComponent(normalizedRequestId)}`,
     {
-      params: normalizedHomeIp ? { home_ip: normalizedHomeIp } : undefined,
+      params: { home_ip: normalizedHomeIp },
       responseType: 'blob',
     },
   )

@@ -1485,6 +1485,7 @@ export const en = {
         clearLogs: 'Clear logs',
         download: 'Download',
         downloadRequestLog: 'Download request log',
+        viewLogDetail: 'View details',
         fetchQueue: 'Pull queue records',
       },
       capabilities: {
@@ -1551,7 +1552,7 @@ export const en = {
         keysDetail: '{{count}} recent request windows',
         requests: 'Request count',
         requestsDetail: '{{success}} success / {{failed}} failed',
-        logs: 'Log lines',
+        logs: 'Runtime logs',
         logsDetail: '{{count}} error log files',
       },
       usage: {
@@ -1595,14 +1596,16 @@ export const en = {
       logs: {
         title: 'Runtime logs',
         description:
-          'Reads recent lines from file logging. Empty content usually means file logging is disabled or nothing has been written yet.',
+          'Read runtime logs with pagination. The table shows summaries; open details for full content and request metadata.',
         unavailable: 'This runtime does not expose the runtime logs route.',
         empty:
           'No runtime log lines are available. Confirm file logging is enabled and the runtime has written logs.',
+        emptyPage: 'This page has no log records. Go back one page or sync again.',
         lineCount: '{{count}} lines',
         latest: 'Latest timestamp: {{time}}',
         latestUnavailable: 'Latest timestamp unavailable',
         total: '{{count}} total',
+        range: 'Showing {{start}}-{{end}} of {{total}}',
         columns: {
           time: 'Time',
           level: 'Level',
@@ -1610,7 +1613,20 @@ export const en = {
           homeIp: 'Home IP',
           clientIp: 'Client IP',
           line: 'Log line',
+          summary: 'Summary',
           actions: 'Actions',
+        },
+        pagination: {
+          range: '{{start}}-{{end}} of {{total}}',
+          pageSize: 'Rows',
+          previous: 'Previous',
+          next: 'Next',
+        },
+        detail: {
+          title: 'Log details',
+          createdAt: 'Created',
+          content: 'Log content',
+          requestLogUnavailable: 'No downloadable request log is available for this record.',
         },
       },
       errorLogs: {

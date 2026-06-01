@@ -1,4 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   clearRuntimeLogs,
@@ -10,6 +12,9 @@ import {
 } from '@/lib/api/management/usage-logs'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
+
+const runtimeLogPageSizeOptions = [50, 100, 200]
+const defaultRuntimeLogPageSize = 50
 
 function useManagementSession() {
   const baseUrl = useSessionStore((state) => state.baseUrl)
@@ -37,6 +42,8 @@ export function useUsageLogsWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
+  const [runtimeLogLimit, setRuntimeLogLimitState] = useState(defaultRuntimeLogPageSize)
+  const [runtimeLogOffset, setRuntimeLogOffset] = useState(0)
   const queryKey = [
     'management-usage-logs',
     session.baseUrl,
@@ -45,22 +52,38 @@ export function useUsageLogsWorkbench() {
     capabilities.usageQueue,
     capabilities.logs,
     capabilities.requestErrorLogs,
+    runtimeLogLimit,
+    runtimeLogOffset,
   ]
 
   const query = useQuery({
     queryKey,
     enabled: connected && capabilityReady && Boolean(session.managementKey),
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       try {
-        return await fetchUsageLogsSnapshot(session, capabilities)
+        return await fetchUsageLogsSnapshot(session, capabilities, {
+          runtimeLogs: {
+            limit: runtimeLogLimit,
+            offset: runtimeLogOffset,
+          },
+        })
       } catch (error) {
         throw toUsageLogsApiError(error)
       }
     },
   })
 
-  const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey })
+  const invalidateUsageLogs = async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ['management-usage-logs', session.baseUrl, connectedAt],
+    })
+  }
+
+  const setRuntimeLogLimit = (nextLimit: number) => {
+    if (!runtimeLogPageSizeOptions.includes(nextLimit)) return
+    setRuntimeLogLimitState(nextLimit)
+    setRuntimeLogOffset(0)
   }
 
   const clearLogsMutation = useMutation({
@@ -71,7 +94,10 @@ export function useUsageLogsWorkbench() {
         throw toUsageLogsApiError(error)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: async () => {
+      setRuntimeLogOffset(0)
+      await invalidateUsageLogs()
+    },
   })
 
   const usageQueueMutation = useMutation({
@@ -129,6 +155,11 @@ export function useUsageLogsWorkbench() {
     downloadingRequestLogId: downloadRequestLogByIdMutation.variables?.requestId ?? null,
     isDownloadingErrorLog: downloadRequestErrorLogMutation.isPending,
     isDownloadingRequestLog: downloadRequestLogByIdMutation.isPending,
+    runtimeLogLimit,
+    runtimeLogOffset,
+    runtimeLogPageSizeOptions,
+    setRuntimeLogLimit,
+    setRuntimeLogOffset,
     mutating:
       clearLogsMutation.isPending ||
       usageQueueMutation.isPending ||

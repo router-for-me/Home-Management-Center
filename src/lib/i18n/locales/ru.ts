@@ -1495,6 +1495,7 @@ export const ru = {
         clearLogs: 'Очистить журналы',
         download: 'Скачать',
         downloadRequestLog: 'Скачать request log',
+        viewLogDetail: 'Подробнее',
         fetchQueue: 'Получить записи очереди',
       },
       capabilities: {
@@ -1561,7 +1562,7 @@ export const ru = {
         keysDetail: 'Окон recent requests: {{count}}',
         requests: 'Запросов',
         requestsDetail: '{{success}} успешно / {{failed}} с ошибкой',
-        logs: 'Строк журналов',
+        logs: 'Runtime logs',
         logsDetail: 'Файлов error logs: {{count}}',
       },
       usage: {
@@ -1605,14 +1606,16 @@ export const ru = {
       logs: {
         title: 'Runtime logs',
         description:
-          'Читает последние строки file logging. Пустой результат обычно означает, что file logging выключен или записей еще нет.',
+          'Показывает runtime logs постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
         unavailable: 'Этот runtime не предоставляет маршрут runtime logs.',
         empty:
           'Нет строк runtime log для отображения. Проверьте, что file logging включен и runtime уже записывал журналы.',
+        emptyPage: 'На этой странице нет записей. Вернитесь назад или синхронизируйте данные.',
         lineCount: '{{count}} строк',
         latest: 'Последнее время: {{time}}',
         latestUnavailable: 'Последнее время недоступно',
         total: 'Всего: {{count}}',
+        range: 'Показано {{start}}-{{end}} из {{total}}',
         columns: {
           time: 'Время',
           level: 'Уровень',
@@ -1620,7 +1623,20 @@ export const ru = {
           homeIp: 'Home IP',
           clientIp: 'Client IP',
           line: 'Строка журнала',
+          summary: 'Сводка',
           actions: 'Действия',
+        },
+        pagination: {
+          range: '{{start}}-{{end}} из {{total}}',
+          pageSize: 'Строк',
+          previous: 'Назад',
+          next: 'Вперед',
+        },
+        detail: {
+          title: 'Детали журнала',
+          createdAt: 'Создано',
+          content: 'Содержимое журнала',
+          requestLogUnavailable: 'Для этой записи нет доступного request log.',
         },
       },
       errorLogs: {

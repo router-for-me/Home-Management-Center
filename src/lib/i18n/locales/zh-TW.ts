@@ -1436,6 +1436,7 @@ export const zhTW = {
         clearLogs: '清空日誌',
         download: '下載',
         downloadRequestLog: '下載請求日誌',
+        viewLogDetail: '查看詳情',
         fetchQueue: '拉取佇列記錄',
       },
       capabilities: {
@@ -1499,7 +1500,7 @@ export const zhTW = {
         keysDetail: '{{count}} 個最近請求視窗',
         requests: '請求計數',
         requestsDetail: '{{success}} 成功 / {{failed}} 失敗',
-        logs: '日誌行數',
+        logs: '執行日誌',
         logsDetail: '{{count}} 個錯誤日誌檔案',
       },
       usage: {
@@ -1538,13 +1539,15 @@ export const zhTW = {
       },
       logs: {
         title: '執行日誌',
-        description: '讀取檔案日誌中最近的執行行。沒有內容通常表示檔案日誌未啟用或暫未寫入。',
+        description: '分頁讀取執行日誌。列表展示摘要，完整內容和請求中繼資料可在詳情中查看。',
         unavailable: '目前執行環境不提供執行日誌介面。',
         empty: '目前沒有可展示的執行日誌。請確認檔案日誌已啟用，且執行環境已有日誌寫入。',
-        lineCount: '{{count}} 行',
+        emptyPage: '目前頁面沒有日誌記錄。請返回上一頁或重新同步。',
+        lineCount: '{{count}} 筆',
         latest: '最新時間：{{time}}',
         latestUnavailable: '最新時間不可用',
         total: '共 {{count}} 筆',
+        range: '目前 {{start}}-{{end}} / 共 {{total}} 筆',
         columns: {
           time: '時間',
           level: '級別',
@@ -1552,7 +1555,20 @@ export const zhTW = {
           homeIp: 'Home IP',
           clientIp: 'Client IP',
           line: '日誌內容',
+          summary: '日誌摘要',
           actions: '操作',
+        },
+        pagination: {
+          range: '{{start}}-{{end}} / 共 {{total}} 筆',
+          pageSize: '每頁',
+          previous: '上一頁',
+          next: '下一頁',
+        },
+        detail: {
+          title: '日誌詳情',
+          createdAt: '建立時間',
+          content: '日誌內容',
+          requestLogUnavailable: '目前記錄沒有可下載的請求日誌。',
         },
       },
       errorLogs: {

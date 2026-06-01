@@ -1436,6 +1436,7 @@ export const zhCN = {
         clearLogs: '清空日志',
         download: '下载',
         downloadRequestLog: '下载请求日志',
+        viewLogDetail: '查看详情',
         fetchQueue: '拉取队列记录',
       },
       capabilities: {
@@ -1499,7 +1500,7 @@ export const zhCN = {
         keysDetail: '{{count}} 个最近请求窗口',
         requests: '请求计数',
         requestsDetail: '{{success}} 成功 / {{failed}} 失败',
-        logs: '日志行数',
+        logs: '运行日志',
         logsDetail: '{{count}} 个错误日志文件',
       },
       usage: {
@@ -1538,13 +1539,15 @@ export const zhCN = {
       },
       logs: {
         title: '运行日志',
-        description: '读取文件日志中最近的运行行。没有内容通常表示文件日志未启用或暂未写入。',
+        description: '分页读取运行日志。列表展示摘要，完整内容和请求元数据可在详情中查看。',
         unavailable: '当前运行时不提供运行日志接口。',
         empty: '当前没有可展示的运行日志。请确认文件日志已启用，并且运行时已有日志写入。',
-        lineCount: '{{count}} 行',
+        emptyPage: '当前页没有日志记录。请返回上一页或重新同步。',
+        lineCount: '{{count}} 条',
         latest: '最新时间：{{time}}',
         latestUnavailable: '最新时间不可用',
         total: '共 {{count}} 条',
+        range: '当前 {{start}}-{{end}} / 共 {{total}} 条',
         columns: {
           time: '时间',
           level: '级别',
@@ -1552,7 +1555,20 @@ export const zhCN = {
           homeIp: 'Home IP',
           clientIp: 'Client IP',
           line: '日志内容',
+          summary: '日志摘要',
           actions: '操作',
+        },
+        pagination: {
+          range: '{{start}}-{{end}} / 共 {{total}} 条',
+          pageSize: '每页',
+          previous: '上一页',
+          next: '下一页',
+        },
+        detail: {
+          title: '日志详情',
+          createdAt: '创建时间',
+          content: '日志内容',
+          requestLogUnavailable: '当前记录没有可下载的请求日志。',
         },
       },
       errorLogs: {
