@@ -1,4 +1,5 @@
-import { isMap, parseDocument, parse as parseYaml } from 'yaml'
+import { Document, isMap, isScalar, parseDocument, parse as parseYaml } from 'yaml'
+import type { Scalar } from 'yaml'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
@@ -62,6 +63,12 @@ type ConfigSnapshot = {
 
 type YamlDocument = ReturnType<typeof parseDocument>
 type YamlPath = string[]
+type YamlScalar = Scalar<unknown> & { range: [number, number, number] }
+type YamlTextPatch = {
+  start: number
+  end: number
+  value: string
+}
 
 const yamlBackedConfigKeys = new Set<ConfigFieldKey>([
   'tlsEnable',
@@ -117,6 +124,42 @@ function setBooleanInDoc(doc: YamlDocument, path: YamlPath, value: boolean) {
 function setStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown) {
   const safe = typeof value === 'string' ? value : ''
   doc.setIn(path, safe)
+}
+
+function stringifyInlineYamlScalar(value: boolean | string) {
+  const doc = new Document({ value })
+  const serialized = doc.toString().trim()
+  const prefix = 'value: '
+
+  if (!serialized.startsWith(prefix)) return ''
+
+  return serialized.slice(prefix.length)
+}
+
+function getExistingScalar(doc: YamlDocument, path: YamlPath): YamlScalar | null {
+  const node: unknown = doc.getIn(path, true)
+
+  if (!isScalar(node) || !node.range) return null
+
+  return node as YamlScalar
+}
+
+function createExistingYamlScalarPatch(
+  doc: YamlDocument,
+  path: YamlPath,
+  value: boolean | string,
+): YamlTextPatch | null {
+  const node = getExistingScalar(doc, path)
+  if (!node) return null
+
+  const nextValue = stringifyInlineYamlScalar(value)
+  if (!nextValue || nextValue.includes('\n')) return null
+
+  return {
+    start: node.range[0],
+    end: node.range[1],
+    value: nextValue,
+  }
 }
 
 function parseJsonText(value: string): unknown {
@@ -180,11 +223,14 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
 }
 
 function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
-  const doc = parseDocument(yaml || '{}')
+  const doc = parseDocument(yaml || '{}', { keepSourceTokens: true })
 
   if (doc.errors.length > 0) {
     throw new Error(doc.errors[0]?.message ?? 'Invalid YAML')
   }
+
+  const minimallyPatchedYaml = patchYamlBackedConfigText(yaml, doc, changes)
+  if (minimallyPatchedYaml !== null) return minimallyPatchedYaml
 
   if (!isMap(doc.contents)) {
     doc.contents = doc.createNode({}) as unknown as typeof doc.contents
@@ -244,6 +290,72 @@ function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
   deleteIfMapEmpty(doc, ['remote-management'])
 
   return doc.toString()
+}
+
+function patchYamlBackedConfigText(yaml: string, doc: YamlDocument, changes: ConfigChange[]) {
+  const patches: YamlTextPatch[] = []
+
+  for (const change of changes) {
+    const patch = createYamlBackedChangeTextPatch(doc, change)
+    if (patch === null) return null
+
+    patches.push(patch)
+  }
+
+  let nextYaml = yaml
+
+  for (const patch of patches.sort((left, right) => right.start - left.start)) {
+    nextYaml = `${nextYaml.slice(0, patch.start)}${patch.value}${nextYaml.slice(patch.end)}`
+  }
+
+  return nextYaml
+}
+
+function createYamlBackedChangeTextPatch(
+  doc: YamlDocument,
+  change: ConfigChange,
+): YamlTextPatch | null {
+  switch (change.key) {
+    case 'tlsEnable':
+      return createExistingYamlScalarPatch(doc, ['tls', 'enable'], Boolean(change.nextValue))
+    case 'tlsCert':
+      return createExistingYamlScalarPatch(doc, ['tls', 'cert'], String(change.nextValue))
+    case 'tlsKey':
+      return createExistingYamlScalarPatch(doc, ['tls', 'key'], String(change.nextValue))
+    case 'remoteManagementAllowRemote':
+      return createExistingYamlScalarPatch(
+        doc,
+        ['remote-management', 'allow-remote'],
+        Boolean(change.nextValue),
+      )
+    case 'remoteManagementSecretKey':
+      return createExistingYamlScalarPatch(
+        doc,
+        ['remote-management', 'secret-key'],
+        String(change.nextValue),
+      )
+    case 'remoteManagementDisableControlPanel':
+      return createExistingYamlScalarPatch(
+        doc,
+        ['remote-management', 'disable-control-panel'],
+        Boolean(change.nextValue),
+      )
+    case 'remoteManagementDisableAutoUpdatePanel':
+      return createExistingYamlScalarPatch(
+        doc,
+        ['remote-management', 'disable-auto-update-panel'],
+        Boolean(change.nextValue),
+      )
+    case 'remoteManagementPanelGithubRepository':
+      if (docHas(doc, ['remote-management', 'panel-repo'])) return null
+      return createExistingYamlScalarPatch(
+        doc,
+        ['remote-management', 'panel-github-repository'],
+        String(change.nextValue),
+      )
+    default:
+      return null
+  }
 }
 
 function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
