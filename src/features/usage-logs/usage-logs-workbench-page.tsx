@@ -526,7 +526,7 @@ function UsageQueuePanel({
         </Button>
       </div>
       {canRead ? (
-        <div className="border-info/25 bg-info/8 text-info-foreground mt-3 rounded-md border px-3 py-2 text-sm">
+        <div className="border-warning/30 bg-warning/8 text-warning-foreground dark:text-warning mt-3 rounded-md border px-3 py-2 text-sm">
           {t('usageLogsPage.queue.consumes')}
         </div>
       ) : null}
