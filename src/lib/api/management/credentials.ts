@@ -402,6 +402,16 @@ export async function fetchCredentialSnapshot(
   }
 }
 
+export function getCredentialBindingAuthId(resource: CredentialResource) {
+  return (
+    resource.authIndex ??
+    readString(resource.raw, 'id') ??
+    readString(resource.raw, 'uuid') ??
+    readString(resource.raw, 'auth_index') ??
+    resource.identifier
+  )
+}
+
 export async function updateCredentialStatus(
   session: ManagementSessionInput,
   resource: CredentialResource,

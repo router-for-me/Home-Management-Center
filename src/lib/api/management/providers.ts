@@ -390,6 +390,21 @@ export async function fetchProviderSnapshot(
   }
 }
 
+export function getProviderBindingAuthId(resource: ProviderResource) {
+  const selector = resource.selector
+
+  return (
+    (typeof selector.id === 'string' ? selector.id : null) ??
+    (typeof selector.uuid === 'string' ? selector.uuid : null) ??
+    (typeof selector.auth_index === 'string' ? selector.auth_index : null) ??
+    resource.authIndex ??
+    readString(resource.raw, 'id') ??
+    readString(resource.raw, 'uuid') ??
+    readString(resource.raw, 'auth_index') ??
+    readString(resource.raw, 'auth-index')
+  )
+}
+
 export async function fetchProviderModelDefinitions(
   session: ManagementSessionInput,
   channel: ProviderModelChannel,

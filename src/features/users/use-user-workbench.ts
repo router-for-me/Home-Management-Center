@@ -24,6 +24,17 @@ import {
   updateAccessKeyBindings,
 } from '@/lib/api/management/access-keys'
 import {
+  type CredentialResource,
+  fetchCredentialSnapshot,
+  getCredentialBindingAuthId,
+  toCredentialApiError,
+} from '@/lib/api/management/credentials'
+import {
+  type ProviderResource,
+  fetchProviderSnapshot,
+  getProviderBindingAuthId,
+} from '@/lib/api/management/providers'
+import {
   type UserFormInput,
   type UserResource,
   createUser,
@@ -35,6 +46,23 @@ import {
 } from '@/lib/api/management/users'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
+
+export type CredentialBindingCandidate = {
+  id: string
+  authId: string
+  label: string
+  provider: string
+  type: string
+  status: string | null
+  disabled: boolean
+  unavailable: boolean
+  source: 'credential' | 'provider'
+}
+
+type CredentialBindingCandidateSnapshot = {
+  candidates: CredentialBindingCandidate[]
+  issue: string | null
+}
 
 function useManagementSession() {
   const baseUrl = useSessionStore((state) => state.baseUrl)
@@ -63,7 +91,63 @@ function toError(error: unknown) {
   return new Error(String(error))
 }
 
-export function useUserWorkbench(selectedUserId?: string | null) {
+function normalizeCredentialCandidate(resource: CredentialResource): CredentialBindingCandidate {
+  const authId = getCredentialBindingAuthId(resource)
+
+  return {
+    id: `credential:${authId}`,
+    authId,
+    label: resource.label ?? resource.email ?? resource.account ?? resource.name ?? authId,
+    provider: resource.provider,
+    type: resource.type,
+    status: resource.status,
+    disabled: resource.disabled,
+    unavailable: resource.unavailable,
+    source: 'credential',
+  }
+}
+
+function normalizeProviderCandidate(resource: ProviderResource): CredentialBindingCandidate | null {
+  const authId = getProviderBindingAuthId(resource)
+  if (!authId) return null
+
+  return {
+    id: `provider:${authId}`,
+    authId,
+    label: resource.name ?? resource.identifier ?? authId,
+    provider: resource.providerId,
+    type: 'api-key',
+    status: null,
+    disabled: resource.disabled,
+    unavailable: false,
+    source: 'provider',
+  }
+}
+
+function createCredentialBindingCandidates(
+  credentials: CredentialResource[],
+  providers: ProviderResource[],
+) {
+  const candidates = [
+    ...credentials.map(normalizeCredentialCandidate),
+    ...providers
+      .map(normalizeProviderCandidate)
+      .filter((item): item is CredentialBindingCandidate => Boolean(item)),
+  ]
+  const seenAuthIds = new Set<string>()
+
+  return candidates.filter((candidate) => {
+    if (seenAuthIds.has(candidate.authId)) return false
+    seenAuthIds.add(candidate.authId)
+    return true
+  })
+}
+
+function readSettledError(result: PromiseSettledResult<unknown>) {
+  return result.status === 'rejected' ? toError(result.reason).message : null
+}
+
+export function useUserWorkbench(selectedUserId?: string | null, loadCredentialCandidates = false) {
   const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
@@ -78,6 +162,11 @@ export function useUserWorkbench(selectedUserId?: string | null) {
     session.baseUrl,
     connectedAt,
     capabilities.accessGroups,
+  ]
+  const credentialCandidatesQueryKey = [
+    'management-credential-binding-candidates',
+    session.baseUrl,
+    connectedAt,
   ]
   const detailQueryKey = ['management-user-detail', session.baseUrl, connectedAt, selectedUserId]
 
@@ -113,6 +202,36 @@ export function useUserWorkbench(selectedUserId?: string | null) {
         return await fetchAccessGroupsSnapshot(session)
       } catch (error) {
         throw toAccessGroupsApiError(error)
+      }
+    },
+  })
+
+  const credentialCandidatesQuery = useQuery({
+    queryKey: credentialCandidatesQueryKey,
+    enabled: accessGroupsEnabled && loadCredentialCandidates,
+    queryFn: async (): Promise<CredentialBindingCandidateSnapshot> => {
+      const [credentialsResult, providersResult] = await Promise.allSettled([
+        fetchCredentialSnapshot(session),
+        fetchProviderSnapshot(session),
+      ])
+      const credentialResources =
+        credentialsResult.status === 'fulfilled' ? credentialsResult.value.resources : []
+      const providerResources =
+        providersResult.status === 'fulfilled'
+          ? providersResult.value.groups.flatMap((group) => group.resources)
+          : []
+      const candidates = createCredentialBindingCandidates(credentialResources, providerResources)
+      const issue = [readSettledError(credentialsResult), readSettledError(providersResult)]
+        .filter(Boolean)
+        .join('\n')
+
+      if (candidates.length === 0 && issue) {
+        throw toCredentialApiError(new Error(issue))
+      }
+
+      return {
+        candidates,
+        issue: issue || null,
       }
     },
   })
@@ -309,6 +428,12 @@ export function useUserWorkbench(selectedUserId?: string | null) {
     users: usersQuery.data?.resources ?? [],
     accessKeys: accessKeysQuery.data?.resources ?? [],
     groups: groupsQuery.data ?? null,
+    credentialCandidates: credentialCandidatesQuery.data?.candidates ?? [],
+    credentialCandidatesPending: credentialCandidatesQuery.isPending,
+    credentialCandidatesIssueMessage: credentialCandidatesQuery.data?.issue ?? null,
+    credentialCandidatesErrorMessage: credentialCandidatesQuery.error
+      ? toError(credentialCandidatesQuery.error).message
+      : null,
     selectedUser: detailQuery.data ?? null,
     fetchedAt: usersQuery.data?.fetchedAt ?? null,
     isPending:
@@ -328,6 +453,9 @@ export function useUserWorkbench(selectedUserId?: string | null) {
       void usersQuery.refetch()
       void accessKeysQuery.refetch()
       if (accessGroupsEnabled) void groupsQuery.refetch()
+    },
+    refetchCredentialCandidates: () => {
+      void credentialCandidatesQuery.refetch()
     },
     createUser: createUserMutation.mutateAsync,
     updateUser: updateUserMutation.mutateAsync,

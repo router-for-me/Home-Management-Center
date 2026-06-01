@@ -1,8 +1,9 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
+import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
   CheckCircle2,
+  Circle,
   Eye,
   KeyRound,
   Layers3,
@@ -54,7 +55,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useUserWorkbench } from '@/features/users/use-user-workbench'
+import {
+  type CredentialBindingCandidate,
+  useUserWorkbench,
+} from '@/features/users/use-user-workbench'
 import type {
   AccessGroupDetailResource,
   AccessGroupKind,
@@ -647,16 +651,28 @@ function GroupForm({
 function GroupDetailForm({
   kind,
   groups,
+  details,
+  credentialCandidates,
+  credentialCandidatesPending,
+  credentialCandidatesIssueMessage,
+  credentialCandidatesErrorMessage,
   initialGroupId,
   mutating,
   onCancel,
+  onRetryCredentialCandidates,
   onSubmit,
 }: {
   kind: AccessGroupKind
   groups: AccessGroupResource[]
+  details: AccessGroupDetailResource[]
+  credentialCandidates: CredentialBindingCandidate[]
+  credentialCandidatesPending: boolean
+  credentialCandidatesIssueMessage: string | null
+  credentialCandidatesErrorMessage: string | null
   initialGroupId?: number
   mutating: boolean
   onCancel: () => void
+  onRetryCredentialCandidates: () => void
   onSubmit: (input: { groupId: number; targetId: string }) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -664,12 +680,44 @@ function GroupDetailForm({
     initialGroupId ?? groups[0]?.numericId ?? null,
   )
   const [targetId, setTargetId] = useState('')
+  const [credentialSearch, setCredentialSearch] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
+  const boundCredentialIds = useMemo(
+    () =>
+      new Set(
+        details
+          .filter((detail) => detail.groupId === groupId && !detail.deletedAt)
+          .map((detail) => detail.targetId),
+      ),
+    [details, groupId],
+  )
+  const filteredCredentialCandidates = useMemo(() => {
+    const normalizedSearch = credentialSearch.trim().toLowerCase()
+    if (!normalizedSearch) return credentialCandidates
+
+    return credentialCandidates.filter((candidate) =>
+      [
+        candidate.label,
+        candidate.authId,
+        candidate.provider,
+        candidate.type,
+        candidate.status ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch),
+    )
+  }, [credentialCandidates, credentialSearch])
+  const firstSelectableCredential = filteredCredentialCandidates.find(
+    (candidate) =>
+      !boundCredentialIds.has(candidate.authId) && !candidate.disabled && !candidate.unavailable,
+  )
 
   useEffect(() => {
     setLocalError(null)
     setGroupId(initialGroupId ?? groups[0]?.numericId ?? null)
     setTargetId('')
+    setCredentialSearch('')
   }, [groups, initialGroupId])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -689,12 +737,29 @@ function GroupDetailForm({
       return
     }
 
+    if (kind === 'channel' && boundCredentialIds.has(targetId.trim())) {
+      setLocalError(t('usersPage.form.validation.authAlreadyBound'))
+      return
+    }
+
     try {
       setLocalError(null)
       await onSubmit({ groupId, targetId: targetId.trim() })
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
+  }
+
+  const handleCredentialSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!firstSelectableCredential) return
+
+    setTargetId(firstSelectableCredential.authId)
+    setLocalError(null)
   }
 
   return (
@@ -718,17 +783,132 @@ function GroupDetailForm({
           </SelectContent>
         </Select>
       </label>
-      <label className="grid gap-2 text-sm font-medium">
-        <span>
-          {kind === 'channel' ? t('usersPage.groups.authId') : t('usersPage.groups.modelId')}
-        </span>
-        <Input
-          value={targetId}
-          disabled={mutating}
-          placeholder={kind === 'channel' ? 'auth-db-id' : 'gpt-5'}
-          onChange={(event) => setTargetId(event.target.value)}
-        />
-      </label>
+      {kind === 'channel' ? (
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">{t('usersPage.groups.credential')}</p>
+          <div className="relative">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              value={credentialSearch}
+              disabled={mutating || credentialCandidatesPending}
+              placeholder={t('usersPage.groups.credentialSearchPlaceholder')}
+              onChange={(event) => setCredentialSearch(event.target.value)}
+              onKeyDown={handleCredentialSearchKeyDown}
+            />
+          </div>
+          {credentialCandidatesPending ? (
+            <div className="grid gap-2 rounded-md border p-2">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+            </div>
+          ) : credentialCandidatesErrorMessage ? (
+            <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
+              <p className="text-destructive text-sm">{credentialCandidatesErrorMessage}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={onRetryCredentialCandidates}
+              >
+                <RefreshCw className="size-4" aria-hidden="true" />
+                {t('usersPage.actions.retry')}
+              </Button>
+            </div>
+          ) : filteredCredentialCandidates.length === 0 ? (
+            <div className="text-muted-foreground rounded-md border px-3 py-6 text-center text-sm">
+              {credentialSearch.trim()
+                ? t('usersPage.groups.credentialSearchEmpty')
+                : t('usersPage.groups.credentialEmpty')}
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {credentialCandidatesIssueMessage ? (
+                <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+                  {credentialCandidatesIssueMessage}
+                </div>
+              ) : null}
+              <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
+                {filteredCredentialCandidates.map((candidate) => {
+                  const alreadyBound = boundCredentialIds.has(candidate.authId)
+                  const unavailable = candidate.disabled || candidate.unavailable
+                  const disabled = mutating || alreadyBound || unavailable
+                  const selected = targetId === candidate.authId
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      disabled={disabled}
+                      className={cn(
+                        'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
+                        selected
+                          ? 'bg-primary/10 text-foreground ring-primary/35 ring-1'
+                          : 'hover:bg-accent/60',
+                        disabled && 'cursor-not-allowed opacity-55',
+                      )}
+                      onClick={() => {
+                        setTargetId(candidate.authId)
+                        setLocalError(null)
+                      }}
+                    >
+                      {selected ? (
+                        <CheckCircle2
+                          className="text-primary mt-0.5 size-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Circle
+                          className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{candidate.label}</span>
+                          <span className="bg-muted text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px]">
+                            {candidate.provider}
+                          </span>
+                          {alreadyBound ? (
+                            <span className="border-success/30 bg-success/10 text-success rounded-md border px-1.5 py-0.5 text-[11px]">
+                              {t('usersPage.groups.credentialAlreadyBound')}
+                            </span>
+                          ) : unavailable ? (
+                            <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-1.5 py-0.5 text-[11px]">
+                              {t('usersPage.groups.credentialUnavailable')}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
+                          {candidate.authId}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          <p className="text-muted-foreground text-xs leading-5">
+            {t('usersPage.groups.credentialSelectHint')}
+          </p>
+        </div>
+      ) : (
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('usersPage.groups.modelId')}</span>
+          <Input
+            value={targetId}
+            disabled={mutating}
+            placeholder="gpt-5"
+            onChange={(event) => setTargetId(event.target.value)}
+          />
+        </label>
+      )}
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
           {localError}
@@ -738,7 +918,15 @@ function GroupDetailForm({
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
-        <Button type="submit" disabled={mutating || groups.length === 0}>
+        <Button
+          type="submit"
+          disabled={
+            mutating ||
+            groups.length === 0 ||
+            (kind === 'channel' &&
+              (credentialCandidatesPending || Boolean(credentialCandidatesErrorMessage)))
+          }
+        >
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {t('usersPage.actions.addBinding')}
         </Button>
@@ -1175,9 +1363,11 @@ export function UsersWorkbenchPage() {
   const [search, setSearch] = useState('')
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const loadCredentialCandidates =
+    sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel'
   const selectedUserId =
     sheetMode?.type === 'user-detail' || sheetMode?.type === 'user-edit' ? sheetMode.user.id : null
-  const workbench = useUserWorkbench(selectedUserId)
+  const workbench = useUserWorkbench(selectedUserId, loadCredentialCandidates)
 
   const users = workbench.users
   const accessKeys = workbench.accessKeys
@@ -1567,9 +1757,15 @@ export function UsersWorkbenchPage() {
             <GroupDetailForm
               kind={sheetMode.kind}
               groups={sheetMode.kind === 'channel' ? channelGroups : modelGroups}
+              details={sheetMode.kind === 'channel' ? channelGroupDetails : modelGroupDetails}
+              credentialCandidates={workbench.credentialCandidates}
+              credentialCandidatesPending={workbench.credentialCandidatesPending}
+              credentialCandidatesIssueMessage={workbench.credentialCandidatesIssueMessage}
+              credentialCandidatesErrorMessage={workbench.credentialCandidatesErrorMessage}
               initialGroupId={sheetMode.groupId}
               mutating={workbench.mutating}
               onCancel={closeSheet}
+              onRetryCredentialCandidates={workbench.refetchCredentialCandidates}
               onSubmit={async (input) => {
                 await workbench.createGroupDetail({ kind: sheetMode.kind, input })
                 toast.success(t('usersPage.toast.bindingCreated'))
