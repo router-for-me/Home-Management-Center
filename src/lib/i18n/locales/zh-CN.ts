@@ -126,6 +126,78 @@ export const zhCN = {
         managementKeyRequired: '必须填写 management key。',
       },
     },
+    accessPortal: {
+      shellSubtitle: '访问入口',
+      eyebrow: '访问分流',
+      title: '选择进入方式',
+      description:
+        '管理员使用 management key 进入控制台；普通用户未来使用用户名和密码进入自己的工作台。',
+      admin: {
+        title: '管理员控制台',
+        description: '管理全局配置、模型服务、账号凭证、客户端密钥、用户和访问范围。',
+        available: 'Management key',
+        connected: '已连接',
+        action: '进入管理员连接',
+        resume: '进入控制台',
+      },
+      user: {
+        title: '普通用户工作台',
+        description: '查看自己的密钥、用量和可用模型。当前运行时尚未开放用户认证接口。',
+        available: '用户名密码',
+        unavailable: '接口未开放',
+        login: '用户登录',
+        register: '开户注册',
+        previewWorkspace: '查看工作台状态',
+      },
+    },
+    adminAccess: {
+      back: '返回入口选择',
+      title: '管理员连接',
+      description:
+        '使用 Management API 地址和 management key 建立管理员会话。该入口用于全局管理能力，不是普通用户登录。',
+    },
+    userAccess: {
+      back: '返回入口选择',
+      fields: {
+        username: '用户名',
+        usernamePlaceholder: '输入用户名',
+        password: '密码',
+        passwordPlaceholder: '输入密码',
+        confirmPassword: '确认密码',
+        confirmPasswordPlaceholder: '再次输入密码',
+      },
+      login: {
+        title: '普通用户登录',
+        description: '未来普通用户会在这里进入自己的受限工作台。',
+        action: '登录',
+        switchPrompt: '还没有账号？',
+        switchAction: '去注册',
+      },
+      register: {
+        title: '普通用户注册',
+        description: '未来这里用于开户注册；付费、邮件验证和找回密码不在 Home 首版范围内。',
+        action: '注册',
+        switchPrompt: '已有账号？',
+        switchAction: '去登录',
+      },
+      unavailable: {
+        title: '当前运行时未开放普通用户认证',
+        description:
+          '后端目前只提供管理员侧 /users 资源管理接口，尚未提供用户注册、登录、会话和个人资源接口。',
+      },
+    },
+    userWorkspace: {
+      back: '返回入口选择',
+      title: '普通用户工作台',
+      description: '该工作台用于展示当前用户自己的客户端密钥、用量和可用模型范围。',
+      login: '前往登录',
+      chooseAccess: '选择其他入口',
+      unavailable: {
+        title: '缺少用户会话接口',
+        description:
+          '当前后端尚未提供 /auth/login、/auth/me、/me/api-keys、/me/usage 和 /me/models 等普通用户接口，因此工作台暂不可用。',
+      },
+    },
     dashboard: {
       disconnected: {
         title: '连接管理端运行时',

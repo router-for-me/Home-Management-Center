@@ -129,6 +129,83 @@ export const ru = {
         managementKeyRequired: 'Management key обязателен.',
       },
     },
+    accessPortal: {
+      shellSubtitle: 'Точка входа',
+      eyebrow: 'Разделение доступа',
+      title: 'Выберите способ входа',
+      description:
+        'Администраторы используют management key для консоли управления. Обычные пользователи будут входить по username и password в свой workspace.',
+      admin: {
+        title: 'Консоль администратора',
+        description:
+          'Управление глобальной конфигурацией, модельными сервисами, учетными данными, клиентскими ключами, пользователями и областями доступа.',
+        available: 'Management key',
+        connected: 'Подключено',
+        action: 'Открыть admin подключение',
+        resume: 'Открыть консоль',
+      },
+      user: {
+        title: 'Workspace пользователя',
+        description:
+          'Просмотр личных ключей, использования и доступных моделей. Этот runtime пока не предоставляет user authentication API.',
+        available: 'Username password',
+        unavailable: 'API недоступен',
+        login: 'Вход пользователя',
+        register: 'Создать аккаунт',
+        previewWorkspace: 'Проверить статус workspace',
+      },
+    },
+    adminAccess: {
+      back: 'Назад к выбору входа',
+      title: 'Подключение администратора',
+      description:
+        'Подключитесь через Management API endpoint и management key. Этот вход предназначен для глобального администрирования, а не для обычного пользователя.',
+    },
+    userAccess: {
+      back: 'Назад к выбору входа',
+      fields: {
+        username: 'Username',
+        usernamePlaceholder: 'Введите username',
+        password: 'Password',
+        passwordPlaceholder: 'Введите password',
+        confirmPassword: 'Подтвердите password',
+        confirmPasswordPlaceholder: 'Введите password еще раз',
+      },
+      login: {
+        title: 'Вход пользователя',
+        description:
+          'В будущем обычные пользователи будут входить здесь в свой ограниченный workspace.',
+        action: 'Войти',
+        switchPrompt: 'Нет аккаунта?',
+        switchAction: 'Создать',
+      },
+      register: {
+        title: 'Регистрация пользователя',
+        description:
+          'Здесь появится легкий flow создания аккаунта. Платежи, email verification и восстановление password не входят в первый scope Home.',
+        action: 'Зарегистрироваться',
+        switchPrompt: 'Уже есть аккаунт?',
+        switchAction: 'Войти',
+      },
+      unavailable: {
+        title: 'Этот runtime не предоставляет authentication для обычных пользователей',
+        description:
+          'Backend сейчас предоставляет только администраторское управление /users. User registration, login, session и personal resource routes пока отсутствуют.',
+      },
+    },
+    userWorkspace: {
+      back: 'Назад к выбору входа',
+      title: 'Workspace пользователя',
+      description:
+        'Этот workspace зарезервирован для клиентских ключей, использования и доступных model scopes текущего пользователя.',
+      login: 'Перейти ко входу',
+      chooseAccess: 'Выбрать другой вход',
+      unavailable: {
+        title: 'Отсутствуют user session routes',
+        description:
+          'Backend пока не предоставляет /auth/login, /auth/me, /me/api-keys, /me/usage или /me/models, поэтому workspace недоступен.',
+      },
+    },
     dashboard: {
       disconnected: {
         title: 'Подключите management runtime',

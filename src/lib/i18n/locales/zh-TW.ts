@@ -126,6 +126,78 @@ export const zhTW = {
         managementKeyRequired: '必須填寫 management key。',
       },
     },
+    accessPortal: {
+      shellSubtitle: '存取入口',
+      eyebrow: '存取分流',
+      title: '選擇進入方式',
+      description:
+        '管理員使用 management key 進入控制台；普通使用者未來使用使用者名稱和密碼進入自己的工作台。',
+      admin: {
+        title: '管理員控制台',
+        description: '管理全域設定、模型服務、帳號憑證、用戶端金鑰、使用者和存取範圍。',
+        available: 'Management key',
+        connected: '已連線',
+        action: '進入管理員連線',
+        resume: '進入控制台',
+      },
+      user: {
+        title: '普通使用者工作台',
+        description: '查看自己的金鑰、用量和可用模型。目前執行環境尚未開放使用者認證介面。',
+        available: '使用者名稱密碼',
+        unavailable: '介面未開放',
+        login: '使用者登入',
+        register: '開戶註冊',
+        previewWorkspace: '查看工作台狀態',
+      },
+    },
+    adminAccess: {
+      back: '返回入口選擇',
+      title: '管理員連線',
+      description:
+        '使用 Management API 位址和 management key 建立管理員工作階段。此入口用於全域管理能力，不是普通使用者登入。',
+    },
+    userAccess: {
+      back: '返回入口選擇',
+      fields: {
+        username: '使用者名稱',
+        usernamePlaceholder: '輸入使用者名稱',
+        password: '密碼',
+        passwordPlaceholder: '輸入密碼',
+        confirmPassword: '確認密碼',
+        confirmPasswordPlaceholder: '再次輸入密碼',
+      },
+      login: {
+        title: '普通使用者登入',
+        description: '未來普通使用者會在這裡進入自己的受限工作台。',
+        action: '登入',
+        switchPrompt: '還沒有帳號？',
+        switchAction: '去註冊',
+      },
+      register: {
+        title: '普通使用者註冊',
+        description: '未來這裡用於開戶註冊；付費、郵件驗證和找回密碼不在 Home 首版範圍內。',
+        action: '註冊',
+        switchPrompt: '已有帳號？',
+        switchAction: '去登入',
+      },
+      unavailable: {
+        title: '目前執行環境未開放普通使用者認證',
+        description:
+          '後端目前只提供管理員側 /users 資源管理介面，尚未提供使用者註冊、登入、工作階段和個人資源介面。',
+      },
+    },
+    userWorkspace: {
+      back: '返回入口選擇',
+      title: '普通使用者工作台',
+      description: '此工作台用於展示目前使用者自己的用戶端金鑰、用量和可用模型範圍。',
+      login: '前往登入',
+      chooseAccess: '選擇其他入口',
+      unavailable: {
+        title: '缺少使用者工作階段介面',
+        description:
+          '目前後端尚未提供 /auth/login、/auth/me、/me/api-keys、/me/usage 和 /me/models 等普通使用者介面，因此工作台暫不可用。',
+      },
+    },
     dashboard: {
       disconnected: {
         title: '連線管理端執行環境',

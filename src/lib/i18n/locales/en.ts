@@ -129,6 +129,82 @@ export const en = {
         managementKeyRequired: 'Management key is required.',
       },
     },
+    accessPortal: {
+      shellSubtitle: 'Access entry',
+      eyebrow: 'Access split',
+      title: 'Choose an entry point',
+      description:
+        'Administrators use a management key for the control plane. Regular users will use username and password for their own workspace.',
+      admin: {
+        title: 'Administrator console',
+        description:
+          'Manage global config, model services, account credentials, client keys, users, and access scopes.',
+        available: 'Management key',
+        connected: 'Connected',
+        action: 'Open admin connection',
+        resume: 'Open console',
+      },
+      user: {
+        title: 'User workspace',
+        description:
+          'Review personal keys, usage, and available models. This runtime does not expose user authentication yet.',
+        available: 'Username password',
+        unavailable: 'API unavailable',
+        login: 'User login',
+        register: 'Create account',
+        previewWorkspace: 'Review workspace status',
+      },
+    },
+    adminAccess: {
+      back: 'Back to entry',
+      title: 'Administrator connection',
+      description:
+        'Connect with the Management API endpoint and management key. This entry is for global administration, not regular user login.',
+    },
+    userAccess: {
+      back: 'Back to entry',
+      fields: {
+        username: 'Username',
+        usernamePlaceholder: 'Enter username',
+        password: 'Password',
+        passwordPlaceholder: 'Enter password',
+        confirmPassword: 'Confirm password',
+        confirmPasswordPlaceholder: 'Enter password again',
+      },
+      login: {
+        title: 'User login',
+        description: 'Regular users will enter their restricted workspace here.',
+        action: 'Log in',
+        switchPrompt: 'No account yet?',
+        switchAction: 'Create one',
+      },
+      register: {
+        title: 'User registration',
+        description:
+          'This will become the lightweight account creation flow. Payments, email verification, and password recovery are outside the first Home scope.',
+        action: 'Register',
+        switchPrompt: 'Already have an account?',
+        switchAction: 'Log in',
+      },
+      unavailable: {
+        title: 'Regular user authentication is not exposed by this runtime',
+        description:
+          'The backend currently exposes administrator-owned /users management only. It does not yet expose user registration, login, session, or personal resource routes.',
+      },
+    },
+    userWorkspace: {
+      back: 'Back to entry',
+      title: 'User workspace',
+      description:
+        'This workspace is reserved for the current user’s client keys, usage, and available model scopes.',
+      login: 'Go to login',
+      chooseAccess: 'Choose another entry',
+      unavailable: {
+        title: 'User session routes are missing',
+        description:
+          'The backend has not exposed /auth/login, /auth/me, /me/api-keys, /me/usage, or /me/models yet, so the workspace is unavailable.',
+      },
+    },
     dashboard: {
       disconnected: {
         title: 'Connect a management runtime',

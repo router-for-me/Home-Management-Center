@@ -9,16 +9,25 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as UsageLogsRouteImport } from './routes/usage-logs'
 import { Route as SystemNodesRouteImport } from './routes/system-nodes'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ProvidersRouteImport } from './routes/providers'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CredentialsRouteImport } from './routes/credentials'
 import { Route as ConfigRouteImport } from './routes/config'
 import { Route as AccessKeysRouteImport } from './routes/access-keys'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminConnectRouteImport } from './routes/admin.connect'
 
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -34,9 +43,19 @@ const SystemNodesRoute = SystemNodesRouteImport.update({
   path: '/system-nodes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProvidersRoute = ProvidersRouteImport.update({
   id: '/providers',
   path: '/providers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -64,6 +83,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminConnectRoute = AdminConnectRouteImport.update({
+  id: '/admin/connect',
+  path: '/admin/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -71,10 +95,14 @@ export interface FileRoutesByFullPath {
   '/config': typeof ConfigRoute
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
   '/users': typeof UsersRoute
+  '/workspace': typeof WorkspaceRoute
+  '/admin/connect': typeof AdminConnectRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -82,10 +110,14 @@ export interface FileRoutesByTo {
   '/config': typeof ConfigRoute
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
   '/users': typeof UsersRoute
+  '/workspace': typeof WorkspaceRoute
+  '/admin/connect': typeof AdminConnectRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,10 +126,14 @@ export interface FileRoutesById {
   '/config': typeof ConfigRoute
   '/credentials': typeof CredentialsRoute
   '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
   '/providers': typeof ProvidersRoute
+  '/register': typeof RegisterRoute
   '/system-nodes': typeof SystemNodesRoute
   '/usage-logs': typeof UsageLogsRoute
   '/users': typeof UsersRoute
+  '/workspace': typeof WorkspaceRoute
+  '/admin/connect': typeof AdminConnectRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,10 +143,14 @@ export interface FileRouteTypes {
     | '/config'
     | '/credentials'
     | '/dashboard'
+    | '/login'
     | '/providers'
+    | '/register'
     | '/system-nodes'
     | '/usage-logs'
     | '/users'
+    | '/workspace'
+    | '/admin/connect'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,10 +158,14 @@ export interface FileRouteTypes {
     | '/config'
     | '/credentials'
     | '/dashboard'
+    | '/login'
     | '/providers'
+    | '/register'
     | '/system-nodes'
     | '/usage-logs'
     | '/users'
+    | '/workspace'
+    | '/admin/connect'
   id:
     | '__root__'
     | '/'
@@ -129,10 +173,14 @@ export interface FileRouteTypes {
     | '/config'
     | '/credentials'
     | '/dashboard'
+    | '/login'
     | '/providers'
+    | '/register'
     | '/system-nodes'
     | '/usage-logs'
     | '/users'
+    | '/workspace'
+    | '/admin/connect'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -141,14 +189,25 @@ export interface RootRouteChildren {
   ConfigRoute: typeof ConfigRoute
   CredentialsRoute: typeof CredentialsRoute
   DashboardRoute: typeof DashboardRoute
+  LoginRoute: typeof LoginRoute
   ProvidersRoute: typeof ProvidersRoute
+  RegisterRoute: typeof RegisterRoute
   SystemNodesRoute: typeof SystemNodesRoute
   UsageLogsRoute: typeof UsageLogsRoute
   UsersRoute: typeof UsersRoute
+  WorkspaceRoute: typeof WorkspaceRoute
+  AdminConnectRoute: typeof AdminConnectRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/users': {
       id: '/users'
       path: '/users'
@@ -170,11 +229,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SystemNodesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/providers': {
       id: '/providers'
       path: '/providers'
       fullPath: '/providers'
       preLoaderRoute: typeof ProvidersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -212,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/connect': {
+      id: '/admin/connect'
+      path: '/admin/connect'
+      fullPath: '/admin/connect'
+      preLoaderRoute: typeof AdminConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -221,10 +301,14 @@ const rootRouteChildren: RootRouteChildren = {
   ConfigRoute: ConfigRoute,
   CredentialsRoute: CredentialsRoute,
   DashboardRoute: DashboardRoute,
+  LoginRoute: LoginRoute,
   ProvidersRoute: ProvidersRoute,
+  RegisterRoute: RegisterRoute,
   SystemNodesRoute: SystemNodesRoute,
   UsageLogsRoute: UsageLogsRoute,
   UsersRoute: UsersRoute,
+  WorkspaceRoute: WorkspaceRoute,
+  AdminConnectRoute: AdminConnectRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
