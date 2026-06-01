@@ -979,7 +979,8 @@ export const en = {
           groupRequired: 'Select a scope.',
           authRequired: 'Select a credential.',
           authAlreadyBound: 'This credential is already bound to the current scope.',
-          modelRequired: 'Model ID is required.',
+          modelRequired: 'Select a model.',
+          modelAlreadyBound: 'This model is already bound to the current scope.',
         },
       },
       keys: {
@@ -1016,7 +1017,16 @@ export const en = {
         credentialSelectHint:
           'Only credentials with an explicit Auth ID are listed. Bound or unavailable credentials cannot be selected again.',
         authId: 'Credential ID',
+        model: 'Model',
         modelId: 'Model ID',
+        modelSearchPlaceholder: 'Search model name, provider, channel, or ID',
+        modelCandidateEmpty: 'No models are available for selection.',
+        modelSearchEmpty: 'No models match your search.',
+        modelAlreadyBound: 'Bound',
+        modelScopeAvailable: 'Available',
+        modelScopeStatic: 'Static catalog',
+        modelSelectHint:
+          'Runtime-available models are shown first, with the static model catalog as fallback. Bound models cannot be selected again.',
         channelEmpty: 'No credential scopes yet.',
         modelEmpty: 'No model scopes yet.',
         detailCount: '{{count}} bindings',
@@ -1094,7 +1104,7 @@ export const en = {
         channelBindingDescription:
           'Search for and select an account credential to add to this scope. Client keys bound to this scope can use those credentials.',
         modelBindingDescription:
-          'Enter a model ID manually to add it to this model scope. Client keys bound to this scope can use those models.',
+          'Search for and select a model to add to this scope. Client keys bound to this scope can use those models.',
       },
       delete: {
         title: 'Confirm deletion',

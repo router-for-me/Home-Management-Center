@@ -955,7 +955,8 @@ export const zhTW = {
           groupRequired: '必須選擇一個範圍。',
           authRequired: '必須選擇一個憑證。',
           authAlreadyBound: '該憑證已綁定到目前範圍。',
-          modelRequired: '必須填寫模型 ID。',
+          modelRequired: '必須選擇一個模型。',
+          modelAlreadyBound: '該模型已綁定到目前範圍。',
         },
       },
       keys: {
@@ -991,7 +992,16 @@ export const zhTW = {
         credentialSelectHint:
           '清單僅顯示具有明確 Auth ID 的憑證；已綁定或不可用的憑證不可重複選擇。',
         authId: '憑證 ID',
+        model: '模型',
         modelId: '模型 ID',
+        modelSearchPlaceholder: '搜尋模型名稱、Provider、頻道或 ID',
+        modelCandidateEmpty: '目前沒有可選擇的模型。',
+        modelSearchEmpty: '沒有符合條件的模型。',
+        modelAlreadyBound: '已綁定',
+        modelScopeAvailable: '執行中可用',
+        modelScopeStatic: '靜態目錄',
+        modelSelectHint:
+          '優先顯示目前執行中可用模型，並用靜態模型目錄補充；已綁定模型不可重複選擇。',
         channelEmpty: '目前沒有憑證範圍。',
         modelEmpty: '目前沒有模型範圍。',
         detailCount: '{{count}} 個綁定',
@@ -1063,7 +1073,7 @@ export const zhTW = {
         channelBindingDescription:
           '搜尋並選擇一個帳號憑證加入該範圍。綁定到此範圍的用戶端金鑰才會使用這些憑證。',
         modelBindingDescription:
-          '手動輸入模型 ID 加入該模型範圍。綁定到此範圍的用戶端金鑰才會使用這些模型。',
+          '搜尋並選擇一個模型加入該範圍。綁定到此範圍的用戶端金鑰才會使用這些模型。',
       },
       delete: {
         title: '確認刪除？',

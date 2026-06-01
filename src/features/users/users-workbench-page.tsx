@@ -57,6 +57,7 @@ import {
 } from '@/components/ui/table'
 import {
   type CredentialBindingCandidate,
+  type ModelBindingCandidate,
   useUserWorkbench,
 } from '@/features/users/use-user-workbench'
 import type {
@@ -656,10 +657,15 @@ function GroupDetailForm({
   credentialCandidatesPending,
   credentialCandidatesIssueMessage,
   credentialCandidatesErrorMessage,
+  modelCandidates,
+  modelCandidatesPending,
+  modelCandidatesIssueMessage,
+  modelCandidatesErrorMessage,
   initialGroupId,
   mutating,
   onCancel,
   onRetryCredentialCandidates,
+  onRetryModelCandidates,
   onSubmit,
 }: {
   kind: AccessGroupKind
@@ -669,10 +675,15 @@ function GroupDetailForm({
   credentialCandidatesPending: boolean
   credentialCandidatesIssueMessage: string | null
   credentialCandidatesErrorMessage: string | null
+  modelCandidates: ModelBindingCandidate[]
+  modelCandidatesPending: boolean
+  modelCandidatesIssueMessage: string | null
+  modelCandidatesErrorMessage: string | null
   initialGroupId?: number
   mutating: boolean
   onCancel: () => void
   onRetryCredentialCandidates: () => void
+  onRetryModelCandidates: () => void
   onSubmit: (input: { groupId: number; targetId: string }) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -681,8 +692,9 @@ function GroupDetailForm({
   )
   const [targetId, setTargetId] = useState('')
   const [credentialSearch, setCredentialSearch] = useState('')
+  const [modelSearch, setModelSearch] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
-  const boundCredentialIds = useMemo(
+  const boundTargetIds = useMemo(
     () =>
       new Set(
         details
@@ -710,7 +722,28 @@ function GroupDetailForm({
   }, [credentialCandidates, credentialSearch])
   const firstSelectableCredential = filteredCredentialCandidates.find(
     (candidate) =>
-      !boundCredentialIds.has(candidate.authId) && !candidate.disabled && !candidate.unavailable,
+      !boundTargetIds.has(candidate.authId) && !candidate.disabled && !candidate.unavailable,
+  )
+  const filteredModelCandidates = useMemo(() => {
+    const normalizedSearch = modelSearch.trim().toLowerCase()
+    if (!normalizedSearch) return modelCandidates
+
+    return modelCandidates.filter((candidate) =>
+      [
+        candidate.label,
+        candidate.modelId,
+        candidate.ownedBy ?? '',
+        candidate.type ?? '',
+        candidate.channel ?? '',
+        candidate.scope,
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch),
+    )
+  }, [modelCandidates, modelSearch])
+  const firstSelectableModel = filteredModelCandidates.find(
+    (candidate) => !boundTargetIds.has(candidate.modelId),
   )
 
   useEffect(() => {
@@ -718,6 +751,7 @@ function GroupDetailForm({
     setGroupId(initialGroupId ?? groups[0]?.numericId ?? null)
     setTargetId('')
     setCredentialSearch('')
+    setModelSearch('')
   }, [groups, initialGroupId])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -737,8 +771,13 @@ function GroupDetailForm({
       return
     }
 
-    if (kind === 'channel' && boundCredentialIds.has(targetId.trim())) {
+    if (kind === 'channel' && boundTargetIds.has(targetId.trim())) {
       setLocalError(t('usersPage.form.validation.authAlreadyBound'))
+      return
+    }
+
+    if (kind === 'model' && boundTargetIds.has(targetId.trim())) {
+      setLocalError(t('usersPage.form.validation.modelAlreadyBound'))
       return
     }
 
@@ -759,6 +798,18 @@ function GroupDetailForm({
     if (!firstSelectableCredential) return
 
     setTargetId(firstSelectableCredential.authId)
+    setLocalError(null)
+  }
+
+  const handleModelSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!firstSelectableModel) return
+
+    setTargetId(firstSelectableModel.modelId)
     setLocalError(null)
   }
 
@@ -835,7 +886,7 @@ function GroupDetailForm({
               ) : null}
               <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
                 {filteredCredentialCandidates.map((candidate) => {
-                  const alreadyBound = boundCredentialIds.has(candidate.authId)
+                  const alreadyBound = boundTargetIds.has(candidate.authId)
                   const unavailable = candidate.disabled || candidate.unavailable
                   const disabled = mutating || alreadyBound || unavailable
                   const selected = targetId === candidate.authId
@@ -899,15 +950,129 @@ function GroupDetailForm({
           </p>
         </div>
       ) : (
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('usersPage.groups.modelId')}</span>
-          <Input
-            value={targetId}
-            disabled={mutating}
-            placeholder="gpt-5"
-            onChange={(event) => setTargetId(event.target.value)}
-          />
-        </label>
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">{t('usersPage.groups.model')}</p>
+          <div className="relative">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              value={modelSearch}
+              disabled={mutating || modelCandidatesPending}
+              placeholder={t('usersPage.groups.modelSearchPlaceholder')}
+              onChange={(event) => setModelSearch(event.target.value)}
+              onKeyDown={handleModelSearchKeyDown}
+            />
+          </div>
+          {modelCandidatesPending ? (
+            <div className="grid gap-2 rounded-md border p-2">
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+              <Skeleton className="h-14" />
+            </div>
+          ) : modelCandidatesErrorMessage ? (
+            <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
+              <p className="text-destructive text-sm">{modelCandidatesErrorMessage}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={onRetryModelCandidates}
+              >
+                <RefreshCw className="size-4" aria-hidden="true" />
+                {t('usersPage.actions.retry')}
+              </Button>
+            </div>
+          ) : filteredModelCandidates.length === 0 ? (
+            <div className="text-muted-foreground rounded-md border px-3 py-6 text-center text-sm">
+              {modelSearch.trim()
+                ? t('usersPage.groups.modelSearchEmpty')
+                : t('usersPage.groups.modelCandidateEmpty')}
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {modelCandidatesIssueMessage ? (
+                <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+                  {modelCandidatesIssueMessage}
+                </div>
+              ) : null}
+              <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
+                {filteredModelCandidates.map((candidate) => {
+                  const alreadyBound = boundTargetIds.has(candidate.modelId)
+                  const disabled = mutating || alreadyBound
+                  const selected = targetId === candidate.modelId
+
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      disabled={disabled}
+                      className={cn(
+                        'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
+                        selected
+                          ? 'bg-primary/10 text-foreground ring-primary/35 ring-1'
+                          : 'hover:bg-accent/60',
+                        disabled && 'cursor-not-allowed opacity-55',
+                      )}
+                      onClick={() => {
+                        setTargetId(candidate.modelId)
+                        setLocalError(null)
+                      }}
+                    >
+                      {selected ? (
+                        <CheckCircle2
+                          className="text-primary mt-0.5 size-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Circle
+                          className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-sm font-medium">{candidate.label}</span>
+                          <span
+                            className={cn(
+                              'rounded-md border px-1.5 py-0.5 text-[11px]',
+                              candidate.scope === 'available'
+                                ? 'border-success/30 bg-success/10 text-success'
+                                : 'bg-muted text-muted-foreground',
+                            )}
+                          >
+                            {candidate.scope === 'available'
+                              ? t('usersPage.groups.modelScopeAvailable')
+                              : t('usersPage.groups.modelScopeStatic')}
+                          </span>
+                          {candidate.channel ? (
+                            <span className="bg-muted text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px]">
+                              {candidate.channel}
+                            </span>
+                          ) : null}
+                          {alreadyBound ? (
+                            <span className="border-success/30 bg-success/10 text-success rounded-md border px-1.5 py-0.5 text-[11px]">
+                              {t('usersPage.groups.modelAlreadyBound')}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
+                          {candidate.modelId}
+                        </span>
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+          <p className="text-muted-foreground text-xs leading-5">
+            {t('usersPage.groups.modelSelectHint')}
+          </p>
+        </div>
       )}
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
@@ -924,7 +1089,8 @@ function GroupDetailForm({
             mutating ||
             groups.length === 0 ||
             (kind === 'channel' &&
-              (credentialCandidatesPending || Boolean(credentialCandidatesErrorMessage)))
+              (credentialCandidatesPending || Boolean(credentialCandidatesErrorMessage))) ||
+            (kind === 'model' && (modelCandidatesPending || Boolean(modelCandidatesErrorMessage)))
           }
         >
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
@@ -1365,9 +1531,10 @@ export function UsersWorkbenchPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const loadCredentialCandidates =
     sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel'
+  const loadModelCandidates = sheetMode?.type === 'detail-create' && sheetMode.kind === 'model'
   const selectedUserId =
     sheetMode?.type === 'user-detail' || sheetMode?.type === 'user-edit' ? sheetMode.user.id : null
-  const workbench = useUserWorkbench(selectedUserId, loadCredentialCandidates)
+  const workbench = useUserWorkbench(selectedUserId, loadCredentialCandidates, loadModelCandidates)
 
   const users = workbench.users
   const accessKeys = workbench.accessKeys
@@ -1762,10 +1929,15 @@ export function UsersWorkbenchPage() {
               credentialCandidatesPending={workbench.credentialCandidatesPending}
               credentialCandidatesIssueMessage={workbench.credentialCandidatesIssueMessage}
               credentialCandidatesErrorMessage={workbench.credentialCandidatesErrorMessage}
+              modelCandidates={workbench.modelCandidates}
+              modelCandidatesPending={workbench.modelCandidatesPending}
+              modelCandidatesIssueMessage={workbench.modelCandidatesIssueMessage}
+              modelCandidatesErrorMessage={workbench.modelCandidatesErrorMessage}
               initialGroupId={sheetMode.groupId}
               mutating={workbench.mutating}
               onCancel={closeSheet}
               onRetryCredentialCandidates={workbench.refetchCredentialCandidates}
+              onRetryModelCandidates={workbench.refetchModelCandidates}
               onSubmit={async (input) => {
                 await workbench.createGroupDetail({ kind: sheetMode.kind, input })
                 toast.success(t('usersPage.toast.bindingCreated'))

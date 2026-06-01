@@ -956,7 +956,8 @@ export const zhCN = {
           groupRequired: '必须选择一个范围。',
           authRequired: '必须选择一个凭证。',
           authAlreadyBound: '该凭证已经绑定到当前范围。',
-          modelRequired: '必须填写模型 ID。',
+          modelRequired: '必须选择一个模型。',
+          modelAlreadyBound: '该模型已经绑定到当前范围。',
         },
       },
       keys: {
@@ -992,7 +993,16 @@ export const zhCN = {
         credentialSelectHint:
           '列表仅展示具有明确 Auth ID 的凭证；已绑定或不可用的凭证不可重复选择。',
         authId: '凭证 ID',
+        model: '模型',
         modelId: '模型 ID',
+        modelSearchPlaceholder: '搜索模型名称、Provider、频道或 ID',
+        modelCandidateEmpty: '当前没有可选择的模型。',
+        modelSearchEmpty: '没有匹配的模型。',
+        modelAlreadyBound: '已绑定',
+        modelScopeAvailable: '运行时可用',
+        modelScopeStatic: '静态目录',
+        modelSelectHint:
+          '优先展示当前运行时可用模型，并用静态模型目录补充；已绑定模型不可重复选择。',
         channelEmpty: '当前没有凭证范围。',
         modelEmpty: '当前没有模型范围。',
         detailCount: '{{count}} 个绑定',
@@ -1064,7 +1074,7 @@ export const zhCN = {
         channelBindingDescription:
           '搜索并选择一个账号凭证加入该范围。绑定到此范围的客户端密钥才会使用这些凭证。',
         modelBindingDescription:
-          '手动输入模型 ID 加入该模型范围。绑定到此范围的客户端密钥才会使用这些模型。',
+          '搜索并选择一个模型加入该范围。绑定到此范围的客户端密钥才会使用这些模型。',
       },
       delete: {
         title: '确认删除？',

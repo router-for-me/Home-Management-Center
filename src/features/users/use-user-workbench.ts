@@ -30,6 +30,11 @@ import {
   toCredentialApiError,
 } from '@/lib/api/management/credentials'
 import {
+  type ModelResource,
+  fetchModelsSnapshot,
+  toModelsApiError,
+} from '@/lib/api/management/models'
+import {
   type ProviderResource,
   fetchProviderSnapshot,
   getProviderBindingAuthId,
@@ -61,6 +66,21 @@ export type CredentialBindingCandidate = {
 
 type CredentialBindingCandidateSnapshot = {
   candidates: CredentialBindingCandidate[]
+  issue: string | null
+}
+
+export type ModelBindingCandidate = {
+  id: string
+  modelId: string
+  label: string
+  ownedBy: string | null
+  type: string | null
+  channel: string | null
+  scope: 'available' | 'static'
+}
+
+type ModelBindingCandidateSnapshot = {
+  candidates: ModelBindingCandidate[]
   issue: string | null
 }
 
@@ -143,11 +163,37 @@ function createCredentialBindingCandidates(
   })
 }
 
+function normalizeModelCandidate(resource: ModelResource): ModelBindingCandidate {
+  return {
+    id: `${resource.scope}:${resource.channel ?? 'runtime'}:${resource.id}`,
+    modelId: resource.id,
+    label: resource.displayName,
+    ownedBy: resource.ownedBy,
+    type: resource.type,
+    channel: resource.channel,
+    scope: resource.scope,
+  }
+}
+
+function createModelBindingCandidates(available: ModelResource[], staticModels: ModelResource[]) {
+  const seenModelIds = new Set<string>()
+
+  return [...available, ...staticModels].flatMap((resource) => {
+    if (seenModelIds.has(resource.id)) return []
+    seenModelIds.add(resource.id)
+    return [normalizeModelCandidate(resource)]
+  })
+}
+
 function readSettledError(result: PromiseSettledResult<unknown>) {
   return result.status === 'rejected' ? toError(result.reason).message : null
 }
 
-export function useUserWorkbench(selectedUserId?: string | null, loadCredentialCandidates = false) {
+export function useUserWorkbench(
+  selectedUserId?: string | null,
+  loadCredentialCandidates = false,
+  loadModelCandidates = false,
+) {
   const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
@@ -165,6 +211,11 @@ export function useUserWorkbench(selectedUserId?: string | null, loadCredentialC
   ]
   const credentialCandidatesQueryKey = [
     'management-credential-binding-candidates',
+    session.baseUrl,
+    connectedAt,
+  ]
+  const modelCandidatesQueryKey = [
+    'management-model-binding-candidates',
     session.baseUrl,
     connectedAt,
   ]
@@ -227,6 +278,34 @@ export function useUserWorkbench(selectedUserId?: string | null, loadCredentialC
 
       if (candidates.length === 0 && issue) {
         throw toCredentialApiError(new Error(issue))
+      }
+
+      return {
+        candidates,
+        issue: issue || null,
+      }
+    },
+  })
+
+  const modelCandidatesQuery = useQuery({
+    queryKey: modelCandidatesQueryKey,
+    enabled: accessGroupsEnabled && loadModelCandidates,
+    queryFn: async (): Promise<ModelBindingCandidateSnapshot> => {
+      const [availableResult, staticResult] = await Promise.allSettled([
+        fetchModelsSnapshot(session, { scope: 'available' }),
+        fetchModelsSnapshot(session, { scope: 'static' }),
+      ])
+      const availableResources =
+        availableResult.status === 'fulfilled' ? availableResult.value.resources : []
+      const staticResources =
+        staticResult.status === 'fulfilled' ? staticResult.value.resources : []
+      const candidates = createModelBindingCandidates(availableResources, staticResources)
+      const issue = [readSettledError(availableResult), readSettledError(staticResult)]
+        .filter(Boolean)
+        .join('\n')
+
+      if (candidates.length === 0 && issue) {
+        throw toModelsApiError(new Error(issue))
       }
 
       return {
@@ -434,6 +513,12 @@ export function useUserWorkbench(selectedUserId?: string | null, loadCredentialC
     credentialCandidatesErrorMessage: credentialCandidatesQuery.error
       ? toError(credentialCandidatesQuery.error).message
       : null,
+    modelCandidates: modelCandidatesQuery.data?.candidates ?? [],
+    modelCandidatesPending: modelCandidatesQuery.isPending,
+    modelCandidatesIssueMessage: modelCandidatesQuery.data?.issue ?? null,
+    modelCandidatesErrorMessage: modelCandidatesQuery.error
+      ? toError(modelCandidatesQuery.error).message
+      : null,
     selectedUser: detailQuery.data ?? null,
     fetchedAt: usersQuery.data?.fetchedAt ?? null,
     isPending:
@@ -456,6 +541,9 @@ export function useUserWorkbench(selectedUserId?: string | null, loadCredentialC
     },
     refetchCredentialCandidates: () => {
       void credentialCandidatesQuery.refetch()
+    },
+    refetchModelCandidates: () => {
+      void modelCandidatesQuery.refetch()
     },
     createUser: createUserMutation.mutateAsync,
     updateUser: updateUserMutation.mutateAsync,
