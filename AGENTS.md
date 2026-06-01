@@ -4,7 +4,14 @@
 
 Home Management Center is the companion Web management console for CLIProxyAPIHome. It is a React 19 + TypeScript application built with Rsbuild, TanStack Router, TanStack Query, Zustand, shadcn/ui, Tailwind CSS v4, and i18next.
 
-Treat `src/lib/api/management/` as the source-of-truth adapter layer for backend integration. Do not invent routes, fields, metrics, or workflows that are not represented by the Management API adapters or confirmed product requirements.
+Treat `src/lib/api/management/` as the frontend integration boundary for backend access. Do not invent routes, fields, metrics, or workflows that are not represented by the current CLIProxyAPIHome Management API contract or confirmed product requirements.
+
+## Backend API Contract
+
+- Read the latest CLIProxyAPIHome Management API contract before adding or changing Management API routes, DTO fields, capability detection, or backend-dependent workflows.
+- Do not use copied API documents, cached API snapshots, or historical local workbench plans as backend contract sources. This frontend repository must not maintain a duplicate Management API specification.
+- Treat `src/lib/api/management/` as the source of truth for what the frontend currently integrates, not as a substitute for the backend contract.
+- If the current backend contract is unavailable in the local environment, inspect the existing adapters conservatively and ask for the current backend document before introducing API assumptions.
 
 ## Key Directories
 
@@ -29,8 +36,9 @@ Before implementing product work, read:
 1. `README.md`
 2. `PRODUCT.md`
 3. `DESIGN.md`
-4. The relevant files in `src/features/`
-5. The relevant adapters in `src/lib/api/management/`
+4. The latest CLIProxyAPIHome Management API contract for backend-dependent work
+5. The relevant files in `src/features/`
+6. The relevant adapters in `src/lib/api/management/`
 
 For UI critique, visual polish, layout, copy, accessibility, empty states, loading states, error states, or responsive behavior, read `PRODUCT.md` and `DESIGN.md` before editing.
 
