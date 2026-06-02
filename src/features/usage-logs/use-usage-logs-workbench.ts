@@ -6,6 +6,7 @@ import {
   clearRuntimeLogs,
   downloadRequestErrorLog,
   downloadRequestLogById,
+  fetchRuntimeLogs,
   fetchUsageLogsSnapshot,
   toUsageLogsApiError,
 } from '@/lib/api/management/usage-logs'
@@ -43,28 +44,46 @@ export function useUsageLogsWorkbench() {
     useManagementSession()
   const [runtimeLogLimit, setRuntimeLogLimitState] = useState(defaultRuntimeLogPageSize)
   const [runtimeLogOffset, setRuntimeLogOffset] = useState(0)
-  const queryKey = [
+  const canQueryRuntimeLogs =
+    connected && capabilityReady && Boolean(session.managementKey) && capabilities.logs
+  const overviewQueryKey = [
     'management-usage-logs',
     session.baseUrl,
     connectedAt,
     capabilities.usage,
     capabilities.logs,
     capabilities.requestErrorLogs,
+  ]
+  const runtimeLogsQueryKey = [
+    'management-runtime-logs',
+    session.baseUrl,
+    connectedAt,
+    capabilities.logs,
     runtimeLogLimit,
     runtimeLogOffset,
   ]
 
-  const query = useQuery({
-    queryKey,
+  const overviewQuery = useQuery({
+    queryKey: overviewQueryKey,
     enabled: connected && capabilityReady && Boolean(session.managementKey),
+    queryFn: async () => {
+      try {
+        return await fetchUsageLogsSnapshot(session, capabilities)
+      } catch (error) {
+        throw toUsageLogsApiError(error)
+      }
+    },
+  })
+
+  const runtimeLogsQuery = useQuery({
+    queryKey: runtimeLogsQueryKey,
+    enabled: canQueryRuntimeLogs,
     placeholderData: keepPreviousData,
     queryFn: async () => {
       try {
-        return await fetchUsageLogsSnapshot(session, capabilities, {
-          runtimeLogs: {
-            limit: runtimeLogLimit,
-            offset: runtimeLogOffset,
-          },
+        return await fetchRuntimeLogs(session, {
+          limit: runtimeLogLimit,
+          offset: runtimeLogOffset,
         })
       } catch (error) {
         throw toUsageLogsApiError(error)
@@ -72,9 +91,9 @@ export function useUsageLogsWorkbench() {
     },
   })
 
-  const invalidateUsageLogs = async () => {
+  const invalidateRuntimeLogs = async () => {
     await queryClient.invalidateQueries({
-      queryKey: ['management-usage-logs', session.baseUrl, connectedAt],
+      queryKey: ['management-runtime-logs', session.baseUrl, connectedAt],
     })
   }
 
@@ -94,7 +113,7 @@ export function useUsageLogsWorkbench() {
     },
     onSuccess: async () => {
       setRuntimeLogOffset(0)
-      await invalidateUsageLogs()
+      await invalidateRuntimeLogs()
     },
   })
 
@@ -118,18 +137,38 @@ export function useUsageLogsWorkbench() {
     },
   })
 
+  const snapshot = overviewQuery.data
+    ? {
+        ...overviewQuery.data,
+        runtimeLogs: runtimeLogsQuery.data ?? overviewQuery.data.runtimeLogs,
+        issues: runtimeLogsQuery.error
+          ? [
+              ...overviewQuery.data.issues,
+              {
+                scope: 'logs' as const,
+                message: runtimeLogsQuery.error.message,
+              },
+            ]
+          : overviewQuery.data.issues,
+      }
+    : undefined
+
   return {
     connected,
     capabilityReady,
     capabilities,
     runtimeMode,
-    snapshot: query.data,
-    isPending: query.isPending,
-    isFetching: query.isFetching,
-    isError: query.isError,
-    errorMessage: query.error?.message ?? null,
+    snapshot,
+    isPending: overviewQuery.isPending || (canQueryRuntimeLogs && runtimeLogsQuery.isPending),
+    isFetching: overviewQuery.isFetching || runtimeLogsQuery.isFetching,
+    isError: overviewQuery.isError,
+    errorMessage: overviewQuery.error?.message ?? null,
     refetch: () => {
-      void query.refetch()
+      void Promise.all(
+        canQueryRuntimeLogs
+          ? [overviewQuery.refetch(), runtimeLogsQuery.refetch()]
+          : [overviewQuery.refetch()],
+      )
     },
     clearLogs: clearLogsMutation.mutateAsync,
     downloadRequestErrorLog: downloadRequestErrorLogMutation.mutateAsync,

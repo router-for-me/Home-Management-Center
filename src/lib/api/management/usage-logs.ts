@@ -3,11 +3,7 @@ import type { CapabilityMap, ManagementSessionInput } from '@/lib/api/management
 
 type UnknownRecord = Record<string, unknown>
 
-export type UsageLogIssueScope =
-  | 'apiKeyUsage'
-  | 'logs'
-  | 'requestErrorLogs'
-  | 'clearLogs'
+export type UsageLogIssueScope = 'apiKeyUsage' | 'logs' | 'requestErrorLogs' | 'clearLogs'
 
 export type UsageLogIssue = {
   scope: UsageLogIssueScope
@@ -285,19 +281,15 @@ function getAttachmentFileName(headers: unknown, fallback: string) {
 export async function fetchUsageLogsSnapshot(
   session: ManagementSessionInput,
   capabilities: CapabilityMap,
-  options?: {
-    runtimeLogs?: RuntimeLogQuery
-  },
 ): Promise<UsageLogsSnapshot> {
   const client = createManagementClient(session)
   const issues: UsageLogIssue[] = []
-  const runtimeLogQuery = options?.runtimeLogs ?? { limit: 50, offset: 0 }
   const configResponse = await client.get<unknown>('/config')
   const config = toRecord(configResponse.data)
   const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
   const usageStatisticsEnabled = readConfigBoolean(config, 'usage-statistics-enabled')
 
-  const [apiKeyUsage, runtimeLogs, requestErrorLogs] = await Promise.all([
+  const [apiKeyUsage, requestErrorLogs] = await Promise.all([
     capabilities.usage
       ? readOptional(
           issues,
@@ -309,19 +301,6 @@ export async function fetchUsageLogsSnapshot(
           [],
         )
       : Promise.resolve([]),
-    capabilities.logs
-      ? readOptional(
-          issues,
-          'logs',
-          async () => {
-            const response = await client.get<unknown>('/logs', {
-              params: runtimeLogQuery,
-            })
-            return normalizeRuntimeLogs(response.data, runtimeLogQuery.offset)
-          },
-          null,
-        )
-      : Promise.resolve(null),
     capabilities.requestErrorLogs
       ? readOptional(
           issues,
@@ -342,10 +321,21 @@ export async function fetchUsageLogsSnapshot(
       fileLoggingEnabled,
     },
     apiKeyUsage,
-    runtimeLogs,
+    runtimeLogs: null,
     requestErrorLogs,
     issues,
   }
+}
+
+export async function fetchRuntimeLogs(
+  session: ManagementSessionInput,
+  query: RuntimeLogQuery,
+): Promise<RuntimeLogSnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/logs', {
+    params: query,
+  })
+  return normalizeRuntimeLogs(response.data, query.offset)
 }
 
 export async function clearRuntimeLogs(session: ManagementSessionInput): Promise<ClearLogsResult> {

@@ -1434,8 +1434,7 @@ export const zhTW = {
     usageLogsPage: {
       disconnected: {
         title: '連線管理端執行環境',
-        description:
-          '用量與日誌來自 Management API。連線執行環境後，才能查看請求統計和日誌。',
+        description: '用量與日誌來自 Management API。連線執行環境後，才能查看請求統計和日誌。',
         action: '連線執行環境',
       },
       error: {
