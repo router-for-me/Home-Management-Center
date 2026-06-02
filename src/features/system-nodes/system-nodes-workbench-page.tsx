@@ -3,9 +3,12 @@ import { type FormEvent, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
+  ClipboardCheck,
+  Copy,
   Info,
   Loader2,
   Play,
+  Plus,
   RefreshCw,
   ServerCog,
   TerminalSquare,
@@ -39,6 +42,7 @@ import {
 import type {
   ApiCallInput,
   ApiCallResult,
+  CertificateClientEnrollment,
   SystemConfigSummary,
   SystemIssue,
   SystemNodeResource,
@@ -100,6 +104,23 @@ function getStatusIcon(tone: StatusTone) {
   if (tone === 'info') return Info
   if (tone === 'warning' || tone === 'danger') return AlertTriangle
   return ServerCog
+}
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textArea = document.createElement('textarea')
+  textArea.value = value
+  textArea.setAttribute('readonly', 'true')
+  textArea.style.position = 'fixed'
+  textArea.style.opacity = '0'
+  document.body.append(textArea)
+  textArea.select()
+  document.execCommand('copy')
+  textArea.remove()
 }
 
 function formatDateTime(value: string | null) {
@@ -510,6 +531,67 @@ function ApiCallSheet({
   )
 }
 
+function NodeEnrollmentSheet({
+  open,
+  onOpenChange,
+  enrollment,
+  onCopyJwt,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  enrollment: CertificateClientEnrollment | null
+  onCopyJwt: (homeJwt: string) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!enrollment?.homeJwt) return
+    await onCopyJwt(enrollment.homeJwt)
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-full gap-0 overflow-hidden sm:max-w-xl">
+        <SheetHeader className="border-b p-5 shadow-[0_1px_0_var(--border)]">
+          <SheetTitle>{t('systemNodesPage.nodes.enrollment.title')}</SheetTitle>
+          <SheetDescription>{t('systemNodesPage.nodes.enrollment.description')}</SheetDescription>
+        </SheetHeader>
+        <div className="flex flex-col gap-4 overflow-y-auto p-5">
+          {enrollment?.id ? (
+            <div className="grid gap-2">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t('systemNodesPage.nodes.enrollment.clientId')}
+              </p>
+              <p className="font-mono text-sm break-all">{enrollment.id}</p>
+            </div>
+          ) : null}
+          <div className="grid gap-2">
+            <p className="text-muted-foreground text-xs font-medium">
+              {t('systemNodesPage.nodes.enrollment.jwtLabel')}
+            </p>
+            <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-all">
+              {enrollment?.homeJwt ?? ''}
+            </pre>
+          </div>
+          <Button type="button" className="w-full sm:w-auto" onClick={() => void handleCopy()}>
+            {copied ? (
+              <ClipboardCheck className="size-4" aria-hidden="true" />
+            ) : (
+              <Copy className="size-4" aria-hidden="true" />
+            )}
+            {copied
+              ? t('systemNodesPage.nodes.enrollment.copied')
+              : t('systemNodesPage.nodes.enrollment.copyJwt')}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 function IssueList({ issues }: { issues: SystemIssue[] }) {
   const { t } = useTranslation()
   if (issues.length === 0) return null
@@ -706,6 +788,8 @@ export function SystemNodesWorkbenchPage() {
   const { t } = useTranslation()
   const workbench = useSystemNodesWorkbench()
   const [apiCallSheetOpen, setApiCallSheetOpen] = useState(false)
+  const [nodeEnrollmentSheetOpen, setNodeEnrollmentSheetOpen] = useState(false)
+  const [nodeEnrollment, setNodeEnrollment] = useState<CertificateClientEnrollment | null>(null)
 
   if (!workbench.connected) {
     return <SystemNodesDisconnectedState />
@@ -722,9 +806,9 @@ export function SystemNodesWorkbenchPage() {
   }
 
   const serverVersion =
+    workbench.snapshot.homeVersion ??
     workbench.serverInfo.homeVersion ??
     workbench.serverInfo.cpaVersion ??
-    workbench.snapshot.latestVersion ??
     t('systemNodesPage.status.unknown')
   const serverVersionAvailable = serverVersion !== t('systemNodesPage.status.unknown')
   const nodesSummaryDetail = workbench.capabilities.nodes
@@ -741,6 +825,23 @@ export function SystemNodesWorkbenchPage() {
   const handleRunApiCall = async (input: ApiCallInput) => {
     await workbench.runApiCall(input)
     toast.success(t('systemNodesPage.toast.apiCallComplete'))
+  }
+
+  const handleAddNode = async () => {
+    try {
+      const enrollment = await workbench.createNodeClient()
+      setNodeEnrollment(enrollment)
+      setNodeEnrollmentSheetOpen(true)
+      toast.success(t('systemNodesPage.toast.nodeClientCreated'))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      toast.error(message)
+    }
+  }
+
+  const handleCopyNodeJwt = async (homeJwt: string) => {
+    await copyTextToClipboard(homeJwt)
+    toast.success(t('systemNodesPage.toast.nodeJwtCopied'))
   }
 
   return (
@@ -790,7 +891,22 @@ export function SystemNodesWorkbenchPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
         <div className="bg-card rounded-lg border p-4 shadow-sm">
-          <h2 className="text-base font-semibold">{t('systemNodesPage.nodes.title')}</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold">{t('systemNodesPage.nodes.title')}</h2>
+            <Button
+              type="button"
+              size="sm"
+              disabled={workbench.createNodeClientPending}
+              onClick={() => void handleAddNode()}
+            >
+              {workbench.createNodeClientPending ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Plus className="size-4" aria-hidden="true" />
+              )}
+              {t('systemNodesPage.nodes.addNode')}
+            </Button>
+          </div>
           <div className="mt-3">
             <NodesPanel
               nodes={workbench.snapshot.nodes}
@@ -815,6 +931,13 @@ export function SystemNodesWorkbenchPage() {
         result={workbench.apiCallResult}
         error={workbench.apiCallError}
         onRun={handleRunApiCall}
+      />
+
+      <NodeEnrollmentSheet
+        open={nodeEnrollmentSheetOpen}
+        onOpenChange={setNodeEnrollmentSheetOpen}
+        enrollment={nodeEnrollment}
+        onCopyJwt={handleCopyNodeJwt}
       />
     </section>
   )

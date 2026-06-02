@@ -1,3 +1,5 @@
+import type { AxiosResponse } from 'axios'
+
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { CapabilityMap, ManagementSessionInput } from '@/lib/api/management/types'
 
@@ -29,6 +31,7 @@ export type SystemIssue = {
 
 export type SystemNodesSnapshot = {
   fetchedAt: string
+  homeVersion: string | null
   latestVersion: string | null
   config: SystemConfigSummary | null
   nodes: SystemNodeResource[]
@@ -49,6 +52,11 @@ export type ApiCallResult = {
   body: string
 }
 
+export type CertificateClientEnrollment = {
+  id: string
+  homeJwt: string
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -60,6 +68,17 @@ function toRecord(value: unknown): UnknownRecord {
 function readString(record: UnknownRecord, key: string): string | null {
   const value = record[key]
   return typeof value === 'string' && value.trim() ? value : null
+}
+
+function readResponseHeader(response: AxiosResponse, name: string): string | null {
+  const headers = response.headers as Record<string, unknown>
+  const value = headers[name.toLowerCase()]
+  if (Array.isArray(value)) {
+    const firstValue = value[0] as unknown
+    return typeof firstValue === 'string' && firstValue.trim() ? firstValue : null
+  }
+  if (typeof value === 'string' && value.trim()) return value
+  return null
 }
 
 function readRoutingStrategy(record: UnknownRecord): string {
@@ -160,15 +179,20 @@ export async function fetchSystemNodesSnapshot(
   const client = createManagementClient(session)
   const issues: SystemIssue[] = []
 
-  const [latestVersion, config, nodes] = await Promise.all([
+  let homeVersion: string | null = null
+  let latestVersion: string | null = null
+
+  const [, config, nodes] = await Promise.all([
     readOptional(
       issues,
       'latestVersion',
       async () => {
         const response = await client.get<unknown>('/latest-version')
-        return readString(toRecord(response.data), 'latest-version')
+        homeVersion = readResponseHeader(response, 'x-cpa-home-version')
+        latestVersion = readString(toRecord(response.data), 'latest-version')
+        return true
       },
-      null,
+      false,
     ),
     readOptional(
       issues,
@@ -194,10 +218,30 @@ export async function fetchSystemNodesSnapshot(
 
   return {
     fetchedAt: new Date().toISOString(),
+    homeVersion,
     latestVersion,
     config,
     nodes,
     issues,
+  }
+}
+
+export async function createCertificateClient(
+  session: ManagementSessionInput,
+): Promise<CertificateClientEnrollment> {
+  const client = createManagementClient(session)
+  const response = await client.post<unknown>('/certificates/clients')
+  const record = toRecord(response.data)
+  const homeJwt = readString(record, 'home_jwt')
+  const id = readString(record, 'id')
+
+  if (!homeJwt) {
+    throw new Error('Management API did not return home_jwt.')
+  }
+
+  return {
+    id: id ?? '',
+    homeJwt,
   }
 }
 

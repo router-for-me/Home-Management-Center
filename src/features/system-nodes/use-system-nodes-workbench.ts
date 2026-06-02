@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   type ApiCallInput,
   type SystemNodesSnapshot,
+  createCertificateClient,
   fetchSystemNodesSnapshot,
   runManagementApiCall,
   toSystemNodesApiError,
@@ -29,7 +30,7 @@ function deriveSystemNodesOperationalStatus(
   if (!snapshot) return null
 
   const configAvailable = Boolean(snapshot.config)
-  const latestVersionAvailable = Boolean(snapshot.latestVersion)
+  const latestVersionAvailable = Boolean(snapshot.homeVersion || snapshot.latestVersion)
   const issueCount = snapshot.issues.length
   const nodesSupported = capabilities.nodes
   const nodeCount = snapshot.nodes.length
@@ -115,6 +116,16 @@ export function useSystemNodesWorkbench() {
     },
   })
 
+  const createNodeClientMutation = useMutation({
+    mutationFn: async () => {
+      try {
+        return await createCertificateClient(session)
+      } catch (error) {
+        throw toSystemNodesApiError(error)
+      }
+    },
+  })
+
   return {
     connected,
     capabilityReady,
@@ -135,5 +146,7 @@ export function useSystemNodesWorkbench() {
     apiCallError: apiCallMutation.error?.message ?? null,
     runApiCall: apiCallMutation.mutateAsync,
     apiCallPending: apiCallMutation.isPending,
+    createNodeClient: createNodeClientMutation.mutateAsync,
+    createNodeClientPending: createNodeClientMutation.isPending,
   }
 }

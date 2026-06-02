@@ -1740,10 +1740,20 @@ export const en = {
       },
       nodes: {
         title: 'Node connections',
+        addNode: 'Add node',
         unavailable: 'The current {{runtime}} runtime does not expose the node query route.',
         empty: 'No node connection records were returned.',
         emptySupported: 'The node route is available, but no connection records were returned.',
         connectedTime: 'Connected at {{time}}',
+        enrollment: {
+          title: 'Node enrollment token',
+          description:
+            'Configure the credential on the node you want to enroll. Store it securely; closing this panel does not revoke the token.',
+          clientId: 'Client ID',
+          jwtLabel: 'Credential',
+          copyJwt: 'Copy credential',
+          copied: 'Copied',
+        },
       },
       issues: {
         title: 'Some diagnostic data could not be loaded',
@@ -1793,6 +1803,8 @@ export const en = {
       },
       toast: {
         apiCallComplete: 'Diagnostic request completed.',
+        nodeClientCreated: 'Node client created.',
+        nodeJwtCopied: 'Credential copied to clipboard.',
       },
     },
     placeholder: {

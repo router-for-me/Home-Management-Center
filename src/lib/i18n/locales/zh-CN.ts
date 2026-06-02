@@ -1680,10 +1680,19 @@ export const zhCN = {
       },
       nodes: {
         title: '节点连接',
+        addNode: '添加节点',
         unavailable: '当前 {{runtime}} 运行时未开放节点查询接口。',
         empty: '当前没有返回节点连接记录。',
         emptySupported: '节点接口可用，当前没有返回连接记录。',
         connectedTime: '连接时间：{{time}}',
+        enrollment: {
+          title: '节点接入凭证',
+          description: '将凭证配置到待接入节点后即可建立连接。请妥善保存，关闭后需重新创建。',
+          clientId: '客户端 ID',
+          jwtLabel: '凭证',
+          copyJwt: '复制凭证',
+          copied: '已复制',
+        },
       },
       issues: {
         title: '部分诊断数据加载失败',
@@ -1732,6 +1741,8 @@ export const zhCN = {
       },
       toast: {
         apiCallComplete: '诊断请求已完成。',
+        nodeClientCreated: '节点客户端已创建。',
+        nodeJwtCopied: '凭证已复制到剪贴板。',
       },
     },
     placeholder: {

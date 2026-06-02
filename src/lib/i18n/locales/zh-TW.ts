@@ -1679,10 +1679,19 @@ export const zhTW = {
       },
       nodes: {
         title: '節點連線',
+        addNode: '新增節點',
         unavailable: '目前 {{runtime}} 執行環境未開放節點查詢介面。',
         empty: '目前沒有回傳節點連線記錄。',
         emptySupported: '節點介面可用，目前沒有回傳連線記錄。',
         connectedTime: '連線時間：{{time}}',
+        enrollment: {
+          title: '節點接入憑證',
+          description: '將憑證設定到待接入節點後即可建立連線。請妥善保存，關閉後需重新建立。',
+          clientId: '用戶端 ID',
+          jwtLabel: '憑證',
+          copyJwt: '複製憑證',
+          copied: '已複製',
+        },
       },
       issues: {
         title: '部分診斷資料載入失敗',
@@ -1731,6 +1740,8 @@ export const zhTW = {
       },
       toast: {
         apiCallComplete: '診斷請求已完成。',
+        nodeClientCreated: '節點用戶端已建立。',
+        nodeJwtCopied: '憑證已複製到剪貼簿。',
       },
     },
     placeholder: {
