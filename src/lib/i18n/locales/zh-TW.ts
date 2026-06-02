@@ -595,9 +595,15 @@ export const zhTW = {
       },
       oauth: {
         title: 'OAuth 登入',
-        startLogin: '開始登入',
+        startLogin: '生成授權連結',
         showAdvanced: '顯示進階選項',
         hideAdvanced: '收起進階選項',
+        authorizationLinkTitle: '授權連結已生成',
+        authorizationLinkDescription:
+          '先複製連結到合適的瀏覽器或帳號環境中完成授權。只有確認要使用目前瀏覽器時，再手動開啟連結。',
+        authorizationLink: '授權連結',
+        copyAuthorizationLink: '複製連結',
+        openAuthorizationLink: '開啟連結',
         closureTitle: '授權狀態與回調',
         closureDescription:
           '登入已啟動。可查看授權狀態；如果瀏覽器回調沒有自動寫入，再手動提交回調 URL。',
@@ -666,9 +672,7 @@ export const zhTW = {
       },
       upload: {
         title: '上傳憑證 JSON',
-        description: '上傳已存在的 OAuth 或 file-backed credential JSON。支援一次選擇多個檔案。',
-        chooseFiles: '選擇 JSON 檔案',
-        actionHint: '點擊或拖曳 JSON 檔案到此區域。',
+        description: '點擊選擇檔案，或拖曳 JSON 到這裡。支援多選。',
       },
       list: {
         title: '憑證資源',
@@ -754,7 +758,8 @@ export const zhTW = {
         updated: '憑證 metadata 已更新。',
         deleted: '憑證已刪除。',
         statusUpdated: '憑證狀態已更新。',
-        oauthStarted: 'OAuth 登入已開啟。',
+        oauthStarted: 'OAuth 授權連結已生成。',
+        oauthLinkCopied: 'OAuth 授權連結已複製。',
         oauthStatusChecked: 'OAuth 狀態：{{status}}。',
         oauthCallbackSubmitted: 'OAuth callback 已提交。',
         vertexImported: 'Vertex 憑證已匯入。',

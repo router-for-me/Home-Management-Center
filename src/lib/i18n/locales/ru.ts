@@ -610,9 +610,15 @@ export const ru = {
       },
       oauth: {
         title: 'OAuth вход',
-        startLogin: 'Начать вход',
+        startLogin: 'Создать ссылку авторизации',
         showAdvanced: 'Показать дополнительные опции',
         hideAdvanced: 'Скрыть дополнительные опции',
+        authorizationLinkTitle: 'Ссылка авторизации создана',
+        authorizationLinkDescription:
+          'Сначала скопируйте ссылку в нужный браузер или профиль аккаунта. Открывайте ее здесь только если этот браузер подходит для авторизации.',
+        authorizationLink: 'Ссылка авторизации',
+        copyAuthorizationLink: 'Скопировать ссылку',
+        openAuthorizationLink: 'Открыть ссылку',
         closureTitle: 'Статус авторизации и callback',
         closureDescription:
           'Вход запущен. Проверьте статус авторизации здесь или отправьте callback URL, если browser redirect не был обработан автоматически.',
@@ -685,10 +691,7 @@ export const ru = {
       },
       upload: {
         title: 'Загрузить credential JSON',
-        description:
-          'Загрузите существующие OAuth или file-backed credential JSON. Можно выбрать несколько файлов.',
-        chooseFiles: 'Выбрать JSON файлы',
-        actionHint: 'Нажмите или перетащите JSON-файлы сюда.',
+        description: 'Выберите файлы или перетащите JSON сюда. Можно выбрать несколько файлов.',
       },
       list: {
         title: 'Credential resources',
@@ -777,7 +780,8 @@ export const ru = {
         updated: 'Credential metadata обновлена.',
         deleted: 'Credential удален.',
         statusUpdated: 'Credential status обновлен.',
-        oauthStarted: 'OAuth вход открыт.',
+        oauthStarted: 'Ссылка OAuth авторизации создана.',
+        oauthLinkCopied: 'Ссылка OAuth авторизации скопирована.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
         oauthCallbackSubmitted: 'OAuth callback отправлен.',
         vertexImported: 'Vertex credential импортирован.',

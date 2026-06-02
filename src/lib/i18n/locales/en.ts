@@ -608,9 +608,15 @@ export const en = {
       },
       oauth: {
         title: 'OAuth login',
-        startLogin: 'Start login',
+        startLogin: 'Generate authorization link',
         showAdvanced: 'Show advanced options',
         hideAdvanced: 'Hide advanced options',
+        authorizationLinkTitle: 'Authorization link generated',
+        authorizationLinkDescription:
+          'Copy the link into the right browser or account profile before authorizing. Open it here only when this browser is the intended account environment.',
+        authorizationLink: 'Authorization link',
+        copyAuthorizationLink: 'Copy link',
+        openAuthorizationLink: 'Open link',
         closureTitle: 'Authorization status and callback',
         closureDescription:
           'Login has started. Check the authorization status here, or submit the callback URL if the browser redirect was not captured automatically.',
@@ -682,10 +688,7 @@ export const en = {
       },
       upload: {
         title: 'Upload credential JSON',
-        description:
-          'Upload existing OAuth or file-backed credential JSON files. Multiple files are supported.',
-        chooseFiles: 'Choose JSON files',
-        actionHint: 'Click or drop JSON files here.',
+        description: 'Choose files or drop JSON here. Multiple files are supported.',
       },
       list: {
         title: 'Credential resources',
@@ -774,7 +777,8 @@ export const en = {
         updated: 'Credential metadata updated.',
         deleted: 'Credential deleted.',
         statusUpdated: 'Credential status updated.',
-        oauthStarted: 'OAuth login opened.',
+        oauthStarted: 'OAuth authorization link generated.',
+        oauthLinkCopied: 'OAuth authorization link copied.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
         oauthCallbackSubmitted: 'OAuth callback submitted.',
         vertexImported: 'Vertex credential imported.',

@@ -595,9 +595,15 @@ export const zhCN = {
       },
       oauth: {
         title: 'OAuth 登录',
-        startLogin: '开始登录',
+        startLogin: '生成授权链接',
         showAdvanced: '显示高级选项',
         hideAdvanced: '收起高级选项',
+        authorizationLinkTitle: '授权链接已生成',
+        authorizationLinkDescription:
+          '先复制链接到合适的浏览器或账号环境中完成授权。只有确认要使用当前浏览器时，再手动打开链接。',
+        authorizationLink: '授权链接',
+        copyAuthorizationLink: '复制链接',
+        openAuthorizationLink: '打开链接',
         closureTitle: '授权状态与回调',
         closureDescription:
           '登录已启动。可查看授权状态；如果浏览器回调没有自动写入，再手动提交回调 URL。',
@@ -666,9 +672,7 @@ export const zhCN = {
       },
       upload: {
         title: '上传凭证 JSON',
-        description: '上传已存在的 OAuth 或 file-backed credential JSON。支持一次选择多个文件。',
-        chooseFiles: '选择 JSON 文件',
-        actionHint: '点击或拖拽 JSON 文件到此区域。',
+        description: '点击选择文件，或拖拽 JSON 到这里。支持多选。',
       },
       list: {
         title: '凭证资源',
@@ -754,7 +758,8 @@ export const zhCN = {
         updated: '凭证 metadata 已更新。',
         deleted: '凭证已删除。',
         statusUpdated: '凭证状态已更新。',
-        oauthStarted: 'OAuth 登录已打开。',
+        oauthStarted: 'OAuth 授权链接已生成。',
+        oauthLinkCopied: 'OAuth 授权链接已复制。',
         oauthStatusChecked: 'OAuth 状态：{{status}}。',
         oauthCallbackSubmitted: 'OAuth callback 已提交。',
         vertexImported: 'Vertex 凭证已导入。',

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   CloudUpload,
+  Copy,
   Download,
   ExternalLink,
   Eye,
@@ -174,6 +175,23 @@ function createOAuthCallbackForm(
     state: state ?? '',
     error: '',
   }
+}
+
+async function copyTextToClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textArea = document.createElement('textarea')
+  textArea.value = value
+  textArea.setAttribute('readonly', 'true')
+  textArea.style.position = 'fixed'
+  textArea.style.opacity = '0'
+  document.body.append(textArea)
+  textArea.select()
+  document.execCommand('copy')
+  textArea.remove()
 }
 
 function getCredentialDisplayName(resource: CredentialResource) {
@@ -632,6 +650,59 @@ function OAuthClosurePanel({
   )
 }
 
+function OAuthAuthorizationLinkPanel({ session }: { session: OAuthSessionSummary }) {
+  const { t } = useTranslation()
+
+  const handleCopy = async () => {
+    try {
+      await copyTextToClipboard(session.url)
+      toast.success(t('credentialsPage.toast.oauthLinkCopied'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleOpen = () => {
+    window.open(session.url, '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <section className="bg-muted/20 mt-3 rounded-lg border p-4">
+      <div className="flex items-start gap-3">
+        <div className="bg-warning/12 text-warning-foreground dark:text-warning flex size-9 shrink-0 items-center justify-center rounded-md">
+          <ExternalLink className="size-4" aria-hidden="true" />
+        </div>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold">
+            {t('credentialsPage.oauth.authorizationLinkTitle')}
+          </h3>
+          <p className="text-muted-foreground mt-1 text-xs leading-5">
+            {t('credentialsPage.oauth.authorizationLinkDescription')}
+          </p>
+        </div>
+      </div>
+      <div className="bg-card mt-3 rounded-md border p-3">
+        <p className="text-muted-foreground mb-1 text-xs">
+          {t('credentialsPage.oauth.authorizationLink')}
+        </p>
+        <p className="text-foreground max-h-24 overflow-auto font-mono text-xs leading-5 break-all">
+          {session.url}
+        </p>
+      </div>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={() => void handleCopy()}>
+          <Copy className="size-4" aria-hidden="true" />
+          {t('credentialsPage.oauth.copyAuthorizationLink')}
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={handleOpen}>
+          <ExternalLink className="size-4" aria-hidden="true" />
+          {t('credentialsPage.oauth.openAuthorizationLink')}
+        </Button>
+      </div>
+    </section>
+  )
+}
+
 function VertexImportPanel({
   result,
   mutating,
@@ -791,7 +862,11 @@ function OAuthStartPanel({
                   disabled={mutating}
                   onClick={() => void onStartOAuth(provider)}
                 >
-                  <ExternalLink className="size-4" aria-hidden="true" />
+                  {mutating ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <ExternalLink className="size-4" aria-hidden="true" />
+                  )}
                   {t('credentialsPage.oauth.startLogin')}
                 </Button>
               </div>
@@ -828,6 +903,7 @@ function OAuthStartPanel({
 
               {session ? (
                 <div className="mt-3">
+                  <OAuthAuthorizationLinkPanel session={session} />
                   <OAuthClosurePanel
                     compact
                     session={session}
@@ -877,7 +953,7 @@ function JsonUploadPanel({
         type="button"
         variant="ghost"
         className={cn(
-          'h-auto min-w-0 justify-start overflow-hidden rounded-lg border border-dashed p-5 text-left whitespace-normal',
+          'min-h-36 min-w-0 justify-center overflow-hidden rounded-lg border border-dashed p-5 text-center whitespace-normal',
           dragActive
             ? 'border-primary/60 bg-primary/5'
             : 'hover:border-primary/40 hover:bg-primary/5',
@@ -898,19 +974,14 @@ function JsonUploadPanel({
         }}
         onDrop={handleDrop}
       >
-        <div className="flex min-w-0 items-start gap-3">
-          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-md">
+        <div className="flex min-w-0 flex-col items-center justify-center gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md">
             <Upload className="size-4" aria-hidden="true" />
           </span>
-          <span className="min-w-0">
-            <span className="block text-base font-semibold">
-              {t('credentialsPage.upload.title')}
-            </span>
-            <span className="text-muted-foreground mt-1 block text-sm leading-6">
+          <span className="grid min-w-0 gap-1.5">
+            <span className="block text-sm font-semibold">{t('credentialsPage.upload.title')}</span>
+            <span className="text-muted-foreground block max-w-sm text-xs leading-5">
               {t('credentialsPage.upload.description')}
-            </span>
-            <span className="text-muted-foreground mt-4 block text-xs leading-5">
-              {t('credentialsPage.upload.actionHint')}
             </span>
           </span>
         </div>
@@ -967,17 +1038,14 @@ function CreateCredentialSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-x-hidden overflow-y-auto sm:max-w-xl">
-        <SheetHeader className="border-b p-5">
+      <SheetContent className="w-full gap-0 overflow-hidden sm:max-w-xl">
+        <SheetHeader className="border-b p-5 shadow-[0_1px_0_var(--border)]">
           <SheetTitle>{t('credentialsPage.create.title')}</SheetTitle>
           <SheetDescription>{t('credentialsPage.create.description')}</SheetDescription>
-        </SheetHeader>
-
-        <div className="grid min-w-0 gap-5 px-5 pb-5">
           <ToggleGroup
             type="single"
             value={mode}
-            className="grid grid-cols-3"
+            className="mt-3 grid grid-cols-3"
             onValueChange={(value) => {
               if (value) onModeChange(value as CreateCredentialMode)
             }}
@@ -992,7 +1060,9 @@ function CreateCredentialSheet({
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
+        </SheetHeader>
 
+        <div className="grid min-h-0 min-w-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto px-5 py-5">
           {mode === 'oauth' ? (
             <OAuthStartPanel
               sessions={oauthSessions}
@@ -1722,7 +1792,6 @@ export function CredentialsWorkbenchPage() {
         delete next[provider]
         return next
       })
-      window.open(result.url, '_blank', 'noopener,noreferrer')
       toast.success(t('credentialsPage.toast.oauthStarted'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
