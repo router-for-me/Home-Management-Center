@@ -5,7 +5,6 @@ type UnknownRecord = Record<string, unknown>
 
 export type UsageLogIssueScope =
   | 'apiKeyUsage'
-  | 'usageQueue'
   | 'logs'
   | 'requestErrorLogs'
   | 'clearLogs'
@@ -25,16 +24,6 @@ export type ApiKeyUsageResource = {
   success: number
   failed: number
   recentRequestCount: number
-}
-
-export type UsageQueueRecord = {
-  id: string
-  requestId: string | null
-  homeIp: string | null
-  model: string | null
-  endpoint: string | null
-  failed: boolean | null
-  raw: unknown
 }
 
 export type RuntimeLogRecord = {
@@ -192,25 +181,6 @@ function normalizeApiKeyUsage(responseData: unknown): ApiKeyUsageResource[] {
         recentRequestCount: Array.isArray(recentRequests) ? recentRequests.length : 0,
       }
     })
-  })
-}
-
-function normalizeUsageQueue(responseData: unknown): UsageQueueRecord[] {
-  const records: unknown[] = Array.isArray(responseData) ? responseData : []
-
-  return records.map((record, index) => {
-    const recordValue = toRecord(record)
-    const requestId = readString(recordValue, 'request_id') ?? readString(recordValue, 'id')
-
-    return {
-      id: requestId ?? `usage-record-${index + 1}`,
-      requestId,
-      homeIp: readString(recordValue, 'home_ip') ?? readString(recordValue, 'home-ip'),
-      model: readString(recordValue, 'model'),
-      endpoint: readString(recordValue, 'endpoint') ?? readString(recordValue, 'path'),
-      failed: readBoolean(recordValue, 'failed'),
-      raw: record,
-    }
   })
 }
 
@@ -376,18 +346,6 @@ export async function fetchUsageLogsSnapshot(
     requestErrorLogs,
     issues,
   }
-}
-
-export async function fetchUsageQueueRecords(
-  session: ManagementSessionInput,
-  count = 20,
-): Promise<UsageQueueRecord[]> {
-  const client = createManagementClient(session)
-  const response = await client.get<unknown>('/usage-queue', {
-    params: { count },
-  })
-
-  return normalizeUsageQueue(response.data)
 }
 
 export async function clearRuntimeLogs(session: ManagementSessionInput): Promise<ClearLogsResult> {

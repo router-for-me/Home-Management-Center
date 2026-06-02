@@ -353,7 +353,6 @@ export const zhTW = {
       capabilityNames: {
         nodes: '節點管理',
         usage: '用量統計',
-        usageQueue: '用量佇列',
         logs: '請求日誌',
         requestErrorLogs: '錯誤日誌',
         users: '使用者管理',
@@ -1436,7 +1435,7 @@ export const zhTW = {
       disconnected: {
         title: '連線管理端執行環境',
         description:
-          '用量與日誌來自 Management API。連線執行環境後，才能查看請求統計、佇列和日誌。',
+          '用量與日誌來自 Management API。連線執行環境後，才能查看請求統計和日誌。',
         action: '連線執行環境',
       },
       error: {
@@ -1457,11 +1456,9 @@ export const zhTW = {
         download: '下載',
         downloadRequestLog: '下載請求日誌',
         viewLogDetail: '查看詳情',
-        fetchQueue: '拉取佇列記錄',
       },
       capabilities: {
         usage: '用量統計',
-        usageQueue: '用量佇列',
         logs: '執行日誌',
         requestErrorLogs: '錯誤日誌',
       },
@@ -1510,7 +1507,6 @@ export const zhTW = {
       },
       issueScopes: {
         apiKeyUsage: '用量統計',
-        usageQueue: '用量佇列',
         logs: '執行日誌',
         requestErrorLogs: '錯誤日誌',
         clearLogs: '清空日誌',
@@ -1535,27 +1531,9 @@ export const zhTW = {
         failed: '失敗',
         recentWindows: '最近視窗',
       },
-      queue: {
-        title: '用量佇列',
-        description: '按需讀取執行環境 usage queue。此介面會彈出最早的記錄，不適合自動刷新。',
-        consumes: '拉取佇列記錄會消費服務端佇列中的記錄；請只在需要排查 usage record 時執行。',
-        unavailable: '目前執行環境不提供用量佇列介面。',
-        notLoaded: '佇列尚未讀取。點擊「拉取佇列記錄」後會最多消費 20 筆記錄。',
-        empty: '本次沒有拉取到用量佇列記錄。',
-        raw: '原始記錄',
-        columns: {
-          request: 'Request ID',
-          homeIp: 'Home IP',
-          model: '模型',
-          endpoint: 'Endpoint',
-          status: '狀態',
-          actions: '操作',
-        },
-      },
       operations: {
         title: '日誌與排查工具',
-        description:
-          '請求日誌、錯誤日誌和 usage queue 屬於排查工具。佇列讀取會消費服務端記錄，因此保持手動觸發。',
+        description: '執行日誌和錯誤日誌用於排查請求鏈路、執行狀態和異常回應。',
       },
       logs: {
         title: '執行日誌',
@@ -1619,7 +1597,6 @@ export const zhTW = {
       toast: {
         logsCleared: '日誌已清空。',
         logDownloaded: '日誌已下載。',
-        queueFetched: '已拉取 {{count}} 筆佇列記錄。',
       },
     },
     systemNodesPage: {
@@ -1797,7 +1774,7 @@ export const zhTW = {
         description:
           '用量和日誌頁將作為 capability-aware 分析頁，在 Home cluster 不暴露 runtime log 路由時平滑降級。',
         itemOne:
-          '在可用時使用 GET /api-key-usage、GET /usage-queue、GET /logs、DELETE /logs 和 request error log 路由。',
+          '在可用時使用 GET /api-key-usage、GET /logs、DELETE /logs 和 request error log 路由。',
         itemTwo: '呈現不可用狀態，而不是把 cluster 缺失路由當成頁面失敗。',
       },
       systemNodes: {

@@ -7,7 +7,6 @@ import {
   downloadRequestErrorLog,
   downloadRequestLogById,
   fetchUsageLogsSnapshot,
-  fetchUsageQueueRecords,
   toUsageLogsApiError,
 } from '@/lib/api/management/usage-logs'
 import { useCapabilityStore } from '@/stores/capability-store'
@@ -49,7 +48,6 @@ export function useUsageLogsWorkbench() {
     session.baseUrl,
     connectedAt,
     capabilities.usage,
-    capabilities.usageQueue,
     capabilities.logs,
     capabilities.requestErrorLogs,
     runtimeLogLimit,
@@ -100,16 +98,6 @@ export function useUsageLogsWorkbench() {
     },
   })
 
-  const usageQueueMutation = useMutation({
-    mutationFn: async () => {
-      try {
-        return await fetchUsageQueueRecords(session, 20)
-      } catch (error) {
-        throw toUsageLogsApiError(error)
-      }
-    },
-  })
-
   const downloadRequestErrorLogMutation = useMutation({
     mutationFn: async (fileName: string) => {
       try {
@@ -144,13 +132,9 @@ export function useUsageLogsWorkbench() {
       void query.refetch()
     },
     clearLogs: clearLogsMutation.mutateAsync,
-    fetchUsageQueue: usageQueueMutation.mutateAsync,
     downloadRequestErrorLog: downloadRequestErrorLogMutation.mutateAsync,
     downloadRequestLogById: downloadRequestLogByIdMutation.mutateAsync,
-    usageQueueRecords: usageQueueMutation.data ?? [],
-    usageQueueLoaded: usageQueueMutation.isSuccess,
     isClearingLogs: clearLogsMutation.isPending,
-    isFetchingUsageQueue: usageQueueMutation.isPending,
     downloadingErrorLogName: downloadRequestErrorLogMutation.variables ?? null,
     downloadingRequestLogId: downloadRequestLogByIdMutation.variables?.requestId ?? null,
     isDownloadingErrorLog: downloadRequestErrorLogMutation.isPending,
@@ -162,7 +146,6 @@ export function useUsageLogsWorkbench() {
     setRuntimeLogOffset,
     mutating:
       clearLogsMutation.isPending ||
-      usageQueueMutation.isPending ||
       downloadRequestErrorLogMutation.isPending ||
       downloadRequestLogByIdMutation.isPending,
   }

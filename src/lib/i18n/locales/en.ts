@@ -362,7 +362,6 @@ export const en = {
       capabilityNames: {
         nodes: 'Node management',
         usage: 'Usage statistics',
-        usageQueue: 'Usage queue',
         logs: 'Request logs',
         requestErrorLogs: 'Error logs',
         users: 'User management',
@@ -1484,7 +1483,7 @@ export const en = {
       disconnected: {
         title: 'Connect a management runtime',
         description:
-          'Usage and logs are loaded from the Management API. Connect a runtime before reviewing request stats, queues, and logs.',
+          'Usage and logs are loaded from the Management API. Connect a runtime before reviewing request stats and logs.',
         action: 'Connect runtime',
       },
       error: {
@@ -1506,11 +1505,9 @@ export const en = {
         download: 'Download',
         downloadRequestLog: 'Download request log',
         viewLogDetail: 'View details',
-        fetchQueue: 'Pull queue records',
       },
       capabilities: {
         usage: 'Usage stats',
-        usageQueue: 'Usage queue',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
       },
@@ -1562,7 +1559,6 @@ export const en = {
       },
       issueScopes: {
         apiKeyUsage: 'Usage stats',
-        usageQueue: 'Usage queue',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
         clearLogs: 'Clear logs',
@@ -1589,29 +1585,10 @@ export const en = {
         failed: 'Failed',
         recentWindows: 'Recent windows',
       },
-      queue: {
-        title: 'Usage queue',
-        description:
-          'Read the runtime usage queue on demand. This route pops the earliest records, so it should not auto-refresh.',
-        consumes:
-          'Pulling queue records consumes records from the server queue. Run it only when investigating usage records.',
-        unavailable: 'This runtime does not expose the usage queue route.',
-        notLoaded: 'The queue has not been read. Pulling records consumes up to 20 queued records.',
-        empty: 'No usage queue records were pulled.',
-        raw: 'Raw record',
-        columns: {
-          request: 'Request ID',
-          homeIp: 'Home IP',
-          model: 'Model',
-          endpoint: 'Endpoint',
-          status: 'Status',
-          actions: 'Actions',
-        },
-      },
       operations: {
         title: 'Logs and investigation tools',
         description:
-          'Request logs, error logs, and the usage queue are investigation tools. Queue reads consume server records, so they remain manual.',
+          'Runtime logs and error logs help investigate request flow, runtime state, and failed responses.',
       },
       logs: {
         title: 'Runtime logs',
@@ -1678,7 +1655,6 @@ export const en = {
       toast: {
         logsCleared: 'Logs cleared.',
         logDownloaded: 'Log downloaded.',
-        queueFetched: '{{count}} queue records pulled.',
       },
     },
     systemNodesPage: {
@@ -1863,7 +1839,7 @@ export const en = {
         description:
           'Usage and logs will be capability-aware analysis pages that degrade cleanly when Home cluster does not expose runtime log routes.',
         itemOne:
-          'Use GET /api-key-usage, GET /usage-queue, GET /logs, DELETE /logs, and request error log routes when available.',
+          'Use GET /api-key-usage, GET /logs, DELETE /logs, and request error log routes when available.',
         itemTwo:
           'Render unavailable states instead of treating missing cluster routes as page failures.',
       },

@@ -43,7 +43,6 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       capabilityStatus,
       capabilities.nodes,
       capabilities.usage,
-      capabilities.usageQueue,
       capabilities.logs,
       capabilities.requestErrorLogs,
       capabilities.users,

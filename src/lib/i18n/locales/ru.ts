@@ -364,7 +364,6 @@ export const ru = {
       capabilityNames: {
         nodes: 'Управление узлами',
         usage: 'Статистика использования',
-        usageQueue: 'Очередь usage',
         logs: 'Журналы запросов',
         requestErrorLogs: 'Журналы ошибок',
         users: 'Управление пользователями',
@@ -1494,7 +1493,7 @@ export const ru = {
       disconnected: {
         title: 'Подключите management runtime',
         description:
-          'Usage и logs загружаются из Management API. Подключите runtime, чтобы смотреть статистику запросов, очереди и журналы.',
+          'Usage и logs загружаются из Management API. Подключите runtime, чтобы смотреть статистику запросов и журналы.',
         action: 'Подключить runtime',
       },
       error: {
@@ -1516,11 +1515,9 @@ export const ru = {
         download: 'Скачать',
         downloadRequestLog: 'Скачать request log',
         viewLogDetail: 'Подробнее',
-        fetchQueue: 'Получить записи очереди',
       },
       capabilities: {
         usage: 'Usage stats',
-        usageQueue: 'Usage queue',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
       },
@@ -1572,7 +1569,6 @@ export const ru = {
       },
       issueScopes: {
         apiKeyUsage: 'Usage stats',
-        usageQueue: 'Usage queue',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
         clearLogs: 'Очистить журналы',
@@ -1599,29 +1595,10 @@ export const ru = {
         failed: 'Ошибки',
         recentWindows: 'Recent windows',
       },
-      queue: {
-        title: 'Usage queue',
-        description:
-          'Читает runtime usage queue по запросу. Этот маршрут извлекает самые ранние записи, поэтому автообновление здесь не подходит.',
-        consumes:
-          'Получение записей очереди потребляет записи из server queue. Запускайте это только при разборе usage records.',
-        unavailable: 'Этот runtime не предоставляет маршрут usage queue.',
-        notLoaded: 'Очередь еще не читалась. Получение записей потребит до 20 записей из очереди.',
-        empty: 'В этот раз usage queue records не получены.',
-        raw: 'Сырая запись',
-        columns: {
-          request: 'Request ID',
-          homeIp: 'Home IP',
-          model: 'Модель',
-          endpoint: 'Endpoint',
-          status: 'Статус',
-          actions: 'Действия',
-        },
-      },
       operations: {
         title: 'Logs и инструменты расследования',
         description:
-          'Request logs, error logs и usage queue используются для расследования. Чтение очереди потребляет server records, поэтому остается ручным.',
+          'Runtime logs и error logs помогают разбирать цепочку запроса, состояние runtime и ошибочные ответы.',
       },
       logs: {
         title: 'Runtime logs',
@@ -1689,7 +1666,6 @@ export const ru = {
       toast: {
         logsCleared: 'Журналы очищены.',
         logDownloaded: 'Журнал скачан.',
-        queueFetched: 'Получено записей очереди: {{count}}.',
       },
     },
     systemNodesPage: {
@@ -1878,7 +1854,7 @@ export const ru = {
         description:
           'Использование и журналы будут capability-aware аналитическими страницами, которые корректно деградируют, если Home cluster не предоставляет runtime log routes.',
         itemOne:
-          'Использовать GET /api-key-usage, GET /usage-queue, GET /logs, DELETE /logs и request error log routes, если доступно.',
+          'Использовать GET /api-key-usage, GET /logs, DELETE /logs и request error log routes, если доступно.',
         itemTwo:
           'Показывать состояние недоступности вместо ошибки страницы при отсутствующих cluster routes.',
       },

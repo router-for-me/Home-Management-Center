@@ -6,7 +6,6 @@ type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' |
 type DashboardCapabilityId =
   | 'nodes'
   | 'usage'
-  | 'usageQueue'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'
@@ -244,7 +243,6 @@ export function createDashboardOverviewViewModel(
   const capabilityStatuses: DashboardCapabilityStatus[] = [
     { id: 'nodes', available: capabilities.nodes },
     { id: 'usage', available: capabilities.usage },
-    { id: 'usageQueue', available: capabilities.usageQueue },
     { id: 'logs', available: capabilities.logs },
     { id: 'requestErrorLogs', available: capabilities.requestErrorLogs },
     { id: 'users', available: capabilities.users },

@@ -353,7 +353,6 @@ export const zhCN = {
       capabilityNames: {
         nodes: '节点管理',
         usage: '用量统计',
-        usageQueue: '用量队列',
         logs: '请求日志',
         requestErrorLogs: '错误日志',
         users: '用户管理',
@@ -1436,7 +1435,7 @@ export const zhCN = {
     usageLogsPage: {
       disconnected: {
         title: '连接管理端运行时',
-        description: '用量与日志来自 Management API。连接运行时后，才能查看请求统计、队列和日志。',
+        description: '用量与日志来自 Management API。连接运行时后，才能查看请求统计和日志。',
         action: '连接运行时',
       },
       error: {
@@ -1457,11 +1456,9 @@ export const zhCN = {
         download: '下载',
         downloadRequestLog: '下载请求日志',
         viewLogDetail: '查看详情',
-        fetchQueue: '拉取队列记录',
       },
       capabilities: {
         usage: '用量统计',
-        usageQueue: '用量队列',
         logs: '运行日志',
         requestErrorLogs: '错误日志',
       },
@@ -1510,7 +1507,6 @@ export const zhCN = {
       },
       issueScopes: {
         apiKeyUsage: '用量统计',
-        usageQueue: '用量队列',
         logs: '运行日志',
         requestErrorLogs: '错误日志',
         clearLogs: '清空日志',
@@ -1535,27 +1531,9 @@ export const zhCN = {
         failed: '失败',
         recentWindows: '最近窗口',
       },
-      queue: {
-        title: '用量队列',
-        description: '按需读取运行时 usage queue。该接口会弹出最早的记录，不适合自动刷新。',
-        consumes: '拉取队列记录会消费服务端队列中的记录；请只在需要排查 usage record 时执行。',
-        unavailable: '当前运行时不提供用量队列接口。',
-        notLoaded: '队列尚未读取。点击“拉取队列记录”后会最多消费 20 条记录。',
-        empty: '本次没有拉取到用量队列记录。',
-        raw: '原始记录',
-        columns: {
-          request: 'Request ID',
-          homeIp: 'Home IP',
-          model: '模型',
-          endpoint: 'Endpoint',
-          status: '状态',
-          actions: '操作',
-        },
-      },
       operations: {
         title: '日志与排查工具',
-        description:
-          '请求日志、错误日志和 usage queue 属于排查工具。队列读取会消费服务端记录，因此保持手动触发。',
+        description: '运行日志和错误日志用于排查请求链路、运行状态和异常响应。',
       },
       logs: {
         title: '运行日志',
@@ -1619,7 +1597,6 @@ export const zhCN = {
       toast: {
         logsCleared: '日志已清空。',
         logDownloaded: '日志已下载。',
-        queueFetched: '已拉取 {{count}} 条队列记录。',
       },
     },
     systemNodesPage: {
@@ -1797,7 +1774,7 @@ export const zhCN = {
         description:
           '用量和日志页将作为 capability-aware 分析页，在 Home cluster 不暴露 runtime log 路由时平滑降级。',
         itemOne:
-          '在可用时使用 GET /api-key-usage、GET /usage-queue、GET /logs、DELETE /logs 和 request error log 路由。',
+          '在可用时使用 GET /api-key-usage、GET /logs、DELETE /logs 和 request error log 路由。',
         itemTwo: '渲染不可用状态，而不是把 cluster 缺失路由当成页面失败。',
       },
       systemNodes: {

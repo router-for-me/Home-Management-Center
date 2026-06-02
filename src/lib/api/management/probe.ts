@@ -97,10 +97,6 @@ function readDeclaredUsageCapability(configData: unknown) {
   ])
 }
 
-function readDeclaredUsageQueueCapability(configData: unknown) {
-  return readDeclaredCapabilityValue(configData, ['usage_queue', 'usageQueue', 'usage-queue'])
-}
-
 function readDeclaredLogsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['logs', 'runtime_logs', 'runtimeLogs'])
 }
@@ -219,9 +215,6 @@ export async function probeManagementRuntime(
   const serverInfo = readServerInfo(configResponse)
   const declaredNodes = capabilitiesPayload ? readDeclaredNodesCapability(capabilitySource) : null
   const declaredUsage = capabilitiesPayload ? readDeclaredUsageCapability(capabilitySource) : null
-  const declaredUsageQueue = capabilitiesPayload
-    ? readDeclaredUsageQueueCapability(capabilitySource)
-    : null
   const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
@@ -253,10 +246,7 @@ export async function probeManagementRuntime(
     nodes: declaredNodes ?? probedCapabilities.nodes,
     usage: declaredUsage ?? probedCapabilities.usage,
     users: declaredUsers ?? probedCapabilities.users,
-    // GET /usage-queue is destructive because it pops queue records, while HEAD is not
-    // registered by the current runtime. Treat the route as available when the
-    // non-destructive usage route exists.
-    usageQueue: declaredUsageQueue ?? declaredUsage ?? probedCapabilities.usage,
+    usageQueue: false,
     // GET /logs returns 400 when file logging is disabled, so probing it would create
     // console noise. Standalone runtimes that expose usage routes also expose the log
     // route family; the usage page decides separately whether config should read lines.

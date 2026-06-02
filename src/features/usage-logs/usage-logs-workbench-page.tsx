@@ -8,7 +8,6 @@ import {
   ChevronRight,
   Download,
   Eye,
-  FileSearch,
   Loader2,
   RefreshCw,
   Search,
@@ -61,7 +60,6 @@ import type {
   RuntimeLogSnapshot,
   UsageLogIssue,
   UsageLogsSnapshot,
-  UsageQueueRecord,
 } from '@/lib/api/management/usage-logs'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -248,7 +246,6 @@ function UsageVerdictHeader({
   snapshot: UsageLogsSnapshot
   capabilities: {
     usage: boolean
-    usageQueue: boolean
     logs: boolean
     requestErrorLogs: boolean
   }
@@ -258,10 +255,7 @@ function UsageVerdictHeader({
 }) {
   const { t, i18n } = useTranslation()
   const runtimeHasAnyCapability =
-    capabilities.usage ||
-    capabilities.usageQueue ||
-    capabilities.logs ||
-    capabilities.requestErrorLogs
+    capabilities.usage || capabilities.logs || capabilities.requestErrorLogs
   const verdict = getUsageVerdict(snapshot, runtimeHasAnyCapability)
 
   return (
@@ -308,7 +302,6 @@ function UsageCapabilityStrip({
 }: {
   capabilities: {
     usage: boolean
-    usageQueue: boolean
     logs: boolean
     requestErrorLogs: boolean
   }
@@ -320,10 +313,6 @@ function UsageCapabilityStrip({
       <CapabilityBadge
         available={capabilities.usage}
         label={t('usageLogsPage.capabilities.usage')}
-      />
-      <CapabilityBadge
-        available={capabilities.usageQueue}
-        label={t('usageLogsPage.capabilities.usageQueue')}
       />
       <CapabilityBadge available={capabilities.logs} label={t('usageLogsPage.capabilities.logs')} />
       <CapabilityBadge
@@ -471,31 +460,6 @@ function ApiKeyUsageTable({
   )
 }
 
-function StatusBadge({ failed }: { failed: boolean | null }) {
-  const { t } = useTranslation()
-  const label =
-    failed === null
-      ? t('usageLogsPage.status.unknownRequest')
-      : failed
-        ? t('usageLogsPage.status.failed')
-        : t('usageLogsPage.status.success')
-
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
-        failed === null
-          ? 'border-border bg-muted/50 text-muted-foreground'
-          : failed
-            ? 'border-destructive/30 bg-destructive/10 text-destructive'
-            : 'border-success/30 bg-success/10 text-success',
-      )}
-    >
-      {label}
-    </span>
-  )
-}
-
 function LogLevelBadge({ level, compact = false }: { level: string | null; compact?: boolean }) {
   const { t } = useTranslation()
   const normalizedLevel = level?.trim().toLowerCase() ?? ''
@@ -519,151 +483,6 @@ function LogLevelBadge({ level, compact = false }: { level: string | null; compa
     >
       {level || t('usageLogsPage.status.notAvailable')}
     </span>
-  )
-}
-
-function UsageQueuePanel({
-  records,
-  loaded,
-  canRead,
-  canDownloadRequestLog,
-  fetching,
-  downloadingRequestLogId,
-  isDownloadingRequestLog,
-  mutating,
-  onFetch,
-  onDownloadRequestLog,
-}: {
-  records: UsageQueueRecord[]
-  loaded: boolean
-  canRead: boolean
-  canDownloadRequestLog: boolean
-  fetching: boolean
-  downloadingRequestLogId: string | null
-  isDownloadingRequestLog: boolean
-  mutating: boolean
-  onFetch: () => void
-  onDownloadRequestLog: (requestId: string, homeIp?: string | null) => void
-}) {
-  const { t, i18n } = useTranslation()
-
-  return (
-    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <SectionHeader
-          title={t('usageLogsPage.queue.title')}
-          description={t('usageLogsPage.queue.description')}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          className="lg:shrink-0"
-          disabled={!canRead || mutating}
-          onClick={onFetch}
-        >
-          {fetching ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <FileSearch className="size-4" aria-hidden="true" />
-          )}
-          {t('usageLogsPage.actions.fetchQueue')}
-        </Button>
-      </div>
-      {canRead ? (
-        <div className="border-warning/30 bg-warning/8 text-warning-foreground dark:text-warning mt-3 rounded-md border px-3 py-2 text-sm">
-          {t('usageLogsPage.queue.consumes')}
-        </div>
-      ) : null}
-      <div className="mt-3 overflow-hidden rounded-md border">
-        {!canRead ? (
-          <p className="text-muted-foreground px-3 py-8 text-sm">
-            {t('usageLogsPage.queue.unavailable')}
-          </p>
-        ) : !loaded ? (
-          <p className="text-muted-foreground px-3 py-8 text-sm">
-            {t('usageLogsPage.queue.notLoaded')}
-          </p>
-        ) : records.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[980px] table-fixed">
-              <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="w-[220px]">
-                    {t('usageLogsPage.queue.columns.request')}
-                  </TableHead>
-                  <TableHead className="w-[150px]">
-                    {t('usageLogsPage.queue.columns.homeIp')}
-                  </TableHead>
-                  <TableHead className="w-[240px]">
-                    {t('usageLogsPage.queue.columns.model')}
-                  </TableHead>
-                  <TableHead className="w-[170px]">
-                    {t('usageLogsPage.queue.columns.endpoint')}
-                  </TableHead>
-                  <TableHead className="w-[90px]">
-                    {t('usageLogsPage.queue.columns.status')}
-                  </TableHead>
-                  <TableHead className="bg-muted sticky right-0 z-10 w-[140px] text-right">
-                    {t('usageLogsPage.queue.columns.actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {records.map((record) => {
-                  const requestId = record.requestId
-                  const downloading =
-                    isDownloadingRequestLog &&
-                    requestId !== null &&
-                    downloadingRequestLogId === requestId
-
-                  return (
-                    <TableRow key={record.id} className="group">
-                      <TableCell className="truncate font-mono text-xs">
-                        {requestId ?? t('usageLogsPage.status.unknownRequest')}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground truncate font-mono text-xs">
-                        {record.homeIp ?? t('usageLogsPage.status.localHome')}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground truncate">
-                        {record.model ?? t('usageLogsPage.status.notAvailable')}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground truncate">
-                        {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge failed={record.failed} />
-                      </TableCell>
-                      <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 w-[140px] text-right transition-colors">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="sm"
-                          disabled={!canDownloadRequestLog || !requestId || mutating}
-                          onClick={() =>
-                            requestId && onDownloadRequestLog(requestId, record.homeIp)
-                          }
-                        >
-                          {downloading ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Download className="size-4" aria-hidden="true" />
-                          )}
-                          {t('usageLogsPage.actions.downloadRequestLog')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <p className="text-muted-foreground px-3 py-8 text-sm">
-            {t('usageLogsPage.queue.empty')}
-          </p>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -1180,10 +999,7 @@ export function UsageLogsWorkbenchPage() {
   const [clearLogsDialogOpen, setClearLogsDialogOpen] = useState(false)
   const capabilities = workbench.capabilities
   const noRuntimeLogCapabilities =
-    !capabilities.usage &&
-    !capabilities.usageQueue &&
-    !capabilities.logs &&
-    !capabilities.requestErrorLogs
+    !capabilities.usage && !capabilities.logs && !capabilities.requestErrorLogs
 
   if (!workbench.connected) {
     return <UsageLogsDisconnectedState />
@@ -1202,15 +1018,6 @@ export function UsageLogsWorkbenchPage() {
       await workbench.clearLogs()
       setClearLogsDialogOpen(false)
       toast.success(t('usageLogsPage.toast.logsCleared'))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
-    }
-  }
-
-  const handleFetchUsageQueue = async () => {
-    try {
-      const records = await workbench.fetchUsageQueue()
-      toast.success(t('usageLogsPage.toast.queueFetched', { count: records.length }))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -1278,20 +1085,6 @@ export function UsageLogsWorkbenchPage() {
             description={t('usageLogsPage.operations.description')}
           />
         </div>
-        <UsageQueuePanel
-          records={workbench.usageQueueRecords}
-          loaded={workbench.usageQueueLoaded}
-          canRead={capabilities.usageQueue}
-          canDownloadRequestLog={capabilities.logs}
-          fetching={workbench.isFetchingUsageQueue}
-          downloadingRequestLogId={workbench.downloadingRequestLogId}
-          isDownloadingRequestLog={workbench.isDownloadingRequestLog}
-          mutating={workbench.mutating}
-          onFetch={() => void handleFetchUsageQueue()}
-          onDownloadRequestLog={(requestId, homeIp) =>
-            void handleDownloadRequestLog(requestId, homeIp)
-          }
-        />
         <RuntimeLogViewer
           runtimeLogs={workbench.snapshot.runtimeLogs}
           canRead={capabilities.logs}
