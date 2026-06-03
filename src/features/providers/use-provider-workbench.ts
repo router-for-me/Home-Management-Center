@@ -2,14 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toManagementApiError } from '@/lib/api/management/client'
 import {
+  type ProviderConnectivityTestInput,
+  type ProviderDiscoveredModel,
   type ProviderEntryFormInput,
   type ProviderId,
   type ProviderModelChannel,
+  type ProviderModelDiscoveryInput,
   type ProviderResource,
   createProviderResource,
   deleteProviderResource,
+  fetchProviderDiscoveredModels,
   fetchProviderModelDefinitions,
   fetchProviderSnapshot,
+  testProviderConnectivity,
   updateProviderResource,
 } from '@/lib/api/management/providers'
 import { useSessionStore } from '@/stores/session-store'
@@ -122,6 +127,26 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     onSuccess: invalidate,
   })
 
+  const discoverModelsMutation = useMutation({
+    mutationFn: async (input: ProviderModelDiscoveryInput): Promise<ProviderDiscoveredModel[]> => {
+      try {
+        return await fetchProviderDiscoveredModels(session, input)
+      } catch (error) {
+        throw toError(error)
+      }
+    },
+  })
+
+  const testProviderModelMutation = useMutation({
+    mutationFn: async (input: ProviderConnectivityTestInput): Promise<void> => {
+      try {
+        await testProviderConnectivity(session, input)
+      } catch (error) {
+        throw toError(error)
+      }
+    },
+  })
+
   return {
     connected,
     snapshot: query.data,
@@ -135,12 +160,16 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     createProvider: createMutation.mutateAsync,
     updateProvider: updateMutation.mutateAsync,
     deleteProvider: deleteMutation.mutateAsync,
+    discoverProviderModels: discoverModelsMutation.mutateAsync,
+    testProviderModel: testProviderModelMutation.mutateAsync,
     refetchModelDefinitions: () => {
       void modelDefinitionsQuery.refetch()
     },
     modelDefinitions: modelDefinitionsQuery.data ?? null,
     modelDefinitionsErrorMessage: modelDefinitionsQuery.error?.message ?? null,
     isFetchingModelDefinitions: modelDefinitionsQuery.isFetching,
+    isDiscoveringProviderModels: discoverModelsMutation.isPending,
+    isTestingProviderModel: testProviderModelMutation.isPending,
     mutating: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
   }
 }

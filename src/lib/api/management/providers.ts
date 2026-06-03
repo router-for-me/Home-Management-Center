@@ -24,6 +24,8 @@ export type ProviderDescriptor = {
   supportsName: boolean
   supportsApiKey: boolean
   supportsDisabled: boolean
+  supportsTestModel: boolean
+  supportsCloak: boolean
 }
 
 export type ProviderEntryFormInput = {
@@ -33,6 +35,48 @@ export type ProviderEntryFormInput = {
   proxyUrl: string
   prefix: string
   disabled: boolean
+  priority?: number
+  models: ProviderModelEntryInput[]
+  headers: ProviderHeaderEntryInput[]
+  excludedModelsText: string
+  testModel?: string
+  cloak?: ProviderCloakInput
+}
+
+export type ProviderCloakInput = {
+  mode: string
+  strictMode: boolean
+  cacheUserId: boolean
+  sensitiveWordsText: string
+}
+
+export type ProviderModelEntryInput = {
+  name: string
+  alias: string
+}
+
+export type ProviderHeaderEntryInput = {
+  key: string
+  value: string
+}
+
+export type ProviderDiscoveredModel = {
+  name: string
+  alias: string | null
+  description: string | null
+}
+
+export type ProviderModelDiscoveryInput = {
+  providerId: ProviderId
+  baseUrl: string
+  apiKey: string
+  authIndex?: string | null
+  headers: ProviderHeaderEntryInput[]
+}
+
+export type ProviderConnectivityTestInput = ProviderModelDiscoveryInput & {
+  testModel?: string
+  models: ProviderModelEntryInput[]
 }
 
 export type ProviderRequestIssue = {
@@ -106,7 +150,9 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'gemini-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: false,
+    supportsDisabled: true,
+    supportsTestModel: false,
+    supportsCloak: false,
   },
   {
     id: 'claude',
@@ -114,7 +160,9 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'claude-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: false,
+    supportsDisabled: true,
+    supportsTestModel: true,
+    supportsCloak: true,
   },
   {
     id: 'codex',
@@ -122,7 +170,9 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'codex-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: false,
+    supportsDisabled: true,
+    supportsTestModel: false,
+    supportsCloak: false,
   },
   {
     id: 'vertex',
@@ -130,7 +180,9 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'vertex-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: false,
+    supportsDisabled: true,
+    supportsTestModel: false,
+    supportsCloak: false,
   },
   {
     id: 'openaiCompatibility',
@@ -139,8 +191,15 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsName: true,
     supportsApiKey: true,
     supportsDisabled: true,
+    supportsTestModel: true,
+    supportsCloak: false,
   },
 ]
+
+const DEFAULT_CLAUDE_BASE_URL = 'https://api.anthropic.com'
+const DEFAULT_GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com'
+const DEFAULT_ANTHROPIC_VERSION = '2023-06-01'
+const DEFAULT_CONNECTIVITY_TIMEOUT_MS = 30_000
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -171,6 +230,10 @@ function readBoolean(record: UnknownRecord, key: string): boolean {
   return record[key] === true
 }
 
+function hasDisableAllModelsRule(record: UnknownRecord) {
+  return readStringArray(record, 'excluded-models').some((item) => item.trim() === '*')
+}
+
 function countArray(record: UnknownRecord, key: string): number {
   const value = record[key]
   return Array.isArray(value) ? value.length : 0
@@ -189,6 +252,18 @@ function readProviderEntries(responseData: unknown, responseKey: string): Unknow
 function readModelDefinitionEntries(responseData: unknown): UnknownRecord[] {
   const value = toRecord(responseData).models
   return Array.isArray(value) ? value.filter(isRecord) : []
+}
+
+function parseResponseBody(value: unknown) {
+  if (typeof value !== 'string') return value
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  try {
+    return JSON.parse(trimmed) as unknown
+  } catch {
+    return value
+  }
 }
 
 function maskSecret(value: string | null): string | null {
@@ -260,7 +335,7 @@ function normalizeProviderResource(
     baseUrl,
     proxyUrl: readString(record, 'proxy-url'),
     prefix,
-    disabled: readBoolean(record, 'disabled'),
+    disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
     priority: readNumber(record, 'priority'),
     modelCount: countArray(record, 'models'),
     headerCount: countRecordKeys(record, 'headers'),
@@ -299,6 +374,281 @@ function normalizeProviderModelDefinition(
   }
 }
 
+function parseTextList(value: string): string[] {
+  return value
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+function createHeaderPayload(entries: ProviderHeaderEntryInput[]) {
+  return entries.reduce<UnknownRecord>((payload, entry) => {
+    const key = entry.key.trim()
+    if (!key) return payload
+    payload[key] = entry.value
+    return payload
+  }, {})
+}
+
+function createStringHeaderPayload(entries: ProviderHeaderEntryInput[]) {
+  return entries.reduce<Record<string, string>>((payload, entry) => {
+    const key = entry.key.trim()
+    if (!key) return payload
+    payload[key] = entry.value
+    return payload
+  }, {})
+}
+
+function hasHeader(headers: Record<string, string>, name: string) {
+  const target = name.toLowerCase()
+  return Object.keys(headers).some((key) => key.toLowerCase() === target)
+}
+
+function normalizeApiBase(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+}
+
+function buildModelsEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl)
+  if (!normalized) return ''
+  const trimmed = normalized.replace(/\/+$/g, '')
+  if (/\/models$/i.test(trimmed)) return trimmed
+  return `${trimmed}/models`
+}
+
+function buildV1ModelsEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl)
+  if (!normalized) return ''
+  const trimmed = normalized.replace(/\/+$/g, '')
+  if (/\/v1\/models$/i.test(trimmed)) return trimmed
+  if (/\/v1$/i.test(trimmed)) return `${trimmed}/models`
+  return `${trimmed}/v1/models`
+}
+
+function buildClaudeModelsEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl) || DEFAULT_CLAUDE_BASE_URL
+  let trimmed = normalized.replace(/\/+$/g, '')
+  trimmed = trimmed.replace(/\/v1\/models$/i, '')
+  trimmed = trimmed.replace(/\/v1(?:\/.*)?$/i, '')
+  return `${trimmed}/v1/models`
+}
+
+function buildClaudeMessagesEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl) || DEFAULT_CLAUDE_BASE_URL
+  let trimmed = normalized.replace(/\/+$/g, '')
+  trimmed = trimmed.replace(/\/v1\/messages$/i, '')
+  trimmed = trimmed.replace(/\/v1(?:\/.*)?$/i, '')
+  return `${trimmed}/v1/messages`
+}
+
+function buildOpenAIChatCompletionsEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl)
+  if (!normalized) return ''
+  const trimmed = normalized.replace(/\/+$/g, '')
+  if (/\/chat\/completions$/i.test(trimmed)) return trimmed
+  if (/\/v1$/i.test(trimmed)) return `${trimmed}/chat/completions`
+  return `${trimmed}/v1/chat/completions`
+}
+
+function buildGeminiModelsEndpoint(baseUrl: string) {
+  const normalized = normalizeApiBase(baseUrl) || DEFAULT_GEMINI_BASE_URL
+  let trimmed = normalized.replace(/\/+$/g, '')
+  trimmed = trimmed.replace(/\/v1beta\/models$/i, '')
+  trimmed = trimmed.replace(/\/v1beta(?:\/.*)?$/i, '')
+  return `${trimmed}/v1beta/models`
+}
+
+function stripGeminiModelResourceName(value: string) {
+  return value.trim().replace(/^\/?models\//i, '')
+}
+
+function normalizeDiscoveredModels(payload: unknown, { dedupe = true } = {}) {
+  const toModel = (entry: unknown): ProviderDiscoveredModel | null => {
+    if (typeof entry === 'string' && entry.trim()) {
+      return { name: entry.trim(), alias: null, description: null }
+    }
+    if (!isRecord(entry)) return null
+
+    const name =
+      readString(entry, 'id') ??
+      readString(entry, 'name') ??
+      readString(entry, 'model') ??
+      readString(entry, 'value')
+    if (!name) return null
+
+    const alias =
+      readString(entry, 'alias') ??
+      readString(entry, 'display_name') ??
+      readString(entry, 'displayName')
+    const description =
+      readString(entry, 'description') ?? readString(entry, 'note') ?? readString(entry, 'comment')
+
+    return {
+      name,
+      alias: alias && alias !== name ? alias : null,
+      description,
+    }
+  }
+
+  const record = toRecord(payload)
+  const source = Array.isArray(payload)
+    ? payload
+    : Array.isArray(record.data)
+      ? record.data
+      : Array.isArray(record.models)
+        ? record.models
+        : []
+  const normalized = source
+    .map(toModel)
+    .filter((model): model is ProviderDiscoveredModel => Boolean(model))
+
+  if (!dedupe) return normalized
+
+  const seen = new Set<string>()
+  return normalized.filter((model) => {
+    const key = model.name.toLowerCase()
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function getApiCallErrorMessage(statusCode: number | null, payload: unknown, bodyText: string) {
+  let message = ''
+  const body = toRecord(payload)
+  const error = body.error
+
+  if (isRecord(error)) {
+    message = readString(error, 'message') ?? ''
+  } else if (typeof error === 'string') {
+    message = error
+  }
+
+  if (!message) {
+    message = readString(body, 'message') ?? ''
+  }
+
+  if (!message && bodyText.trim()) {
+    message = bodyText.trim()
+  }
+
+  if (statusCode && message) return `${statusCode} ${message}`
+  if (statusCode) return `HTTP ${statusCode}`
+  return message || 'Request failed'
+}
+
+async function runProviderModelApiCall(
+  client: AxiosInstance,
+  input: { authIndex?: string; url: string; headers: Record<string, string> },
+) {
+  return runProviderApiCall(client, {
+    authIndex: input.authIndex,
+    method: 'GET',
+    url: input.url,
+    headers: input.headers,
+  })
+}
+
+async function runProviderApiCall(
+  client: AxiosInstance,
+  input: {
+    authIndex?: string
+    method: 'GET' | 'POST'
+    url: string
+    headers: Record<string, string>
+    data?: string
+    timeout?: number
+  },
+) {
+  const response = await client.post<unknown>(
+    '/api-call',
+    {
+      auth_index: input.authIndex?.trim() || undefined,
+      method: input.method,
+      url: input.url,
+      header: Object.keys(input.headers).length ? input.headers : undefined,
+      data: input.data,
+    },
+    input.timeout ? { timeout: input.timeout } : undefined,
+  )
+  const record = toRecord(response.data)
+  const statusCode =
+    typeof record.status_code === 'number' && Number.isFinite(record.status_code)
+      ? record.status_code
+      : null
+  const bodyText = typeof record.body === 'string' ? record.body : ''
+  const body = parseResponseBody(record.body)
+
+  if (statusCode === null || statusCode < 200 || statusCode >= 300) {
+    throw new Error(getApiCallErrorMessage(statusCode, body, bodyText))
+  }
+
+  return body
+}
+
+function createModelPayload(entries: ProviderModelEntryInput[]) {
+  return entries
+    .map((entry) => {
+      const name = entry.name.trim()
+      if (!name) return null
+
+      const payload: UnknownRecord = { name }
+      const alias = entry.alias.trim()
+
+      if (alias && alias !== name) payload.alias = alias
+
+      return payload
+    })
+    .filter((entry): entry is UnknownRecord => Boolean(entry))
+}
+
+function pickConnectivityModel(input: ProviderConnectivityTestInput) {
+  const explicit = input.testModel?.trim()
+  if (explicit) return explicit
+
+  for (const model of input.models) {
+    const name = model.name.trim()
+    if (name) return name
+  }
+
+  return ''
+}
+
+function createCloakPayload(input?: ProviderCloakInput) {
+  if (!input) return undefined
+
+  const mode = input.mode.trim()
+  const sensitiveWords = parseTextList(input.sensitiveWordsText)
+  const hasCloak = mode || input.strictMode || input.cacheUserId || sensitiveWords.length > 0
+  if (!hasCloak) return undefined
+
+  const payload: UnknownRecord = {
+    'strict-mode': input.strictMode,
+    'cache-user-id': input.cacheUserId,
+  }
+
+  if (mode) payload.mode = mode
+  if (sensitiveWords.length) payload['sensitive-words'] = sensitiveWords
+
+  return payload
+}
+
+function appendProviderOptions(payload: UnknownRecord, input: ProviderEntryFormInput) {
+  payload.priority =
+    typeof input.priority === 'number' && Number.isFinite(input.priority) ? input.priority : 0
+
+  const headers = createHeaderPayload(input.headers)
+  payload.headers = headers
+
+  const models = createModelPayload(input.models)
+  payload.models = models
+
+  const excludedModels = parseTextList(input.excludedModelsText)
+  payload['excluded-models'] = excludedModels
+}
+
 function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
   const payload: UnknownRecord = {}
 
@@ -322,7 +672,18 @@ function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntry
     payload.disabled = input.disabled
   }
 
+  if (descriptor.supportsCloak) {
+    const cloak = createCloakPayload(input.cloak)
+    if (cloak) payload.cloak = cloak
+  }
+
+  appendProviderOptions(payload, input)
+
   if (descriptor.id === 'openaiCompatibility') {
+    if (input.testModel?.trim()) {
+      payload['test-model'] = input.testModel.trim()
+    }
+
     if (input.apiKey.trim()) {
       payload['api-key-entries'] = [{ 'api-key': input.apiKey.trim() }]
     }
@@ -419,6 +780,203 @@ export async function fetchProviderModelDefinitions(
       normalizeProviderModelDefinition(record, index),
     ),
   }
+}
+
+export async function fetchProviderDiscoveredModels(
+  session: ManagementSessionInput,
+  input: ProviderModelDiscoveryInput,
+): Promise<ProviderDiscoveredModel[]> {
+  const client = createManagementClient(session)
+  const headers = createStringHeaderPayload(input.headers)
+  const apiKey = input.apiKey.trim()
+  const authIndex = input.authIndex?.trim() || undefined
+
+  if (input.providerId === 'gemini') {
+    const endpoint = buildGeminiModelsEndpoint(input.baseUrl)
+    const resolvedHeaders = { ...headers }
+    if (apiKey && !hasHeader(resolvedHeaders, 'x-goog-api-key')) {
+      resolvedHeaders['x-goog-api-key'] = apiKey
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'x-goog-api-key')) {
+      resolvedHeaders['x-goog-api-key'] = '$TOKEN$'
+    }
+
+    const seen = new Set<string>()
+    const collected: ProviderDiscoveredModel[] = []
+    let pageToken = ''
+
+    for (let page = 0; page < 20; page += 1) {
+      const url = new URL(endpoint)
+      if (pageToken) {
+        url.searchParams.set('pageToken', pageToken)
+      }
+
+      const payload = await runProviderModelApiCall(client, {
+        authIndex,
+        url: url.toString(),
+        headers: resolvedHeaders,
+      })
+
+      normalizeDiscoveredModels(payload, { dedupe: false }).forEach((model) => {
+        const name = stripGeminiModelResourceName(model.name)
+        const key = name.toLowerCase()
+        if (!key || seen.has(key)) return
+        seen.add(key)
+        collected.push({
+          ...model,
+          name,
+          alias: model.alias === name ? null : model.alias,
+        })
+      })
+
+      const nextToken = isRecord(payload) ? readString(payload, 'nextPageToken') : null
+      if (!nextToken) break
+      pageToken = nextToken
+    }
+
+    return collected
+  }
+
+  if (input.providerId === 'claude') {
+    const resolvedHeaders = { ...headers }
+    if (apiKey && !hasHeader(resolvedHeaders, 'x-api-key')) {
+      resolvedHeaders['x-api-key'] = apiKey
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'x-api-key')) {
+      resolvedHeaders['x-api-key'] = '$TOKEN$'
+    }
+    if (!hasHeader(resolvedHeaders, 'anthropic-version')) {
+      resolvedHeaders['anthropic-version'] = DEFAULT_ANTHROPIC_VERSION
+    }
+
+    const payload = await runProviderModelApiCall(client, {
+      authIndex,
+      url: buildClaudeModelsEndpoint(input.baseUrl),
+      headers: resolvedHeaders,
+    })
+
+    return normalizeDiscoveredModels(payload)
+  }
+
+  if (input.providerId === 'codex') {
+    const resolvedHeaders = { ...headers }
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = `Bearer ${apiKey}`
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = 'Bearer $TOKEN$'
+    }
+
+    const payload = await runProviderModelApiCall(client, {
+      authIndex,
+      url: buildV1ModelsEndpoint(input.baseUrl),
+      headers: resolvedHeaders,
+    })
+
+    return normalizeDiscoveredModels(payload)
+  }
+
+  if (input.providerId === 'openaiCompatibility') {
+    const resolvedHeaders = { ...headers }
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = `Bearer ${apiKey}`
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = 'Bearer $TOKEN$'
+    }
+
+    try {
+      const payload = await runProviderModelApiCall(client, {
+        authIndex,
+        url: buildModelsEndpoint(input.baseUrl),
+        headers: resolvedHeaders,
+      })
+
+      return normalizeDiscoveredModels(payload)
+    } catch (error) {
+      if (!apiKey && !authIndex && !Object.keys(resolvedHeaders).length) {
+        throw error
+      }
+
+      const payload = await runProviderModelApiCall(client, {
+        url: buildModelsEndpoint(input.baseUrl),
+        headers: {},
+      })
+
+      return normalizeDiscoveredModels(payload)
+    }
+  }
+
+  return []
+}
+
+export async function testProviderConnectivity(
+  session: ManagementSessionInput,
+  input: ProviderConnectivityTestInput,
+) {
+  const client = createManagementClient(session)
+  const headers = createStringHeaderPayload(input.headers)
+  const apiKey = input.apiKey.trim()
+  const authIndex = input.authIndex?.trim() || undefined
+  const model = pickConnectivityModel(input)
+
+  if (!model) {
+    throw new Error('Missing test model')
+  }
+
+  if (input.providerId === 'claude') {
+    const resolvedHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...headers,
+    }
+    if (!hasHeader(resolvedHeaders, 'anthropic-version')) {
+      resolvedHeaders['anthropic-version'] = DEFAULT_ANTHROPIC_VERSION
+    }
+    if (apiKey && !hasHeader(resolvedHeaders, 'x-api-key')) {
+      resolvedHeaders['x-api-key'] = apiKey
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'x-api-key')) {
+      resolvedHeaders['x-api-key'] = '$TOKEN$'
+    }
+
+    await runProviderApiCall(client, {
+      authIndex,
+      method: 'POST',
+      url: buildClaudeMessagesEndpoint(input.baseUrl),
+      headers: resolvedHeaders,
+      data: JSON.stringify({
+        model,
+        max_tokens: 8,
+        messages: [{ role: 'user', content: 'Hi' }],
+      }),
+      timeout: DEFAULT_CONNECTIVITY_TIMEOUT_MS,
+    })
+    return
+  }
+
+  if (input.providerId === 'openaiCompatibility') {
+    const resolvedHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...headers,
+    }
+    if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = `Bearer ${apiKey}`
+    } else if (authIndex && !hasHeader(resolvedHeaders, 'authorization')) {
+      resolvedHeaders.Authorization = 'Bearer $TOKEN$'
+    }
+
+    await runProviderApiCall(client, {
+      authIndex,
+      method: 'POST',
+      url: buildOpenAIChatCompletionsEndpoint(input.baseUrl),
+      headers: resolvedHeaders,
+      data: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: 'Hi' }],
+        stream: false,
+        max_tokens: 5,
+      }),
+      timeout: DEFAULT_CONNECTIVITY_TIMEOUT_MS,
+    })
+    return
+  }
+
+  throw new Error(`Unsupported provider: ${input.providerId}`)
 }
 
 export async function createProviderResource(
