@@ -1069,8 +1069,9 @@ export const en = {
           groupRequired: 'Select a scope.',
           authRequired: 'Select a credential.',
           authAlreadyBound: 'This credential is already bound to the current scope.',
-          modelRequired: 'Select a model.',
+          modelRequired: 'Select at least one model.',
           modelAlreadyBound: 'This model is already bound to the current scope.',
+          bindingBatchFailed: '{{failed}} bindings failed: {{message}}',
         },
       },
       keys: {
@@ -1115,8 +1116,19 @@ export const en = {
         modelAlreadyBound: 'Bound',
         modelScopeAvailable: 'Available',
         modelScopeStatic: 'Static catalog',
+        modelSourceFilterLabel: 'Source',
+        modelSourceFilters: {
+          all: 'All',
+          available: 'Runtime',
+          static: 'Static',
+        },
+        modelSelectedCount: '{{count}} models selected',
+        modelFilteredCount: '{{count}} current results',
+        selectFilteredModels: 'Select results',
+        invertFilteredModels: 'Invert results',
+        clearSelectedModels: 'Clear selection',
         modelSelectHint:
-          'Runtime-available models are shown first, with the static model catalog as fallback. Bound models cannot be selected again.',
+          'Select one or more models. Runtime-available models are shown first, with the static catalog as fallback. Bound models cannot be selected again.',
         channelEmpty: 'No credential scopes yet.',
         modelEmpty: 'No model scopes yet.',
         detailCount: '{{count}} bindings',
@@ -1162,6 +1174,8 @@ export const en = {
         groupUpdated: 'Scope updated.',
         groupDeleted: 'Scope deleted.',
         bindingCreated: 'Binding added.',
+        bindingsCreated: '{{count}} bindings added.',
+        bindingsPartiallyCreated: '{{created}} bindings added, {{failed}} failed.',
         bindingDeleted: 'Binding deleted.',
       },
       workspace: {
@@ -1194,7 +1208,7 @@ export const en = {
         channelBindingDescription:
           'Search for and select an account credential to add to this scope. Client keys bound to this scope can use those credentials.',
         modelBindingDescription:
-          'Search for and select a model to add to this scope. Client keys bound to this scope can use those models.',
+          'Search for and select one or more models to add to this scope. Client keys bound to this scope can use those models.',
       },
       delete: {
         title: 'Confirm deletion',

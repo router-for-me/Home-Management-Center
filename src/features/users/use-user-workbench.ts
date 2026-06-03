@@ -30,6 +30,7 @@ import {
   toCredentialApiError,
 } from '@/lib/api/management/credentials'
 import {
+  type ManagementModelScope,
   type ModelResource,
   fetchModelsSnapshot,
   toModelsApiError,
@@ -76,12 +77,25 @@ export type ModelBindingCandidate = {
   ownedBy: string | null
   type: string | null
   channel: string | null
-  scope: 'available' | 'static'
+  scopes: ManagementModelScope[]
 }
 
 type ModelBindingCandidateSnapshot = {
   candidates: ModelBindingCandidate[]
   issue: string | null
+}
+
+type CreateAccessGroupDetailsInput = {
+  kind: AccessGroupKind
+  inputs: AccessGroupDetailInput[]
+}
+
+type CreateAccessGroupDetailsResult = {
+  createdCount: number
+  failed: Array<{
+    input: AccessGroupDetailInput
+    message: string
+  }>
 }
 
 function useManagementSession() {
@@ -165,23 +179,41 @@ function createCredentialBindingCandidates(
 
 function normalizeModelCandidate(resource: ModelResource): ModelBindingCandidate {
   return {
-    id: `${resource.scope}:${resource.channel ?? 'runtime'}:${resource.id}`,
+    id: `model:${resource.id}`,
     modelId: resource.id,
     label: resource.displayName,
     ownedBy: resource.ownedBy,
     type: resource.type,
     channel: resource.channel,
-    scope: resource.scope,
+    scopes: [resource.scope],
   }
 }
 
 function createModelBindingCandidates(available: ModelResource[], staticModels: ModelResource[]) {
-  const seenModelIds = new Set<string>()
+  const candidates = new Map<string, ModelBindingCandidate>()
 
-  return [...available, ...staticModels].flatMap((resource) => {
-    if (seenModelIds.has(resource.id)) return []
-    seenModelIds.add(resource.id)
-    return [normalizeModelCandidate(resource)]
+  for (const resource of [...available, ...staticModels]) {
+    const existing = candidates.get(resource.id)
+
+    if (!existing) {
+      candidates.set(resource.id, normalizeModelCandidate(resource))
+      continue
+    }
+
+    if (!existing.scopes.includes(resource.scope)) {
+      existing.scopes.push(resource.scope)
+    }
+
+    existing.ownedBy = existing.ownedBy ?? resource.ownedBy
+    existing.type = existing.type ?? resource.type
+    existing.channel = existing.channel ?? resource.channel
+  }
+
+  return [...candidates.values()].sort((left, right) => {
+    const leftAvailable = left.scopes.includes('available') ? 0 : 1
+    const rightAvailable = right.scopes.includes('available') ? 0 : 1
+
+    return leftAvailable - rightAvailable || left.modelId.localeCompare(right.modelId)
   })
 }
 
@@ -473,6 +505,33 @@ export function useUserWorkbench(
     onSuccess: invalidateAccess,
   })
 
+  const createGroupDetailsMutation = useMutation({
+    mutationFn: async ({
+      kind,
+      inputs,
+    }: CreateAccessGroupDetailsInput): Promise<CreateAccessGroupDetailsResult> => {
+      const results = await Promise.allSettled(
+        inputs.map((input) => createAccessGroupDetail(session, kind, input)),
+      )
+      const failed = results.flatMap((result, index) => {
+        if (result.status === 'fulfilled') return []
+
+        return [
+          {
+            input: inputs[index],
+            message: toAccessGroupsApiError(result.reason).message,
+          },
+        ]
+      })
+
+      return {
+        createdCount: results.length - failed.length,
+        failed,
+      }
+    },
+    onSuccess: invalidateAccess,
+  })
+
   const deleteGroupDetailMutation = useMutation({
     mutationFn: async (detail: AccessGroupDetailResource) => {
       try {
@@ -497,6 +556,7 @@ export function useUserWorkbench(
     updateGroupMutation.isPending ||
     deleteGroupMutation.isPending ||
     createGroupDetailMutation.isPending ||
+    createGroupDetailsMutation.isPending ||
     deleteGroupDetailMutation.isPending
 
   return {
@@ -555,6 +615,7 @@ export function useUserWorkbench(
     updateGroup: updateGroupMutation.mutateAsync,
     deleteGroup: deleteGroupMutation.mutateAsync,
     createGroupDetail: createGroupDetailMutation.mutateAsync,
+    createGroupDetails: createGroupDetailsMutation.mutateAsync,
     deleteGroupDetail: deleteGroupDetailMutation.mutateAsync,
     mutating,
   }

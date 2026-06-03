@@ -1043,8 +1043,9 @@ export const zhCN = {
           groupRequired: '必须选择一个范围。',
           authRequired: '必须选择一个凭证。',
           authAlreadyBound: '该凭证已经绑定到当前范围。',
-          modelRequired: '必须选择一个模型。',
+          modelRequired: '必须至少选择一个模型。',
           modelAlreadyBound: '该模型已经绑定到当前范围。',
+          bindingBatchFailed: '有 {{failed}} 个绑定创建失败：{{message}}',
         },
       },
       keys: {
@@ -1088,8 +1089,19 @@ export const zhCN = {
         modelAlreadyBound: '已绑定',
         modelScopeAvailable: '运行时可用',
         modelScopeStatic: '静态目录',
+        modelSourceFilterLabel: '来源',
+        modelSourceFilters: {
+          all: '全部',
+          available: '运行时',
+          static: '静态目录',
+        },
+        modelSelectedCount: '已选 {{count}} 个模型',
+        modelFilteredCount: '当前 {{count}} 个结果',
+        selectFilteredModels: '全选当前结果',
+        invertFilteredModels: '反选当前结果',
+        clearSelectedModels: '清空选择',
         modelSelectHint:
-          '优先展示当前运行时可用模型，并用静态模型目录补充；已绑定模型不可重复选择。',
+          '可一次选择多个模型；运行时可用模型优先展示，并用静态模型目录补充。已绑定模型不可重复选择。',
         channelEmpty: '当前没有凭证范围。',
         modelEmpty: '当前没有模型范围。',
         detailCount: '{{count}} 个绑定',
@@ -1135,6 +1147,8 @@ export const zhCN = {
         groupUpdated: '范围已更新。',
         groupDeleted: '范围已删除。',
         bindingCreated: '绑定已添加。',
+        bindingsCreated: '已添加 {{count}} 个绑定。',
+        bindingsPartiallyCreated: '已添加 {{created}} 个绑定，{{failed}} 个失败。',
         bindingDeleted: '绑定已删除。',
       },
       workspace: {
@@ -1161,7 +1175,7 @@ export const zhCN = {
         channelBindingDescription:
           '搜索并选择一个账号凭证加入该范围。绑定到此范围的客户端密钥才会使用这些凭证。',
         modelBindingDescription:
-          '搜索并选择一个模型加入该范围。绑定到此范围的客户端密钥才会使用这些模型。',
+          '搜索并选择一个或多个模型加入该范围。绑定到此范围的客户端密钥才会使用这些模型。',
       },
       delete: {
         title: '确认删除？',

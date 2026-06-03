@@ -1073,8 +1073,9 @@ export const ru = {
           groupRequired: 'Выберите область.',
           authRequired: 'Выберите учетные данные.',
           authAlreadyBound: 'Эти учетные данные уже связаны с текущей областью.',
-          modelRequired: 'Выберите модель.',
+          modelRequired: 'Выберите хотя бы одну модель.',
           modelAlreadyBound: 'Эта модель уже связана с текущей областью.',
+          bindingBatchFailed: 'Не удалось создать связей: {{failed}}. {{message}}',
         },
       },
       keys: {
@@ -1119,8 +1120,19 @@ export const ru = {
         modelAlreadyBound: 'Связано',
         modelScopeAvailable: 'Доступна runtime',
         modelScopeStatic: 'Статический каталог',
+        modelSourceFilterLabel: 'Источник',
+        modelSourceFilters: {
+          all: 'Все',
+          available: 'Runtime',
+          static: 'Static',
+        },
+        modelSelectedCount: 'Выбрано моделей: {{count}}',
+        modelFilteredCount: 'Текущих результатов: {{count}}',
+        selectFilteredModels: 'Выбрать результаты',
+        invertFilteredModels: 'Инвертировать',
+        clearSelectedModels: 'Очистить выбор',
         modelSelectHint:
-          'Сначала показаны модели, доступные в текущем runtime, затем статический каталог. Уже связанные модели нельзя выбрать повторно.',
+          'Можно выбрать одну или несколько моделей. Сначала показаны модели текущего runtime, затем статический каталог. Уже связанные модели нельзя выбрать повторно.',
         channelEmpty: 'Областей учетных данных пока нет.',
         modelEmpty: 'Областей моделей пока нет.',
         detailCount: 'Связей: {{count}}',
@@ -1166,6 +1178,8 @@ export const ru = {
         groupUpdated: 'Область обновлена.',
         groupDeleted: 'Область удалена.',
         bindingCreated: 'Связь добавлена.',
+        bindingsCreated: 'Связей добавлено: {{count}}.',
+        bindingsPartiallyCreated: 'Связей добавлено: {{created}}, ошибок: {{failed}}.',
         bindingDeleted: 'Связь удалена.',
       },
       workspace: {
@@ -1201,7 +1215,7 @@ export const ru = {
         channelBindingDescription:
           'Найдите и выберите учетные данные аккаунта для добавления в область. Связанные с областью клиентские ключи смогут использовать эти учетные данные.',
         modelBindingDescription:
-          'Найдите и выберите модель для добавления в область. Связанные с областью клиентские ключи смогут использовать эти модели.',
+          'Найдите и выберите одну или несколько моделей для добавления в область. Связанные с областью клиентские ключи смогут использовать эти модели.',
       },
       delete: {
         title: 'Подтвердите удаление',

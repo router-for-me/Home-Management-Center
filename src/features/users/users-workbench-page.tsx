@@ -71,6 +71,7 @@ import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
 type UsersAccessTab = 'users' | 'keys' | 'channelGroups' | 'modelGroups'
+type ModelSourceFilter = 'all' | 'available' | 'static'
 type SheetMode =
   | { type: 'user-create' }
   | { type: 'user-edit'; user: UserResource }
@@ -87,6 +88,7 @@ type PendingDelete =
   | { type: 'detail'; detail: AccessGroupDetailResource }
 
 const unassignedUserValue = '__unassigned__'
+const modelSourceFilters: ModelSourceFilter[] = ['all', 'available', 'static']
 
 function formatDateTime(value: string | null) {
   if (!value) return null
@@ -684,16 +686,19 @@ function GroupDetailForm({
   onCancel: () => void
   onRetryCredentialCandidates: () => void
   onRetryModelCandidates: () => void
-  onSubmit: (input: { groupId: number; targetId: string }) => Promise<void>
+  onSubmit: (input: { groupId: number; targetIds: string[] }) => Promise<void>
 }) {
   const { t } = useTranslation()
   const [groupId, setGroupId] = useState<number | null>(
     initialGroupId ?? groups[0]?.numericId ?? null,
   )
   const [targetId, setTargetId] = useState('')
+  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([])
+  const [modelSourceFilter, setModelSourceFilter] = useState<ModelSourceFilter>('all')
   const [credentialSearch, setCredentialSearch] = useState('')
   const [modelSearch, setModelSearch] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
+  const selectedModelIdSet = useMemo(() => new Set(selectedModelIds), [selectedModelIds])
   const boundTargetIds = useMemo(
     () =>
       new Set(
@@ -726,33 +731,91 @@ function GroupDetailForm({
   )
   const filteredModelCandidates = useMemo(() => {
     const normalizedSearch = modelSearch.trim().toLowerCase()
-    if (!normalizedSearch) return modelCandidates
+    const sourceFilteredCandidates =
+      modelSourceFilter === 'all'
+        ? modelCandidates
+        : modelCandidates.filter((candidate) => candidate.scopes.includes(modelSourceFilter))
 
-    return modelCandidates.filter((candidate) =>
+    if (!normalizedSearch) return sourceFilteredCandidates
+
+    return sourceFilteredCandidates.filter((candidate) =>
       [
         candidate.label,
         candidate.modelId,
         candidate.ownedBy ?? '',
         candidate.type ?? '',
         candidate.channel ?? '',
-        candidate.scope,
+        candidate.scopes.join(' '),
       ]
         .join(' ')
         .toLowerCase()
         .includes(normalizedSearch),
     )
-  }, [modelCandidates, modelSearch])
-  const firstSelectableModel = filteredModelCandidates.find(
+  }, [modelCandidates, modelSearch, modelSourceFilter])
+  const selectableModelCandidates = filteredModelCandidates.filter(
     (candidate) => !boundTargetIds.has(candidate.modelId),
   )
+  const firstSelectableModel = selectableModelCandidates[0]
+  const allFilteredModelsSelected =
+    selectableModelCandidates.length > 0 &&
+    selectableModelCandidates.every((candidate) => selectedModelIdSet.has(candidate.modelId))
 
   useEffect(() => {
     setLocalError(null)
     setGroupId(initialGroupId ?? groups[0]?.numericId ?? null)
     setTargetId('')
+    setSelectedModelIds([])
+    setModelSourceFilter('all')
     setCredentialSearch('')
     setModelSearch('')
   }, [groups, initialGroupId])
+
+  const handleGroupChange = (value: string) => {
+    setGroupId(Number(value))
+    setTargetId('')
+    setSelectedModelIds([])
+    setLocalError(null)
+  }
+
+  const toggleModelSelection = (modelId: string) => {
+    setSelectedModelIds((current) =>
+      current.includes(modelId) ? current.filter((id) => id !== modelId) : [...current, modelId],
+    )
+    setLocalError(null)
+  }
+
+  const selectFilteredModels = () => {
+    const modelIds = selectableModelCandidates.map((candidate) => candidate.modelId)
+    if (modelIds.length === 0) return
+
+    setSelectedModelIds((current) => [...new Set([...current, ...modelIds])])
+    setLocalError(null)
+  }
+
+  const invertFilteredModels = () => {
+    const modelIds = new Set(selectableModelCandidates.map((candidate) => candidate.modelId))
+    if (modelIds.size === 0) return
+
+    setSelectedModelIds((current) => {
+      const next = new Set(current)
+
+      for (const modelId of modelIds) {
+        if (next.has(modelId)) {
+          next.delete(modelId)
+        } else {
+          next.add(modelId)
+        }
+      }
+
+      return [...next]
+    })
+    setLocalError(null)
+  }
+
+  const clearSelectedModels = () => {
+    setSelectedModelIds([])
+    setLocalError(null)
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -762,28 +825,43 @@ function GroupDetailForm({
       return
     }
 
-    if (!targetId.trim()) {
-      setLocalError(
-        kind === 'channel'
-          ? t('usersPage.form.validation.authRequired')
-          : t('usersPage.form.validation.modelRequired'),
-      )
+    if (kind === 'channel') {
+      const normalizedTargetId = targetId.trim()
+
+      if (!normalizedTargetId) {
+        setLocalError(t('usersPage.form.validation.authRequired'))
+        return
+      }
+
+      if (boundTargetIds.has(normalizedTargetId)) {
+        setLocalError(t('usersPage.form.validation.authAlreadyBound'))
+        return
+      }
+
+      try {
+        setLocalError(null)
+        await onSubmit({ groupId, targetIds: [normalizedTargetId] })
+      } catch (error) {
+        setLocalError(error instanceof Error ? error.message : String(error))
+      }
       return
     }
 
-    if (kind === 'channel' && boundTargetIds.has(targetId.trim())) {
-      setLocalError(t('usersPage.form.validation.authAlreadyBound'))
+    const normalizedModelIds = [...new Set(selectedModelIds.map((id) => id.trim()).filter(Boolean))]
+
+    if (normalizedModelIds.length === 0) {
+      setLocalError(t('usersPage.form.validation.modelRequired'))
       return
     }
 
-    if (kind === 'model' && boundTargetIds.has(targetId.trim())) {
+    if (normalizedModelIds.some((modelId) => boundTargetIds.has(modelId))) {
       setLocalError(t('usersPage.form.validation.modelAlreadyBound'))
       return
     }
 
     try {
       setLocalError(null)
-      await onSubmit({ groupId, targetId: targetId.trim() })
+      await onSubmit({ groupId, targetIds: normalizedModelIds })
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
@@ -809,8 +887,7 @@ function GroupDetailForm({
 
     if (!firstSelectableModel) return
 
-    setTargetId(firstSelectableModel.modelId)
-    setLocalError(null)
+    toggleModelSelection(firstSelectableModel.modelId)
   }
 
   return (
@@ -820,7 +897,7 @@ function GroupDetailForm({
         <Select
           value={groupId ? String(groupId) : ''}
           disabled={mutating || groups.length === 0}
-          onValueChange={(value) => setGroupId(Number(value))}
+          onValueChange={handleGroupChange}
         >
           <SelectTrigger>
             <SelectValue placeholder={t('usersPage.groups.groupPlaceholder')} />
@@ -966,6 +1043,28 @@ function GroupDetailForm({
               onKeyDown={handleModelSearchKeyDown}
             />
           </div>
+          <div className="flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-muted-foreground mr-1 text-xs">
+                {t('usersPage.groups.modelSourceFilterLabel')}
+              </span>
+              {modelSourceFilters.map((filter) => (
+                <Button
+                  key={filter}
+                  type="button"
+                  variant={modelSourceFilter === filter ? 'secondary' : 'outline'}
+                  size="xs"
+                  disabled={mutating || modelCandidatesPending}
+                  onClick={() => setModelSourceFilter(filter)}
+                >
+                  {t(`usersPage.groups.modelSourceFilters.${filter}`)}
+                </Button>
+              ))}
+            </div>
+            <span className="text-muted-foreground text-xs">
+              {t('usersPage.groups.modelSelectedCount', { count: selectedModelIds.length })}
+            </span>
+          </div>
           {modelCandidatesPending ? (
             <div className="grid gap-2 rounded-md border p-2">
               <Skeleton className="h-14" />
@@ -999,17 +1098,58 @@ function GroupDetailForm({
                   {modelCandidatesIssueMessage}
                 </div>
               ) : null}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={
+                      mutating ||
+                      selectableModelCandidates.length === 0 ||
+                      allFilteredModelsSelected
+                    }
+                    onClick={selectFilteredModels}
+                  >
+                    {t('usersPage.groups.selectFilteredModels')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    disabled={mutating || selectableModelCandidates.length === 0}
+                    onClick={invertFilteredModels}
+                  >
+                    {t('usersPage.groups.invertFilteredModels')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="xs"
+                    disabled={mutating || selectedModelIds.length === 0}
+                    onClick={clearSelectedModels}
+                  >
+                    {t('usersPage.groups.clearSelectedModels')}
+                  </Button>
+                </div>
+                <span className="text-muted-foreground text-xs">
+                  {t('usersPage.groups.modelFilteredCount', {
+                    count: filteredModelCandidates.length,
+                  })}
+                </span>
+              </div>
               <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
                 {filteredModelCandidates.map((candidate) => {
                   const alreadyBound = boundTargetIds.has(candidate.modelId)
                   const disabled = mutating || alreadyBound
-                  const selected = targetId === candidate.modelId
+                  const selected = selectedModelIdSet.has(candidate.modelId)
 
                   return (
                     <button
                       key={candidate.id}
                       type="button"
                       disabled={disabled}
+                      aria-pressed={selected}
                       className={cn(
                         'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
                         selected
@@ -1018,8 +1158,7 @@ function GroupDetailForm({
                         disabled && 'cursor-not-allowed opacity-55',
                       )}
                       onClick={() => {
-                        setTargetId(candidate.modelId)
-                        setLocalError(null)
+                        toggleModelSelection(candidate.modelId)
                       }}
                     >
                       {selected ? (
@@ -1036,18 +1175,21 @@ function GroupDetailForm({
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5">
                           <span className="truncate text-sm font-medium">{candidate.label}</span>
-                          <span
-                            className={cn(
-                              'rounded-md border px-1.5 py-0.5 text-[11px]',
-                              candidate.scope === 'available'
-                                ? 'border-success/30 bg-success/10 text-success'
-                                : 'bg-muted text-muted-foreground',
-                            )}
-                          >
-                            {candidate.scope === 'available'
-                              ? t('usersPage.groups.modelScopeAvailable')
-                              : t('usersPage.groups.modelScopeStatic')}
-                          </span>
+                          {candidate.scopes.map((scope) => (
+                            <span
+                              key={scope}
+                              className={cn(
+                                'rounded-md border px-1.5 py-0.5 text-[11px]',
+                                scope === 'available'
+                                  ? 'border-success/30 bg-success/10 text-success'
+                                  : 'bg-muted text-muted-foreground',
+                              )}
+                            >
+                              {scope === 'available'
+                                ? t('usersPage.groups.modelScopeAvailable')
+                                : t('usersPage.groups.modelScopeStatic')}
+                            </span>
+                          ))}
                           {candidate.channel ? (
                             <span className="bg-muted text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px]">
                               {candidate.channel}
@@ -1939,8 +2081,46 @@ export function UsersWorkbenchPage() {
               onRetryCredentialCandidates={workbench.refetchCredentialCandidates}
               onRetryModelCandidates={workbench.refetchModelCandidates}
               onSubmit={async (input) => {
-                await workbench.createGroupDetail({ kind: sheetMode.kind, input })
-                toast.success(t('usersPage.toast.bindingCreated'))
+                if (input.targetIds.length === 1) {
+                  await workbench.createGroupDetail({
+                    kind: sheetMode.kind,
+                    input: {
+                      groupId: input.groupId,
+                      targetId: input.targetIds[0],
+                    },
+                  })
+                  toast.success(t('usersPage.toast.bindingCreated'))
+                  closeSheet()
+                  return
+                }
+
+                const result = await workbench.createGroupDetails({
+                  kind: sheetMode.kind,
+                  inputs: input.targetIds.map((targetId) => ({
+                    groupId: input.groupId,
+                    targetId,
+                  })),
+                })
+
+                if (result.failed.length > 0) {
+                  if (result.createdCount > 0) {
+                    toast.warning(
+                      t('usersPage.toast.bindingsPartiallyCreated', {
+                        created: result.createdCount,
+                        failed: result.failed.length,
+                      }),
+                    )
+                  }
+
+                  throw new Error(
+                    t('usersPage.form.validation.bindingBatchFailed', {
+                      failed: result.failed.length,
+                      message: result.failed[0]?.message ?? '',
+                    }),
+                  )
+                }
+
+                toast.success(t('usersPage.toast.bindingsCreated', { count: result.createdCount }))
                 closeSheet()
               }}
             />
