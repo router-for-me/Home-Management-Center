@@ -236,7 +236,7 @@ function AccessKeyList({
               <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
               <TableHead>{t('accessKeysPage.list.length')}</TableHead>
               <TableHead>{t('accessKeysPage.list.status')}</TableHead>
-              <TableHead className="bg-muted sticky right-0 z-10 w-[168px] text-right sm:w-[360px]">
+              <TableHead className="table-sticky-action-head w-[168px] text-right sm:w-[360px]">
                 {t('accessKeysPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -298,7 +298,7 @@ function AccessKeyList({
                     {t('accessKeysPage.status.accepted')}
                   </span>
                 </TableCell>
-                <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 w-[168px] text-right transition-colors sm:w-[360px]">
+                <TableCell className="table-sticky-action-cell w-[168px] text-right transition-colors sm:w-[360px]">
                   <div className="flex justify-end gap-1.5">
                     <Button
                       type="button"

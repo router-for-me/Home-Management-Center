@@ -1167,7 +1167,7 @@ function CredentialList({
               <TableHead>{t('credentialsPage.list.type')}</TableHead>
               <TableHead>{t('credentialsPage.list.status')}</TableHead>
               <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
-              <TableHead className="bg-muted sticky right-0 z-10 text-right">
+              <TableHead className="table-sticky-action-head text-right">
                 {t('credentialsPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1269,7 +1269,7 @@ function CredentialList({
                   <TableCell className="pr-4">
                     <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
                   </TableCell>
-                  <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 pl-4 transition-colors">
+                  <TableCell className="table-sticky-action-cell pl-4 transition-colors">
                     <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
                       <Button
                         type="button"

@@ -606,7 +606,7 @@ function RuntimeLogViewer({
                     <TableHead className="bg-muted">
                       {t('usageLogsPage.logs.columns.summary')}
                     </TableHead>
-                    <TableHead className="bg-muted sticky right-0 z-30 w-36 text-right shadow-[-1px_0_0_var(--border)]">
+                    <TableHead className="table-sticky-action-head w-36 text-right">
                       {t('usageLogsPage.logs.columns.actions')}
                     </TableHead>
                   </TableRow>
@@ -869,7 +869,7 @@ function RuntimeLogRow({
           </span>
         </div>
       </TableCell>
-      <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 text-right shadow-[-1px_0_0_var(--border)] transition-colors">
+      <TableCell className="table-sticky-action-cell text-right transition-colors">
         <Button type="button" variant="text" size="sm" onClick={() => onInspectLog(record)}>
           <Eye className="size-4" aria-hidden="true" />
           {t('usageLogsPage.actions.viewLogDetail')}
@@ -942,7 +942,7 @@ function ErrorLogFilesPanel({
                   <TableHead className="w-[80px] text-right">
                     {t('usageLogsPage.errorLogs.columns.size')}
                   </TableHead>
-                  <TableHead className="bg-muted sticky right-0 z-10 w-[120px] text-right">
+                  <TableHead className="table-sticky-action-head w-[120px] text-right">
                     {t('usageLogsPage.errorLogs.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -961,7 +961,7 @@ function ErrorLogFilesPanel({
                       <TableCell className="text-muted-foreground text-right">
                         {formatBytes(row.size) ?? t('usageLogsPage.status.notAvailable')}
                       </TableCell>
-                      <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 text-right transition-colors">
+                      <TableCell className="table-sticky-action-cell text-right transition-colors">
                         <Button
                           type="button"
                           variant="text"

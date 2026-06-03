@@ -1378,7 +1378,7 @@ function UsersTable({
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
               <TableHead>{t('usersPage.scopes.model')}</TableHead>
               <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-              <TableHead className="bg-muted sticky right-0 z-10 w-[220px] text-right">
+              <TableHead className="table-sticky-action-head w-[220px] text-right">
                 {t('usersPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1413,7 +1413,7 @@ function UsersTable({
                   <TableCell className="text-muted-foreground">
                     {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
                   </TableCell>
-                  <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 text-right transition-colors">
+                  <TableCell className="table-sticky-action-cell text-right transition-colors">
                     <div className="flex justify-end gap-1.5">
                       <Button
                         variant="text"
@@ -1490,7 +1490,7 @@ function AccessKeysTable({
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
               <TableHead>{t('usersPage.scopes.model')}</TableHead>
               <TableHead>{t('usersPage.keys.length')}</TableHead>
-              <TableHead className="bg-muted sticky right-0 z-10 w-[180px] text-right">
+              <TableHead className="table-sticky-action-head w-[180px] text-right">
                 {t('usersPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1524,7 +1524,7 @@ function AccessKeysTable({
                   )}
                 </TableCell>
                 <TableCell>{key.length}</TableCell>
-                <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 text-right transition-colors">
+                <TableCell className="table-sticky-action-cell text-right transition-colors">
                   <div className="flex justify-end gap-1.5">
                     <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(key)}>
                       <Pencil className="size-4" aria-hidden="true" />

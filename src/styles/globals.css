@@ -23,3 +23,35 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+.table-sticky-action-head,
+.table-sticky-action-cell {
+  position: sticky;
+  right: 0;
+  isolation: isolate;
+  background-clip: padding-box;
+  box-shadow: -1px 0 0 var(--border);
+}
+
+.table-sticky-action-head::before,
+.table-sticky-action-cell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: inherit;
+}
+
+.table-sticky-action-head {
+  z-index: 30;
+  background: var(--muted);
+}
+
+.table-sticky-action-cell {
+  z-index: 10;
+  background: var(--card);
+}
+
+.group:hover > .table-sticky-action-cell {
+  background: var(--accent);
+}
