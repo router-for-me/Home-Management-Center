@@ -536,9 +536,6 @@ function AccessKeyDetailContent({
 
       <dl className="mt-5 grid gap-3 text-sm">
         {[
-          ['prefix', resource.prefix],
-          ['suffix', resource.suffix],
-          ['length', String(resource.length)],
           ['owner', userLabel(users, resource.userId) ?? t('accessKeysPage.list.unassigned')],
           [
             'credentialScope',
