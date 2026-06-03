@@ -1357,7 +1357,7 @@ function UsersTable({
       <div className="overflow-x-auto">
         <Table className="min-w-[980px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
+            <TableRow variant="static">
               <TableHead>{t('usersPage.list.user')}</TableHead>
               <TableHead>{t('usersPage.list.status')}</TableHead>
               <TableHead>{t('usersPage.list.keys')}</TableHead>
@@ -1376,7 +1376,7 @@ function UsersTable({
               const modelScopeIds = getUnion(keys.map((key) => key.modelGroupIds))
 
               return (
-                <TableRow key={user.id} className="hover:bg-accent/40 group transition-colors">
+                <TableRow key={user.id} variant="resource" className="group">
                   <TableCell>
                     <div className="min-w-0">
                       <p className="font-medium">{user.username}</p>
@@ -1470,7 +1470,7 @@ function AccessKeysTable({
       <div className="overflow-x-auto">
         <Table className="min-w-[920px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
+            <TableRow variant="static">
               <TableHead>{t('usersPage.keys.key')}</TableHead>
               <TableHead>{t('usersPage.keys.owner')}</TableHead>
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
@@ -1483,7 +1483,7 @@ function AccessKeysTable({
           </TableHeader>
           <TableBody>
             {keys.map((key) => (
-              <TableRow key={key.id} className="hover:bg-accent/40 group transition-colors">
+              <TableRow key={key.id} variant="resource" className="group">
                 <TableCell>
                   <p className="font-mono text-xs">{key.maskedValue}</p>
                   <p className="text-muted-foreground mt-1 text-xs">
@@ -1615,7 +1615,7 @@ function GroupsTable({
             <div className="overflow-x-auto">
               <Table className="min-w-[620px]">
                 <TableHeader className="bg-muted/40 text-muted-foreground">
-                  <TableRow className="hover:bg-transparent">
+                  <TableRow variant="static">
                     <TableHead>
                       {kind === 'channel'
                         ? t('usersPage.groups.authId')
@@ -1629,14 +1629,14 @@ function GroupsTable({
                 </TableHeader>
                 <TableBody>
                   {groupDetails.length === 0 ? (
-                    <TableRow>
+                    <TableRow variant="static">
                       <TableCell colSpan={3} className="text-muted-foreground py-8 text-center">
                         {t('usersPage.groups.noDetails')}
                       </TableCell>
                     </TableRow>
                   ) : (
                     groupDetails.map((detail) => (
-                      <TableRow key={detail.id}>
+                      <TableRow key={detail.id} variant="resource">
                         <TableCell className="font-mono text-xs">{detail.targetId}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {formatOptionalTime(detail.updatedAt, t('usersPage.status.notReturned'))}

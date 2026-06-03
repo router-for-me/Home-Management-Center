@@ -1954,6 +1954,7 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
                     <TableRow
                       key={`omitted-${index}`}
                       className="bg-muted/50 text-muted-foreground"
+                      variant="semantic"
                     >
                       <TableCell className="w-12 border-r px-2 py-1 text-right select-none">
                         ...
@@ -1984,6 +1985,7 @@ function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
                           ? 'bg-red-500/10 text-red-950 dark:text-red-50'
                           : 'bg-background text-muted-foreground',
                     )}
+                    variant="semantic"
                   >
                     <TableCell
                       className={cn(

@@ -421,7 +421,7 @@ function ApiKeyUsageTable({
           <div className="overflow-x-auto">
             <Table className="min-w-[760px]">
               <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow className="hover:bg-transparent">
+                <TableRow variant="static">
                   <TableHead>{t('usageLogsPage.usage.provider')}</TableHead>
                   <TableHead>{t('usageLogsPage.usage.baseUrl')}</TableHead>
                   <TableHead>{t('usageLogsPage.usage.key')}</TableHead>
@@ -434,7 +434,7 @@ function ApiKeyUsageTable({
               </TableHeader>
               <TableBody>
                 {resources.map((resource) => (
-                  <TableRow key={resource.id}>
+                  <TableRow key={resource.id} variant="resource">
                     <TableCell className="font-medium">{resource.provider}</TableCell>
                     <TableCell className="text-muted-foreground max-w-[260px] truncate font-mono text-xs">
                       {resource.baseUrl || t('usageLogsPage.status.notAvailable')}
@@ -599,7 +599,7 @@ function RuntimeLogViewer({
                 className="w-full min-w-[760px] table-fixed"
               >
                 <TableHeader className="text-muted-foreground sticky top-0 z-20 shadow-[0_1px_0_var(--border)]">
-                  <TableRow className="hover:bg-transparent">
+                  <TableRow variant="static">
                     <TableHead className="bg-muted w-[172px]">
                       {t('usageLogsPage.logs.columns.time')}
                     </TableHead>
@@ -857,7 +857,7 @@ function RuntimeLogRow({
   const level = getRuntimeLogLevel(record)
 
   return (
-    <TableRow className="group">
+    <TableRow variant="resource" className="group">
       <TableCell className="text-muted-foreground truncate">
         {formatDateTime(record.timestamp, i18n) ?? t('usageLogsPage.status.notAvailable')}
       </TableCell>
@@ -932,7 +932,7 @@ function ErrorLogFilesPanel({
           <div className="overflow-x-auto">
             <Table className="min-w-[620px] table-fixed">
               <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow className="hover:bg-transparent">
+                <TableRow variant="static">
                   <TableHead className="w-[260px]">
                     {t('usageLogsPage.errorLogs.columns.name')}
                   </TableHead>
@@ -952,7 +952,7 @@ function ErrorLogFilesPanel({
                   const downloading = isDownloadingErrorLog && downloadingErrorLogName === row.name
 
                   return (
-                    <TableRow key={row.name} className="group">
+                    <TableRow key={row.name} variant="resource" className="group">
                       <TableCell className="truncate font-mono text-xs">{row.name}</TableCell>
                       <TableCell className="text-muted-foreground truncate">
                         {formatTimestamp(row.modified, i18n) ??

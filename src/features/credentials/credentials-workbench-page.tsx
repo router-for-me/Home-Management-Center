@@ -1135,7 +1135,7 @@ function CredentialList({
             <col className="w-[270px]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
+            <TableRow variant="static">
               <TableHead>{t('credentialsPage.list.credential')}</TableHead>
               <TableHead>{t('credentialsPage.list.provider')}</TableHead>
               <TableHead>{t('credentialsPage.list.source')}</TableHead>
@@ -1158,10 +1158,8 @@ function CredentialList({
               return (
                 <TableRow
                   key={resource.id}
-                  className={cn(
-                    'hover:bg-accent/40 transition-colors',
-                    resource.id === selectedResourceId ? 'bg-primary/8' : null,
-                  )}
+                  className={cn(resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                  variant="resource"
                 >
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2.5">

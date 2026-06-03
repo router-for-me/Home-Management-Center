@@ -221,7 +221,7 @@ function AccessKeyList({
       <div className="overflow-x-auto">
         <Table className="min-w-[1120px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
+            <TableRow variant="static">
               <TableHead className="w-10">
                 <Checkbox
                   checked={partiallySelected ? 'indeterminate' : allSelected}
@@ -245,10 +245,8 @@ function AccessKeyList({
             {resources.map((resource) => (
               <TableRow
                 key={resource.id}
-                className={cn(
-                  'hover:bg-accent/40 group transition-colors',
-                  selectedKeyId === resource.id ? 'bg-primary/8' : null,
-                )}
+                className={cn('group', selectedKeyId === resource.id ? 'bg-primary/8' : null)}
+                variant="resource"
               >
                 <TableCell>
                   <Checkbox

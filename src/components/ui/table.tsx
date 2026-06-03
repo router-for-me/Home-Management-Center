@@ -1,6 +1,22 @@
 import * as React from 'react'
 
+import { type VariantProps, cva } from 'class-variance-authority'
+
 import { cn } from '@/lib/utils'
+
+const tableRowVariants = cva('data-[state=selected]:bg-muted border-b transition-colors', {
+  variants: {
+    variant: {
+      default: 'hover:bg-muted/50',
+      resource: 'hover:bg-accent/40',
+      static: 'hover:bg-transparent',
+      semantic: '',
+    },
+  },
+  defaultVariants: {
+    variant: 'default',
+  },
+})
 
 function Table({
   className,
@@ -37,16 +53,13 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   )
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+function TableRow({
+  className,
+  variant,
+  ...props
+}: React.ComponentProps<'tr'> & VariantProps<typeof tableRowVariants>) {
   return (
-    <tr
-      data-slot="table-row"
-      className={cn(
-        'hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors',
-        className,
-      )}
-      {...props}
-    />
+    <tr data-slot="table-row" className={cn(tableRowVariants({ variant }), className)} {...props} />
   )
 }
 
@@ -76,4 +89,4 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   )
 }
 
-export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow }
+export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableRowVariants }

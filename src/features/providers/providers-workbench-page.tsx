@@ -568,7 +568,7 @@ function ProviderResourceTable({
             <col className="w-[26%]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow className="hover:bg-transparent">
+            <TableRow variant="static">
               <TableHead>{t('providersPage.table.key')}</TableHead>
               <TableHead>{t('providersPage.table.baseUrl')}</TableHead>
               <TableHead>{t('providersPage.table.prefix')}</TableHead>
@@ -581,10 +581,8 @@ function ProviderResourceTable({
             {resources.map((resource) => (
               <TableRow
                 key={resource.id}
-                className={cn(
-                  'hover:bg-accent/40 transition-colors',
-                  resource.id === selectedResourceId ? 'bg-primary/8' : null,
-                )}
+                className={cn(resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                variant="resource"
               >
                 <TableCell>
                   <p className="max-w-[220px] truncate font-medium">
