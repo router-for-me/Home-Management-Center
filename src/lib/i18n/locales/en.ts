@@ -1067,7 +1067,7 @@ export const en = {
           keyRequired: 'Key value is required.',
           groupNameRequired: 'Scope name is required.',
           groupRequired: 'Select a scope.',
-          authRequired: 'Select a credential.',
+          authRequired: 'Select at least one credential.',
           authAlreadyBound: 'This credential is already bound to the current scope.',
           modelRequired: 'Select at least one model.',
           modelAlreadyBound: 'This model is already bound to the current scope.',
@@ -1105,8 +1105,10 @@ export const en = {
         credentialSearchEmpty: 'No account credentials match your search.',
         credentialAlreadyBound: 'Bound',
         credentialUnavailable: 'Unavailable',
+        credentialSelectedCount: '{{count}} credentials selected',
+        credentialFilteredCount: '{{count}} current results',
         credentialSelectHint:
-          'Only credentials with an explicit Auth ID are listed. Bound or unavailable credentials cannot be selected again.',
+          'Select one or more credentials. Only credentials with an explicit Auth ID are listed. Bound or unavailable credentials cannot be selected again.',
         authId: 'Credential ID',
         model: 'Model',
         modelId: 'Model ID',
@@ -1124,9 +1126,9 @@ export const en = {
         },
         modelSelectedCount: '{{count}} models selected',
         modelFilteredCount: '{{count}} current results',
-        selectFilteredModels: 'Select results',
-        invertFilteredModels: 'Invert results',
-        clearSelectedModels: 'Clear selection',
+        selectFilteredItems: 'Select results',
+        invertFilteredItems: 'Invert results',
+        clearSelectedItems: 'Clear selection',
         modelSelectHint:
           'Select one or more models. Runtime-available models are shown first, with the static catalog as fallback. Bound models cannot be selected again.',
         channelEmpty: 'No credential scopes yet.',
@@ -1206,7 +1208,7 @@ export const en = {
         channelGroupEditDescription: 'Maintain the credential scope name and enabled state.',
         modelGroupEditDescription: 'Maintain the model scope name and enabled state.',
         channelBindingDescription:
-          'Search for and select an account credential to add to this scope. Client keys bound to this scope can use those credentials.',
+          'Search for and select one or more account credentials to add to this scope. Client keys bound to this scope can use those credentials.',
         modelBindingDescription:
           'Search for and select one or more models to add to this scope. Client keys bound to this scope can use those models.',
       },

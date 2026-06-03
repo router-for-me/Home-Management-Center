@@ -1040,7 +1040,7 @@ export const zhTW = {
           keyRequired: '必須填寫金鑰值。',
           groupNameRequired: '必須填寫範圍名稱。',
           groupRequired: '必須選擇一個範圍。',
-          authRequired: '必須選擇一個憑證。',
+          authRequired: '必須至少選擇一個憑證。',
           authAlreadyBound: '該憑證已綁定到目前範圍。',
           modelRequired: '必須至少選擇一個模型。',
           modelAlreadyBound: '該模型已綁定到目前範圍。',
@@ -1077,8 +1077,10 @@ export const zhTW = {
         credentialSearchEmpty: '沒有符合條件的帳號憑證。',
         credentialAlreadyBound: '已綁定',
         credentialUnavailable: '不可用',
+        credentialSelectedCount: '已選 {{count}} 個憑證',
+        credentialFilteredCount: '目前 {{count}} 個結果',
         credentialSelectHint:
-          '清單僅顯示具有明確 Auth ID 的憑證；已綁定或不可用的憑證不可重複選擇。',
+          '可一次選擇多個憑證；清單僅顯示具有明確 Auth ID 的憑證。已綁定或不可用的憑證不可重複選擇。',
         authId: '憑證 ID',
         model: '模型',
         modelId: '模型 ID',
@@ -1096,9 +1098,9 @@ export const zhTW = {
         },
         modelSelectedCount: '已選 {{count}} 個模型',
         modelFilteredCount: '目前 {{count}} 個結果',
-        selectFilteredModels: '全選目前結果',
-        invertFilteredModels: '反選目前結果',
-        clearSelectedModels: '清空選擇',
+        selectFilteredItems: '全選目前結果',
+        invertFilteredItems: '反選目前結果',
+        clearSelectedItems: '清空選擇',
         modelSelectHint:
           '可一次選擇多個模型；優先顯示目前執行中可用模型，並用靜態模型目錄補充。已綁定模型不可重複選擇。',
         channelEmpty: '目前沒有憑證範圍。',
@@ -1172,7 +1174,7 @@ export const zhTW = {
         channelGroupEditDescription: '維護憑證範圍名稱和啟用狀態。',
         modelGroupEditDescription: '維護模型範圍名稱和啟用狀態。',
         channelBindingDescription:
-          '搜尋並選擇一個帳號憑證加入該範圍。綁定到此範圍的用戶端金鑰才會使用這些憑證。',
+          '搜尋並選擇一個或多個帳號憑證加入該範圍。綁定到此範圍的用戶端金鑰才會使用這些憑證。',
         modelBindingDescription:
           '搜尋並選擇一個或多個模型加入該範圍。綁定到此範圍的用戶端金鑰才會使用這些模型。',
       },

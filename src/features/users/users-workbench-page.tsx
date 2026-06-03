@@ -1,9 +1,16 @@
-import { type FormEvent, type KeyboardEvent, useEffect, useMemo, useState } from 'react'
+import {
+  type Dispatch,
+  type FormEvent,
+  type KeyboardEvent,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import {
   AlertTriangle,
   CheckCircle2,
-  Circle,
   Eye,
   KeyRound,
   Layers3,
@@ -86,6 +93,21 @@ type PendingDelete =
   | { type: 'key'; key: AccessKeyResource }
   | { type: 'group'; group: AccessGroupResource }
   | { type: 'detail'; detail: AccessGroupDetailResource }
+type BindingCandidateOption = {
+  id: string
+  value: string
+  label: string
+  description: string
+  badges: Array<{
+    label: string
+    className?: string
+  }>
+  disabled?: boolean
+}
+type BindingCandidateFilterOption = {
+  value: string
+  label: string
+}
 
 const unassignedUserValue = '__unassigned__'
 const modelSourceFilters: ModelSourceFilter[] = ['all', 'available', 'static']
@@ -651,6 +673,260 @@ function GroupForm({
   )
 }
 
+function BindingCandidateMultiSelect({
+  title,
+  searchValue,
+  searchPlaceholder,
+  selectedValues,
+  selectedCountLabel,
+  filteredCountLabel,
+  options,
+  pending,
+  issueMessage,
+  errorMessage,
+  emptyMessage,
+  searchEmptyMessage,
+  hint,
+  filters,
+  filterValue,
+  mutating,
+  onSearchChange,
+  onSelectedValuesChange,
+  onFilterChange,
+  onRetry,
+  onClearError,
+}: {
+  title: string
+  searchValue: string
+  searchPlaceholder: string
+  selectedValues: string[]
+  selectedCountLabel: string
+  filteredCountLabel: string
+  options: BindingCandidateOption[]
+  pending: boolean
+  issueMessage: string | null
+  errorMessage: string | null
+  emptyMessage: string
+  searchEmptyMessage: string
+  hint: string
+  filters?: BindingCandidateFilterOption[]
+  filterValue?: string
+  mutating: boolean
+  onSearchChange: (value: string) => void
+  onSelectedValuesChange: Dispatch<SetStateAction<string[]>>
+  onFilterChange?: (value: string) => void
+  onRetry: () => void
+  onClearError: () => void
+}) {
+  const { t } = useTranslation()
+  const selectedValueSet = useMemo(() => new Set(selectedValues), [selectedValues])
+  const selectableOptions = options.filter((option) => !option.disabled)
+  const allFilteredSelected =
+    selectableOptions.length > 0 &&
+    selectableOptions.every((option) => selectedValueSet.has(option.value))
+
+  const toggleSelection = (value: string) => {
+    onSelectedValuesChange((current) =>
+      current.includes(value) ? current.filter((item) => item !== value) : [...current, value],
+    )
+    onClearError()
+  }
+
+  const selectFiltered = () => {
+    const values = selectableOptions.map((option) => option.value)
+    if (values.length === 0) return
+
+    onSelectedValuesChange((current) => [...new Set([...current, ...values])])
+    onClearError()
+  }
+
+  const invertFiltered = () => {
+    const values = new Set(selectableOptions.map((option) => option.value))
+    if (values.size === 0) return
+
+    onSelectedValuesChange((current) => {
+      const next = new Set(current)
+
+      for (const value of values) {
+        if (next.has(value)) {
+          next.delete(value)
+        } else {
+          next.add(value)
+        }
+      }
+
+      return [...next]
+    })
+    onClearError()
+  }
+
+  const clearSelected = () => {
+    onSelectedValuesChange([])
+    onClearError()
+  }
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
+
+    event.preventDefault()
+    event.stopPropagation()
+
+    const firstSelectableOption = selectableOptions[0]
+    if (!firstSelectableOption) return
+
+    toggleSelection(firstSelectableOption.value)
+  }
+
+  return (
+    <div className="grid gap-2">
+      <p className="text-sm font-medium">{title}</p>
+      <div className="relative">
+        <Search
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          aria-hidden="true"
+        />
+        <Input
+          className="pl-9"
+          value={searchValue}
+          disabled={mutating || pending}
+          placeholder={searchPlaceholder}
+          onChange={(event) => onSearchChange(event.target.value)}
+          onKeyDown={handleSearchKeyDown}
+        />
+      </div>
+      <div className="flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+        {filters?.length ? (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-muted-foreground mr-1 text-xs">
+              {t('usersPage.groups.modelSourceFilterLabel')}
+            </span>
+            {filters.map((filter) => (
+              <Button
+                key={filter.value}
+                type="button"
+                variant={filterValue === filter.value ? 'secondary' : 'outline'}
+                size="xs"
+                disabled={mutating || pending}
+                onClick={() => onFilterChange?.(filter.value)}
+              >
+                {filter.label}
+              </Button>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">{filteredCountLabel}</span>
+        )}
+        <span className="text-muted-foreground text-xs">{selectedCountLabel}</span>
+      </div>
+      {pending ? (
+        <div className="grid gap-2 rounded-md border p-2">
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+        </div>
+      ) : errorMessage ? (
+        <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
+          <p className="text-destructive text-sm">{errorMessage}</p>
+          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+            <RefreshCw className="size-4" aria-hidden="true" />
+            {t('usersPage.actions.retry')}
+          </Button>
+        </div>
+      ) : options.length === 0 ? (
+        <div className="text-muted-foreground rounded-md border px-3 py-6 text-center text-sm">
+          {searchValue.trim() ? searchEmptyMessage : emptyMessage}
+        </div>
+      ) : (
+        <div className="grid gap-2">
+          {issueMessage ? (
+            <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+              {issueMessage}
+            </div>
+          ) : null}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={mutating || selectableOptions.length === 0 || allFilteredSelected}
+                onClick={selectFiltered}
+              >
+                {t('usersPage.groups.selectFilteredItems')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={mutating || selectableOptions.length === 0}
+                onClick={invertFiltered}
+              >
+                {t('usersPage.groups.invertFilteredItems')}
+              </Button>
+              <Button
+                type="button"
+                variant="text"
+                size="xs"
+                disabled={mutating || selectedValues.length === 0}
+                onClick={clearSelected}
+              >
+                {t('usersPage.groups.clearSelectedItems')}
+              </Button>
+            </div>
+            <span className="text-muted-foreground text-xs">{filteredCountLabel}</span>
+          </div>
+          <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
+            {options.map((option) => {
+              const selected = selectedValueSet.has(option.value)
+              const disabled = mutating || option.disabled
+
+              return (
+                <label
+                  key={option.id}
+                  className={cn(
+                    'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
+                    selected
+                      ? 'bg-primary/10 text-foreground ring-primary/35 ring-1'
+                      : 'hover:bg-accent/60',
+                    disabled && 'cursor-not-allowed opacity-55',
+                  )}
+                >
+                  <Checkbox
+                    checked={selected}
+                    disabled={disabled}
+                    className="mt-0.5"
+                    onCheckedChange={() => toggleSelection(option.value)}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-sm font-medium">{option.label}</span>
+                      {option.badges.map((badge, index) => (
+                        <span
+                          key={`${badge.label}-${index}`}
+                          className={cn(
+                            'rounded-md border px-1.5 py-0.5 text-[11px]',
+                            badge.className ?? 'bg-muted text-muted-foreground',
+                          )}
+                        >
+                          {badge.label}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
+                      {option.description}
+                    </span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      <p className="text-muted-foreground text-xs leading-5">{hint}</p>
+    </div>
+  )
+}
+
 function GroupDetailForm({
   kind,
   groups,
@@ -692,13 +968,11 @@ function GroupDetailForm({
   const [groupId, setGroupId] = useState<number | null>(
     initialGroupId ?? groups[0]?.numericId ?? null,
   )
-  const [targetId, setTargetId] = useState('')
-  const [selectedModelIds, setSelectedModelIds] = useState<string[]>([])
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
   const [modelSourceFilter, setModelSourceFilter] = useState<ModelSourceFilter>('all')
   const [credentialSearch, setCredentialSearch] = useState('')
   const [modelSearch, setModelSearch] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
-  const selectedModelIdSet = useMemo(() => new Set(selectedModelIds), [selectedModelIds])
   const boundTargetIds = useMemo(
     () =>
       new Set(
@@ -725,9 +999,40 @@ function GroupDetailForm({
         .includes(normalizedSearch),
     )
   }, [credentialCandidates, credentialSearch])
-  const firstSelectableCredential = filteredCredentialCandidates.find(
-    (candidate) =>
-      !boundTargetIds.has(candidate.authId) && !candidate.disabled && !candidate.unavailable,
+  const credentialOptions = useMemo<BindingCandidateOption[]>(
+    () =>
+      filteredCredentialCandidates.map((candidate) => {
+        const alreadyBound = boundTargetIds.has(candidate.authId)
+        const unavailable = candidate.disabled || candidate.unavailable
+
+        return {
+          id: candidate.id,
+          value: candidate.authId,
+          label: candidate.label,
+          description: candidate.authId,
+          disabled: alreadyBound || unavailable,
+          badges: [
+            { label: candidate.provider },
+            ...(alreadyBound
+              ? [
+                  {
+                    label: t('usersPage.groups.credentialAlreadyBound'),
+                    className: 'border-success/30 bg-success/10 text-success',
+                  },
+                ]
+              : unavailable
+                ? [
+                    {
+                      label: t('usersPage.groups.credentialUnavailable'),
+                      className:
+                        'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+                    },
+                  ]
+                : []),
+          ],
+        }
+      }),
+    [boundTargetIds, filteredCredentialCandidates, t],
   )
   const filteredModelCandidates = useMemo(() => {
     const normalizedSearch = modelSearch.trim().toLowerCase()
@@ -752,19 +1057,55 @@ function GroupDetailForm({
         .includes(normalizedSearch),
     )
   }, [modelCandidates, modelSearch, modelSourceFilter])
-  const selectableModelCandidates = filteredModelCandidates.filter(
-    (candidate) => !boundTargetIds.has(candidate.modelId),
+  const modelFilterOptions = useMemo<BindingCandidateFilterOption[]>(
+    () =>
+      modelSourceFilters.map((filter) => ({
+        value: filter,
+        label: t(`usersPage.groups.modelSourceFilters.${filter}`),
+      })),
+    [t],
   )
-  const firstSelectableModel = selectableModelCandidates[0]
-  const allFilteredModelsSelected =
-    selectableModelCandidates.length > 0 &&
-    selectableModelCandidates.every((candidate) => selectedModelIdSet.has(candidate.modelId))
+  const modelOptions = useMemo<BindingCandidateOption[]>(
+    () =>
+      filteredModelCandidates.map((candidate) => {
+        const alreadyBound = boundTargetIds.has(candidate.modelId)
+
+        return {
+          id: candidate.id,
+          value: candidate.modelId,
+          label: candidate.label,
+          description: candidate.modelId,
+          disabled: alreadyBound,
+          badges: [
+            ...candidate.scopes.map((scope) => ({
+              label:
+                scope === 'available'
+                  ? t('usersPage.groups.modelScopeAvailable')
+                  : t('usersPage.groups.modelScopeStatic'),
+              className:
+                scope === 'available'
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'bg-muted text-muted-foreground',
+            })),
+            ...(candidate.channel ? [{ label: candidate.channel }] : []),
+            ...(alreadyBound
+              ? [
+                  {
+                    label: t('usersPage.groups.modelAlreadyBound'),
+                    className: 'border-success/30 bg-success/10 text-success',
+                  },
+                ]
+              : []),
+          ],
+        }
+      }),
+    [boundTargetIds, filteredModelCandidates, t],
+  )
 
   useEffect(() => {
     setLocalError(null)
     setGroupId(initialGroupId ?? groups[0]?.numericId ?? null)
-    setTargetId('')
-    setSelectedModelIds([])
+    setSelectedTargetIds([])
     setModelSourceFilter('all')
     setCredentialSearch('')
     setModelSearch('')
@@ -772,48 +1113,7 @@ function GroupDetailForm({
 
   const handleGroupChange = (value: string) => {
     setGroupId(Number(value))
-    setTargetId('')
-    setSelectedModelIds([])
-    setLocalError(null)
-  }
-
-  const toggleModelSelection = (modelId: string) => {
-    setSelectedModelIds((current) =>
-      current.includes(modelId) ? current.filter((id) => id !== modelId) : [...current, modelId],
-    )
-    setLocalError(null)
-  }
-
-  const selectFilteredModels = () => {
-    const modelIds = selectableModelCandidates.map((candidate) => candidate.modelId)
-    if (modelIds.length === 0) return
-
-    setSelectedModelIds((current) => [...new Set([...current, ...modelIds])])
-    setLocalError(null)
-  }
-
-  const invertFilteredModels = () => {
-    const modelIds = new Set(selectableModelCandidates.map((candidate) => candidate.modelId))
-    if (modelIds.size === 0) return
-
-    setSelectedModelIds((current) => {
-      const next = new Set(current)
-
-      for (const modelId of modelIds) {
-        if (next.has(modelId)) {
-          next.delete(modelId)
-        } else {
-          next.add(modelId)
-        }
-      }
-
-      return [...next]
-    })
-    setLocalError(null)
-  }
-
-  const clearSelectedModels = () => {
-    setSelectedModelIds([])
+    setSelectedTargetIds([])
     setLocalError(null)
   }
 
@@ -825,69 +1125,34 @@ function GroupDetailForm({
       return
     }
 
-    if (kind === 'channel') {
-      const normalizedTargetId = targetId.trim()
+    const normalizedTargetIds = [
+      ...new Set(selectedTargetIds.map((id) => id.trim()).filter(Boolean)),
+    ]
 
-      if (!normalizedTargetId) {
-        setLocalError(t('usersPage.form.validation.authRequired'))
-        return
-      }
-
-      if (boundTargetIds.has(normalizedTargetId)) {
-        setLocalError(t('usersPage.form.validation.authAlreadyBound'))
-        return
-      }
-
-      try {
-        setLocalError(null)
-        await onSubmit({ groupId, targetIds: [normalizedTargetId] })
-      } catch (error) {
-        setLocalError(error instanceof Error ? error.message : String(error))
-      }
+    if (normalizedTargetIds.length === 0) {
+      setLocalError(
+        kind === 'channel'
+          ? t('usersPage.form.validation.authRequired')
+          : t('usersPage.form.validation.modelRequired'),
+      )
       return
     }
 
-    const normalizedModelIds = [...new Set(selectedModelIds.map((id) => id.trim()).filter(Boolean))]
-
-    if (normalizedModelIds.length === 0) {
-      setLocalError(t('usersPage.form.validation.modelRequired'))
-      return
-    }
-
-    if (normalizedModelIds.some((modelId) => boundTargetIds.has(modelId))) {
-      setLocalError(t('usersPage.form.validation.modelAlreadyBound'))
+    if (normalizedTargetIds.some((targetId) => boundTargetIds.has(targetId))) {
+      setLocalError(
+        kind === 'channel'
+          ? t('usersPage.form.validation.authAlreadyBound')
+          : t('usersPage.form.validation.modelAlreadyBound'),
+      )
       return
     }
 
     try {
       setLocalError(null)
-      await onSubmit({ groupId, targetIds: normalizedModelIds })
+      await onSubmit({ groupId, targetIds: normalizedTargetIds })
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
-  }
-
-  const handleCredentialSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    if (!firstSelectableCredential) return
-
-    setTargetId(firstSelectableCredential.authId)
-    setLocalError(null)
-  }
-
-  const handleModelSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
-
-    event.preventDefault()
-    event.stopPropagation()
-
-    if (!firstSelectableModel) return
-
-    toggleModelSelection(firstSelectableModel.modelId)
   }
 
   return (
@@ -912,309 +1177,58 @@ function GroupDetailForm({
         </Select>
       </label>
       {kind === 'channel' ? (
-        <div className="grid gap-2">
-          <p className="text-sm font-medium">{t('usersPage.groups.credential')}</p>
-          <div className="relative">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              className="pl-9"
-              value={credentialSearch}
-              disabled={mutating || credentialCandidatesPending}
-              placeholder={t('usersPage.groups.credentialSearchPlaceholder')}
-              onChange={(event) => setCredentialSearch(event.target.value)}
-              onKeyDown={handleCredentialSearchKeyDown}
-            />
-          </div>
-          {credentialCandidatesPending ? (
-            <div className="grid gap-2 rounded-md border p-2">
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-            </div>
-          ) : credentialCandidatesErrorMessage ? (
-            <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
-              <p className="text-destructive text-sm">{credentialCandidatesErrorMessage}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={onRetryCredentialCandidates}
-              >
-                <RefreshCw className="size-4" aria-hidden="true" />
-                {t('usersPage.actions.retry')}
-              </Button>
-            </div>
-          ) : filteredCredentialCandidates.length === 0 ? (
-            <div className="text-muted-foreground rounded-md border px-3 py-6 text-center text-sm">
-              {credentialSearch.trim()
-                ? t('usersPage.groups.credentialSearchEmpty')
-                : t('usersPage.groups.credentialEmpty')}
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              {credentialCandidatesIssueMessage ? (
-                <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
-                  {credentialCandidatesIssueMessage}
-                </div>
-              ) : null}
-              <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
-                {filteredCredentialCandidates.map((candidate) => {
-                  const alreadyBound = boundTargetIds.has(candidate.authId)
-                  const unavailable = candidate.disabled || candidate.unavailable
-                  const disabled = mutating || alreadyBound || unavailable
-                  const selected = targetId === candidate.authId
-
-                  return (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      disabled={disabled}
-                      className={cn(
-                        'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
-                        selected
-                          ? 'bg-primary/10 text-foreground ring-primary/35 ring-1'
-                          : 'hover:bg-accent/60',
-                        disabled && 'cursor-not-allowed opacity-55',
-                      )}
-                      onClick={() => {
-                        setTargetId(candidate.authId)
-                        setLocalError(null)
-                      }}
-                    >
-                      {selected ? (
-                        <CheckCircle2
-                          className="text-primary mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Circle
-                          className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-sm font-medium">{candidate.label}</span>
-                          <span className="bg-muted text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px]">
-                            {candidate.provider}
-                          </span>
-                          {alreadyBound ? (
-                            <span className="border-success/30 bg-success/10 text-success rounded-md border px-1.5 py-0.5 text-[11px]">
-                              {t('usersPage.groups.credentialAlreadyBound')}
-                            </span>
-                          ) : unavailable ? (
-                            <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-1.5 py-0.5 text-[11px]">
-                              {t('usersPage.groups.credentialUnavailable')}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
-                          {candidate.authId}
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('usersPage.groups.credentialSelectHint')}
-          </p>
-        </div>
+        <BindingCandidateMultiSelect
+          title={t('usersPage.groups.credential')}
+          searchValue={credentialSearch}
+          searchPlaceholder={t('usersPage.groups.credentialSearchPlaceholder')}
+          selectedValues={selectedTargetIds}
+          selectedCountLabel={t('usersPage.groups.credentialSelectedCount', {
+            count: selectedTargetIds.length,
+          })}
+          filteredCountLabel={t('usersPage.groups.credentialFilteredCount', {
+            count: filteredCredentialCandidates.length,
+          })}
+          options={credentialOptions}
+          pending={credentialCandidatesPending}
+          issueMessage={credentialCandidatesIssueMessage}
+          errorMessage={credentialCandidatesErrorMessage}
+          emptyMessage={t('usersPage.groups.credentialEmpty')}
+          searchEmptyMessage={t('usersPage.groups.credentialSearchEmpty')}
+          hint={t('usersPage.groups.credentialSelectHint')}
+          mutating={mutating}
+          onSearchChange={setCredentialSearch}
+          onSelectedValuesChange={setSelectedTargetIds}
+          onRetry={onRetryCredentialCandidates}
+          onClearError={() => setLocalError(null)}
+        />
       ) : (
-        <div className="grid gap-2">
-          <p className="text-sm font-medium">{t('usersPage.groups.model')}</p>
-          <div className="relative">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              className="pl-9"
-              value={modelSearch}
-              disabled={mutating || modelCandidatesPending}
-              placeholder={t('usersPage.groups.modelSearchPlaceholder')}
-              onChange={(event) => setModelSearch(event.target.value)}
-              onKeyDown={handleModelSearchKeyDown}
-            />
-          </div>
-          <div className="flex flex-col gap-2 rounded-md border px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-muted-foreground mr-1 text-xs">
-                {t('usersPage.groups.modelSourceFilterLabel')}
-              </span>
-              {modelSourceFilters.map((filter) => (
-                <Button
-                  key={filter}
-                  type="button"
-                  variant={modelSourceFilter === filter ? 'secondary' : 'outline'}
-                  size="xs"
-                  disabled={mutating || modelCandidatesPending}
-                  onClick={() => setModelSourceFilter(filter)}
-                >
-                  {t(`usersPage.groups.modelSourceFilters.${filter}`)}
-                </Button>
-              ))}
-            </div>
-            <span className="text-muted-foreground text-xs">
-              {t('usersPage.groups.modelSelectedCount', { count: selectedModelIds.length })}
-            </span>
-          </div>
-          {modelCandidatesPending ? (
-            <div className="grid gap-2 rounded-md border p-2">
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-              <Skeleton className="h-14" />
-            </div>
-          ) : modelCandidatesErrorMessage ? (
-            <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
-              <p className="text-destructive text-sm">{modelCandidatesErrorMessage}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={onRetryModelCandidates}
-              >
-                <RefreshCw className="size-4" aria-hidden="true" />
-                {t('usersPage.actions.retry')}
-              </Button>
-            </div>
-          ) : filteredModelCandidates.length === 0 ? (
-            <div className="text-muted-foreground rounded-md border px-3 py-6 text-center text-sm">
-              {modelSearch.trim()
-                ? t('usersPage.groups.modelSearchEmpty')
-                : t('usersPage.groups.modelCandidateEmpty')}
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              {modelCandidatesIssueMessage ? (
-                <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
-                  {modelCandidatesIssueMessage}
-                </div>
-              ) : null}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    disabled={
-                      mutating ||
-                      selectableModelCandidates.length === 0 ||
-                      allFilteredModelsSelected
-                    }
-                    onClick={selectFilteredModels}
-                  >
-                    {t('usersPage.groups.selectFilteredModels')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    disabled={mutating || selectableModelCandidates.length === 0}
-                    onClick={invertFilteredModels}
-                  >
-                    {t('usersPage.groups.invertFilteredModels')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="xs"
-                    disabled={mutating || selectedModelIds.length === 0}
-                    onClick={clearSelectedModels}
-                  >
-                    {t('usersPage.groups.clearSelectedModels')}
-                  </Button>
-                </div>
-                <span className="text-muted-foreground text-xs">
-                  {t('usersPage.groups.modelFilteredCount', {
-                    count: filteredModelCandidates.length,
-                  })}
-                </span>
-              </div>
-              <div className="grid max-h-72 gap-1 overflow-y-auto rounded-md border p-1.5">
-                {filteredModelCandidates.map((candidate) => {
-                  const alreadyBound = boundTargetIds.has(candidate.modelId)
-                  const disabled = mutating || alreadyBound
-                  const selected = selectedModelIdSet.has(candidate.modelId)
-
-                  return (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      disabled={disabled}
-                      aria-pressed={selected}
-                      className={cn(
-                        'flex min-w-0 items-start gap-3 rounded-md px-3 py-2.5 text-left transition-colors',
-                        selected
-                          ? 'bg-primary/10 text-foreground ring-primary/35 ring-1'
-                          : 'hover:bg-accent/60',
-                        disabled && 'cursor-not-allowed opacity-55',
-                      )}
-                      onClick={() => {
-                        toggleModelSelection(candidate.modelId)
-                      }}
-                    >
-                      {selected ? (
-                        <CheckCircle2
-                          className="text-primary mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Circle
-                          className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                          aria-hidden="true"
-                        />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate text-sm font-medium">{candidate.label}</span>
-                          {candidate.scopes.map((scope) => (
-                            <span
-                              key={scope}
-                              className={cn(
-                                'rounded-md border px-1.5 py-0.5 text-[11px]',
-                                scope === 'available'
-                                  ? 'border-success/30 bg-success/10 text-success'
-                                  : 'bg-muted text-muted-foreground',
-                              )}
-                            >
-                              {scope === 'available'
-                                ? t('usersPage.groups.modelScopeAvailable')
-                                : t('usersPage.groups.modelScopeStatic')}
-                            </span>
-                          ))}
-                          {candidate.channel ? (
-                            <span className="bg-muted text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px]">
-                              {candidate.channel}
-                            </span>
-                          ) : null}
-                          {alreadyBound ? (
-                            <span className="border-success/30 bg-success/10 text-success rounded-md border px-1.5 py-0.5 text-[11px]">
-                              {t('usersPage.groups.modelAlreadyBound')}
-                            </span>
-                          ) : null}
-                        </span>
-                        <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
-                          {candidate.modelId}
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('usersPage.groups.modelSelectHint')}
-          </p>
-        </div>
+        <BindingCandidateMultiSelect
+          title={t('usersPage.groups.model')}
+          searchValue={modelSearch}
+          searchPlaceholder={t('usersPage.groups.modelSearchPlaceholder')}
+          selectedValues={selectedTargetIds}
+          selectedCountLabel={t('usersPage.groups.modelSelectedCount', {
+            count: selectedTargetIds.length,
+          })}
+          filteredCountLabel={t('usersPage.groups.modelFilteredCount', {
+            count: filteredModelCandidates.length,
+          })}
+          options={modelOptions}
+          pending={modelCandidatesPending}
+          issueMessage={modelCandidatesIssueMessage}
+          errorMessage={modelCandidatesErrorMessage}
+          emptyMessage={t('usersPage.groups.modelCandidateEmpty')}
+          searchEmptyMessage={t('usersPage.groups.modelSearchEmpty')}
+          hint={t('usersPage.groups.modelSelectHint')}
+          filters={modelFilterOptions}
+          filterValue={modelSourceFilter}
+          mutating={mutating}
+          onSearchChange={setModelSearch}
+          onSelectedValuesChange={setSelectedTargetIds}
+          onFilterChange={(value) => setModelSourceFilter(value as ModelSourceFilter)}
+          onRetry={onRetryModelCandidates}
+          onClearError={() => setLocalError(null)}
+        />
       )}
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">

@@ -1041,7 +1041,7 @@ export const zhCN = {
           keyRequired: '必须填写密钥值。',
           groupNameRequired: '必须填写范围名称。',
           groupRequired: '必须选择一个范围。',
-          authRequired: '必须选择一个凭证。',
+          authRequired: '必须至少选择一个凭证。',
           authAlreadyBound: '该凭证已经绑定到当前范围。',
           modelRequired: '必须至少选择一个模型。',
           modelAlreadyBound: '该模型已经绑定到当前范围。',
@@ -1078,8 +1078,10 @@ export const zhCN = {
         credentialSearchEmpty: '没有匹配的账号凭证。',
         credentialAlreadyBound: '已绑定',
         credentialUnavailable: '不可用',
+        credentialSelectedCount: '已选 {{count}} 个凭证',
+        credentialFilteredCount: '当前 {{count}} 个结果',
         credentialSelectHint:
-          '列表仅展示具有明确 Auth ID 的凭证；已绑定或不可用的凭证不可重复选择。',
+          '可一次选择多个凭证；列表仅展示具有明确 Auth ID 的凭证。已绑定或不可用的凭证不可重复选择。',
         authId: '凭证 ID',
         model: '模型',
         modelId: '模型 ID',
@@ -1097,9 +1099,9 @@ export const zhCN = {
         },
         modelSelectedCount: '已选 {{count}} 个模型',
         modelFilteredCount: '当前 {{count}} 个结果',
-        selectFilteredModels: '全选当前结果',
-        invertFilteredModels: '反选当前结果',
-        clearSelectedModels: '清空选择',
+        selectFilteredItems: '全选当前结果',
+        invertFilteredItems: '反选当前结果',
+        clearSelectedItems: '清空选择',
         modelSelectHint:
           '可一次选择多个模型；运行时可用模型优先展示，并用静态模型目录补充。已绑定模型不可重复选择。',
         channelEmpty: '当前没有凭证范围。',
@@ -1173,7 +1175,7 @@ export const zhCN = {
         channelGroupEditDescription: '维护凭证范围名称和启用状态。',
         modelGroupEditDescription: '维护模型范围名称和启用状态。',
         channelBindingDescription:
-          '搜索并选择一个账号凭证加入该范围。绑定到此范围的客户端密钥才会使用这些凭证。',
+          '搜索并选择一个或多个账号凭证加入该范围。绑定到此范围的客户端密钥才会使用这些凭证。',
         modelBindingDescription:
           '搜索并选择一个或多个模型加入该范围。绑定到此范围的客户端密钥才会使用这些模型。',
       },
