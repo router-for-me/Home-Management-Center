@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Sheet,
@@ -82,6 +83,9 @@ type OAuthSessionSummary = {
 }
 type OAuthSessionMap = Partial<Record<CredentialOAuthProvider, OAuthSessionSummary>>
 type OAuthStatusMap = Partial<Record<CredentialOAuthProvider, CredentialOAuthStatus>>
+type PendingCredentialConfirmation =
+  | { type: 'delete'; resource: CredentialResource }
+  | { type: 'bulkDelete'; resources: CredentialResource[] }
 
 const oauthProviders: CredentialOAuthProvider[] = [
   'claude',
@@ -1097,21 +1101,33 @@ function CreateCredentialSheet({
 function CredentialList({
   resources,
   selectedResourceId,
+  selectedResourceIds,
   mutating,
   onDeleteResource,
   onDownloadResource,
   onEditResource,
+  onToggleSelection,
+  onToggleAll,
+  onToggleStatus,
   onViewResource,
 }: {
   resources: CredentialResource[]
   selectedResourceId: string | null
+  selectedResourceIds: Set<string>
   mutating: boolean
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onEditResource: (resource: CredentialResource) => void
+  onToggleSelection: (resource: CredentialResource) => void
+  onToggleAll: () => void
+  onToggleStatus: (resource: CredentialResource, disabled: boolean) => void
   onViewResource: (resource: CredentialResource) => void
 }) {
   const { t } = useTranslation()
+  const allSelected =
+    resources.length > 0 && resources.every((resource) => selectedResourceIds.has(resource.id))
+  const partiallySelected =
+    !allSelected && resources.some((resource) => selectedResourceIds.has(resource.id))
 
   if (resources.length === 0) {
     return (
@@ -1124,25 +1140,36 @@ function CredentialList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[1230px] table-fixed">
+        <Table className="min-w-[1340px] table-fixed">
           <colgroup>
+            <col className="w-[44px]" />
             <col className="w-[320px]" />
             <col className="w-[130px]" />
             <col className="w-[105px]" />
             <col className="w-[105px]" />
-            <col className="w-[120px]" />
+            <col className="w-[170px]" />
             <col className="w-[180px]" />
             <col className="w-[270px]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow variant="static">
+              <TableHead>
+                <Checkbox
+                  checked={partiallySelected ? 'indeterminate' : allSelected}
+                  aria-label={t('credentialsPage.bulk.selectAll')}
+                  disabled={mutating}
+                  onCheckedChange={onToggleAll}
+                />
+              </TableHead>
               <TableHead>{t('credentialsPage.list.credential')}</TableHead>
               <TableHead>{t('credentialsPage.list.provider')}</TableHead>
               <TableHead>{t('credentialsPage.list.source')}</TableHead>
               <TableHead>{t('credentialsPage.list.type')}</TableHead>
               <TableHead>{t('credentialsPage.list.status')}</TableHead>
               <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
-              <TableHead className="text-right">{t('credentialsPage.list.actions')}</TableHead>
+              <TableHead className="bg-muted sticky right-0 z-10 text-right">
+                {t('credentialsPage.list.actions')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1158,9 +1185,23 @@ function CredentialList({
               return (
                 <TableRow
                   key={resource.id}
-                  className={cn(resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                  className={cn(
+                    'group',
+                    resource.id === selectedResourceId ? 'bg-primary/8' : null,
+                  )}
                   variant="resource"
                 >
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedResourceIds.has(resource.id)}
+                      aria-label={t('credentialsPage.bulk.selectOne', {
+                        name: displayName,
+                      })}
+                      disabled={mutating}
+                      onCheckedChange={() => onToggleSelection(resource)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2.5">
                       <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
@@ -1188,34 +1229,47 @@ function CredentialList({
                     </span>
                   </TableCell>
                   <TableCell>
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
-                        statusTone === 'positive'
-                          ? 'border-primary/30 bg-primary/10 text-primary'
-                          : statusTone === 'warning'
-                            ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-                            : 'border-border bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {statusTone === 'warning' ? (
-                        <AlertTriangle className="size-3" aria-hidden="true" />
-                      ) : (
-                        <CheckCircle2 className="size-3" aria-hidden="true" />
-                      )}
-                      {resource.disabled
-                        ? t('credentialsPage.status.disabled')
-                        : resource.unavailable
-                          ? t('credentialsPage.status.unavailable')
-                          : t(`credentialsPage.status.${resource.status}`, {
-                              defaultValue: resource.status,
-                            })}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
+                          statusTone === 'positive'
+                            ? 'border-primary/30 bg-primary/10 text-primary'
+                            : statusTone === 'warning'
+                              ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+                              : 'border-border bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {statusTone === 'warning' ? (
+                          <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+                        ) : (
+                          <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
+                        )}
+                        <span className="truncate">
+                          {resource.disabled
+                            ? t('credentialsPage.status.disabled')
+                            : resource.unavailable
+                              ? t('credentialsPage.status.unavailable')
+                              : t(`credentialsPage.status.${resource.status}`, {
+                                  defaultValue: resource.status,
+                                })}
+                        </span>
+                      </span>
+                      <Switch
+                        checked={!resource.disabled}
+                        disabled={mutating}
+                        aria-label={t('credentialsPage.list.toggleStatus', {
+                          name: displayName,
+                        })}
+                        onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                    </div>
                   </TableCell>
                   <TableCell className="pr-4">
                     <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
                   </TableCell>
-                  <TableCell className="pl-4">
+                  <TableCell className="group-hover:bg-accent bg-card sticky right-0 z-10 pl-4 transition-colors">
                     <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
                       <Button
                         type="button"
@@ -1632,6 +1686,7 @@ export function CredentialsWorkbenchPage() {
   const [providerFilter, setProviderFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
+  const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(() => new Set())
   const [panelMode, setPanelMode] = useState<MetadataPanelMode>('detail')
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [geminiProjectId, setGeminiProjectId] = useState('')
@@ -1639,7 +1694,7 @@ export function CredentialsWorkbenchPage() {
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
 
   const resources = workbench.snapshot?.resources ?? []
   const filteredResources = useMemo(() => {
@@ -1671,6 +1726,9 @@ export function CredentialsWorkbenchPage() {
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     resources.find((resource) => resource.id === selectedResourceId) ??
     null
+  const selectedResources = resources.filter((resource) => selectedResourceIds.has(resource.id))
+  const selectedDisabledCount = selectedResources.filter((resource) => resource.disabled).length
+  const selectedEnabledCount = selectedResources.length - selectedDisabledCount
   const activeCount = resources.filter(
     (resource) => !resource.disabled && !resource.unavailable,
   ).length
@@ -1684,6 +1742,17 @@ export function CredentialsWorkbenchPage() {
       setDetailSheetOpen(false)
     }
   }, [resources, selectedResourceId])
+
+  useEffect(() => {
+    const resourceIds = new Set(resources.map((resource) => resource.id))
+    setSelectedResourceIds((current) => {
+      const nextSelection = new Set(
+        Array.from(current).filter((resourceId) => resourceIds.has(resourceId)),
+      )
+
+      return nextSelection.size === current.size ? current : nextSelection
+    })
+  }, [resources])
 
   if (!workbench.connected) {
     return <CredentialDisconnectedState />
@@ -1731,13 +1800,11 @@ export function CredentialsWorkbenchPage() {
     }
   }
 
-  const handleToggleStatus = async (resource = selectedResource) => {
-    if (!resource) return
-
+  const handleSetStatus = async (resource: CredentialResource, disabled: boolean) => {
     try {
       await workbench.updateStatus({
         resource,
-        disabled: !resource.disabled,
+        disabled,
       })
       toast.success(t('credentialsPage.toast.statusUpdated'))
     } catch (error) {
@@ -1745,15 +1812,108 @@ export function CredentialsWorkbenchPage() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!selectedResource) return
+  const handleToggleStatus = async (resource = selectedResource) => {
+    if (!resource) return
+    await handleSetStatus(resource, !resource.disabled)
+  }
+
+  const handleToggleSelection = (resource: CredentialResource) => {
+    setSelectedResourceIds((current) => {
+      const nextSelection = new Set(current)
+
+      if (nextSelection.has(resource.id)) {
+        nextSelection.delete(resource.id)
+      } else {
+        nextSelection.add(resource.id)
+      }
+
+      return nextSelection
+    })
+  }
+
+  const handleToggleAll = () => {
+    setSelectedResourceIds((current) => {
+      const everyFilteredResourceSelected = filteredResources.every((resource) =>
+        current.has(resource.id),
+      )
+      const nextSelection = new Set(current)
+
+      for (const resource of filteredResources) {
+        if (everyFilteredResourceSelected) {
+          nextSelection.delete(resource.id)
+        } else {
+          nextSelection.add(resource.id)
+        }
+      }
+
+      return nextSelection
+    })
+  }
+
+  const handleBulkStatus = async (disabled: boolean) => {
+    if (selectedResources.length === 0) return
 
     try {
-      await workbench.deleteCredential(selectedResource)
-      toast.success(t('credentialsPage.toast.deleted'))
-      setSelectedResourceId(null)
-      setDetailSheetOpen(false)
-      setDeleteDialogOpen(false)
+      await workbench.bulkUpdateStatus({
+        resources: selectedResources,
+        disabled,
+      })
+      toast.success(
+        t(disabled ? 'credentialsPage.toast.bulkDisabled' : 'credentialsPage.toast.bulkEnabled', {
+          count: selectedResources.length,
+        }),
+      )
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleDelete = (resource = selectedResource) => {
+    if (!resource) return
+    setConfirmation({ type: 'delete', resource })
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedResources.length === 0) return
+    setConfirmation({ type: 'bulkDelete', resources: selectedResources })
+  }
+
+  const handleConfirmAction = async () => {
+    const currentConfirmation = confirmation
+    if (!currentConfirmation) return
+
+    try {
+      if (currentConfirmation.type === 'delete') {
+        await workbench.deleteCredential(currentConfirmation.resource)
+        toast.success(t('credentialsPage.toast.deleted'))
+        setSelectedResourceIds((current) => {
+          const nextSelection = new Set(current)
+          nextSelection.delete(currentConfirmation.resource.id)
+          return nextSelection
+        })
+        if (selectedResourceId === currentConfirmation.resource.id) {
+          setSelectedResourceId(null)
+          setDetailSheetOpen(false)
+        }
+      } else {
+        await workbench.bulkDeleteCredentials(currentConfirmation.resources)
+        toast.success(
+          t('credentialsPage.toast.bulkDeleted', {
+            count: currentConfirmation.resources.length,
+          }),
+        )
+        setSelectedResourceIds(new Set())
+        if (
+          selectedResourceId &&
+          currentConfirmation.resources.some((resource) => resource.id === selectedResourceId)
+        ) {
+          setSelectedResourceId(null)
+          setDetailSheetOpen(false)
+        }
+      }
+
+      setPanelMode('detail')
+      setConfirmation(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -1817,6 +1977,25 @@ export function CredentialsWorkbenchPage() {
     await workbench.importVertexCredential(input)
     toast.success(t('credentialsPage.toast.vertexImported'))
   }
+
+  const confirmationCopy =
+    confirmation?.type === 'delete'
+      ? {
+          title: t('credentialsPage.delete.title'),
+          description: t('credentialsPage.delete.confirm', {
+            name: getCredentialDisplayName(confirmation.resource),
+          }),
+          action: t('credentialsPage.actions.delete'),
+        }
+      : confirmation?.type === 'bulkDelete'
+        ? {
+            title: t('credentialsPage.bulk.deleteTitle'),
+            description: t('credentialsPage.bulk.deleteConfirm', {
+              count: confirmation.resources.length,
+            }),
+            action: t('credentialsPage.bulk.deleteSelected'),
+          }
+        : null
 
   return (
     <section className="grid w-full gap-5">
@@ -1917,20 +2096,77 @@ export function CredentialsWorkbenchPage() {
             </div>
           </div>
           <div className="mt-4">
+            {selectedResourceIds.size > 0 ? (
+              <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">
+                    {t('credentialsPage.bulk.selected', { count: selectedResourceIds.size })}
+                  </p>
+                  <p className="text-muted-foreground mt-0.5 text-xs">
+                    {t('credentialsPage.bulk.selectedSummary', {
+                      enabled: selectedEnabledCount,
+                      disabled: selectedDisabledCount,
+                    })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={workbench.mutating}
+                    onClick={() => setSelectedResourceIds(new Set())}
+                  >
+                    {t('credentialsPage.bulk.clearSelection')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={workbench.mutating || selectedDisabledCount === 0}
+                    onClick={() => void handleBulkStatus(false)}
+                  >
+                    <CheckCircle2 className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.bulk.enableSelected')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={workbench.mutating || selectedEnabledCount === 0}
+                    onClick={() => void handleBulkStatus(true)}
+                  >
+                    <AlertTriangle className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.bulk.disableSelected')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    disabled={workbench.mutating}
+                    onClick={handleBulkDelete}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.bulk.deleteSelected')}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <CredentialList
               resources={filteredResources}
               selectedResourceId={selectedResourceId}
+              selectedResourceIds={selectedResourceIds}
               mutating={workbench.mutating}
               onDeleteResource={(resource) => {
-                setSelectedResourceId(resource.id)
-                setPanelMode('detail')
-                setDeleteDialogOpen(true)
+                handleDelete(resource)
               }}
               onDownloadResource={(resource) => void handleDownload(resource)}
               onEditResource={(resource) => {
                 setSelectedResourceId(resource.id)
                 setPanelMode('edit')
                 setDetailSheetOpen(true)
+              }}
+              onToggleSelection={handleToggleSelection}
+              onToggleAll={handleToggleAll}
+              onToggleStatus={(resource, disabled) => {
+                void handleSetStatus(resource, disabled)
               }}
               onViewResource={(resource) => {
                 setSelectedResourceId(resource.id)
@@ -1988,17 +2224,16 @@ export function CredentialsWorkbenchPage() {
         onImportVertex={handleImportVertex}
       />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog
+        open={Boolean(confirmation)}
+        onOpenChange={(open) => {
+          if (!open && !workbench.mutating) setConfirmation(null)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('credentialsPage.delete.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedResource
-                ? t('credentialsPage.delete.confirm', {
-                    name: getCredentialDisplayName(selectedResource),
-                  })
-                : null}
-            </AlertDialogDescription>
+            <AlertDialogTitle>{confirmationCopy?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmationCopy?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={workbench.mutating}>
@@ -2009,13 +2244,13 @@ export function CredentialsWorkbenchPage() {
               disabled={workbench.mutating}
               onClick={(event) => {
                 event.preventDefault()
-                void handleDelete()
+                void handleConfirmAction()
               }}
             >
               {workbench.mutating ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {t('credentialsPage.actions.delete')}
+              {confirmationCopy?.action}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

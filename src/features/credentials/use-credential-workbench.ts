@@ -103,6 +103,36 @@ export function useCredentialWorkbench() {
     onSuccess: invalidate,
   })
 
+  const bulkStatusMutation = useMutation({
+    mutationFn: async ({
+      resources,
+      disabled,
+    }: {
+      resources: CredentialResource[]
+      disabled: boolean
+    }) => {
+      try {
+        await Promise.all(
+          resources.map((resource) => updateCredentialStatus(session, resource, disabled)),
+        )
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    onSuccess: invalidate,
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (resources: CredentialResource[]) => {
+      try {
+        await Promise.all(resources.map((resource) => deleteCredentialResource(session, resource)))
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    onSuccess: invalidate,
+  })
+
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
       try {
@@ -189,6 +219,8 @@ export function useCredentialWorkbench() {
     updateStatus: statusMutation.mutateAsync,
     updateMetadata: metadataMutation.mutateAsync,
     deleteCredential: deleteMutation.mutateAsync,
+    bulkUpdateStatus: bulkStatusMutation.mutateAsync,
+    bulkDeleteCredentials: bulkDeleteMutation.mutateAsync,
     uploadCredentials: uploadMutation.mutateAsync,
     downloadCredential: downloadMutation.mutateAsync,
     fetchModels: modelsMutation.mutateAsync,
@@ -204,6 +236,8 @@ export function useCredentialWorkbench() {
       statusMutation.isPending ||
       metadataMutation.isPending ||
       deleteMutation.isPending ||
+      bulkStatusMutation.isPending ||
+      bulkDeleteMutation.isPending ||
       uploadMutation.isPending ||
       downloadMutation.isPending ||
       modelsMutation.isPending ||
