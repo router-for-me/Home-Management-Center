@@ -217,11 +217,50 @@ export const zhTW = {
       },
       keys: {
         title: '用戶端存取金鑰',
-        pending: '下一步將接入目前使用者自己的金鑰列表、建立和刪除能力。',
+        description: '這些金鑰用於用戶端呼叫 Home 服務端，只能管理歸屬於目前使用者的條目。',
+        empty: '目前帳號還沒有用戶端存取金鑰。',
+        unrestricted: '不限制範圍',
+        table: {
+          key: '金鑰',
+          scope: '範圍',
+          updatedAt: '更新時間',
+          actions: '操作',
+        },
+        actions: {
+          new: '新建金鑰',
+          create: '建立金鑰',
+          save: '儲存金鑰',
+          copy: '複製',
+          edit: '編輯',
+        },
+        form: {
+          key: '金鑰值',
+          keyCreatePlaceholder: '留空則由後端自動生成',
+          keyEditPlaceholder: '輸入新的金鑰值',
+          generatedHint: '不填寫時，Home 會生成一個新的用戶端存取金鑰。',
+          editHint: '儲存後用戶端需要使用新的金鑰值。',
+        },
+        sheet: {
+          createTitle: '新建用戶端存取金鑰',
+          createDescription: '建立後金鑰會歸屬於目前登入使用者。',
+          editTitle: '編輯用戶端存取金鑰',
+          editDescription: '更新金鑰值不會改變目前使用者歸屬。',
+        },
+        validation: {
+          keyRequired: '必須填寫新的金鑰值。',
+        },
+        deleteTitle: '刪除用戶端存取金鑰？',
+        deleteDescription: '確認刪除金鑰 {{key}}？此操作會立即影響使用該金鑰的用戶端。',
       },
       security: {
         title: '帳號安全',
         pending: '後續將接入修改密碼、TOTP 和 Passkey 管理。',
+      },
+      toast: {
+        copied: '金鑰已複製。',
+        keyCreated: '金鑰已建立。',
+        keyUpdated: '金鑰已更新。',
+        keyDeleted: '金鑰已刪除。',
       },
     },
     dashboard: {

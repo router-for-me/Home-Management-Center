@@ -225,11 +225,51 @@ export const en = {
       },
       keys: {
         title: 'Client access keys',
-        pending: 'The next step will connect your personal key list, creation, and deletion.',
+        description:
+          'These keys are used by clients calling the Home server. Only keys owned by the current user are shown.',
+        empty: 'This account has no client access keys yet.',
+        unrestricted: 'Unrestricted',
+        table: {
+          key: 'Key',
+          scope: 'Scope',
+          updatedAt: 'Updated',
+          actions: 'Actions',
+        },
+        actions: {
+          new: 'New key',
+          create: 'Create key',
+          save: 'Save key',
+          copy: 'Copy',
+          edit: 'Edit',
+        },
+        form: {
+          key: 'Key value',
+          keyCreatePlaceholder: 'Leave empty to generate one',
+          keyEditPlaceholder: 'Enter a new key value',
+          generatedHint: 'When empty, Home generates a new client access key.',
+          editHint: 'Clients must use the new key value after saving.',
+        },
+        sheet: {
+          createTitle: 'New client access key',
+          createDescription: 'The created key will belong to the current user.',
+          editTitle: 'Edit client access key',
+          editDescription: 'Updating the key value keeps the current user ownership.',
+        },
+        validation: {
+          keyRequired: 'A new key value is required.',
+        },
+        deleteTitle: 'Delete client access key?',
+        deleteDescription: 'Delete key {{key}}? Clients using it will be affected immediately.',
       },
       security: {
         title: 'Account security',
         pending: 'Password change, TOTP, and Passkey management will be connected next.',
+      },
+      toast: {
+        copied: 'Key copied.',
+        keyCreated: 'Key created.',
+        keyUpdated: 'Key updated.',
+        keyDeleted: 'Key deleted.',
       },
     },
     dashboard: {

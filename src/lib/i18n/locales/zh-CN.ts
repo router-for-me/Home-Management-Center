@@ -217,11 +217,50 @@ export const zhCN = {
       },
       keys: {
         title: '客户端访问密钥',
-        pending: '下一步将接入当前用户自己的密钥列表、创建和删除能力。',
+        description: '这些密钥用于客户端调用 Home 服务端，只能管理归属于当前用户的条目。',
+        empty: '当前账号还没有客户端访问密钥。',
+        unrestricted: '不限制范围',
+        table: {
+          key: '密钥',
+          scope: '范围',
+          updatedAt: '更新时间',
+          actions: '操作',
+        },
+        actions: {
+          new: '新建密钥',
+          create: '创建密钥',
+          save: '保存密钥',
+          copy: '复制',
+          edit: '编辑',
+        },
+        form: {
+          key: '密钥值',
+          keyCreatePlaceholder: '留空则由后端自动生成',
+          keyEditPlaceholder: '输入新的密钥值',
+          generatedHint: '不填写时，Home 会生成一个新的客户端访问密钥。',
+          editHint: '保存后客户端需要使用新的密钥值。',
+        },
+        sheet: {
+          createTitle: '新建客户端访问密钥',
+          createDescription: '创建后密钥会归属于当前登录用户。',
+          editTitle: '编辑客户端访问密钥',
+          editDescription: '更新密钥值不会改变当前用户归属。',
+        },
+        validation: {
+          keyRequired: '必须填写新的密钥值。',
+        },
+        deleteTitle: '删除客户端访问密钥？',
+        deleteDescription: '确认删除密钥 {{key}}？此操作会立即影响使用该密钥的客户端。',
       },
       security: {
         title: '账号安全',
         pending: '后续将接入修改密码、TOTP 和 Passkey 管理。',
+      },
+      toast: {
+        copied: '密钥已复制。',
+        keyCreated: '密钥已创建。',
+        keyUpdated: '密钥已更新。',
+        keyDeleted: '密钥已删除。',
       },
     },
     dashboard: {
