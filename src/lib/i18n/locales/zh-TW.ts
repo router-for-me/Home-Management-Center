@@ -188,8 +188,9 @@ export const zhTW = {
         switchAction: '去登入',
       },
       passkey: {
-        description: '此帳號需要使用 Passkey 登入。瀏覽器 Passkey 流程會在後續步驟接入。',
-        pending: '此帳號需要 Passkey 登入，目前前端尚未接入瀏覽器 Passkey 流程。',
+        description: '此帳號需要使用 Passkey 登入。請使用瀏覽器或系統提示完成驗證。',
+        pending: '此帳號需要 Passkey 登入。',
+        action: '使用 Passkey 登入',
       },
       validation: {
         usernameRequired: '必須填寫使用者名稱。',
@@ -277,6 +278,15 @@ export const zhTW = {
           codePlaceholder: '輸入 6 位驗證碼',
           bind: '綁定 TOTP',
         },
+        passkey: {
+          title: 'Passkey',
+          description: '為目前帳號新增瀏覽器或系統 Passkey，用於免密碼登入。',
+          count: '已新增 {{count}} 個',
+          namePlaceholder: 'Passkey 名稱，例如 MacBook',
+          create: '新增 Passkey',
+          limitation:
+            '目前 User API 只返回 Passkey 數量，不返回可選擇的 Passkey 列表，因此這裡暫不提供刪除單個 Passkey 的入口。',
+        },
         validation: {
           passwordRequired: '必須填寫新密碼。',
           passwordMismatch: '兩次輸入的新密碼不一致。',
@@ -291,6 +301,7 @@ export const zhTW = {
         keyDeleted: '金鑰已刪除。',
         passwordUpdated: '密碼已更新。',
         totpEnabled: 'TOTP 已啟用。',
+        passkeyCreated: 'Passkey 已新增。',
       },
     },
     dashboard: {

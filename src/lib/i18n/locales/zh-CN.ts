@@ -188,8 +188,9 @@ export const zhCN = {
         switchAction: '去登录',
       },
       passkey: {
-        description: '此账号需要使用 Passkey 登录。浏览器 Passkey 流程会在后续步骤接入。',
-        pending: '此账号需要 Passkey 登录，当前前端尚未接入浏览器 Passkey 流程。',
+        description: '此账号需要使用 Passkey 登录。请使用浏览器或系统提示完成验证。',
+        pending: '此账号需要 Passkey 登录。',
+        action: '使用 Passkey 登录',
       },
       validation: {
         usernameRequired: '必须填写用户名。',
@@ -277,6 +278,15 @@ export const zhCN = {
           codePlaceholder: '输入 6 位验证码',
           bind: '绑定 TOTP',
         },
+        passkey: {
+          title: 'Passkey',
+          description: '为当前账号添加浏览器或系统 Passkey，用于免密码登录。',
+          count: '已添加 {{count}} 个',
+          namePlaceholder: 'Passkey 名称，例如 MacBook',
+          create: '添加 Passkey',
+          limitation:
+            '当前 User API 只返回 Passkey 数量，不返回可选择的 Passkey 列表，因此这里暂不提供删除单个 Passkey 的入口。',
+        },
         validation: {
           passwordRequired: '必须填写新密码。',
           passwordMismatch: '两次输入的新密码不一致。',
@@ -291,6 +301,7 @@ export const zhCN = {
         keyDeleted: '密钥已删除。',
         passwordUpdated: '密码已更新。',
         totpEnabled: 'TOTP 已启用。',
+        passkeyCreated: 'Passkey 已添加。',
       },
     },
     dashboard: {

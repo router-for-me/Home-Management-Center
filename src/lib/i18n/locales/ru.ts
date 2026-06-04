@@ -194,10 +194,9 @@ export const ru = {
         switchAction: 'Войти',
       },
       passkey: {
-        description:
-          'Для этого аккаунта требуется Passkey. Browser Passkey flow будет подключен на следующем шаге.',
-        pending:
-          'Для этого аккаунта требуется Passkey. Frontend пока не подключил browser Passkey flow.',
+        description: 'Для этого аккаунта требуется Passkey. Завершите browser или system prompt.',
+        pending: 'Для этого аккаунта требуется Passkey.',
+        action: 'Использовать Passkey',
       },
       validation: {
         usernameRequired: 'Username обязателен.',
@@ -288,6 +287,15 @@ export const ru = {
           codePlaceholder: 'Введите 6-значный code',
           bind: 'Привязать TOTP',
         },
+        passkey: {
+          title: 'Passkey',
+          description: 'Добавьте browser или system Passkey для passwordless login.',
+          count: 'Добавлено: {{count}}',
+          namePlaceholder: 'Имя Passkey, например MacBook',
+          create: 'Добавить Passkey',
+          limitation:
+            'Текущий User API возвращает только Passkey count, а не список Passkey, поэтому удаление отдельного Passkey пока не показано.',
+        },
         validation: {
           passwordRequired: 'Новый password обязателен.',
           passwordMismatch: 'Новые passwords не совпадают.',
@@ -302,6 +310,7 @@ export const ru = {
         keyDeleted: 'Ключ удален.',
         passwordUpdated: 'Password обновлен.',
         totpEnabled: 'TOTP включен.',
+        passkeyCreated: 'Passkey добавлен.',
       },
     },
     dashboard: {

@@ -194,9 +194,9 @@ export const en = {
       },
       passkey: {
         description:
-          'This account requires Passkey login. Browser Passkey flow will be wired in a later step.',
-        pending:
-          'This account requires Passkey login. The frontend has not wired the browser Passkey flow yet.',
+          'This account requires Passkey login. Complete the browser or system prompt to continue.',
+        pending: 'This account requires Passkey login.',
+        action: 'Use Passkey',
       },
       validation: {
         usernameRequired: 'Username is required.',
@@ -286,6 +286,15 @@ export const en = {
           codePlaceholder: 'Enter 6-digit code',
           bind: 'Bind TOTP',
         },
+        passkey: {
+          title: 'Passkey',
+          description: 'Add a browser or system Passkey for passwordless login.',
+          count: '{{count}} added',
+          namePlaceholder: 'Passkey name, for example MacBook',
+          create: 'Add Passkey',
+          limitation:
+            'The current User API returns only the Passkey count, not a selectable Passkey list, so single-Passkey deletion is not shown here yet.',
+        },
         validation: {
           passwordRequired: 'New password is required.',
           passwordMismatch: 'The two new passwords do not match.',
@@ -300,6 +309,7 @@ export const en = {
         keyDeleted: 'Key deleted.',
         passwordUpdated: 'Password updated.',
         totpEnabled: 'TOTP enabled.',
+        passkeyCreated: 'Passkey added.',
       },
     },
     dashboard: {

@@ -246,25 +246,30 @@ function ApiKeysTable({
 
 function SecurityPanel({
   totpEnabled,
+  passkeyCount,
   setup,
   loading,
   mutating,
   onShowTotp,
   onBindTotp,
   onChangePassword,
+  onCreatePasskey,
 }: {
   totpEnabled: boolean
+  passkeyCount: number
   setup: ReturnType<typeof useUserWorkspace>['totpSetup']
   loading: boolean
   mutating: boolean
   onShowTotp: (regenerate?: boolean) => Promise<void>
   onBindTotp: (input: { secret: string; code: string; issuer?: string }) => Promise<unknown>
   onChangePassword: (input: { newPassword: string }) => Promise<unknown>
+  onCreatePasskey: (input: { name?: string }) => Promise<unknown>
 }) {
   const { t } = useTranslation()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
+  const [passkeyName, setPasskeyName] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -311,6 +316,17 @@ function SecurityPanel({
       })
       setTotpCode('')
       toast.success(t('userWorkspace.toast.totpEnabled'))
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleCreatePasskey = async () => {
+    try {
+      setLocalError(null)
+      await onCreatePasskey({ name: passkeyName })
+      setPasskeyName('')
+      toast.success(t('userWorkspace.toast.passkeyCreated'))
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
@@ -445,6 +461,35 @@ function SecurityPanel({
             </div>
           ) : null}
         </div>
+      </div>
+
+      <div className="grid gap-4 border-t p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold">{t('userWorkspace.security.passkey.title')}</h3>
+            <p className="text-muted-foreground mt-1 text-sm leading-6">
+              {t('userWorkspace.security.passkey.description')}
+            </p>
+          </div>
+          <span className="border-info/25 bg-info/10 text-info w-fit rounded-md border px-2 py-1 text-xs font-medium">
+            {t('userWorkspace.security.passkey.count', { count: passkeyCount })}
+          </span>
+        </div>
+        <div className="grid gap-3 md:max-w-xl md:grid-cols-[1fr_auto]">
+          <Input
+            value={passkeyName}
+            disabled={mutating}
+            placeholder={t('userWorkspace.security.passkey.namePlaceholder')}
+            onChange={(event) => setPasskeyName(event.target.value)}
+          />
+          <Button type="button" disabled={mutating} onClick={() => void handleCreatePasskey()}>
+            {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+            {t('userWorkspace.security.passkey.create')}
+          </Button>
+        </div>
+        <p className="text-muted-foreground max-w-[70ch] text-xs leading-5">
+          {t('userWorkspace.security.passkey.limitation')}
+        </p>
       </div>
 
       {localError ? (
@@ -598,6 +643,7 @@ export function UserWorkspacePage() {
 
             <SecurityPanel
               totpEnabled={user.totpEnabled}
+              passkeyCount={user.passkeyCount}
               setup={workbench.totpSetup}
               loading={workbench.totpSetupLoading}
               mutating={workbench.mutating}
@@ -606,6 +652,7 @@ export function UserWorkspacePage() {
               }}
               onBindTotp={workbench.bindTotp}
               onChangePassword={workbench.changePassword}
+              onCreatePasskey={workbench.createPasskey}
             />
           </div>
         )}

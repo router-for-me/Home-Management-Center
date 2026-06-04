@@ -8,6 +8,7 @@ import {
   fetchUserApiKeys,
   updateUserApiKey,
 } from '@/lib/api/user/api-keys'
+import { createUserPasskeyWithBrowser } from '@/lib/api/user/passkeys'
 import {
   type BindTotpInput,
   type ChangePasswordInput,
@@ -99,6 +100,19 @@ export function useUserWorkspace() {
     onError: toError,
   })
 
+  const createPasskeyMutation = useMutation({
+    mutationFn: (input: { name?: string }) => createUserPasskeyWithBrowser(session, input),
+    onSuccess: () => {
+      if (!user) return
+
+      updateUser({
+        ...user,
+        passkeyCount: user.passkeyCount + 1,
+      })
+    },
+    onError: toError,
+  })
+
   return {
     user,
     authenticated,
@@ -115,12 +129,14 @@ export function useUserWorkspace() {
     totpSetupLoading: showTotpMutation.isPending,
     bindTotp: bindTotpMutation.mutateAsync,
     changePassword: changePasswordMutation.mutateAsync,
+    createPasskey: createPasskeyMutation.mutateAsync,
     mutating:
       createKeyMutation.isPending ||
       updateKeyMutation.isPending ||
       deleteKeyMutation.isPending ||
       showTotpMutation.isPending ||
       bindTotpMutation.isPending ||
-      changePasswordMutation.isPending,
+      changePasswordMutation.isPending ||
+      createPasskeyMutation.isPending,
   }
 }

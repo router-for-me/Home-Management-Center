@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { loginUser, loginUserWithTotp, registerUser } from '@/lib/api/user/auth'
 import { isUserApiError } from '@/lib/api/user/client'
+import { loginUserWithBrowserPasskey } from '@/lib/api/user/passkeys'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 type UserAuthPageProps = {
@@ -47,7 +48,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       return
     }
 
-    if (!password) {
+    if (step !== 'passkey' && !password) {
       setLocalError(t('userAccess.validation.passwordRequired'))
       return
     }
@@ -62,11 +63,6 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       return
     }
 
-    if (step === 'passkey') {
-      setLocalError(t('userAccess.passkey.pending'))
-      return
-    }
-
     try {
       setLocalError(null)
       setChecking()
@@ -74,13 +70,15 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       const session =
         mode === 'register'
           ? await registerUser({ username: trimmedUsername, password })
-          : step === 'totp'
-            ? await loginUserWithTotp({
-                username: trimmedUsername,
-                password,
-                totpCode,
-              })
-            : await loginUser({ username: trimmedUsername, password })
+          : step === 'passkey'
+            ? await loginUserWithBrowserPasskey(trimmedUsername)
+            : step === 'totp'
+              ? await loginUserWithTotp({
+                  username: trimmedUsername,
+                  password,
+                  totpCode,
+                })
+              : await loginUser({ username: trimmedUsername, password })
 
       setAuthenticated(session, remember)
       await navigate({ to: '/workspace' })
@@ -95,7 +93,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
 
         if (error.code === 'passkey_required') {
           setStep('passkey')
-          setLocalError(t('userAccess.passkey.pending'))
+          setLocalError(null)
           reset()
           return
         }
@@ -211,10 +209,14 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                   {localError}
                 </div>
               ) : null}
-              <Button type="submit" disabled={checking || step === 'passkey'}>
+              <Button type="submit" disabled={checking}>
                 {checking ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                 <LockKeyhole className="size-4" aria-hidden="true" />
-                {checking ? t('userAccess.processing') : t(`userAccess.${mode}.action`)}
+                {checking
+                  ? t('userAccess.processing')
+                  : step === 'passkey'
+                    ? t('userAccess.passkey.action')
+                    : t(`userAccess.${mode}.action`)}
               </Button>
             </fieldset>
 
