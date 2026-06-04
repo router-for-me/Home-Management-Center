@@ -134,7 +134,7 @@ export const en = {
       eyebrow: 'Access split',
       title: 'Choose an entry point',
       description:
-        'Administrators use a management key for the control plane. Regular users will use username and password for their own workspace.',
+        'Administrators use a management key for the control plane. Regular users use username and password for their own workspace.',
       admin: {
         title: 'Administrator console',
         description:
@@ -146,11 +146,11 @@ export const en = {
       },
       user: {
         title: 'User workspace',
-        description:
-          'Review personal keys, usage, and available models. This runtime does not expose user authentication yet.',
+        description: 'Manage personal client access keys and account security settings.',
         available: 'Username password',
-        unavailable: 'API unavailable',
+        authenticated: 'Signed in',
         login: 'User login',
+        workspace: 'Open workspace',
         register: 'Create account',
         previewWorkspace: 'Review workspace status',
       },
@@ -170,10 +170,16 @@ export const en = {
         passwordPlaceholder: 'Enter password',
         confirmPassword: 'Confirm password',
         confirmPasswordPlaceholder: 'Enter password again',
+        totpCode: 'TOTP code',
+        totpCodePlaceholder: 'Enter 6-digit code',
       },
+      remember: 'Remember this login',
+      rememberHint: 'Stores it in this browser. Leave unchecked to keep it only for this tab.',
+      processing: 'Processing',
+      authenticated: 'Signed in as {{username}}.',
       login: {
         title: 'User login',
-        description: 'Regular users will enter their restricted workspace here.',
+        description: 'Sign in to manage your client access keys and account security.',
         action: 'Log in',
         switchPrompt: 'No account yet?',
         switchAction: 'Create one',
@@ -181,28 +187,49 @@ export const en = {
       register: {
         title: 'User registration',
         description:
-          'This will become the lightweight account creation flow. Payments, email verification, and password recovery are outside the first Home scope.',
+          'Create a Home user account. Payments, email verification, and password recovery are outside the first Home scope.',
         action: 'Register',
         switchPrompt: 'Already have an account?',
         switchAction: 'Log in',
       },
-      unavailable: {
-        title: 'Regular user authentication is not exposed by this runtime',
+      passkey: {
         description:
-          'The backend currently exposes administrator-owned /users management only. It does not yet expose user registration, login, session, or personal resource routes.',
+          'This account requires Passkey login. Browser Passkey flow will be wired in a later step.',
+        pending:
+          'This account requires Passkey login. The frontend has not wired the browser Passkey flow yet.',
+      },
+      validation: {
+        usernameRequired: 'Username is required.',
+        passwordRequired: 'Password is required.',
+        passwordMismatch: 'The two passwords do not match.',
+        totpRequired: 'TOTP code is required.',
       },
     },
     userWorkspace: {
       back: 'Back to entry',
       title: 'User workspace',
-      description:
-        'This workspace is reserved for the current user’s client keys, usage, and available model scopes.',
+      description: 'Manage your own client access keys and account security settings.',
       login: 'Go to login',
-      chooseAccess: 'Choose another entry',
-      unavailable: {
-        title: 'User session routes are missing',
+      register: 'Create account',
+      logout: 'Log out',
+      signedOut: {
+        title: 'Sign in to a user account first',
         description:
-          'The backend has not exposed /auth/login, /auth/me, /me/api-keys, /me/usage, or /me/models yet, so the workspace is unavailable.',
+          'After signing in, you can view your client access keys, credits, and security settings.',
+      },
+      summary: {
+        user: 'Current user',
+        credits: 'Credit balance',
+        expiresAt: 'Session expires',
+        notAvailable: 'Unavailable',
+      },
+      keys: {
+        title: 'Client access keys',
+        pending: 'The next step will connect your personal key list, creation, and deletion.',
+      },
+      security: {
+        title: 'Account security',
+        pending: 'Password change, TOTP, and Passkey management will be connected next.',
       },
     },
     dashboard: {

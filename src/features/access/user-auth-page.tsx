@@ -1,21 +1,116 @@
-import { Link } from '@tanstack/react-router'
+import { useState } from 'react'
 
-import { ArrowLeft, CircleAlert, LockKeyhole, UserRound } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+
+import { ArrowLeft, CircleAlert, Loader2, LockKeyhole, ShieldCheck, UserRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { loginUser, loginUserWithTotp, registerUser } from '@/lib/api/user/auth'
+import { isUserApiError } from '@/lib/api/user/client'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 type UserAuthPageProps = {
   mode: 'login' | 'register'
 }
 
+type AuthStep = 'password' | 'totp' | 'passkey'
+
 export function UserAuthPage({ mode }: UserAuthPageProps) {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const status = useUserSessionStore((state) => state.status)
-  const unavailable = status === 'unavailable'
+  const rememberSession = useUserSessionStore((state) => state.rememberSession)
+  const setChecking = useUserSessionStore((state) => state.setChecking)
+  const setAuthenticated = useUserSessionStore((state) => state.setAuthenticated)
+  const setError = useUserSessionStore((state) => state.setError)
+  const reset = useUserSessionStore((state) => state.reset)
+  const user = useUserSessionStore((state) => state.user)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [remember, setRemember] = useState(rememberSession)
+  const [step, setStep] = useState<AuthStep>('password')
+  const [localError, setLocalError] = useState<string | null>(null)
+  const checking = status === 'checking'
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedUsername = username.trim()
+
+    if (!trimmedUsername) {
+      setLocalError(t('userAccess.validation.usernameRequired'))
+      return
+    }
+
+    if (!password) {
+      setLocalError(t('userAccess.validation.passwordRequired'))
+      return
+    }
+
+    if (mode === 'register' && password !== confirmPassword) {
+      setLocalError(t('userAccess.validation.passwordMismatch'))
+      return
+    }
+
+    if (step === 'totp' && !totpCode.trim()) {
+      setLocalError(t('userAccess.validation.totpRequired'))
+      return
+    }
+
+    if (step === 'passkey') {
+      setLocalError(t('userAccess.passkey.pending'))
+      return
+    }
+
+    try {
+      setLocalError(null)
+      setChecking()
+
+      const session =
+        mode === 'register'
+          ? await registerUser({ username: trimmedUsername, password })
+          : step === 'totp'
+            ? await loginUserWithTotp({
+                username: trimmedUsername,
+                password,
+                totpCode,
+              })
+            : await loginUser({ username: trimmedUsername, password })
+
+      setAuthenticated(session, remember)
+      await navigate({ to: '/workspace' })
+    } catch (error) {
+      if (isUserApiError(error) && mode === 'login') {
+        if (error.code === 'totp_required') {
+          setStep('totp')
+          setLocalError(null)
+          reset()
+          return
+        }
+
+        if (error.code === 'passkey_required') {
+          setStep('passkey')
+          setLocalError(t('userAccess.passkey.pending'))
+          reset()
+          return
+        }
+      }
+
+      const message = isUserApiError(error)
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : String(error)
+
+      setError(message)
+      setLocalError(message)
+    }
+  }
 
   return (
     <PublicAccessShell>
@@ -38,33 +133,39 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
             </p>
           </div>
 
-          <div className="grid gap-5 p-5 md:p-6">
-            {unavailable ? (
-              <div className="bg-warning/10 text-warning-foreground dark:text-warning grid gap-2 px-3 py-3 text-sm">
-                <span className="flex items-center gap-2 font-medium">
-                  <CircleAlert className="size-4 shrink-0" aria-hidden="true" />
-                  {t('userAccess.unavailable.title')}
-                </span>
-                <span className="leading-6">{t('userAccess.unavailable.description')}</span>
+          <form className="grid gap-5 p-5 md:p-6" onSubmit={(event) => void handleSubmit(event)}>
+            {status === 'authenticated' && user ? (
+              <div className="border-success/30 bg-success/10 text-success-foreground flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{t('userAccess.authenticated', { username: user.username })}</span>
               </div>
             ) : null}
 
-            <fieldset className="grid gap-4" disabled={unavailable} aria-disabled={unavailable}>
+            {step === 'passkey' ? (
+              <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{t('userAccess.passkey.description')}</span>
+              </div>
+            ) : null}
+
+            <fieldset className="grid gap-4" disabled={checking} aria-disabled={checking}>
               <label className="grid gap-2 text-sm font-medium">
                 <span>{t('userAccess.fields.username')}</span>
                 <Input
+                  value={username}
                   autoComplete="username"
                   placeholder={t('userAccess.fields.usernamePlaceholder')}
-                  className={unavailable ? 'bg-muted/45' : undefined}
+                  onChange={(event) => setUsername(event.target.value)}
                 />
               </label>
               <label className="grid gap-2 text-sm font-medium">
                 <span>{t('userAccess.fields.password')}</span>
                 <Input
                   type="password"
+                  value={password}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   placeholder={t('userAccess.fields.passwordPlaceholder')}
-                  className={unavailable ? 'bg-muted/45' : undefined}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
               </label>
               {mode === 'register' ? (
@@ -72,15 +173,48 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                   <span>{t('userAccess.fields.confirmPassword')}</span>
                   <Input
                     type="password"
+                    value={confirmPassword}
                     autoComplete="new-password"
                     placeholder={t('userAccess.fields.confirmPasswordPlaceholder')}
-                    className={unavailable ? 'bg-muted/45' : undefined}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                   />
                 </label>
               ) : null}
-              <Button type="button" disabled={unavailable}>
+              {mode === 'login' && step === 'totp' ? (
+                <label className="grid gap-2 text-sm font-medium">
+                  <span>{t('userAccess.fields.totpCode')}</span>
+                  <Input
+                    value={totpCode}
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    placeholder={t('userAccess.fields.totpCodePlaceholder')}
+                    onChange={(event) => setTotpCode(event.target.value)}
+                  />
+                </label>
+              ) : null}
+              <label className="flex items-start gap-3 text-sm">
+                <Checkbox
+                  className="mt-1"
+                  checked={remember}
+                  disabled={checking}
+                  onCheckedChange={(checked) => setRemember(checked === true)}
+                />
+                <span className="grid gap-1">
+                  <span className="font-medium">{t('userAccess.remember')}</span>
+                  <span className="text-muted-foreground text-xs leading-5">
+                    {t('userAccess.rememberHint')}
+                  </span>
+                </span>
+              </label>
+              {localError ? (
+                <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+                  {localError}
+                </div>
+              ) : null}
+              <Button type="submit" disabled={checking || step === 'passkey'}>
+                {checking ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                 <LockKeyhole className="size-4" aria-hidden="true" />
-                {t(`userAccess.${mode}.action`)}
+                {checking ? t('userAccess.processing') : t(`userAccess.${mode}.action`)}
               </Button>
             </fieldset>
 
@@ -97,7 +231,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                   : t('userAccess.register.switchAction')}
               </Link>
             </p>
-          </div>
+          </form>
         </div>
       </section>
     </PublicAccessShell>

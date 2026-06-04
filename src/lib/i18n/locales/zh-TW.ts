@@ -131,7 +131,7 @@ export const zhTW = {
       eyebrow: '存取分流',
       title: '選擇進入方式',
       description:
-        '管理員使用 management key 進入控制台；普通使用者未來使用使用者名稱和密碼進入自己的工作台。',
+        '管理員使用 management key 進入控制台；普通使用者使用使用者名稱和密碼進入自己的工作台。',
       admin: {
         title: '管理員控制台',
         description: '管理全域設定、模型服務、帳號憑證、用戶端金鑰、使用者和存取範圍。',
@@ -142,10 +142,11 @@ export const zhTW = {
       },
       user: {
         title: '普通使用者工作台',
-        description: '查看自己的金鑰、用量和可用模型。目前執行環境尚未開放使用者認證介面。',
+        description: '管理自己的用戶端存取金鑰和帳號安全設定。',
         available: '使用者名稱密碼',
-        unavailable: '介面未開放',
+        authenticated: '已登入',
         login: '使用者登入',
+        workspace: '進入工作台',
         register: '開戶註冊',
         previewWorkspace: '查看工作台狀態',
       },
@@ -165,37 +166,62 @@ export const zhTW = {
         passwordPlaceholder: '輸入密碼',
         confirmPassword: '確認密碼',
         confirmPasswordPlaceholder: '再次輸入密碼',
+        totpCode: 'TOTP 驗證碼',
+        totpCodePlaceholder: '輸入 6 位驗證碼',
       },
+      remember: '記住登入狀態',
+      rememberHint: '保存在此瀏覽器中；關閉後只在目前分頁工作階段內保留。',
+      processing: '處理中',
+      authenticated: '已以 {{username}} 登入。',
       login: {
         title: '普通使用者登入',
-        description: '未來普通使用者會在這裡進入自己的受限工作台。',
+        description: '登入後進入自己的工作台，管理用戶端存取金鑰和帳號安全。',
         action: '登入',
         switchPrompt: '還沒有帳號？',
         switchAction: '去註冊',
       },
       register: {
         title: '普通使用者註冊',
-        description: '未來這裡用於開戶註冊；付費、郵件驗證和找回密碼不在 Home 首版範圍內。',
+        description: '建立 Home 使用者帳號。付費、郵件驗證和找回密碼不在 Home 首版範圍內。',
         action: '註冊',
         switchPrompt: '已有帳號？',
         switchAction: '去登入',
       },
-      unavailable: {
-        title: '目前執行環境未開放普通使用者認證',
-        description:
-          '後端目前只提供管理員側 /users 資源管理介面，尚未提供使用者註冊、登入、工作階段和個人資源介面。',
+      passkey: {
+        description: '此帳號需要使用 Passkey 登入。瀏覽器 Passkey 流程會在後續步驟接入。',
+        pending: '此帳號需要 Passkey 登入，目前前端尚未接入瀏覽器 Passkey 流程。',
+      },
+      validation: {
+        usernameRequired: '必須填寫使用者名稱。',
+        passwordRequired: '必須填寫密碼。',
+        passwordMismatch: '兩次輸入的密碼不一致。',
+        totpRequired: '必須填寫 TOTP 驗證碼。',
       },
     },
     userWorkspace: {
       back: '返回入口選擇',
       title: '普通使用者工作台',
-      description: '此工作台用於展示目前使用者自己的用戶端金鑰、用量和可用模型範圍。',
+      description: '管理目前使用者自己的用戶端存取金鑰和帳號安全設定。',
       login: '前往登入',
-      chooseAccess: '選擇其他入口',
-      unavailable: {
-        title: '缺少使用者工作階段介面',
-        description:
-          '目前後端尚未提供 /auth/login、/auth/me、/me/api-keys、/me/usage 和 /me/models 等普通使用者介面，因此工作台暫不可用。',
+      register: '建立帳號',
+      logout: '登出',
+      signedOut: {
+        title: '需要先登入普通使用者帳號',
+        description: '登入後才能查看自己的用戶端存取金鑰、點數和安全設定。',
+      },
+      summary: {
+        user: '目前使用者',
+        credits: '點數餘額',
+        expiresAt: '登入有效期',
+        notAvailable: '不可用',
+      },
+      keys: {
+        title: '用戶端存取金鑰',
+        pending: '下一步將接入目前使用者自己的金鑰列表、建立和刪除能力。',
+      },
+      security: {
+        title: '帳號安全',
+        pending: '後續將接入修改密碼、TOTP 和 Passkey 管理。',
       },
     },
     dashboard: {

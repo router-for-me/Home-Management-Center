@@ -131,7 +131,7 @@ export const zhCN = {
       eyebrow: '访问分流',
       title: '选择进入方式',
       description:
-        '管理员使用 management key 进入控制台；普通用户未来使用用户名和密码进入自己的工作台。',
+        '管理员使用 management key 进入控制台；普通用户使用用户名和密码进入自己的工作台。',
       admin: {
         title: '管理员控制台',
         description: '管理全局配置、模型服务、账号凭证、客户端密钥、用户和访问范围。',
@@ -142,10 +142,11 @@ export const zhCN = {
       },
       user: {
         title: '普通用户工作台',
-        description: '查看自己的密钥、用量和可用模型。当前运行时尚未开放用户认证接口。',
+        description: '管理自己的客户端访问密钥和账号安全设置。',
         available: '用户名密码',
-        unavailable: '接口未开放',
+        authenticated: '已登录',
         login: '用户登录',
+        workspace: '进入工作台',
         register: '开户注册',
         previewWorkspace: '查看工作台状态',
       },
@@ -165,37 +166,62 @@ export const zhCN = {
         passwordPlaceholder: '输入密码',
         confirmPassword: '确认密码',
         confirmPasswordPlaceholder: '再次输入密码',
+        totpCode: 'TOTP 验证码',
+        totpCodePlaceholder: '输入 6 位验证码',
       },
+      remember: '记住登录状态',
+      rememberHint: '保存在此浏览器中；关闭后只在当前标签页会话内保留。',
+      processing: '处理中',
+      authenticated: '已作为 {{username}} 登录。',
       login: {
         title: '普通用户登录',
-        description: '未来普通用户会在这里进入自己的受限工作台。',
+        description: '登录后进入自己的工作台，管理客户端访问密钥和账号安全。',
         action: '登录',
         switchPrompt: '还没有账号？',
         switchAction: '去注册',
       },
       register: {
         title: '普通用户注册',
-        description: '未来这里用于开户注册；付费、邮件验证和找回密码不在 Home 首版范围内。',
+        description: '创建 Home 用户账号。付费、邮件验证和找回密码不在 Home 首版范围内。',
         action: '注册',
         switchPrompt: '已有账号？',
         switchAction: '去登录',
       },
-      unavailable: {
-        title: '当前运行时未开放普通用户认证',
-        description:
-          '后端目前只提供管理员侧 /users 资源管理接口，尚未提供用户注册、登录、会话和个人资源接口。',
+      passkey: {
+        description: '此账号需要使用 Passkey 登录。浏览器 Passkey 流程会在后续步骤接入。',
+        pending: '此账号需要 Passkey 登录，当前前端尚未接入浏览器 Passkey 流程。',
+      },
+      validation: {
+        usernameRequired: '必须填写用户名。',
+        passwordRequired: '必须填写密码。',
+        passwordMismatch: '两次输入的密码不一致。',
+        totpRequired: '必须填写 TOTP 验证码。',
       },
     },
     userWorkspace: {
       back: '返回入口选择',
       title: '普通用户工作台',
-      description: '该工作台用于展示当前用户自己的客户端密钥、用量和可用模型范围。',
+      description: '管理当前用户自己的客户端访问密钥和账号安全设置。',
       login: '前往登录',
-      chooseAccess: '选择其他入口',
-      unavailable: {
-        title: '缺少用户会话接口',
-        description:
-          '当前后端尚未提供 /auth/login、/auth/me、/me/api-keys、/me/usage 和 /me/models 等普通用户接口，因此工作台暂不可用。',
+      register: '创建账号',
+      logout: '退出登录',
+      signedOut: {
+        title: '需要先登录普通用户账号',
+        description: '登录后才能查看自己的客户端访问密钥、点数和安全设置。',
+      },
+      summary: {
+        user: '当前用户',
+        credits: '点数余额',
+        expiresAt: '登录有效期',
+        notAvailable: '不可用',
+      },
+      keys: {
+        title: '客户端访问密钥',
+        pending: '下一步将接入当前用户自己的密钥列表、创建和删除能力。',
+      },
+      security: {
+        title: '账号安全',
+        pending: '后续将接入修改密码、TOTP 和 Passkey 管理。',
       },
     },
     dashboard: {

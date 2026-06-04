@@ -13,7 +13,7 @@ export function AccessEntryPage() {
   const managementStatus = useSessionStore((state) => state.status)
   const userStatus = useUserSessionStore((state) => state.status)
   const managementConnected = managementStatus === 'connected'
-  const userUnavailable = userStatus === 'unavailable'
+  const userAuthenticated = userStatus === 'authenticated'
 
   return (
     <PublicAccessShell>
@@ -63,9 +63,9 @@ export function AccessEntryPage() {
                 <span className="bg-info/10 text-info flex size-10 items-center justify-center rounded-md">
                   <UserRound className="size-5" aria-hidden="true" />
                 </span>
-                <span className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-2 py-1 text-xs font-medium">
-                  {userUnavailable
-                    ? t('accessPortal.user.unavailable')
+                <span className="border-info/25 bg-info/10 text-info rounded-md border px-2 py-1 text-xs font-medium">
+                  {userAuthenticated
+                    ? t('accessPortal.user.authenticated')
                     : t('accessPortal.user.available')}
                 </span>
               </div>
@@ -82,8 +82,10 @@ export function AccessEntryPage() {
                 <Link to="/register">{t('accessPortal.user.register')}</Link>
               </Button>
               <Button asChild variant="secondary">
-                <Link to="/login">
-                  {t('accessPortal.user.login')}
+                <Link to={userAuthenticated ? '/workspace' : '/login'}>
+                  {userAuthenticated
+                    ? t('accessPortal.user.workspace')
+                    : t('accessPortal.user.login')}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>

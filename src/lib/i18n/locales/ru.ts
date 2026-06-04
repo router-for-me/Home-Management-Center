@@ -134,7 +134,7 @@ export const ru = {
       eyebrow: 'Разделение доступа',
       title: 'Выберите способ входа',
       description:
-        'Администраторы используют management key для консоли управления. Обычные пользователи будут входить по username и password в свой workspace.',
+        'Администраторы используют management key для консоли управления. Обычные пользователи входят по username и password в свой workspace.',
       admin: {
         title: 'Консоль администратора',
         description:
@@ -146,11 +146,11 @@ export const ru = {
       },
       user: {
         title: 'Workspace пользователя',
-        description:
-          'Просмотр личных ключей, использования и доступных моделей. Этот runtime пока не предоставляет user authentication API.',
+        description: 'Управление личными клиентскими ключами и настройками безопасности аккаунта.',
         available: 'Username password',
-        unavailable: 'API недоступен',
+        authenticated: 'Выполнен вход',
         login: 'Вход пользователя',
+        workspace: 'Открыть workspace',
         register: 'Создать аккаунт',
         previewWorkspace: 'Проверить статус workspace',
       },
@@ -170,11 +170,17 @@ export const ru = {
         passwordPlaceholder: 'Введите password',
         confirmPassword: 'Подтвердите password',
         confirmPasswordPlaceholder: 'Введите password еще раз',
+        totpCode: 'TOTP код',
+        totpCodePlaceholder: 'Введите 6-значный код',
       },
+      remember: 'Запомнить вход',
+      rememberHint:
+        'Сохраняет вход в этом браузере. Если выключено, хранится только в текущей вкладке.',
+      processing: 'Обработка',
+      authenticated: 'Вход выполнен как {{username}}.',
       login: {
         title: 'Вход пользователя',
-        description:
-          'В будущем обычные пользователи будут входить здесь в свой ограниченный workspace.',
+        description: 'Войдите, чтобы управлять клиентскими ключами и безопасностью аккаунта.',
         action: 'Войти',
         switchPrompt: 'Нет аккаунта?',
         switchAction: 'Создать',
@@ -182,28 +188,50 @@ export const ru = {
       register: {
         title: 'Регистрация пользователя',
         description:
-          'Здесь появится легкий flow создания аккаунта. Платежи, email verification и восстановление password не входят в первый scope Home.',
+          'Создайте аккаунт Home. Платежи, email verification и восстановление password не входят в первый scope Home.',
         action: 'Зарегистрироваться',
         switchPrompt: 'Уже есть аккаунт?',
         switchAction: 'Войти',
       },
-      unavailable: {
-        title: 'Этот runtime не предоставляет authentication для обычных пользователей',
+      passkey: {
         description:
-          'Backend сейчас предоставляет только администраторское управление /users. User registration, login, session и personal resource routes пока отсутствуют.',
+          'Для этого аккаунта требуется Passkey. Browser Passkey flow будет подключен на следующем шаге.',
+        pending:
+          'Для этого аккаунта требуется Passkey. Frontend пока не подключил browser Passkey flow.',
+      },
+      validation: {
+        usernameRequired: 'Username обязателен.',
+        passwordRequired: 'Password обязателен.',
+        passwordMismatch: 'Passwords не совпадают.',
+        totpRequired: 'TOTP код обязателен.',
       },
     },
     userWorkspace: {
       back: 'Назад к выбору входа',
       title: 'Workspace пользователя',
       description:
-        'Этот workspace зарезервирован для клиентских ключей, использования и доступных model scopes текущего пользователя.',
+        'Управление собственными клиентскими ключами и настройками безопасности аккаунта.',
       login: 'Перейти ко входу',
-      chooseAccess: 'Выбрать другой вход',
-      unavailable: {
-        title: 'Отсутствуют user session routes',
+      register: 'Создать аккаунт',
+      logout: 'Выйти',
+      signedOut: {
+        title: 'Сначала войдите в user account',
         description:
-          'Backend пока не предоставляет /auth/login, /auth/me, /me/api-keys, /me/usage или /me/models, поэтому workspace недоступен.',
+          'После входа можно просматривать клиентские ключи, credits и настройки безопасности.',
+      },
+      summary: {
+        user: 'Текущий пользователь',
+        credits: 'Баланс credits',
+        expiresAt: 'Сессия истекает',
+        notAvailable: 'Недоступно',
+      },
+      keys: {
+        title: 'Клиентские ключи',
+        pending: 'На следующем шаге будут подключены список ключей, создание и удаление.',
+      },
+      security: {
+        title: 'Безопасность аккаунта',
+        pending: 'Смена password, TOTP и Passkey management будут подключены далее.',
       },
     },
     dashboard: {

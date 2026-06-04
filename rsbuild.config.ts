@@ -20,6 +20,10 @@ export default defineConfig(({ command }) => {
           target: managementProxyTarget,
           changeOrigin: true,
         },
+        '/user': {
+          target: managementProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
     dev: {
