@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  fetchUserMe,
+} from '@/lib/api/user/auth'
+import {
   type UserApiKeyInput,
   type UserApiKeyResource,
   createUserApiKey,
@@ -45,6 +48,14 @@ export function useUserWorkspace() {
     token: token ?? '',
   }
   const apiKeysQueryKey = ['user-api-keys', baseUrl, token]
+  const userQueryKey = ['user-info', baseUrl, token]
+
+  const userQuery = useQuery({
+    queryKey: userQueryKey,
+    enabled: authenticated,
+    queryFn: () => fetchUserMe(session),
+    staleTime: 30_000,
+  })
 
   const apiKeysQuery = useQuery({
     queryKey: apiKeysQueryKey,
@@ -113,8 +124,11 @@ export function useUserWorkspace() {
     onError: toError,
   })
 
+  const effectiveUser = userQuery.data ?? user
+
   return {
-    user,
+    user: effectiveUser,
+    userLoading: userQuery.isLoading,
     authenticated,
     apiKeys: apiKeysQuery.data ?? [],
     apiKeysLoading: apiKeysQuery.isLoading,

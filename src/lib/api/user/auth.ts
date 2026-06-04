@@ -126,6 +126,27 @@ export async function loginUser(
   }
 }
 
+export async function fetchUserMe(session: UserSessionInput = {}): Promise<UserAccount> {
+  const client = createUserClient(session)
+
+  try {
+    const response = await client.get<unknown>('/me')
+
+    const record =
+      typeof response.data === 'object' &&
+      response.data !== null &&
+      !Array.isArray(response.data)
+        ? (response.data as UnknownRecord)
+        : {}
+
+    const userData = record.user ?? record
+
+    return normalizeUserAccount(userData)
+  } catch (error) {
+    throw toUserApiError(error)
+  }
+}
+
 export async function loginUserWithTotp(
   input: UserTotpLoginInput,
   session: UserSessionInput = {},
