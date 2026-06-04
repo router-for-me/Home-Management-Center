@@ -156,16 +156,18 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                   onChange={(event) => setUsername(event.target.value)}
                 />
               </label>
-              <label className="grid gap-2 text-sm font-medium">
-                <span>{t('userAccess.fields.password')}</span>
-                <Input
-                  type="password"
-                  value={password}
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                  placeholder={t('userAccess.fields.passwordPlaceholder')}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-              </label>
+              {step !== 'passkey' ? (
+                <label className="grid gap-2 text-sm font-medium">
+                  <span>{t('userAccess.fields.password')}</span>
+                  <Input
+                    type="password"
+                    value={password}
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    placeholder={t('userAccess.fields.passwordPlaceholder')}
+                    onChange={(event) => setPassword(event.target.value)}
+                  />
+                </label>
+              ) : null}
               {mode === 'register' ? (
                 <label className="grid gap-2 text-sm font-medium">
                   <span>{t('userAccess.fields.confirmPassword')}</span>
