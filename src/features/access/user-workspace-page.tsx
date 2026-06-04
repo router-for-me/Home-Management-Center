@@ -15,6 +15,7 @@ import {
   Trash2,
   UserRound,
 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -243,6 +244,218 @@ function ApiKeysTable({
   )
 }
 
+function SecurityPanel({
+  totpEnabled,
+  setup,
+  loading,
+  mutating,
+  onShowTotp,
+  onBindTotp,
+  onChangePassword,
+}: {
+  totpEnabled: boolean
+  setup: ReturnType<typeof useUserWorkspace>['totpSetup']
+  loading: boolean
+  mutating: boolean
+  onShowTotp: (regenerate?: boolean) => Promise<void>
+  onBindTotp: (input: { secret: string; code: string; issuer?: string }) => Promise<unknown>
+  onChangePassword: (input: { newPassword: string }) => Promise<unknown>
+}) {
+  const { t } = useTranslation()
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!newPassword) {
+      setLocalError(t('userWorkspace.security.validation.passwordRequired'))
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setLocalError(t('userWorkspace.security.validation.passwordMismatch'))
+      return
+    }
+
+    try {
+      setLocalError(null)
+      await onChangePassword({ newPassword })
+      setNewPassword('')
+      setConfirmPassword('')
+      toast.success(t('userWorkspace.toast.passwordUpdated'))
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleBindTotp = async () => {
+    if (!setup?.secret) {
+      setLocalError(t('userWorkspace.security.validation.totpSetupRequired'))
+      return
+    }
+
+    if (!totpCode.trim()) {
+      setLocalError(t('userWorkspace.security.validation.totpCodeRequired'))
+      return
+    }
+
+    try {
+      setLocalError(null)
+      await onBindTotp({
+        secret: setup.secret,
+        code: totpCode,
+        issuer: setup.issuer,
+      })
+      setTotpCode('')
+      toast.success(t('userWorkspace.toast.totpEnabled'))
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return (
+    <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
+      <div className="flex items-start gap-3 border-b p-4">
+        <span className="bg-success/10 text-success flex size-9 shrink-0 items-center justify-center rounded-md">
+          <ShieldCheck className="size-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold">{t('userWorkspace.security.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm leading-6">
+            {t('userWorkspace.security.description')}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-0 md:grid-cols-2">
+        <form
+          className="grid gap-4 p-4 md:border-r"
+          onSubmit={(event) => void handlePasswordSubmit(event)}
+        >
+          <div>
+            <h3 className="text-sm font-semibold">{t('userWorkspace.security.password.title')}</h3>
+            <p className="text-muted-foreground mt-1 text-sm leading-6">
+              {t('userWorkspace.security.password.description')}
+            </p>
+          </div>
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('userWorkspace.security.password.newPassword')}</span>
+            <Input
+              type="password"
+              value={newPassword}
+              autoComplete="new-password"
+              disabled={mutating}
+              placeholder={t('userWorkspace.security.password.newPasswordPlaceholder')}
+              onChange={(event) => setNewPassword(event.target.value)}
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('userWorkspace.security.password.confirmPassword')}</span>
+            <Input
+              type="password"
+              value={confirmPassword}
+              autoComplete="new-password"
+              disabled={mutating}
+              placeholder={t('userWorkspace.security.password.confirmPasswordPlaceholder')}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </label>
+          <Button type="submit" disabled={mutating} className="w-fit">
+            {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+            {t('userWorkspace.security.password.action')}
+          </Button>
+        </form>
+
+        <div className="grid gap-4 border-t p-4 md:border-t-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">{t('userWorkspace.security.totp.title')}</h3>
+              <p className="text-muted-foreground mt-1 text-sm leading-6">
+                {t('userWorkspace.security.totp.description')}
+              </p>
+            </div>
+            <span className="border-info/25 bg-info/10 text-info w-fit rounded-md border px-2 py-1 text-xs font-medium">
+              {totpEnabled
+                ? t('userWorkspace.security.totp.enabled')
+                : t('userWorkspace.security.totp.disabled')}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={loading || mutating}
+              onClick={() => void onShowTotp(false)}
+            >
+              {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+              {t('userWorkspace.security.totp.showSetup')}
+            </Button>
+            <Button
+              variant="text"
+              disabled={loading || mutating}
+              onClick={() => void onShowTotp(true)}
+            >
+              {t('userWorkspace.security.totp.regenerate')}
+            </Button>
+          </div>
+          {setup ? (
+            <div className="grid gap-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                {setup.otpAuthUrl ? (
+                  <div className="bg-background flex size-36 shrink-0 items-center justify-center rounded-md border p-2">
+                    <QRCodeSVG value={setup.otpAuthUrl} size={128} />
+                  </div>
+                ) : null}
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground text-xs">
+                    {t('userWorkspace.security.totp.secret')}
+                  </p>
+                  <p className="mt-1 font-mono text-sm break-all">{setup.secret}</p>
+                  <p className="text-muted-foreground mt-3 text-xs">
+                    {t('userWorkspace.security.totp.metadata', {
+                      digits: setup.digits,
+                      period: setup.period,
+                      algorithm: setup.algorithm,
+                    })}
+                  </p>
+                </div>
+              </div>
+              <label className="grid gap-2 text-sm font-medium">
+                <span>{t('userWorkspace.security.totp.code')}</span>
+                <Input
+                  value={totpCode}
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  disabled={mutating}
+                  placeholder={t('userWorkspace.security.totp.codePlaceholder')}
+                  onChange={(event) => setTotpCode(event.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                disabled={mutating}
+                className="w-fit"
+                onClick={() => void handleBindTotp()}
+              >
+                {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {t('userWorkspace.security.totp.bind')}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {localError ? (
+        <div className="border-destructive/30 bg-destructive/10 text-destructive mx-4 mb-4 rounded-md border px-3 py-2 text-sm">
+          {localError}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function UserWorkspacePage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -383,19 +596,17 @@ export function UserWorkspacePage() {
               />
             </div>
 
-            <div className="bg-card rounded-lg border p-5">
-              <div className="flex items-start gap-3">
-                <span className="bg-success/10 text-success flex size-9 shrink-0 items-center justify-center rounded-md">
-                  <ShieldCheck className="size-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold">{t('userWorkspace.security.title')}</h2>
-                  <p className="text-muted-foreground mt-1 text-sm leading-6">
-                    {t('userWorkspace.security.pending')}
-                  </p>
-                </div>
-              </div>
-            </div>
+            <SecurityPanel
+              totpEnabled={user.totpEnabled}
+              setup={workbench.totpSetup}
+              loading={workbench.totpSetupLoading}
+              mutating={workbench.mutating}
+              onShowTotp={async (regenerate) => {
+                await workbench.showTotpSetup({ regenerate })
+              }}
+              onBindTotp={workbench.bindTotp}
+              onChangePassword={workbench.changePassword}
+            />
           </div>
         )}
 

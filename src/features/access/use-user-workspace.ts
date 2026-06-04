@@ -8,6 +8,13 @@ import {
   fetchUserApiKeys,
   updateUserApiKey,
 } from '@/lib/api/user/api-keys'
+import {
+  type BindTotpInput,
+  type ChangePasswordInput,
+  bindUserTotp,
+  changeUserPassword,
+  fetchUserTotpSetup,
+} from '@/lib/api/user/security'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 function toError(error: unknown) {
@@ -30,6 +37,7 @@ export function useUserWorkspace() {
   const baseUrl = useUserSessionStore((state) => state.baseUrl)
   const token = useUserSessionStore((state) => state.token)
   const user = useUserSessionStore((state) => state.user)
+  const updateUser = useUserSessionStore((state) => state.updateUser)
   const authenticated = status === 'authenticated' && Boolean(token)
   const session = {
     baseUrl,
@@ -70,6 +78,27 @@ export function useUserWorkspace() {
     onError: toError,
   })
 
+  const showTotpMutation = useMutation({
+    mutationFn: (input: { regenerate?: boolean }) => fetchUserTotpSetup(session, input),
+    onError: toError,
+  })
+
+  const bindTotpMutation = useMutation({
+    mutationFn: (input: BindTotpInput) => bindUserTotp(session, input),
+    onSuccess: (nextUser) => {
+      updateUser(nextUser)
+    },
+    onError: toError,
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: (input: ChangePasswordInput) => changeUserPassword(session, input),
+    onSuccess: (nextUser) => {
+      updateUser(nextUser)
+    },
+    onError: toError,
+  })
+
   return {
     user,
     authenticated,
@@ -81,7 +110,17 @@ export function useUserWorkspace() {
     createApiKey: createKeyMutation.mutateAsync,
     updateApiKey: updateKeyMutation.mutateAsync,
     deleteApiKey: deleteKeyMutation.mutateAsync,
+    showTotpSetup: showTotpMutation.mutateAsync,
+    totpSetup: showTotpMutation.data ?? null,
+    totpSetupLoading: showTotpMutation.isPending,
+    bindTotp: bindTotpMutation.mutateAsync,
+    changePassword: changePasswordMutation.mutateAsync,
     mutating:
-      createKeyMutation.isPending || updateKeyMutation.isPending || deleteKeyMutation.isPending,
+      createKeyMutation.isPending ||
+      updateKeyMutation.isPending ||
+      deleteKeyMutation.isPending ||
+      showTotpMutation.isPending ||
+      bindTotpMutation.isPending ||
+      changePasswordMutation.isPending,
   }
 }
