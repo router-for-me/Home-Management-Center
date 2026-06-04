@@ -8,6 +8,7 @@ export type UserResource = {
   numericId: number | null
   username: string
   hasPassword: boolean
+  credits: number
   mfaConfigured: boolean
   passkeyCount: number
   deletedAt: string | null
@@ -19,6 +20,7 @@ export type UserResource = {
 export type UserFormInput = {
   username: string
   password?: string
+  credits?: number
 }
 
 type UsersSnapshot = {
@@ -46,6 +48,14 @@ function readNumber(record: UnknownRecord, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
     if (typeof value === 'number' && Number.isFinite(value)) return value
+  }
+  return null
+}
+
+function readBoolean(record: UnknownRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'boolean') return value
   }
   return null
 }
@@ -80,7 +90,10 @@ function normalizeUser(record: UnknownRecord, index: number): UserResource {
     id,
     numericId,
     username,
-    hasPassword: typeof record.password === 'string' && record.password.length > 0,
+    hasPassword:
+      readBoolean(record, ['password_set', 'passwordSet']) ??
+      (typeof record.password === 'string' && record.password.length > 0),
+    credits: readNumber(record, ['credits']) ?? 0,
     mfaConfigured: hasStructuredValue(record.mfa),
     passkeyCount: Array.isArray(passkey) ? passkey.length : hasStructuredValue(passkey) ? 1 : 0,
     deletedAt: readString(record, ['deleted_at', 'deletedAt']),
@@ -94,6 +107,7 @@ function toUserPayload(input: UserFormInput) {
   return {
     username: input.username.trim(),
     password: input.password?.trim() || undefined,
+    credits: input.credits,
   }
 }
 

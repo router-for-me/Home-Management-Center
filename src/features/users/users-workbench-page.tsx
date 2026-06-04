@@ -329,12 +329,14 @@ function UserForm({
   const { t } = useTranslation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [credits, setCredits] = useState('0')
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalError(null)
     setUsername(mode === 'edit' && user ? user.username : '')
     setPassword('')
+    setCredits(mode === 'edit' && user ? String(user.credits) : '0')
   }, [mode, user])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -346,11 +348,18 @@ function UserForm({
       return
     }
 
+    const numericCredits = Number(credits)
+    if (!Number.isFinite(numericCredits) || numericCredits < 0) {
+      setLocalError(t('usersPage.form.validation.creditsInvalid'))
+      return
+    }
+
     try {
       setLocalError(null)
       await onSubmit({
         username: trimmedUsername,
         password: password.trim() || undefined,
+        credits: numericCredits,
       })
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
@@ -384,6 +393,21 @@ function UserForm({
           placeholder={t('usersPage.form.passwordPlaceholder')}
           onChange={(event) => setPassword(event.target.value)}
         />
+      </label>
+      <label className="grid gap-2 text-sm font-medium">
+        <span>{t('usersPage.form.credits')}</span>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={credits}
+          disabled={mutating}
+          placeholder={t('usersPage.form.creditsPlaceholder')}
+          onChange={(event) => setCredits(event.target.value)}
+        />
+        <span className="text-muted-foreground text-xs leading-5">
+          {t('usersPage.form.creditsHint')}
+        </span>
       </label>
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
@@ -1297,6 +1321,7 @@ function UserDetailContent({
             ['createdAt', formatOptionalTime(user.createdAt, t('usersPage.status.notReturned'))],
             ['updatedAt', formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))],
             ['deletedAt', formatOptionalTime(user.deletedAt, t('usersPage.status.notDeleted'))],
+            ['credits', formatNumber(user.credits)],
             ['mfa', user.mfaConfigured ? t('common.enabled') : t('common.disabled')],
             ['passkeyCount', formatNumber(user.passkeyCount)],
           ].map(([key, value]) => (
@@ -1369,11 +1394,12 @@ function UsersTable({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[980px]">
+        <Table className="min-w-[1040px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow variant="static">
               <TableHead>{t('usersPage.list.user')}</TableHead>
               <TableHead>{t('usersPage.list.status')}</TableHead>
+              <TableHead>{t('usersPage.list.credits')}</TableHead>
               <TableHead>{t('usersPage.list.keys')}</TableHead>
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
               <TableHead>{t('usersPage.scopes.model')}</TableHead>
@@ -1399,6 +1425,7 @@ function UsersTable({
                   <TableCell>
                     <StatusBadge deletedAt={user.deletedAt} />
                   </TableCell>
+                  <TableCell>{formatNumber(user.credits)}</TableCell>
                   <TableCell>{formatNumber(keys.length)}</TableCell>
                   <TableCell className="max-w-[220px] truncate">
                     {groupListLabel(
