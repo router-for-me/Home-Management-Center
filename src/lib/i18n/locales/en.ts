@@ -131,28 +131,28 @@ export const en = {
     },
     accessPortal: {
       shellSubtitle: 'Access entry',
-      eyebrow: 'Access split',
-      title: 'Choose an entry point',
+      eyebrow: 'Session entry',
+      title: 'Open Home Console',
       description:
-        'Administrators use a management key for the control plane. Regular users use username and password for their own workspace.',
+        'Choose the workspace for the current session. Administrators connect the Management API; user accounts maintain only their own keys and security.',
       admin: {
-        title: 'Administrator console',
+        title: 'Admin session',
         description:
-          'Manage global config, model services, account credentials, client keys, users, and access scopes.',
-        available: 'Management key',
+          'Connect the Management API to manage runtime config, model services, credential pools, users, and access scopes.',
+        available: 'Management key required',
         connected: 'Connected',
-        action: 'Open admin connection',
-        resume: 'Open console',
+        action: 'Connect admin runtime',
+        resume: 'Open admin console',
       },
       user: {
-        title: 'User workspace',
-        description: 'Manage personal client access keys and account security settings.',
-        available: 'Username password',
+        title: 'User session',
+        description:
+          'Sign in to maintain personal client access keys, credit status, and account security.',
+        available: 'Account login',
         authenticated: 'Signed in',
-        login: 'User login',
-        workspace: 'Open workspace',
+        login: 'Sign in',
+        workspace: 'Open user workspace',
         register: 'Create account',
-        previewWorkspace: 'Review workspace status',
       },
     },
     adminAccess: {
@@ -237,10 +237,12 @@ export const en = {
         },
         actions: {
           new: 'New key',
+          refresh: 'Refresh keys',
           create: 'Create key',
           save: 'Save key',
           copy: 'Copy',
           edit: 'Edit',
+          delete: 'Delete',
         },
         form: {
           key: 'Key value',
@@ -263,7 +265,8 @@ export const en = {
       },
       security: {
         title: 'Account security',
-        description: 'Change the login password or bind TOTP two-step verification.',
+        description:
+          'Change the login password, bind TOTP two-step verification, or add a Passkey.',
         password: {
           title: 'Change password',
           description: 'Use the new password the next time you sign in.',
@@ -279,7 +282,7 @@ export const en = {
           enabled: 'Enabled',
           disabled: 'Disabled',
           showSetup: 'Show setup',
-          regenerate: 'Regenerate',
+          regenerate: 'Regenerate setup',
           secret: 'Secret',
           metadata: '{{digits}} digits · {{period}} seconds · {{algorithm}}',
           code: 'Code',
@@ -293,7 +296,7 @@ export const en = {
           namePlaceholder: 'Passkey name, for example MacBook',
           create: 'Add Passkey',
           limitation:
-            'The current User API returns only the Passkey count, not a selectable Passkey list, so single-Passkey deletion is not shown here yet.',
+            'The User API returns only the Passkey count, so single-Passkey deletion is not available yet.',
         },
         validation: {
           passwordRequired: 'New password is required.',

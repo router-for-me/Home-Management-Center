@@ -128,8 +128,13 @@ export function useUserWorkspace() {
     totpSetup: showTotpMutation.data ?? null,
     totpSetupLoading: showTotpMutation.isPending,
     bindTotp: bindTotpMutation.mutateAsync,
+    totpBinding: bindTotpMutation.isPending,
     changePassword: changePasswordMutation.mutateAsync,
+    passwordChanging: changePasswordMutation.isPending,
     createPasskey: createPasskeyMutation.mutateAsync,
+    passkeyCreating: createPasskeyMutation.isPending,
+    apiKeysMutating:
+      createKeyMutation.isPending || updateKeyMutation.isPending || deleteKeyMutation.isPending,
     mutating:
       createKeyMutation.isPending ||
       updateKeyMutation.isPending ||

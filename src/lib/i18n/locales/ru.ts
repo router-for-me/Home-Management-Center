@@ -131,28 +131,28 @@ export const ru = {
     },
     accessPortal: {
       shellSubtitle: 'Точка входа',
-      eyebrow: 'Разделение доступа',
-      title: 'Выберите способ входа',
+      eyebrow: 'Вход в сессию',
+      title: 'Открыть Home Console',
       description:
-        'Администраторы используют management key для консоли управления. Обычные пользователи входят по username и password в свой workspace.',
+        'Выберите рабочую область для текущей сессии. Администраторы подключают Management API; пользовательские аккаунты управляют только своими ключами и безопасностью.',
       admin: {
-        title: 'Консоль администратора',
+        title: 'Сессия администратора',
         description:
-          'Управление глобальной конфигурацией, модельными сервисами, учетными данными, клиентскими ключами, пользователями и областями доступа.',
-        available: 'Management key',
+          'Подключите Management API для управления runtime config, модельными сервисами, пулом учетных данных, пользователями и областями доступа.',
+        available: 'Нужен management key',
         connected: 'Подключено',
-        action: 'Открыть admin подключение',
-        resume: 'Открыть консоль',
+        action: 'Подключить admin runtime',
+        resume: 'Открыть admin console',
       },
       user: {
-        title: 'Workspace пользователя',
-        description: 'Управление личными клиентскими ключами и настройками безопасности аккаунта.',
-        available: 'Username password',
+        title: 'Сессия пользователя',
+        description:
+          'Войдите, чтобы управлять личными клиентскими ключами, балансом credits и безопасностью аккаунта.',
+        available: 'Вход в аккаунт',
         authenticated: 'Выполнен вход',
-        login: 'Вход пользователя',
-        workspace: 'Открыть workspace',
+        login: 'Войти',
+        workspace: 'Открыть workspace пользователя',
         register: 'Создать аккаунт',
-        previewWorkspace: 'Проверить статус workspace',
       },
     },
     adminAccess: {
@@ -238,10 +238,12 @@ export const ru = {
         },
         actions: {
           new: 'Новый ключ',
+          refresh: 'Обновить ключи',
           create: 'Создать',
           save: 'Сохранить',
           copy: 'Копировать',
           edit: 'Изменить',
+          delete: 'Удалить',
         },
         form: {
           key: 'Значение ключа',
@@ -264,7 +266,7 @@ export const ru = {
       },
       security: {
         title: 'Безопасность аккаунта',
-        description: 'Смените login password или привяжите TOTP two-step verification.',
+        description: 'Смените login password, привяжите TOTP или добавьте Passkey.',
         password: {
           title: 'Смена password',
           description: 'При следующем входе используйте новый password.',
@@ -280,7 +282,7 @@ export const ru = {
           enabled: 'Включено',
           disabled: 'Выключено',
           showSetup: 'Показать setup',
-          regenerate: 'Regenerate',
+          regenerate: 'Regenerate setup',
           secret: 'Secret',
           metadata: '{{digits}} digits · {{period}} seconds · {{algorithm}}',
           code: 'Code',
@@ -294,7 +296,7 @@ export const ru = {
           namePlaceholder: 'Имя Passkey, например MacBook',
           create: 'Добавить Passkey',
           limitation:
-            'Текущий User API возвращает только Passkey count, а не список Passkey, поэтому удаление отдельного Passkey пока не показано.',
+            'User API возвращает только Passkey count, поэтому удаление отдельного Passkey пока недоступно.',
         },
         validation: {
           passwordRequired: 'Новый password обязателен.',

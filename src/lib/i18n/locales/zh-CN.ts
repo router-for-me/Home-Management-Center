@@ -128,27 +128,26 @@ export const zhCN = {
     },
     accessPortal: {
       shellSubtitle: '访问入口',
-      eyebrow: '访问分流',
-      title: '选择进入方式',
+      eyebrow: '会话入口',
+      title: '进入 Home 控制台',
       description:
-        '管理员使用 management key 进入控制台；普通用户使用用户名和密码进入自己的工作台。',
+        '根据会话类型进入对应工作区。管理员连接 Management API；用户账号只维护自己的访问密钥和安全设置。',
       admin: {
-        title: '管理员控制台',
-        description: '管理全局配置、模型服务、账号凭证、客户端密钥、用户和访问范围。',
-        available: 'Management key',
+        title: '管理会话',
+        description: '连接 Management API 后管理运行时配置、模型服务、凭证池、用户与访问范围。',
+        available: '需要 management key',
         connected: '已连接',
-        action: '进入管理员连接',
-        resume: '进入控制台',
+        action: '连接管理端',
+        resume: '进入管理控制台',
       },
       user: {
-        title: '普通用户工作台',
-        description: '管理自己的客户端访问密钥和账号安全设置。',
-        available: '用户名密码',
+        title: '用户会话',
+        description: '登录 Home 用户账号，维护个人客户端访问密钥、点数状态和账号安全。',
+        available: '账号登录',
         authenticated: '已登录',
-        login: '用户登录',
-        workspace: '进入工作台',
-        register: '开户注册',
-        previewWorkspace: '查看工作台状态',
+        login: '登录',
+        workspace: '进入用户工作台',
+        register: '注册账号',
       },
     },
     adminAccess: {
@@ -229,10 +228,12 @@ export const zhCN = {
         },
         actions: {
           new: '新建密钥',
+          refresh: '刷新密钥',
           create: '创建密钥',
           save: '保存密钥',
           copy: '复制',
           edit: '编辑',
+          delete: '删除',
         },
         form: {
           key: '密钥值',
@@ -255,7 +256,7 @@ export const zhCN = {
       },
       security: {
         title: '账号安全',
-        description: '修改登录密码，或为当前账号绑定 TOTP 二步验证。',
+        description: '修改登录密码，绑定 TOTP 二步验证，或添加 Passkey。',
         password: {
           title: '修改密码',
           description: '修改后下次登录需要使用新密码。',
@@ -271,7 +272,7 @@ export const zhCN = {
           enabled: '已启用',
           disabled: '未启用',
           showSetup: '显示设置',
-          regenerate: '重新生成',
+          regenerate: '重新生成设置',
           secret: '密钥',
           metadata: '{{digits}} 位 · {{period}} 秒 · {{algorithm}}',
           code: '验证码',
@@ -284,8 +285,7 @@ export const zhCN = {
           count: '已添加 {{count}} 个',
           namePlaceholder: 'Passkey 名称，例如 MacBook',
           create: '添加 Passkey',
-          limitation:
-            '当前 User API 只返回 Passkey 数量，不返回可选择的 Passkey 列表，因此这里暂不提供删除单个 Passkey 的入口。',
+          limitation: '当前 User API 只返回 Passkey 数量，因此暂不支持删除单个 Passkey。',
         },
         validation: {
           passwordRequired: '必须填写新密码。',

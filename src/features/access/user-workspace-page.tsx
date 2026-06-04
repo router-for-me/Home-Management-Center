@@ -233,7 +233,7 @@ function ApiKeysTable({
                   onClick={() => onDelete(resource)}
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
-                  {t('common.delete')}
+                  {t('userWorkspace.keys.actions.delete')}
                 </Button>
               </div>
             </TableCell>
@@ -248,8 +248,10 @@ function SecurityPanel({
   totpEnabled,
   passkeyCount,
   setup,
-  loading,
-  mutating,
+  totpSetupLoading,
+  totpBinding,
+  passwordChanging,
+  passkeyCreating,
   onShowTotp,
   onBindTotp,
   onChangePassword,
@@ -258,8 +260,10 @@ function SecurityPanel({
   totpEnabled: boolean
   passkeyCount: number
   setup: ReturnType<typeof useUserWorkspace>['totpSetup']
-  loading: boolean
-  mutating: boolean
+  totpSetupLoading: boolean
+  totpBinding: boolean
+  passwordChanging: boolean
+  passkeyCreating: boolean
   onShowTotp: (regenerate?: boolean) => Promise<void>
   onBindTotp: (input: { secret: string; code: string; issuer?: string }) => Promise<unknown>
   onChangePassword: (input: { newPassword: string }) => Promise<unknown>
@@ -270,6 +274,7 @@ function SecurityPanel({
   const [confirmPassword, setConfirmPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [passkeyName, setPasskeyName] = useState('')
+  const [totpAction, setTotpAction] = useState<'show' | 'regenerate' | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -321,6 +326,19 @@ function SecurityPanel({
     }
   }
 
+  const handleShowTotp = async (regenerate: boolean) => {
+    setTotpAction(regenerate ? 'regenerate' : 'show')
+
+    try {
+      setLocalError(null)
+      await onShowTotp(regenerate)
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    } finally {
+      setTotpAction(null)
+    }
+  }
+
   const handleCreatePasskey = async () => {
     try {
       setLocalError(null)
@@ -363,7 +381,7 @@ function SecurityPanel({
               type="password"
               value={newPassword}
               autoComplete="new-password"
-              disabled={mutating}
+              disabled={passwordChanging}
               placeholder={t('userWorkspace.security.password.newPasswordPlaceholder')}
               onChange={(event) => setNewPassword(event.target.value)}
             />
@@ -374,18 +392,20 @@ function SecurityPanel({
               type="password"
               value={confirmPassword}
               autoComplete="new-password"
-              disabled={mutating}
+              disabled={passwordChanging}
               placeholder={t('userWorkspace.security.password.confirmPasswordPlaceholder')}
               onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </label>
-          <Button type="submit" disabled={mutating} className="w-fit">
-            {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+          <Button type="submit" disabled={passwordChanging} className="w-fit">
+            {passwordChanging ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : null}
             {t('userWorkspace.security.password.action')}
           </Button>
         </form>
 
-        <div className="grid gap-4 border-t p-4 md:border-t-0">
+        <div className="grid content-start gap-4 border-t p-4 md:border-t-0">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-sm font-semibold">{t('userWorkspace.security.totp.title')}</h3>
@@ -402,17 +422,22 @@ function SecurityPanel({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={loading || mutating}
-              onClick={() => void onShowTotp(false)}
+              disabled={totpSetupLoading || totpBinding}
+              onClick={() => void handleShowTotp(false)}
             >
-              {loading ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+              {totpSetupLoading && totpAction === 'show' ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
               {t('userWorkspace.security.totp.showSetup')}
             </Button>
             <Button
-              variant="text"
-              disabled={loading || mutating}
-              onClick={() => void onShowTotp(true)}
+              variant="outline"
+              disabled={totpSetupLoading || totpBinding}
+              onClick={() => void handleShowTotp(true)}
             >
+              {totpSetupLoading && totpAction === 'regenerate' ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
               {t('userWorkspace.security.totp.regenerate')}
             </Button>
           </div>
@@ -444,18 +469,20 @@ function SecurityPanel({
                   value={totpCode}
                   autoComplete="one-time-code"
                   inputMode="numeric"
-                  disabled={mutating}
+                  disabled={totpBinding}
                   placeholder={t('userWorkspace.security.totp.codePlaceholder')}
                   onChange={(event) => setTotpCode(event.target.value)}
                 />
               </label>
               <Button
                 type="button"
-                disabled={mutating}
+                disabled={totpBinding}
                 className="w-fit"
                 onClick={() => void handleBindTotp()}
               >
-                {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {totpBinding ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
                 {t('userWorkspace.security.totp.bind')}
               </Button>
             </div>
@@ -478,16 +505,22 @@ function SecurityPanel({
         <div className="grid gap-3 md:max-w-xl md:grid-cols-[1fr_auto]">
           <Input
             value={passkeyName}
-            disabled={mutating}
+            disabled={passkeyCreating}
             placeholder={t('userWorkspace.security.passkey.namePlaceholder')}
             onChange={(event) => setPasskeyName(event.target.value)}
           />
-          <Button type="button" disabled={mutating} onClick={() => void handleCreatePasskey()}>
-            {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+          <Button
+            type="button"
+            disabled={passkeyCreating}
+            onClick={() => void handleCreatePasskey()}
+          >
+            {passkeyCreating ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : null}
             {t('userWorkspace.security.passkey.create')}
           </Button>
         </div>
-        <p className="text-muted-foreground max-w-[70ch] text-xs leading-5">
+        <p className="text-muted-foreground text-xs leading-5">
           {t('userWorkspace.security.passkey.limitation')}
         </p>
       </div>
@@ -619,7 +652,7 @@ export function UserWorkspacePage() {
                       className={workbench.apiKeysFetching ? 'size-4 animate-spin' : 'size-4'}
                       aria-hidden="true"
                     />
-                    {t('common.refresh')}
+                    {t('userWorkspace.keys.actions.refresh')}
                   </Button>
                   <Button onClick={() => setSheetMode({ type: 'create' })}>
                     <Plus className="size-4" aria-hidden="true" />
@@ -645,8 +678,10 @@ export function UserWorkspacePage() {
               totpEnabled={user.totpEnabled}
               passkeyCount={user.passkeyCount}
               setup={workbench.totpSetup}
-              loading={workbench.totpSetupLoading}
-              mutating={workbench.mutating}
+              totpSetupLoading={workbench.totpSetupLoading}
+              totpBinding={workbench.totpBinding}
+              passwordChanging={workbench.passwordChanging}
+              passkeyCreating={workbench.passkeyCreating}
               onShowTotp={async (regenerate) => {
                 await workbench.showTotpSetup({ regenerate })
               }}
@@ -675,7 +710,7 @@ export function UserWorkspacePage() {
                 </SheetHeader>
                 <ApiKeyForm
                   mode={sheetMode}
-                  mutating={workbench.mutating}
+                  mutating={workbench.apiKeysMutating}
                   onCancel={closeSheet}
                   onSubmit={async (input) => {
                     if (sheetMode.type === 'create') {
@@ -707,12 +742,12 @@ export function UserWorkspacePage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={workbench.mutating}>
+              <AlertDialogCancel disabled={workbench.apiKeysMutating}>
                 {t('common.cancel')}
               </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 text-white"
-                disabled={workbench.mutating}
+                disabled={workbench.apiKeysMutating}
                 onClick={(event) => {
                   event.preventDefault()
                   if (!pendingDelete) return
@@ -723,10 +758,10 @@ export function UserWorkspacePage() {
                   })
                 }}
               >
-                {workbench.mutating ? (
+                {workbench.apiKeysMutating ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : null}
-                {t('common.delete')}
+                {t('userWorkspace.keys.actions.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

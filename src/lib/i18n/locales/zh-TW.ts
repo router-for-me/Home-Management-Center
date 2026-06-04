@@ -128,27 +128,26 @@ export const zhTW = {
     },
     accessPortal: {
       shellSubtitle: '存取入口',
-      eyebrow: '存取分流',
-      title: '選擇進入方式',
+      eyebrow: '工作階段入口',
+      title: '進入 Home 控制台',
       description:
-        '管理員使用 management key 進入控制台；普通使用者使用使用者名稱和密碼進入自己的工作台。',
+        '依工作階段類型進入對應工作區。管理員連線 Management API；使用者帳號只維護自己的存取金鑰和安全設定。',
       admin: {
-        title: '管理員控制台',
-        description: '管理全域設定、模型服務、帳號憑證、用戶端金鑰、使用者和存取範圍。',
-        available: 'Management key',
+        title: '管理工作階段',
+        description: '連線 Management API 後管理執行環境設定、模型服務、憑證池、使用者與存取範圍。',
+        available: '需要 management key',
         connected: '已連線',
-        action: '進入管理員連線',
-        resume: '進入控制台',
+        action: '連線管理端',
+        resume: '進入管理控制台',
       },
       user: {
-        title: '普通使用者工作台',
-        description: '管理自己的用戶端存取金鑰和帳號安全設定。',
-        available: '使用者名稱密碼',
+        title: '使用者工作階段',
+        description: '登入 Home 使用者帳號，維護個人用戶端存取金鑰、點數狀態和帳號安全。',
+        available: '帳號登入',
         authenticated: '已登入',
-        login: '使用者登入',
-        workspace: '進入工作台',
-        register: '開戶註冊',
-        previewWorkspace: '查看工作台狀態',
+        login: '登入',
+        workspace: '進入使用者工作台',
+        register: '註冊帳號',
       },
     },
     adminAccess: {
@@ -229,10 +228,12 @@ export const zhTW = {
         },
         actions: {
           new: '新建金鑰',
+          refresh: '刷新金鑰',
           create: '建立金鑰',
           save: '儲存金鑰',
           copy: '複製',
           edit: '編輯',
+          delete: '刪除',
         },
         form: {
           key: '金鑰值',
@@ -255,7 +256,7 @@ export const zhTW = {
       },
       security: {
         title: '帳號安全',
-        description: '修改登入密碼，或為目前帳號綁定 TOTP 二步驗證。',
+        description: '修改登入密碼，綁定 TOTP 二步驗證，或新增 Passkey。',
         password: {
           title: '修改密碼',
           description: '修改後下次登入需要使用新密碼。',
@@ -271,7 +272,7 @@ export const zhTW = {
           enabled: '已啟用',
           disabled: '未啟用',
           showSetup: '顯示設定',
-          regenerate: '重新生成',
+          regenerate: '重新生成設定',
           secret: '密鑰',
           metadata: '{{digits}} 位 · {{period}} 秒 · {{algorithm}}',
           code: '驗證碼',
@@ -284,8 +285,7 @@ export const zhTW = {
           count: '已新增 {{count}} 個',
           namePlaceholder: 'Passkey 名稱，例如 MacBook',
           create: '新增 Passkey',
-          limitation:
-            '目前 User API 只返回 Passkey 數量，不返回可選擇的 Passkey 列表，因此這裡暫不提供刪除單個 Passkey 的入口。',
+          limitation: '目前 User API 只返回 Passkey 數量，因此暫不支援刪除單個 Passkey。',
         },
         validation: {
           passwordRequired: '必須填寫新密碼。',

@@ -18,16 +18,16 @@ export function AccessEntryPage() {
   return (
     <PublicAccessShell>
       <section className="mx-auto grid max-w-4xl gap-8">
-        <div className="max-w-2xl">
+        <div className="max-w-4xl">
           <p className="text-primary text-xs font-semibold">{t('accessPortal.eyebrow')}</p>
           <h1 className="mt-3 text-2xl font-semibold md:text-3xl">{t('accessPortal.title')}</h1>
-          <p className="text-muted-foreground mt-3 max-w-[68ch] text-sm leading-6">
+          <p className="text-muted-foreground mt-3 text-sm leading-6">
             {t('accessPortal.description')}
           </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <section className="bg-card grid content-between gap-8 rounded-lg border p-5 shadow-sm">
+          <section className="bg-card flex min-h-[280px] flex-col rounded-lg border p-5 shadow-sm">
             <div className="grid gap-4">
               <div className="flex items-start justify-between gap-3">
                 <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md">
@@ -47,7 +47,7 @@ export function AccessEntryPage() {
               </div>
             </div>
 
-            <Button asChild className="w-full justify-between">
+            <Button asChild className="mt-auto w-full">
               <Link to={managementConnected ? '/dashboard' : '/admin/connect'}>
                 {managementConnected
                   ? t('accessPortal.admin.resume')
@@ -57,7 +57,7 @@ export function AccessEntryPage() {
             </Button>
           </section>
 
-          <section className="bg-card grid content-between gap-8 rounded-lg border p-5 shadow-sm">
+          <section className="bg-card flex min-h-[280px] flex-col rounded-lg border p-5 shadow-sm">
             <div className="grid gap-4">
               <div className="flex items-start justify-between gap-3">
                 <span className="bg-info/10 text-info flex size-10 items-center justify-center rounded-md">
@@ -77,22 +77,26 @@ export function AccessEntryPage() {
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button asChild variant="outline">
-                <Link to="/register">{t('accessPortal.user.register')}</Link>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link to={userAuthenticated ? '/workspace' : '/login'}>
-                  {userAuthenticated
-                    ? t('accessPortal.user.workspace')
-                    : t('accessPortal.user.login')}
+            {userAuthenticated ? (
+              <Button asChild className="mt-auto w-full">
+                <Link to="/workspace">
+                  {t('accessPortal.user.workspace')}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>
-            </div>
-            <Button asChild variant="text" size="sm" className="w-fit justify-self-start px-0">
-              <Link to="/workspace">{t('accessPortal.user.previewWorkspace')}</Link>
-            </Button>
+            ) : (
+              <div className="mt-auto grid gap-2 sm:grid-cols-2">
+                <Button asChild variant="outline">
+                  <Link to="/register">{t('accessPortal.user.register')}</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/login">
+                    {t('accessPortal.user.login')}
+                    <ArrowRight className="size-4" aria-hidden="true" />
+                  </Link>
+                </Button>
+              </div>
+            )}
           </section>
         </div>
       </section>
