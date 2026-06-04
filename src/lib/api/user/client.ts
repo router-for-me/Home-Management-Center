@@ -1,7 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 
 const USER_PATH = '/user'
-const MANAGEMENT_PATH = '/v0/management'
 
 export const DEFAULT_USER_API_BASE_URL = USER_PATH
 
@@ -30,12 +29,6 @@ function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, '')
 }
 
-function getCurrentHttpOrigin() {
-  if (typeof window === 'undefined') return null
-  if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') return null
-  return window.location.origin
-}
-
 function parseAbsoluteUrl(rawBaseUrl: string) {
   const withProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(rawBaseUrl)
     ? rawBaseUrl
@@ -54,12 +47,9 @@ export function normalizeUserBaseUrl(rawBaseUrl?: string | null) {
   }
 
   const parsed = parseAbsoluteUrl(trimmed)
-  const managementPathIndex = parsed.pathname.indexOf(MANAGEMENT_PATH)
   const userPathIndex = parsed.pathname.indexOf(USER_PATH)
 
-  if (managementPathIndex >= 0) {
-    parsed.pathname = parsed.pathname.slice(0, managementPathIndex) + USER_PATH
-  } else if (userPathIndex >= 0) {
+  if (userPathIndex >= 0) {
     parsed.pathname = parsed.pathname.slice(0, userPathIndex + USER_PATH.length)
   } else {
     parsed.pathname = USER_PATH
@@ -118,13 +108,4 @@ export function toUserApiError(error: unknown): UserApiError {
     message: String(error),
     code: 'unknown',
   }
-}
-
-export function userBaseUrlFromManagementBaseUrl(baseUrl: string) {
-  const origin = getCurrentHttpOrigin()
-  if (baseUrl.startsWith('/') && origin) {
-    return normalizeUserBaseUrl(new URL(baseUrl, origin).toString())
-  }
-
-  return normalizeUserBaseUrl(baseUrl)
 }
