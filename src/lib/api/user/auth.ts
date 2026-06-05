@@ -8,6 +8,15 @@ export type UserAccount = {
   credits: number
   totpEnabled: boolean
   passkeyCount: number
+  passkeys: UserPasskeyResource[]
+  createdAt: string | null
+  updatedAt: string | null
+  raw: unknown
+}
+
+export type UserPasskeyResource = {
+  id: string
+  name: string | null
   createdAt: string | null
   updatedAt: string | null
   raw: unknown
@@ -56,17 +65,46 @@ function readBoolean(record: UnknownRecord, keys: string[]) {
   return false
 }
 
+function normalizeUserPasskey(value: unknown): UserPasskeyResource {
+  const record = isRecord(value) ? value : {}
+
+  return {
+    id: readString(record, ['id', 'passkey_id', 'passkey-id']) ?? '',
+    name: readString(record, ['name']),
+    createdAt: readString(record, ['created_at', 'createdAt']),
+    updatedAt: readString(record, ['updated_at', 'updatedAt']),
+    raw: value,
+  }
+}
+
+export function normalizeUserPasskeys(value: unknown): UserPasskeyResource[] {
+  if (Array.isArray(value)) {
+    return value.map(normalizeUserPasskey).filter((passkey) => passkey.id)
+  }
+
+  const record = isRecord(value) ? value : {}
+  if (Array.isArray(record.passkeys)) {
+    return record.passkeys.map(normalizeUserPasskey).filter((passkey) => passkey.id)
+  }
+
+  const single = normalizeUserPasskey(value)
+  return single.id ? [single] : []
+}
+
 export function normalizeUserAccount(value: unknown): UserAccount {
   const record = isRecord(value) ? value : {}
   const id = readNumber(record, ['id', 'user_id', 'userId'])
   const username = readString(record, ['username', 'user_name', 'userName', 'name'])
+  const passkeyList = normalizeUserPasskeys(record.passkeys)
+  const passkeys = passkeyList.length > 0 ? passkeyList : normalizeUserPasskeys(record.passkey)
 
   return {
     id,
     username: username ?? (id !== null ? String(id) : ''),
     credits: readNumber(record, ['credits']) ?? 0,
     totpEnabled: readBoolean(record, ['totp_enabled', 'totpEnabled']),
-    passkeyCount: readNumber(record, ['passkey_count', 'passkeyCount']) ?? 0,
+    passkeyCount: readNumber(record, ['passkey_count', 'passkeyCount']) ?? passkeys.length,
+    passkeys,
     createdAt: readString(record, ['created_at', 'createdAt']),
     updatedAt: readString(record, ['updated_at', 'updatedAt']),
     raw: value,
@@ -133,9 +171,7 @@ export async function fetchUserMe(session: UserSessionInput = {}): Promise<UserA
     const response = await client.get<unknown>('/me')
 
     const record =
-      typeof response.data === 'object' &&
-      response.data !== null &&
-      !Array.isArray(response.data)
+      typeof response.data === 'object' && response.data !== null && !Array.isArray(response.data)
         ? (response.data as UnknownRecord)
         : {}
 

@@ -1,15 +1,12 @@
-import { type UserAuthSession, normalizeUserAccount } from '@/lib/api/user/auth'
+import {
+  type UserAuthSession,
+  type UserPasskeyResource,
+  normalizeUserAccount,
+  normalizeUserPasskeys,
+} from '@/lib/api/user/auth'
 import { type UserSessionInput, createUserClient, toUserApiError } from '@/lib/api/user/client'
 
 type UnknownRecord = Record<string, unknown>
-
-export type UserPasskeyResource = {
-  id: string
-  name: string | null
-  createdAt: string | null
-  updatedAt: string | null
-  raw: unknown
-}
 
 type PasskeyBeginResult = {
   challengeId: string
@@ -26,18 +23,6 @@ function readString(record: UnknownRecord, keys: string[]) {
     if (typeof value === 'string' && value.trim()) return value
   }
   return null
-}
-
-function normalizePasskey(value: unknown): UserPasskeyResource {
-  const record = isRecord(value) ? value : {}
-
-  return {
-    id: readString(record, ['id', 'passkey_id', 'passkey-id']) ?? '',
-    name: readString(record, ['name']),
-    createdAt: readString(record, ['created_at', 'createdAt']),
-    updatedAt: readString(record, ['updated_at', 'updatedAt']),
-    raw: value,
-  }
 }
 
 function normalizePasskeyBegin(value: unknown): PasskeyBeginResult {
@@ -252,8 +237,26 @@ async function finishPasskeyRegistration(
       name: name?.trim() || undefined,
     })
     const record = isRecord(response.data) ? response.data : {}
+    const passkey = normalizeUserPasskeys(record.passkey)[0] ?? normalizeUserPasskeys(record)[0]
 
-    return normalizePasskey(record.passkey)
+    if (!passkey) {
+      throw new Error('invalid passkey response')
+    }
+
+    return passkey
+  } catch (error) {
+    throw toUserApiError(error)
+  }
+}
+
+export async function deleteUserPasskey(
+  session: Required<Pick<UserSessionInput, 'token'>> & UserSessionInput,
+  passkey: Pick<UserPasskeyResource, 'id'>,
+) {
+  const client = createUserClient(session)
+
+  try {
+    await client.delete(`/passkeys/${encodeURIComponent(passkey.id)}`)
   } catch (error) {
     throw toUserApiError(error)
   }

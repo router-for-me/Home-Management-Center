@@ -81,7 +81,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
               : await loginUser({ username: trimmedUsername, password })
 
       setAuthenticated(session, remember)
-      await navigate({ to: '/workspace' })
+      await navigate({ to: '/user/workspace' })
     } catch (error) {
       if (isUserApiError(error) && mode === 'login') {
         if (error.code === 'totp_required') {
@@ -227,7 +227,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 ? t('userAccess.login.switchPrompt')
                 : t('userAccess.register.switchPrompt')}{' '}
               <Link
-                to={mode === 'login' ? '/register' : '/login'}
+                to={mode === 'login' ? '/user/register' : '/user/login'}
                 className="text-primary focus-visible:ring-ring/50 rounded-sm font-medium outline-none hover:underline focus-visible:ring-3"
               >
                 {mode === 'login'

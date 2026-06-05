@@ -3,15 +3,15 @@ import { useEffect, useRef } from 'react'
 import { bootstrapManagementSession } from '@/features/session/connect-session'
 
 const managementOnlyRoutes = new Set([
-  '/dashboard',
-  '/access-keys',
+  '/admin/dashboard',
+  '/admin/access-keys',
   '/admin/connect',
-  '/config',
-  '/credentials',
-  '/providers',
-  '/system-nodes',
-  '/usage-logs',
-  '/users',
+  '/admin/config',
+  '/admin/credentials',
+  '/admin/providers',
+  '/admin/system-nodes',
+  '/admin/usage-logs',
+  '/admin/users',
 ])
 
 function isManagementRoute() {

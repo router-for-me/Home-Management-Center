@@ -127,3 +127,16 @@ export async function bindUserTotp(
     throw toUserApiError(error)
   }
 }
+
+export async function deleteUserTotp(
+  session: Required<Pick<UserSessionInput, 'token'>> & UserSessionInput,
+) {
+  const client = createUserClient(session)
+
+  try {
+    const response = await client.delete<unknown>('/totp')
+    return readUserWriteResponse(response.data)
+  } catch (error) {
+    throw toUserApiError(error)
+  }
+}

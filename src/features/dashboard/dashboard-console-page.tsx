@@ -407,7 +407,7 @@ export function DashboardConsolePage() {
                 {t('dashboard.providers.emptyDescription')}
               </p>
               <Button asChild className="mt-5">
-                <Link to="/providers">
+                <Link to="/admin/providers">
                   <Network className="size-4" aria-hidden="true" />
                   {t('dashboard.providers.configureAction')}
                 </Link>

@@ -13,14 +13,14 @@ import {
 type NavigationGroupId = 'operate' | 'gateway' | 'observe' | 'control'
 
 type NavigationRoute =
-  | '/dashboard'
-  | '/providers'
-  | '/credentials'
-  | '/access-keys'
-  | '/users'
-  | '/config'
-  | '/usage-logs'
-  | '/system-nodes'
+  | '/admin/dashboard'
+  | '/admin/providers'
+  | '/admin/credentials'
+  | '/admin/access-keys'
+  | '/admin/users'
+  | '/admin/config'
+  | '/admin/usage-logs'
+  | '/admin/system-nodes'
 
 type NavigationItem = {
   to: NavigationRoute
@@ -41,7 +41,7 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.operate',
     items: [
       {
-        to: '/dashboard',
+        to: '/admin/dashboard',
         labelKey: 'navigation.dashboard',
         metaKey: 'navigationMeta.dashboard',
         icon: Gauge,
@@ -53,25 +53,25 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.gateway',
     items: [
       {
-        to: '/providers',
+        to: '/admin/providers',
         labelKey: 'navigation.providers',
         metaKey: 'navigationMeta.providers',
         icon: Network,
       },
       {
-        to: '/credentials',
+        to: '/admin/credentials',
         labelKey: 'navigation.credentials',
         metaKey: 'navigationMeta.credentials',
         icon: ShieldCheck,
       },
       {
-        to: '/access-keys',
+        to: '/admin/access-keys',
         labelKey: 'navigation.accessKeys',
         metaKey: 'navigationMeta.accessKeys',
         icon: KeyRound,
       },
       {
-        to: '/users',
+        to: '/admin/users',
         labelKey: 'navigation.users',
         metaKey: 'navigationMeta.users',
         icon: UsersRound,
@@ -83,7 +83,7 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.observe',
     items: [
       {
-        to: '/usage-logs',
+        to: '/admin/usage-logs',
         labelKey: 'navigation.usageLogs',
         metaKey: 'navigationMeta.usageLogs',
         icon: BarChart3,
@@ -95,13 +95,13 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.control',
     items: [
       {
-        to: '/config',
+        to: '/admin/config',
         labelKey: 'navigation.config',
         metaKey: 'navigationMeta.config',
         icon: SlidersHorizontal,
       },
       {
-        to: '/system-nodes',
+        to: '/admin/system-nodes',
         labelKey: 'navigation.systemNodes',
         metaKey: 'navigationMeta.systemNodes',
         icon: ServerCog,

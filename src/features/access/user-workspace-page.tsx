@@ -50,11 +50,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { UserApiKeyInput, UserApiKeyResource } from '@/lib/api/user/api-keys'
+import type { UserPasskeyResource } from '@/lib/api/user/auth'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 import { useUserWorkspace } from './use-user-workspace'
 
 type KeySheetMode = { type: 'create' } | { type: 'edit'; resource: UserApiKeyResource }
+type SecurityDeleteTarget = { type: 'totp' } | { type: 'passkey'; passkey: UserPasskeyResource }
 
 function formatOptionalTime(value: string | null, fallback: string) {
   if (!value) return fallback
@@ -250,24 +252,34 @@ function SecurityPanel({
   setup,
   totpSetupLoading,
   totpBinding,
+  totpDeleting,
   passwordChanging,
+  passkeys,
   passkeyCreating,
+  passkeyDeleting,
   onShowTotp,
   onBindTotp,
+  onDeleteTotp,
   onChangePassword,
   onCreatePasskey,
+  onDeletePasskey,
 }: {
   totpEnabled: boolean
   passkeyCount: number
   setup: ReturnType<typeof useUserWorkspace>['totpSetup']
   totpSetupLoading: boolean
   totpBinding: boolean
+  totpDeleting: boolean
   passwordChanging: boolean
+  passkeys: UserPasskeyResource[]
   passkeyCreating: boolean
+  passkeyDeleting: boolean
   onShowTotp: (regenerate?: boolean) => Promise<void>
   onBindTotp: (input: { secret: string; code: string; issuer?: string }) => Promise<unknown>
+  onDeleteTotp: () => Promise<unknown>
   onChangePassword: (input: { newPassword: string }) => Promise<unknown>
   onCreatePasskey: (input: { name?: string }) => Promise<unknown>
+  onDeletePasskey: (passkey: UserPasskeyResource) => Promise<unknown>
 }) {
   const { t } = useTranslation()
   const [newPassword, setNewPassword] = useState('')
@@ -276,6 +288,10 @@ function SecurityPanel({
   const [passkeyName, setPasskeyName] = useState('')
   const [totpAction, setTotpAction] = useState<'show' | 'regenerate' | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [pendingSecurityDelete, setPendingSecurityDelete] = useState<SecurityDeleteTarget | null>(
+    null,
+  )
+  const securityDeleting = totpDeleting || passkeyDeleting
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -345,6 +361,24 @@ function SecurityPanel({
       await onCreatePasskey({ name: passkeyName })
       setPasskeyName('')
       toast.success(t('userWorkspace.toast.passkeyCreated'))
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleSecurityDelete = async () => {
+    if (!pendingSecurityDelete) return
+
+    try {
+      setLocalError(null)
+      if (pendingSecurityDelete.type === 'totp') {
+        await onDeleteTotp()
+        toast.success(t('userWorkspace.toast.totpDeleted'))
+      } else {
+        await onDeletePasskey(pendingSecurityDelete.passkey)
+        toast.success(t('userWorkspace.toast.passkeyDeleted'))
+      }
+      setPendingSecurityDelete(null)
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
@@ -422,7 +456,7 @@ function SecurityPanel({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={totpSetupLoading || totpBinding}
+              disabled={totpSetupLoading || totpBinding || totpDeleting}
               onClick={() => void handleShowTotp(false)}
             >
               {totpSetupLoading && totpAction === 'show' ? (
@@ -432,7 +466,7 @@ function SecurityPanel({
             </Button>
             <Button
               variant="outline"
-              disabled={totpSetupLoading || totpBinding}
+              disabled={totpSetupLoading || totpBinding || totpDeleting}
               onClick={() => void handleShowTotp(true)}
             >
               {totpSetupLoading && totpAction === 'regenerate' ? (
@@ -440,6 +474,20 @@ function SecurityPanel({
               ) : null}
               {t('userWorkspace.security.totp.regenerate')}
             </Button>
+            {totpEnabled ? (
+              <Button
+                variant="destructive"
+                disabled={totpSetupLoading || totpBinding || totpDeleting}
+                onClick={() => setPendingSecurityDelete({ type: 'totp' })}
+              >
+                {totpDeleting ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Trash2 className="size-4" aria-hidden="true" />
+                )}
+                {t('userWorkspace.security.totp.delete')}
+              </Button>
+            ) : null}
           </div>
           {setup ? (
             <div className="grid gap-4">
@@ -454,13 +502,6 @@ function SecurityPanel({
                     {t('userWorkspace.security.totp.secret')}
                   </p>
                   <p className="mt-1 font-mono text-sm break-all">{setup.secret}</p>
-                  <p className="text-muted-foreground mt-3 text-xs">
-                    {t('userWorkspace.security.totp.metadata', {
-                      digits: setup.digits,
-                      period: setup.period,
-                      algorithm: setup.algorithm,
-                    })}
-                  </p>
                 </div>
               </div>
               <label className="grid gap-2 text-sm font-medium">
@@ -469,14 +510,14 @@ function SecurityPanel({
                   value={totpCode}
                   autoComplete="one-time-code"
                   inputMode="numeric"
-                  disabled={totpBinding}
+                  disabled={totpBinding || totpDeleting}
                   placeholder={t('userWorkspace.security.totp.codePlaceholder')}
                   onChange={(event) => setTotpCode(event.target.value)}
                 />
               </label>
               <Button
                 type="button"
-                disabled={totpBinding}
+                disabled={totpBinding || totpDeleting}
                 className="w-fit"
                 onClick={() => void handleBindTotp()}
               >
@@ -502,16 +543,73 @@ function SecurityPanel({
             {t('userWorkspace.security.passkey.count', { count: passkeyCount })}
           </span>
         </div>
+        {passkeys.length > 0 ? (
+          <div className="overflow-hidden rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('userWorkspace.security.passkey.table.name')}</TableHead>
+                  <TableHead>{t('userWorkspace.security.passkey.table.createdAt')}</TableHead>
+                  <TableHead>{t('userWorkspace.security.passkey.table.updatedAt')}</TableHead>
+                  <TableHead className="w-24 text-right">
+                    {t('userWorkspace.security.passkey.table.actions')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {passkeys.map((passkey) => (
+                  <TableRow key={passkey.id}>
+                    <TableCell className="min-w-0">
+                      <div className="font-medium break-all">
+                        {passkey.name || t('userWorkspace.security.passkey.unnamed')}
+                      </div>
+                      <div className="text-muted-foreground mt-1 font-mono text-xs break-all">
+                        {passkey.id}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatOptionalTime(
+                        passkey.createdAt,
+                        t('userWorkspace.summary.notAvailable'),
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatOptionalTime(
+                        passkey.updatedAt,
+                        t('userWorkspace.summary.notAvailable'),
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={passkeyDeleting}
+                        aria-label={t('userWorkspace.security.passkey.delete')}
+                        onClick={() => setPendingSecurityDelete({ type: 'passkey', passkey })}
+                      >
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-xs leading-5">
+            {t('userWorkspace.security.passkey.empty')}
+          </p>
+        )}
         <div className="grid gap-3 md:max-w-xl md:grid-cols-[1fr_auto]">
           <Input
             value={passkeyName}
-            disabled={passkeyCreating}
+            disabled={passkeyCreating || passkeyDeleting}
             placeholder={t('userWorkspace.security.passkey.namePlaceholder')}
             onChange={(event) => setPasskeyName(event.target.value)}
           />
           <Button
             type="button"
-            disabled={passkeyCreating}
+            disabled={passkeyCreating || passkeyDeleting}
             onClick={() => void handleCreatePasskey()}
           >
             {passkeyCreating ? (
@@ -520,9 +618,6 @@ function SecurityPanel({
             {t('userWorkspace.security.passkey.create')}
           </Button>
         </div>
-        <p className="text-muted-foreground text-xs leading-5">
-          {t('userWorkspace.security.passkey.limitation')}
-        </p>
       </div>
 
       {localError ? (
@@ -530,6 +625,44 @@ function SecurityPanel({
           {localError}
         </div>
       ) : null}
+
+      <AlertDialog
+        open={Boolean(pendingSecurityDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingSecurityDelete(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('userWorkspace.security.delete.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingSecurityDelete?.type === 'totp'
+                ? t('userWorkspace.security.delete.totp')
+                : pendingSecurityDelete?.type === 'passkey'
+                  ? t('userWorkspace.security.delete.passkey', {
+                      name: pendingSecurityDelete.passkey.name || pendingSecurityDelete.passkey.id,
+                    })
+                  : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={securityDeleting}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 text-white"
+              disabled={securityDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleSecurityDelete()
+              }}
+            >
+              {securityDeleting ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('userWorkspace.security.delete.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -579,10 +712,10 @@ export function UserWorkspacePage() {
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Button asChild>
-                <Link to="/login">{t('userWorkspace.login')}</Link>
+                <Link to="/user/login">{t('userWorkspace.login')}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link to="/register">{t('userWorkspace.register')}</Link>
+                <Link to="/user/register">{t('userWorkspace.register')}</Link>
               </Button>
             </div>
           </div>
@@ -680,14 +813,19 @@ export function UserWorkspacePage() {
               setup={workbench.totpSetup}
               totpSetupLoading={workbench.totpSetupLoading}
               totpBinding={workbench.totpBinding}
+              totpDeleting={workbench.totpDeleting}
               passwordChanging={workbench.passwordChanging}
+              passkeys={workbench.passkeys}
               passkeyCreating={workbench.passkeyCreating}
+              passkeyDeleting={workbench.passkeyDeleting}
               onShowTotp={async (regenerate) => {
                 await workbench.showTotpSetup({ regenerate })
               }}
               onBindTotp={workbench.bindTotp}
+              onDeleteTotp={workbench.deleteTotp}
               onChangePassword={workbench.changePassword}
               onCreatePasskey={workbench.createPasskey}
+              onDeletePasskey={workbench.deletePasskey}
             />
           </div>
         )}

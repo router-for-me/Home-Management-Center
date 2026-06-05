@@ -26,7 +26,12 @@ export type DashboardRecommendedAction = {
     | 'checkRouting'
     | 'reviewDebug'
     | 'reviewDataStatus'
-  to: '/providers' | '/credentials' | '/access-keys' | '/config' | '/system-nodes'
+  to:
+    | '/admin/providers'
+    | '/admin/credentials'
+    | '/admin/access-keys'
+    | '/admin/config'
+    | '/admin/system-nodes'
   tone: DashboardTone
 }
 
@@ -161,27 +166,27 @@ function createRecommendedActions({
   const actions: DashboardRecommendedAction[] = []
 
   if (activeProviders === 0) {
-    actions.push({ id: 'configureProviders', to: '/providers', tone: 'warning' })
+    actions.push({ id: 'configureProviders', to: '/admin/providers', tone: 'warning' })
   }
 
   if (activeCredentials === 0) {
-    actions.push({ id: 'addCredential', to: '/credentials', tone: 'warning' })
+    actions.push({ id: 'addCredential', to: '/admin/credentials', tone: 'warning' })
   }
 
   if (clientKeys === 0) {
-    actions.push({ id: 'createClientKey', to: '/access-keys', tone: 'warning' })
+    actions.push({ id: 'createClientKey', to: '/admin/access-keys', tone: 'warning' })
   }
 
   if (routingStrategy === 'unknown') {
-    actions.push({ id: 'checkRouting', to: '/config', tone: 'warning' })
+    actions.push({ id: 'checkRouting', to: '/admin/config', tone: 'warning' })
   }
 
   if (debugEnabled) {
-    actions.push({ id: 'reviewDebug', to: '/config', tone: 'warning' })
+    actions.push({ id: 'reviewDebug', to: '/admin/config', tone: 'warning' })
   }
 
   if (dataStatusCount > 0) {
-    actions.push({ id: 'reviewDataStatus', to: '/system-nodes', tone: 'neutral' })
+    actions.push({ id: 'reviewDataStatus', to: '/admin/system-nodes', tone: 'neutral' })
   }
 
   return actions.slice(0, 3)

@@ -48,7 +48,7 @@ export function AccessEntryPage() {
             </div>
 
             <Button asChild className="mt-auto w-full">
-              <Link to={managementConnected ? '/dashboard' : '/admin/connect'}>
+              <Link to={managementConnected ? '/admin/dashboard' : '/admin/connect'}>
                 {managementConnected
                   ? t('accessPortal.admin.resume')
                   : t('accessPortal.admin.action')}
@@ -79,7 +79,7 @@ export function AccessEntryPage() {
 
             {userAuthenticated ? (
               <Button asChild className="mt-auto w-full">
-                <Link to="/workspace">
+                <Link to="/user/workspace">
                   {t('accessPortal.user.workspace')}
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
@@ -87,10 +87,10 @@ export function AccessEntryPage() {
             ) : (
               <div className="mt-auto grid gap-2 sm:grid-cols-2">
                 <Button asChild variant="outline">
-                  <Link to="/register">{t('accessPortal.user.register')}</Link>
+                  <Link to="/user/register">{t('accessPortal.user.register')}</Link>
                 </Button>
                 <Button asChild>
-                  <Link to="/login">
+                  <Link to="/user/login">
                     {t('accessPortal.user.login')}
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>

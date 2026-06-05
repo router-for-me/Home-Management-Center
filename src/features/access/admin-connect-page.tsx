@@ -60,7 +60,7 @@ export function AdminConnectPage() {
         managementKey: draftManagementKey.trim(),
         rememberConnection: draftRememberConnection,
       })
-      await navigate({ to: '/dashboard' })
+      await navigate({ to: '/admin/dashboard' })
     } catch {
       // The management session store owns the normalized runtime error.
     }

@@ -8,7 +8,13 @@ type RouteShellProps = {
   children: ReactNode
 }
 
-const publicRoutes = new Set(['/', '/admin/connect', '/login', '/register', '/workspace'])
+const publicRoutes = new Set([
+  '/',
+  '/admin/connect',
+  '/user/login',
+  '/user/register',
+  '/user/workspace',
+])
 
 export function RouteShell({ children }: RouteShellProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })

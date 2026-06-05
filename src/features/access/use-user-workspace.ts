@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
-  fetchUserMe,
-} from '@/lib/api/user/auth'
-import {
   type UserApiKeyInput,
   type UserApiKeyResource,
   createUserApiKey,
@@ -11,12 +8,14 @@ import {
   fetchUserApiKeys,
   updateUserApiKey,
 } from '@/lib/api/user/api-keys'
-import { createUserPasskeyWithBrowser } from '@/lib/api/user/passkeys'
+import { type UserAccount, type UserPasskeyResource, fetchUserMe } from '@/lib/api/user/auth'
+import { createUserPasskeyWithBrowser, deleteUserPasskey } from '@/lib/api/user/passkeys'
 import {
   type BindTotpInput,
   type ChangePasswordInput,
   bindUserTotp,
   changeUserPassword,
+  deleteUserTotp,
   fetchUserTotpSetup,
 } from '@/lib/api/user/security'
 import { useUserSessionStore } from '@/stores/user-session-store'
@@ -49,6 +48,10 @@ export function useUserWorkspace() {
   }
   const apiKeysQueryKey = ['user-api-keys', baseUrl, token]
   const userQueryKey = ['user-info', baseUrl, token]
+  const syncUser = (nextUser: UserAccount) => {
+    updateUser(nextUser)
+    queryClient.setQueryData(userQueryKey, nextUser)
+  }
 
   const userQuery = useQuery({
     queryKey: userQueryKey,
@@ -98,7 +101,15 @@ export function useUserWorkspace() {
   const bindTotpMutation = useMutation({
     mutationFn: (input: BindTotpInput) => bindUserTotp(session, input),
     onSuccess: (nextUser) => {
-      updateUser(nextUser)
+      syncUser(nextUser)
+    },
+    onError: toError,
+  })
+
+  const deleteTotpMutation = useMutation({
+    mutationFn: () => deleteUserTotp(session),
+    onSuccess: (nextUser) => {
+      syncUser(nextUser)
     },
     onError: toError,
   })
@@ -106,19 +117,42 @@ export function useUserWorkspace() {
   const changePasswordMutation = useMutation({
     mutationFn: (input: ChangePasswordInput) => changeUserPassword(session, input),
     onSuccess: (nextUser) => {
-      updateUser(nextUser)
+      syncUser(nextUser)
     },
     onError: toError,
   })
 
   const createPasskeyMutation = useMutation({
     mutationFn: (input: { name?: string }) => createUserPasskeyWithBrowser(session, input),
-    onSuccess: () => {
-      if (!user) return
+    onSuccess: (passkey) => {
+      const currentUser =
+        queryClient.getQueryData<UserAccount>(userQueryKey) ?? useUserSessionStore.getState().user
 
-      updateUser({
-        ...user,
-        passkeyCount: user.passkeyCount + 1,
+      if (!currentUser) return
+
+      syncUser({
+        ...currentUser,
+        passkeyCount: currentUser.passkeyCount + 1,
+        passkeys: passkey
+          ? [...currentUser.passkeys.filter((item) => item.id !== passkey.id), passkey]
+          : currentUser.passkeys,
+      })
+    },
+    onError: toError,
+  })
+
+  const deletePasskeyMutation = useMutation({
+    mutationFn: (passkey: UserPasskeyResource) => deleteUserPasskey(session, passkey),
+    onSuccess: (_, passkey) => {
+      const currentUser =
+        queryClient.getQueryData<UserAccount>(userQueryKey) ?? useUserSessionStore.getState().user
+
+      if (!currentUser) return
+
+      syncUser({
+        ...currentUser,
+        passkeyCount: Math.max(0, currentUser.passkeyCount - 1),
+        passkeys: currentUser.passkeys.filter((item) => item.id !== passkey.id),
       })
     },
     onError: toError,
@@ -143,10 +177,15 @@ export function useUserWorkspace() {
     totpSetupLoading: showTotpMutation.isPending,
     bindTotp: bindTotpMutation.mutateAsync,
     totpBinding: bindTotpMutation.isPending,
+    deleteTotp: deleteTotpMutation.mutateAsync,
+    totpDeleting: deleteTotpMutation.isPending,
     changePassword: changePasswordMutation.mutateAsync,
     passwordChanging: changePasswordMutation.isPending,
+    passkeys: effectiveUser?.passkeys ?? [],
     createPasskey: createPasskeyMutation.mutateAsync,
     passkeyCreating: createPasskeyMutation.isPending,
+    deletePasskey: deletePasskeyMutation.mutateAsync,
+    passkeyDeleting: deletePasskeyMutation.isPending,
     apiKeysMutating:
       createKeyMutation.isPending || updateKeyMutation.isPending || deleteKeyMutation.isPending,
     mutating:
@@ -155,7 +194,9 @@ export function useUserWorkspace() {
       deleteKeyMutation.isPending ||
       showTotpMutation.isPending ||
       bindTotpMutation.isPending ||
+      deleteTotpMutation.isPending ||
       changePasswordMutation.isPending ||
-      createPasskeyMutation.isPending,
+      createPasskeyMutation.isPending ||
+      deletePasskeyMutation.isPending,
   }
 }

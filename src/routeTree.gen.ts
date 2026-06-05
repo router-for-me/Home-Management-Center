@@ -9,78 +9,68 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkspaceRouteImport } from './routes/workspace'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as UsageLogsRouteImport } from './routes/usage-logs'
-import { Route as SystemNodesRouteImport } from './routes/system-nodes'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as ProvidersRouteImport } from './routes/providers'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as CredentialsRouteImport } from './routes/credentials'
-import { Route as ConfigRouteImport } from './routes/config'
-import { Route as AccessKeysRouteImport } from './routes/access-keys'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UserWorkspaceRouteImport } from './routes/user.workspace'
+import { Route as UserRegisterRouteImport } from './routes/user.register'
+import { Route as UserLoginRouteImport } from './routes/user.login'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminUsageLogsRouteImport } from './routes/admin.usage-logs'
+import { Route as AdminSystemNodesRouteImport } from './routes/admin.system-nodes'
+import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCredentialsRouteImport } from './routes/admin.credentials'
 import { Route as AdminConnectRouteImport } from './routes/admin.connect'
+import { Route as AdminConfigRouteImport } from './routes/admin.config'
+import { Route as AdminAccessKeysRouteImport } from './routes/admin.access-keys'
 
-const WorkspaceRoute = WorkspaceRouteImport.update({
-  id: '/workspace',
-  path: '/workspace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsageLogsRoute = UsageLogsRouteImport.update({
-  id: '/usage-logs',
-  path: '/usage-logs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SystemNodesRoute = SystemNodesRouteImport.update({
-  id: '/system-nodes',
-  path: '/system-nodes',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProvidersRoute = ProvidersRouteImport.update({
-  id: '/providers',
-  path: '/providers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CredentialsRoute = CredentialsRouteImport.update({
-  id: '/credentials',
-  path: '/credentials',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfigRoute = ConfigRouteImport.update({
-  id: '/config',
-  path: '/config',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccessKeysRoute = AccessKeysRouteImport.update({
-  id: '/access-keys',
-  path: '/access-keys',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserWorkspaceRoute = UserWorkspaceRouteImport.update({
+  id: '/user/workspace',
+  path: '/user/workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserRegisterRoute = UserRegisterRouteImport.update({
+  id: '/user/register',
+  path: '/user/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserLoginRoute = UserLoginRouteImport.update({
+  id: '/user/login',
+  path: '/user/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsageLogsRoute = AdminUsageLogsRouteImport.update({
+  id: '/admin/usage-logs',
+  path: '/admin/usage-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminSystemNodesRoute = AdminSystemNodesRouteImport.update({
+  id: '/admin/system-nodes',
+  path: '/admin/system-nodes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminProvidersRoute = AdminProvidersRouteImport.update({
+  id: '/admin/providers',
+  path: '/admin/providers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCredentialsRoute = AdminCredentialsRouteImport.update({
+  id: '/admin/credentials',
+  path: '/admin/credentials',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminConnectRoute = AdminConnectRouteImport.update({
@@ -88,201 +78,197 @@ const AdminConnectRoute = AdminConnectRouteImport.update({
   path: '/admin/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminConfigRoute = AdminConfigRouteImport.update({
+  id: '/admin/config',
+  path: '/admin/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAccessKeysRoute = AdminAccessKeysRouteImport.update({
+  id: '/admin/access-keys',
+  path: '/admin/access-keys',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/access-keys': typeof AccessKeysRoute
-  '/config': typeof ConfigRoute
-  '/credentials': typeof CredentialsRoute
-  '/dashboard': typeof DashboardRoute
-  '/login': typeof LoginRoute
-  '/providers': typeof ProvidersRoute
-  '/register': typeof RegisterRoute
-  '/system-nodes': typeof SystemNodesRoute
-  '/usage-logs': typeof UsageLogsRoute
-  '/users': typeof UsersRoute
-  '/workspace': typeof WorkspaceRoute
+  '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/providers': typeof AdminProvidersRoute
+  '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/user/login': typeof UserLoginRoute
+  '/user/register': typeof UserRegisterRoute
+  '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/access-keys': typeof AccessKeysRoute
-  '/config': typeof ConfigRoute
-  '/credentials': typeof CredentialsRoute
-  '/dashboard': typeof DashboardRoute
-  '/login': typeof LoginRoute
-  '/providers': typeof ProvidersRoute
-  '/register': typeof RegisterRoute
-  '/system-nodes': typeof SystemNodesRoute
-  '/usage-logs': typeof UsageLogsRoute
-  '/users': typeof UsersRoute
-  '/workspace': typeof WorkspaceRoute
+  '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/providers': typeof AdminProvidersRoute
+  '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/user/login': typeof UserLoginRoute
+  '/user/register': typeof UserRegisterRoute
+  '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/access-keys': typeof AccessKeysRoute
-  '/config': typeof ConfigRoute
-  '/credentials': typeof CredentialsRoute
-  '/dashboard': typeof DashboardRoute
-  '/login': typeof LoginRoute
-  '/providers': typeof ProvidersRoute
-  '/register': typeof RegisterRoute
-  '/system-nodes': typeof SystemNodesRoute
-  '/usage-logs': typeof UsageLogsRoute
-  '/users': typeof UsersRoute
-  '/workspace': typeof WorkspaceRoute
+  '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
+  '/admin/credentials': typeof AdminCredentialsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/providers': typeof AdminProvidersRoute
+  '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/user/login': typeof UserLoginRoute
+  '/user/register': typeof UserRegisterRoute
+  '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/access-keys'
-    | '/config'
-    | '/credentials'
-    | '/dashboard'
-    | '/login'
-    | '/providers'
-    | '/register'
-    | '/system-nodes'
-    | '/usage-logs'
-    | '/users'
-    | '/workspace'
+    | '/admin/access-keys'
+    | '/admin/config'
     | '/admin/connect'
+    | '/admin/credentials'
+    | '/admin/dashboard'
+    | '/admin/providers'
+    | '/admin/system-nodes'
+    | '/admin/usage-logs'
+    | '/admin/users'
+    | '/user/login'
+    | '/user/register'
+    | '/user/workspace'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/access-keys'
-    | '/config'
-    | '/credentials'
-    | '/dashboard'
-    | '/login'
-    | '/providers'
-    | '/register'
-    | '/system-nodes'
-    | '/usage-logs'
-    | '/users'
-    | '/workspace'
+    | '/admin/access-keys'
+    | '/admin/config'
     | '/admin/connect'
+    | '/admin/credentials'
+    | '/admin/dashboard'
+    | '/admin/providers'
+    | '/admin/system-nodes'
+    | '/admin/usage-logs'
+    | '/admin/users'
+    | '/user/login'
+    | '/user/register'
+    | '/user/workspace'
   id:
     | '__root__'
     | '/'
-    | '/access-keys'
-    | '/config'
-    | '/credentials'
-    | '/dashboard'
-    | '/login'
-    | '/providers'
-    | '/register'
-    | '/system-nodes'
-    | '/usage-logs'
-    | '/users'
-    | '/workspace'
+    | '/admin/access-keys'
+    | '/admin/config'
     | '/admin/connect'
+    | '/admin/credentials'
+    | '/admin/dashboard'
+    | '/admin/providers'
+    | '/admin/system-nodes'
+    | '/admin/usage-logs'
+    | '/admin/users'
+    | '/user/login'
+    | '/user/register'
+    | '/user/workspace'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AccessKeysRoute: typeof AccessKeysRoute
-  ConfigRoute: typeof ConfigRoute
-  CredentialsRoute: typeof CredentialsRoute
-  DashboardRoute: typeof DashboardRoute
-  LoginRoute: typeof LoginRoute
-  ProvidersRoute: typeof ProvidersRoute
-  RegisterRoute: typeof RegisterRoute
-  SystemNodesRoute: typeof SystemNodesRoute
-  UsageLogsRoute: typeof UsageLogsRoute
-  UsersRoute: typeof UsersRoute
-  WorkspaceRoute: typeof WorkspaceRoute
+  AdminAccessKeysRoute: typeof AdminAccessKeysRoute
+  AdminConfigRoute: typeof AdminConfigRoute
   AdminConnectRoute: typeof AdminConnectRoute
+  AdminCredentialsRoute: typeof AdminCredentialsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminProvidersRoute: typeof AdminProvidersRoute
+  AdminSystemNodesRoute: typeof AdminSystemNodesRoute
+  AdminUsageLogsRoute: typeof AdminUsageLogsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  UserLoginRoute: typeof UserLoginRoute
+  UserRegisterRoute: typeof UserRegisterRoute
+  UserWorkspaceRoute: typeof UserWorkspaceRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/workspace': {
-      id: '/workspace'
-      path: '/workspace'
-      fullPath: '/workspace'
-      preLoaderRoute: typeof WorkspaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/usage-logs': {
-      id: '/usage-logs'
-      path: '/usage-logs'
-      fullPath: '/usage-logs'
-      preLoaderRoute: typeof UsageLogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/system-nodes': {
-      id: '/system-nodes'
-      path: '/system-nodes'
-      fullPath: '/system-nodes'
-      preLoaderRoute: typeof SystemNodesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/providers': {
-      id: '/providers'
-      path: '/providers'
-      fullPath: '/providers'
-      preLoaderRoute: typeof ProvidersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/credentials': {
-      id: '/credentials'
-      path: '/credentials'
-      fullPath: '/credentials'
-      preLoaderRoute: typeof CredentialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/config': {
-      id: '/config'
-      path: '/config'
-      fullPath: '/config'
-      preLoaderRoute: typeof ConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/access-keys': {
-      id: '/access-keys'
-      path: '/access-keys'
-      fullPath: '/access-keys'
-      preLoaderRoute: typeof AccessKeysRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/workspace': {
+      id: '/user/workspace'
+      path: '/user/workspace'
+      fullPath: '/user/workspace'
+      preLoaderRoute: typeof UserWorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/register': {
+      id: '/user/register'
+      path: '/user/register'
+      fullPath: '/user/register'
+      preLoaderRoute: typeof UserRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/login': {
+      id: '/user/login'
+      path: '/user/login'
+      fullPath: '/user/login'
+      preLoaderRoute: typeof UserLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/usage-logs': {
+      id: '/admin/usage-logs'
+      path: '/admin/usage-logs'
+      fullPath: '/admin/usage-logs'
+      preLoaderRoute: typeof AdminUsageLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/system-nodes': {
+      id: '/admin/system-nodes'
+      path: '/admin/system-nodes'
+      fullPath: '/admin/system-nodes'
+      preLoaderRoute: typeof AdminSystemNodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/providers': {
+      id: '/admin/providers'
+      path: '/admin/providers'
+      fullPath: '/admin/providers'
+      preLoaderRoute: typeof AdminProvidersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/credentials': {
+      id: '/admin/credentials'
+      path: '/admin/credentials'
+      fullPath: '/admin/credentials'
+      preLoaderRoute: typeof AdminCredentialsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/connect': {
@@ -292,23 +278,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/config': {
+      id: '/admin/config'
+      path: '/admin/config'
+      fullPath: '/admin/config'
+      preLoaderRoute: typeof AdminConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/access-keys': {
+      id: '/admin/access-keys'
+      path: '/admin/access-keys'
+      fullPath: '/admin/access-keys'
+      preLoaderRoute: typeof AdminAccessKeysRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AccessKeysRoute: AccessKeysRoute,
-  ConfigRoute: ConfigRoute,
-  CredentialsRoute: CredentialsRoute,
-  DashboardRoute: DashboardRoute,
-  LoginRoute: LoginRoute,
-  ProvidersRoute: ProvidersRoute,
-  RegisterRoute: RegisterRoute,
-  SystemNodesRoute: SystemNodesRoute,
-  UsageLogsRoute: UsageLogsRoute,
-  UsersRoute: UsersRoute,
-  WorkspaceRoute: WorkspaceRoute,
+  AdminAccessKeysRoute: AdminAccessKeysRoute,
+  AdminConfigRoute: AdminConfigRoute,
   AdminConnectRoute: AdminConnectRoute,
+  AdminCredentialsRoute: AdminCredentialsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminProvidersRoute: AdminProvidersRoute,
+  AdminSystemNodesRoute: AdminSystemNodesRoute,
+  AdminUsageLogsRoute: AdminUsageLogsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  UserLoginRoute: UserLoginRoute,
+  UserRegisterRoute: UserRegisterRoute,
+  UserWorkspaceRoute: UserWorkspaceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
