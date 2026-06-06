@@ -1140,7 +1140,7 @@ function CredentialList({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[1340px] table-fixed">
+        <Table className="min-w-[1410px] table-fixed">
           <colgroup>
             <col className="w-[44px]" />
             <col className="w-[320px]" />
@@ -1149,7 +1149,7 @@ function CredentialList({
             <col className="w-[105px]" />
             <col className="w-[170px]" />
             <col className="w-[180px]" />
-            <col className="w-[270px]" />
+            <col className="w-[336px]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow variant="static">
@@ -1167,7 +1167,7 @@ function CredentialList({
               <TableHead>{t('credentialsPage.list.type')}</TableHead>
               <TableHead>{t('credentialsPage.list.status')}</TableHead>
               <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head text-right">
+              <TableHead className="table-sticky-action-head w-[336px] text-right">
                 {t('credentialsPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1269,8 +1269,8 @@ function CredentialList({
                   <TableCell className="pr-4">
                     <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
                   </TableCell>
-                  <TableCell className="table-sticky-action-cell pl-4 transition-colors">
-                    <div className="flex flex-nowrap justify-end gap-1.5 whitespace-nowrap">
+                  <TableCell className="table-sticky-action-cell w-[336px] pl-4 text-right transition-colors">
+                    <div className="table-action-cell-content">
                       <Button
                         type="button"
                         variant="text"

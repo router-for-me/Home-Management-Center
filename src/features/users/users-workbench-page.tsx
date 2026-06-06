@@ -1404,7 +1404,7 @@ function UsersTable({
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
               <TableHead>{t('usersPage.scopes.model')}</TableHead>
               <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[220px] text-right">
+              <TableHead className="table-sticky-action-head w-[248px] text-right">
                 {t('usersPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1440,8 +1440,8 @@ function UsersTable({
                   <TableCell className="text-muted-foreground">
                     {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
                   </TableCell>
-                  <TableCell className="table-sticky-action-cell text-right transition-colors">
-                    <div className="flex justify-end gap-1.5">
+                  <TableCell className="table-sticky-action-cell w-[248px] text-right transition-colors">
+                    <div className="table-action-cell-content">
                       <Button
                         variant="text"
                         size="sm"
@@ -1551,8 +1551,8 @@ function AccessKeysTable({
                   )}
                 </TableCell>
                 <TableCell>{key.length}</TableCell>
-                <TableCell className="table-sticky-action-cell text-right transition-colors">
-                  <div className="flex justify-end gap-1.5">
+                <TableCell className="table-sticky-action-cell w-[180px] text-right transition-colors">
+                  <div className="table-action-cell-content">
                     <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(key)}>
                       <Pencil className="size-4" aria-hidden="true" />
                       {t('usersPage.actions.edit')}

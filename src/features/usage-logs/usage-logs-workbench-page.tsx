@@ -869,11 +869,13 @@ function RuntimeLogRow({
           </span>
         </div>
       </TableCell>
-      <TableCell className="table-sticky-action-cell text-right transition-colors">
-        <Button type="button" variant="text" size="sm" onClick={() => onInspectLog(record)}>
-          <Eye className="size-4" aria-hidden="true" />
-          {t('usageLogsPage.actions.viewLogDetail')}
-        </Button>
+      <TableCell className="table-sticky-action-cell w-36 text-right transition-colors">
+        <div className="table-action-cell-content">
+          <Button type="button" variant="text" size="sm" onClick={() => onInspectLog(record)}>
+            <Eye className="size-4" aria-hidden="true" />
+            {t('usageLogsPage.actions.viewLogDetail')}
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   )
@@ -961,21 +963,23 @@ function ErrorLogFilesPanel({
                       <TableCell className="text-muted-foreground text-right">
                         {formatBytes(row.size) ?? t('usageLogsPage.status.notAvailable')}
                       </TableCell>
-                      <TableCell className="table-sticky-action-cell text-right transition-colors">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="sm"
-                          disabled={mutating}
-                          onClick={() => onDownloadErrorLog(row.name)}
-                        >
-                          {downloading ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Download className="size-4" aria-hidden="true" />
-                          )}
-                          {t('usageLogsPage.actions.download')}
-                        </Button>
+                      <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
+                        <div className="table-action-cell-content">
+                          <Button
+                            type="button"
+                            variant="text"
+                            size="sm"
+                            disabled={mutating}
+                            onClick={() => onDownloadErrorLog(row.name)}
+                          >
+                            {downloading ? (
+                              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Download className="size-4" aria-hidden="true" />
+                            )}
+                            {t('usageLogsPage.actions.download')}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

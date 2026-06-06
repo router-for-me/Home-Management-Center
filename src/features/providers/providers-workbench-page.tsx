@@ -558,14 +558,14 @@ function ProviderResourceTable({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[960px] table-fixed">
+        <Table className="min-w-[1080px] table-fixed">
           <colgroup>
-            <col className="w-[20%]" />
-            <col className="w-[22%]" />
-            <col className="w-[9%]" />
-            <col className="w-[14%]" />
-            <col className="w-[9%]" />
-            <col className="w-[26%]" />
+            <col className="w-[220px]" />
+            <col className="w-[240px]" />
+            <col className="w-[96px]" />
+            <col className="w-[150px]" />
+            <col className="w-[120px]" />
+            <col className="w-[248px]" />
           </colgroup>
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow variant="static">
@@ -574,14 +574,16 @@ function ProviderResourceTable({
               <TableHead>{t('providersPage.table.prefix')}</TableHead>
               <TableHead>{t('providersPage.table.models')}</TableHead>
               <TableHead>{t('providersPage.table.status')}</TableHead>
-              <TableHead className="text-right">{t('providersPage.table.actions')}</TableHead>
+              <TableHead className="table-sticky-action-head w-[248px] text-right">
+                {t('providersPage.table.actions')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {resources.map((resource) => (
               <TableRow
                 key={resource.id}
-                className={cn(resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
                 variant="resource"
               >
                 <TableCell>
@@ -629,8 +631,8 @@ function ProviderResourceTable({
                       : t('providersPage.status.active')}
                   </span>
                 </TableCell>
-                <TableCell>
-                  <div className="flex justify-end gap-1.5">
+                <TableCell className="table-sticky-action-cell w-[248px] text-right transition-colors">
+                  <div className="table-action-cell-content">
                     <Button
                       type="button"
                       variant="text"
