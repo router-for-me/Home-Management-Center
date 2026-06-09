@@ -23,6 +23,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   AlertDialog,
@@ -1999,14 +2000,10 @@ export function CredentialsWorkbenchPage() {
 
   return (
     <section className="grid w-full gap-5">
-      <div className="bg-card rounded-lg border p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-normal">
-              {t('credentialsPage.header.title')}
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      <PageHeader
+        title={t('credentialsPage.header.title')}
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -2040,9 +2037,10 @@ export function CredentialsWorkbenchPage() {
               <Plus className="size-4" aria-hidden="true" />
               {t('credentialsPage.actions.addCredential')}
             </Button>
-          </div>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
+          </>
+        }
+        tags={
+          <>
           <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
             {t('credentialsPage.header.activeResources', {
               active: activeCount,
@@ -2060,8 +2058,9 @@ export function CredentialsWorkbenchPage() {
               time: formatDateTime(workbench.snapshot.fetchedAt),
             })}
           </span>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
         <FilterPanel

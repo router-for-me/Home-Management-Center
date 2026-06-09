@@ -16,6 +16,12 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/shared/page-header'
+import {
+  TableSurface,
+  containedTableContainerClassName,
+  stickyTableHeaderClassName,
+} from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,19 +165,13 @@ function UsageLogsDisconnectedState() {
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
 
   return (
-    <section className="bg-card rounded-lg border p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold">{t('usageLogsPage.disconnected.title')}</h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-            {t('usageLogsPage.disconnected.description')}
-          </p>
-        </div>
-        <Button className="sm:shrink-0" onClick={openConnectionDialog}>
-          {t('usageLogsPage.disconnected.action')}
-        </Button>
-      </div>
-    </section>
+    <PageHeader
+      title={t('usageLogsPage.disconnected.title')}
+      description={t('usageLogsPage.disconnected.description')}
+      actions={
+        <Button onClick={openConnectionDialog}>{t('usageLogsPage.disconnected.action')}</Button>
+      }
+    />
   )
 }
 
@@ -203,20 +203,16 @@ function UsageLogsErrorState({
   const { t } = useTranslation()
 
   return (
-    <section className="bg-card rounded-lg border p-6 shadow-sm">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-semibold">{t('usageLogsPage.error.title')}</h1>
-          <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
-            {errorMessage ?? t('usageLogsPage.error.description')}
-          </p>
-        </div>
-        <Button className="sm:shrink-0" onClick={onRetry}>
+    <PageHeader
+      title={t('usageLogsPage.error.title')}
+      description={errorMessage ?? t('usageLogsPage.error.description')}
+      actions={
+        <Button onClick={onRetry}>
           <RefreshCw className="size-4" aria-hidden="true" />
           {t('usageLogsPage.error.retry')}
         </Button>
-      </div>
-    </section>
+      }
+    />
   )
 }
 
@@ -259,32 +255,29 @@ function UsageVerdictHeader({
   const verdict = getUsageVerdict(snapshot, runtimeHasAnyCapability)
 
   return (
-    <header className="bg-card rounded-lg border p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold">{t(`usageLogsPage.verdict.${verdict}.title`)}</h1>
-            <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
-              {t(`usageLogsPage.verdict.${verdict}.badge`)}
-            </span>
-          </div>
-          <p className="text-muted-foreground mt-2 max-w-3xl text-sm leading-6">
-            {t(`usageLogsPage.verdict.${verdict}.description`, {
-              mode: t(`runtimeMode.${runtimeMode}`),
+    <PageHeader
+      title={t(`usageLogsPage.verdict.${verdict}.title`)}
+      titleMeta={
+        <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
+          {t(`usageLogsPage.verdict.${verdict}.badge`)}
+        </span>
+      }
+      description={t(`usageLogsPage.verdict.${verdict}.description`, {
+        mode: t(`runtimeMode.${runtimeMode}`),
+      })}
+      meta={
+        <>
+          <span>{t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}</span>
+          <span>
+            {t('usageLogsPage.header.updatedAt', {
+              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
             })}
-          </p>
-          <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <span>
-              {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-            </span>
-            <span>
-              {t('usageLogsPage.header.updatedAt', {
-                time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-              })}
-            </span>
-          </div>
-        </div>
-        <Button variant="outline" className="lg:shrink-0" disabled={isFetching} onClick={onRefresh}>
+          </span>
+        </>
+      }
+      tags={<UsageCapabilityStrip capabilities={capabilities} />}
+      actions={
+        <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
           {isFetching ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           ) : (
@@ -292,8 +285,8 @@ function UsageVerdictHeader({
           )}
           {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
         </Button>
-      </div>
-    </header>
+      }
+    />
   )
 }
 
@@ -309,7 +302,7 @@ function UsageCapabilityStrip({
   const { t } = useTranslation()
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <>
       <CapabilityBadge
         available={capabilities.usage}
         label={t('usageLogsPage.capabilities.usage')}
@@ -319,7 +312,7 @@ function UsageCapabilityStrip({
         available={capabilities.requestErrorLogs}
         label={t('usageLogsPage.capabilities.requestErrorLogs')}
       />
-    </div>
+    </>
   )
 }
 
@@ -407,7 +400,7 @@ function ApiKeyUsageTable({
   const { t } = useTranslation()
 
   return (
-    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+    <TableSurface className="min-w-0 p-4">
       <SectionHeader
         title={t('usageLogsPage.usage.title')}
         description={t('usageLogsPage.usage.description')}
@@ -456,7 +449,7 @@ function ApiKeyUsageTable({
           </p>
         )}
       </div>
-    </div>
+    </TableSurface>
   )
 }
 
@@ -544,7 +537,7 @@ function RuntimeLogViewer({
   )
 
   return (
-    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+    <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <SectionHeader
           title={t('usageLogsPage.logs.title')}
@@ -595,17 +588,15 @@ function RuntimeLogViewer({
           <>
             <div className="relative">
               <Table
-                containerClassName="max-h-[min(62vh,48rem)] overflow-auto"
+                containerClassName={containedTableContainerClassName}
                 className="w-full min-w-[760px] table-fixed"
               >
-                <TableHeader className="text-muted-foreground sticky top-0 z-20 shadow-[0_1px_0_var(--border)]">
+                <TableHeader className={stickyTableHeaderClassName}>
                   <TableRow variant="static">
-                    <TableHead className="bg-muted w-[172px]">
+                    <TableHead className="w-[172px]">
                       {t('usageLogsPage.logs.columns.time')}
                     </TableHead>
-                    <TableHead className="bg-muted">
-                      {t('usageLogsPage.logs.columns.summary')}
-                    </TableHead>
+                    <TableHead>{t('usageLogsPage.logs.columns.summary')}</TableHead>
                     <TableHead className="table-sticky-action-head w-36 text-right">
                       {t('usageLogsPage.logs.columns.actions')}
                     </TableHead>
@@ -650,7 +641,7 @@ function RuntimeLogViewer({
         }}
         onDownloadRequestLog={onDownloadRequestLog}
       />
-    </div>
+    </TableSurface>
   )
 }
 
@@ -905,7 +896,7 @@ function ErrorLogFilesPanel({
   }, [requestErrorLogs, search])
 
   return (
-    <div className="bg-card min-w-0 rounded-lg border p-4 shadow-sm">
+    <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <SectionHeader
           title={t('usageLogsPage.errorLogs.title')}
@@ -931,69 +922,70 @@ function ErrorLogFilesPanel({
             {t('usageLogsPage.errorLogs.unavailable')}
           </p>
         ) : rows.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[620px] table-fixed">
-              <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow variant="static">
-                  <TableHead className="w-[260px]">
-                    {t('usageLogsPage.errorLogs.columns.name')}
-                  </TableHead>
-                  <TableHead className="w-[160px]">
-                    {t('usageLogsPage.errorLogs.columns.modified')}
-                  </TableHead>
-                  <TableHead className="w-[80px] text-right">
-                    {t('usageLogsPage.errorLogs.columns.size')}
-                  </TableHead>
-                  <TableHead className="table-sticky-action-head w-[120px] text-right">
-                    {t('usageLogsPage.errorLogs.columns.actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const downloading = isDownloadingErrorLog && downloadingErrorLogName === row.name
+          <Table
+            containerClassName={containedTableContainerClassName}
+            className="min-w-[620px] table-fixed"
+          >
+            <TableHeader className={stickyTableHeaderClassName}>
+              <TableRow variant="static">
+                <TableHead className="w-[260px]">
+                  {t('usageLogsPage.errorLogs.columns.name')}
+                </TableHead>
+                <TableHead className="w-[160px]">
+                  {t('usageLogsPage.errorLogs.columns.modified')}
+                </TableHead>
+                <TableHead className="w-[80px] text-right">
+                  {t('usageLogsPage.errorLogs.columns.size')}
+                </TableHead>
+                <TableHead className="table-sticky-action-head w-[120px] text-right">
+                  {t('usageLogsPage.errorLogs.columns.actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const downloading = isDownloadingErrorLog && downloadingErrorLogName === row.name
 
-                  return (
-                    <TableRow key={row.name} variant="resource" className="group">
-                      <TableCell className="truncate font-mono text-xs">{row.name}</TableCell>
-                      <TableCell className="text-muted-foreground truncate">
-                        {formatTimestamp(row.modified, i18n) ??
-                          t('usageLogsPage.status.notAvailable')}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-right">
-                        {formatBytes(row.size) ?? t('usageLogsPage.status.notAvailable')}
-                      </TableCell>
-                      <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
-                        <div className="table-action-cell-content">
-                          <Button
-                            type="button"
-                            variant="text"
-                            size="sm"
-                            disabled={mutating}
-                            onClick={() => onDownloadErrorLog(row.name)}
-                          >
-                            {downloading ? (
-                              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                            ) : (
-                              <Download className="size-4" aria-hidden="true" />
-                            )}
-                            {t('usageLogsPage.actions.download')}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                return (
+                  <TableRow key={row.name} variant="resource" className="group">
+                    <TableCell className="truncate font-mono text-xs">{row.name}</TableCell>
+                    <TableCell className="text-muted-foreground truncate">
+                      {formatTimestamp(row.modified, i18n) ??
+                        t('usageLogsPage.status.notAvailable')}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-right">
+                      {formatBytes(row.size) ?? t('usageLogsPage.status.notAvailable')}
+                    </TableCell>
+                    <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
+                      <div className="table-action-cell-content">
+                        <Button
+                          type="button"
+                          variant="text"
+                          size="sm"
+                          disabled={mutating}
+                          onClick={() => onDownloadErrorLog(row.name)}
+                        >
+                          {downloading ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Download className="size-4" aria-hidden="true" />
+                          )}
+                          {t('usageLogsPage.actions.download')}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         ) : (
           <p className="text-muted-foreground px-3 py-8 text-sm">
             {t('usageLogsPage.errorLogs.empty')}
           </p>
         )}
       </div>
-    </div>
+    </TableSurface>
   )
 }
 
@@ -1056,8 +1048,6 @@ export function UsageLogsWorkbenchPage() {
         isFetching={workbench.isFetching}
         onRefresh={workbench.refetch}
       />
-
-      <UsageCapabilityStrip capabilities={capabilities} />
 
       {noRuntimeLogCapabilities ? (
         <div className="bg-card rounded-lg border p-6 shadow-sm">

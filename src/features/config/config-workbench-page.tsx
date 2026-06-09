@@ -28,6 +28,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/shared/page-header'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2400,21 +2401,12 @@ export function ConfigWorkbenchPage() {
 
   return (
     <section className="grid w-full gap-4">
-      <div className="bg-card rounded-lg border p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-normal">
-              {t('configPage.header.title')}
-            </h1>
-            <p className="text-muted-foreground mt-1 max-w-2xl text-sm leading-6">
-              {t('configPage.header.description')}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <ModeSwitch mode={mode} onModeChange={handleModeChange} />
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        className="p-4"
+        title={t('configPage.header.title')}
+        description={t('configPage.header.description')}
+        actions={<ModeSwitch mode={mode} onModeChange={handleModeChange} />}
+      />
 
       <ConfigActionBar
         mode={mode}

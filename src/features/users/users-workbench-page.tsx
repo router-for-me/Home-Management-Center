@@ -26,6 +26,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/shared/page-header'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1852,12 +1853,10 @@ export function UsersWorkbenchPage() {
 
   return (
     <section className="grid gap-5">
-      <div className="bg-card rounded-lg border p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-normal">{t('usersPage.header.title')}</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      <PageHeader
+        title={t('usersPage.header.title')}
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -1877,9 +1876,10 @@ export function UsersWorkbenchPage() {
               <Plus className="size-4" aria-hidden="true" />
               {t('usersPage.actions.newUser')}
             </Button>
-          </div>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
+          </>
+        }
+        tags={
+          <>
           <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
             {t('usersPage.header.users', { count: users.length })}
           </span>
@@ -1897,8 +1897,9 @@ export function UsersWorkbenchPage() {
               time: formatOptionalTime(workbench.fetchedAt, t('usersPage.status.notReturned')),
             })}
           </span>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="bg-card min-w-0 rounded-lg border p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

@@ -18,6 +18,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   AlertDialog,
@@ -2222,14 +2223,10 @@ export function ProvidersWorkbenchPage() {
 
   return (
     <section className="grid w-full gap-5">
-      <div className="bg-card rounded-lg border p-5 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <h1 className="text-xl font-semibold tracking-normal">
-              {t('providersPage.header.title')}
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      <PageHeader
+        title={t('providersPage.header.title')}
+        actions={
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -2259,9 +2256,10 @@ export function ProvidersWorkbenchPage() {
               <Plus className="size-4" aria-hidden="true" />
               {t('providersPage.actions.new')}
             </Button>
-          </div>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
+          </>
+        }
+        tags={
+          <>
           <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
             {t('providersPage.header.activeResources', {
               active: activeResourcesCount,
@@ -2285,8 +2283,9 @@ export function ProvidersWorkbenchPage() {
               })}
             </span>
           ) : null}
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
         <ProviderCategoryList
