@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 const managementOnlyRoutes = new Set([
   '/admin/dashboard',
   '/admin/access-keys',
+  '/admin/billing',
   '/admin/connect',
   '/admin/config',
   '/admin/credentials',

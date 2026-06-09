@@ -54,6 +54,7 @@ import type { UserPasskeyResource } from '@/lib/api/user/auth'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 import { useUserWorkspace } from './use-user-workspace'
+import { UserBillingReport } from './user-billing-report'
 
 type KeySheetMode = { type: 'create' } | { type: 'edit'; resource: UserApiKeyResource }
 type SecurityDeleteTarget = { type: 'totp' } | { type: 'passkey'; passkey: UserPasskeyResource }
@@ -761,6 +762,8 @@ export function UserWorkspacePage() {
                 </p>
               </div>
             </div>
+
+            <UserBillingReport />
 
             <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
               <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">

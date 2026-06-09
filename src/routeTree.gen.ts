@@ -21,6 +21,7 @@ import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCredentialsRouteImport } from './routes/admin.credentials'
 import { Route as AdminConnectRouteImport } from './routes/admin.connect'
 import { Route as AdminConfigRouteImport } from './routes/admin.config'
+import { Route as AdminBillingRouteImport } from './routes/admin.billing'
 import { Route as AdminAccessKeysRouteImport } from './routes/admin.access-keys'
 
 const IndexRoute = IndexRouteImport.update({
@@ -83,6 +84,11 @@ const AdminConfigRoute = AdminConfigRouteImport.update({
   path: '/admin/config',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminBillingRoute = AdminBillingRouteImport.update({
+  id: '/admin/billing',
+  path: '/admin/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAccessKeysRoute = AdminAccessKeysRouteImport.update({
   id: '/admin/access-keys',
   path: '/admin/access-keys',
@@ -92,6 +98,7 @@ const AdminAccessKeysRoute = AdminAccessKeysRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin/access-keys': typeof AdminAccessKeysRoute
+  '/admin/billing': typeof AdminBillingRoute
   '/admin/config': typeof AdminConfigRoute
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
@@ -140,6 +149,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin/access-keys'
+    | '/admin/billing'
     | '/admin/config'
     | '/admin/connect'
     | '/admin/credentials'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin/access-keys'
+    | '/admin/billing'
     | '/admin/config'
     | '/admin/connect'
     | '/admin/credentials'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin/access-keys'
+    | '/admin/billing'
     | '/admin/config'
     | '/admin/connect'
     | '/admin/credentials'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminAccessKeysRoute: typeof AdminAccessKeysRoute
+  AdminBillingRoute: typeof AdminBillingRoute
   AdminConfigRoute: typeof AdminConfigRoute
   AdminConnectRoute: typeof AdminConnectRoute
   AdminCredentialsRoute: typeof AdminCredentialsRoute
@@ -285,6 +298,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/billing': {
+      id: '/admin/billing'
+      path: '/admin/billing'
+      fullPath: '/admin/billing'
+      preLoaderRoute: typeof AdminBillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/access-keys': {
       id: '/admin/access-keys'
       path: '/admin/access-keys'
@@ -298,6 +318,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminAccessKeysRoute: AdminAccessKeysRoute,
+  AdminBillingRoute: AdminBillingRoute,
   AdminConfigRoute: AdminConfigRoute,
   AdminConnectRoute: AdminConnectRoute,
   AdminCredentialsRoute: AdminCredentialsRoute,

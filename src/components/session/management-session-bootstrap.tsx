@@ -5,6 +5,7 @@ import { bootstrapManagementSession } from '@/features/session/connect-session'
 const managementOnlyRoutes = new Set([
   '/admin/dashboard',
   '/admin/access-keys',
+  '/admin/billing',
   '/admin/connect',
   '/admin/config',
   '/admin/credentials',

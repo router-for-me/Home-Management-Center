@@ -1,0 +1,1997 @@
+import { type FormEvent, useEffect, useState } from 'react'
+
+import {
+  BarChart3,
+  CircleMinus,
+  Copy,
+  Eye,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  WalletCards,
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+
+import { PageHeader } from '@/components/shared/page-header'
+import { ProviderLogo } from '@/components/shared/provider-logo'
+import {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldHeader,
+} from '@/components/shared/drawer-scaffold'
+import {
+  TableSurface,
+  containedTableContainerClassName,
+  stickyTableHeaderClassName,
+} from '@/components/shared/table-surface'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Sheet,
+  SheetDescription,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  type BillingTab,
+  type DateRangePreset,
+  billingPageSizes,
+  createDatePresetRange,
+  createDefaultBillingFilters,
+  defaultBillingPagination,
+  getNextOffset,
+  getPreviousOffset,
+} from '@/features/billing/billing-model'
+import { useBillingWorkbench } from '@/features/billing/use-billing-workbench'
+import type {
+  BalanceRecord,
+  BillingFilters,
+  BillingPagination,
+  ChargeRecord,
+  ModelPrice,
+  ModelPriceInput,
+  ProxyPoolInput,
+  ProxyPoolItem,
+} from '@/lib/api/management/billing-types'
+import type { UserResource } from '@/lib/api/management/users'
+import { cn } from '@/lib/utils'
+import { useConsoleUiStore } from '@/stores/ui-store'
+
+type SheetMode =
+  | { type: 'charge-detail'; record: ChargeRecord }
+  | { type: 'balance-detail'; record: BalanceRecord }
+  | { type: 'balance'; operation: 'recharge' | 'deduct' }
+  | { type: 'model-price-create' }
+  | { type: 'model-price-edit'; resource: ModelPrice }
+  | { type: 'proxy-create' }
+  | { type: 'proxy-edit'; resource: ProxyPoolItem }
+
+type PendingDelete =
+  | { type: 'model-price'; resource: ModelPrice }
+  | { type: 'proxy'; resource: ProxyPoolItem }
+
+type PendingBalanceOperation = {
+  operation: 'recharge' | 'deduct'
+  input: {
+    userId: number
+    amount: number
+    note: string
+  }
+}
+
+const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices', 'proxyPools']
+
+function toProviderLogoId(provider: string) {
+  const normalized = provider.trim().toLowerCase()
+  if (normalized === 'openai' || normalized === 'openai-compatibility') {
+    return 'openaiCompatibility'
+  }
+  if (normalized === 'anthropic') return 'claude'
+  if (normalized === 'google') return 'gemini'
+  return provider
+}
+
+function toModelPriceInput(resource: ModelPrice, enabled = resource.enabled): ModelPriceInput {
+  return {
+    provider: resource.provider,
+    model: resource.model,
+    inputPricePerMillion: resource.inputPricePerMillion,
+    outputPricePerMillion: resource.outputPricePerMillion,
+    cacheReadPricePerMillion: resource.cacheReadPricePerMillion,
+    cacheWritePricePerMillion: resource.cacheWritePricePerMillion,
+    requestPrice: resource.requestPrice,
+    enabled,
+    note: resource.note ?? undefined,
+  }
+}
+
+function toProxyPoolInput(resource: ProxyPoolItem, enabled = resource.enabled): ProxyPoolInput {
+  return {
+    name: resource.name,
+    proxyUrl: resource.proxyUrl,
+    enabled,
+    priority: resource.priority,
+    note: resource.note ?? undefined,
+  }
+}
+
+function formatDateTime(value: string | null | undefined, fallback: string) {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(value)
+}
+
+function formatSignedAmount(value: number) {
+  const absolute = formatMoney(Math.abs(value))
+  return value >= 0 ? `+${absolute}` : `-${absolute}`
+}
+
+function maskUrl(value: string) {
+  if (value.length <= 48) return value
+  return `${value.slice(0, 24)}...${value.slice(-16)}`
+}
+
+async function copyText(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+  }
+}
+
+function BillingDisconnectedState() {
+  const { t } = useTranslation()
+  const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
+
+  return (
+    <section className="mx-auto grid w-full max-w-5xl gap-4">
+      <div className="bg-card rounded-lg border p-6 shadow-sm">
+        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div className="flex min-w-0 gap-4">
+            <div className="bg-primary/10 text-primary flex size-11 shrink-0 items-center justify-center rounded-md">
+              <WalletCards className="size-5" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-semibold tracking-normal">
+                {t('billingPage.disconnected.title')}
+              </h1>
+              <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
+                {t('billingPage.disconnected.description')}
+              </p>
+            </div>
+          </div>
+          <Button className="md:shrink-0" onClick={openConnectionDialog}>
+            <WalletCards className="size-4" aria-hidden="true" />
+            {t('billingPage.disconnected.action')}
+          </Button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ErrorNotice({ message, fallback }: { message: string | null; fallback: string }) {
+  const showDetail = Boolean(message && message !== fallback)
+
+  return (
+    <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+      <div>{fallback}</div>
+      {showDetail ? <div className="mt-1 font-mono text-xs opacity-80">{message}</div> : null}
+    </div>
+  )
+}
+
+function EmptyState({ children }: { children: string }) {
+  return <div className="text-muted-foreground px-4 py-10 text-center text-sm">{children}</div>
+}
+
+function PaginationBar({
+  pagination,
+  total,
+  disabled,
+  onChange,
+}: {
+  pagination: BillingPagination
+  total: number
+  disabled: boolean
+  onChange: (pagination: BillingPagination) => void
+}) {
+  const { t } = useTranslation()
+  const start = total === 0 ? 0 : pagination.offset + 1
+  const end = Math.min(total, pagination.offset + pagination.limit)
+
+  return (
+    <div className="flex flex-col gap-3 border-t px-4 py-3 md:flex-row md:items-center md:justify-between">
+      <span className="text-muted-foreground text-sm">
+        {t('billingPage.pagination.range', { start, end, total })}
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          value={String(pagination.limit)}
+          onValueChange={(value) => onChange({ limit: Number(value), offset: 0 })}
+        >
+          <SelectTrigger className="w-28" size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {billingPageSizes.map((size) => (
+              <SelectItem key={size} value={String(size)}>
+                {t('billingPage.pagination.rows', { count: size })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled || pagination.offset === 0}
+          onClick={() => onChange({ ...pagination, offset: getPreviousOffset(pagination) })}
+        >
+          {t('billingPage.pagination.previous')}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled || pagination.offset + pagination.limit >= total}
+          onClick={() => onChange({ ...pagination, offset: getNextOffset(pagination, total) })}
+        >
+          {t('billingPage.pagination.next')}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function MetricStrip({
+  title,
+  items,
+  columnsClassName,
+}: {
+  title: string
+  items: Array<{ label: string; value: string; detail?: string; valueClassName?: string }>
+  columnsClassName?: string
+}) {
+  return (
+    <div className="bg-card rounded-lg border p-4">
+      <h2 className="text-sm font-semibold">{title}</h2>
+      <div className={cn('mt-4 grid gap-4', columnsClassName)}>
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="min-w-0 border-t pt-3 first:border-t-0 first:pt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4 lg:first:border-l-0 lg:first:pl-0"
+          >
+            <p className="text-muted-foreground truncate text-xs">{item.label}</p>
+            <p
+              className={cn(
+                'mt-2 truncate text-lg font-semibold tabular-nums',
+                item.valueClassName,
+              )}
+            >
+              {item.value}
+            </p>
+            {item.detail ? (
+              <p className="text-muted-foreground mt-1 truncate text-xs">{item.detail}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function createDefaultBillingTextFilters() {
+  const filters = createDefaultBillingFilters()
+  return {
+    user: filters.user,
+    model: filters.model,
+    provider: filters.provider,
+  }
+}
+
+function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWorkbench> }) {
+  const { t } = useTranslation()
+  const overview = workbench.overview
+
+  if (workbench.overviewLoading) {
+    return <Skeleton className="h-[420px] rounded-lg" />
+  }
+
+  if (workbench.overviewError) {
+    return (
+      <ErrorNotice
+        message={workbench.overviewError}
+        fallback={t('billingPage.error.description')}
+      />
+    )
+  }
+
+  if (!overview) {
+    return <EmptyState>{t('billingPage.overview.empty')}</EmptyState>
+  }
+
+  return (
+    <div className="grid gap-4">
+      <MetricStrip
+        title={t('billingPage.overview.metrics.financeSummary')}
+        columnsClassName="lg:grid-cols-4"
+        items={[
+          {
+            label: t('billingPage.overview.metrics.totalChargeAmount'),
+            value: formatMoney(overview.totalChargeAmount),
+            detail: t('billingPage.overview.metrics.selectedRange'),
+            valueClassName: 'text-destructive',
+          },
+          {
+            label: t('billingPage.overview.metrics.totalRechargeAmount'),
+            value: formatMoney(overview.totalRechargeAmount),
+            detail: t('billingPage.overview.metrics.selectedRange'),
+            valueClassName: 'text-success',
+          },
+          {
+            label: t('billingPage.overview.metrics.totalDeductAmount'),
+            value: formatMoney(overview.totalDeductAmount),
+            detail: t('billingPage.overview.metrics.selectedRange'),
+            valueClassName: 'text-warning-foreground dark:text-warning',
+          },
+          {
+            label: t('billingPage.overview.metrics.totalBalance'),
+            value: formatMoney(overview.totalBalance),
+            detail: t('billingPage.overview.metrics.currentSnapshot'),
+          },
+        ]}
+      />
+      <MetricStrip
+        title={t('billingPage.overview.metrics.usageSummary')}
+        columnsClassName="lg:grid-cols-5"
+        items={[
+          {
+            label: t('billingPage.overview.metrics.requests'),
+            value: formatNumber(overview.requestCount),
+          },
+          {
+            label: t('billingPage.overview.metrics.inputTokens'),
+            value: formatNumber(overview.inputTokens),
+          },
+          {
+            label: t('billingPage.overview.metrics.outputTokens'),
+            value: formatNumber(overview.outputTokens),
+          },
+          {
+            label: t('billingPage.overview.metrics.cacheTokens'),
+            value: formatNumber(overview.cacheTokens),
+          },
+          {
+            label: t('billingPage.overview.metrics.activeUsers'),
+            value: formatNumber(overview.activeUserCount),
+          },
+        ]}
+      />
+      <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="bg-card rounded-lg border p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold">{t('billingPage.overview.trend.title')}</h2>
+            <BarChart3 className="text-muted-foreground size-4" aria-hidden="true" />
+          </div>
+          {overview.dailyTrend.length === 0 ? (
+            <EmptyState>{t('billingPage.overview.trend.empty')}</EmptyState>
+          ) : (
+            <div className="mt-4 grid gap-2">
+              {overview.dailyTrend.map((point) => (
+                <div
+                  key={point.date}
+                  className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-3 rounded-md border px-3 py-2 text-sm"
+                >
+                  <span className="truncate">{point.date}</span>
+                  <span className="font-medium tabular-nums">
+                    {formatMoney(point.chargeAmount)}
+                  </span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {t('billingPage.overview.trend.requests', {
+                      count: formatNumber(point.requestCount),
+                    })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="grid gap-4">
+          {[
+            ['topUsers', overview.topUsers],
+            ['topModels', overview.topModels],
+            ['topProviders', overview.topProviders],
+          ].map(([key, items]) => (
+            <div key={key as string} className="bg-card rounded-lg border p-4">
+              <h2 className="text-sm font-semibold">
+                {t(`billingPage.overview.rank.${key as string}`)}
+              </h2>
+              {(items as typeof overview.topUsers).length === 0 ? (
+                <p className="text-muted-foreground mt-3 text-sm">
+                  {t('billingPage.overview.rank.empty')}
+                </p>
+              ) : (
+                <div className="mt-3 grid gap-2">
+                  {(items as typeof overview.topUsers).slice(0, 5).map((item) => (
+                    <div
+                      key={item.id}
+                      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 text-sm"
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        {key === 'topProviders' ? (
+                          <ProviderLogo
+                            providerId={toProviderLogoId(item.id || item.label)}
+                            size="sm"
+                          />
+                        ) : null}
+                        <span className="min-w-0 truncate">{item.label}</span>
+                      </span>
+                      <span className="font-medium tabular-nums">{formatMoney(item.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChargeRecordsTab({
+  workbench,
+  pagination,
+  onPaginationChange,
+  onView,
+}: {
+  workbench: ReturnType<typeof useBillingWorkbench>
+  pagination: BillingPagination
+  onPaginationChange: (pagination: BillingPagination) => void
+  onView: (record: ChargeRecord) => void
+}) {
+  const { t } = useTranslation()
+
+  if (workbench.chargesLoading) return <Skeleton className="h-[420px] rounded-lg" />
+  if (workbench.chargesError) {
+    return (
+      <ErrorNotice message={workbench.chargesError} fallback={t('billingPage.error.description')} />
+    )
+  }
+
+  return (
+    <TableSurface
+      pagination={
+        <PaginationBar
+          pagination={pagination}
+          total={workbench.chargesTotal}
+          disabled={workbench.chargesFetching}
+          onChange={onPaginationChange}
+        />
+      }
+    >
+      {workbench.charges.length === 0 ? (
+        <EmptyState>{t('billingPage.charges.empty')}</EmptyState>
+      ) : (
+        <Table className="min-w-[1160px]" containerClassName={containedTableContainerClassName}>
+          <TableHeader className={stickyTableHeaderClassName}>
+            <TableRow variant="static">
+              <TableHead>{t('billingPage.charges.columns.time')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.user')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.key')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.provider')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.model')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.request')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.tokens')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.amount')}</TableHead>
+              <TableHead>{t('billingPage.charges.columns.balanceAfter')}</TableHead>
+              <TableHead className="table-sticky-action-head w-32 text-right">
+                {t('billingPage.common.actions')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workbench.charges.map((record) => (
+              <TableRow key={record.id} variant="resource">
+                <TableCell>
+                  {formatDateTime(record.createdAt, t('billingPage.common.na'))}
+                </TableCell>
+                <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {record.apiKeyMasked || record.apiKeyLabel || t('billingPage.common.na')}
+                </TableCell>
+                <TableCell>{record.provider || t('billingPage.common.na')}</TableCell>
+                <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                  {record.model || t('billingPage.common.na')}
+                </TableCell>
+                <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                  {record.requestId}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {t('billingPage.charges.tokenSummary', {
+                    input: formatNumber(record.inputTokens),
+                    output: formatNumber(record.outputTokens),
+                    cache: formatNumber(record.cacheTokens),
+                  })}
+                </TableCell>
+                <TableCell className="text-destructive font-medium tabular-nums">
+                  {formatSignedAmount(-Math.abs(record.amount))}
+                </TableCell>
+                <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
+                  <Button variant="text" size="sm" onClick={() => onView(record)}>
+                    <Eye className="size-4" aria-hidden="true" />
+                    {t('billingPage.common.view')}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </TableSurface>
+  )
+}
+
+function BalanceRecordsTab({
+  workbench,
+  pagination,
+  onPaginationChange,
+  onCreate,
+  onView,
+}: {
+  workbench: ReturnType<typeof useBillingWorkbench>
+  pagination: BillingPagination
+  onPaginationChange: (pagination: BillingPagination) => void
+  onCreate: (operation: 'recharge' | 'deduct') => void
+  onView: (record: BalanceRecord) => void
+}) {
+  const { t } = useTranslation()
+
+  if (workbench.balanceRecordsLoading) return <Skeleton className="h-[420px] rounded-lg" />
+  if (workbench.balanceRecordsError) {
+    return (
+      <ErrorNotice
+        message={workbench.balanceRecordsError}
+        fallback={t('billingPage.error.description')}
+      />
+    )
+  }
+
+  return (
+    <TableSurface
+      pagination={
+        <PaginationBar
+          pagination={pagination}
+          total={workbench.balanceRecordsTotal}
+          disabled={workbench.balanceRecordsFetching}
+          onChange={onPaginationChange}
+        />
+      }
+    >
+      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">{t('billingPage.balance.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('billingPage.balance.description')}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => onCreate('recharge')}>
+            <Plus className="size-4" aria-hidden="true" />
+            {t('billingPage.balance.actions.recharge')}
+          </Button>
+          <Button variant="warning" onClick={() => onCreate('deduct')}>
+            <CircleMinus className="size-4" aria-hidden="true" />
+            {t('billingPage.balance.actions.deduct')}
+          </Button>
+        </div>
+      </div>
+      {workbench.balanceRecords.length === 0 ? (
+        <EmptyState>{t('billingPage.balance.empty')}</EmptyState>
+      ) : (
+        <Table className="min-w-[1120px]" containerClassName={containedTableContainerClassName}>
+          <TableHeader className={stickyTableHeaderClassName}>
+            <TableRow variant="static">
+              <TableHead>{t('billingPage.balance.columns.time')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.user')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.type')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.amount')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.before')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.after')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.operator')}</TableHead>
+              <TableHead>{t('billingPage.balance.columns.note')}</TableHead>
+              <TableHead className="table-sticky-action-head w-32 text-right">
+                {t('billingPage.common.actions')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workbench.balanceRecords.map((record: BalanceRecord) => (
+              <TableRow key={record.id} variant="resource">
+                <TableCell>
+                  {formatDateTime(record.createdAt, t('billingPage.common.na'))}
+                </TableCell>
+                <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
+                <TableCell>
+                  {record.type === 'recharge'
+                    ? t('billingPage.balance.types.recharge')
+                    : t('billingPage.balance.types.deduct')}
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    'font-medium tabular-nums',
+                    record.type === 'deduct'
+                      ? 'text-warning-foreground dark:text-warning'
+                      : 'text-success',
+                  )}
+                >
+                  {formatSignedAmount(
+                    record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount),
+                  )}
+                </TableCell>
+                <TableCell className="tabular-nums">{formatMoney(record.balanceBefore)}</TableCell>
+                <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                <TableCell>{record.operator || t('billingPage.common.na')}</TableCell>
+                <TableCell className="max-w-[260px] truncate">
+                  {record.note || t('billingPage.common.na')}
+                </TableCell>
+                <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
+                  <Button variant="text" size="sm" onClick={() => onView(record)}>
+                    <Eye className="size-4" aria-hidden="true" />
+                    {t('billingPage.common.view')}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </TableSurface>
+  )
+}
+
+function ModelPricesTab({
+  workbench,
+  onCreate,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  workbench: ReturnType<typeof useBillingWorkbench>
+  onCreate: () => void
+  onEdit: (resource: ModelPrice) => void
+  onToggle: (resource: ModelPrice) => void
+  onDelete: (resource: ModelPrice) => void
+}) {
+  const { t } = useTranslation()
+  const copy = (value: string) => {
+    void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
+  }
+
+  if (workbench.modelPricesLoading) return <Skeleton className="h-[420px] rounded-lg" />
+  if (workbench.modelPricesError) {
+    return (
+      <ErrorNotice
+        message={workbench.modelPricesError}
+        fallback={t('billingPage.error.description')}
+      />
+    )
+  }
+
+  return (
+    <TableSurface>
+      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">{t('billingPage.prices.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('billingPage.prices.description')}
+          </p>
+        </div>
+        <Button onClick={onCreate}>
+          <Plus className="size-4" aria-hidden="true" />
+          {t('billingPage.prices.actions.create')}
+        </Button>
+      </div>
+      {workbench.modelPrices.length === 0 ? (
+        <EmptyState>{t('billingPage.prices.empty')}</EmptyState>
+      ) : (
+        <Table className="min-w-[1180px]" containerClassName={containedTableContainerClassName}>
+          <TableHeader className={stickyTableHeaderClassName}>
+            <TableRow variant="static">
+              <TableHead>{t('billingPage.prices.columns.provider')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.model')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.input')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.output')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.cacheRead')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.cacheWrite')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.request')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.state')}</TableHead>
+              <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
+              <TableHead className="table-sticky-action-head w-[232px] text-right">
+                {t('billingPage.common.actions')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workbench.modelPrices.map((resource) => (
+              <TableRow key={resource.id} variant="resource">
+                <TableCell>{resource.provider}</TableCell>
+                <TableCell className="max-w-[220px]">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate font-mono text-xs">{resource.model}</span>
+                    {resource.model ? (
+                      <Button
+                        type="button"
+                        variant="text"
+                        size="icon-xs"
+                        onClick={() => copy(resource.model)}
+                      >
+                        <Copy className="size-3" aria-hidden="true" />
+                        <span className="sr-only">{t('billingPage.common.copy')}</span>
+                      </Button>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatMoney(resource.inputPricePerMillion)}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatMoney(resource.outputPricePerMillion)}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatMoney(resource.cacheReadPricePerMillion)}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatMoney(resource.cacheWritePricePerMillion)}
+                </TableCell>
+                <TableCell className="tabular-nums">{formatMoney(resource.requestPrice)}</TableCell>
+                <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
+                <TableCell>
+                  {resource.enabled
+                    ? t('billingPage.common.enabled')
+                    : t('billingPage.common.disabled')}
+                </TableCell>
+                <TableCell>
+                  {formatDateTime(resource.updatedAt, t('billingPage.common.na'))}
+                </TableCell>
+                <TableCell className="table-sticky-action-cell w-[232px] text-right transition-colors">
+                  <div className="flex justify-end gap-1.5">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      disabled={workbench.mutating}
+                      onClick={() => onToggle(resource)}
+                    >
+                      {resource.enabled
+                        ? t('billingPage.common.disable')
+                        : t('billingPage.common.enable')}
+                    </Button>
+                    <Button variant="text" size="sm" onClick={() => onEdit(resource)}>
+                      <Pencil className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.edit')}
+                    </Button>
+                    <Button variant="destructiveText" size="sm" onClick={() => onDelete(resource)}>
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.delete')}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </TableSurface>
+  )
+}
+
+function ProxyPoolsTab({
+  workbench,
+  onCreate,
+  onEdit,
+  onToggle,
+  onTest,
+  onDelete,
+}: {
+  workbench: ReturnType<typeof useBillingWorkbench>
+  onCreate: () => void
+  onEdit: (resource: ProxyPoolItem) => void
+  onToggle: (resource: ProxyPoolItem) => void
+  onTest: (resource: ProxyPoolItem) => void
+  onDelete: (resource: ProxyPoolItem) => void
+}) {
+  const { t } = useTranslation()
+  const copy = (value: string) => {
+    void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
+  }
+
+  if (workbench.proxyPoolsLoading) return <Skeleton className="h-[420px] rounded-lg" />
+  if (workbench.proxyPoolsError) {
+    return (
+      <ErrorNotice
+        message={workbench.proxyPoolsError}
+        fallback={t('billingPage.error.description')}
+      />
+    )
+  }
+
+  return (
+    <TableSurface>
+      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-sm font-semibold">{t('billingPage.proxies.title')}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {t('billingPage.proxies.description')}
+          </p>
+        </div>
+        <Button onClick={onCreate}>
+          <Plus className="size-4" aria-hidden="true" />
+          {t('billingPage.proxies.actions.create')}
+        </Button>
+      </div>
+      {workbench.proxyPools.length === 0 ? (
+        <EmptyState>{t('billingPage.proxies.empty')}</EmptyState>
+      ) : (
+        <Table className="min-w-[980px]" containerClassName={containedTableContainerClassName}>
+          <TableHeader className={stickyTableHeaderClassName}>
+            <TableRow variant="static">
+              <TableHead>{t('billingPage.proxies.columns.name')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.url')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.state')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.scope')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.priority')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.lastTest')}</TableHead>
+              <TableHead>{t('billingPage.proxies.columns.note')}</TableHead>
+              <TableHead className="table-sticky-action-head w-[320px] text-right">
+                {t('billingPage.common.actions')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workbench.proxyPools.map((resource) => (
+              <TableRow key={resource.id} variant="resource">
+                <TableCell>{resource.name}</TableCell>
+                <TableCell className="max-w-[280px]">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span className="min-w-0 truncate font-mono text-xs">
+                      {maskUrl(resource.proxyUrl)}
+                    </span>
+                    {resource.proxyUrl ? (
+                      <Button
+                        type="button"
+                        variant="text"
+                        size="icon-xs"
+                        onClick={() => copy(resource.proxyUrl)}
+                      >
+                        <Copy className="size-3" aria-hidden="true" />
+                        <span className="sr-only">{t('billingPage.common.copy')}</span>
+                      </Button>
+                    ) : null}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {resource.enabled
+                    ? t('billingPage.common.enabled')
+                    : t('billingPage.common.disabled')}
+                </TableCell>
+                <TableCell>{t('billingPage.proxies.scope.global')}</TableCell>
+                <TableCell className="tabular-nums">{resource.priority}</TableCell>
+                <TableCell>
+                  {formatDateTime(resource.lastTestedAt, t('billingPage.common.na'))}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {resource.note || t('billingPage.common.na')}
+                </TableCell>
+                <TableCell className="table-sticky-action-cell w-[320px] text-right transition-colors">
+                  <div className="flex justify-end gap-1.5">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      disabled={workbench.mutating}
+                      onClick={() => onTest(resource)}
+                    >
+                      <RefreshCw className="size-4" aria-hidden="true" />
+                      {t('billingPage.proxies.actions.test')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="sm"
+                      disabled={workbench.mutating}
+                      onClick={() => onToggle(resource)}
+                    >
+                      {resource.enabled
+                        ? t('billingPage.common.disable')
+                        : t('billingPage.common.enable')}
+                    </Button>
+                    <Button variant="text" size="sm" onClick={() => onEdit(resource)}>
+                      <Pencil className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.edit')}
+                    </Button>
+                    <Button variant="destructiveText" size="sm" onClick={() => onDelete(resource)}>
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.delete')}
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </TableSurface>
+  )
+}
+
+function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
+  const { t } = useTranslation()
+  const copy = (value: string) => {
+    void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
+  }
+  const rows = [
+    [t('billingPage.chargeDetail.requestId'), record.requestId, true],
+    [t('billingPage.chargeDetail.user'), record.username || `#${record.userId ?? '-'}`, false],
+    [t('billingPage.chargeDetail.key'), record.apiKeyMasked || record.apiKeyLabel, true],
+    [t('billingPage.chargeDetail.provider'), record.provider, false],
+    [t('billingPage.chargeDetail.model'), record.model, true],
+    [t('billingPage.chargeDetail.originalModel'), record.originalModel, true],
+    [t('billingPage.chargeDetail.actualModel'), record.actualModel, true],
+    [t('billingPage.chargeDetail.endpoint'), record.endpoint, true],
+    [t('billingPage.chargeDetail.inputTokens'), formatNumber(record.inputTokens), false],
+    [t('billingPage.chargeDetail.outputTokens'), formatNumber(record.outputTokens), false],
+    [t('billingPage.chargeDetail.cacheTokens'), formatNumber(record.cacheTokens), false],
+    [t('billingPage.chargeDetail.matchedPriceRule'), record.matchedPriceRule, true],
+    [t('billingPage.chargeDetail.amount'), formatSignedAmount(-Math.abs(record.amount)), false],
+    [t('billingPage.chargeDetail.balanceBefore'), formatMoney(record.balanceBefore), false],
+    [t('billingPage.chargeDetail.balanceAfter'), formatMoney(record.balanceAfter), false],
+    [
+      t('billingPage.chargeDetail.createdAt'),
+      formatDateTime(record.createdAt, t('billingPage.common.na')),
+      false,
+    ],
+  ] as const
+
+  return (
+    <DrawerScaffoldBody className="grid gap-5">
+      <div className="grid gap-2">
+        {rows.map(([label, value, copyable]) => (
+          <div key={label} className="grid gap-1 rounded-md border px-3 py-2">
+            <span className="text-muted-foreground text-xs">{label}</span>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className="min-w-0 truncate text-sm">
+                {value || t('billingPage.common.na')}
+              </span>
+              {copyable && value ? (
+                <Button type="button" variant="text" size="icon-xs" onClick={() => copy(value)}>
+                  <Copy className="size-3" aria-hidden="true" />
+                  <span className="sr-only">{t('billingPage.common.copy')}</span>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-md border p-3">
+        <h3 className="text-sm font-semibold">{t('billingPage.chargeDetail.priceSnapshot')}</h3>
+        <div className="mt-3 grid gap-2 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">{t('billingPage.prices.columns.input')}</span>
+            <span className="tabular-nums">
+              {formatMoney(record.priceSnapshot.inputPricePerMillion)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">{t('billingPage.prices.columns.output')}</span>
+            <span className="tabular-nums">
+              {formatMoney(record.priceSnapshot.outputPricePerMillion)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">
+              {t('billingPage.prices.columns.cacheRead')}
+            </span>
+            <span className="tabular-nums">
+              {formatMoney(record.priceSnapshot.cacheReadPricePerMillion)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">
+              {t('billingPage.prices.columns.cacheWrite')}
+            </span>
+            <span className="tabular-nums">
+              {formatMoney(record.priceSnapshot.cacheWritePricePerMillion)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">{t('billingPage.prices.columns.request')}</span>
+            <span className="tabular-nums">{formatMoney(record.priceSnapshot.requestPrice)}</span>
+          </div>
+        </div>
+      </div>
+      {record.requestSummary ? (
+        <div className="rounded-md border p-3">
+          <h3 className="text-sm font-semibold">{t('billingPage.chargeDetail.requestSummary')}</h3>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">{record.requestSummary}</p>
+        </div>
+      ) : null}
+    </DrawerScaffoldBody>
+  )
+}
+
+function BalanceDetailSheet({ record }: { record: BalanceRecord }) {
+  const { t } = useTranslation()
+  const amount = record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount)
+  const rows = [
+    [
+      t('billingPage.balanceDetail.createdAt'),
+      formatDateTime(record.createdAt, t('billingPage.common.na')),
+    ],
+    [t('billingPage.balanceDetail.user'), record.username || `#${record.userId ?? '-'}`],
+    [
+      t('billingPage.balanceDetail.type'),
+      record.type === 'recharge'
+        ? t('billingPage.balance.types.recharge')
+        : t('billingPage.balance.types.deduct'),
+    ],
+    [t('billingPage.balanceDetail.amount'), formatSignedAmount(amount)],
+    [t('billingPage.balanceDetail.balanceBefore'), formatMoney(record.balanceBefore)],
+    [t('billingPage.balanceDetail.balanceAfter'), formatMoney(record.balanceAfter)],
+    [t('billingPage.balanceDetail.operator'), record.operator || t('billingPage.common.na')],
+    [t('billingPage.balanceDetail.note'), record.note || t('billingPage.common.na')],
+  ]
+
+  return (
+    <DrawerScaffoldBody className="grid gap-2">
+      {rows.map(([label, value]) => (
+        <div key={label} className="grid gap-1 rounded-md border px-3 py-2">
+          <span className="text-muted-foreground text-xs">{label}</span>
+          <span className="min-w-0 text-sm break-words">{value}</span>
+        </div>
+      ))}
+    </DrawerScaffoldBody>
+  )
+}
+
+function BalanceOperationSheet({
+  operation,
+  users,
+  mutating,
+  onCancel,
+  onSubmit,
+}: {
+  operation: 'recharge' | 'deduct'
+  users: UserResource[]
+  mutating: boolean
+  onCancel: () => void
+  onSubmit: (input: { userId: number; amount: number; note: string }) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const firstUser = users.find((user) => user.numericId !== null)
+  const [userId, setUserId] = useState(firstUser?.numericId ? String(firstUser.numericId) : '')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const selectedUser = users.find(
+    (user) => user.numericId !== null && String(user.numericId) === userId,
+  )
+  const parsedAmount = Number(amount)
+  const nextBalance =
+    selectedUser && Number.isFinite(parsedAmount)
+      ? selectedUser.credits + (operation === 'recharge' ? parsedAmount : -parsedAmount)
+      : null
+
+  useEffect(() => {
+    setUserId(firstUser?.numericId ? String(firstUser.numericId) : '')
+    setAmount('')
+    setNote('')
+    setError(null)
+  }, [firstUser?.numericId, operation])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const numericUserId = Number(userId)
+    const numericAmount = Number(amount)
+
+    if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
+      setError(t('billingPage.balance.validation.userRequired'))
+      return
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError(t('billingPage.balance.validation.amountRequired'))
+      return
+    }
+    if (operation === 'deduct' && !note.trim()) {
+      setError(t('billingPage.balance.validation.noteRequired'))
+      return
+    }
+
+    setError(null)
+    try {
+      await onSubmit({ userId: numericUserId, amount: numericAmount, note: note.trim() })
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-5">
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.balance.form.user')}</span>
+          <Select value={userId} onValueChange={setUserId} disabled={mutating}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('billingPage.balance.form.userPlaceholder')} />
+            </SelectTrigger>
+            <SelectContent>
+              {users
+                .filter((user) => user.numericId !== null)
+                .map((user) => (
+                  <SelectItem key={user.id} value={String(user.numericId)}>
+                    {user.username}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <div className="grid gap-3 rounded-md border p-3 text-sm">
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">{t('billingPage.balance.form.current')}</span>
+            <span className="font-medium tabular-nums">
+              {selectedUser ? formatMoney(selectedUser.credits) : t('billingPage.common.na')}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-muted-foreground">{t('billingPage.balance.form.after')}</span>
+            <span className="font-medium tabular-nums">
+              {nextBalance !== null ? formatMoney(nextBalance) : t('billingPage.common.na')}
+            </span>
+          </div>
+        </div>
+        {operation === 'deduct' && nextBalance !== null && nextBalance < 0 ? (
+          <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
+            {t('billingPage.balance.form.negativeHint')}
+          </div>
+        ) : null}
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.balance.form.amount')}</span>
+          <Input
+            type="number"
+            min="0"
+            step="0.000001"
+            value={amount}
+            disabled={mutating}
+            onChange={(event) => setAmount(event.target.value)}
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          <span>
+            {operation === 'deduct'
+              ? t('billingPage.balance.form.noteRequired')
+              : t('billingPage.balance.form.note')}
+          </span>
+          <Textarea
+            value={note}
+            disabled={mutating}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        </label>
+        {error ? <ErrorNotice message={error} fallback={error} /> : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
+        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          variant={operation === 'deduct' ? 'warning' : 'default'}
+          disabled={mutating}
+        >
+          {mutating ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : operation === 'deduct' ? (
+            <CircleMinus className="size-4" aria-hidden="true" />
+          ) : (
+            <Plus className="size-4" aria-hidden="true" />
+          )}
+          {operation === 'recharge'
+            ? t('billingPage.balance.actions.recharge')
+            : t('billingPage.balance.actions.deduct')}
+        </Button>
+      </DrawerScaffoldFooter>
+    </form>
+  )
+}
+
+function ModelPriceSheet({
+  mode,
+  mutating,
+  onCancel,
+  onSubmit,
+}: {
+  mode: { type: 'create' } | { type: 'edit'; resource: ModelPrice }
+  mutating: boolean
+  onCancel: () => void
+  onSubmit: (input: ModelPriceInput) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const resource = mode.type === 'edit' ? mode.resource : null
+  const [input, setInput] = useState<ModelPriceInput>({
+    provider: resource?.provider ?? '',
+    model: resource?.model ?? '',
+    inputPricePerMillion: resource?.inputPricePerMillion ?? 0,
+    outputPricePerMillion: resource?.outputPricePerMillion ?? 0,
+    cacheReadPricePerMillion: resource?.cacheReadPricePerMillion ?? 0,
+    cacheWritePricePerMillion: resource?.cacheWritePricePerMillion ?? 0,
+    requestPrice: resource?.requestPrice ?? 0,
+    enabled: resource?.enabled ?? true,
+    note: resource?.note ?? '',
+  })
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setInput({
+      provider: resource?.provider ?? '',
+      model: resource?.model ?? '',
+      inputPricePerMillion: resource?.inputPricePerMillion ?? 0,
+      outputPricePerMillion: resource?.outputPricePerMillion ?? 0,
+      cacheReadPricePerMillion: resource?.cacheReadPricePerMillion ?? 0,
+      cacheWritePricePerMillion: resource?.cacheWritePricePerMillion ?? 0,
+      requestPrice: resource?.requestPrice ?? 0,
+      enabled: resource?.enabled ?? true,
+      note: resource?.note ?? '',
+    })
+    setError(null)
+  }, [resource])
+
+  const setNumber = (key: keyof ModelPriceInput, value: string) => {
+    setInput((current) => ({ ...current, [key]: Number(value) }))
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!input.provider.trim() || !input.model.trim()) {
+      setError(t('billingPage.prices.validation.identityRequired'))
+      return
+    }
+    const numbers = [
+      input.inputPricePerMillion,
+      input.outputPricePerMillion,
+      input.cacheReadPricePerMillion,
+      input.cacheWritePricePerMillion,
+      input.requestPrice,
+    ]
+    if (numbers.some((value) => !Number.isFinite(value) || value < 0)) {
+      setError(t('billingPage.prices.validation.priceInvalid'))
+      return
+    }
+
+    setError(null)
+    try {
+      await onSubmit(input)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-5">
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('billingPage.prices.form.provider')}</span>
+            <Input
+              value={input.provider}
+              disabled={mutating}
+              onChange={(event) =>
+                setInput((current) => ({ ...current, provider: event.target.value }))
+              }
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('billingPage.prices.form.model')}</span>
+            <Input
+              value={input.model}
+              disabled={mutating}
+              onChange={(event) =>
+                setInput((current) => ({ ...current, model: event.target.value }))
+              }
+            />
+          </label>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {[
+            ['inputPricePerMillion', 'input'],
+            ['outputPricePerMillion', 'output'],
+            ['cacheReadPricePerMillion', 'cacheRead'],
+            ['cacheWritePricePerMillion', 'cacheWrite'],
+            ['requestPrice', 'request'],
+          ].map(([key, label]) => (
+            <label key={key} className="grid gap-2 text-sm font-medium">
+              <span>{t(`billingPage.prices.form.${label}`)}</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.000001"
+                value={String(input[key as keyof ModelPriceInput] ?? 0)}
+                disabled={mutating}
+                onChange={(event) => setNumber(key as keyof ModelPriceInput, event.target.value)}
+              />
+            </label>
+          ))}
+        </div>
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.prices.form.enabled')}</span>
+          <Select
+            value={input.enabled ? 'enabled' : 'disabled'}
+            onValueChange={(value) =>
+              setInput((current) => ({ ...current, enabled: value === 'enabled' }))
+            }
+            disabled={mutating}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
+              <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.prices.form.note')}</span>
+          <Textarea
+            value={input.note ?? ''}
+            disabled={mutating}
+            onChange={(event) => setInput((current) => ({ ...current, note: event.target.value }))}
+          />
+        </label>
+        {error ? <ErrorNotice message={error} fallback={error} /> : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
+        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button type="submit" disabled={mutating}>
+          {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+          {t('billingPage.common.save')}
+        </Button>
+      </DrawerScaffoldFooter>
+    </form>
+  )
+}
+
+function ProxyPoolSheet({
+  mode,
+  mutating,
+  onCancel,
+  onSubmit,
+}: {
+  mode: { type: 'create' } | { type: 'edit'; resource: ProxyPoolItem }
+  mutating: boolean
+  onCancel: () => void
+  onSubmit: (input: ProxyPoolInput) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const resource = mode.type === 'edit' ? mode.resource : null
+  const [input, setInput] = useState<ProxyPoolInput>({
+    name: resource?.name ?? '',
+    proxyUrl: resource?.proxyUrl ?? '',
+    enabled: resource?.enabled ?? true,
+    priority: resource?.priority ?? 0,
+    note: resource?.note ?? '',
+  })
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setInput({
+      name: resource?.name ?? '',
+      proxyUrl: resource?.proxyUrl ?? '',
+      enabled: resource?.enabled ?? true,
+      priority: resource?.priority ?? 0,
+      note: resource?.note ?? '',
+    })
+    setError(null)
+  }, [resource])
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!input.name.trim() || !input.proxyUrl.trim()) {
+      setError(t('billingPage.proxies.validation.required'))
+      return
+    }
+    if (!Number.isFinite(input.priority)) {
+      setError(t('billingPage.proxies.validation.priorityInvalid'))
+      return
+    }
+    setError(null)
+    try {
+      await onSubmit(input)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
+    }
+  }
+
+  return (
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-5">
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.proxies.form.name')}</span>
+          <Input
+            value={input.name}
+            disabled={mutating}
+            onChange={(event) => setInput((current) => ({ ...current, name: event.target.value }))}
+          />
+        </label>
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.proxies.form.url')}</span>
+          <Input
+            value={input.proxyUrl}
+            disabled={mutating}
+            onChange={(event) =>
+              setInput((current) => ({ ...current, proxyUrl: event.target.value }))
+            }
+          />
+        </label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('billingPage.proxies.form.enabled')}</span>
+            <Select
+              value={input.enabled ? 'enabled' : 'disabled'}
+              onValueChange={(value) =>
+                setInput((current) => ({ ...current, enabled: value === 'enabled' }))
+              }
+              disabled={mutating}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
+                <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('billingPage.proxies.form.priority')}</span>
+            <Input
+              type="number"
+              value={String(input.priority)}
+              disabled={mutating}
+              onChange={(event) =>
+                setInput((current) => ({ ...current, priority: Number(event.target.value) }))
+              }
+            />
+          </label>
+        </div>
+        <div className="rounded-md border px-3 py-2 text-sm">
+          <span className="text-muted-foreground">{t('billingPage.proxies.form.scope')}</span>
+          <span className="ml-2 font-medium">{t('billingPage.proxies.scope.global')}</span>
+        </div>
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('billingPage.proxies.form.note')}</span>
+          <Textarea
+            value={input.note ?? ''}
+            disabled={mutating}
+            onChange={(event) => setInput((current) => ({ ...current, note: event.target.value }))}
+          />
+        </label>
+        {error ? <ErrorNotice message={error} fallback={error} /> : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
+        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button type="submit" disabled={mutating}>
+          {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+          {t('billingPage.common.save')}
+        </Button>
+      </DrawerScaffoldFooter>
+    </form>
+  )
+}
+
+export function BillingWorkbenchPage() {
+  const { t } = useTranslation()
+  const [filters, setFilters] = useState<BillingFilters>(() => createDefaultBillingFilters())
+  const [textFilters, setTextFilters] = useState(() => createDefaultBillingTextFilters())
+  const [datePreset, setDatePreset] = useState<DateRangePreset>('7d')
+  const [activeTab, setActiveTab] = useState<BillingTab>('overview')
+  const [chargePagination, setChargePagination] =
+    useState<BillingPagination>(defaultBillingPagination)
+  const [balancePagination, setBalancePagination] =
+    useState<BillingPagination>(defaultBillingPagination)
+  const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [pendingBalanceOperation, setPendingBalanceOperation] =
+    useState<PendingBalanceOperation | null>(null)
+  const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
+  const activeFetching =
+    activeTab === 'overview'
+      ? workbench.overviewFetching
+      : activeTab === 'charges'
+        ? workbench.chargesFetching
+        : activeTab === 'balanceRecords'
+          ? workbench.balanceRecordsFetching
+          : activeTab === 'modelPrices'
+            ? workbench.modelPricesFetching
+            : workbench.proxyPoolsFetching
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (
+        filters.user === textFilters.user &&
+        filters.model === textFilters.model &&
+        filters.provider === textFilters.provider
+      ) {
+        return
+      }
+
+      setFilters((current) => ({
+        ...current,
+        user: textFilters.user,
+        model: textFilters.model,
+        provider: textFilters.provider,
+      }))
+      setChargePagination(defaultBillingPagination)
+      setBalancePagination(defaultBillingPagination)
+    }, 300)
+
+    return () => window.clearTimeout(timeout)
+  }, [
+    filters.model,
+    filters.provider,
+    filters.user,
+    textFilters.model,
+    textFilters.provider,
+    textFilters.user,
+  ])
+
+  if (!workbench.connected) return <BillingDisconnectedState />
+
+  const updateFilters = (patch: Partial<BillingFilters>) => {
+    setFilters((current) => ({ ...current, ...patch }))
+    setChargePagination(defaultBillingPagination)
+    setBalancePagination(defaultBillingPagination)
+  }
+
+  const handlePresetChange = (preset: DateRangePreset) => {
+    setDatePreset(preset)
+    if (preset !== 'custom') {
+      updateFilters(createDatePresetRange(preset))
+    }
+  }
+
+  const closeSheet = () => setSheetMode(null)
+  const showMutationError = (error: unknown) => {
+    toast.error(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
+  }
+
+  return (
+    <section className="grid gap-5">
+      <PageHeader
+        className="md:p-6"
+        title={t('billingPage.header.title')}
+        description={t('billingPage.header.description')}
+        actions={
+          <Button
+            variant="outline"
+            disabled={activeFetching}
+            onClick={() => {
+              if (activeTab === 'overview') void workbench.refreshOverview()
+              if (activeTab === 'charges') void workbench.refreshCharges()
+              if (activeTab === 'balanceRecords') void workbench.refreshBalanceRecords()
+              if (activeTab === 'modelPrices') void workbench.refreshModelPrices()
+              if (activeTab === 'proxyPools') void workbench.refreshProxyPools()
+            }}
+          >
+            <RefreshCw
+              className={activeFetching ? 'size-4 animate-spin' : 'size-4'}
+              aria-hidden="true"
+            />
+            {t('billingPage.actions.refresh')}
+          </Button>
+        }
+      />
+
+      <div className="bg-card rounded-lg border p-4 shadow-sm">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
+          <Select
+            value={datePreset}
+            onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
+              <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
+              <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
+              <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            value={filters.from}
+            onChange={(event) => {
+              setDatePreset('custom')
+              updateFilters({ from: event.target.value })
+            }}
+          />
+          <Input
+            type="date"
+            value={filters.to}
+            onChange={(event) => {
+              setDatePreset('custom')
+              updateFilters({ to: event.target.value })
+            }}
+          />
+          <Input
+            value={textFilters.user}
+            placeholder={t('billingPage.filters.user')}
+            onChange={(event) =>
+              setTextFilters((current) => ({ ...current, user: event.target.value }))
+            }
+          />
+          <Input
+            value={textFilters.model}
+            placeholder={t('billingPage.filters.model')}
+            onChange={(event) =>
+              setTextFilters((current) => ({ ...current, model: event.target.value }))
+            }
+          />
+          <div className="relative">
+            <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
+            <Input
+              className="pl-9"
+              value={textFilters.provider}
+              placeholder={t('billingPage.filters.provider')}
+              onChange={(event) =>
+                setTextFilters((current) => ({ ...current, provider: event.target.value }))
+              }
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto">
+        {tabs.map((tab) => (
+          <Button
+            key={tab}
+            variant={activeTab === tab ? 'default' : 'outline'}
+            onClick={() => setActiveTab(tab)}
+          >
+            {t(`billingPage.tabs.${tab}`)}
+          </Button>
+        ))}
+      </div>
+
+      {activeTab === 'overview' ? <OverviewTab workbench={workbench} /> : null}
+      {activeTab === 'charges' ? (
+        <ChargeRecordsTab
+          workbench={workbench}
+          pagination={chargePagination}
+          onPaginationChange={setChargePagination}
+          onView={(record) => setSheetMode({ type: 'charge-detail', record })}
+        />
+      ) : null}
+      {activeTab === 'balanceRecords' ? (
+        <BalanceRecordsTab
+          workbench={workbench}
+          pagination={balancePagination}
+          onPaginationChange={setBalancePagination}
+          onCreate={(operation) => setSheetMode({ type: 'balance', operation })}
+          onView={(record) => setSheetMode({ type: 'balance-detail', record })}
+        />
+      ) : null}
+      {activeTab === 'modelPrices' ? (
+        <ModelPricesTab
+          workbench={workbench}
+          onCreate={() => setSheetMode({ type: 'model-price-create' })}
+          onEdit={(resource) => setSheetMode({ type: 'model-price-edit', resource })}
+          onToggle={(resource) => {
+            void workbench
+              .updateModelPrice({
+                resource,
+                input: toModelPriceInput(resource, !resource.enabled),
+              })
+              .then(() => toast.success(t('billingPage.toast.priceUpdated')))
+              .catch(showMutationError)
+          }}
+          onDelete={(resource) => setPendingDelete({ type: 'model-price', resource })}
+        />
+      ) : null}
+      {activeTab === 'proxyPools' ? (
+        <ProxyPoolsTab
+          workbench={workbench}
+          onCreate={() => setSheetMode({ type: 'proxy-create' })}
+          onEdit={(resource) => setSheetMode({ type: 'proxy-edit', resource })}
+          onToggle={(resource) => {
+            void workbench
+              .updateProxyPool({
+                resource,
+                input: toProxyPoolInput(resource, !resource.enabled),
+              })
+              .then(() => toast.success(t('billingPage.toast.proxyUpdated')))
+              .catch(showMutationError)
+          }}
+          onTest={(resource) => {
+            void workbench
+              .testProxyPool(resource)
+              .then(() => toast.success(t('billingPage.toast.proxyTested')))
+              .catch(showMutationError)
+          }}
+          onDelete={(resource) => setPendingDelete({ type: 'proxy', resource })}
+        />
+      ) : null}
+
+      <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
+        <DrawerScaffoldContent className="sm:max-w-2xl">
+          {sheetMode ? (
+            <>
+              <DrawerScaffoldHeader>
+                <SheetTitle>
+                  {sheetMode.type === 'charge-detail'
+                    ? t('billingPage.chargeDetail.title')
+                    : sheetMode.type === 'balance-detail'
+                      ? t('billingPage.balanceDetail.title')
+                      : sheetMode.type === 'balance'
+                        ? sheetMode.operation === 'recharge'
+                          ? t('billingPage.balance.sheet.rechargeTitle')
+                          : t('billingPage.balance.sheet.deductTitle')
+                        : sheetMode.type === 'model-price-create'
+                          ? t('billingPage.prices.sheet.createTitle')
+                          : sheetMode.type === 'model-price-edit'
+                            ? t('billingPage.prices.sheet.editTitle')
+                            : sheetMode.type === 'proxy-create'
+                              ? t('billingPage.proxies.sheet.createTitle')
+                              : t('billingPage.proxies.sheet.editTitle')}
+                </SheetTitle>
+                <SheetDescription>
+                  {sheetMode.type === 'charge-detail'
+                    ? t('billingPage.chargeDetail.description')
+                    : sheetMode.type === 'balance-detail'
+                      ? t('billingPage.balanceDetail.description')
+                      : sheetMode.type === 'balance'
+                        ? t('billingPage.balance.sheet.description')
+                        : sheetMode.type === 'model-price-create' ||
+                            sheetMode.type === 'model-price-edit'
+                          ? t('billingPage.prices.sheet.description')
+                          : t('billingPage.proxies.sheet.description')}
+                </SheetDescription>
+              </DrawerScaffoldHeader>
+              {sheetMode.type === 'charge-detail' ? (
+                <ChargeDetailSheet record={sheetMode.record} />
+              ) : null}
+              {sheetMode.type === 'balance-detail' ? (
+                <BalanceDetailSheet record={sheetMode.record} />
+              ) : null}
+              {sheetMode.type === 'balance' ? (
+                <BalanceOperationSheet
+                  operation={sheetMode.operation}
+                  users={workbench.users}
+                  mutating={workbench.mutating || workbench.usersLoading}
+                  onCancel={closeSheet}
+                  onSubmit={(input) => {
+                    setPendingBalanceOperation({
+                      operation: sheetMode.operation,
+                      input,
+                    })
+                    return Promise.resolve()
+                  }}
+                />
+              ) : null}
+              {sheetMode.type === 'model-price-create' || sheetMode.type === 'model-price-edit' ? (
+                <ModelPriceSheet
+                  mode={
+                    sheetMode.type === 'model-price-create'
+                      ? { type: 'create' }
+                      : { type: 'edit', resource: sheetMode.resource }
+                  }
+                  mutating={workbench.mutating}
+                  onCancel={closeSheet}
+                  onSubmit={async (input) => {
+                    if (sheetMode.type === 'model-price-create') {
+                      await workbench.createModelPrice(input)
+                      toast.success(t('billingPage.toast.priceCreated'))
+                    } else {
+                      await workbench.updateModelPrice({ resource: sheetMode.resource, input })
+                      toast.success(t('billingPage.toast.priceUpdated'))
+                    }
+                    closeSheet()
+                  }}
+                />
+              ) : null}
+              {sheetMode.type === 'proxy-create' || sheetMode.type === 'proxy-edit' ? (
+                <ProxyPoolSheet
+                  mode={
+                    sheetMode.type === 'proxy-create'
+                      ? { type: 'create' }
+                      : { type: 'edit', resource: sheetMode.resource }
+                  }
+                  mutating={workbench.mutating}
+                  onCancel={closeSheet}
+                  onSubmit={async (input) => {
+                    if (sheetMode.type === 'proxy-create') {
+                      await workbench.createProxyPool(input)
+                      toast.success(t('billingPage.toast.proxyCreated'))
+                    } else {
+                      await workbench.updateProxyPool({ resource: sheetMode.resource, input })
+                      toast.success(t('billingPage.toast.proxyUpdated'))
+                    }
+                    closeSheet()
+                  }}
+                />
+              ) : null}
+            </>
+          ) : null}
+        </DrawerScaffoldContent>
+      </Sheet>
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => !open && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingDelete?.type === 'model-price'
+                ? t('billingPage.prices.delete.title')
+                : t('billingPage.proxies.delete.title')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.type === 'model-price'
+                ? t('billingPage.prices.delete.description', {
+                    model: pendingDelete.resource.model,
+                  })
+                : t('billingPage.proxies.delete.description', {
+                    name: pendingDelete?.resource.name ?? '',
+                  })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workbench.mutating}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 text-white"
+              disabled={workbench.mutating}
+              onClick={(event) => {
+                event.preventDefault()
+                if (!pendingDelete) return
+
+                const action =
+                  pendingDelete.type === 'model-price'
+                    ? workbench.deleteModelPrice(pendingDelete.resource)
+                    : workbench.deleteProxyPool(pendingDelete.resource)
+
+                void action
+                  .then(() => {
+                    toast.success(t('billingPage.toast.deleted'))
+                    setPendingDelete(null)
+                  })
+                  .catch(showMutationError)
+              }}
+            >
+              {workbench.mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('billingPage.common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(pendingBalanceOperation)}
+        onOpenChange={(open) => !open && setPendingBalanceOperation(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingBalanceOperation?.operation === 'deduct'
+                ? t('billingPage.balance.confirm.deductTitle')
+                : t('billingPage.balance.confirm.rechargeTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingBalanceOperation?.operation === 'deduct'
+                ? t('billingPage.balance.confirm.deductDescription', {
+                    amount: pendingBalanceOperation
+                      ? formatMoney(pendingBalanceOperation.input.amount)
+                      : '',
+                  })
+                : t('billingPage.balance.confirm.rechargeDescription', {
+                    amount: pendingBalanceOperation
+                      ? formatMoney(pendingBalanceOperation.input.amount)
+                      : '',
+                  })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workbench.mutating}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={
+                pendingBalanceOperation?.operation === 'deduct'
+                  ? 'bg-warning text-warning-foreground hover:bg-warning/90 focus-visible:ring-warning/20'
+                  : undefined
+              }
+              disabled={workbench.mutating}
+              onClick={(event) => {
+                event.preventDefault()
+                if (!pendingBalanceOperation) return
+
+                const action =
+                  pendingBalanceOperation.operation === 'recharge'
+                    ? workbench.recharge(pendingBalanceOperation.input)
+                    : workbench.deduct(pendingBalanceOperation.input)
+
+                void action
+                  .then(() => {
+                    toast.success(
+                      pendingBalanceOperation.operation === 'recharge'
+                        ? t('billingPage.toast.recharged')
+                        : t('billingPage.toast.deducted'),
+                    )
+                    setPendingBalanceOperation(null)
+                    closeSheet()
+                  })
+                  .catch(showMutationError)
+              }}
+            >
+              {workbench.mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('billingPage.balance.confirm.action')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  )
+}

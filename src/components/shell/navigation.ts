@@ -8,9 +8,10 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UsersRound,
+  WalletCards,
 } from 'lucide-react'
 
-type NavigationGroupId = 'operate' | 'gateway' | 'observe' | 'control'
+type NavigationGroupId = 'operate' | 'gateway' | 'finance' | 'observe' | 'control'
 
 type NavigationRoute =
   | '/admin/dashboard'
@@ -18,6 +19,7 @@ type NavigationRoute =
   | '/admin/credentials'
   | '/admin/access-keys'
   | '/admin/users'
+  | '/admin/billing'
   | '/admin/config'
   | '/admin/usage-logs'
   | '/admin/system-nodes'
@@ -87,6 +89,18 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.usageLogs',
         metaKey: 'navigationMeta.usageLogs',
         icon: BarChart3,
+      },
+    ],
+  },
+  {
+    id: 'finance',
+    labelKey: 'navigationGroups.finance',
+    items: [
+      {
+        to: '/admin/billing',
+        labelKey: 'navigation.billing',
+        metaKey: 'navigationMeta.billing',
+        icon: WalletCards,
       },
     ],
   },
