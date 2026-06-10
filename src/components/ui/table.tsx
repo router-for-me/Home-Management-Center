@@ -8,7 +8,7 @@ const tableRowVariants = cva('data-[state=selected]:bg-muted border-b transition
   variants: {
     variant: {
       default: 'hover:bg-muted/50',
-      resource: 'hover:bg-accent/40',
+      resource: 'table-resource-row',
       static: 'hover:bg-transparent',
       semantic: '',
     },

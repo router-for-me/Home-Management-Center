@@ -3,8 +3,10 @@
 @import './theme-tokens.css';
 @import './effects.css';
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
 }
 
 :where(button:not(:disabled), [role='button']:not([aria-disabled='true'])) {
@@ -52,11 +54,21 @@ body {
 
 .table-sticky-action-cell {
   --table-sticky-action-background: var(--card);
+  --table-resource-row-hover-background: color-mix(in oklch, var(--card), var(--accent) 52%);
   z-index: 10;
 }
 
+.table-resource-row {
+  --table-resource-row-hover-background: color-mix(in oklch, var(--card), var(--accent) 52%);
+}
+
+.table-resource-row:hover {
+  background-color: var(--table-resource-row-hover-background);
+}
+
+.table-resource-row:hover > .table-sticky-action-cell,
 .group:hover > .table-sticky-action-cell {
-  --table-sticky-action-background: color-mix(in oklch, var(--card), var(--accent) 52%);
+  --table-sticky-action-background: var(--table-resource-row-hover-background);
 }
 
 .table-action-cell-content {
