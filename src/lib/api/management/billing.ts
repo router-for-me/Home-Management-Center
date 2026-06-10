@@ -74,12 +74,18 @@ function readPageRecords(value: unknown) {
   return readArrayRecords(value, ['items', 'records', 'data', 'charges', 'balance_records'])
 }
 
+function isPositiveIntegerText(value: string) {
+  return /^[1-9]\d*$/.test(value.trim())
+}
+
 function compactParams(filters: BillingFilters, pagination?: BillingPagination) {
+  const user = filters.user.trim()
+
   return {
     from: filters.from || undefined,
     to: filters.to || undefined,
-    user: filters.user.trim() || undefined,
-    user_id: filters.user.trim() || undefined,
+    user: user || undefined,
+    user_id: isPositiveIntegerText(user) ? user : undefined,
     provider: filters.provider.trim() || undefined,
     model: filters.model.trim() || undefined,
     limit: pagination?.limit,
@@ -433,7 +439,7 @@ export async function deleteModelPrice(session: ManagementSessionInput, resource
 
 export async function fetchProxyPools(session: ManagementSessionInput) {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/billing/proxy-pools')
+  const response = await client.get<unknown>('/proxy/proxy-pools')
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -445,7 +451,7 @@ export async function fetchProxyPools(session: ManagementSessionInput) {
 
 export async function createProxyPool(session: ManagementSessionInput, input: ProxyPoolInput) {
   const client = createManagementClient(session)
-  await client.post('/billing/proxy-pools', toProxyPoolPayload(input))
+  await client.post('/proxy/proxy-pools', toProxyPoolPayload(input))
 }
 
 export async function updateProxyPool(
@@ -455,19 +461,19 @@ export async function updateProxyPool(
 ) {
   const client = createManagementClient(session)
   await client.patch(
-    `/billing/proxy-pools/${encodeURIComponent(resource.id)}`,
+    `/proxy/proxy-pools/${encodeURIComponent(resource.id)}`,
     toProxyPoolPayload(input),
   )
 }
 
 export async function deleteProxyPool(session: ManagementSessionInput, resource: ProxyPoolItem) {
   const client = createManagementClient(session)
-  await client.delete(`/billing/proxy-pools/${encodeURIComponent(resource.id)}`)
+  await client.delete(`/proxy/proxy-pools/${encodeURIComponent(resource.id)}`)
 }
 
 export async function testProxyPool(session: ManagementSessionInput, resource: ProxyPoolItem) {
   const client = createManagementClient(session)
-  await client.post(`/billing/proxy-pools/${encodeURIComponent(resource.id)}/test`, {})
+  await client.post(`/proxy/proxy-pools/${encodeURIComponent(resource.id)}/test`, {})
 }
 
 export function toBillingApiError(error: unknown) {

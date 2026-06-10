@@ -405,7 +405,7 @@ export const ru = {
         last30d: 'Последние 30 дней',
         custom: 'Свой период',
         user: 'Фильтр по пользователю',
-        provider: 'Фильтр по Provider',
+        provider: 'Фильтр по провайдеру',
         model: 'Фильтр по ID модели',
       },
       common: {
@@ -462,13 +462,16 @@ export const ru = {
         },
       },
       charges: {
+        title: 'Записи списаний',
+        description:
+          'Просматривайте результаты списаний, расход tokens и изменения баланса по каждому запросу.',
         empty: 'В выбранном периоде нет записей списаний.',
         tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
         columns: {
           time: 'Время',
           user: 'Пользователь',
           key: 'Клиентский ключ',
-          provider: 'Provider',
+          provider: 'Провайдер',
           model: 'Модель',
           request: 'Request ID',
           tokens: 'Tokens',
@@ -482,7 +485,7 @@ export const ru = {
         requestId: 'Request ID',
         user: 'Пользователь',
         key: 'Клиентский ключ',
-        provider: 'Provider',
+        provider: 'Провайдер',
         model: 'Модель',
         originalModel: 'Исходная модель',
         actualModel: 'Фактическая модель',
@@ -500,8 +503,7 @@ export const ru = {
       },
       balance: {
         title: 'Записи баланса',
-        description:
-          'Ручные пополнения и списания администратора. Прямая установка баланса недоступна.',
+        description: 'Просматривайте пополнения, списания и изменения баланса пользователей.',
         empty: 'В выбранном периоде нет записей баланса.',
         actions: {
           recharge: 'Пополнить',
@@ -547,9 +549,16 @@ export const ru = {
           rechargeTitle: 'Подтвердить пополнение?',
           deductTitle: 'Подтвердить списание?',
           rechargeDescription:
-            'Пополнить баланс пользователя на {{amount}}? После отправки будет создана запись баланса.',
+            'После отправки будет создана запись баланса. Проверьте пользователя и итоговый баланс.',
           deductDescription:
-            'Списать {{amount}} с баланса пользователя? Итоговый баланс может быть отрицательным.',
+            'Списание создаст запись баланса. Проверьте пользователя, сумму и итоговый баланс.',
+          user: 'Пользователь',
+          amount: 'Изменение суммы',
+          current: 'Текущий баланс',
+          after: 'Баланс после',
+          note: 'Примечание',
+          negativeResult:
+            'Итоговый баланс будет отрицательным. Home допускает отрицательный баланс, но подтвердите, что это ожидаемо.',
           action: 'Подтвердить',
         },
       },
@@ -567,15 +576,15 @@ export const ru = {
       },
       prices: {
         title: 'Цены моделей',
-        description:
-          'Поддержка правил списания для моделей. Исторические списания хранят свой снимок цены.',
+        description: 'Управляйте ценами моделей для расчета будущих списаний по запросам.',
         empty: 'Цены моделей пока не настроены.',
         actions: {
           create: 'Новая цена',
+          toggleState: 'Переключить состояние цены модели {{model}}',
         },
         columns: {
-          provider: 'Provider',
-          model: 'Model ID',
+          provider: 'Провайдер модели',
+          model: 'ID модели',
           input: 'Input price',
           output: 'Output price',
           cacheRead: 'Cache read',
@@ -593,22 +602,43 @@ export const ru = {
         sheet: {
           createTitle: 'Новая цена модели',
           editTitle: 'Изменить цену модели',
-          description:
-            'Цены не могут быть отрицательными. Provider и model ID должны быть уникальны.',
         },
         form: {
-          provider: 'Provider',
-          model: 'Model ID',
+          identity: 'Идентификатор модели',
+          identityHint: 'Выберите модель из списка, чтобы создать правило сопоставления списаний.',
+          modelSelect: 'Выберите модель',
+          modelPlaceholder: 'Выберите модель',
+          modelSearchPlaceholder: 'Поиск по ID модели, имени или названию провайдера',
+          modelCandidateEmpty: 'Нет моделей, доступных для выбора.',
+          modelSearchEmpty: 'Нет моделей по условиям поиска.',
+          selectedModel: 'Выбранная модель',
+          pricingTarget: 'Объект тарификации',
+          selectedModelPlaceholder:
+            'Сначала выберите модель. Правило цены будет применяться к ней.',
+          reloadModels: 'Перезагрузить модели',
+          provider: 'Провайдер модели',
+          model: 'ID модели',
           input: 'Input price per million tokens',
           output: 'Output price per million tokens',
           cacheRead: 'Cache read price per million tokens',
           cacheWrite: 'Cache write price per million tokens',
           request: 'Per-request price',
+          pricing: 'Правила цены',
+          pricingHint:
+            'Эти цены применяются к будущим списаниям; исторические списания сохраняют исходный снимок цены.',
+          state: 'Состояние записи',
+          stateHint:
+            'Состояние включения определяет, будет ли это правило цены применяться к будущим списаниям.',
           enabled: 'Состояние включения',
           note: 'Примечание',
         },
+        modelScopes: {
+          available: 'Доступно в runtime',
+          static: 'Статический каталог',
+        },
         validation: {
-          identityRequired: 'Provider и model ID обязательны.',
+          providerRequired: 'Укажите провайдера модели.',
+          modelRequired: 'Выберите провайдера модели и ID модели.',
           priceInvalid: 'Цены должны быть числами больше или равными 0.',
         },
         delete: {
@@ -619,12 +649,13 @@ export const ru = {
       },
       proxies: {
         title: 'Proxy pools',
-        description:
-          'Первая версия управляет только глобальными proxy pools без пользовательских, модельных или credential routing policies.',
+        description: 'Управляйте proxy-узлами и их состоянием подключения для пересылки запросов.',
         empty: 'Proxy entries пока нет.',
         actions: {
           create: 'Новый proxy',
+          save: 'Сохранить proxy',
           test: 'Тест',
+          toggleState: 'Переключить состояние proxy {{name}}',
         },
         columns: {
           name: 'Имя',
@@ -645,16 +676,26 @@ export const ru = {
             'Proxy URL скрывается по умолчанию. Scope в этой версии фиксирован как global.',
         },
         form: {
+          identity: 'Данные proxy',
+          identityHint: 'Укажите запись proxy для идентификации и тестов подключения.',
           name: 'Имя',
           url: 'Proxy URL',
+          urlHint: 'Поддерживаются URL http, https, socks5 или socks5h.',
+          routing: 'Состояние записи',
+          routingHint:
+            'В этой версии записи global proxy только хранятся и тестируются. Они не меняют runtime priority proxy, выбор аккаунта или outbound routing.',
           enabled: 'Состояние включения',
           priority: 'Приоритет',
+          priorityHint: 'Сохраняемое целое число; в этой версии оно не влияет на runtime routing.',
           scope: 'Scope',
           note: 'Примечание',
         },
         validation: {
           required: 'Имя и proxy URL обязательны.',
-          priorityInvalid: 'Приоритет должен быть корректным числом.',
+          nameRequired: 'Имя обязательно.',
+          urlRequired: 'Proxy URL обязателен.',
+          urlInvalid: 'Proxy URL должен быть корректным URL http, https, socks5 или socks5h.',
+          priorityInvalid: 'Приоритет должен быть целым числом.',
         },
         delete: {
           title: 'Удалить proxy?',

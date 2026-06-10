@@ -29,13 +29,119 @@ import type {
   ProxyPoolInput,
   ProxyPoolItem,
 } from '@/lib/api/management/billing-types'
+import {
+  type ManagementModelScope,
+  type ModelResource,
+  fetchModelsSnapshot,
+  toModelsApiError,
+} from '@/lib/api/management/models'
 import { fetchUsersSnapshot, toUserApiError } from '@/lib/api/management/users'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
+export type BillingModelPriceCandidate = {
+  id: string
+  provider: string
+  model: string
+  label: string
+  description: string
+  ownedBy: string | null
+  type: string | null
+  scopes: ManagementModelScope[]
+}
+
+type BillingModelPriceCandidateSnapshot = {
+  candidates: BillingModelPriceCandidate[]
+  issue: string | null
+}
+
 function toError(error: unknown) {
   if (error instanceof Error) return error
   return new Error(String(error))
+}
+
+function readSettledError(result: PromiseSettledResult<unknown>) {
+  return result.status === 'rejected' ? toError(result.reason).message : null
+}
+
+function normalizeModelProvider(resource: ModelResource) {
+  const channel = resource.channel?.trim()
+  if (channel) return normalizeBillingProvider(channel)
+
+  const type = resource.type?.trim()
+  if (type) return normalizeBillingProvider(type)
+
+  const ownedBy = resource.ownedBy?.trim()
+  if (ownedBy) return normalizeBillingProvider(ownedBy)
+
+  return ''
+}
+
+function normalizeBillingProvider(value: string) {
+  const normalized = value.trim().toLowerCase()
+  if (
+    normalized === 'codex-free' ||
+    normalized === 'codex-team' ||
+    normalized === 'codex-plus' ||
+    normalized === 'codex-pro'
+  ) {
+    return 'codex'
+  }
+
+  return normalized
+}
+
+function normalizeModelPriceCandidate(resource: ModelResource): BillingModelPriceCandidate | null {
+  const provider = normalizeModelProvider(resource)
+  if (!provider) return null
+
+  return {
+    id: `${provider}:${resource.id}`,
+    provider,
+    model: resource.id,
+    label: resource.displayName,
+    description: resource.name ?? resource.id,
+    ownedBy: resource.ownedBy,
+    type: resource.type,
+    scopes: [resource.scope],
+  }
+}
+
+function createModelPriceCandidates(available: ModelResource[], staticModels: ModelResource[]) {
+  const candidates = new Map<string, BillingModelPriceCandidate>()
+
+  for (const resource of [...staticModels, ...available]) {
+    const candidate = normalizeModelPriceCandidate(resource)
+    if (!candidate) continue
+
+    const existing = candidates.get(candidate.id)
+    if (!existing) {
+      candidates.set(candidate.id, candidate)
+      continue
+    }
+
+    for (const scope of candidate.scopes) {
+      if (!existing.scopes.includes(scope)) {
+        existing.scopes.push(scope)
+      }
+    }
+
+    existing.label = existing.label || candidate.label
+    existing.description = existing.description || candidate.description
+    existing.ownedBy = existing.ownedBy ?? candidate.ownedBy
+    existing.type = existing.type ?? candidate.type
+  }
+
+  return [...candidates.values()].sort((left, right) => {
+    const leftAvailable = left.scopes.includes('available') ? 0 : 1
+    const rightAvailable = right.scopes.includes('available') ? 0 : 1
+
+    return (
+      leftAvailable - rightAvailable ||
+      left.provider.localeCompare(right.provider) ||
+      left.model.localeCompare(right.model)
+    )
+  })
 }
 
 function useManagementSession() {
@@ -80,6 +186,12 @@ export function useBillingWorkbench(
     connectedAt,
     filters.provider,
     filters.model,
+  ]
+  const modelPriceCandidatesQueryKey = [
+    'billing',
+    'modelPriceCandidates',
+    session.baseUrl,
+    connectedAt,
   ]
   const proxyPoolsQueryKey = ['billing', 'proxyPools', session.baseUrl, connectedAt]
   const usersQueryKey = ['billing', 'users', session.baseUrl, connectedAt]
@@ -128,6 +240,34 @@ export function useBillingWorkbench(
         return await fetchModelPrices(session, filters)
       } catch (error) {
         throw toBillingApiError(error)
+      }
+    },
+  })
+
+  const modelPriceCandidatesQuery = useQuery({
+    queryKey: modelPriceCandidatesQueryKey,
+    enabled: ready && activeTab === 'modelPrices',
+    queryFn: async (): Promise<BillingModelPriceCandidateSnapshot> => {
+      const [availableResult, staticResult] = await Promise.allSettled([
+        fetchModelsSnapshot(session, { scope: 'available' }),
+        fetchModelsSnapshot(session, { scope: 'static' }),
+      ])
+      const availableResources =
+        availableResult.status === 'fulfilled' ? availableResult.value.resources : []
+      const staticResources =
+        staticResult.status === 'fulfilled' ? staticResult.value.resources : []
+      const candidates = createModelPriceCandidates(availableResources, staticResources)
+      const issue = [readSettledError(availableResult), readSettledError(staticResult)]
+        .filter(Boolean)
+        .join('\n')
+
+      if (candidates.length === 0 && issue) {
+        throw toModelsApiError(new Error(issue))
+      }
+
+      return {
+        candidates,
+        issue: issue || null,
       }
     },
   })
@@ -271,6 +411,13 @@ export function useBillingWorkbench(
     modelPricesLoading: modelPricesQuery.isLoading,
     modelPricesFetching: modelPricesQuery.isFetching,
     modelPricesError: modelPricesQuery.error ? toError(modelPricesQuery.error).message : null,
+    modelPriceCandidates: modelPriceCandidatesQuery.data?.candidates ?? [],
+    modelPriceCandidatesLoading: modelPriceCandidatesQuery.isLoading,
+    modelPriceCandidatesFetching: modelPriceCandidatesQuery.isFetching,
+    modelPriceCandidatesIssue: modelPriceCandidatesQuery.data?.issue ?? null,
+    modelPriceCandidatesError: modelPriceCandidatesQuery.error
+      ? toError(modelPriceCandidatesQuery.error).message
+      : null,
     proxyPools: proxyPoolsQuery.data?.items ?? [],
     proxyPoolsLoading: proxyPoolsQuery.isLoading,
     proxyPoolsFetching: proxyPoolsQuery.isFetching,
@@ -282,6 +429,7 @@ export function useBillingWorkbench(
     refreshCharges: chargesQuery.refetch,
     refreshBalanceRecords: balanceRecordsQuery.refetch,
     refreshModelPrices: modelPricesQuery.refetch,
+    refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
     refreshProxyPools: proxyPoolsQuery.refetch,
     recharge: rechargeMutation.mutateAsync,
     deduct: deductionMutation.mutateAsync,

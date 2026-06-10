@@ -1,11 +1,19 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import {
+  type ComponentProps,
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import {
   BarChart3,
-  CircleMinus,
   Copy,
   Eye,
   Loader2,
+  Minus,
+  PackageCheck,
   Pencil,
   Plus,
   RefreshCw,
@@ -16,16 +24,17 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { PageHeader } from '@/components/shared/page-header'
-import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   DrawerScaffoldBody,
   DrawerScaffoldContent,
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { PageHeader } from '@/components/shared/page-header'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   TableSurface,
+  TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
@@ -48,12 +57,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetDescription,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -73,7 +79,10 @@ import {
   getNextOffset,
   getPreviousOffset,
 } from '@/features/billing/billing-model'
-import { useBillingWorkbench } from '@/features/billing/use-billing-workbench'
+import {
+  type BillingModelPriceCandidate,
+  useBillingWorkbench,
+} from '@/features/billing/use-billing-workbench'
 import type {
   BalanceRecord,
   BillingFilters,
@@ -108,7 +117,12 @@ type PendingBalanceOperation = {
     amount: number
     note: string
   }
+  userLabel: string
+  currentBalance: number
+  nextBalance: number
 }
+
+type BalanceOperationDraft = Omit<PendingBalanceOperation, 'operation'>
 
 const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices', 'proxyPools']
 
@@ -178,6 +192,34 @@ function maskUrl(value: string) {
   return `${value.slice(0, 24)}...${value.slice(-16)}`
 }
 
+function formatUserIdentity(user: UserResource) {
+  return user.numericId !== null ? `${user.username} (#${user.numericId})` : user.username
+}
+
+function formatUserReference(
+  username: string,
+  userId: number | null,
+  users: UserResource[],
+  fallback: string,
+) {
+  const matchedUser = userId !== null ? users.find((user) => user.numericId === userId) : undefined
+
+  if (matchedUser) return formatUserIdentity(matchedUser)
+  if (username && userId !== null) return `${username} (#${userId})`
+  if (username) return username
+  if (userId !== null) return `#${userId}`
+  return fallback
+}
+
+function isValidProxyUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return ['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol)
+  } catch {
+    return false
+  }
+}
+
 async function copyText(value: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(value)
@@ -228,6 +270,100 @@ function ErrorNotice({ message, fallback }: { message: string | null; fallback: 
 
 function EmptyState({ children }: { children: string }) {
   return <div className="text-muted-foreground px-4 py-10 text-center text-sm">{children}</div>
+}
+
+function CompactDrawerFormBody({ className, children }: ComponentProps<'div'>) {
+  return (
+    <DrawerScaffoldBody className="p-4 sm:p-5">
+      <div className={cn('grid w-full gap-4', className)}>{children}</div>
+    </DrawerScaffoldBody>
+  )
+}
+
+function CompactField({
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string
+  hint?: string
+  error?: string | null
+  children: ReactNode
+}) {
+  return (
+    <div className="grid gap-1.5 text-sm font-medium">
+      <span>{label}</span>
+      {children}
+      {error ? (
+        <p className="text-destructive text-xs leading-5 font-normal" aria-live="polite">
+          {error}
+        </p>
+      ) : null}
+      {hint ? <p className="text-muted-foreground text-xs leading-5 font-normal">{hint}</p> : null}
+    </div>
+  )
+}
+
+function CompactSummaryRow({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string
+  value: string
+  valueClassName?: string
+}) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <span className="text-muted-foreground min-w-0 truncate">{label}</span>
+      <span className={cn('min-w-0 text-right font-medium tabular-nums', valueClassName)}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function StateBadge({ enabled }: { enabled: boolean }) {
+  const { t } = useTranslation()
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
+        enabled
+          ? 'border-success/30 bg-success/10 text-success'
+          : 'border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning',
+      )}
+    >
+      {enabled ? t('billingPage.common.enabled') : t('billingPage.common.disabled')}
+    </span>
+  )
+}
+
+function StateToggle({
+  enabled,
+  disabled,
+  label,
+  onToggle,
+}: {
+  enabled: boolean
+  disabled: boolean
+  label: string
+  onToggle: () => void
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <StateBadge enabled={enabled} />
+      <Switch
+        checked={enabled}
+        disabled={disabled}
+        aria-label={label}
+        onCheckedChange={onToggle}
+        onClick={(event) => event.stopPropagation()}
+      />
+    </div>
+  )
 }
 
 function PaginationBar({
@@ -514,6 +650,10 @@ function ChargeRecordsTab({
         />
       }
     >
+      <TableSurfaceHeader
+        title={t('billingPage.charges.title')}
+        description={t('billingPage.charges.description')}
+      />
       {workbench.charges.length === 0 ? (
         <EmptyState>{t('billingPage.charges.empty')}</EmptyState>
       ) : (
@@ -613,24 +753,22 @@ function BalanceRecordsTab({
         />
       }
     >
-      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">{t('billingPage.balance.title')}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('billingPage.balance.description')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => onCreate('recharge')}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('billingPage.balance.actions.recharge')}
-          </Button>
-          <Button variant="warning" onClick={() => onCreate('deduct')}>
-            <CircleMinus className="size-4" aria-hidden="true" />
-            {t('billingPage.balance.actions.deduct')}
-          </Button>
-        </div>
-      </div>
+      <TableSurfaceHeader
+        title={t('billingPage.balance.title')}
+        description={t('billingPage.balance.description')}
+        actions={
+          <>
+            <Button onClick={() => onCreate('recharge')}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t('billingPage.balance.actions.recharge')}
+            </Button>
+            <Button variant="warning" onClick={() => onCreate('deduct')}>
+              <Minus className="size-4" aria-hidden="true" />
+              {t('billingPage.balance.actions.deduct')}
+            </Button>
+          </>
+        }
+      />
       {workbench.balanceRecords.length === 0 ? (
         <EmptyState>{t('billingPage.balance.empty')}</EmptyState>
       ) : (
@@ -656,7 +794,14 @@ function BalanceRecordsTab({
                 <TableCell>
                   {formatDateTime(record.createdAt, t('billingPage.common.na'))}
                 </TableCell>
-                <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
+                <TableCell>
+                  {formatUserReference(
+                    record.username,
+                    record.userId,
+                    workbench.users,
+                    t('billingPage.common.na'),
+                  )}
+                </TableCell>
                 <TableCell>
                   {record.type === 'recharge'
                     ? t('billingPage.balance.types.recharge')
@@ -681,10 +826,17 @@ function BalanceRecordsTab({
                   {record.note || t('billingPage.common.na')}
                 </TableCell>
                 <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                  <Button variant="text" size="sm" onClick={() => onView(record)}>
-                    <Eye className="size-4" aria-hidden="true" />
-                    {t('billingPage.common.view')}
-                  </Button>
+                  <div className="table-action-cell-content">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      className="px-2"
+                      onClick={() => onView(record)}
+                    >
+                      <Eye className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.view')}
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -725,18 +877,16 @@ function ModelPricesTab({
 
   return (
     <TableSurface>
-      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">{t('billingPage.prices.title')}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('billingPage.prices.description')}
-          </p>
-        </div>
-        <Button onClick={onCreate}>
-          <Plus className="size-4" aria-hidden="true" />
-          {t('billingPage.prices.actions.create')}
-        </Button>
-      </div>
+      <TableSurfaceHeader
+        title={t('billingPage.prices.title')}
+        description={t('billingPage.prices.description')}
+        actions={
+          <Button onClick={onCreate}>
+            <Plus className="size-4" aria-hidden="true" />
+            {t('billingPage.prices.actions.create')}
+          </Button>
+        }
+      />
       {workbench.modelPrices.length === 0 ? (
         <EmptyState>{t('billingPage.prices.empty')}</EmptyState>
       ) : (
@@ -753,7 +903,7 @@ function ModelPricesTab({
               <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
               <TableHead>{t('billingPage.prices.columns.state')}</TableHead>
               <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[232px] text-right">
+              <TableHead className="table-sticky-action-head w-[184px] text-right">
                 {t('billingPage.common.actions')}
               </TableHead>
             </TableRow>
@@ -793,30 +943,35 @@ function ModelPricesTab({
                 <TableCell className="tabular-nums">{formatMoney(resource.requestPrice)}</TableCell>
                 <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
                 <TableCell>
-                  {resource.enabled
-                    ? t('billingPage.common.enabled')
-                    : t('billingPage.common.disabled')}
+                  <StateToggle
+                    enabled={resource.enabled}
+                    disabled={workbench.mutating}
+                    label={t('billingPage.prices.actions.toggleState', {
+                      model: resource.model || resource.provider,
+                    })}
+                    onToggle={() => onToggle(resource)}
+                  />
                 </TableCell>
                 <TableCell>
                   {formatDateTime(resource.updatedAt, t('billingPage.common.na'))}
                 </TableCell>
-                <TableCell className="table-sticky-action-cell w-[232px] text-right transition-colors">
-                  <div className="flex justify-end gap-1.5">
+                <TableCell className="table-sticky-action-cell w-[184px] text-right transition-colors">
+                  <div className="table-action-cell-content">
                     <Button
                       variant="text"
                       size="sm"
-                      disabled={workbench.mutating}
-                      onClick={() => onToggle(resource)}
+                      className="px-2"
+                      onClick={() => onEdit(resource)}
                     >
-                      {resource.enabled
-                        ? t('billingPage.common.disable')
-                        : t('billingPage.common.enable')}
-                    </Button>
-                    <Button variant="text" size="sm" onClick={() => onEdit(resource)}>
                       <Pencil className="size-4" aria-hidden="true" />
                       {t('billingPage.common.edit')}
                     </Button>
-                    <Button variant="destructiveText" size="sm" onClick={() => onDelete(resource)}>
+                    <Button
+                      variant="destructiveText"
+                      size="sm"
+                      className="px-2"
+                      onClick={() => onDelete(resource)}
+                    >
                       <Trash2 className="size-4" aria-hidden="true" />
                       {t('billingPage.common.delete')}
                     </Button>
@@ -863,18 +1018,16 @@ function ProxyPoolsTab({
 
   return (
     <TableSurface>
-      <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-sm font-semibold">{t('billingPage.proxies.title')}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('billingPage.proxies.description')}
-          </p>
-        </div>
-        <Button onClick={onCreate}>
-          <Plus className="size-4" aria-hidden="true" />
-          {t('billingPage.proxies.actions.create')}
-        </Button>
-      </div>
+      <TableSurfaceHeader
+        title={t('billingPage.proxies.title')}
+        description={t('billingPage.proxies.description')}
+        actions={
+          <Button onClick={onCreate}>
+            <Plus className="size-4" aria-hidden="true" />
+            {t('billingPage.proxies.actions.create')}
+          </Button>
+        }
+      />
       {workbench.proxyPools.length === 0 ? (
         <EmptyState>{t('billingPage.proxies.empty')}</EmptyState>
       ) : (
@@ -888,7 +1041,7 @@ function ProxyPoolsTab({
               <TableHead>{t('billingPage.proxies.columns.priority')}</TableHead>
               <TableHead>{t('billingPage.proxies.columns.lastTest')}</TableHead>
               <TableHead>{t('billingPage.proxies.columns.note')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[320px] text-right">
+              <TableHead className="table-sticky-action-head w-[256px] text-right">
                 {t('billingPage.common.actions')}
               </TableHead>
             </TableRow>
@@ -916,9 +1069,14 @@ function ProxyPoolsTab({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {resource.enabled
-                    ? t('billingPage.common.enabled')
-                    : t('billingPage.common.disabled')}
+                  <StateToggle
+                    enabled={resource.enabled}
+                    disabled={workbench.mutating}
+                    label={t('billingPage.proxies.actions.toggleState', {
+                      name: resource.name,
+                    })}
+                    onToggle={() => onToggle(resource)}
+                  />
                 </TableCell>
                 <TableCell>{t('billingPage.proxies.scope.global')}</TableCell>
                 <TableCell className="tabular-nums">{resource.priority}</TableCell>
@@ -928,11 +1086,12 @@ function ProxyPoolsTab({
                 <TableCell className="max-w-[220px] truncate">
                   {resource.note || t('billingPage.common.na')}
                 </TableCell>
-                <TableCell className="table-sticky-action-cell w-[320px] text-right transition-colors">
-                  <div className="flex justify-end gap-1.5">
+                <TableCell className="table-sticky-action-cell w-[256px] text-right transition-colors">
+                  <div className="table-action-cell-content">
                     <Button
                       variant="text"
                       size="sm"
+                      className="px-2"
                       disabled={workbench.mutating}
                       onClick={() => onTest(resource)}
                     >
@@ -942,18 +1101,18 @@ function ProxyPoolsTab({
                     <Button
                       variant="text"
                       size="sm"
-                      disabled={workbench.mutating}
-                      onClick={() => onToggle(resource)}
+                      className="px-2"
+                      onClick={() => onEdit(resource)}
                     >
-                      {resource.enabled
-                        ? t('billingPage.common.disable')
-                        : t('billingPage.common.enable')}
-                    </Button>
-                    <Button variant="text" size="sm" onClick={() => onEdit(resource)}>
                       <Pencil className="size-4" aria-hidden="true" />
                       {t('billingPage.common.edit')}
                     </Button>
-                    <Button variant="destructiveText" size="sm" onClick={() => onDelete(resource)}>
+                    <Button
+                      variant="destructiveText"
+                      size="sm"
+                      className="px-2"
+                      onClick={() => onDelete(resource)}
+                    >
                       <Trash2 className="size-4" aria-hidden="true" />
                       {t('billingPage.common.delete')}
                     </Button>
@@ -1063,7 +1222,7 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
   )
 }
 
-function BalanceDetailSheet({ record }: { record: BalanceRecord }) {
+function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: UserResource[] }) {
   const { t } = useTranslation()
   const amount = record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount)
   const rows = [
@@ -1071,7 +1230,10 @@ function BalanceDetailSheet({ record }: { record: BalanceRecord }) {
       t('billingPage.balanceDetail.createdAt'),
       formatDateTime(record.createdAt, t('billingPage.common.na')),
     ],
-    [t('billingPage.balanceDetail.user'), record.username || `#${record.userId ?? '-'}`],
+    [
+      t('billingPage.balanceDetail.user'),
+      formatUserReference(record.username, record.userId, users, t('billingPage.common.na')),
+    ],
     [
       t('billingPage.balanceDetail.type'),
       record.type === 'recharge'
@@ -1108,7 +1270,7 @@ function BalanceOperationSheet({
   users: UserResource[]
   mutating: boolean
   onCancel: () => void
-  onSubmit: (input: { userId: number; amount: number; note: string }) => Promise<void>
+  onSubmit: (draft: BalanceOperationDraft) => Promise<void>
 }) {
   const { t } = useTranslation()
   const firstUser = users.find((user) => user.numericId !== null)
@@ -1116,12 +1278,18 @@ function BalanceOperationSheet({
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{
+    userId?: string
+    amount?: string
+    note?: string
+  }>({})
   const selectedUser = users.find(
     (user) => user.numericId !== null && String(user.numericId) === userId,
   )
   const parsedAmount = Number(amount)
+  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0
   const nextBalance =
-    selectedUser && Number.isFinite(parsedAmount)
+    selectedUser && amountIsValid
       ? selectedUser.credits + (operation === 'recharge' ? parsedAmount : -parsedAmount)
       : null
 
@@ -1130,29 +1298,43 @@ function BalanceOperationSheet({
     setAmount('')
     setNote('')
     setError(null)
+    setFieldErrors({})
   }, [firstUser?.numericId, operation])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const numericUserId = Number(userId)
     const numericAmount = Number(amount)
+    const nextFieldErrors: typeof fieldErrors = {}
 
     if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
-      setError(t('billingPage.balance.validation.userRequired'))
-      return
+      nextFieldErrors.userId = t('billingPage.balance.validation.userRequired')
     }
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError(t('billingPage.balance.validation.amountRequired'))
-      return
+      nextFieldErrors.amount = t('billingPage.balance.validation.amountRequired')
     }
     if (operation === 'deduct' && !note.trim()) {
-      setError(t('billingPage.balance.validation.noteRequired'))
+      nextFieldErrors.note = t('billingPage.balance.validation.noteRequired')
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setError(null)
       return
     }
 
+    setFieldErrors({})
     setError(null)
     try {
-      await onSubmit({ userId: numericUserId, amount: numericAmount, note: note.trim() })
+      await onSubmit({
+        input: { userId: numericUserId, amount: numericAmount, note: note.trim() },
+        userLabel: selectedUser ? formatUserIdentity(selectedUser) : `#${numericUserId}`,
+        currentBalance: selectedUser?.credits ?? 0,
+        nextBalance:
+          selectedUser?.credits !== undefined
+            ? selectedUser.credits + (operation === 'recharge' ? numericAmount : -numericAmount)
+            : 0,
+      })
     } catch (error) {
       setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
     }
@@ -1160,11 +1342,20 @@ function BalanceOperationSheet({
 
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
-      <DrawerScaffoldBody className="grid gap-5">
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.balance.form.user')}</span>
-          <Select value={userId} onValueChange={setUserId} disabled={mutating}>
-            <SelectTrigger>
+      <CompactDrawerFormBody>
+        <CompactField label={t('billingPage.balance.form.user')} error={fieldErrors.userId}>
+          <Select
+            value={userId}
+            onValueChange={(value) => {
+              setUserId(value)
+              setFieldErrors((current) => ({ ...current, userId: undefined }))
+            }}
+            disabled={mutating}
+          >
+            <SelectTrigger
+              aria-label={t('billingPage.balance.form.user')}
+              aria-invalid={Boolean(fieldErrors.userId)}
+            >
               <SelectValue placeholder={t('billingPage.balance.form.userPlaceholder')} />
             </SelectTrigger>
             <SelectContent>
@@ -1172,56 +1363,73 @@ function BalanceOperationSheet({
                 .filter((user) => user.numericId !== null)
                 .map((user) => (
                   <SelectItem key={user.id} value={String(user.numericId)}>
-                    {user.username}
+                    {formatUserIdentity(user)}
                   </SelectItem>
                 ))}
             </SelectContent>
           </Select>
-        </label>
-        <div className="grid gap-3 rounded-md border p-3 text-sm">
-          <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground">{t('billingPage.balance.form.current')}</span>
-            <span className="font-medium tabular-nums">
-              {selectedUser ? formatMoney(selectedUser.credits) : t('billingPage.common.na')}
-            </span>
-          </div>
-          <div className="flex justify-between gap-3">
-            <span className="text-muted-foreground">{t('billingPage.balance.form.after')}</span>
-            <span className="font-medium tabular-nums">
-              {nextBalance !== null ? formatMoney(nextBalance) : t('billingPage.common.na')}
-            </span>
-          </div>
+        </CompactField>
+        <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
+          <CompactSummaryRow
+            label={t('billingPage.balance.form.current')}
+            value={selectedUser ? formatMoney(selectedUser.credits) : t('billingPage.common.na')}
+          />
+          <CompactSummaryRow
+            label={t('billingPage.balance.form.after')}
+            value={nextBalance !== null ? formatMoney(nextBalance) : t('billingPage.common.na')}
+            valueClassName={cn(
+              nextBalance !== null && nextBalance < 0
+                ? 'text-warning-foreground dark:text-warning'
+                : null,
+            )}
+          />
         </div>
         {operation === 'deduct' && nextBalance !== null && nextBalance < 0 ? (
           <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
             {t('billingPage.balance.form.negativeHint')}
           </div>
         ) : null}
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.balance.form.amount')}</span>
+        <CompactField label={t('billingPage.balance.form.amount')} error={fieldErrors.amount}>
           <Input
             type="number"
             min="0"
             step="0.000001"
             value={amount}
+            aria-label={t('billingPage.balance.form.amount')}
+            aria-invalid={Boolean(fieldErrors.amount)}
             disabled={mutating}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => {
+              setAmount(event.target.value)
+              setFieldErrors((current) => ({ ...current, amount: undefined }))
+            }}
           />
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>
-            {operation === 'deduct'
+        </CompactField>
+        <CompactField
+          label={
+            operation === 'deduct'
               ? t('billingPage.balance.form.noteRequired')
-              : t('billingPage.balance.form.note')}
-          </span>
+              : t('billingPage.balance.form.note')
+          }
+          error={fieldErrors.note}
+        >
           <Textarea
             value={note}
+            className="min-h-20"
+            aria-label={
+              operation === 'deduct'
+                ? t('billingPage.balance.form.noteRequired')
+                : t('billingPage.balance.form.note')
+            }
+            aria-invalid={Boolean(fieldErrors.note)}
             disabled={mutating}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => {
+              setNote(event.target.value)
+              setFieldErrors((current) => ({ ...current, note: undefined }))
+            }}
           />
-        </label>
+        </CompactField>
         {error ? <ErrorNotice message={error} fallback={error} /> : null}
-      </DrawerScaffoldBody>
+      </CompactDrawerFormBody>
       <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
@@ -1234,7 +1442,7 @@ function BalanceOperationSheet({
           {mutating ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           ) : operation === 'deduct' ? (
-            <CircleMinus className="size-4" aria-hidden="true" />
+            <Minus className="size-4" aria-hidden="true" />
           ) : (
             <Plus className="size-4" aria-hidden="true" />
           )}
@@ -1247,15 +1455,50 @@ function BalanceOperationSheet({
   )
 }
 
+function createModelPriceCandidateValue(provider: string, model: string) {
+  return JSON.stringify([provider, model])
+}
+
+function createCurrentModelPriceCandidate(
+  input: Pick<ModelPriceInput, 'provider' | 'model'>,
+): BillingModelPriceCandidate | null {
+  const provider = input.provider.trim()
+  const model = input.model.trim()
+  if (!provider || !model) return null
+
+  return {
+    id: `${provider}:${model}`,
+    provider,
+    model,
+    label: model,
+    description: model,
+    ownedBy: null,
+    type: null,
+    scopes: [],
+  }
+}
+
 function ModelPriceSheet({
   mode,
+  candidates,
+  candidatesLoading,
+  candidatesFetching,
+  candidatesError,
+  candidatesIssue,
   mutating,
   onCancel,
+  onRetryCandidates,
   onSubmit,
 }: {
   mode: { type: 'create' } | { type: 'edit'; resource: ModelPrice }
+  candidates: BillingModelPriceCandidate[]
+  candidatesLoading: boolean
+  candidatesFetching: boolean
+  candidatesError: string | null
+  candidatesIssue: string | null
   mutating: boolean
   onCancel: () => void
+  onRetryCandidates: () => void
   onSubmit: (input: ModelPriceInput) => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -1272,6 +1515,49 @@ function ModelPriceSheet({
     note: resource?.note ?? '',
   })
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof ModelPriceInput | 'provider' | 'model', string>>
+  >({})
+  const [modelSearch, setModelSearch] = useState('')
+  const currentCandidate = useMemo(() => createCurrentModelPriceCandidate(input), [input])
+  const candidateOptions = useMemo(() => {
+    const options = [...candidates]
+    if (
+      currentCandidate &&
+      !options.some(
+        (candidate) =>
+          candidate.provider === currentCandidate.provider &&
+          candidate.model === currentCandidate.model,
+      )
+    ) {
+      options.unshift(currentCandidate)
+    }
+
+    return options
+  }, [candidates, currentCandidate])
+  const selectedCandidate =
+    candidateOptions.find(
+      (candidate) =>
+        candidate.provider === input.provider.trim() && candidate.model === input.model.trim(),
+    ) ?? currentCandidate
+  const filteredCandidates = useMemo(() => {
+    const normalizedSearch = modelSearch.trim().toLowerCase()
+    if (!normalizedSearch) return candidateOptions
+
+    return candidateOptions.filter((candidate) =>
+      [
+        candidate.provider,
+        candidate.model,
+        candidate.label,
+        candidate.description,
+        candidate.ownedBy ?? '',
+        candidate.type ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch),
+    )
+  }, [candidateOptions, modelSearch])
 
   useEffect(() => {
     setInput({
@@ -1286,119 +1572,296 @@ function ModelPriceSheet({
       note: resource?.note ?? '',
     })
     setError(null)
+    setFieldErrors({})
+    setModelSearch('')
   }, [resource])
 
   const setNumber = (key: keyof ModelPriceInput, value: string) => {
     setInput((current) => ({ ...current, [key]: Number(value) }))
+    setFieldErrors((current) => ({ ...current, [key]: undefined }))
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    const nextFieldErrors: typeof fieldErrors = {}
+
     if (!input.provider.trim() || !input.model.trim()) {
-      setError(t('billingPage.prices.validation.identityRequired'))
-      return
+      nextFieldErrors.model = t('billingPage.prices.validation.modelRequired')
     }
-    const numbers = [
-      input.inputPricePerMillion,
-      input.outputPricePerMillion,
-      input.cacheReadPricePerMillion,
-      input.cacheWritePricePerMillion,
-      input.requestPrice,
-    ]
-    if (numbers.some((value) => !Number.isFinite(value) || value < 0)) {
-      setError(t('billingPage.prices.validation.priceInvalid'))
+    const priceFields = [
+      'inputPricePerMillion',
+      'outputPricePerMillion',
+      'cacheReadPricePerMillion',
+      'cacheWritePricePerMillion',
+      'requestPrice',
+    ] as const
+    priceFields.forEach((key) => {
+      const value = input[key]
+      if (!Number.isFinite(value) || value < 0) {
+        nextFieldErrors[key] = t('billingPage.prices.validation.priceInvalid')
+      }
+    })
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setError(null)
       return
     }
 
+    setFieldErrors({})
     setError(null)
     try {
-      await onSubmit(input)
+      await onSubmit({
+        ...input,
+        provider: input.provider.trim(),
+        model: input.model.trim(),
+        note: input.note?.trim() || undefined,
+      })
     } catch (error) {
       setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
     }
   }
 
+  const priceFields = [
+    ['inputPricePerMillion', 'input'],
+    ['outputPricePerMillion', 'output'],
+    ['cacheReadPricePerMillion', 'cacheRead'],
+    ['cacheWritePricePerMillion', 'cacheWrite'],
+    ['requestPrice', 'request'],
+  ] as const
+
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
-      <DrawerScaffoldBody className="grid gap-5">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-2 text-sm font-medium">
-            <span>{t('billingPage.prices.form.provider')}</span>
-            <Input
-              value={input.provider}
+      <CompactDrawerFormBody>
+        <section className="grid gap-2">
+          <CompactField label={t('billingPage.prices.form.modelSelect')} error={fieldErrors.model}>
+            <div className="grid gap-2">
+              <div className="relative">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <Input
+                  value={modelSearch}
+                  className="pl-9"
+                  placeholder={t('billingPage.prices.form.modelSearchPlaceholder')}
+                  disabled={mutating || (candidatesLoading && candidateOptions.length === 0)}
+                  onChange={(event) => setModelSearch(event.target.value)}
+                />
+              </div>
+              <div className="bg-muted/20 rounded-md border p-1.5">
+                <div
+                  className="grid max-h-72 gap-1 overflow-y-auto pr-1"
+                  role="listbox"
+                  aria-label={t('billingPage.prices.form.modelSelect')}
+                >
+                  {filteredCandidates.length > 0 ? (
+                    filteredCandidates.map((candidate) => (
+                      <button
+                        key={createModelPriceCandidateValue(candidate.provider, candidate.model)}
+                        type="button"
+                        role="option"
+                        aria-label={`${candidate.label}, ${candidate.model}, ${candidate.provider}`}
+                        aria-selected={
+                          candidate.provider === input.provider.trim() &&
+                          candidate.model === input.model.trim()
+                        }
+                        disabled={mutating}
+                        className={cn(
+                          'hover:bg-accent focus-visible:ring-ring/50 grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
+                          candidate.provider === input.provider.trim() &&
+                            candidate.model === input.model.trim()
+                            ? 'border-primary/45 bg-primary/10'
+                            : 'bg-card border-transparent',
+                        )}
+                        onClick={() => {
+                          setInput((current) => ({
+                            ...current,
+                            provider: candidate.provider,
+                            model: candidate.model,
+                          }))
+                          setFieldErrors((current) => ({
+                            ...current,
+                            provider: undefined,
+                            model: undefined,
+                          }))
+                        }}
+                      >
+                        <ProviderLogo providerId={toProviderLogoId(candidate.provider)} size="sm" />
+                        <span className="grid min-w-0 gap-0.5">
+                          <span className="min-w-0 truncate font-medium">{candidate.label}</span>
+                          <span className="text-muted-foreground grid min-w-0 gap-1 text-xs leading-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+                            <span className="min-w-0 truncate">{candidate.model}</span>
+                            <span className="min-w-0 truncate sm:text-right">
+                              {candidate.provider}
+                            </span>
+                          </span>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="text-muted-foreground px-2 py-6 text-center text-sm">
+                      {modelSearch.trim()
+                        ? t('billingPage.prices.form.modelSearchEmpty')
+                        : t('billingPage.prices.form.modelCandidateEmpty')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CompactField>
+          {candidatesLoading ? (
+            <div className="grid gap-2">
+              <Skeleton className="h-9 rounded-md" />
+              <Skeleton className="h-16 rounded-md" />
+            </div>
+          ) : null}
+          {candidatesError ? (
+            <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
+              <p className="text-destructive text-sm">{candidatesError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                disabled={mutating || candidatesFetching}
+                onClick={onRetryCandidates}
+              >
+                {candidatesFetching ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <RefreshCw className="size-4" aria-hidden="true" />
+                )}
+                {t('billingPage.prices.form.reloadModels')}
+              </Button>
+            </div>
+          ) : candidatesIssue ? (
+            <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+              {candidatesIssue}
+            </div>
+          ) : null}
+        </section>
+        <section
+          aria-live="polite"
+          className={cn(
+            'grid gap-3 rounded-md border px-3 py-3 text-sm',
+            selectedCandidate ? 'border-primary/30 bg-primary/10' : 'bg-muted/25 border-dashed',
+          )}
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <div
+              className={cn(
+                'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border',
+                selectedCandidate
+                  ? 'border-primary/30 bg-primary/12 text-primary'
+                  : 'bg-background text-muted-foreground',
+              )}
+            >
+              {selectedCandidate ? (
+                <ProviderLogo providerId={toProviderLogoId(selectedCandidate.provider)} size="sm" />
+              ) : (
+                <PackageCheck className="size-4" aria-hidden="true" />
+              )}
+            </div>
+            <div className="grid min-w-0 gap-1">
+              <span className="text-muted-foreground text-xs font-medium">
+                {t('billingPage.prices.form.pricingTarget')}
+              </span>
+              {selectedCandidate ? (
+                <>
+                  <span className="min-w-0 truncate font-semibold">{selectedCandidate.label}</span>
+                  <div className="text-muted-foreground flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs leading-5">
+                    <span className="min-w-0 truncate">
+                      {t('billingPage.prices.form.provider')} {selectedCandidate.provider}
+                    </span>
+                    <span className="min-w-0 truncate">
+                      {t('billingPage.prices.form.model')} {selectedCandidate.model}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <span className="text-muted-foreground">
+                  {t('billingPage.prices.form.selectedModelPlaceholder')}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+        <section className="grid gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">{t('billingPage.prices.form.pricing')}</h3>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {t('billingPage.prices.form.pricingHint')}
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {priceFields.map(([key, label]) => (
+              <CompactField
+                key={key}
+                label={t(`billingPage.prices.form.${label}`)}
+                error={fieldErrors[key]}
+              >
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.000001"
+                  value={String(input[key] ?? 0)}
+                  aria-label={t(`billingPage.prices.form.${label}`)}
+                  aria-invalid={Boolean(fieldErrors[key])}
+                  disabled={mutating}
+                  onChange={(event) => setNumber(key, event.target.value)}
+                />
+              </CompactField>
+            ))}
+          </div>
+        </section>
+        <section className="grid gap-3 rounded-md border px-3 py-3">
+          <div>
+            <h3 className="text-sm font-semibold">{t('billingPage.prices.form.state')}</h3>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {t('billingPage.prices.form.stateHint')}
+            </p>
+          </div>
+          <CompactField label={t('billingPage.prices.form.enabled')}>
+            <Select
+              value={input.enabled ? 'enabled' : 'disabled'}
+              onValueChange={(value) =>
+                setInput((current) => ({ ...current, enabled: value === 'enabled' }))
+              }
+              disabled={mutating}
+            >
+              <SelectTrigger aria-label={t('billingPage.prices.form.enabled')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
+                <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </CompactField>
+          <CompactField label={t('billingPage.prices.form.note')}>
+            <Textarea
+              value={input.note ?? ''}
+              className="min-h-20"
+              aria-label={t('billingPage.prices.form.note')}
               disabled={mutating}
               onChange={(event) =>
-                setInput((current) => ({ ...current, provider: event.target.value }))
+                setInput((current) => ({ ...current, note: event.target.value }))
               }
             />
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
-            <span>{t('billingPage.prices.form.model')}</span>
-            <Input
-              value={input.model}
-              disabled={mutating}
-              onChange={(event) =>
-                setInput((current) => ({ ...current, model: event.target.value }))
-              }
-            />
-          </label>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {[
-            ['inputPricePerMillion', 'input'],
-            ['outputPricePerMillion', 'output'],
-            ['cacheReadPricePerMillion', 'cacheRead'],
-            ['cacheWritePricePerMillion', 'cacheWrite'],
-            ['requestPrice', 'request'],
-          ].map(([key, label]) => (
-            <label key={key} className="grid gap-2 text-sm font-medium">
-              <span>{t(`billingPage.prices.form.${label}`)}</span>
-              <Input
-                type="number"
-                min="0"
-                step="0.000001"
-                value={String(input[key as keyof ModelPriceInput] ?? 0)}
-                disabled={mutating}
-                onChange={(event) => setNumber(key as keyof ModelPriceInput, event.target.value)}
-              />
-            </label>
-          ))}
-        </div>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.prices.form.enabled')}</span>
-          <Select
-            value={input.enabled ? 'enabled' : 'disabled'}
-            onValueChange={(value) =>
-              setInput((current) => ({ ...current, enabled: value === 'enabled' }))
-            }
-            disabled={mutating}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
-              <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.prices.form.note')}</span>
-          <Textarea
-            value={input.note ?? ''}
-            disabled={mutating}
-            onChange={(event) => setInput((current) => ({ ...current, note: event.target.value }))}
-          />
-        </label>
+          </CompactField>
+        </section>
         {error ? <ErrorNotice message={error} fallback={error} /> : null}
-      </DrawerScaffoldBody>
+      </CompactDrawerFormBody>
       <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={mutating}>
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-          {t('billingPage.common.save')}
+          {mode.type === 'create'
+            ? t('billingPage.prices.actions.create')
+            : t('billingPage.common.save')}
         </Button>
       </DrawerScaffoldFooter>
     </form>
@@ -1426,6 +1889,11 @@ function ProxyPoolSheet({
     note: resource?.note ?? '',
   })
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{
+    name?: string
+    proxyUrl?: string
+    priority?: string
+  }>({})
 
   useEffect(() => {
     setInput({
@@ -1436,21 +1904,40 @@ function ProxyPoolSheet({
       note: resource?.note ?? '',
     })
     setError(null)
+    setFieldErrors({})
   }, [resource])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!input.name.trim() || !input.proxyUrl.trim()) {
-      setError(t('billingPage.proxies.validation.required'))
+    const nextFieldErrors: typeof fieldErrors = {}
+
+    if (!input.name.trim()) {
+      nextFieldErrors.name = t('billingPage.proxies.validation.nameRequired')
+    }
+    if (!input.proxyUrl.trim()) {
+      nextFieldErrors.proxyUrl = t('billingPage.proxies.validation.urlRequired')
+    } else if (!isValidProxyUrl(input.proxyUrl.trim())) {
+      nextFieldErrors.proxyUrl = t('billingPage.proxies.validation.urlInvalid')
+    }
+    if (!Number.isInteger(input.priority)) {
+      nextFieldErrors.priority = t('billingPage.proxies.validation.priorityInvalid')
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setError(null)
       return
     }
-    if (!Number.isFinite(input.priority)) {
-      setError(t('billingPage.proxies.validation.priorityInvalid'))
-      return
-    }
+
+    setFieldErrors({})
     setError(null)
     try {
-      await onSubmit(input)
+      await onSubmit({
+        ...input,
+        name: input.name.trim(),
+        proxyUrl: input.proxyUrl.trim(),
+        note: input.note?.trim() || undefined,
+      })
     } catch (error) {
       setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
     }
@@ -1458,77 +1945,116 @@ function ProxyPoolSheet({
 
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
-      <DrawerScaffoldBody className="grid gap-5">
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.proxies.form.name')}</span>
-          <Input
-            value={input.name}
-            disabled={mutating}
-            onChange={(event) => setInput((current) => ({ ...current, name: event.target.value }))}
-          />
-        </label>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.proxies.form.url')}</span>
-          <Input
-            value={input.proxyUrl}
-            disabled={mutating}
-            onChange={(event) =>
-              setInput((current) => ({ ...current, proxyUrl: event.target.value }))
-            }
-          />
-        </label>
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid gap-2 text-sm font-medium">
-            <span>{t('billingPage.proxies.form.enabled')}</span>
-            <Select
-              value={input.enabled ? 'enabled' : 'disabled'}
-              onValueChange={(value) =>
-                setInput((current) => ({ ...current, enabled: value === 'enabled' }))
-              }
-              disabled={mutating}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
-                <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="grid gap-2 text-sm font-medium">
-            <span>{t('billingPage.proxies.form.priority')}</span>
+      <CompactDrawerFormBody>
+        <section className="grid gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">{t('billingPage.proxies.form.identity')}</h3>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {t('billingPage.proxies.form.identityHint')}
+            </p>
+          </div>
+          <CompactField label={t('billingPage.proxies.form.name')} error={fieldErrors.name}>
             <Input
-              type="number"
-              value={String(input.priority)}
+              value={input.name}
+              aria-label={t('billingPage.proxies.form.name')}
+              aria-invalid={Boolean(fieldErrors.name)}
               disabled={mutating}
-              onChange={(event) =>
-                setInput((current) => ({ ...current, priority: Number(event.target.value) }))
-              }
+              onChange={(event) => {
+                setInput((current) => ({ ...current, name: event.target.value }))
+                setFieldErrors((current) => ({ ...current, name: undefined }))
+              }}
             />
-          </label>
-        </div>
-        <div className="rounded-md border px-3 py-2 text-sm">
-          <span className="text-muted-foreground">{t('billingPage.proxies.form.scope')}</span>
-          <span className="ml-2 font-medium">{t('billingPage.proxies.scope.global')}</span>
-        </div>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('billingPage.proxies.form.note')}</span>
+          </CompactField>
+          <CompactField
+            label={t('billingPage.proxies.form.url')}
+            hint={t('billingPage.proxies.form.urlHint')}
+            error={fieldErrors.proxyUrl}
+          >
+            <Input
+              value={input.proxyUrl}
+              aria-label={t('billingPage.proxies.form.url')}
+              aria-invalid={Boolean(fieldErrors.proxyUrl)}
+              disabled={mutating}
+              onChange={(event) => {
+                setInput((current) => ({ ...current, proxyUrl: event.target.value }))
+                setFieldErrors((current) => ({ ...current, proxyUrl: undefined }))
+              }}
+            />
+          </CompactField>
+        </section>
+        <section className="grid gap-3 rounded-md border px-3 py-3">
+          <div>
+            <h3 className="text-sm font-semibold">{t('billingPage.proxies.form.routing')}</h3>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {t('billingPage.proxies.form.routingHint')}
+            </p>
+          </div>
+          <div className="grid items-start gap-3 sm:grid-cols-2">
+            <CompactField label={t('billingPage.proxies.form.enabled')}>
+              <Select
+                value={input.enabled ? 'enabled' : 'disabled'}
+                onValueChange={(value) =>
+                  setInput((current) => ({ ...current, enabled: value === 'enabled' }))
+                }
+                disabled={mutating}
+              >
+                <SelectTrigger aria-label={t('billingPage.proxies.form.enabled')}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
+                  <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </CompactField>
+            <CompactField
+              label={t('billingPage.proxies.form.priority')}
+              error={fieldErrors.priority}
+            >
+              <Input
+                type="number"
+                step="1"
+                value={String(input.priority)}
+                aria-label={t('billingPage.proxies.form.priority')}
+                aria-invalid={Boolean(fieldErrors.priority)}
+                disabled={mutating}
+                onChange={(event) => {
+                  setInput((current) => ({ ...current, priority: Number(event.target.value) }))
+                  setFieldErrors((current) => ({ ...current, priority: undefined }))
+                }}
+              />
+            </CompactField>
+          </div>
+          <p className="text-muted-foreground text-xs leading-5">
+            {t('billingPage.proxies.form.priorityHint')}
+          </p>
+          <div className="bg-muted/25 rounded-md border px-3 py-2 text-sm">
+            <CompactSummaryRow
+              label={t('billingPage.proxies.form.scope')}
+              value={t('billingPage.proxies.scope.global')}
+            />
+          </div>
+        </section>
+        <CompactField label={t('billingPage.proxies.form.note')}>
           <Textarea
             value={input.note ?? ''}
+            className="min-h-20"
+            aria-label={t('billingPage.proxies.form.note')}
             disabled={mutating}
             onChange={(event) => setInput((current) => ({ ...current, note: event.target.value }))}
           />
-        </label>
+        </CompactField>
         {error ? <ErrorNotice message={error} fallback={error} /> : null}
-      </DrawerScaffoldBody>
+      </CompactDrawerFormBody>
       <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
         <Button type="submit" disabled={mutating}>
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-          {t('billingPage.common.save')}
+          {mode.type === 'create'
+            ? t('billingPage.proxies.actions.create')
+            : t('billingPage.proxies.actions.save')}
         </Button>
       </DrawerScaffoldFooter>
     </form>
@@ -1791,24 +2317,24 @@ export function BillingWorkbenchPage() {
                               ? t('billingPage.proxies.sheet.createTitle')
                               : t('billingPage.proxies.sheet.editTitle')}
                 </SheetTitle>
-                <SheetDescription>
-                  {sheetMode.type === 'charge-detail'
-                    ? t('billingPage.chargeDetail.description')
-                    : sheetMode.type === 'balance-detail'
-                      ? t('billingPage.balanceDetail.description')
-                      : sheetMode.type === 'balance'
-                        ? t('billingPage.balance.sheet.description')
-                        : sheetMode.type === 'model-price-create' ||
-                            sheetMode.type === 'model-price-edit'
-                          ? t('billingPage.prices.sheet.description')
+                {sheetMode.type === 'model-price-create' ||
+                sheetMode.type === 'model-price-edit' ? null : (
+                  <SheetDescription>
+                    {sheetMode.type === 'charge-detail'
+                      ? t('billingPage.chargeDetail.description')
+                      : sheetMode.type === 'balance-detail'
+                        ? t('billingPage.balanceDetail.description')
+                        : sheetMode.type === 'balance'
+                          ? t('billingPage.balance.sheet.description')
                           : t('billingPage.proxies.sheet.description')}
-                </SheetDescription>
+                  </SheetDescription>
+                )}
               </DrawerScaffoldHeader>
               {sheetMode.type === 'charge-detail' ? (
                 <ChargeDetailSheet record={sheetMode.record} />
               ) : null}
               {sheetMode.type === 'balance-detail' ? (
-                <BalanceDetailSheet record={sheetMode.record} />
+                <BalanceDetailSheet record={sheetMode.record} users={workbench.users} />
               ) : null}
               {sheetMode.type === 'balance' ? (
                 <BalanceOperationSheet
@@ -1816,10 +2342,10 @@ export function BillingWorkbenchPage() {
                   users={workbench.users}
                   mutating={workbench.mutating || workbench.usersLoading}
                   onCancel={closeSheet}
-                  onSubmit={(input) => {
+                  onSubmit={(draft) => {
                     setPendingBalanceOperation({
                       operation: sheetMode.operation,
-                      input,
+                      ...draft,
                     })
                     return Promise.resolve()
                   }}
@@ -1832,8 +2358,14 @@ export function BillingWorkbenchPage() {
                       ? { type: 'create' }
                       : { type: 'edit', resource: sheetMode.resource }
                   }
+                  candidates={workbench.modelPriceCandidates}
+                  candidatesLoading={workbench.modelPriceCandidatesLoading}
+                  candidatesFetching={workbench.modelPriceCandidatesFetching}
+                  candidatesError={workbench.modelPriceCandidatesError}
+                  candidatesIssue={workbench.modelPriceCandidatesIssue}
                   mutating={workbench.mutating}
                   onCancel={closeSheet}
+                  onRetryCandidates={workbench.refreshModelPriceCandidates}
                   onSubmit={async (input) => {
                     if (sheetMode.type === 'model-price-create') {
                       await workbench.createModelPrice(input)
@@ -1939,17 +2471,56 @@ export function BillingWorkbenchPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pendingBalanceOperation?.operation === 'deduct'
-                ? t('billingPage.balance.confirm.deductDescription', {
-                    amount: pendingBalanceOperation
-                      ? formatMoney(pendingBalanceOperation.input.amount)
-                      : '',
-                  })
-                : t('billingPage.balance.confirm.rechargeDescription', {
-                    amount: pendingBalanceOperation
-                      ? formatMoney(pendingBalanceOperation.input.amount)
-                      : '',
-                  })}
+                ? t('billingPage.balance.confirm.deductDescription')
+                : t('billingPage.balance.confirm.rechargeDescription')}
             </AlertDialogDescription>
+            {pendingBalanceOperation ? (
+              <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
+                <CompactSummaryRow
+                  label={t('billingPage.balance.confirm.user')}
+                  value={pendingBalanceOperation.userLabel}
+                />
+                <CompactSummaryRow
+                  label={t('billingPage.balance.confirm.amount')}
+                  value={formatSignedAmount(
+                    pendingBalanceOperation.operation === 'deduct'
+                      ? -Math.abs(pendingBalanceOperation.input.amount)
+                      : Math.abs(pendingBalanceOperation.input.amount),
+                  )}
+                  valueClassName={
+                    pendingBalanceOperation.operation === 'deduct'
+                      ? 'text-warning-foreground dark:text-warning'
+                      : 'text-success'
+                  }
+                />
+                <CompactSummaryRow
+                  label={t('billingPage.balance.confirm.current')}
+                  value={formatMoney(pendingBalanceOperation.currentBalance)}
+                />
+                <CompactSummaryRow
+                  label={t('billingPage.balance.confirm.after')}
+                  value={formatMoney(pendingBalanceOperation.nextBalance)}
+                  valueClassName={
+                    pendingBalanceOperation.nextBalance < 0
+                      ? 'text-warning-foreground dark:text-warning'
+                      : undefined
+                  }
+                />
+                <div className="grid gap-1 border-t pt-2">
+                  <span className="text-muted-foreground text-xs">
+                    {t('billingPage.balance.confirm.note')}
+                  </span>
+                  <span className="min-w-0 text-sm break-words">
+                    {pendingBalanceOperation.input.note || t('billingPage.common.na')}
+                  </span>
+                </div>
+                {pendingBalanceOperation.nextBalance < 0 ? (
+                  <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+                    {t('billingPage.balance.confirm.negativeResult')}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={workbench.mutating}>

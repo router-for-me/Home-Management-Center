@@ -404,7 +404,7 @@ export const en = {
         last30d: 'Last 30 days',
         custom: 'Custom',
         user: 'Filter user',
-        provider: 'Filter Provider',
+        provider: 'Filter provider',
         model: 'Filter model ID',
       },
       common: {
@@ -461,6 +461,8 @@ export const en = {
         },
       },
       charges: {
+        title: 'Charge records',
+        description: 'Review charge results, token usage, and balance changes for each request.',
         empty: 'No charge records in the selected range.',
         tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
         columns: {
@@ -499,8 +501,7 @@ export const en = {
       },
       balance: {
         title: 'Balance records',
-        description:
-          'Admin-created recharge and deduction ledger. Direct balance setting is not available.',
+        description: 'Review user balance recharges, deductions, and balance changes.',
         empty: 'No balance records in the selected range.',
         actions: {
           recharge: 'Recharge',
@@ -545,9 +546,16 @@ export const en = {
           rechargeTitle: 'Confirm recharge?',
           deductTitle: 'Confirm deduction?',
           rechargeDescription:
-            'Recharge this user by {{amount}}? Submitting creates a balance record.',
+            'Submitting creates a balance record. Confirm the user and resulting balance.',
           deductDescription:
-            'Deduct {{amount}} from this user balance? The resulting balance may be negative.',
+            'Deduction creates a balance record. Confirm the user, amount, and resulting balance.',
+          user: 'User',
+          amount: 'Amount change',
+          current: 'Current balance',
+          after: 'Balance after',
+          note: 'Note',
+          negativeResult:
+            'The resulting balance will be negative. Home allows negative balances, but confirm this is intended.',
           action: 'Confirm',
         },
       },
@@ -565,14 +573,14 @@ export const en = {
       },
       prices: {
         title: 'Model prices',
-        description:
-          'Maintain model charge rules. Historical charge records keep their price snapshots.',
+        description: 'Manage model unit prices used for future request charge calculations.',
         empty: 'No model prices yet.',
         actions: {
           create: 'New price',
+          toggleState: 'Toggle model price {{model}} enabled state',
         },
         columns: {
-          provider: 'Provider',
+          provider: 'Model provider',
           model: 'Model ID',
           input: 'Input price',
           output: 'Output price',
@@ -591,21 +599,43 @@ export const en = {
         sheet: {
           createTitle: 'New model price',
           editTitle: 'Edit model price',
-          description: 'Prices cannot be negative. Provider and model ID should be unique.',
         },
         form: {
-          provider: 'Provider',
+          identity: 'Model identity',
+          identityHint: 'Select a model from the list to create the charge matching rule.',
+          modelSelect: 'Select model',
+          modelPlaceholder: 'Select model',
+          modelSearchPlaceholder: 'Search model ID, name, or provider name',
+          modelCandidateEmpty: 'No models are available for selection.',
+          modelSearchEmpty: 'No models match your search.',
+          selectedModel: 'Selected model',
+          pricingTarget: 'Pricing target',
+          selectedModelPlaceholder:
+            'Select a model first. The price rule will apply to that model.',
+          reloadModels: 'Reload models',
+          provider: 'Model provider',
           model: 'Model ID',
           input: 'Input price per million tokens',
           output: 'Output price per million tokens',
           cacheRead: 'Cache read price per million tokens',
           cacheWrite: 'Cache write price per million tokens',
           request: 'Per-request price',
+          pricing: 'Price rules',
+          pricingHint:
+            'These prices apply to future charge calculations; historical charges keep their original price snapshot.',
+          state: 'Record state',
+          stateHint:
+            'The enabled state only controls whether this price rule applies to future charges.',
           enabled: 'Enabled state',
           note: 'Note',
         },
+        modelScopes: {
+          available: 'Runtime available',
+          static: 'Static catalog',
+        },
         validation: {
-          identityRequired: 'Provider and model ID are required.',
+          providerRequired: 'Provide a model provider.',
+          modelRequired: 'Select a model provider and model ID.',
           priceInvalid: 'Prices must be numbers greater than or equal to 0.',
         },
         delete: {
@@ -616,12 +646,13 @@ export const en = {
       },
       proxies: {
         title: 'Proxy pools',
-        description:
-          'The first version manages only global proxy pools, without user, model, or credential routing policies.',
+        description: 'Manage proxy endpoints and their connection status for request forwarding.',
         empty: 'No proxy pool entries yet.',
         actions: {
           create: 'New proxy',
+          save: 'Save proxy',
           test: 'Test',
+          toggleState: 'Toggle proxy {{name}} enabled state',
         },
         columns: {
           name: 'Name',
@@ -642,16 +673,26 @@ export const en = {
             'Proxy URLs are masked by default. Scope is fixed to global in this version.',
         },
         form: {
+          identity: 'Proxy information',
+          identityHint: 'Enter the proxy record used for identification and connectivity tests.',
           name: 'Name',
           url: 'Proxy URL',
+          urlHint: 'Supports http, https, socks5, or socks5h URLs.',
+          routing: 'Record state',
+          routingHint:
+            'This version only stores and tests global proxy records. It does not change runtime proxy priority, account selection, or outbound routing.',
           enabled: 'Enabled state',
           priority: 'Priority',
+          priorityHint: 'Stored integer value; it does not affect runtime routing in this version.',
           scope: 'Scope',
           note: 'Note',
         },
         validation: {
           required: 'Name and proxy URL are required.',
-          priorityInvalid: 'Priority must be a valid number.',
+          nameRequired: 'Name is required.',
+          urlRequired: 'Proxy URL is required.',
+          urlInvalid: 'Proxy URL must be a valid http, https, socks5, or socks5h URL.',
+          priorityInvalid: 'Priority must be an integer.',
         },
         delete: {
           title: 'Delete proxy?',
