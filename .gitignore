@@ -27,5 +27,6 @@ test-results
 .tanstack/
 
 .agents/
+.claude/
 .workbench/
 .impeccable/
