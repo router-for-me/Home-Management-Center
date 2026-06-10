@@ -24,6 +24,32 @@ function toError(error: unknown) {
   return new Error(String(error))
 }
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function createTodayRange(): UserBillingFilters {
+  const today = toDateInputValue(new Date())
+
+  return {
+    from: today,
+    to: today,
+  }
+}
+
+function createCurrentMonthRange(): UserBillingFilters {
+  const now = new Date()
+
+  return {
+    from: toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: toDateInputValue(now),
+  }
+}
+
 export function useUserBillingReport(
   filters: UserBillingFilters,
   pagination: UserBillingPagination,
@@ -43,7 +69,22 @@ export function useUserBillingReport(
   const overviewQuery = useQuery({
     queryKey: ['userBilling', 'overview', baseUrl, token, filters],
     enabled: authenticated,
-    queryFn: () => fetchUserBillingOverview(session, filters),
+    queryFn: async () => {
+      const [rangeOverview, todayOverview, monthOverview] = await Promise.all([
+        fetchUserBillingOverview(session, filters),
+        fetchUserBillingOverview(session, createTodayRange()),
+        fetchUserBillingOverview(session, createCurrentMonthRange()),
+      ])
+
+      return {
+        ...rangeOverview,
+        overview: {
+          ...rangeOverview.overview,
+          todaySpend: todayOverview.overview.todaySpend,
+          monthSpend: monthOverview.overview.monthSpend,
+        },
+      }
+    },
   })
 
   const chargesQuery = useQuery({

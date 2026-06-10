@@ -25,7 +25,7 @@ type UserSessionState = {
   rememberSession: boolean
   errorMessage: string | null
   setChecking: () => void
-  setAuthenticated: (session: UserAuthSession, rememberSession: boolean) => void
+  setAuthenticated: (session: UserAuthSession, rememberSession: boolean, baseUrl?: string) => void
   setError: (message: string) => void
   updateUser: (user: UserAccount) => void
   logout: () => void
@@ -98,7 +98,7 @@ function clearStoredSession() {
 
 const initialSession = readStoredSession()
 
-export const useUserSessionStore = create<UserSessionState>((set) => ({
+export const useUserSessionStore = create<UserSessionState>((set, get) => ({
   status: initialSession ? 'authenticated' : 'disconnected',
   baseUrl: initialSession?.baseUrl ?? DEFAULT_USER_API_BASE_URL,
   token: initialSession?.token ?? null,
@@ -111,9 +111,9 @@ export const useUserSessionStore = create<UserSessionState>((set) => ({
       status: 'checking',
       errorMessage: null,
     }),
-  setAuthenticated: (session, rememberSession) => {
+  setAuthenticated: (session, rememberSession, baseUrl) => {
     const nextSession: StoredUserSession = {
-      baseUrl: DEFAULT_USER_API_BASE_URL,
+      baseUrl: normalizeUserBaseUrl(baseUrl ?? get().baseUrl),
       token: session.token,
       expiresAt: session.expiresAt,
       user: session.user,
