@@ -267,7 +267,9 @@ function UsageVerdictHeader({
       })}
       meta={
         <>
-          <span>{t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}</span>
+          <span>
+            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
+          </span>
           <span>
             {t('usageLogsPage.header.updatedAt', {
               time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
@@ -589,12 +591,15 @@ function RuntimeLogViewer({
             <div className="relative">
               <Table
                 containerClassName={containedTableContainerClassName}
-                className="w-full min-w-[760px] table-fixed"
+                className="w-full min-w-[900px] table-fixed"
               >
                 <TableHeader className={stickyTableHeaderClassName}>
                   <TableRow variant="static">
                     <TableHead className="w-[172px]">
                       {t('usageLogsPage.logs.columns.time')}
+                    </TableHead>
+                    <TableHead className="w-[152px]">
+                      {t('usageLogsPage.logs.columns.request')}
                     </TableHead>
                     <TableHead>{t('usageLogsPage.logs.columns.summary')}</TableHead>
                     <TableHead className="table-sticky-action-head w-36 text-right">
@@ -851,6 +856,9 @@ function RuntimeLogRow({
     <TableRow variant="resource" className="group">
       <TableCell className="text-muted-foreground truncate">
         {formatDateTime(record.timestamp, i18n) ?? t('usageLogsPage.status.notAvailable')}
+      </TableCell>
+      <TableCell className="text-muted-foreground truncate font-mono text-xs">
+        {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
       </TableCell>
       <TableCell className="min-w-0 whitespace-normal">
         <div className="flex w-full min-w-0 items-center gap-2">
