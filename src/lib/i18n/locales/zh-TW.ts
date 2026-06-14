@@ -802,7 +802,7 @@ export const zhTW = {
         },
         config: {
           title: '系統設定',
-          description: '調整路由、日誌和 YAML 設定。',
+          description: '調整路由、日誌和執行設定。',
         },
         systemNodes: {
           title: '系統資訊',
@@ -1715,14 +1715,9 @@ export const zhTW = {
       },
       header: {
         title: '設定工作台',
-        description: '視覺化模式用於安全編輯常用設定；設定檔模式用於完整替換 config.yaml。',
+        description: '透過一個視覺化工作台編輯已支援的執行設定。',
         runtime: '執行環境：{{mode}}',
         updatedAt: '更新於 {{time}}',
-      },
-      modes: {
-        label: '設定編輯模式',
-        structured: '視覺化',
-        yaml: '設定檔',
       },
       actions: {
         reload: '重新載入',
@@ -1735,7 +1730,6 @@ export const zhTW = {
         clean: '無未儲存修改',
         unsaved: '有未儲存修改',
         visualChangeCount: '{{count}} 項視覺化變更',
-        fileChanged: '設定檔已修改',
         enabled: '已啟用',
         disabled: '已關閉',
         emptyValue: '空值',
@@ -1752,7 +1746,7 @@ export const zhTW = {
         tls: {
           title: 'TLS',
           shortTitle: 'TLS',
-          description: '設定 HTTPS 開關、憑證路徑和私鑰路徑。儲存時會寫回 config.yaml。',
+          description: '設定 HTTPS 開關、憑證路徑和私鑰路徑。',
         },
         remoteManagement: {
           title: '遠端管理',
@@ -1797,7 +1791,7 @@ export const zhTW = {
         payload: {
           title: 'Payload 規則',
           shortTitle: 'Payload',
-          description: '控制模型前綴處理。完整 payload 規則請在設定檔模式維護。',
+          description: '控制模型前綴處理。完整 payload 規則編輯暫不在目前工作台開放。',
         },
       },
       fields: {
@@ -1827,12 +1821,12 @@ export const zhTW = {
         },
         tlsCert: {
           label: '憑證路徑',
-          description: 'TLS certificate 檔案路徑，對應 config.yaml 中的 tls.cert。',
+          description: '執行環境使用的 TLS certificate 檔案路徑。',
           placeholder: '/path/to/cert.pem',
         },
         tlsKey: {
           label: '私鑰路徑',
-          description: 'TLS private key 檔案路徑，對應 config.yaml 中的 tls.key。',
+          description: '執行環境使用的 TLS private key 檔案路徑。',
           placeholder: '/path/to/key.pem',
         },
         remoteManagementAllowRemote: {
@@ -1841,7 +1835,7 @@ export const zhTW = {
         },
         remoteManagementSecretKey: {
           label: 'Management Key',
-          description: '管理面板使用的金鑰。本機設定模式下，服務端啟動時會處理明文金鑰。',
+          description: '管理面板存取受保護 API 時使用的金鑰。',
           placeholder: '輸入 management key',
         },
         remoteManagementDisableControlPanel: {
@@ -1945,7 +1939,7 @@ export const zhTW = {
       },
       json: {
         remove: '移除',
-        unsupportedStructure: '目前設定包含暫不支援視覺化編輯的結構，請在設定檔模式中維護。',
+        unsupportedStructure: '目前設定包含暫不支援視覺化編輯的結構。',
         emptyRows: '目前沒有規則。',
         addProvider: '新增供應商',
         addChannel: '新增 Channel',
@@ -2002,7 +1996,7 @@ export const zhTW = {
         emptyModels: '目前通道沒有回傳模型定義。',
         emptyFiltered: '沒有匹配的模型。',
         customTitle: '自訂 Provider 規則',
-        customDescription: '以下 provider 不在目前視覺化通道列表中，請在設定檔模式中維護。',
+        customDescription: '以下 provider 不在目前視覺化通道列表中，暫不能在這裡編輯。',
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
@@ -2018,32 +2012,13 @@ export const zhTW = {
       diff: {
         title: '儲存前變更',
         empty: '目前沒有待儲存的設定變更。',
-        visualDescription: '目前視覺化模式有 {{count}} 項未儲存修改。點擊項目可跳轉到對應設定區。',
-        fileDescription: '儲存後會完整覆蓋目前 config.yaml，請確認變更內容。',
-        fileChanged: '設定檔內容已修改。儲存會替換完整設定。',
-        addedLines: '新增 {{count}} 行',
-        removedLines: '刪除 {{count}} 行',
-        omittedLines: '已摺疊 {{count}} 行未變更內容',
-      },
-      yaml: {
-        title: '設定檔模式',
-        localWarning:
-          'CPA 與 Home 單機模式會讀取並替換本機 config.yaml，通常會保留原始註解和格式。',
-        clusterWarning:
-          'Home 叢集模式會把 YAML 寫入叢集設定倉庫；服務端可能移除憑證根欄位並重新編碼設定。',
-        searchPlaceholder: '搜尋 YAML',
-        matches: '{{count}} 個匹配',
+        visualDescription: '目前有 {{count}} 項未儲存的視覺化變更。點擊項目可跳轉到對應設定區。',
       },
       confirm: {
         reload: '目前存在未儲存修改，確認重新載入並丟棄本機修改？',
-        saveYaml: '設定檔模式會替換完整設定。確認儲存？',
-        switchMode: '目前模式存在未儲存修改。切換模式會丟棄這些修改，是否繼續？',
       },
       confirmDialog: {
-        switchModeTitle: '切換編輯模式？',
         reloadTitle: '重新載入設定？',
-        saveYamlTitle: '儲存完整設定檔？',
-        discardAndSwitch: '丟棄並切換',
         discardAndReload: '丟棄並重新載入',
       },
       toast: {
@@ -2394,10 +2369,9 @@ export const zhTW = {
       },
       config: {
         title: '設定',
-        description:
-          '設定頁將提供視覺化模式和設定檔模式，分別用於常用設定和完整設定替換，並提供區分模式的儲存提示。',
-        itemOne: '使用 GET /config、GET /config.yaml、PUT /config.yaml 和簡單 leaf routes。',
-        itemTwo: '提示 cluster 模式會從 repository state 重寫 YAML，且不保留註解。',
+        description: '設定頁只提供一個視覺化工作台，用於已支援執行設定的編輯、校驗和儲存。',
+        itemOne: '使用 GET /config、簡單 leaf routes，以及 adapter 內部必要的設定快照更新。',
+        itemTwo: '產品 UI 只保留視覺化編輯入口。',
       },
       usageLogs: {
         title: '用量與日誌',

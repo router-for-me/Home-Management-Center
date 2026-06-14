@@ -823,7 +823,7 @@ export const en = {
         },
         config: {
           title: 'System config',
-          description: 'Adjust routing, logging, and YAML settings.',
+          description: 'Adjust routing, logging, and runtime settings.',
         },
         systemNodes: {
           title: 'System Info',
@@ -1763,15 +1763,9 @@ export const en = {
       },
       header: {
         title: 'Configuration workspace',
-        description:
-          'Use visual mode for safe common edits. Use config file mode for full config.yaml replacement.',
+        description: 'Edit supported runtime settings through one visual workspace.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Updated {{time}}',
-      },
-      modes: {
-        label: 'Config editing mode',
-        structured: 'Visual',
-        yaml: 'Config file',
       },
       actions: {
         reload: 'Reload',
@@ -1784,7 +1778,6 @@ export const en = {
         clean: 'No unsaved changes',
         unsaved: 'Unsaved changes',
         visualChangeCount: '{{count}} visual changes',
-        fileChanged: 'Config file changed',
         enabled: 'Enabled',
         disabled: 'Disabled',
         emptyValue: 'empty',
@@ -1801,8 +1794,7 @@ export const en = {
         tls: {
           title: 'TLS',
           shortTitle: 'TLS',
-          description:
-            'Configure HTTPS, certificate path, and private key path. Saving writes back to config.yaml.',
+          description: 'Configure HTTPS, certificate path, and private key path.',
         },
         remoteManagement: {
           title: 'Remote management',
@@ -1850,7 +1842,7 @@ export const en = {
           title: 'Payload rules',
           shortTitle: 'Payload',
           description:
-            'Control model prefix handling. Maintain full payload rules in config file mode.',
+            'Control model prefix handling. Full payload rule editing is not exposed in this workspace.',
         },
       },
       fields: {
@@ -1880,12 +1872,12 @@ export const en = {
         },
         tlsCert: {
           label: 'Certificate path',
-          description: 'TLS certificate file path, mapped to tls.cert in config.yaml.',
+          description: 'TLS certificate file path used by the runtime.',
           placeholder: '/path/to/cert.pem',
         },
         tlsKey: {
           label: 'Private key path',
-          description: 'TLS private key file path, mapped to tls.key in config.yaml.',
+          description: 'TLS private key file path used by the runtime.',
           placeholder: '/path/to/key.pem',
         },
         remoteManagementAllowRemote: {
@@ -1894,8 +1886,7 @@ export const en = {
         },
         remoteManagementSecretKey: {
           label: 'Management key',
-          description:
-            'Key used by the management panel. In local config mode, the server processes plaintext keys at startup.',
+          description: 'Key used by the management panel for protected API access.',
           placeholder: 'Enter management key',
         },
         remoteManagementDisableControlPanel: {
@@ -2004,7 +1995,7 @@ export const en = {
       json: {
         remove: 'Remove',
         unsupportedStructure:
-          'This config contains a structure that is not supported by the visual editor. Maintain it in config file mode.',
+          'This config contains a structure that is not supported by the visual editor.',
         emptyRows: 'No rules configured.',
         addProvider: 'Add provider',
         addChannel: 'Add channel',
@@ -2064,7 +2055,7 @@ export const en = {
         emptyFiltered: 'No matching models.',
         customTitle: 'Custom provider rules',
         customDescription:
-          'These providers are not in the current visual channel list. Maintain them in config file mode.',
+          'These providers are not in the current visual channel list and cannot be edited here.',
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
@@ -2081,33 +2072,13 @@ export const en = {
         title: 'Changes before save',
         empty: 'There are no config changes to save.',
         visualDescription:
-          'Visual mode has {{count}} unsaved changes. Select an item to jump to its config section.',
-        fileDescription:
-          'Saving will fully overwrite the current config.yaml. Review changes first.',
-        fileChanged: 'The config file content has changed. Saving replaces the full config.',
-        addedLines: '{{count}} added',
-        removedLines: '{{count}} removed',
-        omittedLines: '{{count}} unchanged lines hidden',
-      },
-      yaml: {
-        title: 'Config file mode',
-        localWarning:
-          'CPA and Home standalone read and replace the local config.yaml, usually preserving original comments and formatting.',
-        clusterWarning:
-          'Home cluster writes YAML into the cluster config repository. The server may remove credential roots and re-encode config.',
-        searchPlaceholder: 'Search YAML',
-        matches: '{{count}} matches',
+          'There are {{count}} unsaved visual changes. Select an item to jump to its config section.',
       },
       confirm: {
         reload: 'Discard unsaved local changes and reload?',
-        saveYaml: 'Config file mode replaces the full config. Save now?',
-        switchMode: 'This mode has unsaved changes. Switching modes will discard them. Continue?',
       },
       confirmDialog: {
-        switchModeTitle: 'Switch editing mode?',
         reloadTitle: 'Reload config?',
-        saveYamlTitle: 'Save full config file?',
-        discardAndSwitch: 'Discard and switch',
         discardAndReload: 'Discard and reload',
       },
       toast: {
@@ -2477,10 +2448,10 @@ export const en = {
       config: {
         title: 'Config',
         description:
-          'Configuration will use visual mode for common settings and config file mode for full replacement, with mode-aware save messaging.',
-        itemOne: 'Use GET /config, GET /config.yaml, PUT /config.yaml, and simple leaf routes.',
-        itemTwo:
-          'Warn that cluster mode rewrites YAML from repository state and does not preserve comments.',
+          'Configuration uses a single visual workspace for supported runtime settings, with guarded save and reload flows.',
+        itemOne:
+          'Use GET /config, simple leaf routes, and adapter-contained config snapshot updates only where no leaf route exists.',
+        itemTwo: 'Keep the product UI on the single visual editing path.',
       },
       usageLogs: {
         title: 'Usage & Logs',

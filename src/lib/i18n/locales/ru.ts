@@ -826,7 +826,7 @@ export const ru = {
         },
         config: {
           title: 'Системная конфигурация',
-          description: 'Настроить маршрутизацию, журналы и YAML.',
+          description: 'Настроить маршрутизацию, журналы и runtime-параметры.',
         },
         systemNodes: {
           title: 'Сведения о системе',
@@ -1773,14 +1773,9 @@ export const ru = {
       header: {
         title: 'Рабочая область конфигурации',
         description:
-          'Visual mode подходит для безопасных частых изменений. Config file mode полностью заменяет config.yaml.',
+          'Редактируйте поддерживаемые runtime-настройки через одну визуальную рабочую область.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Обновлено {{time}}',
-      },
-      modes: {
-        label: 'Режим редактирования config',
-        structured: 'Визуально',
-        yaml: 'Файл config',
       },
       actions: {
         reload: 'Перезагрузить',
@@ -1793,7 +1788,6 @@ export const ru = {
         clean: 'Нет несохраненных изменений',
         unsaved: 'Есть несохраненные изменения',
         visualChangeCount: 'Визуальных изменений: {{count}}',
-        fileChanged: 'Файл config изменен',
         enabled: 'Включено',
         disabled: 'Выключено',
         emptyValue: 'пусто',
@@ -1810,8 +1804,7 @@ export const ru = {
         tls: {
           title: 'TLS',
           shortTitle: 'TLS',
-          description:
-            'Настройка HTTPS, пути сертификата и пути приватного ключа. Сохранение записывает изменения в config.yaml.',
+          description: 'Настройка HTTPS, пути сертификата и пути приватного ключа.',
         },
         remoteManagement: {
           title: 'Удаленное управление',
@@ -1859,7 +1852,7 @@ export const ru = {
           title: 'Payload rules',
           shortTitle: 'Payload',
           description:
-            'Управление model prefix. Полные payload rules редактируются в режиме файла config.',
+            'Управление model prefix. Полное редактирование payload rules пока недоступно в этой рабочей области.',
         },
       },
       fields: {
@@ -1889,12 +1882,12 @@ export const ru = {
         },
         tlsCert: {
           label: 'Путь сертификата',
-          description: 'Путь к TLS certificate, соответствует tls.cert в config.yaml.',
+          description: 'Путь к TLS certificate, который использует runtime.',
           placeholder: '/path/to/cert.pem',
         },
         tlsKey: {
           label: 'Путь приватного ключа',
-          description: 'Путь к TLS private key, соответствует tls.key в config.yaml.',
+          description: 'Путь к TLS private key, который использует runtime.',
           placeholder: '/path/to/key.pem',
         },
         remoteManagementAllowRemote: {
@@ -1903,8 +1896,7 @@ export const ru = {
         },
         remoteManagementSecretKey: {
           label: 'Management key',
-          description:
-            'Ключ для management panel. В local config mode сервер обрабатывает plaintext keys при запуске.',
+          description: 'Ключ, который management panel использует для защищенного API доступа.',
           placeholder: 'Введите management key',
         },
         remoteManagementDisableControlPanel: {
@@ -2014,7 +2006,7 @@ export const ru = {
       json: {
         remove: 'Удалить',
         unsupportedStructure:
-          'Эта config содержит структуру, которую visual editor пока не поддерживает. Поддерживайте ее в config file mode.',
+          'Эта config содержит структуру, которую visual editor пока не поддерживает.',
         emptyRows: 'Правила не настроены.',
         addProvider: 'Добавить provider',
         addChannel: 'Добавить channel',
@@ -2074,7 +2066,7 @@ export const ru = {
         emptyFiltered: 'Нет подходящих моделей.',
         customTitle: 'Custom provider rules',
         customDescription:
-          'Эти providers не входят в текущий visual channel list. Поддерживайте их в config file mode.',
+          'Эти providers не входят в текущий visual channel list и не могут редактироваться здесь.',
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
@@ -2091,34 +2083,13 @@ export const ru = {
         title: 'Изменения перед сохранением',
         empty: 'Нет изменений конфигурации для сохранения.',
         visualDescription:
-          'В визуальном режиме есть несохраненные изменения: {{count}}. Нажмите на пункт, чтобы перейти к разделу конфигурации.',
-        fileDescription:
-          'Сохранение полностью перезапишет текущий config.yaml. Проверьте изменения.',
-        fileChanged: 'Содержимое файла config изменено. Сохранение заменяет всю конфигурацию.',
-        addedLines: 'Добавлено строк: {{count}}',
-        removedLines: 'Удалено строк: {{count}}',
-        omittedLines: 'Скрыто неизмененных строк: {{count}}',
-      },
-      yaml: {
-        title: 'Config file mode',
-        localWarning:
-          'CPA и Home standalone читают и заменяют локальный config.yaml, обычно сохраняя комментарии и формат.',
-        clusterWarning:
-          'Home cluster записывает YAML в cluster config repository. Сервер может удалить credential roots и перекодировать config.',
-        searchPlaceholder: 'Поиск в YAML',
-        matches: 'Совпадений: {{count}}',
+          'Есть несохраненные визуальные изменения: {{count}}. Нажмите на пункт, чтобы перейти к разделу конфигурации.',
       },
       confirm: {
         reload: 'Отбросить несохраненные локальные изменения и перезагрузить?',
-        saveYaml: 'Режим файла config заменяет всю конфигурацию. Сохранить?',
-        switchMode:
-          'В текущем режиме есть несохраненные изменения. Переключение режима отбросит их. Продолжить?',
       },
       confirmDialog: {
-        switchModeTitle: 'Переключить режим редактирования?',
         reloadTitle: 'Перезагрузить конфигурацию?',
-        saveYamlTitle: 'Сохранить полный файл config?',
-        discardAndSwitch: 'Отбросить и переключить',
         discardAndReload: 'Отбросить и перезагрузить',
       },
       toast: {
@@ -2492,11 +2463,10 @@ export const ru = {
       config: {
         title: 'Конфигурация',
         description:
-          'Конфигурация будет иметь структурированный режим для частых настроек и YAML-режим для полной замены с сообщениями сохранения по режиму.',
+          'Конфигурация использует одну визуальную рабочую область для редактирования, проверки и сохранения поддерживаемых runtime-настроек.',
         itemOne:
-          'Использовать GET /config, GET /config.yaml, PUT /config.yaml и простые leaf routes.',
-        itemTwo:
-          'Предупреждать, что cluster режим переписывает YAML из состояния repository и не сохраняет комментарии.',
+          'Использовать GET /config, простые leaf routes и только необходимые adapter-contained обновления config snapshot.',
+        itemTwo: 'В product UI оставлять только один визуальный путь редактирования.',
       },
       usageLogs: {
         title: 'Использование и журналы',

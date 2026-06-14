@@ -24,7 +24,7 @@ This is not a marketing surface. Design serves people who need to understand whe
 - Manage model service keys without confusing them with client access keys.
 - Manage account credentials created through OAuth login or file import.
 - Inspect usage, logs, request errors, nodes, versions, diagnostics, and configuration.
-- Provide a visual configuration workspace and a full config-file editor for advanced changes.
+- Provide a visual configuration workspace for supported runtime settings.
 - Represent unsupported, unavailable, or partially loaded backend data as explicit UI states.
 - Provide a credible global interface in Simplified Chinese, Traditional Chinese, English, and Russian.
 
@@ -58,7 +58,7 @@ The interface should feel like a serious control plane: clear hierarchy, restrai
 - Account credentials: OAuth and file-backed credentials, metadata, status, import, download, and model availability.
 - Access keys: client-facing keys used by downstream clients.
 - Usage and logs: usage records, queues, runtime logs, request error logs, download and clear flows.
-- System config: visual config sections, full config-file editing, diff preview, validation, and guarded saving.
+- System config: visual config sections, change preview, validation, and guarded saving.
 - System information: versions, nodes, runtime diagnostics, config summary, and guarded API call tools.
 
 ## Design Principles
@@ -67,7 +67,7 @@ The interface should feel like a serious control plane: clear hierarchy, restrai
 - Backend-aware by default: unsupported or missing API routes must become explicit UI states, not fake data.
 - Familiar console patterns win: sidebar navigation, compact tables, sheets, dialogs, sticky action bars, and predictable filters.
 - No card sprawl: cards are for grouped resources, repeated items, modals, and framed tools, not every section by default.
-- Risk is visible: destructive actions, secret changes, full config replacement, remote access, and diagnostics need clear confirmation.
+- Risk is visible: destructive actions, secret changes, remote access, and diagnostics need clear confirmation.
 - Density with scanability: compact layouts are welcome, but text, icons, and controls must remain easy to locate.
 - Internationalized from the start: all visible copy must use i18n keys for `zh-CN`, `zh-TW`, `en`, and `ru`.
 

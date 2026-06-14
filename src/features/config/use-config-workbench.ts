@@ -4,7 +4,6 @@ import {
   type ConfigChange,
   applyConfigChanges,
   fetchConfigSnapshot,
-  replaceConfigYaml,
   toConfigApiError,
 } from '@/lib/api/management/config'
 import {
@@ -90,17 +89,6 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
     onSuccess: invalidate,
   })
 
-  const yamlMutation = useMutation({
-    mutationFn: async (yaml: string) => {
-      try {
-        await replaceConfigYaml(session, yaml)
-      } catch (error) {
-        throw toThrowableError(error)
-      }
-    },
-    onSuccess: invalidate,
-  })
-
   return {
     connected,
     runtimeMode,
@@ -113,13 +101,12 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
       void query.refetch()
     },
     saveStructured: structuredMutation.mutateAsync,
-    saveYaml: yamlMutation.mutateAsync,
     refetchModelDefinitions: () => {
       void modelDefinitionsQuery.refetch()
     },
     modelDefinitions: modelDefinitionsQuery.data ?? null,
     modelDefinitionsErrorMessage: modelDefinitionsQuery.error?.message ?? null,
     isFetchingModelDefinitions: modelDefinitionsQuery.isFetching,
-    mutating: structuredMutation.isPending || yamlMutation.isPending,
+    mutating: structuredMutation.isPending,
   }
 }

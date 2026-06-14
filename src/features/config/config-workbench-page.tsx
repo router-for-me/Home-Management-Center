@@ -58,15 +58,11 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import type {
   ConfigChange,
   ConfigFieldKey,
-  ConfigMode,
   ConfigStructuredValues,
 } from '@/lib/api/management/config'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
@@ -125,36 +121,9 @@ type ModelMappingRule = {
   regex?: boolean
 }
 
-type ConfigYamlDiffLine =
-  | {
-      type: 'context' | 'added' | 'removed'
-      oldLineNumber: number | null
-      newLineNumber: number | null
-      content: string
-    }
-  | {
-      type: 'omitted'
-      skipped: number
-    }
-
-type ConfigYamlDiff = {
-  lines: ConfigYamlDiffLine[]
-  added: number
-  removed: number
+type PendingConfigConfirmation = {
+  type: 'reload'
 }
-
-type PendingConfigConfirmation =
-  | {
-      type: 'switchMode'
-      fromMode: ConfigMode
-      nextMode: ConfigMode
-    }
-  | {
-      type: 'reload'
-    }
-  | {
-      type: 'saveYaml'
-    }
 
 type ConfigFieldDefinition = {
   key: ConfigFieldKey
@@ -513,150 +482,6 @@ function formatConfigValue(value: ConfigChange['nextValue'], emptyLabel: string)
   return value === '' ? emptyLabel : String(value)
 }
 
-function splitConfigTextLines(value: string) {
-  const normalized = value.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-  if (!normalized) return []
-
-  const lines = normalized.split('\n')
-  if (normalized.endsWith('\n')) {
-    lines.pop()
-  }
-
-  return lines
-}
-
-function compactYamlDiffLines(lines: ConfigYamlDiffLine[], contextSize = 3): ConfigYamlDiffLine[] {
-  const visibleIndexes = new Set<number>()
-
-  lines.forEach((line, index) => {
-    if (line.type === 'context') return
-
-    const start = Math.max(0, index - contextSize)
-    const end = Math.min(lines.length - 1, index + contextSize)
-
-    for (let nextIndex = start; nextIndex <= end; nextIndex += 1) {
-      visibleIndexes.add(nextIndex)
-    }
-  })
-
-  const compacted: ConfigYamlDiffLine[] = []
-  let skipped = 0
-
-  lines.forEach((line, index) => {
-    if (visibleIndexes.has(index)) {
-      if (skipped > 0) {
-        compacted.push({ type: 'omitted', skipped })
-        skipped = 0
-      }
-      compacted.push(line)
-      return
-    }
-
-    skipped += 1
-  })
-
-  if (skipped > 0) {
-    compacted.push({ type: 'omitted', skipped })
-  }
-
-  return compacted
-}
-
-function getYamlDiff(previousYaml: string, nextYaml: string): ConfigYamlDiff {
-  if (previousYaml === nextYaml) {
-    return { lines: [], added: 0, removed: 0 }
-  }
-
-  const previousLines = splitConfigTextLines(previousYaml)
-  const nextLines = splitConfigTextLines(nextYaml)
-
-  if (previousLines.length * nextLines.length > 2_500_000) {
-    const lines: ConfigYamlDiffLine[] = [
-      ...previousLines.map((content, index) => ({
-        type: 'removed' as const,
-        oldLineNumber: index + 1,
-        newLineNumber: null,
-        content,
-      })),
-      ...nextLines.map((content, index) => ({
-        type: 'added' as const,
-        oldLineNumber: null,
-        newLineNumber: index + 1,
-        content,
-      })),
-    ]
-
-    return {
-      lines: compactYamlDiffLines(lines, 8),
-      added: nextLines.length,
-      removed: previousLines.length,
-    }
-  }
-
-  const width = nextLines.length + 1
-  const lcs = new Uint32Array((previousLines.length + 1) * width)
-
-  for (let oldIndex = 1; oldIndex <= previousLines.length; oldIndex += 1) {
-    for (let newIndex = 1; newIndex <= nextLines.length; newIndex += 1) {
-      const current = oldIndex * width + newIndex
-      if (previousLines[oldIndex - 1] === nextLines[newIndex - 1]) {
-        lcs[current] = lcs[(oldIndex - 1) * width + newIndex - 1] + 1
-      } else {
-        lcs[current] = Math.max(lcs[(oldIndex - 1) * width + newIndex], lcs[current - 1])
-      }
-    }
-  }
-
-  const reversedLines: ConfigYamlDiffLine[] = []
-  let oldIndex = previousLines.length
-  let newIndex = nextLines.length
-  let added = 0
-  let removed = 0
-
-  while (oldIndex > 0 || newIndex > 0) {
-    if (oldIndex > 0 && newIndex > 0 && previousLines[oldIndex - 1] === nextLines[newIndex - 1]) {
-      reversedLines.push({
-        type: 'context',
-        oldLineNumber: oldIndex,
-        newLineNumber: newIndex,
-        content: previousLines[oldIndex - 1],
-      })
-      oldIndex -= 1
-      newIndex -= 1
-    } else if (
-      newIndex > 0 &&
-      (oldIndex === 0 ||
-        lcs[oldIndex * width + newIndex - 1] >= lcs[(oldIndex - 1) * width + newIndex])
-    ) {
-      reversedLines.push({
-        type: 'added',
-        oldLineNumber: null,
-        newLineNumber: newIndex,
-        content: nextLines[newIndex - 1],
-      })
-      added += 1
-      newIndex -= 1
-    } else {
-      reversedLines.push({
-        type: 'removed',
-        oldLineNumber: oldIndex,
-        newLineNumber: null,
-        content: previousLines[oldIndex - 1],
-      })
-      removed += 1
-      oldIndex -= 1
-    }
-  }
-
-  const lines = reversedLines.reverse()
-
-  return {
-    lines: compactYamlDiffLines(lines),
-    added,
-    removed,
-  }
-}
-
 function ConfigDisconnectedState() {
   const { t } = useTranslation()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
@@ -737,45 +562,6 @@ function ConfigErrorState({
         </div>
       </div>
     </section>
-  )
-}
-
-function ModeSwitch({
-  mode,
-  onModeChange,
-}: {
-  mode: ConfigMode
-  onModeChange: (mode: ConfigMode) => void
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <ToggleGroup
-      type="single"
-      value={mode}
-      onValueChange={(value) => {
-        if (value) onModeChange(value as ConfigMode)
-      }}
-      className="bg-background"
-      aria-label={t('configPage.modes.label')}
-    >
-      {(['structured', 'yaml'] as const).map((nextMode) => (
-        <ToggleGroupItem
-          key={nextMode}
-          value={nextMode}
-          size="sm"
-          variant="outline"
-          className="gap-1.5"
-        >
-          {nextMode === 'structured' ? (
-            <Settings2 className="size-3.5" aria-hidden="true" />
-          ) : (
-            <Code2 className="size-3.5" aria-hidden="true" />
-          )}
-          {t(`configPage.modes.${nextMode}`)}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
   )
 }
 
@@ -1787,33 +1573,27 @@ function StructuredWorkspace({
             })()}
 
             <div className="mt-4 grid gap-3">
-              {section.fields.length > 0 ? (
-                section.fields.map((field) =>
-                  isJsonConfigFieldKey(field.key) ? (
-                    <JsonConfigField
-                      key={field.key}
-                      field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-                      value={String(draft[field.key])}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      oauthModelCatalog={oauthModelCatalog}
-                      onChange={onChange}
-                    />
-                  ) : (
-                    <ConfigField
-                      key={field.key}
-                      field={field}
-                      value={draft[field.key]}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      onChange={onChange}
-                    />
-                  ),
-                )
-              ) : (
-                <div className="bg-muted/60 text-muted-foreground rounded-md border px-3 py-3 text-sm leading-6">
-                  {t(`configPage.sections.${section.id}.yamlOnly`)}
-                </div>
+              {section.fields.map((field) =>
+                isJsonConfigFieldKey(field.key) ? (
+                  <JsonConfigField
+                    key={field.key}
+                    field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+                    value={String(draft[field.key])}
+                    disabled={disabled}
+                    invalid={validationErrors.includes(field.key)}
+                    oauthModelCatalog={oauthModelCatalog}
+                    onChange={onChange}
+                  />
+                ) : (
+                  <ConfigField
+                    key={field.key}
+                    field={field}
+                    value={draft[field.key]}
+                    disabled={disabled}
+                    invalid={validationErrors.includes(field.key)}
+                    onChange={onChange}
+                  />
+                ),
               )}
             </div>
           </section>
@@ -1824,10 +1604,8 @@ function StructuredWorkspace({
 }
 
 function ConfigActionBar({
-  mode,
   changeCount,
   validationCount,
-  yamlDirty,
   isFetching,
   mutating,
   runtimeMode,
@@ -1837,10 +1615,8 @@ function ConfigActionBar({
   onReload,
   onSave,
 }: {
-  mode: ConfigMode
   changeCount: number
   validationCount: number
-  yamlDirty: boolean
   isFetching: boolean
   mutating: boolean
   runtimeMode: string
@@ -1851,7 +1627,7 @@ function ConfigActionBar({
   onSave: () => void
 }) {
   const { t } = useTranslation()
-  const dirty = mode === 'structured' ? changeCount > 0 : yamlDirty
+  const dirty = changeCount > 0
 
   return (
     <div className="bg-background/95 sticky top-16 z-20 -mx-4 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
@@ -1877,11 +1653,9 @@ function ConfigActionBar({
                   : 'bg-muted text-muted-foreground',
               )}
             >
-              {mode === 'structured'
+              {dirty
                 ? t('configPage.status.visualChangeCount', { count: changeCount })
-                : yamlDirty
-                  ? t('configPage.status.fileChanged')
-                  : t('configPage.status.clean')}
+                : t('configPage.status.clean')}
             </span>
             {validationCount > 0 ? (
               <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
@@ -1923,127 +1697,14 @@ function ConfigActionBar({
   )
 }
 
-function YamlDiffViewer({ diff }: { diff: ConfigYamlDiff }) {
-  const { t } = useTranslation()
-
-  if (diff.added === 0 && diff.removed === 0) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-3 py-3 text-sm">
-        {t('configPage.diff.empty')}
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-          {t('configPage.diff.addedLines', { count: diff.added })}
-        </span>
-        <span className="inline-flex items-center rounded-md border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-700 dark:text-red-300">
-          {t('configPage.diff.removedLines', { count: diff.removed })}
-        </span>
-      </div>
-
-      <div className="bg-card overflow-hidden rounded-md border">
-        <div className="max-h-[70dvh] overflow-auto">
-          <Table className="border-collapse font-mono text-xs">
-            <TableBody>
-              {diff.lines.map((line, index) => {
-                if (line.type === 'omitted') {
-                  return (
-                    <TableRow
-                      key={`omitted-${index}`}
-                      className="bg-muted/50 text-muted-foreground"
-                      variant="semantic"
-                    >
-                      <TableCell className="w-12 border-r px-2 py-1 text-right select-none">
-                        ...
-                      </TableCell>
-                      <TableCell className="w-12 border-r px-2 py-1 text-right select-none">
-                        ...
-                      </TableCell>
-                      <TableCell className="w-7 border-r px-2 py-1 text-center select-none">
-                        ...
-                      </TableCell>
-                      <TableCell className="px-2 py-1 italic">
-                        {t('configPage.diff.omittedLines', { count: line.skipped })}
-                      </TableCell>
-                    </TableRow>
-                  )
-                }
-
-                const isAdded = line.type === 'added'
-                const isRemoved = line.type === 'removed'
-
-                return (
-                  <TableRow
-                    key={`${line.type}-${line.oldLineNumber ?? 'new'}-${line.newLineNumber ?? 'old'}-${index}`}
-                    className={cn(
-                      isAdded
-                        ? 'bg-emerald-500/10 text-emerald-950 dark:text-emerald-50'
-                        : isRemoved
-                          ? 'bg-red-500/10 text-red-950 dark:text-red-50'
-                          : 'bg-background text-muted-foreground',
-                    )}
-                    variant="semantic"
-                  >
-                    <TableCell
-                      className={cn(
-                        'text-muted-foreground w-12 border-r px-2 py-1 text-right select-none',
-                        isRemoved ? 'bg-red-500/10' : null,
-                      )}
-                    >
-                      {line.oldLineNumber ?? ''}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'text-muted-foreground w-12 border-r px-2 py-1 text-right select-none',
-                        isAdded ? 'bg-emerald-500/10' : null,
-                      )}
-                    >
-                      {line.newLineNumber ?? ''}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        'w-7 border-r px-2 py-1 text-center font-semibold select-none',
-                        isAdded
-                          ? 'text-emerald-700 dark:text-emerald-300'
-                          : isRemoved
-                            ? 'text-red-700 dark:text-red-300'
-                            : 'text-muted-foreground',
-                      )}
-                    >
-                      {isAdded ? '+' : isRemoved ? '-' : ' '}
-                    </TableCell>
-                    <TableCell className="min-w-[28rem] px-2 py-1 break-words whitespace-pre-wrap">
-                      {line.content || ' '}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ChangeDetailSheet({
   open,
-  mode,
   changes,
-  yamlDirty,
-  yamlDiff,
   onOpenChange,
   onJumpToField,
 }: {
   open: boolean
-  mode: ConfigMode
   changes: ConfigChange[]
-  yamlDirty: boolean
-  yamlDiff: ConfigYamlDiff
   onOpenChange: (open: boolean) => void
   onJumpToField: (key: ConfigFieldKey) => void
 }) {
@@ -2055,22 +1716,12 @@ function ChangeDetailSheet({
         <SheetHeader className="border-b">
           <SheetTitle>{t('configPage.diff.title')}</SheetTitle>
           <SheetDescription>
-            {mode === 'structured'
-              ? t('configPage.diff.visualDescription', { count: changes.length })
-              : t('configPage.diff.fileDescription')}
+            {t('configPage.diff.visualDescription', { count: changes.length })}
           </SheetDescription>
         </SheetHeader>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-          {mode === 'yaml' ? (
-            yamlDirty ? (
-              <YamlDiffViewer diff={yamlDiff} />
-            ) : (
-              <div className="text-muted-foreground rounded-md border px-3 py-3 text-sm">
-                {t('configPage.diff.empty')}
-              </div>
-            )
-          ) : changes.length === 0 ? (
+          {changes.length === 0 ? (
             <div className="text-muted-foreground rounded-md border px-3 py-3 text-sm">
               {t('configPage.diff.empty')}
             </div>
@@ -2116,72 +1767,6 @@ function ChangeDetailSheet({
   )
 }
 
-function YamlWorkspace({
-  yaml,
-  runtimeMode,
-  disabled,
-  yamlDirty,
-  onYamlChange,
-}: {
-  yaml: string
-  runtimeMode: string
-  disabled: boolean
-  yamlDirty: boolean
-  onYamlChange: (value: string) => void
-}) {
-  const { t } = useTranslation()
-  const [search, setSearch] = useState('')
-  const matchCount = search ? yaml.toLowerCase().split(search.toLowerCase()).length - 1 : 0
-
-  return (
-    <div className="grid gap-4">
-      <div className="bg-card rounded-lg border p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">{t('configPage.yaml.title')}</h2>
-            <p className="text-muted-foreground mt-1 text-sm leading-6">
-              {runtimeMode === 'home-cluster'
-                ? t('configPage.yaml.clusterWarning')
-                : t('configPage.yaml.localWarning')}
-            </p>
-          </div>
-          <div className="relative min-w-0 lg:w-72">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              className="pl-9"
-              value={search}
-              disabled={disabled}
-              placeholder={t('configPage.yaml.searchPlaceholder')}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('configPage.yaml.matches', { count: matchCount })}
-          </span>
-          {yamlDirty ? (
-            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-              {t('configPage.status.unsaved')}
-            </span>
-          ) : null}
-        </div>
-      </div>
-
-      <Textarea
-        className="bg-card min-h-[620px] rounded-lg p-4 font-mono text-xs leading-5 disabled:opacity-60"
-        value={yaml}
-        disabled={disabled}
-        spellCheck={false}
-        onChange={(event) => onYamlChange(event.target.value)}
-      />
-    </div>
-  )
-}
-
 function ConfigConfirmationDialog({
   confirmation,
   onCancel,
@@ -2192,28 +1777,6 @@ function ConfigConfirmationDialog({
   onConfirm: () => void
 }) {
   const { t } = useTranslation()
-  const titleKey =
-    confirmation?.type === 'switchMode'
-      ? 'configPage.confirmDialog.switchModeTitle'
-      : confirmation?.type === 'reload'
-        ? 'configPage.confirmDialog.reloadTitle'
-        : 'configPage.confirmDialog.saveYamlTitle'
-  const descriptionKey =
-    confirmation?.type === 'switchMode'
-      ? 'configPage.confirm.switchMode'
-      : confirmation?.type === 'reload'
-        ? 'configPage.confirm.reload'
-        : 'configPage.confirm.saveYaml'
-  const actionLabel =
-    confirmation?.type === 'switchMode'
-      ? t('configPage.confirmDialog.discardAndSwitch')
-      : confirmation?.type === 'reload'
-        ? t('configPage.confirmDialog.discardAndReload')
-        : t('configPage.actions.save')
-  const actionClassName =
-    confirmation?.type === 'saveYaml'
-      ? undefined
-      : 'bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40'
 
   return (
     <AlertDialog
@@ -2224,13 +1787,16 @@ function ConfigConfirmationDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{t(titleKey)}</AlertDialogTitle>
-          <AlertDialogDescription>{t(descriptionKey)}</AlertDialogDescription>
+          <AlertDialogTitle>{t('configPage.confirmDialog.reloadTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('configPage.confirm.reload')}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-          <AlertDialogAction className={actionClassName} onClick={onConfirm}>
-            {actionLabel}
+          <AlertDialogAction
+            className="bg-destructive hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 text-white"
+            onClick={onConfirm}
+          >
+            {t('configPage.confirmDialog.discardAndReload')}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -2240,19 +1806,16 @@ function ConfigConfirmationDialog({
 
 export function ConfigWorkbenchPage() {
   const { t } = useTranslation()
-  const [mode, setMode] = useState<ConfigMode>('structured')
   const [oauthModelChannel, setOauthModelChannel] = useState<ProviderModelChannel>('claude')
   const [oauthModelFilter, setOauthModelFilter] = useState('')
   const workbench = useConfigWorkbench(oauthModelChannel)
   const [structuredDraft, setStructuredDraft] = useState<ConfigStructuredValues | null>(null)
-  const [yamlDraft, setYamlDraft] = useState('')
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
 
   useEffect(() => {
     if (!workbench.snapshot) return
     setStructuredDraft(workbench.snapshot.structured)
-    setYamlDraft(workbench.snapshot.yaml)
   }, [workbench.snapshot])
 
   const changes = useMemo(() => {
@@ -2263,17 +1826,8 @@ export function ConfigWorkbenchPage() {
     () => (structuredDraft ? getValidationErrors(structuredDraft) : []),
     [structuredDraft],
   )
-  const yamlDirty = Boolean(workbench.snapshot && yamlDraft !== workbench.snapshot.yaml)
-  const yamlDiff = useMemo(
-    () =>
-      workbench.snapshot
-        ? getYamlDiff(workbench.snapshot.yaml, yamlDraft)
-        : { lines: [], added: 0, removed: 0 },
-    [workbench.snapshot, yamlDraft],
-  )
-  const isDirty = mode === 'structured' ? changes.length > 0 : yamlDirty
-  const saveDisabled =
-    !isDirty || workbench.mutating || (mode === 'structured' && validationErrors.length > 0)
+  const isDirty = changes.length > 0
+  const saveDisabled = !isDirty || workbench.mutating || validationErrors.length > 0
   const oauthModelCatalog: OAuthModelCatalogState = {
     channel: oauthModelChannel,
     models: workbench.modelDefinitions?.models ?? [],
@@ -2307,74 +1861,28 @@ export function ConfigWorkbenchPage() {
     setStructuredDraft((current) => (current ? { ...current, [key]: value } : current))
   }
 
-  const handleModeChange = (nextMode: ConfigMode) => {
-    if (nextMode === mode) return
-
-    if (isDirty) {
-      setConfirmation({
-        type: 'switchMode',
-        fromMode: mode,
-        nextMode,
-      })
-      return
-    }
-
-    setChangeSheetOpen(false)
-    setMode(nextMode)
-  }
-
-  const discardDraftForMode = (draftMode: ConfigMode) => {
-    if (draftMode === 'structured') {
-      setStructuredDraft(snapshot.structured)
-    } else {
-      setYamlDraft(snapshot.yaml)
-    }
-  }
-
-  const confirmModeChange = (fromMode: ConfigMode, nextMode: ConfigMode) => {
-    discardDraftForMode(fromMode)
-    setChangeSheetOpen(false)
-    setMode(nextMode)
-  }
-
   const handleReload = () => {
     if (isDirty) {
       setConfirmation({ type: 'reload' })
       return
     }
     setStructuredDraft(snapshot.structured)
-    setYamlDraft(snapshot.yaml)
     workbench.refetch()
   }
 
   const reloadFromRuntime = () => {
     setStructuredDraft(snapshot.structured)
-    setYamlDraft(snapshot.yaml)
     workbench.refetch()
-  }
-
-  const saveYaml = async () => {
-    try {
-      await workbench.saveYaml(yamlDraft)
-      toast.success(t('configPage.toast.saved'))
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
-    }
   }
 
   const handleSave = async () => {
     try {
-      if (mode === 'structured') {
-        if (validationErrors.length > 0) {
-          toast.error(t('configPage.toast.validationFailed'))
-          return
-        }
-        await workbench.saveStructured(changes)
-        toast.success(t('configPage.toast.saved'))
+      if (validationErrors.length > 0) {
+        toast.error(t('configPage.toast.validationFailed'))
         return
       }
-
-      setConfirmation({ type: 'saveYaml' })
+      await workbench.saveStructured(changes)
+      toast.success(t('configPage.toast.saved'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -2386,17 +1894,9 @@ export function ConfigWorkbenchPage() {
 
     if (!currentConfirmation) return
 
-    if (currentConfirmation.type === 'switchMode') {
-      confirmModeChange(currentConfirmation.fromMode, currentConfirmation.nextMode)
-      return
-    }
-
     if (currentConfirmation.type === 'reload') {
       reloadFromRuntime()
-      return
     }
-
-    void saveYaml()
   }
 
   return (
@@ -2405,14 +1905,11 @@ export function ConfigWorkbenchPage() {
         className="p-4"
         title={t('configPage.header.title')}
         description={t('configPage.header.description')}
-        actions={<ModeSwitch mode={mode} onModeChange={handleModeChange} />}
       />
 
       <ConfigActionBar
-        mode={mode}
         changeCount={changes.length}
-        validationCount={mode === 'structured' ? validationErrors.length : 0}
-        yamlDirty={yamlDirty}
+        validationCount={validationErrors.length}
         isFetching={workbench.isFetching}
         mutating={workbench.mutating}
         runtimeMode={workbench.runtimeMode}
@@ -2425,10 +1922,7 @@ export function ConfigWorkbenchPage() {
 
       <ChangeDetailSheet
         open={changeSheetOpen}
-        mode={mode}
         changes={changes}
-        yamlDirty={yamlDirty}
-        yamlDiff={yamlDiff}
         onOpenChange={setChangeSheetOpen}
         onJumpToField={(key) => {
           window.requestAnimationFrame(() => scrollToField(key))
@@ -2441,24 +1935,14 @@ export function ConfigWorkbenchPage() {
         onConfirm={handleConfirmAction}
       />
 
-      {mode === 'structured' ? (
-        <StructuredWorkspace
-          draft={structuredDraft}
-          changes={changes}
-          validationErrors={validationErrors}
-          disabled={workbench.mutating}
-          oauthModelCatalog={oauthModelCatalog}
-          onChange={handleStructuredChange}
-        />
-      ) : (
-        <YamlWorkspace
-          yaml={yamlDraft}
-          runtimeMode={workbench.runtimeMode}
-          disabled={workbench.mutating}
-          yamlDirty={yamlDirty}
-          onYamlChange={setYamlDraft}
-        />
-      )}
+      <StructuredWorkspace
+        draft={structuredDraft}
+        changes={changes}
+        validationErrors={validationErrors}
+        disabled={workbench.mutating}
+        oauthModelCatalog={oauthModelCatalog}
+        onChange={handleStructuredChange}
+      />
     </section>
   )
 }

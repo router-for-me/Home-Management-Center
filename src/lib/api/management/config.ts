@@ -6,8 +6,6 @@ import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/manag
 
 type UnknownRecord = Record<string, unknown>
 
-export type ConfigMode = 'structured' | 'yaml'
-
 export type ConfigFieldKey =
   | 'debug'
   | 'loggingToFile'
@@ -593,15 +591,6 @@ export async function applyConfigChanges(session: ManagementSessionInput, change
   const patchedYaml = patchYamlBackedConfig(yaml, yamlBackedChanges)
 
   await client.put('/config.yaml', patchedYaml, {
-    headers: {
-      'Content-Type': 'application/yaml; charset=utf-8',
-    },
-  })
-}
-
-export async function replaceConfigYaml(session: ManagementSessionInput, yaml: string) {
-  const client = createManagementClient(session)
-  await client.put('/config.yaml', yaml, {
     headers: {
       'Content-Type': 'application/yaml; charset=utf-8',
     },

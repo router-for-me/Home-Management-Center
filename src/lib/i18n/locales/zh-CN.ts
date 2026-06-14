@@ -802,7 +802,7 @@ export const zhCN = {
         },
         config: {
           title: '系统配置',
-          description: '调整路由、日志和 YAML 设置。',
+          description: '调整路由、日志和运行时设置。',
         },
         systemNodes: {
           title: '系统信息',
@@ -1716,14 +1716,9 @@ export const zhCN = {
       },
       header: {
         title: '配置工作台',
-        description: '可视化模式用于安全编辑常用配置；配置文件模式用于完整替换 config.yaml。',
+        description: '通过一个可视化工作台编辑已支持的运行时配置。',
         runtime: '运行时：{{mode}}',
         updatedAt: '更新于 {{time}}',
-      },
-      modes: {
-        label: '配置编辑模式',
-        structured: '可视化',
-        yaml: '配置文件',
       },
       actions: {
         reload: '重新加载',
@@ -1736,7 +1731,6 @@ export const zhCN = {
         clean: '无未保存修改',
         unsaved: '有未保存修改',
         visualChangeCount: '{{count}} 项可视化变更',
-        fileChanged: '配置文件已修改',
         enabled: '已启用',
         disabled: '已关闭',
         emptyValue: '空值',
@@ -1753,7 +1747,7 @@ export const zhCN = {
         tls: {
           title: 'TLS',
           shortTitle: 'TLS',
-          description: '配置 HTTPS 开关、证书路径和私钥路径。保存时会写回 config.yaml。',
+          description: '配置 HTTPS 开关、证书路径和私钥路径。',
         },
         remoteManagement: {
           title: '远程管理',
@@ -1798,7 +1792,7 @@ export const zhCN = {
         payload: {
           title: 'Payload 规则',
           shortTitle: 'Payload',
-          description: '控制模型前缀处理。完整 payload 规则请在配置文件模式维护。',
+          description: '控制模型前缀处理。完整 payload 规则编辑暂不在当前工作台开放。',
         },
       },
       fields: {
@@ -1828,12 +1822,12 @@ export const zhCN = {
         },
         tlsCert: {
           label: '证书路径',
-          description: 'TLS certificate 文件路径，对应 config.yaml 中的 tls.cert。',
+          description: '运行时使用的 TLS certificate 文件路径。',
           placeholder: '/path/to/cert.pem',
         },
         tlsKey: {
           label: '私钥路径',
-          description: 'TLS private key 文件路径，对应 config.yaml 中的 tls.key。',
+          description: '运行时使用的 TLS private key 文件路径。',
           placeholder: '/path/to/key.pem',
         },
         remoteManagementAllowRemote: {
@@ -1842,7 +1836,7 @@ export const zhCN = {
         },
         remoteManagementSecretKey: {
           label: 'Management Key',
-          description: '管理面板使用的密钥。本地配置模式下，服务端启动时会处理明文密钥。',
+          description: '管理面板访问受保护 API 时使用的密钥。',
           placeholder: '输入 management key',
         },
         remoteManagementDisableControlPanel: {
@@ -1946,7 +1940,7 @@ export const zhCN = {
       },
       json: {
         remove: '移除',
-        unsupportedStructure: '当前配置包含暂不支持可视化编辑的结构，请在配置文件模式中维护。',
+        unsupportedStructure: '当前配置包含暂不支持可视化编辑的结构。',
         emptyRows: '当前没有规则。',
         addProvider: '添加供应商',
         addChannel: '添加 Channel',
@@ -2003,7 +1997,7 @@ export const zhCN = {
         emptyModels: '当前通道没有返回模型定义。',
         emptyFiltered: '没有匹配的模型。',
         customTitle: '自定义 Provider 规则',
-        customDescription: '以下 provider 不在当前可视化通道列表中，请在配置文件模式中维护。',
+        customDescription: '以下 provider 不在当前可视化通道列表中，暂不能在这里编辑。',
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
@@ -2019,32 +2013,13 @@ export const zhCN = {
       diff: {
         title: '保存前变更',
         empty: '当前没有待保存的配置变更。',
-        visualDescription: '当前可视化模式有 {{count}} 项未保存修改。点击条目可跳转到对应配置区。',
-        fileDescription: '保存后会完整覆盖当前 config.yaml，请确认变更内容。',
-        fileChanged: '配置文件内容已修改。保存会替换完整配置。',
-        addedLines: '新增 {{count}} 行',
-        removedLines: '删除 {{count}} 行',
-        omittedLines: '已折叠 {{count}} 行未变化内容',
-      },
-      yaml: {
-        title: '配置文件模式',
-        localWarning:
-          'CPA 与 Home 单机模式会读取并替换本地 config.yaml，通常会保留原始注释和格式。',
-        clusterWarning:
-          'Home 集群模式会把 YAML 写入集群配置仓库；服务端可能移除凭证根字段并重新编码配置。',
-        searchPlaceholder: '搜索 YAML',
-        matches: '{{count}} 个匹配',
+        visualDescription: '当前有 {{count}} 项未保存的可视化变更。点击条目可跳转到对应配置区。',
       },
       confirm: {
         reload: '当前存在未保存修改，确认重新加载并丢弃本地修改？',
-        saveYaml: '配置文件模式会替换完整配置。确认保存？',
-        switchMode: '当前模式存在未保存修改。切换模式会丢弃这些修改，是否继续？',
       },
       confirmDialog: {
-        switchModeTitle: '切换编辑模式？',
         reloadTitle: '重新加载配置？',
-        saveYamlTitle: '保存完整配置文件？',
-        discardAndSwitch: '丢弃并切换',
         discardAndReload: '丢弃并重新加载',
       },
       toast: {
@@ -2395,10 +2370,9 @@ export const zhCN = {
       },
       config: {
         title: '配置',
-        description:
-          '配置页将提供可视化模式和配置文件模式，分别用于常用设置和完整配置替换，并提供区分模式的保存提示。',
-        itemOne: '使用 GET /config、GET /config.yaml、PUT /config.yaml 和简单 leaf routes。',
-        itemTwo: '提示 cluster 模式会从 repository state 重写 YAML，且不保留注释。',
+        description: '配置页只提供一个可视化工作台，用于已支持运行时设置的编辑、校验和保存。',
+        itemOne: '使用 GET /config、简单 leaf routes，以及 adapter 内部必要的配置快照更新。',
+        itemTwo: '产品 UI 只保留可视化编辑入口。',
       },
       usageLogs: {
         title: '用量与日志',

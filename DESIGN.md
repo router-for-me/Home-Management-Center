@@ -13,7 +13,7 @@ Named rules:
 - **Verdict Before Detail**: major pages lead with the current operational state before showing secondary metrics.
 - **Backend State Is Visible**: unsupported, missing, or failed backend behavior appears as explicit UI states.
 - **Cards Earn Their Border**: use cards for resource groups, repeated items, modals, and framed tools; avoid nested cards and decorative section cards.
-- **Risk Has Weight**: destructive actions, remote access, secret changes, diagnostics, and full config replacement need stronger confirmation and clearer copy.
+- **Risk Has Weight**: destructive actions, remote access, secret changes, and diagnostics need stronger confirmation and clearer copy.
 - **Density Without Compression**: keep layouts efficient while preserving readable spacing, stable control sizes, and clear scan paths.
 
 ## Colors
@@ -145,10 +145,10 @@ Resource pages:
 
 Config workspace:
 
-- Use `Visual` and `Config file` modes.
-- Visual mode is a workspace with sections, not a linear wizard.
+- Use one visual workspace for supported runtime settings.
+- The config workspace uses sections, not a linear wizard.
 - Save, reload, dirty state, validation state, and view changes belong in a sticky action bar inside the workspace.
-- Config file mode uses diff preview and clear full-file replacement warnings.
+- Do not expose a second raw-editing path in the product UI.
 - Sensitive fields use hidden inputs with explicit reveal controls.
 
 Sheets and dialogs:
