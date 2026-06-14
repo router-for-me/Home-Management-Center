@@ -15,6 +15,7 @@ import {
   KeyRound,
   Layers3,
   Loader2,
+  Minus,
   Pencil,
   Plus,
   RefreshCw,
@@ -63,6 +64,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 import {
   type CredentialBindingCandidate,
   type ModelBindingCandidate,
@@ -74,6 +76,7 @@ import type {
   AccessGroupResource,
 } from '@/lib/api/management/access-groups'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
+import type { BalanceOperationInput } from '@/lib/api/management/billing-types'
 import type { UserFormInput, UserResource } from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -84,6 +87,7 @@ type SheetMode =
   | { type: 'user-create' }
   | { type: 'user-edit'; user: UserResource }
   | { type: 'user-detail'; user: UserResource }
+  | { type: 'balance'; operation: 'recharge' | 'deduct' }
   | { type: 'key-create' }
   | { type: 'key-edit'; key: AccessKeyResource }
   | { type: 'group-create'; kind: AccessGroupKind }
@@ -94,6 +98,14 @@ type PendingDelete =
   | { type: 'key'; key: AccessKeyResource }
   | { type: 'group'; group: AccessGroupResource }
   | { type: 'detail'; detail: AccessGroupDetailResource }
+type PendingBalanceOperation = {
+  operation: 'recharge' | 'deduct'
+  input: BalanceOperationInput
+  userLabel: string
+  currentBalance: number
+  nextBalance: number
+}
+type BalanceOperationDraft = Omit<PendingBalanceOperation, 'operation'>
 type BindingCandidateOption = {
   id: string
   value: string
@@ -128,6 +140,22 @@ function formatOptionalTime(value: string | null, fallback: string) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(value)
+}
+
+function formatSignedAmount(value: number) {
+  const absolute = formatMoney(Math.abs(value))
+  return value >= 0 ? `+${absolute}` : `-${absolute}`
+}
+
+function formatUserIdentity(user: UserResource) {
+  return user.numericId !== null ? `${user.username} (#${user.numericId})` : user.username
 }
 
 function generateAccessKey() {
@@ -1707,12 +1735,244 @@ function GroupsTable({
   )
 }
 
+function BalanceOperationForm({
+  operation,
+  users,
+  mutating,
+  onCancel,
+  onSubmit,
+}: {
+  operation: 'recharge' | 'deduct'
+  users: UserResource[]
+  mutating: boolean
+  onCancel: () => void
+  onSubmit: (draft: BalanceOperationDraft) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const selectableUsers = useMemo(
+    () => users.filter((user) => user.numericId !== null && !user.deletedAt),
+    [users],
+  )
+  const firstUser = selectableUsers[0]
+  const [userId, setUserId] = useState(firstUser?.numericId ? String(firstUser.numericId) : '')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{
+    userId?: string
+    amount?: string
+    note?: string
+  }>({})
+
+  useEffect(() => {
+    setUserId(firstUser?.numericId ? String(firstUser.numericId) : '')
+    setAmount('')
+    setNote('')
+    setError(null)
+    setFieldErrors({})
+  }, [firstUser?.numericId, operation])
+
+  const selectedUser = selectableUsers.find(
+    (user) => user.numericId !== null && String(user.numericId) === userId,
+  )
+  const parsedAmount = Number(amount)
+  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0
+  const nextBalance =
+    selectedUser && amountIsValid
+      ? selectedUser.credits + (operation === 'recharge' ? parsedAmount : -parsedAmount)
+      : null
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const numericUserId = Number(userId)
+    const numericAmount = Number(amount)
+    const nextFieldErrors: typeof fieldErrors = {}
+
+    if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
+      nextFieldErrors.userId = t('usersPage.balance.validation.userRequired')
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      nextFieldErrors.amount = t('usersPage.balance.validation.amountRequired')
+    }
+    if (operation === 'deduct' && !note.trim()) {
+      nextFieldErrors.note = t('usersPage.balance.validation.noteRequired')
+    }
+
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setError(null)
+      return
+    }
+
+    setFieldErrors({})
+    setError(null)
+    try {
+      await onSubmit({
+        input: { userId: numericUserId, amount: numericAmount, note: note.trim() },
+        userLabel: selectedUser ? formatUserIdentity(selectedUser) : `#${numericUserId}`,
+        currentBalance: selectedUser?.credits ?? 0,
+        nextBalance:
+          selectedUser?.credits !== undefined
+            ? selectedUser.credits + (operation === 'recharge' ? numericAmount : -numericAmount)
+            : 0,
+      })
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : String(submitError))
+    }
+  }
+
+  return (
+    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
+      <label className="grid gap-2 text-sm font-medium">
+        <span>{t('usersPage.balance.form.user')}</span>
+        <Select
+          value={userId}
+          onValueChange={(value) => {
+            setUserId(value)
+            setFieldErrors((current) => ({ ...current, userId: undefined }))
+          }}
+          disabled={mutating}
+        >
+          <SelectTrigger
+            aria-label={t('usersPage.balance.form.user')}
+            aria-invalid={Boolean(fieldErrors.userId)}
+          >
+            <SelectValue placeholder={t('usersPage.balance.form.userPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {selectableUsers.map((user) => (
+              <SelectItem key={user.id} value={String(user.numericId)}>
+                {formatUserIdentity(user)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {fieldErrors.userId ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.userId}
+          </span>
+        ) : null}
+      </label>
+
+      <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <span className="text-muted-foreground min-w-0 truncate">
+            {t('usersPage.balance.form.current')}
+          </span>
+          <span className="min-w-0 text-right font-medium tabular-nums">
+            {selectedUser ? formatMoney(selectedUser.credits) : t('usersPage.balance.common.na')}
+          </span>
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <span className="text-muted-foreground min-w-0 truncate">
+            {t('usersPage.balance.form.after')}
+          </span>
+          <span
+            className={cn(
+              'min-w-0 text-right font-medium tabular-nums',
+              nextBalance !== null && nextBalance < 0
+                ? 'text-warning-foreground dark:text-warning'
+                : null,
+            )}
+          >
+            {nextBalance !== null ? formatMoney(nextBalance) : t('usersPage.balance.common.na')}
+          </span>
+        </div>
+      </div>
+
+      {operation === 'deduct' && nextBalance !== null && nextBalance < 0 ? (
+        <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
+          {t('usersPage.balance.form.negativeHint')}
+        </div>
+      ) : null}
+
+      <label className="grid gap-2 text-sm font-medium">
+        <span>{t('usersPage.balance.form.amount')}</span>
+        <Input
+          type="number"
+          min="0"
+          step="0.000001"
+          value={amount}
+          aria-label={t('usersPage.balance.form.amount')}
+          aria-invalid={Boolean(fieldErrors.amount)}
+          disabled={mutating}
+          onChange={(event) => {
+            setAmount(event.target.value)
+            setFieldErrors((current) => ({ ...current, amount: undefined }))
+          }}
+        />
+        {fieldErrors.amount ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.amount}
+          </span>
+        ) : null}
+      </label>
+
+      <label className="grid gap-2 text-sm font-medium">
+        <span>
+          {operation === 'deduct'
+            ? t('usersPage.balance.form.noteRequired')
+            : t('usersPage.balance.form.note')}
+        </span>
+        <Textarea
+          value={note}
+          className="min-h-20"
+          aria-label={
+            operation === 'deduct'
+              ? t('usersPage.balance.form.noteRequired')
+              : t('usersPage.balance.form.note')
+          }
+          aria-invalid={Boolean(fieldErrors.note)}
+          disabled={mutating}
+          onChange={(event) => {
+            setNote(event.target.value)
+            setFieldErrors((current) => ({ ...current, note: undefined }))
+          }}
+        />
+        {fieldErrors.note ? (
+          <span className="text-destructive text-xs leading-5 font-normal">{fieldErrors.note}</span>
+        ) : null}
+      </label>
+
+      {error ? (
+        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          variant={operation === 'deduct' ? 'warning' : 'default'}
+          disabled={mutating}
+        >
+          {mutating ? (
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+          ) : operation === 'deduct' ? (
+            <Minus className="size-4" aria-hidden="true" />
+          ) : (
+            <Plus className="size-4" aria-hidden="true" />
+          )}
+          {operation === 'recharge'
+            ? t('usersPage.balance.actions.recharge')
+            : t('usersPage.balance.actions.deduct')}
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function UsersWorkbenchPage() {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<UsersAccessTab>('users')
   const [search, setSearch] = useState('')
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [pendingBalanceOperation, setPendingBalanceOperation] =
+    useState<PendingBalanceOperation | null>(null)
   const loadCredentialCandidates =
     sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel'
   const loadModelCandidates = sheetMode?.type === 'detail-create' && sheetMode.kind === 'model'
@@ -1815,17 +2075,21 @@ export function UsersWorkbenchPage() {
         ? t('usersPage.form.editTitle')
         : sheetMode?.type === 'user-detail'
           ? t('usersPage.detail.title')
-          : sheetMode?.type === 'key-create'
-            ? t('usersPage.keys.createTitle')
-            : sheetMode?.type === 'key-edit'
-              ? t('usersPage.keys.editTitle')
-              : sheetMode?.type === 'group-create'
-                ? t(`usersPage.groups.${sheetMode.kind}CreateTitle`)
-                : sheetMode?.type === 'group-edit'
-                  ? t(`usersPage.groups.${sheetMode.group.kind}EditTitle`)
-                  : sheetMode?.type === 'detail-create'
-                    ? t(`usersPage.groups.${sheetMode.kind}BindingTitle`)
-                    : ''
+          : sheetMode?.type === 'balance'
+            ? sheetMode.operation === 'recharge'
+              ? t('usersPage.balance.sheet.rechargeTitle')
+              : t('usersPage.balance.sheet.deductTitle')
+            : sheetMode?.type === 'key-create'
+              ? t('usersPage.keys.createTitle')
+              : sheetMode?.type === 'key-edit'
+                ? t('usersPage.keys.editTitle')
+                : sheetMode?.type === 'group-create'
+                  ? t(`usersPage.groups.${sheetMode.kind}CreateTitle`)
+                  : sheetMode?.type === 'group-edit'
+                    ? t(`usersPage.groups.${sheetMode.group.kind}EditTitle`)
+                    : sheetMode?.type === 'detail-create'
+                      ? t(`usersPage.groups.${sheetMode.kind}BindingTitle`)
+                      : ''
   const sheetDescription =
     sheetMode?.type === 'user-create'
       ? t('usersPage.sheet.userCreateDescription')
@@ -1833,23 +2097,25 @@ export function UsersWorkbenchPage() {
         ? t('usersPage.sheet.userEditDescription')
         : sheetMode?.type === 'user-detail'
           ? t('usersPage.sheet.userDetailDescription')
-          : sheetMode?.type === 'key-create'
-            ? t('usersPage.sheet.keyCreateDescription')
-            : sheetMode?.type === 'key-edit'
-              ? t('usersPage.sheet.keyEditDescription')
-              : sheetMode?.type === 'group-create'
-                ? sheetMode.kind === 'channel'
-                  ? t('usersPage.sheet.channelGroupCreateDescription')
-                  : t('usersPage.sheet.modelGroupCreateDescription')
-                : sheetMode?.type === 'group-edit'
-                  ? sheetMode.group.kind === 'channel'
-                    ? t('usersPage.sheet.channelGroupEditDescription')
-                    : t('usersPage.sheet.modelGroupEditDescription')
-                  : sheetMode?.type === 'detail-create'
-                    ? sheetMode.kind === 'channel'
-                      ? t('usersPage.sheet.channelBindingDescription')
-                      : t('usersPage.sheet.modelBindingDescription')
-                    : ''
+          : sheetMode?.type === 'balance'
+            ? t('usersPage.balance.sheet.description')
+            : sheetMode?.type === 'key-create'
+              ? t('usersPage.sheet.keyCreateDescription')
+              : sheetMode?.type === 'key-edit'
+                ? t('usersPage.sheet.keyEditDescription')
+                : sheetMode?.type === 'group-create'
+                  ? sheetMode.kind === 'channel'
+                    ? t('usersPage.sheet.channelGroupCreateDescription')
+                    : t('usersPage.sheet.modelGroupCreateDescription')
+                  : sheetMode?.type === 'group-edit'
+                    ? sheetMode.group.kind === 'channel'
+                      ? t('usersPage.sheet.channelGroupEditDescription')
+                      : t('usersPage.sheet.modelGroupEditDescription')
+                    : sheetMode?.type === 'detail-create'
+                      ? sheetMode.kind === 'channel'
+                        ? t('usersPage.sheet.channelBindingDescription')
+                        : t('usersPage.sheet.modelBindingDescription')
+                      : ''
 
   return (
     <section className="grid gap-5">
@@ -1872,6 +2138,22 @@ export function UsersWorkbenchPage() {
                 ? t('usersPage.actions.syncing')
                 : t('usersPage.actions.refresh')}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSheetMode({ type: 'balance', operation: 'recharge' })}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t('usersPage.balance.actions.recharge')}
+            </Button>
+            <Button
+              variant="warning"
+              size="sm"
+              onClick={() => setSheetMode({ type: 'balance', operation: 'deduct' })}
+            >
+              <Minus className="size-4" aria-hidden="true" />
+              {t('usersPage.balance.actions.deduct')}
+            </Button>
             <Button size="sm" onClick={() => setSheetMode({ type: 'user-create' })}>
               <Plus className="size-4" aria-hidden="true" />
               {t('usersPage.actions.newUser')}
@@ -1880,23 +2162,23 @@ export function UsersWorkbenchPage() {
         }
         tags={
           <>
-          <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-            {t('usersPage.header.users', { count: users.length })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('usersPage.header.activeUsers', { count: activeUsers.length })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('usersPage.header.keys', { count: accessKeys.length })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('usersPage.header.assignedKeys', { count: assignedKeyCount })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('usersPage.header.updatedAt', {
-              time: formatOptionalTime(workbench.fetchedAt, t('usersPage.status.notReturned')),
-            })}
-          </span>
+            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
+              {t('usersPage.header.users', { count: users.length })}
+            </span>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('usersPage.header.activeUsers', { count: activeUsers.length })}
+            </span>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('usersPage.header.keys', { count: accessKeys.length })}
+            </span>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('usersPage.header.assignedKeys', { count: assignedKeyCount })}
+            </span>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('usersPage.header.updatedAt', {
+                time: formatOptionalTime(workbench.fetchedAt, t('usersPage.status.notReturned')),
+              })}
+            </span>
           </>
         }
       />
@@ -2064,6 +2346,17 @@ export function UsersWorkbenchPage() {
               channelGroups={channelGroups}
               modelGroups={modelGroups}
             />
+          ) : sheetMode?.type === 'balance' ? (
+            <BalanceOperationForm
+              operation={sheetMode.operation}
+              users={users}
+              mutating={workbench.mutating}
+              onCancel={closeSheet}
+              onSubmit={(draft) => {
+                setPendingBalanceOperation({ operation: sheetMode.operation, ...draft })
+                return Promise.resolve()
+              }}
+            />
           ) : sheetMode?.type === 'key-create' || sheetMode?.type === 'key-edit' ? (
             <AccessKeyForm
               mode={sheetMode.type === 'key-create' ? 'create' : 'edit'}
@@ -2210,6 +2503,141 @@ export function UsersWorkbenchPage() {
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
               {t('usersPage.actions.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={Boolean(pendingBalanceOperation)}
+        onOpenChange={(open) => {
+          if (!open) setPendingBalanceOperation(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {pendingBalanceOperation?.operation === 'deduct'
+                ? t('usersPage.balance.confirm.deductTitle')
+                : t('usersPage.balance.confirm.rechargeTitle')}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingBalanceOperation?.operation === 'deduct'
+                ? t('usersPage.balance.confirm.deductDescription')
+                : t('usersPage.balance.confirm.rechargeDescription')}
+            </AlertDialogDescription>
+            {pendingBalanceOperation ? (
+              <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <span className="text-muted-foreground min-w-0 truncate">
+                    {t('usersPage.balance.confirm.user')}
+                  </span>
+                  <span className="min-w-0 text-right font-medium">
+                    {pendingBalanceOperation.userLabel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <span className="text-muted-foreground min-w-0 truncate">
+                    {t('usersPage.balance.confirm.amount')}
+                  </span>
+                  <span
+                    className={cn(
+                      'min-w-0 text-right font-medium tabular-nums',
+                      pendingBalanceOperation.operation === 'deduct'
+                        ? 'text-warning-foreground dark:text-warning'
+                        : 'text-success',
+                    )}
+                  >
+                    {formatSignedAmount(
+                      pendingBalanceOperation.operation === 'deduct'
+                        ? -Math.abs(pendingBalanceOperation.input.amount)
+                        : Math.abs(pendingBalanceOperation.input.amount),
+                    )}
+                  </span>
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <span className="text-muted-foreground min-w-0 truncate">
+                    {t('usersPage.balance.confirm.current')}
+                  </span>
+                  <span className="min-w-0 text-right font-medium tabular-nums">
+                    {formatMoney(pendingBalanceOperation.currentBalance)}
+                  </span>
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                  <span className="text-muted-foreground min-w-0 truncate">
+                    {t('usersPage.balance.confirm.after')}
+                  </span>
+                  <span
+                    className={cn(
+                      'min-w-0 text-right font-medium tabular-nums',
+                      pendingBalanceOperation.nextBalance < 0
+                        ? 'text-warning-foreground dark:text-warning'
+                        : null,
+                    )}
+                  >
+                    {formatMoney(pendingBalanceOperation.nextBalance)}
+                  </span>
+                </div>
+                <div className="grid gap-1 border-t pt-2">
+                  <span className="text-muted-foreground text-xs">
+                    {t('usersPage.balance.confirm.note')}
+                  </span>
+                  <span className="min-w-0 text-sm break-words">
+                    {pendingBalanceOperation.input.note || t('usersPage.balance.common.na')}
+                  </span>
+                </div>
+                {pendingBalanceOperation.nextBalance < 0 ? (
+                  <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
+                    {t('usersPage.balance.confirm.negativeResult')}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={workbench.mutating}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className={
+                pendingBalanceOperation?.operation === 'deduct'
+                  ? 'bg-warning text-warning-foreground hover:bg-warning/90 focus-visible:ring-warning/20'
+                  : undefined
+              }
+              disabled={workbench.mutating}
+              onClick={(event) => {
+                event.preventDefault()
+                if (!pendingBalanceOperation) return
+
+                const operation = pendingBalanceOperation.operation
+                const action =
+                  operation === 'recharge'
+                    ? workbench.recharge(pendingBalanceOperation.input)
+                    : workbench.deduct(pendingBalanceOperation.input)
+
+                void action
+                  .then(() => {
+                    toast.success(
+                      operation === 'recharge'
+                        ? t('usersPage.toast.recharged')
+                        : t('usersPage.toast.deducted'),
+                    )
+                    setPendingBalanceOperation(null)
+                    closeSheet()
+                  })
+                  .catch((mutationError) => {
+                    toast.error(
+                      mutationError instanceof Error
+                        ? mutationError.message
+                        : String(mutationError),
+                    )
+                  })
+              }}
+            >
+              {workbench.mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+              {t('usersPage.balance.confirm.action')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
