@@ -4,10 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import type { BillingTab } from '@/features/billing/billing-model'
 import {
-  createDeduction,
   createModelPrice,
   createProxyPool,
-  createRecharge,
   deleteModelPrice,
   deleteProxyPool,
   fetchBalanceRecords,
@@ -21,7 +19,6 @@ import {
   updateProxyPool,
 } from '@/lib/api/management/billing'
 import type {
-  BalanceOperationInput,
   BillingFilters,
   BillingPagination,
   ModelPrice,
@@ -296,37 +293,10 @@ export function useBillingWorkbench(
     },
   })
 
-  const invalidateOverview = () => queryClient.invalidateQueries({ queryKey: overviewQueryKey })
-  const invalidateBalanceRecords = () =>
-    queryClient.invalidateQueries({ queryKey: ['billing', 'balanceRecords'] })
   const invalidateModelPrices = () =>
     queryClient.invalidateQueries({ queryKey: ['billing', 'modelPrices'] })
   const invalidateProxyPools = () =>
     queryClient.invalidateQueries({ queryKey: ['billing', 'proxyPools'] })
-  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: usersQueryKey })
-  const invalidateUserBilling = () => queryClient.invalidateQueries({ queryKey: ['userBilling'] })
-
-  const rechargeMutation = useMutation({
-    mutationFn: (input: BalanceOperationInput) => createRecharge(session, input),
-    onSuccess: () => {
-      void invalidateOverview()
-      void invalidateBalanceRecords()
-      void invalidateUsers()
-      void invalidateUserBilling()
-    },
-    onError: toError,
-  })
-
-  const deductionMutation = useMutation({
-    mutationFn: (input: BalanceOperationInput) => createDeduction(session, input),
-    onSuccess: () => {
-      void invalidateOverview()
-      void invalidateBalanceRecords()
-      void invalidateUsers()
-      void invalidateUserBilling()
-    },
-    onError: toError,
-  })
 
   const createPriceMutation = useMutation({
     mutationFn: (input: ModelPriceInput) => createModelPrice(session, input),
@@ -431,8 +401,6 @@ export function useBillingWorkbench(
     refreshModelPrices: modelPricesQuery.refetch,
     refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
     refreshProxyPools: proxyPoolsQuery.refetch,
-    recharge: rechargeMutation.mutateAsync,
-    deduct: deductionMutation.mutateAsync,
     createModelPrice: createPriceMutation.mutateAsync,
     updateModelPrice: updatePriceMutation.mutateAsync,
     deleteModelPrice: deletePriceMutation.mutateAsync,
@@ -441,8 +409,6 @@ export function useBillingWorkbench(
     deleteProxyPool: deleteProxyMutation.mutateAsync,
     testProxyPool: testProxyMutation.mutateAsync,
     mutating:
-      rechargeMutation.isPending ||
-      deductionMutation.isPending ||
       createPriceMutation.isPending ||
       updatePriceMutation.isPending ||
       deletePriceMutation.isPending ||

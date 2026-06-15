@@ -375,8 +375,7 @@ export const zhTW = {
       },
       header: {
         title: '財務與報表',
-        description:
-          '管理 Home 多使用者計費能力：查看扣款事實、手工充值或扣減餘額、維護模型價格，並管理全域代理池。',
+        description: '查看 Home 多使用者計費資料：扣款事實、餘額流水、模型價格，並管理全域代理池。',
       },
       actions: {
         refresh: '刷新目前視圖',
@@ -492,10 +491,6 @@ export const zhTW = {
         title: '餘額記錄',
         description: '查看使用者餘額的充值、扣減和變動記錄。',
         empty: '目前時間範圍內沒有餘額記錄。',
-        actions: {
-          recharge: '充值',
-          deduct: '扣減',
-        },
         types: {
           recharge: '充值',
           deduct: '扣減',
@@ -509,39 +504,6 @@ export const zhTW = {
           after: '操作後餘額',
           operator: '操作管理員',
           note: '備註',
-        },
-        sheet: {
-          rechargeTitle: '手工充值',
-          deductTitle: '手工扣減',
-          description: '選擇使用者並填寫金額，提交後會保留一條餘額流水。',
-        },
-        form: {
-          user: '使用者',
-          userPlaceholder: '選擇使用者',
-          current: '目前餘額',
-          after: '操作後餘額',
-          negativeHint: '扣減後餘額會變為負數。Home 允許負數餘額，但請確認這是預期操作。',
-          amount: '金額',
-          note: '備註',
-          noteRequired: '備註，必填',
-        },
-        validation: {
-          userRequired: '必須選擇一個使用者。',
-          amountRequired: '金額必須大於 0。',
-          noteRequired: '扣減必須填寫備註。',
-        },
-        confirm: {
-          rechargeTitle: '確認充值？',
-          deductTitle: '確認扣減？',
-          rechargeDescription: '提交後會生成一條餘額記錄，請確認使用者和操作後餘額。',
-          deductDescription: '扣減會生成一條餘額記錄，請確認使用者、金額和操作後餘額。',
-          user: '使用者',
-          amount: '金額變化',
-          current: '目前餘額',
-          after: '操作後餘額',
-          note: '備註',
-          negativeResult: '本次操作後餘額會變為負數。Home 允許負數餘額，但請確認這是預期操作。',
-          action: '確認提交',
         },
       },
       balanceDetail: {
@@ -681,8 +643,6 @@ export const zhTW = {
       },
       toast: {
         copied: '已複製。',
-        recharged: '充值已提交。',
-        deducted: '扣減已提交。',
         priceCreated: '模型價格已建立。',
         priceUpdated: '模型價格已更新。',
         proxyCreated: '代理已建立。',
@@ -1633,6 +1593,48 @@ export const zhTW = {
         channelBindingTitle: '新增憑證綁定',
         modelBindingTitle: '新增模型綁定',
       },
+      balance: {
+        common: {
+          na: '—',
+        },
+        actions: {
+          recharge: '充值',
+          deduct: '扣減',
+        },
+        sheet: {
+          rechargeTitle: '手工充值',
+          deductTitle: '手工扣減',
+          description: '選擇使用者並填寫金額，提交後會保留一條餘額流水。',
+        },
+        form: {
+          user: '使用者',
+          userPlaceholder: '選擇使用者',
+          current: '目前餘額',
+          after: '操作後餘額',
+          negativeHint: '扣減後餘額會變為負數。Home 允許負數餘額，但請確認這是預期操作。',
+          amount: '金額',
+          note: '備註',
+          noteRequired: '備註，必填',
+        },
+        validation: {
+          userRequired: '必須選擇一個使用者。',
+          amountRequired: '金額必須大於 0。',
+          noteRequired: '扣減必須填寫備註。',
+        },
+        confirm: {
+          rechargeTitle: '確認充值？',
+          deductTitle: '確認扣減？',
+          rechargeDescription: '提交後會生成一條餘額記錄，請確認使用者和操作後餘額。',
+          deductDescription: '扣減會生成一條餘額記錄，請確認使用者、金額和操作後餘額。',
+          user: '使用者',
+          amount: '金額變化',
+          current: '目前餘額',
+          after: '操作後餘額',
+          note: '備註',
+          negativeResult: '本次操作後餘額會變為負數。Home 允許負數餘額，但請確認這是預期操作。',
+          action: '確認提交',
+        },
+      },
       detail: {
         title: '使用者詳情',
         empty: '選擇一個使用者查看詳情。',
@@ -1667,6 +1669,8 @@ export const zhTW = {
         bindingsCreated: '已新增 {{count}} 個綁定。',
         bindingsPartiallyCreated: '已新增 {{created}} 個綁定，{{failed}} 個失敗。',
         bindingDeleted: '綁定已刪除。',
+        recharged: '充值已提交。',
+        deducted: '扣減已提交。',
       },
       workspace: {
         title: '存取工作台',

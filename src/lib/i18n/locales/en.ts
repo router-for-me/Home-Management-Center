@@ -386,7 +386,7 @@ export const en = {
       header: {
         title: 'Billing & Reports',
         description:
-          'Manage Home multi-user billing: charge facts, manual recharge or deduction, model prices, and global proxy pools.',
+          'Review Home multi-user billing: charge facts, balance records, model prices, and global proxy pools.',
       },
       actions: {
         refresh: 'Refresh current view',
@@ -503,10 +503,6 @@ export const en = {
         title: 'Balance records',
         description: 'Review user balance recharges, deductions, and balance changes.',
         empty: 'No balance records in the selected range.',
-        actions: {
-          recharge: 'Recharge',
-          deduct: 'Deduct',
-        },
         types: {
           recharge: 'Recharge',
           deduct: 'Deduct',
@@ -520,43 +516,6 @@ export const en = {
           after: 'After',
           operator: 'Operator',
           note: 'Note',
-        },
-        sheet: {
-          rechargeTitle: 'Manual recharge',
-          deductTitle: 'Manual deduction',
-          description: 'Select a user and amount. Submitting creates a balance ledger record.',
-        },
-        form: {
-          user: 'User',
-          userPlaceholder: 'Select user',
-          current: 'Current balance',
-          after: 'Balance after',
-          negativeHint:
-            'The balance will become negative. Home allows negative balances, but confirm this is intended.',
-          amount: 'Amount',
-          note: 'Note',
-          noteRequired: 'Note, required',
-        },
-        validation: {
-          userRequired: 'Select a user.',
-          amountRequired: 'Amount must be greater than 0.',
-          noteRequired: 'Deduction requires a note.',
-        },
-        confirm: {
-          rechargeTitle: 'Confirm recharge?',
-          deductTitle: 'Confirm deduction?',
-          rechargeDescription:
-            'Submitting creates a balance record. Confirm the user and resulting balance.',
-          deductDescription:
-            'Deduction creates a balance record. Confirm the user, amount, and resulting balance.',
-          user: 'User',
-          amount: 'Amount change',
-          current: 'Current balance',
-          after: 'Balance after',
-          note: 'Note',
-          negativeResult:
-            'The resulting balance will be negative. Home allows negative balances, but confirm this is intended.',
-          action: 'Confirm',
         },
       },
       balanceDetail: {
@@ -701,8 +660,6 @@ export const en = {
       },
       toast: {
         copied: 'Copied.',
-        recharged: 'Recharge submitted.',
-        deducted: 'Deduction submitted.',
         priceCreated: 'Model price created.',
         priceUpdated: 'Model price updated.',
         proxyCreated: 'Proxy created.',
@@ -1674,6 +1631,52 @@ export const en = {
         channelBindingTitle: 'Add credential binding',
         modelBindingTitle: 'Add model binding',
       },
+      balance: {
+        common: {
+          na: '—',
+        },
+        actions: {
+          recharge: 'Recharge',
+          deduct: 'Deduct',
+        },
+        sheet: {
+          rechargeTitle: 'Manual recharge',
+          deductTitle: 'Manual deduction',
+          description: 'Select a user and amount. Submitting creates a balance ledger record.',
+        },
+        form: {
+          user: 'User',
+          userPlaceholder: 'Select user',
+          current: 'Current balance',
+          after: 'Balance after',
+          negativeHint:
+            'The balance will become negative. Home allows negative balances, but confirm this is intended.',
+          amount: 'Amount',
+          note: 'Note',
+          noteRequired: 'Note, required',
+        },
+        validation: {
+          userRequired: 'Select a user.',
+          amountRequired: 'Amount must be greater than 0.',
+          noteRequired: 'Deduction requires a note.',
+        },
+        confirm: {
+          rechargeTitle: 'Confirm recharge?',
+          deductTitle: 'Confirm deduction?',
+          rechargeDescription:
+            'Submitting creates a balance record. Confirm the user and resulting balance.',
+          deductDescription:
+            'Deduction creates a balance record. Confirm the user, amount, and resulting balance.',
+          user: 'User',
+          amount: 'Amount change',
+          current: 'Current balance',
+          after: 'Balance after',
+          note: 'Note',
+          negativeResult:
+            'The resulting balance will be negative. Home allows negative balances, but confirm this is intended.',
+          action: 'Confirm',
+        },
+      },
       detail: {
         title: 'User detail',
         empty: 'Select a user to inspect details.',
@@ -1708,6 +1711,8 @@ export const en = {
         bindingsCreated: '{{count}} bindings added.',
         bindingsPartiallyCreated: '{{created}} bindings added, {{failed}} failed.',
         bindingDeleted: 'Binding deleted.',
+        recharged: 'Recharge submitted.',
+        deducted: 'Deduction submitted.',
       },
       workspace: {
         title: 'Access workspace',

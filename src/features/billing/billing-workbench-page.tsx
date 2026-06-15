@@ -12,7 +12,6 @@ import {
   Copy,
   Eye,
   Loader2,
-  Minus,
   PackageCheck,
   Pencil,
   Plus,
@@ -100,7 +99,6 @@ import { useConsoleUiStore } from '@/stores/ui-store'
 type SheetMode =
   | { type: 'charge-detail'; record: ChargeRecord }
   | { type: 'balance-detail'; record: BalanceRecord }
-  | { type: 'balance'; operation: 'recharge' | 'deduct' }
   | { type: 'model-price-create' }
   | { type: 'model-price-edit'; resource: ModelPrice }
   | { type: 'proxy-create' }
@@ -109,20 +107,6 @@ type SheetMode =
 type PendingDelete =
   | { type: 'model-price'; resource: ModelPrice }
   | { type: 'proxy'; resource: ProxyPoolItem }
-
-type PendingBalanceOperation = {
-  operation: 'recharge' | 'deduct'
-  input: {
-    userId: number
-    amount: number
-    note: string
-  }
-  userLabel: string
-  currentBalance: number
-  nextBalance: number
-}
-
-type BalanceOperationDraft = Omit<PendingBalanceOperation, 'operation'>
 
 const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices', 'proxyPools']
 
@@ -721,13 +705,11 @@ function BalanceRecordsTab({
   workbench,
   pagination,
   onPaginationChange,
-  onCreate,
   onView,
 }: {
   workbench: ReturnType<typeof useBillingWorkbench>
   pagination: BillingPagination
   onPaginationChange: (pagination: BillingPagination) => void
-  onCreate: (operation: 'recharge' | 'deduct') => void
   onView: (record: BalanceRecord) => void
 }) {
   const { t } = useTranslation()
@@ -756,18 +738,6 @@ function BalanceRecordsTab({
       <TableSurfaceHeader
         title={t('billingPage.balance.title')}
         description={t('billingPage.balance.description')}
-        actions={
-          <>
-            <Button onClick={() => onCreate('recharge')}>
-              <Plus className="size-4" aria-hidden="true" />
-              {t('billingPage.balance.actions.recharge')}
-            </Button>
-            <Button variant="warning" onClick={() => onCreate('deduct')}>
-              <Minus className="size-4" aria-hidden="true" />
-              {t('billingPage.balance.actions.deduct')}
-            </Button>
-          </>
-        }
       />
       {workbench.balanceRecords.length === 0 ? (
         <EmptyState>{t('billingPage.balance.empty')}</EmptyState>
@@ -1256,202 +1226,6 @@ function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: U
         </div>
       ))}
     </DrawerScaffoldBody>
-  )
-}
-
-function BalanceOperationSheet({
-  operation,
-  users,
-  mutating,
-  onCancel,
-  onSubmit,
-}: {
-  operation: 'recharge' | 'deduct'
-  users: UserResource[]
-  mutating: boolean
-  onCancel: () => void
-  onSubmit: (draft: BalanceOperationDraft) => Promise<void>
-}) {
-  const { t } = useTranslation()
-  const firstUser = users.find((user) => user.numericId !== null)
-  const [userId, setUserId] = useState(firstUser?.numericId ? String(firstUser.numericId) : '')
-  const [amount, setAmount] = useState('')
-  const [note, setNote] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{
-    userId?: string
-    amount?: string
-    note?: string
-  }>({})
-  const selectedUser = users.find(
-    (user) => user.numericId !== null && String(user.numericId) === userId,
-  )
-  const parsedAmount = Number(amount)
-  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0
-  const nextBalance =
-    selectedUser && amountIsValid
-      ? selectedUser.credits + (operation === 'recharge' ? parsedAmount : -parsedAmount)
-      : null
-
-  useEffect(() => {
-    setUserId(firstUser?.numericId ? String(firstUser.numericId) : '')
-    setAmount('')
-    setNote('')
-    setError(null)
-    setFieldErrors({})
-  }, [firstUser?.numericId, operation])
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const numericUserId = Number(userId)
-    const numericAmount = Number(amount)
-    const nextFieldErrors: typeof fieldErrors = {}
-
-    if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
-      nextFieldErrors.userId = t('billingPage.balance.validation.userRequired')
-    }
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      nextFieldErrors.amount = t('billingPage.balance.validation.amountRequired')
-    }
-    if (operation === 'deduct' && !note.trim()) {
-      nextFieldErrors.note = t('billingPage.balance.validation.noteRequired')
-    }
-
-    if (Object.keys(nextFieldErrors).length > 0) {
-      setFieldErrors(nextFieldErrors)
-      setError(null)
-      return
-    }
-
-    setFieldErrors({})
-    setError(null)
-    try {
-      await onSubmit({
-        input: { userId: numericUserId, amount: numericAmount, note: note.trim() },
-        userLabel: selectedUser ? formatUserIdentity(selectedUser) : `#${numericUserId}`,
-        currentBalance: selectedUser?.credits ?? 0,
-        nextBalance:
-          selectedUser?.credits !== undefined
-            ? selectedUser.credits + (operation === 'recharge' ? numericAmount : -numericAmount)
-            : 0,
-      })
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
-    }
-  }
-
-  return (
-    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
-      <CompactDrawerFormBody>
-        <CompactField label={t('billingPage.balance.form.user')} error={fieldErrors.userId}>
-          <Select
-            value={userId}
-            onValueChange={(value) => {
-              setUserId(value)
-              setFieldErrors((current) => ({ ...current, userId: undefined }))
-            }}
-            disabled={mutating}
-          >
-            <SelectTrigger
-              aria-label={t('billingPage.balance.form.user')}
-              aria-invalid={Boolean(fieldErrors.userId)}
-            >
-              <SelectValue placeholder={t('billingPage.balance.form.userPlaceholder')} />
-            </SelectTrigger>
-            <SelectContent>
-              {users
-                .filter((user) => user.numericId !== null)
-                .map((user) => (
-                  <SelectItem key={user.id} value={String(user.numericId)}>
-                    {formatUserIdentity(user)}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </CompactField>
-        <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
-          <CompactSummaryRow
-            label={t('billingPage.balance.form.current')}
-            value={selectedUser ? formatMoney(selectedUser.credits) : t('billingPage.common.na')}
-          />
-          <CompactSummaryRow
-            label={t('billingPage.balance.form.after')}
-            value={nextBalance !== null ? formatMoney(nextBalance) : t('billingPage.common.na')}
-            valueClassName={cn(
-              nextBalance !== null && nextBalance < 0
-                ? 'text-warning-foreground dark:text-warning'
-                : null,
-            )}
-          />
-        </div>
-        {operation === 'deduct' && nextBalance !== null && nextBalance < 0 ? (
-          <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
-            {t('billingPage.balance.form.negativeHint')}
-          </div>
-        ) : null}
-        <CompactField label={t('billingPage.balance.form.amount')} error={fieldErrors.amount}>
-          <Input
-            type="number"
-            min="0"
-            step="0.000001"
-            value={amount}
-            aria-label={t('billingPage.balance.form.amount')}
-            aria-invalid={Boolean(fieldErrors.amount)}
-            disabled={mutating}
-            onChange={(event) => {
-              setAmount(event.target.value)
-              setFieldErrors((current) => ({ ...current, amount: undefined }))
-            }}
-          />
-        </CompactField>
-        <CompactField
-          label={
-            operation === 'deduct'
-              ? t('billingPage.balance.form.noteRequired')
-              : t('billingPage.balance.form.note')
-          }
-          error={fieldErrors.note}
-        >
-          <Textarea
-            value={note}
-            className="min-h-20"
-            aria-label={
-              operation === 'deduct'
-                ? t('billingPage.balance.form.noteRequired')
-                : t('billingPage.balance.form.note')
-            }
-            aria-invalid={Boolean(fieldErrors.note)}
-            disabled={mutating}
-            onChange={(event) => {
-              setNote(event.target.value)
-              setFieldErrors((current) => ({ ...current, note: undefined }))
-            }}
-          />
-        </CompactField>
-        {error ? <ErrorNotice message={error} fallback={error} /> : null}
-      </CompactDrawerFormBody>
-      <DrawerScaffoldFooter>
-        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button
-          type="submit"
-          variant={operation === 'deduct' ? 'warning' : 'default'}
-          disabled={mutating}
-        >
-          {mutating ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : operation === 'deduct' ? (
-            <Minus className="size-4" aria-hidden="true" />
-          ) : (
-            <Plus className="size-4" aria-hidden="true" />
-          )}
-          {operation === 'recharge'
-            ? t('billingPage.balance.actions.recharge')
-            : t('billingPage.balance.actions.deduct')}
-        </Button>
-      </DrawerScaffoldFooter>
-    </form>
   )
 }
 
@@ -2073,8 +1847,6 @@ export function BillingWorkbenchPage() {
     useState<BillingPagination>(defaultBillingPagination)
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
-  const [pendingBalanceOperation, setPendingBalanceOperation] =
-    useState<PendingBalanceOperation | null>(null)
   const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
   const activeFetching =
     activeTab === 'overview'
@@ -2250,7 +2022,6 @@ export function BillingWorkbenchPage() {
           workbench={workbench}
           pagination={balancePagination}
           onPaginationChange={setBalancePagination}
-          onCreate={(operation) => setSheetMode({ type: 'balance', operation })}
           onView={(record) => setSheetMode({ type: 'balance-detail', record })}
         />
       ) : null}
@@ -2305,17 +2076,13 @@ export function BillingWorkbenchPage() {
                     ? t('billingPage.chargeDetail.title')
                     : sheetMode.type === 'balance-detail'
                       ? t('billingPage.balanceDetail.title')
-                      : sheetMode.type === 'balance'
-                        ? sheetMode.operation === 'recharge'
-                          ? t('billingPage.balance.sheet.rechargeTitle')
-                          : t('billingPage.balance.sheet.deductTitle')
-                        : sheetMode.type === 'model-price-create'
-                          ? t('billingPage.prices.sheet.createTitle')
-                          : sheetMode.type === 'model-price-edit'
-                            ? t('billingPage.prices.sheet.editTitle')
-                            : sheetMode.type === 'proxy-create'
-                              ? t('billingPage.proxies.sheet.createTitle')
-                              : t('billingPage.proxies.sheet.editTitle')}
+                      : sheetMode.type === 'model-price-create'
+                        ? t('billingPage.prices.sheet.createTitle')
+                        : sheetMode.type === 'model-price-edit'
+                          ? t('billingPage.prices.sheet.editTitle')
+                          : sheetMode.type === 'proxy-create'
+                            ? t('billingPage.proxies.sheet.createTitle')
+                            : t('billingPage.proxies.sheet.editTitle')}
                 </SheetTitle>
                 {sheetMode.type === 'model-price-create' ||
                 sheetMode.type === 'model-price-edit' ? null : (
@@ -2324,9 +2091,7 @@ export function BillingWorkbenchPage() {
                       ? t('billingPage.chargeDetail.description')
                       : sheetMode.type === 'balance-detail'
                         ? t('billingPage.balanceDetail.description')
-                        : sheetMode.type === 'balance'
-                          ? t('billingPage.balance.sheet.description')
-                          : t('billingPage.proxies.sheet.description')}
+                        : t('billingPage.proxies.sheet.description')}
                   </SheetDescription>
                 )}
               </DrawerScaffoldHeader>
@@ -2335,21 +2100,6 @@ export function BillingWorkbenchPage() {
               ) : null}
               {sheetMode.type === 'balance-detail' ? (
                 <BalanceDetailSheet record={sheetMode.record} users={workbench.users} />
-              ) : null}
-              {sheetMode.type === 'balance' ? (
-                <BalanceOperationSheet
-                  operation={sheetMode.operation}
-                  users={workbench.users}
-                  mutating={workbench.mutating || workbench.usersLoading}
-                  onCancel={closeSheet}
-                  onSubmit={(draft) => {
-                    setPendingBalanceOperation({
-                      operation: sheetMode.operation,
-                      ...draft,
-                    })
-                    return Promise.resolve()
-                  }}
-                />
               ) : null}
               {sheetMode.type === 'model-price-create' || sheetMode.type === 'model-price-edit' ? (
                 <ModelPriceSheet
@@ -2365,7 +2115,9 @@ export function BillingWorkbenchPage() {
                   candidatesIssue={workbench.modelPriceCandidatesIssue}
                   mutating={workbench.mutating}
                   onCancel={closeSheet}
-                  onRetryCandidates={workbench.refreshModelPriceCandidates}
+                  onRetryCandidates={() => {
+                    void workbench.refreshModelPriceCandidates()
+                  }}
                   onSubmit={async (input) => {
                     if (sheetMode.type === 'model-price-create') {
                       await workbench.createModelPrice(input)
@@ -2453,112 +2205,6 @@ export function BillingWorkbenchPage() {
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
               {t('billingPage.common.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={Boolean(pendingBalanceOperation)}
-        onOpenChange={(open) => !open && setPendingBalanceOperation(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingBalanceOperation?.operation === 'deduct'
-                ? t('billingPage.balance.confirm.deductTitle')
-                : t('billingPage.balance.confirm.rechargeTitle')}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingBalanceOperation?.operation === 'deduct'
-                ? t('billingPage.balance.confirm.deductDescription')
-                : t('billingPage.balance.confirm.rechargeDescription')}
-            </AlertDialogDescription>
-            {pendingBalanceOperation ? (
-              <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
-                <CompactSummaryRow
-                  label={t('billingPage.balance.confirm.user')}
-                  value={pendingBalanceOperation.userLabel}
-                />
-                <CompactSummaryRow
-                  label={t('billingPage.balance.confirm.amount')}
-                  value={formatSignedAmount(
-                    pendingBalanceOperation.operation === 'deduct'
-                      ? -Math.abs(pendingBalanceOperation.input.amount)
-                      : Math.abs(pendingBalanceOperation.input.amount),
-                  )}
-                  valueClassName={
-                    pendingBalanceOperation.operation === 'deduct'
-                      ? 'text-warning-foreground dark:text-warning'
-                      : 'text-success'
-                  }
-                />
-                <CompactSummaryRow
-                  label={t('billingPage.balance.confirm.current')}
-                  value={formatMoney(pendingBalanceOperation.currentBalance)}
-                />
-                <CompactSummaryRow
-                  label={t('billingPage.balance.confirm.after')}
-                  value={formatMoney(pendingBalanceOperation.nextBalance)}
-                  valueClassName={
-                    pendingBalanceOperation.nextBalance < 0
-                      ? 'text-warning-foreground dark:text-warning'
-                      : undefined
-                  }
-                />
-                <div className="grid gap-1 border-t pt-2">
-                  <span className="text-muted-foreground text-xs">
-                    {t('billingPage.balance.confirm.note')}
-                  </span>
-                  <span className="min-w-0 text-sm break-words">
-                    {pendingBalanceOperation.input.note || t('billingPage.common.na')}
-                  </span>
-                </div>
-                {pendingBalanceOperation.nextBalance < 0 ? (
-                  <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
-                    {t('billingPage.balance.confirm.negativeResult')}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={workbench.mutating}>
-              {t('common.cancel')}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className={
-                pendingBalanceOperation?.operation === 'deduct'
-                  ? 'bg-warning text-warning-foreground hover:bg-warning/90 focus-visible:ring-warning/20'
-                  : undefined
-              }
-              disabled={workbench.mutating}
-              onClick={(event) => {
-                event.preventDefault()
-                if (!pendingBalanceOperation) return
-
-                const action =
-                  pendingBalanceOperation.operation === 'recharge'
-                    ? workbench.recharge(pendingBalanceOperation.input)
-                    : workbench.deduct(pendingBalanceOperation.input)
-
-                void action
-                  .then(() => {
-                    toast.success(
-                      pendingBalanceOperation.operation === 'recharge'
-                        ? t('billingPage.toast.recharged')
-                        : t('billingPage.toast.deducted'),
-                    )
-                    setPendingBalanceOperation(null)
-                    closeSheet()
-                  })
-                  .catch(showMutationError)
-              }}
-            >
-              {workbench.mutating ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : null}
-              {t('billingPage.balance.confirm.action')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -23,6 +23,8 @@ import {
   toAccessKeyApiError,
   updateAccessKeyBindings,
 } from '@/lib/api/management/access-keys'
+import { createDeduction, createRecharge, toBillingApiError } from '@/lib/api/management/billing'
+import type { BalanceOperationInput } from '@/lib/api/management/billing-types'
 import {
   type CredentialResource,
   fetchCredentialSnapshot,
@@ -410,6 +412,37 @@ export function useUserWorkbench(
     onSuccess: invalidateAccess,
   })
 
+  const invalidateBalanceAfterOperation = async () => {
+    await Promise.all([
+      invalidateUsers(),
+      queryClient.invalidateQueries({ queryKey: ['billing', 'balanceRecords'] }),
+      queryClient.invalidateQueries({ queryKey: ['billing', 'overview'] }),
+      queryClient.invalidateQueries({ queryKey: ['userBilling'] }),
+    ])
+  }
+
+  const rechargeMutation = useMutation({
+    mutationFn: async (input: BalanceOperationInput) => {
+      try {
+        return await createRecharge(session, input)
+      } catch (error) {
+        throw toBillingApiError(error)
+      }
+    },
+    onSuccess: invalidateBalanceAfterOperation,
+  })
+
+  const deductionMutation = useMutation({
+    mutationFn: async (input: BalanceOperationInput) => {
+      try {
+        return await createDeduction(session, input)
+      } catch (error) {
+        throw toBillingApiError(error)
+      }
+    },
+    onSuccess: invalidateBalanceAfterOperation,
+  })
+
   const createAccessKeyMutation = useMutation({
     mutationFn: async (input: AccessKeyFormInput) => {
       try {
@@ -549,6 +582,8 @@ export function useUserWorkbench(
     createUserMutation.isPending ||
     updateUserMutation.isPending ||
     deleteUserMutation.isPending ||
+    rechargeMutation.isPending ||
+    deductionMutation.isPending ||
     createAccessKeyMutation.isPending ||
     updateAccessKeyBindingsMutation.isPending ||
     deleteAccessKeyMutation.isPending ||
@@ -608,6 +643,8 @@ export function useUserWorkbench(
     createUser: createUserMutation.mutateAsync,
     updateUser: updateUserMutation.mutateAsync,
     deleteUser: deleteUserMutation.mutateAsync,
+    recharge: rechargeMutation.mutateAsync,
+    deduct: deductionMutation.mutateAsync,
     createAccessKey: createAccessKeyMutation.mutateAsync,
     updateAccessKeyBindings: updateAccessKeyBindingsMutation.mutateAsync,
     deleteAccessKey: deleteAccessKeyMutation.mutateAsync,
