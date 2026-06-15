@@ -328,7 +328,7 @@ export function AppShell({ children }: AppShellProps) {
       </Sidebar>
 
       <SidebarInset className="bg-background min-w-0">
-        <header className="bg-background/92 sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between gap-3 overflow-hidden border-b px-4 backdrop-blur md:px-6">
+        <header className="bg-background/92 sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between gap-3 overflow-hidden border-b px-4 backdrop-blur md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <AppSidebarTrigger />
             <div className="flex min-w-0 items-center gap-2">
