@@ -20,7 +20,6 @@ import {
   Save,
   Search,
   ServerCog,
-  Settings2,
   ShieldCheck,
   SlidersHorizontal,
   Terminal,
@@ -1630,7 +1629,7 @@ function ConfigActionBar({
   const dirty = changeCount > 0
 
   return (
-    <div className="bg-background/95 sticky top-16 z-20 -mx-4 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+    <div className="bg-background/95 sticky top-16 z-[var(--z-page-sticky)] -mx-4 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
       <div className="bg-card rounded-lg border p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">

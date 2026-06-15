@@ -56,8 +56,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       onOpenChange={onOpenChange}
       loop
       label={t('commandPalette.label')}
-      overlayClassName="bg-overlay fixed inset-0 z-50 backdrop-blur-sm"
-      contentClassName="bg-popover text-popover-foreground fixed top-[15vh] left-1/2 z-50 grid w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-lg border p-0 shadow-2xl"
+      overlayClassName="bg-overlay fixed inset-0 z-[var(--z-overlay)] backdrop-blur-sm"
+      contentClassName="bg-popover text-popover-foreground fixed top-[15vh] left-1/2 z-[var(--z-overlay)] grid w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-lg border p-0 shadow-2xl"
     >
       <DialogPrimitive.Title className="sr-only">{t('commandPalette.label')}</DialogPrimitive.Title>
       <DialogPrimitive.Description className="sr-only">

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 const containedTableContainerClassName = 'max-h-[min(640px,calc(100vh-280px))] overflow-auto'
 const stickyTableHeaderClassName =
-  'bg-muted text-muted-foreground sticky top-0 z-20 shadow-[0_1px_0_var(--border)]'
+  'bg-muted text-muted-foreground sticky top-0 z-[var(--z-table-sticky)] shadow-[0_1px_0_var(--border)]'
 
 function TableSurface({
   children,

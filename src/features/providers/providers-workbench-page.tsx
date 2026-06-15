@@ -169,7 +169,12 @@ function readProviderHeaders(raw: UnknownRecord): ProviderHeaderEntryInput[] {
 
   return Object.entries(headers).map(([key, value]) => ({
     key,
-    value: typeof value === 'string' ? value : String(value ?? ''),
+    value:
+      typeof value === 'string'
+        ? value
+        : typeof value === 'number' || typeof value === 'boolean'
+          ? String(value)
+          : '',
   }))
 }
 
@@ -1546,7 +1551,7 @@ function ProviderFormPanel({
                     <div
                       id={testModelSuggestionsId}
                       role="listbox"
-                      className="bg-popover text-popover-foreground absolute top-full right-0 left-0 z-30 mt-1 overflow-hidden rounded-md border shadow-md"
+                      className="bg-popover text-popover-foreground absolute top-full right-0 left-0 z-[var(--z-overlay)] mt-1 overflow-hidden rounded-md border shadow-md"
                     >
                       <div className="max-h-56 overflow-y-auto p-1">
                         {filteredTestModelOptions.map((option) => (
@@ -2260,29 +2265,29 @@ export function ProvidersWorkbenchPage() {
         }
         tags={
           <>
-          <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-            {t('providersPage.header.activeResources', {
-              active: activeResourcesCount,
-              total: totalResources,
-            })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('providersPage.header.providerFamilies', {
-              count: groups.filter((group) => group.resources.length > 0).length,
-            })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('providersPage.header.updatedAt', {
-              time: formatDateTime(workbench.snapshot.fetchedAt),
-            })}
-          </span>
-          {workbench.snapshot.issues.length > 0 ? (
-            <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
-              {t('providersPage.header.issueCount', {
-                count: workbench.snapshot.issues.length,
+            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
+              {t('providersPage.header.activeResources', {
+                active: activeResourcesCount,
+                total: totalResources,
               })}
             </span>
-          ) : null}
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('providersPage.header.providerFamilies', {
+                count: groups.filter((group) => group.resources.length > 0).length,
+              })}
+            </span>
+            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
+              {t('providersPage.header.updatedAt', {
+                time: formatDateTime(workbench.snapshot.fetchedAt),
+              })}
+            </span>
+            {workbench.snapshot.issues.length > 0 ? (
+              <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
+                {t('providersPage.header.issueCount', {
+                  count: workbench.snapshot.issues.length,
+                })}
+              </span>
+            ) : null}
           </>
         }
       />

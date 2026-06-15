@@ -26,6 +26,14 @@ body {
   font-family: var(--font-sans);
 }
 
+:root {
+  --z-table-sticky: 20;
+  --z-table-sticky-action: 21;
+  --z-page-sticky: 30;
+  --z-shell-header: 40;
+  --z-overlay: 50;
+}
+
 .table-sticky-action-head,
 .table-sticky-action-cell {
   --table-sticky-action-background: var(--card);
@@ -49,7 +57,7 @@ body {
 
 .table-sticky-action-head {
   --table-sticky-action-background: var(--muted);
-  z-index: 30;
+  z-index: var(--z-table-sticky-action);
 }
 
 .table-sticky-action-cell {
