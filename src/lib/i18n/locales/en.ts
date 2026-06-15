@@ -2296,7 +2296,7 @@ export const en = {
         success: 'Success',
         failed: 'Failed',
         notAvailable: 'N/A',
-        unknownRequest: 'Unknown request',
+        unknownRequest: '--',
         localHome: 'Local Home',
       },
       confirm: {

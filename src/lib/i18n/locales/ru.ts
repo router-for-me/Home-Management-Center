@@ -2307,7 +2307,7 @@ export const ru = {
         success: 'Успешно',
         failed: 'Ошибка',
         notAvailable: 'Н/Д',
-        unknownRequest: 'Неизвестный запрос',
+        unknownRequest: '--',
         localHome: 'Локальный Home',
       },
       confirm: {

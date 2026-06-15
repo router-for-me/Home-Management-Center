@@ -2221,7 +2221,7 @@ export const zhTW = {
         success: '成功',
         failed: '失敗',
         notAvailable: '不可用',
-        unknownRequest: '未知請求',
+        unknownRequest: '--',
         localHome: '本機',
       },
       confirm: {

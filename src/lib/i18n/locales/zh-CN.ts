@@ -2222,7 +2222,7 @@ export const zhCN = {
         success: '成功',
         failed: '失败',
         notAvailable: '不可用',
-        unknownRequest: '未知请求',
+        unknownRequest: '--',
         localHome: '本机',
       },
       confirm: {
