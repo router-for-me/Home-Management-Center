@@ -1636,26 +1636,50 @@ export const en = {
           na: '—',
         },
         actions: {
+          balance: 'Balance',
           recharge: 'Recharge',
           deduct: 'Deduct',
         },
+        bulk: {
+          selectAll: 'Select operable users in the current list',
+          selectOne: 'Select user {{user}}',
+          selected: '{{count}} users selected',
+          selectedSummary: 'Bulk operations create separate balance records for each user.',
+          clearSelection: 'Clear selection',
+          balanceSelected: 'Balance operation',
+        },
         sheet: {
-          rechargeTitle: 'Manual recharge',
-          deductTitle: 'Manual deduction',
-          description: 'Select a user and amount. Submitting creates a balance ledger record.',
+          title: 'Balance operation',
+          batchTitle: 'Batch balance operation',
+          description:
+            'The target user is set from the table action. Enter an amount to create a balance record.',
+          batchDescription:
+            'Operations are submitted one user at a time, and each user receives a separate balance record.',
         },
         form: {
           user: 'User',
           userPlaceholder: 'Select user',
+          target: 'Target',
+          targetCount: '{{count}} users',
+          operation: 'Operation type',
           current: 'Current balance',
           after: 'Balance after',
+          currentTotal: 'Current balance total',
+          afterTotal: 'Balance total after',
+          batchHint:
+            'The same amount and note will be used for each user, with separate records on the backend.',
           negativeHint:
             'The balance will become negative. Home allows negative balances, but confirm this is intended.',
+          negativeTargetHint:
+            '{{count}} users will have negative balances after this deduction. Home allows negative balances, but confirm this is intended.',
           amount: 'Amount',
+          amountSingleHint: 'The amount applies to the current user.',
+          amountBatchHint: 'The amount applies to each selected user.',
           note: 'Note',
           noteRequired: 'Note, required',
         },
         validation: {
+          targetRequired: 'Select at least one operable user.',
           userRequired: 'Select a user.',
           amountRequired: 'Amount must be greater than 0.',
           noteRequired: 'Deduction requires a note.',
@@ -1663,18 +1687,33 @@ export const en = {
         confirm: {
           rechargeTitle: 'Confirm recharge?',
           deductTitle: 'Confirm deduction?',
+          batchRechargeTitle: 'Confirm batch recharge?',
+          batchDeductTitle: 'Confirm batch deduction?',
           rechargeDescription:
             'Submitting creates a balance record. Confirm the user and resulting balance.',
           deductDescription:
             'Deduction creates a balance record. Confirm the user, amount, and resulting balance.',
+          batchDescription:
+            'Requests will be submitted for each selected user. Confirm the user count, per-user amount, and balance totals.',
           user: 'User',
+          users: 'Users',
           amount: 'Amount change',
+          amountPerUser: 'Amount per user',
+          totalAmount: 'Total change',
           current: 'Current balance',
           after: 'Balance after',
+          currentTotal: 'Current balance total',
+          afterTotal: 'Balance total after',
           note: 'Note',
           negativeResult:
-            'The resulting balance will be negative. Home allows negative balances, but confirm this is intended.',
+            '{{count}} users will have negative balances after this operation. Home allows negative balances, but confirm this is intended.',
           action: 'Confirm',
+        },
+        toast: {
+          noEligibleUsers: 'No operable users selected.',
+          batchCompleted: 'Balance operation completed for {{count}} users.',
+          partialFailed: '{{succeeded}} users completed, {{failed}} failed: {{message}}',
+          failed: '{{count}} user operations failed: {{message}}',
         },
       },
       detail: {

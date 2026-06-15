@@ -100,6 +100,12 @@ type CreateAccessGroupDetailsResult = {
   }>
 }
 
+type BalanceBatchResult = {
+  succeeded: number
+  failed: number
+  firstError: string | null
+}
+
 function useManagementSession() {
   const baseUrl = useSessionStore((state) => state.baseUrl)
   const managementKey = useSessionStore((state) => state.managementKey)
@@ -443,6 +449,48 @@ export function useUserWorkbench(
     onSuccess: invalidateBalanceAfterOperation,
   })
 
+  const rechargeBatchMutation = useMutation({
+    mutationFn: async (inputs: BalanceOperationInput[]): Promise<BalanceBatchResult> => {
+      let succeeded = 0
+      let failed = 0
+      let firstError: string | null = null
+
+      for (const input of inputs) {
+        try {
+          await createRecharge(session, input)
+          succeeded += 1
+        } catch (error) {
+          failed += 1
+          firstError ??= toBillingApiError(error).message
+        }
+      }
+
+      return { succeeded, failed, firstError }
+    },
+    onSuccess: invalidateBalanceAfterOperation,
+  })
+
+  const deductionBatchMutation = useMutation({
+    mutationFn: async (inputs: BalanceOperationInput[]): Promise<BalanceBatchResult> => {
+      let succeeded = 0
+      let failed = 0
+      let firstError: string | null = null
+
+      for (const input of inputs) {
+        try {
+          await createDeduction(session, input)
+          succeeded += 1
+        } catch (error) {
+          failed += 1
+          firstError ??= toBillingApiError(error).message
+        }
+      }
+
+      return { succeeded, failed, firstError }
+    },
+    onSuccess: invalidateBalanceAfterOperation,
+  })
+
   const createAccessKeyMutation = useMutation({
     mutationFn: async (input: AccessKeyFormInput) => {
       try {
@@ -584,6 +632,8 @@ export function useUserWorkbench(
     deleteUserMutation.isPending ||
     rechargeMutation.isPending ||
     deductionMutation.isPending ||
+    rechargeBatchMutation.isPending ||
+    deductionBatchMutation.isPending ||
     createAccessKeyMutation.isPending ||
     updateAccessKeyBindingsMutation.isPending ||
     deleteAccessKeyMutation.isPending ||
@@ -645,6 +695,8 @@ export function useUserWorkbench(
     deleteUser: deleteUserMutation.mutateAsync,
     recharge: rechargeMutation.mutateAsync,
     deduct: deductionMutation.mutateAsync,
+    rechargeBatch: rechargeBatchMutation.mutateAsync,
+    deductBatch: deductionBatchMutation.mutateAsync,
     createAccessKey: createAccessKeyMutation.mutateAsync,
     updateAccessKeyBindings: updateAccessKeyBindingsMutation.mutateAsync,
     deleteAccessKey: deleteAccessKeyMutation.mutateAsync,

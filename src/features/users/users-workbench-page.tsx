@@ -11,6 +11,7 @@ import {
 import {
   AlertTriangle,
   CheckCircle2,
+  CircleDollarSign,
   Eye,
   KeyRound,
   Layers3,
@@ -27,6 +28,12 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldHeader,
+} from '@/components/shared/drawer-scaffold'
 import { PageHeader } from '@/components/shared/page-header'
 import {
   AlertDialog,
@@ -48,13 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -76,7 +77,6 @@ import type {
   AccessGroupResource,
 } from '@/lib/api/management/access-groups'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
-import type { BalanceOperationInput } from '@/lib/api/management/billing-types'
 import type { UserFormInput, UserResource } from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -87,7 +87,7 @@ type SheetMode =
   | { type: 'user-create' }
   | { type: 'user-edit'; user: UserResource }
   | { type: 'user-detail'; user: UserResource }
-  | { type: 'balance'; operation: 'recharge' | 'deduct' }
+  | { type: 'balance'; targets: BalanceOperationTarget[] }
   | { type: 'key-create' }
   | { type: 'key-edit'; key: AccessKeyResource }
   | { type: 'group-create'; kind: AccessGroupKind }
@@ -100,12 +100,20 @@ type PendingDelete =
   | { type: 'detail'; detail: AccessGroupDetailResource }
 type PendingBalanceOperation = {
   operation: 'recharge' | 'deduct'
-  input: BalanceOperationInput
-  userLabel: string
-  currentBalance: number
-  nextBalance: number
+  targets: BalanceOperationTarget[]
+  amount: number
+  note: string
+  currentTotal: number
+  nextTotal: number
+  negativeTargetCount: number
 }
-type BalanceOperationDraft = Omit<PendingBalanceOperation, 'operation'>
+type BalanceOperationDraft = PendingBalanceOperation
+type BalanceOperationTarget = {
+  id: string
+  numericId: number
+  username: string
+  credits: number
+}
 type BindingCandidateOption = {
   id: string
   value: string
@@ -154,8 +162,25 @@ function formatSignedAmount(value: number) {
   return value >= 0 ? `+${absolute}` : `-${absolute}`
 }
 
-function formatUserIdentity(user: UserResource) {
-  return user.numericId !== null ? `${user.username} (#${user.numericId})` : user.username
+function formatBalanceTargetIdentity(target: BalanceOperationTarget) {
+  return `${target.username} (#${target.numericId})`
+}
+
+function toBalanceOperationTarget(user: UserResource): BalanceOperationTarget | null {
+  if (user.numericId === null || user.deletedAt) return null
+
+  return {
+    id: user.id,
+    numericId: user.numericId,
+    username: user.username,
+    credits: user.credits,
+  }
+}
+
+function isBalanceOperationTarget(
+  target: BalanceOperationTarget | null,
+): target is BalanceOperationTarget {
+  return target !== null
 }
 
 function generateAccessKey() {
@@ -1398,19 +1423,32 @@ function UsersTable({
   accessKeys,
   channelGroups,
   modelGroups,
+  selectedUserIds,
   onView,
   onEdit,
   onDelete,
+  onToggleSelection,
+  onToggleAll,
+  onBalanceOperation,
 }: {
   users: UserResource[]
   accessKeys: AccessKeyResource[]
   channelGroups: AccessGroupResource[]
   modelGroups: AccessGroupResource[]
+  selectedUserIds: Set<string>
   onView: (user: UserResource) => void
   onEdit: (user: UserResource) => void
   onDelete: (user: UserResource) => void
+  onToggleSelection: (user: UserResource) => void
+  onToggleAll: () => void
+  onBalanceOperation: (users: UserResource[]) => void
 }) {
   const { t } = useTranslation()
+  const selectableUsers = users.filter((user) => toBalanceOperationTarget(user) !== null)
+  const allSelected =
+    selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIds.has(user.id))
+  const partiallySelected =
+    !allSelected && selectableUsers.some((user) => selectedUserIds.has(user.id))
 
   if (users.length === 0) {
     return (
@@ -1423,9 +1461,17 @@ function UsersTable({
   return (
     <div className="overflow-hidden rounded-md border">
       <div className="overflow-x-auto">
-        <Table className="min-w-[1040px]">
+        <Table className="min-w-[1100px]">
           <TableHeader className="bg-muted/70 text-muted-foreground">
             <TableRow variant="static">
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={partiallySelected ? 'indeterminate' : allSelected}
+                  disabled={selectableUsers.length === 0}
+                  aria-label={t('usersPage.balance.bulk.selectAll')}
+                  onCheckedChange={onToggleAll}
+                />
+              </TableHead>
               <TableHead>{t('usersPage.list.user')}</TableHead>
               <TableHead>{t('usersPage.list.status')}</TableHead>
               <TableHead>{t('usersPage.list.credits')}</TableHead>
@@ -1433,7 +1479,7 @@ function UsersTable({
               <TableHead>{t('usersPage.scopes.credential')}</TableHead>
               <TableHead>{t('usersPage.scopes.model')}</TableHead>
               <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[248px] text-right">
+              <TableHead className="table-sticky-action-head w-[280px] text-right">
                 {t('usersPage.list.actions')}
               </TableHead>
             </TableRow>
@@ -1443,9 +1489,22 @@ function UsersTable({
               const keys = getUserKeys(accessKeys, user)
               const credentialScopeIds = getUnion(keys.map((key) => key.channelGroupIds))
               const modelScopeIds = getUnion(keys.map((key) => key.modelGroupIds))
+              const balanceTarget = toBalanceOperationTarget(user)
+              const balanceDisabled = !balanceTarget
 
               return (
                 <TableRow key={user.id} variant="resource" className="group">
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedUserIds.has(user.id)}
+                      disabled={balanceDisabled}
+                      aria-label={t('usersPage.balance.bulk.selectOne', {
+                        user: user.username,
+                      })}
+                      onCheckedChange={() => onToggleSelection(user)}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="min-w-0">
                       <p className="font-medium">{user.username}</p>
@@ -1469,7 +1528,7 @@ function UsersTable({
                   <TableCell className="text-muted-foreground">
                     {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
                   </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[248px] text-right transition-colors">
+                  <TableCell className="table-sticky-action-cell w-[280px] text-right transition-colors">
                     <div className="table-action-cell-content">
                       <Button
                         variant="text"
@@ -1488,6 +1547,16 @@ function UsersTable({
                       >
                         <Pencil className="size-4" aria-hidden="true" />
                         {t('usersPage.actions.edit')}
+                      </Button>
+                      <Button
+                        variant="text"
+                        size="sm"
+                        className="px-2"
+                        disabled={balanceDisabled}
+                        onClick={() => onBalanceOperation([user])}
+                      >
+                        <CircleDollarSign className="size-4" aria-hidden="true" />
+                        {t('usersPage.balance.actions.balance')}
                       </Button>
                       <Button
                         variant="destructiveText"
@@ -1736,60 +1805,65 @@ function GroupsTable({
 }
 
 function BalanceOperationForm({
-  operation,
-  users,
+  targets,
   mutating,
   onCancel,
   onSubmit,
 }: {
-  operation: 'recharge' | 'deduct'
-  users: UserResource[]
+  targets: BalanceOperationTarget[]
   mutating: boolean
   onCancel: () => void
   onSubmit: (draft: BalanceOperationDraft) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const selectableUsers = useMemo(
-    () => users.filter((user) => user.numericId !== null && !user.deletedAt),
-    [users],
-  )
-  const firstUser = selectableUsers[0]
-  const [userId, setUserId] = useState(firstUser?.numericId ? String(firstUser.numericId) : '')
+  const [operation, setOperation] = useState<'recharge' | 'deduct'>('recharge')
   const [amount, setAmount] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<{
-    userId?: string
     amount?: string
     note?: string
   }>({})
+  const parsedAmount = Number(amount)
+  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0
+  const currentTotal = targets.reduce((total, target) => total + target.credits, 0)
+  const perTargetDelta = amountIsValid
+    ? operation === 'recharge'
+      ? parsedAmount
+      : -parsedAmount
+    : 0
+  const totalDelta = amountIsValid ? perTargetDelta * targets.length : null
+  const nextTotal = totalDelta !== null ? currentTotal + totalDelta : null
+  const negativeTargetCount = amountIsValid
+    ? targets.filter((target) => target.credits + perTargetDelta < 0).length
+    : 0
+  const targetLabel =
+    targets.length === 1
+      ? formatBalanceTargetIdentity(targets[0])
+      : t('usersPage.balance.form.targetCount', { count: targets.length })
 
   useEffect(() => {
-    setUserId(firstUser?.numericId ? String(firstUser.numericId) : '')
+    setOperation('recharge')
     setAmount('')
     setNote('')
     setError(null)
     setFieldErrors({})
-  }, [firstUser?.numericId, operation])
+  }, [targets])
 
-  const selectedUser = selectableUsers.find(
-    (user) => user.numericId !== null && String(user.numericId) === userId,
-  )
-  const parsedAmount = Number(amount)
-  const amountIsValid = Number.isFinite(parsedAmount) && parsedAmount > 0
-  const nextBalance =
-    selectedUser && amountIsValid
-      ? selectedUser.credits + (operation === 'recharge' ? parsedAmount : -parsedAmount)
-      : null
+  const handleOperationChange = (nextOperation: 'recharge' | 'deduct') => {
+    setOperation(nextOperation)
+    setError(null)
+    setFieldErrors({})
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const numericUserId = Number(userId)
     const numericAmount = Number(amount)
     const nextFieldErrors: typeof fieldErrors = {}
 
-    if (!Number.isFinite(numericUserId) || numericUserId <= 0) {
-      nextFieldErrors.userId = t('usersPage.balance.validation.userRequired')
+    if (targets.length === 0) {
+      setError(t('usersPage.balance.validation.targetRequired'))
+      return
     }
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       nextFieldErrors.amount = t('usersPage.balance.validation.amountRequired')
@@ -1807,14 +1881,15 @@ function BalanceOperationForm({
     setFieldErrors({})
     setError(null)
     try {
+      const nextDelta = operation === 'recharge' ? numericAmount : -numericAmount
       await onSubmit({
-        input: { userId: numericUserId, amount: numericAmount, note: note.trim() },
-        userLabel: selectedUser ? formatUserIdentity(selectedUser) : `#${numericUserId}`,
-        currentBalance: selectedUser?.credits ?? 0,
-        nextBalance:
-          selectedUser?.credits !== undefined
-            ? selectedUser.credits + (operation === 'recharge' ? numericAmount : -numericAmount)
-            : 0,
+        operation,
+        targets,
+        amount: numericAmount,
+        note: note.trim(),
+        currentTotal,
+        nextTotal: currentTotal + nextDelta * targets.length,
+        negativeTargetCount: targets.filter((target) => target.credits + nextDelta < 0).length,
       })
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : String(submitError))
@@ -1822,132 +1897,149 @@ function BalanceOperationForm({
   }
 
   return (
-    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
-        <span>{t('usersPage.balance.form.user')}</span>
-        <Select
-          value={userId}
-          onValueChange={(value) => {
-            setUserId(value)
-            setFieldErrors((current) => ({ ...current, userId: undefined }))
-          }}
-          disabled={mutating}
-        >
-          <SelectTrigger
-            aria-label={t('usersPage.balance.form.user')}
-            aria-invalid={Boolean(fieldErrors.userId)}
-          >
-            <SelectValue placeholder={t('usersPage.balance.form.userPlaceholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            {selectableUsers.map((user) => (
-              <SelectItem key={user.id} value={String(user.numericId)}>
-                {formatUserIdentity(user)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {fieldErrors.userId ? (
-          <span className="text-destructive text-xs leading-5 font-normal">
-            {fieldErrors.userId}
-          </span>
+    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-4">
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">{t('usersPage.balance.form.target')}</p>
+          <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+              <span className="text-muted-foreground min-w-0 truncate">
+                {targets.length === 1
+                  ? t('usersPage.balance.confirm.user')
+                  : t('usersPage.balance.confirm.users')}
+              </span>
+              <span className="min-w-0 text-right font-medium">{targetLabel}</span>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+              <span className="text-muted-foreground min-w-0 truncate">
+                {t('usersPage.balance.form.currentTotal')}
+              </span>
+              <span className="min-w-0 text-right font-medium tabular-nums">
+                {formatMoney(currentTotal)}
+              </span>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+              <span className="text-muted-foreground min-w-0 truncate">
+                {t('usersPage.balance.form.afterTotal')}
+              </span>
+              <span
+                className={cn(
+                  'min-w-0 text-right font-medium tabular-nums',
+                  nextTotal !== null && nextTotal < 0
+                    ? 'text-warning-foreground dark:text-warning'
+                    : null,
+                )}
+              >
+                {nextTotal !== null ? formatMoney(nextTotal) : t('usersPage.balance.common.na')}
+              </span>
+            </div>
+          </div>
+          {targets.length > 1 ? (
+            <p className="text-muted-foreground text-xs leading-5">
+              {t('usersPage.balance.form.batchHint')}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">{t('usersPage.balance.form.operation')}</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant={operation === 'recharge' ? 'default' : 'outline'}
+              disabled={mutating}
+              onClick={() => handleOperationChange('recharge')}
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t('usersPage.balance.actions.recharge')}
+            </Button>
+            <Button
+              type="button"
+              variant={operation === 'deduct' ? 'warning' : 'outline'}
+              disabled={mutating}
+              onClick={() => handleOperationChange('deduct')}
+            >
+              <Minus className="size-4" aria-hidden="true" />
+              {t('usersPage.balance.actions.deduct')}
+            </Button>
+          </div>
+        </div>
+
+        {operation === 'deduct' && negativeTargetCount > 0 ? (
+          <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
+            {t('usersPage.balance.form.negativeTargetHint', { count: negativeTargetCount })}
+          </div>
         ) : null}
-      </label>
 
-      <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-          <span className="text-muted-foreground min-w-0 truncate">
-            {t('usersPage.balance.form.current')}
+        <label className="grid gap-2 text-sm font-medium">
+          <span>{t('usersPage.balance.form.amount')}</span>
+          <Input
+            type="number"
+            min="0"
+            step="0.000001"
+            value={amount}
+            aria-label={t('usersPage.balance.form.amount')}
+            aria-invalid={Boolean(fieldErrors.amount)}
+            disabled={mutating}
+            onChange={(event) => {
+              setAmount(event.target.value)
+              setFieldErrors((current) => ({ ...current, amount: undefined }))
+            }}
+          />
+          <span className="text-muted-foreground text-xs leading-5">
+            {targets.length > 1
+              ? t('usersPage.balance.form.amountBatchHint')
+              : t('usersPage.balance.form.amountSingleHint')}
           </span>
-          <span className="min-w-0 text-right font-medium tabular-nums">
-            {selectedUser ? formatMoney(selectedUser.credits) : t('usersPage.balance.common.na')}
-          </span>
-        </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-          <span className="text-muted-foreground min-w-0 truncate">
-            {t('usersPage.balance.form.after')}
-          </span>
-          <span
-            className={cn(
-              'min-w-0 text-right font-medium tabular-nums',
-              nextBalance !== null && nextBalance < 0
-                ? 'text-warning-foreground dark:text-warning'
-                : null,
-            )}
-          >
-            {nextBalance !== null ? formatMoney(nextBalance) : t('usersPage.balance.common.na')}
-          </span>
-        </div>
-      </div>
+          {fieldErrors.amount ? (
+            <span className="text-destructive text-xs leading-5 font-normal">
+              {fieldErrors.amount}
+            </span>
+          ) : null}
+        </label>
 
-      {operation === 'deduct' && nextBalance !== null && nextBalance < 0 ? (
-        <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm">
-          {t('usersPage.balance.form.negativeHint')}
-        </div>
-      ) : null}
-
-      <label className="grid gap-2 text-sm font-medium">
-        <span>{t('usersPage.balance.form.amount')}</span>
-        <Input
-          type="number"
-          min="0"
-          step="0.000001"
-          value={amount}
-          aria-label={t('usersPage.balance.form.amount')}
-          aria-invalid={Boolean(fieldErrors.amount)}
-          disabled={mutating}
-          onChange={(event) => {
-            setAmount(event.target.value)
-            setFieldErrors((current) => ({ ...current, amount: undefined }))
-          }}
-        />
-        {fieldErrors.amount ? (
-          <span className="text-destructive text-xs leading-5 font-normal">
-            {fieldErrors.amount}
-          </span>
-        ) : null}
-      </label>
-
-      <label className="grid gap-2 text-sm font-medium">
-        <span>
-          {operation === 'deduct'
-            ? t('usersPage.balance.form.noteRequired')
-            : t('usersPage.balance.form.note')}
-        </span>
-        <Textarea
-          value={note}
-          className="min-h-20"
-          aria-label={
-            operation === 'deduct'
+        <label className="grid gap-2 text-sm font-medium">
+          <span>
+            {operation === 'deduct'
               ? t('usersPage.balance.form.noteRequired')
-              : t('usersPage.balance.form.note')
-          }
-          aria-invalid={Boolean(fieldErrors.note)}
-          disabled={mutating}
-          onChange={(event) => {
-            setNote(event.target.value)
-            setFieldErrors((current) => ({ ...current, note: undefined }))
-          }}
-        />
-        {fieldErrors.note ? (
-          <span className="text-destructive text-xs leading-5 font-normal">{fieldErrors.note}</span>
+              : t('usersPage.balance.form.note')}
+          </span>
+          <Textarea
+            value={note}
+            className="min-h-20"
+            aria-label={
+              operation === 'deduct'
+                ? t('usersPage.balance.form.noteRequired')
+                : t('usersPage.balance.form.note')
+            }
+            aria-invalid={Boolean(fieldErrors.note)}
+            disabled={mutating}
+            onChange={(event) => {
+              setNote(event.target.value)
+              setFieldErrors((current) => ({ ...current, note: undefined }))
+            }}
+          />
+          {fieldErrors.note ? (
+            <span className="text-destructive text-xs leading-5 font-normal">
+              {fieldErrors.note}
+            </span>
+          ) : null}
+        </label>
+
+        {error ? (
+          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            {error}
+          </div>
         ) : null}
-      </label>
-
-      {error ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {error}
-        </div>
-      ) : null}
-
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
         <Button
           type="submit"
           variant={operation === 'deduct' ? 'warning' : 'default'}
-          disabled={mutating}
+          disabled={mutating || targets.length === 0}
         >
           {mutating ? (
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -1960,7 +2052,7 @@ function BalanceOperationForm({
             ? t('usersPage.balance.actions.recharge')
             : t('usersPage.balance.actions.deduct')}
         </Button>
-      </div>
+      </DrawerScaffoldFooter>
     </form>
   )
 }
@@ -1971,6 +2063,7 @@ export function UsersWorkbenchPage() {
   const [search, setSearch] = useState('')
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(() => new Set())
   const [pendingBalanceOperation, setPendingBalanceOperation] =
     useState<PendingBalanceOperation | null>(null)
   const loadCredentialCandidates =
@@ -1996,6 +2089,10 @@ export function UsersWorkbenchPage() {
           : true,
       ),
     [normalizedSearch, users],
+  )
+  const selectedUsers = useMemo(
+    () => users.filter((user) => selectedUserIds.has(user.id) && toBalanceOperationTarget(user)),
+    [selectedUserIds, users],
   )
   const filteredKeys = useMemo(
     () =>
@@ -2036,6 +2133,23 @@ export function UsersWorkbenchPage() {
   const activeUsers = users.filter((user) => !user.deletedAt)
   const assignedKeyCount = accessKeys.filter((key) => key.userId !== null).length
 
+  useEffect(() => {
+    if (activeTab === 'users') return
+
+    setSelectedUserIds((current) => (current.size > 0 ? new Set() : current))
+  }, [activeTab])
+
+  useEffect(() => {
+    const eligibleIds = new Set(
+      users.filter((user) => toBalanceOperationTarget(user) !== null).map((user) => user.id),
+    )
+
+    setSelectedUserIds((current) => {
+      const next = new Set([...current].filter((id) => eligibleIds.has(id)))
+      return next.size === current.size ? current : next
+    })
+  }, [users])
+
   if (!workbench.connected) return <UsersDisconnectedState />
   if (!workbench.capabilityReady) return <UsersLoadingState />
   if (!workbench.capabilities.users) {
@@ -2047,6 +2161,53 @@ export function UsersWorkbenchPage() {
   }
 
   const closeSheet = () => setSheetMode(null)
+
+  const openBalanceOperation = (targetUsers: UserResource[]) => {
+    const targets = targetUsers.map(toBalanceOperationTarget).filter(isBalanceOperationTarget)
+
+    if (targets.length === 0) {
+      toast.error(t('usersPage.balance.toast.noEligibleUsers'))
+      return
+    }
+
+    setSheetMode({ type: 'balance', targets })
+  }
+
+  const toggleUserSelection = (user: UserResource) => {
+    if (!toBalanceOperationTarget(user)) return
+
+    setSelectedUserIds((current) => {
+      const next = new Set(current)
+
+      if (next.has(user.id)) {
+        next.delete(user.id)
+      } else {
+        next.add(user.id)
+      }
+
+      return next
+    })
+  }
+
+  const toggleFilteredUserSelection = () => {
+    const selectableUsers = filteredUsers.filter((user) => toBalanceOperationTarget(user) !== null)
+    const allFilteredSelected =
+      selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIds.has(user.id))
+
+    setSelectedUserIds((current) => {
+      const next = new Set(current)
+
+      for (const user of selectableUsers) {
+        if (allFilteredSelected) {
+          next.delete(user.id)
+        } else {
+          next.add(user.id)
+        }
+      }
+
+      return next
+    })
+  }
 
   const handleDelete = async () => {
     if (!pendingDelete) return
@@ -2076,9 +2237,9 @@ export function UsersWorkbenchPage() {
         : sheetMode?.type === 'user-detail'
           ? t('usersPage.detail.title')
           : sheetMode?.type === 'balance'
-            ? sheetMode.operation === 'recharge'
-              ? t('usersPage.balance.sheet.rechargeTitle')
-              : t('usersPage.balance.sheet.deductTitle')
+            ? sheetMode.targets.length > 1
+              ? t('usersPage.balance.sheet.batchTitle')
+              : t('usersPage.balance.sheet.title')
             : sheetMode?.type === 'key-create'
               ? t('usersPage.keys.createTitle')
               : sheetMode?.type === 'key-edit'
@@ -2098,7 +2259,9 @@ export function UsersWorkbenchPage() {
         : sheetMode?.type === 'user-detail'
           ? t('usersPage.sheet.userDetailDescription')
           : sheetMode?.type === 'balance'
-            ? t('usersPage.balance.sheet.description')
+            ? sheetMode.targets.length > 1
+              ? t('usersPage.balance.sheet.batchDescription')
+              : t('usersPage.balance.sheet.description')
             : sheetMode?.type === 'key-create'
               ? t('usersPage.sheet.keyCreateDescription')
               : sheetMode?.type === 'key-edit'
@@ -2116,6 +2279,27 @@ export function UsersWorkbenchPage() {
                         ? t('usersPage.sheet.channelBindingDescription')
                         : t('usersPage.sheet.modelBindingDescription')
                       : ''
+  const pendingBalanceTargetCount = pendingBalanceOperation?.targets.length ?? 0
+  const pendingBalanceTargetLabel =
+    pendingBalanceOperation && pendingBalanceTargetCount === 1
+      ? formatBalanceTargetIdentity(pendingBalanceOperation.targets[0])
+      : pendingBalanceOperation
+        ? t('usersPage.balance.form.targetCount', { count: pendingBalanceTargetCount })
+        : ''
+  const pendingBalanceSignedAmount = pendingBalanceOperation
+    ? formatSignedAmount(
+        pendingBalanceOperation.operation === 'deduct'
+          ? -Math.abs(pendingBalanceOperation.amount)
+          : Math.abs(pendingBalanceOperation.amount),
+      )
+    : ''
+  const pendingBalanceTotalChange = pendingBalanceOperation
+    ? formatSignedAmount(
+        pendingBalanceOperation.operation === 'deduct'
+          ? -Math.abs(pendingBalanceOperation.amount * pendingBalanceTargetCount)
+          : Math.abs(pendingBalanceOperation.amount * pendingBalanceTargetCount),
+      )
+    : ''
 
   return (
     <section className="grid gap-5">
@@ -2137,26 +2321,6 @@ export function UsersWorkbenchPage() {
               {workbench.isFetching
                 ? t('usersPage.actions.syncing')
                 : t('usersPage.actions.refresh')}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSheetMode({ type: 'balance', operation: 'recharge' })}
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              {t('usersPage.balance.actions.recharge')}
-            </Button>
-            <Button
-              variant="warning"
-              size="sm"
-              onClick={() => setSheetMode({ type: 'balance', operation: 'deduct' })}
-            >
-              <Minus className="size-4" aria-hidden="true" />
-              {t('usersPage.balance.actions.deduct')}
-            </Button>
-            <Button size="sm" onClick={() => setSheetMode({ type: 'user-create' })}>
-              <Plus className="size-4" aria-hidden="true" />
-              {t('usersPage.actions.newUser')}
             </Button>
           </>
         }
@@ -2229,15 +2393,58 @@ export function UsersWorkbenchPage() {
 
         <div className="mt-4">
           {activeTab === 'users' ? (
-            <UsersTable
-              users={filteredUsers}
-              accessKeys={accessKeys}
-              channelGroups={channelGroups}
-              modelGroups={modelGroups}
-              onView={(user) => setSheetMode({ type: 'user-detail', user })}
-              onEdit={(user) => setSheetMode({ type: 'user-edit', user })}
-              onDelete={(user) => setPendingDelete({ type: 'user', user })}
-            />
+            <div className="grid gap-3">
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setSheetMode({ type: 'user-create' })}>
+                  <Plus className="size-4" aria-hidden="true" />
+                  {t('usersPage.actions.newUser')}
+                </Button>
+              </div>
+              {selectedUsers.length > 0 ? (
+                <div className="bg-muted/60 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {t('usersPage.balance.bulk.selected', { count: selectedUsers.length })}
+                    </p>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {t('usersPage.balance.bulk.selectedSummary')}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="text"
+                      size="sm"
+                      disabled={workbench.mutating}
+                      onClick={() => setSelectedUserIds(new Set())}
+                    >
+                      {t('usersPage.balance.bulk.clearSelection')}
+                    </Button>
+                    <Button
+                      variant="text"
+                      size="sm"
+                      disabled={workbench.mutating}
+                      onClick={() => openBalanceOperation(selectedUsers)}
+                    >
+                      <CircleDollarSign className="size-4" aria-hidden="true" />
+                      {t('usersPage.balance.bulk.balanceSelected')}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              <UsersTable
+                users={filteredUsers}
+                accessKeys={accessKeys}
+                channelGroups={channelGroups}
+                modelGroups={modelGroups}
+                selectedUserIds={selectedUserIds}
+                onView={(user) => setSheetMode({ type: 'user-detail', user })}
+                onEdit={(user) => setSheetMode({ type: 'user-edit', user })}
+                onDelete={(user) => setPendingDelete({ type: 'user', user })}
+                onToggleSelection={toggleUserSelection}
+                onToggleAll={toggleFilteredUserSelection}
+                onBalanceOperation={openBalanceOperation}
+              />
+            </div>
           ) : activeTab === 'keys' ? (
             <div className="grid gap-3">
               <div className="flex justify-end">
@@ -2316,11 +2523,11 @@ export function UsersWorkbenchPage() {
       </div>
 
       <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
-        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
-          <SheetHeader className="border-b p-5">
+        <DrawerScaffoldContent className="sm:max-w-xl">
+          <DrawerScaffoldHeader>
             <SheetTitle>{sheetTitle}</SheetTitle>
             <SheetDescription>{sheetDescription}</SheetDescription>
-          </SheetHeader>
+          </DrawerScaffoldHeader>
           {sheetMode?.type === 'user-create' || sheetMode?.type === 'user-edit' ? (
             <UserForm
               mode={sheetMode.type === 'user-create' ? 'create' : 'edit'}
@@ -2348,12 +2555,11 @@ export function UsersWorkbenchPage() {
             />
           ) : sheetMode?.type === 'balance' ? (
             <BalanceOperationForm
-              operation={sheetMode.operation}
-              users={users}
+              targets={sheetMode.targets}
               mutating={workbench.mutating}
               onCancel={closeSheet}
               onSubmit={(draft) => {
-                setPendingBalanceOperation({ operation: sheetMode.operation, ...draft })
+                setPendingBalanceOperation(draft)
                 return Promise.resolve()
               }}
             />
@@ -2460,7 +2666,7 @@ export function UsersWorkbenchPage() {
               }}
             />
           ) : null}
-        </SheetContent>
+        </DrawerScaffoldContent>
       </Sheet>
 
       <AlertDialog
@@ -2517,28 +2723,36 @@ export function UsersWorkbenchPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {pendingBalanceOperation?.operation === 'deduct'
-                ? t('usersPage.balance.confirm.deductTitle')
-                : t('usersPage.balance.confirm.rechargeTitle')}
+              {pendingBalanceOperation && pendingBalanceOperation.targets.length > 1
+                ? pendingBalanceOperation.operation === 'deduct'
+                  ? t('usersPage.balance.confirm.batchDeductTitle')
+                  : t('usersPage.balance.confirm.batchRechargeTitle')
+                : pendingBalanceOperation?.operation === 'deduct'
+                  ? t('usersPage.balance.confirm.deductTitle')
+                  : t('usersPage.balance.confirm.rechargeTitle')}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingBalanceOperation?.operation === 'deduct'
-                ? t('usersPage.balance.confirm.deductDescription')
-                : t('usersPage.balance.confirm.rechargeDescription')}
+              {pendingBalanceOperation && pendingBalanceOperation.targets.length > 1
+                ? t('usersPage.balance.confirm.batchDescription')
+                : pendingBalanceOperation?.operation === 'deduct'
+                  ? t('usersPage.balance.confirm.deductDescription')
+                  : t('usersPage.balance.confirm.rechargeDescription')}
             </AlertDialogDescription>
             {pendingBalanceOperation ? (
               <div className="bg-muted/25 grid gap-2 rounded-md border px-3 py-2.5 text-sm">
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <span className="text-muted-foreground min-w-0 truncate">
-                    {t('usersPage.balance.confirm.user')}
+                    {pendingBalanceOperation.targets.length === 1
+                      ? t('usersPage.balance.confirm.user')
+                      : t('usersPage.balance.confirm.users')}
                   </span>
                   <span className="min-w-0 text-right font-medium">
-                    {pendingBalanceOperation.userLabel}
+                    {pendingBalanceTargetLabel}
                   </span>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <span className="text-muted-foreground min-w-0 truncate">
-                    {t('usersPage.balance.confirm.amount')}
+                    {t('usersPage.balance.confirm.amountPerUser')}
                   </span>
                   <span
                     className={cn(
@@ -2548,34 +2762,47 @@ export function UsersWorkbenchPage() {
                         : 'text-success',
                     )}
                   >
-                    {formatSignedAmount(
-                      pendingBalanceOperation.operation === 'deduct'
-                        ? -Math.abs(pendingBalanceOperation.input.amount)
-                        : Math.abs(pendingBalanceOperation.input.amount),
-                    )}
+                    {pendingBalanceSignedAmount}
                   </span>
                 </div>
+                {pendingBalanceOperation.targets.length > 1 ? (
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                    <span className="text-muted-foreground min-w-0 truncate">
+                      {t('usersPage.balance.confirm.totalAmount')}
+                    </span>
+                    <span
+                      className={cn(
+                        'min-w-0 text-right font-medium tabular-nums',
+                        pendingBalanceOperation.operation === 'deduct'
+                          ? 'text-warning-foreground dark:text-warning'
+                          : 'text-success',
+                      )}
+                    >
+                      {pendingBalanceTotalChange}
+                    </span>
+                  </div>
+                ) : null}
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <span className="text-muted-foreground min-w-0 truncate">
-                    {t('usersPage.balance.confirm.current')}
+                    {t('usersPage.balance.confirm.currentTotal')}
                   </span>
                   <span className="min-w-0 text-right font-medium tabular-nums">
-                    {formatMoney(pendingBalanceOperation.currentBalance)}
+                    {formatMoney(pendingBalanceOperation.currentTotal)}
                   </span>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                   <span className="text-muted-foreground min-w-0 truncate">
-                    {t('usersPage.balance.confirm.after')}
+                    {t('usersPage.balance.confirm.afterTotal')}
                   </span>
                   <span
                     className={cn(
                       'min-w-0 text-right font-medium tabular-nums',
-                      pendingBalanceOperation.nextBalance < 0
+                      pendingBalanceOperation.nextTotal < 0
                         ? 'text-warning-foreground dark:text-warning'
                         : null,
                     )}
                   >
-                    {formatMoney(pendingBalanceOperation.nextBalance)}
+                    {formatMoney(pendingBalanceOperation.nextTotal)}
                   </span>
                 </div>
                 <div className="grid gap-1 border-t pt-2">
@@ -2583,12 +2810,14 @@ export function UsersWorkbenchPage() {
                     {t('usersPage.balance.confirm.note')}
                   </span>
                   <span className="min-w-0 text-sm break-words">
-                    {pendingBalanceOperation.input.note || t('usersPage.balance.common.na')}
+                    {pendingBalanceOperation.note || t('usersPage.balance.common.na')}
                   </span>
                 </div>
-                {pendingBalanceOperation.nextBalance < 0 ? (
+                {pendingBalanceOperation.negativeTargetCount > 0 ? (
                   <div className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-xs leading-5">
-                    {t('usersPage.balance.confirm.negativeResult')}
+                    {t('usersPage.balance.confirm.negativeResult', {
+                      count: pendingBalanceOperation.negativeTargetCount,
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -2610,19 +2839,47 @@ export function UsersWorkbenchPage() {
                 if (!pendingBalanceOperation) return
 
                 const operation = pendingBalanceOperation.operation
+                const inputs = pendingBalanceOperation.targets.map((target) => ({
+                  userId: target.numericId,
+                  amount: pendingBalanceOperation.amount,
+                  note: pendingBalanceOperation.note,
+                }))
                 const action =
                   operation === 'recharge'
-                    ? workbench.recharge(pendingBalanceOperation.input)
-                    : workbench.deduct(pendingBalanceOperation.input)
+                    ? workbench.rechargeBatch(inputs)
+                    : workbench.deductBatch(inputs)
 
                 void action
-                  .then(() => {
-                    toast.success(
-                      operation === 'recharge'
-                        ? t('usersPage.toast.recharged')
-                        : t('usersPage.toast.deducted'),
-                    )
+                  .then((result) => {
+                    if (result.failed > 0) {
+                      toast.error(
+                        result.succeeded > 0
+                          ? t('usersPage.balance.toast.partialFailed', {
+                              succeeded: result.succeeded,
+                              failed: result.failed,
+                              message: result.firstError ?? '',
+                            })
+                          : t('usersPage.balance.toast.failed', {
+                              count: result.failed,
+                              message: result.firstError ?? '',
+                            }),
+                      )
+
+                      if (result.succeeded === 0) return
+                    } else {
+                      toast.success(
+                        pendingBalanceOperation.targets.length === 1
+                          ? operation === 'recharge'
+                            ? t('usersPage.toast.recharged')
+                            : t('usersPage.toast.deducted')
+                          : t('usersPage.balance.toast.batchCompleted', {
+                              count: result.succeeded,
+                            }),
+                      )
+                    }
+
                     setPendingBalanceOperation(null)
+                    setSelectedUserIds(new Set())
                     closeSheet()
                   })
                   .catch((mutationError) => {
