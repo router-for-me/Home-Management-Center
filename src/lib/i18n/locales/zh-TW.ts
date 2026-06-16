@@ -2173,6 +2173,7 @@ export const zhTW = {
         title: '執行日誌',
         description: '分頁讀取執行日誌。列表展示摘要，完整內容和請求中繼資料可在詳情中查看。',
         unavailable: '目前執行環境不提供執行日誌介面。',
+        fileLoggingDisabled: '檔案日誌未啟用，目前沒有可讀取或清空的執行日誌檔案。',
         empty: '目前沒有可展示的執行日誌。請確認檔案日誌已啟用，且執行環境已有日誌寫入。',
         emptyPage: '目前頁面沒有日誌記錄。請返回上一頁或重新同步。',
         lineCount: '{{count}} 筆',
@@ -2230,6 +2231,7 @@ export const zhTW = {
       },
       toast: {
         logsCleared: '日誌已清空。',
+        fileLoggingDisabled: '檔案日誌未啟用，無法清空執行日誌。',
         logDownloaded: '日誌已下載。',
       },
     },

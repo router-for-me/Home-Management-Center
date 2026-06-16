@@ -136,6 +136,11 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url)
 }
 
+function isFileLoggingDisabledError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.toLowerCase().includes('logging to file disabled')
+}
+
 function getUsageTotals(resources: ApiKeyUsageResource[]) {
   return resources.reduce(
     (acc, resource) => ({
@@ -485,6 +490,7 @@ function RuntimeLogViewer({
   runtimeLogs,
   canRead,
   canClear,
+  fileLoggingEnabled,
   pageSizeOptions,
   pageSize,
   offset,
@@ -500,6 +506,7 @@ function RuntimeLogViewer({
   runtimeLogs: RuntimeLogSnapshot | null
   canRead: boolean
   canClear: boolean
+  fileLoggingEnabled: boolean
   pageSizeOptions: number[]
   pageSize: number
   offset: number
@@ -584,7 +591,9 @@ function RuntimeLogViewer({
       <div className="mt-3 overflow-hidden rounded-md border">
         {!canRead ? (
           <p className="text-muted-foreground px-3 py-8 text-sm">
-            {t('usageLogsPage.logs.unavailable')}
+            {fileLoggingEnabled
+              ? t('usageLogsPage.logs.unavailable')
+              : t('usageLogsPage.logs.fileLoggingDisabled')}
           </p>
         ) : records.length > 0 ? (
           <>
@@ -1017,13 +1026,27 @@ export function UsageLogsWorkbenchPage() {
     return <UsageLogsErrorState errorMessage={workbench.errorMessage} onRetry={workbench.refetch} />
   }
 
+  const snapshot = workbench.snapshot
+
   const handleClearLogs = async () => {
+    if (!snapshot.settings.fileLoggingEnabled) {
+      setClearLogsDialogOpen(false)
+      toast.error(t('usageLogsPage.toast.fileLoggingDisabled'))
+      return
+    }
+
     try {
       await workbench.clearLogs()
       setClearLogsDialogOpen(false)
       toast.success(t('usageLogsPage.toast.logsCleared'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
+      toast.error(
+        isFileLoggingDisabledError(error)
+          ? t('usageLogsPage.toast.fileLoggingDisabled')
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      )
     }
   }
 
@@ -1050,7 +1073,7 @@ export function UsageLogsWorkbenchPage() {
   return (
     <section className="grid w-full gap-4">
       <UsageVerdictHeader
-        snapshot={workbench.snapshot}
+        snapshot={snapshot}
         capabilities={capabilities}
         runtimeMode={workbench.runtimeMode}
         isFetching={workbench.isFetching}
@@ -1075,10 +1098,10 @@ export function UsageLogsWorkbenchPage() {
         </div>
       ) : null}
 
-      <IssueList issues={workbench.snapshot.issues} />
-      <SummaryCards snapshot={workbench.snapshot} />
+      <IssueList issues={snapshot.issues} />
+      <SummaryCards snapshot={snapshot} />
 
-      <ApiKeyUsageTable resources={workbench.snapshot.apiKeyUsage} canRead={capabilities.usage} />
+      <ApiKeyUsageTable resources={snapshot.apiKeyUsage} canRead={capabilities.usage} />
 
       <div className="grid gap-4">
         <div className="min-w-0">
@@ -1088,9 +1111,10 @@ export function UsageLogsWorkbenchPage() {
           />
         </div>
         <RuntimeLogViewer
-          runtimeLogs={workbench.snapshot.runtimeLogs}
-          canRead={capabilities.logs}
-          canClear={capabilities.logs}
+          runtimeLogs={snapshot.runtimeLogs}
+          canRead={capabilities.logs && snapshot.settings.fileLoggingEnabled}
+          canClear={capabilities.logs && snapshot.settings.fileLoggingEnabled}
+          fileLoggingEnabled={snapshot.settings.fileLoggingEnabled}
           pageSizeOptions={workbench.runtimeLogPageSizeOptions}
           pageSize={workbench.runtimeLogLimit}
           offset={workbench.runtimeLogOffset}
@@ -1098,7 +1122,14 @@ export function UsageLogsWorkbenchPage() {
           isDownloadingRequestLog={workbench.isDownloadingRequestLog}
           clearing={workbench.isClearingLogs}
           mutating={workbench.mutating}
-          onClear={() => setClearLogsDialogOpen(true)}
+          onClear={() => {
+            if (!snapshot.settings.fileLoggingEnabled) {
+              toast.error(t('usageLogsPage.toast.fileLoggingDisabled'))
+              return
+            }
+
+            setClearLogsDialogOpen(true)
+          }}
           onPageSizeChange={workbench.setRuntimeLogLimit}
           onOffsetChange={workbench.setRuntimeLogOffset}
           onDownloadRequestLog={(requestId, homeIp) =>
@@ -1106,7 +1137,7 @@ export function UsageLogsWorkbenchPage() {
           }
         />
         <ErrorLogFilesPanel
-          requestErrorLogs={workbench.snapshot.requestErrorLogs}
+          requestErrorLogs={snapshot.requestErrorLogs}
           canRead={capabilities.requestErrorLogs}
           mutating={workbench.mutating}
           downloadingErrorLogName={workbench.downloadingErrorLogName}
@@ -1115,7 +1146,10 @@ export function UsageLogsWorkbenchPage() {
         />
       </div>
 
-      <AlertDialog open={clearLogsDialogOpen} onOpenChange={setClearLogsDialogOpen}>
+      <AlertDialog
+        open={clearLogsDialogOpen && snapshot.settings.fileLoggingEnabled}
+        onOpenChange={setClearLogsDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('usageLogsPage.confirm.clearLogsTitle')}</AlertDialogTitle>

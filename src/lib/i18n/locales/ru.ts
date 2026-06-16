@@ -2257,6 +2257,8 @@ export const ru = {
         description:
           'Показывает runtime logs постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
         unavailable: 'Этот runtime не предоставляет маршрут runtime logs.',
+        fileLoggingDisabled:
+          'Файловое логирование отключено, поэтому нет runtime log файлов для чтения или очистки.',
         empty:
           'Нет строк runtime log для отображения. Проверьте, что file logging включен и runtime уже записывал журналы.',
         emptyPage: 'На этой странице нет записей. Вернитесь назад или синхронизируйте данные.',
@@ -2317,6 +2319,8 @@ export const ru = {
       },
       toast: {
         logsCleared: 'Журналы очищены.',
+        fileLoggingDisabled:
+          'Файловое логирование отключено, поэтому runtime logs нельзя очистить.',
         logDownloaded: 'Журнал скачан.',
       },
     },

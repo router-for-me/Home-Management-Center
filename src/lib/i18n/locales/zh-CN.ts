@@ -2174,6 +2174,7 @@ export const zhCN = {
         title: '运行日志',
         description: '分页读取运行日志。列表展示摘要，完整内容和请求元数据可在详情中查看。',
         unavailable: '当前运行时不提供运行日志接口。',
+        fileLoggingDisabled: '文件日志未启用，当前没有可读取或清空的运行日志文件。',
         empty: '当前没有可展示的运行日志。请确认文件日志已启用，并且运行时已有日志写入。',
         emptyPage: '当前页没有日志记录。请返回上一页或重新同步。',
         lineCount: '{{count}} 条',
@@ -2231,6 +2232,7 @@ export const zhCN = {
       },
       toast: {
         logsCleared: '日志已清空。',
+        fileLoggingDisabled: '文件日志未启用，无法清空运行日志。',
         logDownloaded: '日志已下载。',
       },
     },

@@ -44,7 +44,7 @@ export function useUsageLogsWorkbench() {
     useManagementSession()
   const [runtimeLogLimit, setRuntimeLogLimitState] = useState(defaultRuntimeLogPageSize)
   const [runtimeLogOffset, setRuntimeLogOffset] = useState(0)
-  const canQueryRuntimeLogs =
+  const canUseRuntimeLogRoutes =
     connected && capabilityReady && Boolean(session.managementKey) && capabilities.logs
   const overviewQueryKey = [
     'management-usage-logs',
@@ -74,6 +74,8 @@ export function useUsageLogsWorkbench() {
       }
     },
   })
+  const canQueryRuntimeLogs =
+    canUseRuntimeLogRoutes && overviewQuery.data?.settings.fileLoggingEnabled === true
 
   const runtimeLogsQuery = useQuery({
     queryKey: runtimeLogsQueryKey,

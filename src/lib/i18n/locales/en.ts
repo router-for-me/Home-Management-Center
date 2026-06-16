@@ -2246,6 +2246,8 @@ export const en = {
         description:
           'Read runtime logs with pagination. The table shows summaries; open details for full content and request metadata.',
         unavailable: 'This runtime does not expose the runtime logs route.',
+        fileLoggingDisabled:
+          'File logging is disabled, so there are no runtime log files to read or clear.',
         empty:
           'No runtime log lines are available. Confirm file logging is enabled and the runtime has written logs.',
         emptyPage: 'This page has no log records. Go back one page or sync again.',
@@ -2305,6 +2307,7 @@ export const en = {
       },
       toast: {
         logsCleared: 'Logs cleared.',
+        fileLoggingDisabled: 'File logging is disabled, so runtime logs cannot be cleared.',
         logDownloaded: 'Log downloaded.',
       },
     },
