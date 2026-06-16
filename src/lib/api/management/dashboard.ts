@@ -11,7 +11,6 @@ type DashboardProviderId =
   | 'codex'
   | 'vertex'
   | 'openaiCompatibility'
-  | 'ampcode'
 
 type DashboardRequestIssueScope =
   | 'latestVersion'
@@ -89,11 +88,6 @@ const dashboardProviderDescriptors: DashboardProviderDescriptor[] = [
     id: 'openaiCompatibility',
     path: '/openai-compatibility',
     responseKey: 'openai-compatibility',
-  },
-  {
-    id: 'ampcode',
-    path: '/ampcode/upstream-api-keys',
-    responseKey: 'upstream-api-keys',
   },
 ]
 

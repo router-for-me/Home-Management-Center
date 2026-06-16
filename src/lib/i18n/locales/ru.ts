@@ -797,7 +797,7 @@ export const ru = {
         emptyDescription:
           'Модельные ключи не возвращены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
         emptySupportedProviders:
-          'Поддерживаются Gemini, Claude, Codex, Vertex, OpenAI-compatible сервисы и AMP.',
+          'Поддерживаются Gemini, Claude, Codex, Vertex и OpenAI-compatible сервисы.',
         configureAction: 'Настроить модельный сервис',
         total: 'Всего',
         active: 'Доступно',
@@ -809,7 +809,6 @@ export const ru = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI Integration (ampcode)',
       },
       config: {
         title: 'Ключевые переключатели',
@@ -863,7 +862,6 @@ export const ru = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI Integration (ampcode)',
       },
     },
     providersPage: {
@@ -1887,11 +1885,6 @@ export const ru = {
           shortTitle: 'Роутинг',
           description: 'Управление retry timing и маршрутизацией модельных сервисов.',
         },
-        ampcode: {
-          title: 'Amp CLI интеграция',
-          shortTitle: 'Amp',
-          description: 'Настройка upstream URL, key mappings и model mappings для Amp CLI.',
-        },
         payload: {
           title: 'Payload rules',
           shortTitle: 'Payload',
@@ -1993,36 +1986,6 @@ export const ru = {
         quotaSwitchPreviewModel: {
           label: 'Переключать preview model при квоте',
           description: 'Пробовать доступную preview model при исчерпании квоты.',
-        },
-        ampcodeUpstreamUrl: {
-          label: 'Amp upstream URL',
-          description: 'Upstream URL для запросов Amp CLI. Пустое значение удаляет настройку.',
-          placeholder: 'https://amp.example.com',
-        },
-        ampcodeUpstreamApiKey: {
-          label: 'Amp upstream key',
-          description: 'Один upstream Amp API key. Пустое значение удаляет настройку.',
-          placeholder: 'Вставьте Amp upstream key',
-        },
-        ampcodeRestrictManagementToLocalhost: {
-          label: 'Management только с localhost',
-          description: 'Ограничить AmpCode management доступом с localhost.',
-        },
-        ampcodeForceModelMappings: {
-          label: 'Принудительные model mappings',
-          description: 'Принудительно применять model mappings ниже.',
-        },
-        ampcodeModelMappingsJson: {
-          label: 'Model mappings',
-          description:
-            'Сопоставляет запрошенные Amp models с upstream target models, с optional regex matching.',
-          placeholder: '[{"from":"claude-opus-4.5","to":"claude-sonnet-4","regex":false}]',
-        },
-        ampcodeUpstreamApiKeysJson: {
-          label: 'Multiple upstream keys',
-          description:
-            'Сопоставляет client keys с конкретными Amp upstream keys для управления request forwarding.',
-          placeholder: '[{"upstream-api-key":"upstream-key","api-keys":["client-key"]}]',
         },
         oauthExcludedModelsJson: {
           label: 'Disabled models',

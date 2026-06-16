@@ -10,7 +10,6 @@ const providerLogoUrls: Record<string, { src: string; darkSrc?: string; classNam
   antigravity: { src: '/icons/antigravity.svg' },
   kimi: { src: '/icons/kimi-light.svg', darkSrc: '/icons/kimi-dark.svg' },
   openaiCompatibility: { src: '/icons/openai-light.svg', className: 'dark:invert' },
-  ampcode: { src: '/icons/amp.svg' },
   xai: { src: '/icons/grok.svg', className: 'p-0.5 dark:invert' },
 }
 
@@ -40,10 +39,6 @@ const providerMarks: Record<
   openaiCompatibility: {
     label: 'AI',
     className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-  },
-  ampcode: {
-    label: 'Amp',
-    className: 'border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300',
   },
   xai: {
     label: 'xAI',

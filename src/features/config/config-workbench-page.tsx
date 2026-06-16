@@ -22,7 +22,6 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
-  Terminal,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -78,7 +77,6 @@ type ConfigSectionId =
   | 'network'
   | 'quota'
   | 'streaming'
-  | 'ampcode'
   | 'payload'
 
 type ConfigFieldKind =
@@ -90,11 +88,7 @@ type ConfigFieldKind =
   | 'jsonArray'
   | 'jsonObject'
 
-type JsonConfigFieldKey =
-  | 'oauthExcludedModelsJson'
-  | 'oauthModelAliasJson'
-  | 'ampcodeModelMappingsJson'
-  | 'ampcodeUpstreamApiKeysJson'
+type JsonConfigFieldKey = 'oauthExcludedModelsJson' | 'oauthModelAliasJson'
 
 type OAuthModelCatalogState = {
   channel: ProviderModelChannel
@@ -112,12 +106,6 @@ type AliasRule = {
   name?: string
   alias?: string
   fork?: boolean
-}
-
-type ModelMappingRule = {
-  from?: string
-  to?: string
-  regex?: boolean
 }
 
 type PendingConfigConfirmation = {
@@ -222,17 +210,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'ampcode',
-    fields: [
-      { key: 'ampcodeUpstreamUrl', kind: 'text', sectionId: 'ampcode' },
-      { key: 'ampcodeUpstreamApiKey', kind: 'text', sectionId: 'ampcode' },
-      { key: 'ampcodeRestrictManagementToLocalhost', kind: 'boolean', sectionId: 'ampcode' },
-      { key: 'ampcodeForceModelMappings', kind: 'boolean', sectionId: 'ampcode' },
-      { key: 'ampcodeModelMappingsJson', kind: 'jsonArray', sectionId: 'ampcode' },
-      { key: 'ampcodeUpstreamApiKeysJson', kind: 'jsonArray', sectionId: 'ampcode' },
-    ],
-  },
-  {
     id: 'payload',
     fields: [{ key: 'forceModelPrefix', kind: 'boolean', sectionId: 'payload' }],
   },
@@ -269,15 +246,12 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   network: Network,
   quota: Gauge,
   streaming: Route,
-  ampcode: Terminal,
   payload: Code2,
 }
 
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
-  'ampcodeModelMappingsJson',
-  'ampcodeUpstreamApiKeysJson',
 ])
 
 type JsonParseResult =
@@ -362,35 +336,6 @@ function canEditModelAliases(value: unknown) {
   )
 }
 
-function canEditModelMappings(value: unknown) {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        isRecord(item) &&
-        hasOnlyKeys(item, ['from', 'to', 'regex']) &&
-        (item.from === undefined || typeof item.from === 'string') &&
-        (item.to === undefined || typeof item.to === 'string') &&
-        (item.regex === undefined || typeof item.regex === 'boolean'),
-    )
-  )
-}
-
-function canEditUpstreamApiKeys(value: unknown) {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        isRecord(item) &&
-        hasOnlyKeys(item, ['upstream-api-key', 'api-keys']) &&
-        (item['upstream-api-key'] === undefined || typeof item['upstream-api-key'] === 'string') &&
-        (item['api-keys'] === undefined ||
-          (Array.isArray(item['api-keys']) &&
-            item['api-keys'].every((key) => typeof key === 'string'))),
-    )
-  )
-}
-
 function getModelDisplayName(model: ProviderModelDefinition) {
   return model.displayName || model.name || model.id
 }
@@ -401,10 +346,6 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
       return canEditModelAliases(value)
-    case 'ampcodeModelMappingsJson':
-      return canEditModelMappings(value)
-    case 'ampcodeUpstreamApiKeysJson':
-      return canEditUpstreamApiKeys(value)
   }
 }
 
@@ -1252,186 +1193,6 @@ function ModelAliasEditor({
   )
 }
 
-function ModelMappingsEditor({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: ModelMappingRule[]
-  disabled: boolean
-  onChange: (value: ModelMappingRule[]) => void
-}) {
-  const { t } = useTranslation()
-  const columnsClass = 'lg:grid-cols-[minmax(12rem,1fr)_minmax(12rem,1fr)_minmax(8rem,auto)_auto]'
-
-  const updateItem = (index: number, patch: Partial<ModelMappingRule>) => {
-    onChange(value.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
-  }
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <p className="text-muted-foreground text-xs leading-5">
-          {t('configPage.json.modelMappings.description')}
-        </p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="w-fit"
-          disabled={disabled}
-          onClick={() => onChange([...value, { from: '', to: '', regex: false }])}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t('configPage.json.addMapping')}
-        </Button>
-      </div>
-
-      {value.length === 0 ? (
-        <EmptyJsonRows label={t('configPage.json.emptyRows')} />
-      ) : (
-        <div className="overflow-hidden rounded-md border">
-          <div className={cn('bg-muted/45 hidden border-b lg:grid', columnsClass)}>
-            <TableHeaderCell
-              label={t('configPage.json.columns.from')}
-              description={t('configPage.json.columnDescriptions.from')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.to')}
-              description={t('configPage.json.columnDescriptions.to')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.regex')}
-              description={t('configPage.json.columnDescriptions.regex')}
-            />
-            <TableHeaderCell label={t('configPage.json.columns.actions')} />
-          </div>
-
-          <div className="divide-y">
-            {value.map((item, index) => (
-              <div key={index} className={cn('grid gap-2 px-3 py-3 lg:items-start', columnsClass)}>
-                <label className="grid gap-1.5">
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.from')}
-                  </span>
-                  <Input
-                    value={item.from ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.from')}
-                    placeholder={t('configPage.json.placeholders.from')}
-                    onChange={(event) => updateItem(index, { from: event.target.value })}
-                  />
-                </label>
-                <label className="grid gap-1.5">
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.to')}
-                  </span>
-                  <Input
-                    value={item.to ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.to')}
-                    placeholder={t('configPage.json.placeholders.to')}
-                    onChange={(event) => updateItem(index, { to: event.target.value })}
-                  />
-                </label>
-                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(item.regex)}
-                    disabled={disabled}
-                    onCheckedChange={(checked) => updateItem(index, { regex: checked === true })}
-                  />
-                  <span>{t('configPage.json.columns.regex')}</span>
-                </label>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="sm"
-                  className="justify-start lg:justify-center"
-                  disabled={disabled}
-                  onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}
-                >
-                  {t('configPage.json.remove')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function UpstreamApiKeysEditor({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: Array<{ 'upstream-api-key'?: string; 'api-keys'?: string[] }>
-  disabled: boolean
-  onChange: (value: Array<{ 'upstream-api-key'?: string; 'api-keys'?: string[] }>) => void
-}) {
-  const { t } = useTranslation()
-
-  const updateItem = (
-    index: number,
-    patch: Partial<{ 'upstream-api-key': string; 'api-keys': string[] }>,
-  ) => {
-    onChange(value.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)))
-  }
-
-  return (
-    <div className="grid gap-3">
-      {value.length === 0 ? (
-        <EmptyJsonRows label={t('configPage.json.emptyRows')} />
-      ) : (
-        value.map((item, index) => (
-          <div
-            key={index}
-            className="grid gap-2 rounded-md border px-3 py-3 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)_auto]"
-          >
-            <Input
-              value={item['upstream-api-key'] ?? ''}
-              disabled={disabled}
-              aria-label={t('configPage.json.columns.upstreamApiKey')}
-              placeholder={t('configPage.json.placeholders.upstreamApiKey')}
-              onChange={(event) => updateItem(index, { 'upstream-api-key': event.target.value })}
-            />
-            <Input
-              value={(item['api-keys'] ?? []).join(', ')}
-              disabled={disabled}
-              aria-label={t('configPage.json.columns.clientKeys')}
-              placeholder={t('configPage.json.placeholders.clientKeys')}
-              onChange={(event) =>
-                updateItem(index, { 'api-keys': parseListText(event.target.value) })
-              }
-            />
-            <Button
-              type="button"
-              variant="text"
-              size="sm"
-              disabled={disabled}
-              onClick={() => onChange(value.filter((_, itemIndex) => itemIndex !== index))}
-            >
-              {t('configPage.json.remove')}
-            </Button>
-          </div>
-        ))
-      )}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-fit"
-        disabled={disabled}
-        onClick={() => onChange([...value, { 'upstream-api-key': '', 'api-keys': [] }])}
-      >
-        <Plus className="size-4" aria-hidden="true" />
-        {t('configPage.json.addUpstreamKey')}
-      </Button>
-    </div>
-  )
-}
-
 function StructuredJsonEditor({
   fieldKey,
   value,
@@ -1459,22 +1220,6 @@ function StructuredJsonEditor({
       return (
         <ModelAliasEditor
           value={value as Record<string, AliasRule[]>}
-          disabled={disabled}
-          onChange={onChange}
-        />
-      )
-    case 'ampcodeModelMappingsJson':
-      return (
-        <ModelMappingsEditor
-          value={value as ModelMappingRule[]}
-          disabled={disabled}
-          onChange={onChange}
-        />
-      )
-    case 'ampcodeUpstreamApiKeysJson':
-      return (
-        <UpstreamApiKeysEditor
-          value={value as Array<{ 'upstream-api-key'?: string; 'api-keys'?: string[] }>}
           disabled={disabled}
           onChange={onChange}
         />

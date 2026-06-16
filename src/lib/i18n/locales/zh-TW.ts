@@ -775,7 +775,7 @@ export const zhTW = {
         emptyTitle: '尚未設定模型服務',
         emptyDescription:
           '目前沒有回傳任何模型服務金鑰。新增模型服務後，閘道才能把請求轉發到上游模型。',
-        emptySupportedProviders: '支援 Gemini、Claude、Codex、Vertex、OpenAI 相容服務和 AMP。',
+        emptySupportedProviders: '支援 Gemini、Claude、Codex、Vertex、OpenAI 相容服務。',
         configureAction: '設定模型服務',
         total: '總數',
         active: '可用',
@@ -787,7 +787,6 @@ export const zhTW = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI 集成 (ampcode)',
       },
       config: {
         title: '關鍵開關',
@@ -840,7 +839,6 @@ export const zhTW = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI 集成 (ampcode)',
       },
     },
     providersPage: {
@@ -1823,11 +1821,6 @@ export const zhTW = {
           shortTitle: '路由',
           description: '控制請求重試間隔和模型服務路由策略。',
         },
-        ampcode: {
-          title: 'Amp CLI 集成',
-          shortTitle: 'Amp',
-          description: '設定 Amp CLI 的上游位址、金鑰映射和模型映射規則。',
-        },
         payload: {
           title: 'Payload 規則',
           shortTitle: 'Payload',
@@ -1927,34 +1920,6 @@ export const zhTW = {
         quotaSwitchPreviewModel: {
           label: '額度耗盡切換預覽模型',
           description: '額度耗盡後嘗試切換到可用的預覽模型。',
-        },
-        ampcodeUpstreamUrl: {
-          label: 'Amp 上游位址',
-          description: 'Amp CLI 請求轉發到的上游服務位址；留空會刪除該設定。',
-          placeholder: 'https://amp.example.com',
-        },
-        ampcodeUpstreamApiKey: {
-          label: 'Amp 上游金鑰',
-          description: '單個 Amp 上游 API key；留空會刪除該設定。',
-          placeholder: '貼上 Amp 上游金鑰',
-        },
-        ampcodeRestrictManagementToLocalhost: {
-          label: '僅本機管理',
-          description: '限制 AmpCode management 相關存取只能來自 localhost。',
-        },
-        ampcodeForceModelMappings: {
-          label: '強制模型映射',
-          description: '啟用後強制套用下方模型映射規則。',
-        },
-        ampcodeModelMappingsJson: {
-          label: '模型映射',
-          description: '設定 Amp 請求模型到上游目標模型的映射，可按需啟用 regex 匹配。',
-          placeholder: '[{"from":"claude-opus-4.5","to":"claude-sonnet-4","regex":false}]',
-        },
-        ampcodeUpstreamApiKeysJson: {
-          label: '多上游金鑰',
-          description: '將用戶端金鑰映射到指定 Amp 上游金鑰，用於控制請求轉發目標。',
-          placeholder: '[{"upstream-api-key":"upstream-key","api-keys":["client-key"]}]',
         },
         oauthExcludedModelsJson: {
           label: '模型停用',

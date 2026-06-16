@@ -794,7 +794,7 @@ export const en = {
         emptyDescription:
           'No model service keys were returned. Add a model service before the gateway can forward requests upstream.',
         emptySupportedProviders:
-          'Supports Gemini, Claude, Codex, Vertex, OpenAI-compatible services, and AMP.',
+          'Supports Gemini, Claude, Codex, Vertex, and OpenAI-compatible services.',
         configureAction: 'Configure model service',
         total: 'Total',
         active: 'Available',
@@ -806,7 +806,6 @@ export const en = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI Integration (ampcode)',
       },
       config: {
         title: 'Key switches',
@@ -860,7 +859,6 @@ export const en = {
         codex: 'Codex',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
-        ampcode: 'Amp CLI Integration (ampcode)',
       },
     },
     providersPage: {
@@ -1877,11 +1875,6 @@ export const en = {
           shortTitle: 'Routing',
           description: 'Control request retry timing and model service routing.',
         },
-        ampcode: {
-          title: 'Amp CLI integration',
-          shortTitle: 'Amp',
-          description: 'Configure Amp CLI upstream endpoints, key mappings, and model mappings.',
-        },
         payload: {
           title: 'Payload rules',
           shortTitle: 'Payload',
@@ -1982,36 +1975,6 @@ export const en = {
         quotaSwitchPreviewModel: {
           label: 'Switch preview model on quota',
           description: 'Try an available preview model when quota is exhausted.',
-        },
-        ampcodeUpstreamUrl: {
-          label: 'Amp upstream URL',
-          description: 'Upstream service URL for Amp CLI requests. Empty removes the setting.',
-          placeholder: 'https://amp.example.com',
-        },
-        ampcodeUpstreamApiKey: {
-          label: 'Amp upstream key',
-          description: 'Single upstream Amp API key. Empty removes the setting.',
-          placeholder: 'Paste Amp upstream key',
-        },
-        ampcodeRestrictManagementToLocalhost: {
-          label: 'Localhost-only management',
-          description: 'Restrict AmpCode management access to localhost.',
-        },
-        ampcodeForceModelMappings: {
-          label: 'Force model mappings',
-          description: 'Force the model mappings below when enabled.',
-        },
-        ampcodeModelMappingsJson: {
-          label: 'Model mappings',
-          description:
-            'Map requested Amp models to upstream target models, with optional regex matching.',
-          placeholder: '[{"from":"claude-opus-4.5","to":"claude-sonnet-4","regex":false}]',
-        },
-        ampcodeUpstreamApiKeysJson: {
-          label: 'Multiple upstream keys',
-          description:
-            'Map client keys to specific Amp upstream keys to control request forwarding.',
-          placeholder: '[{"upstream-api-key":"upstream-key","api-keys":["client-key"]}]',
         },
         oauthExcludedModelsJson: {
           label: 'Disabled models',

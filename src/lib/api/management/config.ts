@@ -29,12 +29,6 @@ export type ConfigFieldKey =
   | 'routingStrategy'
   | 'quotaSwitchProject'
   | 'quotaSwitchPreviewModel'
-  | 'ampcodeUpstreamUrl'
-  | 'ampcodeUpstreamApiKey'
-  | 'ampcodeRestrictManagementToLocalhost'
-  | 'ampcodeForceModelMappings'
-  | 'ampcodeModelMappingsJson'
-  | 'ampcodeUpstreamApiKeysJson'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
 
@@ -52,7 +46,7 @@ type ConfigSnapshot = {
   structured: ConfigStructuredValues
   yaml: string
   issues: Array<{
-    scope: 'config' | 'yaml' | 'ampcode' | 'oauthRules'
+    scope: 'config' | 'yaml' | 'oauthRules'
     message: string
     status?: number
     code?: ManagementApiError['code']
@@ -361,7 +355,6 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
   const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
   const tls = toRecord(rawConfig.tls)
   const remoteManagement = toRecord(rawConfig['remote-management'])
-  const ampcode = toRecord(rawConfig.ampcode)
   const oauthExcludedModels = toRecord(rawConfig['oauth-excluded-models'])
   const oauthModelAlias = toRecord(rawConfig['oauth-model-alias'])
 
@@ -391,12 +384,6 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     routingStrategy: readString(routing, 'strategy', 'round-robin'),
     quotaSwitchProject: readBoolean(quotaExceeded, 'switch-project'),
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
-    ampcodeUpstreamUrl: readString(ampcode, 'upstream-url'),
-    ampcodeUpstreamApiKey: readString(ampcode, 'upstream-api-key'),
-    ampcodeRestrictManagementToLocalhost: readBoolean(ampcode, 'restrict-management-to-localhost'),
-    ampcodeForceModelMappings: readBoolean(ampcode, 'force-model-mappings'),
-    ampcodeModelMappingsJson: stringifyJsonArray(ampcode['model-mappings']),
-    ampcodeUpstreamApiKeysJson: stringifyJsonArray(ampcode['upstream-api-keys']),
     oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),
     oauthModelAliasJson: stringifyJsonObject(oauthModelAlias),
   }
@@ -439,16 +426,6 @@ export async function fetchConfigSnapshot(
     rawConfig = toRecord(configResponse.data)
   } catch (error) {
     throw toThrowableManagementError(error)
-  }
-
-  try {
-    const ampcodeResponse = await client.get<unknown>('/ampcode')
-    const ampcode = toRecord(ampcodeResponse.data).ampcode
-    if (isRecord(ampcode)) {
-      rawConfig = { ...rawConfig, ampcode }
-    }
-  } catch (error) {
-    issues.push(normalizeIssue('ampcode', error))
   }
 
   try {
@@ -536,32 +513,6 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
       return
     case 'quotaSwitchPreviewModel':
       await client.put('/quota-exceeded/switch-preview-model', { value })
-      return
-    case 'ampcodeUpstreamUrl':
-      if (typeof value === 'string' && value.trim()) {
-        await client.put('/ampcode/upstream-url', { value: value.trim() })
-        return
-      }
-      await client.delete('/ampcode/upstream-url')
-      return
-    case 'ampcodeUpstreamApiKey':
-      if (typeof value === 'string' && value.trim()) {
-        await client.put('/ampcode/upstream-api-key', { value: value.trim() })
-        return
-      }
-      await client.delete('/ampcode/upstream-api-key')
-      return
-    case 'ampcodeRestrictManagementToLocalhost':
-      await client.put('/ampcode/restrict-management-to-localhost', { value })
-      return
-    case 'ampcodeForceModelMappings':
-      await client.put('/ampcode/force-model-mappings', { value })
-      return
-    case 'ampcodeModelMappingsJson':
-      await client.put('/ampcode/model-mappings', { value: parseJsonArrayText(value) })
-      return
-    case 'ampcodeUpstreamApiKeysJson':
-      await client.put('/ampcode/upstream-api-keys', { value: parseJsonArrayText(value) })
       return
     case 'oauthExcludedModelsJson':
       await client.put('/oauth-excluded-models', parseJsonObjectText(value))
