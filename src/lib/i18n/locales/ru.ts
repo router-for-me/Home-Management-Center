@@ -381,13 +381,12 @@ export const ru = {
       disconnected: {
         title: 'Подключите management runtime',
         description:
-          'Подключите Management API, чтобы видеть финансовый обзор, списания, записи баланса, цены моделей и proxy pools.',
+          'Подключите Management API, чтобы видеть финансовый обзор, списания, записи баланса и цены моделей.',
         action: 'Подключить management',
       },
       header: {
         title: 'Финансы и отчеты',
-        description:
-          'Просмотр биллинга Home: факты списаний, записи баланса, цены моделей и глобальные proxy pools.',
+        description: 'Просмотр биллинга Home: факты списаний, записи баланса и цены моделей.',
       },
       actions: {
         refresh: 'Обновить текущий вид',
@@ -397,7 +396,6 @@ export const ru = {
         charges: 'Списания',
         balanceRecords: 'Баланс',
         modelPrices: 'Цены моделей',
-        proxyPools: 'Proxy pools',
       },
       filters: {
         today: 'Сегодня',
@@ -605,68 +603,10 @@ export const ru = {
             'Удалить цену модели {{model}}? Исторические списания сохранят свои снимки цен.',
         },
       },
-      proxies: {
-        title: 'Proxy pools',
-        description: 'Управляйте proxy-узлами и их состоянием подключения для пересылки запросов.',
-        empty: 'Proxy entries пока нет.',
-        actions: {
-          create: 'Новый proxy',
-          save: 'Сохранить proxy',
-          test: 'Тест',
-          toggleState: 'Переключить состояние proxy {{name}}',
-        },
-        columns: {
-          name: 'Имя',
-          url: 'Proxy URL',
-          state: 'Состояние',
-          scope: 'Scope',
-          priority: 'Приоритет',
-          lastTest: 'Последний тест',
-          note: 'Примечание',
-        },
-        scope: {
-          global: 'Глобально',
-        },
-        sheet: {
-          createTitle: 'Новый proxy',
-          editTitle: 'Изменить proxy',
-          description:
-            'Proxy URL скрывается по умолчанию. Scope в этой версии фиксирован как global.',
-        },
-        form: {
-          identity: 'Данные proxy',
-          identityHint: 'Укажите запись proxy для идентификации и тестов подключения.',
-          name: 'Имя',
-          url: 'Proxy URL',
-          urlHint: 'Поддерживаются URL http, https, socks5 или socks5h.',
-          routing: 'Состояние записи',
-          routingHint:
-            'В этой версии записи global proxy только хранятся и тестируются. Они не меняют runtime priority proxy, выбор аккаунта или outbound routing.',
-          enabled: 'Состояние включения',
-          priority: 'Приоритет',
-          priorityHint: 'Сохраняемое целое число; в этой версии оно не влияет на runtime routing.',
-          scope: 'Scope',
-          note: 'Примечание',
-        },
-        validation: {
-          required: 'Имя и proxy URL обязательны.',
-          nameRequired: 'Имя обязательно.',
-          urlRequired: 'Proxy URL обязателен.',
-          urlInvalid: 'Proxy URL должен быть корректным URL http, https, socks5 или socks5h.',
-          priorityInvalid: 'Приоритет должен быть целым числом.',
-        },
-        delete: {
-          title: 'Удалить proxy?',
-          description: 'Удалить proxy {{name}}? Gateway больше не будет использовать эту запись.',
-        },
-      },
       toast: {
         copied: 'Скопировано.',
         priceCreated: 'Цена модели создана.',
         priceUpdated: 'Цена модели обновлена.',
-        proxyCreated: 'Proxy создан.',
-        proxyUpdated: 'Proxy обновлен.',
-        proxyTested: 'Тест подключения proxy отправлен.',
         deleted: 'Удалено.',
         actionFailed: 'Действие не выполнено. Проверьте ответ backend API.',
       },
@@ -1837,6 +1777,10 @@ export const ru = {
       outline: {
         title: 'Разделы конфигурации',
       },
+      networkPanels: {
+        current: 'Текущий outbound proxy',
+        pool: 'Proxy pool',
+      },
       sections: {
         server: {
           title: 'Runtime сервера',
@@ -2004,6 +1948,90 @@ export const ru = {
         'round-robin': 'Round robin',
         'fill-first': 'Fill first',
         unknown: 'Неизвестно',
+      },
+      proxyPools: {
+        title: 'Proxy pool',
+        description:
+          'Ведите переиспользуемые proxy-записи и проверяйте подключение. В этой версии они не меняют runtime outbound routing.',
+        empty:
+          'Proxy-записей пока нет. Создайте запись, чтобы централизованно хранить proxy URL и проверять подключение.',
+        error: 'Не удалось загрузить proxy pool. Проверьте доступность backend route.',
+        unsupported:
+          'Текущий Management API не поддерживает управление proxy pool. Текущий outbound proxy все еще можно редактировать.',
+        actions: {
+          create: 'Новая proxy-запись',
+          save: 'Сохранить proxy-запись',
+          refresh: 'Обновить',
+          test: 'Тест',
+          toggleState: 'Переключить состояние proxy-записи {{name}}',
+        },
+        columns: {
+          name: 'Имя',
+          url: 'Proxy URL',
+          state: 'Состояние',
+          scope: 'Scope',
+          priority: 'Приоритет',
+          lastTest: 'Последний тест',
+          note: 'Примечание',
+        },
+        common: {
+          actions: 'Действия',
+          copy: 'Копировать',
+          edit: 'Изменить',
+          delete: 'Удалить',
+          enabled: 'Включено',
+          disabled: 'Отключено',
+          na: 'Не тестировалось',
+        },
+        scope: {
+          global: 'Глобально',
+        },
+        testResults: {
+          passed: 'Успешно',
+          failed: 'Ошибка',
+          untested: 'Не тестировалось',
+        },
+        sheet: {
+          createTitle: 'Новая proxy-запись',
+          editTitle: 'Изменить proxy-запись',
+          description:
+            'Proxy-записи используются для централизованного ведения и тестов подключения. В этой версии они не участвуют в runtime routing.',
+        },
+        form: {
+          identity: 'Данные proxy',
+          identityHint: 'Укажите proxy-запись для идентификации и тестов подключения.',
+          name: 'Имя',
+          url: 'Proxy URL',
+          urlHint: 'Поддерживаются URL http, https, socks5 или socks5h.',
+          recordState: 'Состояние записи',
+          recordStateHint:
+            'Состояние включения только помечает доступность записи; оно не означает, что runtime выберет этот proxy.',
+          enabled: 'Состояние включения',
+          priority: 'Приоритет',
+          priorityHint:
+            'Сохраняемое целое число; в этой версии оно не влияет на runtime proxy priority или outbound routing.',
+          scope: 'Scope',
+          note: 'Примечание',
+        },
+        validation: {
+          nameRequired: 'Имя обязательно.',
+          urlRequired: 'Proxy URL обязателен.',
+          urlInvalid: 'Proxy URL должен быть корректным URL http, https, socks5 или socks5h.',
+          priorityInvalid: 'Приоритет должен быть целым числом.',
+        },
+        delete: {
+          title: 'Удалить proxy-запись?',
+          description:
+            'Удалить proxy-запись {{name}}? После удаления эта запись больше не будет доступна для тестов подключения или будущего выбора в конфигурации.',
+        },
+        toast: {
+          copied: 'Скопировано.',
+          created: 'Proxy-запись создана.',
+          updated: 'Proxy-запись обновлена.',
+          tested: 'Тест подключения proxy завершен.',
+          deleted: 'Proxy-запись удалена.',
+          actionFailed: 'Действие не выполнено. Проверьте ответ backend API.',
+        },
       },
       validation: {
         invalidField: 'Введите корректное значение.',

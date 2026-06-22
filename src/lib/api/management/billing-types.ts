@@ -103,22 +103,6 @@ export type ModelPrice = {
   raw: unknown
 }
 
-export type ProxyPoolTestResult = 'passed' | 'failed' | 'untested'
-
-export type ProxyPoolItem = {
-  id: string
-  name: string
-  proxyUrl: string
-  enabled: boolean
-  scope: 'global'
-  priority: number
-  lastTestedAt: string | null
-  lastTestResult: ProxyPoolTestResult
-  note: string | null
-  updatedAt: string
-  raw: unknown
-}
-
 export type BillingFilters = {
   from: string
   to: string
@@ -155,13 +139,5 @@ export type ModelPriceInput = {
   cacheWritePricePerMillion: number
   requestPrice: number
   enabled: boolean
-  note?: string
-}
-
-export type ProxyPoolInput = {
-  name: string
-  proxyUrl: string
-  enabled: boolean
-  priority: number
   note?: string
 }

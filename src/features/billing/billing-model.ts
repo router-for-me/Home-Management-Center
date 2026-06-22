@@ -1,6 +1,6 @@
 import type { BillingFilters, BillingPagination } from '@/lib/api/management/billing-types'
 
-export type BillingTab = 'overview' | 'charges' | 'balanceRecords' | 'modelPrices' | 'proxyPools'
+export type BillingTab = 'overview' | 'charges' | 'balanceRecords' | 'modelPrices'
 
 export type DateRangePreset = 'today' | '7d' | '30d' | 'custom'
 

@@ -5,26 +5,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { BillingTab } from '@/features/billing/billing-model'
 import {
   createModelPrice,
-  createProxyPool,
   deleteModelPrice,
-  deleteProxyPool,
   fetchBalanceRecords,
   fetchBillingOverview,
   fetchChargeRecords,
   fetchModelPrices,
-  fetchProxyPools,
-  testProxyPool,
   toBillingApiError,
   updateModelPrice,
-  updateProxyPool,
 } from '@/lib/api/management/billing'
 import type {
   BillingFilters,
   BillingPagination,
   ModelPrice,
   ModelPriceInput,
-  ProxyPoolInput,
-  ProxyPoolItem,
 } from '@/lib/api/management/billing-types'
 import {
   type ManagementModelScope,
@@ -190,7 +183,6 @@ export function useBillingWorkbench(
     session.baseUrl,
     connectedAt,
   ]
-  const proxyPoolsQueryKey = ['billing', 'proxyPools', session.baseUrl, connectedAt]
   const usersQueryKey = ['billing', 'users', session.baseUrl, connectedAt]
 
   const overviewQuery = useQuery({
@@ -269,18 +261,6 @@ export function useBillingWorkbench(
     },
   })
 
-  const proxyPoolsQuery = useQuery({
-    queryKey: proxyPoolsQueryKey,
-    enabled: ready && activeTab === 'proxyPools',
-    queryFn: async () => {
-      try {
-        return await fetchProxyPools(session)
-      } catch (error) {
-        throw toBillingApiError(error)
-      }
-    },
-  })
-
   const usersQuery = useQuery({
     queryKey: usersQueryKey,
     enabled: ready && activeTab === 'balanceRecords',
@@ -295,8 +275,6 @@ export function useBillingWorkbench(
 
   const invalidateModelPrices = () =>
     queryClient.invalidateQueries({ queryKey: ['billing', 'modelPrices'] })
-  const invalidateProxyPools = () =>
-    queryClient.invalidateQueries({ queryKey: ['billing', 'proxyPools'] })
 
   const createPriceMutation = useMutation({
     mutationFn: (input: ModelPriceInput) => createModelPrice(session, input),
@@ -319,39 +297,6 @@ export function useBillingWorkbench(
     mutationFn: (resource: ModelPrice) => deleteModelPrice(session, resource),
     onSuccess: () => {
       void invalidateModelPrices()
-    },
-    onError: toError,
-  })
-
-  const createProxyMutation = useMutation({
-    mutationFn: (input: ProxyPoolInput) => createProxyPool(session, input),
-    onSuccess: () => {
-      void invalidateProxyPools()
-    },
-    onError: toError,
-  })
-
-  const updateProxyMutation = useMutation({
-    mutationFn: ({ resource, input }: { resource: ProxyPoolItem; input: ProxyPoolInput }) =>
-      updateProxyPool(session, resource, input),
-    onSuccess: () => {
-      void invalidateProxyPools()
-    },
-    onError: toError,
-  })
-
-  const deleteProxyMutation = useMutation({
-    mutationFn: (resource: ProxyPoolItem) => deleteProxyPool(session, resource),
-    onSuccess: () => {
-      void invalidateProxyPools()
-    },
-    onError: toError,
-  })
-
-  const testProxyMutation = useMutation({
-    mutationFn: (resource: ProxyPoolItem) => testProxyPool(session, resource),
-    onSuccess: () => {
-      void invalidateProxyPools()
     },
     onError: toError,
   })
@@ -388,10 +333,6 @@ export function useBillingWorkbench(
     modelPriceCandidatesError: modelPriceCandidatesQuery.error
       ? toError(modelPriceCandidatesQuery.error).message
       : null,
-    proxyPools: proxyPoolsQuery.data?.items ?? [],
-    proxyPoolsLoading: proxyPoolsQuery.isLoading,
-    proxyPoolsFetching: proxyPoolsQuery.isFetching,
-    proxyPoolsError: proxyPoolsQuery.error ? toError(proxyPoolsQuery.error).message : null,
     users: usersQuery.data?.resources ?? [],
     usersLoading: usersQuery.isLoading,
     usersError: usersQuery.error ? toError(usersQuery.error).message : null,
@@ -400,21 +341,12 @@ export function useBillingWorkbench(
     refreshBalanceRecords: balanceRecordsQuery.refetch,
     refreshModelPrices: modelPricesQuery.refetch,
     refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
-    refreshProxyPools: proxyPoolsQuery.refetch,
     createModelPrice: createPriceMutation.mutateAsync,
     updateModelPrice: updatePriceMutation.mutateAsync,
     deleteModelPrice: deletePriceMutation.mutateAsync,
-    createProxyPool: createProxyMutation.mutateAsync,
-    updateProxyPool: updateProxyMutation.mutateAsync,
-    deleteProxyPool: deleteProxyMutation.mutateAsync,
-    testProxyPool: testProxyMutation.mutateAsync,
     mutating:
       createPriceMutation.isPending ||
       updatePriceMutation.isPending ||
-      deletePriceMutation.isPending ||
-      createProxyMutation.isPending ||
-      updateProxyMutation.isPending ||
-      deleteProxyMutation.isPending ||
-      testProxyMutation.isPending,
+      deletePriceMutation.isPending,
   }
 }

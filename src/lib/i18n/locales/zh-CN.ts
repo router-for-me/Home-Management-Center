@@ -369,13 +369,12 @@ export const zhCN = {
     billingPage: {
       disconnected: {
         title: '连接管理端运行时',
-        description:
-          '连接 Management API 后才能查看财务概览、扣款明细、余额记录、模型价格和代理池。',
+        description: '连接 Management API 后才能查看财务概览、扣款明细、余额记录和模型价格。',
         action: '连接管理端',
       },
       header: {
         title: '财务与报表',
-        description: '查看 Home 多用户计费数据：扣款事实、余额流水、模型价格，并管理全局代理池。',
+        description: '查看 Home 多用户计费数据：扣款事实、余额流水和模型价格。',
       },
       actions: {
         refresh: '刷新当前视图',
@@ -385,7 +384,6 @@ export const zhCN = {
         charges: '扣款明细',
         balanceRecords: '余额记录',
         modelPrices: '模型价格',
-        proxyPools: '代理池',
       },
       filters: {
         today: '今日',
@@ -587,67 +585,10 @@ export const zhCN = {
           description: '确认删除模型价格 {{model}}？历史扣款记录仍会保留价格快照。',
         },
       },
-      proxies: {
-        title: '代理池',
-        description: '管理用于请求转发的代理节点和连通性状态。',
-        empty: '还没有代理池条目。',
-        actions: {
-          create: '新建代理',
-          save: '保存代理',
-          test: '测试',
-          toggleState: '切换代理 {{name}} 的启用状态',
-        },
-        columns: {
-          name: '名称',
-          url: '代理地址',
-          state: '状态',
-          scope: '适用范围',
-          priority: '优先级',
-          lastTest: '最近测试',
-          note: '备注',
-        },
-        scope: {
-          global: '全局',
-        },
-        sheet: {
-          createTitle: '新建代理',
-          editTitle: '编辑代理',
-          description: '代理地址默认脱敏展示。第一版适用范围固定为全局。',
-        },
-        form: {
-          identity: '代理信息',
-          identityHint: '填写用于识别和连通性测试的代理记录。',
-          name: '名称',
-          url: '代理地址',
-          urlHint: '支持 http、https、socks5 或 socks5h URL。',
-          routing: '记录状态',
-          routingHint:
-            '当前版本仅存储和测试全局代理记录，不改变运行时代理优先级、账号选择或出站路由。',
-          enabled: '启用状态',
-          priority: '优先级',
-          priorityHint: '存储用整数；当前版本不影响运行时路由。',
-          scope: '适用范围',
-          note: '备注',
-        },
-        validation: {
-          required: '必须填写名称和代理地址。',
-          nameRequired: '必须填写名称。',
-          urlRequired: '必须填写代理地址。',
-          urlInvalid: '代理地址必须是有效的 http、https、socks5 或 socks5h URL。',
-          priorityInvalid: '优先级必须是整数。',
-        },
-        delete: {
-          title: '删除代理？',
-          description: '确认删除代理 {{name}}？删除后网关不能再使用该代理条目。',
-        },
-      },
       toast: {
         copied: '已复制。',
         priceCreated: '模型价格已创建。',
         priceUpdated: '模型价格已更新。',
-        proxyCreated: '代理已创建。',
-        proxyUpdated: '代理已更新。',
-        proxyTested: '代理连通性测试已提交。',
         deleted: '已删除。',
         actionFailed: '操作失败，请检查后端接口响应。',
       },
@@ -1776,6 +1717,10 @@ export const zhCN = {
       outline: {
         title: '配置目录',
       },
+      networkPanels: {
+        current: '当前出站代理',
+        pool: '代理池',
+      },
       sections: {
         server: {
           title: '服务运行',
@@ -1937,6 +1882,84 @@ export const zhCN = {
         'round-robin': '轮询',
         'fill-first': '优先填满',
         unknown: '未知',
+      },
+      proxyPools: {
+        title: '代理池',
+        description: '维护可复用的代理记录并测试连通性；当前版本不会改变运行时出站路由。',
+        empty: '还没有代理记录。新建代理记录后，可以在这里统一维护代理地址并测试连通性。',
+        error: '无法加载代理池，请检查后端接口是否可用。',
+        unsupported: '当前 Management API 不支持代理池管理。仍可继续编辑当前出站代理。',
+        actions: {
+          create: '新建代理记录',
+          save: '保存代理记录',
+          refresh: '刷新',
+          test: '测试',
+          toggleState: '切换代理记录 {{name}} 的启用状态',
+        },
+        columns: {
+          name: '名称',
+          url: '代理地址',
+          state: '状态',
+          scope: '适用范围',
+          priority: '优先级',
+          lastTest: '最近测试',
+          note: '备注',
+        },
+        common: {
+          actions: '操作',
+          copy: '复制',
+          edit: '编辑',
+          delete: '删除',
+          enabled: '已启用',
+          disabled: '已停用',
+          na: '未测试',
+        },
+        scope: {
+          global: '全局',
+        },
+        testResults: {
+          passed: '通过',
+          failed: '失败',
+          untested: '未测试',
+        },
+        sheet: {
+          createTitle: '新建代理记录',
+          editTitle: '编辑代理记录',
+          description: '代理记录用于统一维护和连通性测试；当前版本不参与运行时路由。',
+        },
+        form: {
+          identity: '代理信息',
+          identityHint: '填写用于识别和连通性测试的代理记录。',
+          name: '名称',
+          url: '代理地址',
+          urlHint: '支持 http、https、socks5 或 socks5h URL。',
+          recordState: '记录状态',
+          recordStateHint: '启用状态只标记该记录是否可用，不代表运行时会选择该代理。',
+          enabled: '启用状态',
+          priority: '优先级',
+          priorityHint: '存储用整数；当前版本不影响运行时代理优先级或出站路由。',
+          scope: '适用范围',
+          note: '备注',
+        },
+        validation: {
+          nameRequired: '必须填写名称。',
+          urlRequired: '必须填写代理地址。',
+          urlInvalid: '代理地址必须是有效的 http、https、socks5 或 socks5h URL。',
+          priorityInvalid: '优先级必须是整数。',
+        },
+        delete: {
+          title: '删除代理记录？',
+          description:
+            '确认删除代理记录 {{name}}？删除后，该记录将无法继续用于连通性测试或后续配置选择。',
+        },
+        toast: {
+          copied: '已复制。',
+          created: '代理记录已创建。',
+          updated: '代理记录已更新。',
+          tested: '代理连通性测试完成。',
+          deleted: '代理记录已删除。',
+          actionFailed: '操作失败，请检查后端接口响应。',
+        },
       },
       validation: {
         invalidField: '请填写有效值。',

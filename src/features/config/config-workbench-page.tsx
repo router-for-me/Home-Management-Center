@@ -57,6 +57,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import type {
   ConfigChange,
@@ -107,6 +108,8 @@ type AliasRule = {
   alias?: string
   fork?: boolean
 }
+
+type NetworkProxyPanel = 'current' | 'pool'
 
 type PendingConfigConfirmation = {
   type: 'reload'
@@ -1285,6 +1288,7 @@ function StructuredWorkspace({
   onChange: (key: ConfigFieldKey, value: boolean | number | string) => void
 }) {
   const { t } = useTranslation()
+  const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
 
   return (
     <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
@@ -1316,30 +1320,66 @@ function StructuredWorkspace({
               )
             })()}
 
-            <div className="mt-4 grid gap-3">
-              {section.fields.map((field) =>
-                isJsonConfigFieldKey(field.key) ? (
-                  <JsonConfigField
-                    key={field.key}
-                    field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-                    value={String(draft[field.key])}
-                    disabled={disabled}
-                    invalid={validationErrors.includes(field.key)}
-                    oauthModelCatalog={oauthModelCatalog}
-                    onChange={onChange}
-                  />
+            {section.id === 'network' ? (
+              <div className="mt-4 grid gap-4">
+                <div className="bg-muted/50 inline-flex w-fit items-center gap-1 rounded-md border p-1 shadow-xs">
+                  {(['current', 'pool'] as const).map((panel) => (
+                    <Button
+                      key={panel}
+                      type="button"
+                      size="sm"
+                      variant={networkPanel === panel ? 'secondary' : 'ghost'}
+                      className="h-8"
+                      onClick={() => setNetworkPanel(panel)}
+                    >
+                      {t(`configPage.networkPanels.${panel}`)}
+                    </Button>
+                  ))}
+                </div>
+
+                {networkPanel === 'current' ? (
+                  <div className="grid gap-3">
+                    {section.fields.map((field) => (
+                      <ConfigField
+                        key={field.key}
+                        field={field}
+                        value={draft[field.key]}
+                        disabled={disabled}
+                        invalid={validationErrors.includes(field.key)}
+                        onChange={onChange}
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  <ConfigField
-                    key={field.key}
-                    field={field}
-                    value={draft[field.key]}
-                    disabled={disabled}
-                    invalid={validationErrors.includes(field.key)}
-                    onChange={onChange}
-                  />
-                ),
-              )}
-            </div>
+                  <ProxyPoolsPanel enabled={networkPanel === 'pool'} />
+                )}
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-3">
+                {section.fields.map((field) =>
+                  isJsonConfigFieldKey(field.key) ? (
+                    <JsonConfigField
+                      key={field.key}
+                      field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+                      value={String(draft[field.key])}
+                      disabled={disabled}
+                      invalid={validationErrors.includes(field.key)}
+                      oauthModelCatalog={oauthModelCatalog}
+                      onChange={onChange}
+                    />
+                  ) : (
+                    <ConfigField
+                      key={field.key}
+                      field={field}
+                      value={draft[field.key]}
+                      disabled={disabled}
+                      invalid={validationErrors.includes(field.key)}
+                      onChange={onChange}
+                    />
+                  ),
+                )}
+              </div>
+            )}
           </section>
         ))}
       </div>

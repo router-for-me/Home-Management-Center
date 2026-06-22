@@ -13,9 +13,6 @@ import type {
   ModelPriceInput,
   ModelPriceSnapshot,
   ModelPriceSource,
-  ProxyPoolInput,
-  ProxyPoolItem,
-  ProxyPoolTestResult,
 } from '@/lib/api/management/billing-types'
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementSessionInput } from '@/lib/api/management/types'
@@ -263,31 +260,6 @@ function normalizeModelPrice(value: unknown, index: number): ModelPrice {
   }
 }
 
-function normalizeProxyPoolTestResult(value: string | null): ProxyPoolTestResult {
-  if (value === 'passed' || value === 'failed') return value
-  return 'untested'
-}
-
-function normalizeProxyPoolItem(value: unknown, index: number): ProxyPoolItem {
-  const record = toRecord(value)
-
-  return {
-    id: readString(record, ['id']) ?? `proxy-${index + 1}`,
-    name: readString(record, ['name']) ?? '',
-    proxyUrl: readString(record, ['proxy_url', 'proxyUrl', 'proxy-url', 'url']) ?? '',
-    enabled: readBoolean(record, ['enabled'], true),
-    scope: 'global',
-    priority: readNumber(record, ['priority']) ?? 0,
-    lastTestedAt: readString(record, ['last_tested_at', 'lastTestedAt']),
-    lastTestResult: normalizeProxyPoolTestResult(
-      readString(record, ['last_test_result', 'lastTestResult', 'test_result']),
-    ),
-    note: readString(record, ['note']),
-    updatedAt: readString(record, ['updated_at', 'updatedAt']) ?? '',
-    raw: value,
-  }
-}
-
 function normalizePage<T>(
   value: unknown,
   pagination: BillingPagination,
@@ -323,17 +295,6 @@ function toModelPricePayload(input: ModelPriceInput) {
     cache_write_price_per_million: input.cacheWritePricePerMillion,
     request_price: input.requestPrice,
     enabled: input.enabled,
-    note: input.note?.trim() || undefined,
-  }
-}
-
-function toProxyPoolPayload(input: ProxyPoolInput) {
-  return {
-    name: input.name.trim(),
-    proxy_url: input.proxyUrl.trim(),
-    enabled: input.enabled,
-    priority: input.priority,
-    scope: 'global',
     note: input.note?.trim() || undefined,
   }
 }
@@ -435,45 +396,6 @@ export async function updateModelPrice(
 export async function deleteModelPrice(session: ManagementSessionInput, resource: ModelPrice) {
   const client = createManagementClient(session)
   await client.delete(`/billing/model-prices/${encodeURIComponent(resource.id)}`)
-}
-
-export async function fetchProxyPools(session: ManagementSessionInput) {
-  const client = createManagementClient(session)
-  const response = await client.get<unknown>('/proxy/proxy-pools')
-
-  return {
-    fetchedAt: new Date().toISOString(),
-    items: readArrayRecords(response.data, ['items', 'records', 'data', 'proxy_pools']).map(
-      normalizeProxyPoolItem,
-    ),
-  }
-}
-
-export async function createProxyPool(session: ManagementSessionInput, input: ProxyPoolInput) {
-  const client = createManagementClient(session)
-  await client.post('/proxy/proxy-pools', toProxyPoolPayload(input))
-}
-
-export async function updateProxyPool(
-  session: ManagementSessionInput,
-  resource: ProxyPoolItem,
-  input: ProxyPoolInput,
-) {
-  const client = createManagementClient(session)
-  await client.patch(
-    `/proxy/proxy-pools/${encodeURIComponent(resource.id)}`,
-    toProxyPoolPayload(input),
-  )
-}
-
-export async function deleteProxyPool(session: ManagementSessionInput, resource: ProxyPoolItem) {
-  const client = createManagementClient(session)
-  await client.delete(`/proxy/proxy-pools/${encodeURIComponent(resource.id)}`)
-}
-
-export async function testProxyPool(session: ManagementSessionInput, resource: ProxyPoolItem) {
-  const client = createManagementClient(session)
-  await client.post(`/proxy/proxy-pools/${encodeURIComponent(resource.id)}/test`, {})
 }
 
 export function toBillingApiError(error: unknown) {

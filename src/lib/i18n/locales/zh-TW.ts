@@ -369,13 +369,12 @@ export const zhTW = {
     billingPage: {
       disconnected: {
         title: '連線管理端執行環境',
-        description:
-          '連線 Management API 後才能查看財務概覽、扣款明細、餘額記錄、模型價格和代理池。',
+        description: '連線 Management API 後才能查看財務概覽、扣款明細、餘額記錄和模型價格。',
         action: '連線管理端',
       },
       header: {
         title: '財務與報表',
-        description: '查看 Home 多使用者計費資料：扣款事實、餘額流水、模型價格，並管理全域代理池。',
+        description: '查看 Home 多使用者計費資料：扣款事實、餘額流水和模型價格。',
       },
       actions: {
         refresh: '刷新目前視圖',
@@ -385,7 +384,6 @@ export const zhTW = {
         charges: '扣款明細',
         balanceRecords: '餘額記錄',
         modelPrices: '模型價格',
-        proxyPools: '代理池',
       },
       filters: {
         today: '今日',
@@ -587,67 +585,10 @@ export const zhTW = {
           description: '確認刪除模型價格 {{model}}？歷史扣款記錄仍會保留價格快照。',
         },
       },
-      proxies: {
-        title: '代理池',
-        description: '管理用於請求轉發的代理節點和連通性狀態。',
-        empty: '還沒有代理池條目。',
-        actions: {
-          create: '新建代理',
-          save: '儲存代理',
-          test: '測試',
-          toggleState: '切換代理 {{name}} 的啟用狀態',
-        },
-        columns: {
-          name: '名稱',
-          url: '代理位址',
-          state: '狀態',
-          scope: '適用範圍',
-          priority: '優先級',
-          lastTest: '最近測試',
-          note: '備註',
-        },
-        scope: {
-          global: '全域',
-        },
-        sheet: {
-          createTitle: '新建代理',
-          editTitle: '編輯代理',
-          description: '代理位址預設脫敏展示。第一版適用範圍固定為全域。',
-        },
-        form: {
-          identity: '代理資訊',
-          identityHint: '填寫用於識別和連通性測試的代理記錄。',
-          name: '名稱',
-          url: '代理位址',
-          urlHint: '支援 http、https、socks5 或 socks5h URL。',
-          routing: '記錄狀態',
-          routingHint:
-            '目前版本僅儲存和測試全域代理記錄，不改變執行時代理優先級、帳號選擇或出站路由。',
-          enabled: '啟用狀態',
-          priority: '優先級',
-          priorityHint: '儲存用整數；目前版本不影響執行時路由。',
-          scope: '適用範圍',
-          note: '備註',
-        },
-        validation: {
-          required: '必須填寫名稱和代理位址。',
-          nameRequired: '必須填寫名稱。',
-          urlRequired: '必須填寫代理位址。',
-          urlInvalid: '代理位址必須是有效的 http、https、socks5 或 socks5h URL。',
-          priorityInvalid: '優先級必須是整數。',
-        },
-        delete: {
-          title: '刪除代理？',
-          description: '確認刪除代理 {{name}}？刪除後閘道不能再使用該代理條目。',
-        },
-      },
       toast: {
         copied: '已複製。',
         priceCreated: '模型價格已建立。',
         priceUpdated: '模型價格已更新。',
-        proxyCreated: '代理已建立。',
-        proxyUpdated: '代理已更新。',
-        proxyTested: '代理連通性測試已提交。',
         deleted: '已刪除。',
         actionFailed: '操作失敗，請檢查後端介面回應。',
       },
@@ -1775,6 +1716,10 @@ export const zhTW = {
       outline: {
         title: '設定目錄',
       },
+      networkPanels: {
+        current: '目前出站代理',
+        pool: '代理池',
+      },
       sections: {
         server: {
           title: '服務執行',
@@ -1936,6 +1881,84 @@ export const zhTW = {
         'round-robin': '輪詢',
         'fill-first': '優先填滿',
         unknown: '未知',
+      },
+      proxyPools: {
+        title: '代理池',
+        description: '維護可複用的代理記錄並測試連通性；目前版本不會改變執行時出站路由。',
+        empty: '還沒有代理記錄。新建代理記錄後，可以在這裡統一維護代理位址並測試連通性。',
+        error: '無法載入代理池，請檢查後端介面是否可用。',
+        unsupported: '目前 Management API 不支援代理池管理。仍可繼續編輯目前出站代理。',
+        actions: {
+          create: '新建代理記錄',
+          save: '儲存代理記錄',
+          refresh: '重新整理',
+          test: '測試',
+          toggleState: '切換代理記錄 {{name}} 的啟用狀態',
+        },
+        columns: {
+          name: '名稱',
+          url: '代理位址',
+          state: '狀態',
+          scope: '適用範圍',
+          priority: '優先級',
+          lastTest: '最近測試',
+          note: '備註',
+        },
+        common: {
+          actions: '操作',
+          copy: '複製',
+          edit: '編輯',
+          delete: '刪除',
+          enabled: '已啟用',
+          disabled: '已停用',
+          na: '未測試',
+        },
+        scope: {
+          global: '全域',
+        },
+        testResults: {
+          passed: '通過',
+          failed: '失敗',
+          untested: '未測試',
+        },
+        sheet: {
+          createTitle: '新建代理記錄',
+          editTitle: '編輯代理記錄',
+          description: '代理記錄用於統一維護和連通性測試；目前版本不參與執行時路由。',
+        },
+        form: {
+          identity: '代理資訊',
+          identityHint: '填寫用於識別和連通性測試的代理記錄。',
+          name: '名稱',
+          url: '代理位址',
+          urlHint: '支援 http、https、socks5 或 socks5h URL。',
+          recordState: '記錄狀態',
+          recordStateHint: '啟用狀態只標記該記錄是否可用，不代表執行時會選擇該代理。',
+          enabled: '啟用狀態',
+          priority: '優先級',
+          priorityHint: '儲存用整數；目前版本不影響執行時代理優先級或出站路由。',
+          scope: '適用範圍',
+          note: '備註',
+        },
+        validation: {
+          nameRequired: '必須填寫名稱。',
+          urlRequired: '必須填寫代理位址。',
+          urlInvalid: '代理位址必須是有效的 http、https、socks5 或 socks5h URL。',
+          priorityInvalid: '優先級必須是整數。',
+        },
+        delete: {
+          title: '刪除代理記錄？',
+          description:
+            '確認刪除代理記錄 {{name}}？刪除後，該記錄將無法繼續用於連通性測試或後續設定選擇。',
+        },
+        toast: {
+          copied: '已複製。',
+          created: '代理記錄已建立。',
+          updated: '代理記錄已更新。',
+          tested: '代理連通性測試完成。',
+          deleted: '代理記錄已刪除。',
+          actionFailed: '操作失敗，請檢查後端介面回應。',
+        },
       },
       validation: {
         invalidField: '請填寫有效值。',

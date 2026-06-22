@@ -380,13 +380,13 @@ export const en = {
       disconnected: {
         title: 'Connect a management runtime',
         description:
-          'Connect the Management API to view financial overview, charge records, balance records, model prices, and proxy pools.',
+          'Connect the Management API to view financial overview, charge records, balance records, and model prices.',
         action: 'Connect management',
       },
       header: {
         title: 'Billing & Reports',
         description:
-          'Review Home multi-user billing: charge facts, balance records, model prices, and global proxy pools.',
+          'Review Home multi-user billing: charge facts, balance records, and model prices.',
       },
       actions: {
         refresh: 'Refresh current view',
@@ -396,7 +396,6 @@ export const en = {
         charges: 'Charge records',
         balanceRecords: 'Balance records',
         modelPrices: 'Model prices',
-        proxyPools: 'Proxy pools',
       },
       filters: {
         today: 'Today',
@@ -603,68 +602,10 @@ export const en = {
             'Delete model price {{model}}? Historical charge records keep their price snapshots.',
         },
       },
-      proxies: {
-        title: 'Proxy pools',
-        description: 'Manage proxy endpoints and their connection status for request forwarding.',
-        empty: 'No proxy pool entries yet.',
-        actions: {
-          create: 'New proxy',
-          save: 'Save proxy',
-          test: 'Test',
-          toggleState: 'Toggle proxy {{name}} enabled state',
-        },
-        columns: {
-          name: 'Name',
-          url: 'Proxy URL',
-          state: 'State',
-          scope: 'Scope',
-          priority: 'Priority',
-          lastTest: 'Last test',
-          note: 'Note',
-        },
-        scope: {
-          global: 'Global',
-        },
-        sheet: {
-          createTitle: 'New proxy',
-          editTitle: 'Edit proxy',
-          description:
-            'Proxy URLs are masked by default. Scope is fixed to global in this version.',
-        },
-        form: {
-          identity: 'Proxy information',
-          identityHint: 'Enter the proxy record used for identification and connectivity tests.',
-          name: 'Name',
-          url: 'Proxy URL',
-          urlHint: 'Supports http, https, socks5, or socks5h URLs.',
-          routing: 'Record state',
-          routingHint:
-            'This version only stores and tests global proxy records. It does not change runtime proxy priority, account selection, or outbound routing.',
-          enabled: 'Enabled state',
-          priority: 'Priority',
-          priorityHint: 'Stored integer value; it does not affect runtime routing in this version.',
-          scope: 'Scope',
-          note: 'Note',
-        },
-        validation: {
-          required: 'Name and proxy URL are required.',
-          nameRequired: 'Name is required.',
-          urlRequired: 'Proxy URL is required.',
-          urlInvalid: 'Proxy URL must be a valid http, https, socks5, or socks5h URL.',
-          priorityInvalid: 'Priority must be an integer.',
-        },
-        delete: {
-          title: 'Delete proxy?',
-          description: 'Delete proxy {{name}}? The gateway will no longer use this proxy entry.',
-        },
-      },
       toast: {
         copied: 'Copied.',
         priceCreated: 'Model price created.',
         priceUpdated: 'Model price updated.',
-        proxyCreated: 'Proxy created.',
-        proxyUpdated: 'Proxy updated.',
-        proxyTested: 'Proxy connectivity test submitted.',
         deleted: 'Deleted.',
         actionFailed: 'Action failed. Check the backend response.',
       },
@@ -1827,6 +1768,10 @@ export const en = {
       outline: {
         title: 'Config outline',
       },
+      networkPanels: {
+        current: 'Current outbound proxy',
+        pool: 'Proxy pool',
+      },
       sections: {
         server: {
           title: 'Server runtime',
@@ -1993,6 +1938,90 @@ export const en = {
         'round-robin': 'Round robin',
         'fill-first': 'Fill first',
         unknown: 'Unknown',
+      },
+      proxyPools: {
+        title: 'Proxy pool',
+        description:
+          'Maintain reusable proxy records and test connectivity. This version does not change runtime outbound routing.',
+        empty:
+          'No proxy records yet. Create a proxy record to maintain proxy URLs and test connectivity here.',
+        error: 'Unable to load the proxy pool. Check whether the backend route is available.',
+        unsupported:
+          'The current Management API does not support proxy pool management. You can still edit the current outbound proxy.',
+        actions: {
+          create: 'New proxy record',
+          save: 'Save proxy record',
+          refresh: 'Refresh',
+          test: 'Test',
+          toggleState: 'Toggle proxy record {{name}} enabled state',
+        },
+        columns: {
+          name: 'Name',
+          url: 'Proxy URL',
+          state: 'State',
+          scope: 'Scope',
+          priority: 'Priority',
+          lastTest: 'Last test',
+          note: 'Note',
+        },
+        common: {
+          actions: 'Actions',
+          copy: 'Copy',
+          edit: 'Edit',
+          delete: 'Delete',
+          enabled: 'Enabled',
+          disabled: 'Disabled',
+          na: 'Not tested',
+        },
+        scope: {
+          global: 'Global',
+        },
+        testResults: {
+          passed: 'Passed',
+          failed: 'Failed',
+          untested: 'Not tested',
+        },
+        sheet: {
+          createTitle: 'New proxy record',
+          editTitle: 'Edit proxy record',
+          description:
+            'Proxy records are for shared maintenance and connectivity tests. They do not participate in runtime routing in this version.',
+        },
+        form: {
+          identity: 'Proxy information',
+          identityHint: 'Enter the proxy record used for identification and connectivity tests.',
+          name: 'Name',
+          url: 'Proxy URL',
+          urlHint: 'Supports http, https, socks5, or socks5h URLs.',
+          recordState: 'Record state',
+          recordStateHint:
+            'The enabled state only marks whether this record is available; it does not mean the runtime will select this proxy.',
+          enabled: 'Enabled state',
+          priority: 'Priority',
+          priorityHint:
+            'Stored integer value; it does not affect runtime proxy priority or outbound routing in this version.',
+          scope: 'Scope',
+          note: 'Note',
+        },
+        validation: {
+          nameRequired: 'Name is required.',
+          urlRequired: 'Proxy URL is required.',
+          urlInvalid: 'Proxy URL must be a valid http, https, socks5, or socks5h URL.',
+          priorityInvalid: 'Priority must be an integer.',
+        },
+        delete: {
+          title: 'Delete proxy record?',
+          description:
+            'Delete proxy record {{name}}? After deletion, this record can no longer be used for connectivity tests or future config selection.',
+        },
+        toast: {
+          copied: 'Copied.',
+          created: 'Proxy record created.',
+          updated: 'Proxy record updated.',
+          tested: 'Proxy connectivity test completed.',
+          deleted: 'Proxy record deleted.',
+          actionFailed: 'Action failed. Check the backend response.',
+        },
       },
       validation: {
         invalidField: 'Enter a valid value.',

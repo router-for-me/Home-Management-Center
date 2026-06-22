@@ -89,8 +89,6 @@ import type {
   ChargeRecord,
   ModelPrice,
   ModelPriceInput,
-  ProxyPoolInput,
-  ProxyPoolItem,
 } from '@/lib/api/management/billing-types'
 import type { UserResource } from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
@@ -101,14 +99,10 @@ type SheetMode =
   | { type: 'balance-detail'; record: BalanceRecord }
   | { type: 'model-price-create' }
   | { type: 'model-price-edit'; resource: ModelPrice }
-  | { type: 'proxy-create' }
-  | { type: 'proxy-edit'; resource: ProxyPoolItem }
 
-type PendingDelete =
-  | { type: 'model-price'; resource: ModelPrice }
-  | { type: 'proxy'; resource: ProxyPoolItem }
+type PendingDelete = { type: 'model-price'; resource: ModelPrice }
 
-const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices', 'proxyPools']
+const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices']
 
 function toProviderLogoId(provider: string) {
   const normalized = provider.trim().toLowerCase()
@@ -130,16 +124,6 @@ function toModelPriceInput(resource: ModelPrice, enabled = resource.enabled): Mo
     cacheWritePricePerMillion: resource.cacheWritePricePerMillion,
     requestPrice: resource.requestPrice,
     enabled,
-    note: resource.note ?? undefined,
-  }
-}
-
-function toProxyPoolInput(resource: ProxyPoolItem, enabled = resource.enabled): ProxyPoolInput {
-  return {
-    name: resource.name,
-    proxyUrl: resource.proxyUrl,
-    enabled,
-    priority: resource.priority,
     note: resource.note ?? undefined,
   }
 }
@@ -171,11 +155,6 @@ function formatSignedAmount(value: number) {
   return value >= 0 ? `+${absolute}` : `-${absolute}`
 }
 
-function maskUrl(value: string) {
-  if (value.length <= 48) return value
-  return `${value.slice(0, 24)}...${value.slice(-16)}`
-}
-
 function formatUserIdentity(user: UserResource) {
   return user.numericId !== null ? `${user.username} (#${user.numericId})` : user.username
 }
@@ -193,15 +172,6 @@ function formatUserReference(
   if (username) return username
   if (userId !== null) return `#${userId}`
   return fallback
-}
-
-function isValidProxyUrl(value: string) {
-  try {
-    const url = new URL(value)
-    return ['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol)
-  } catch {
-    return false
-  }
 }
 
 async function copyText(value: string) {
@@ -285,25 +255,6 @@ function CompactField({
         </p>
       ) : null}
       {hint ? <p className="text-muted-foreground text-xs leading-5 font-normal">{hint}</p> : null}
-    </div>
-  )
-}
-
-function CompactSummaryRow({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string
-  value: string
-  valueClassName?: string
-}) {
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-      <span className="text-muted-foreground min-w-0 truncate">{label}</span>
-      <span className={cn('min-w-0 text-right font-medium tabular-nums', valueClassName)}>
-        {value}
-      </span>
     </div>
   )
 }
@@ -956,147 +907,6 @@ function ModelPricesTab({
   )
 }
 
-function ProxyPoolsTab({
-  workbench,
-  onCreate,
-  onEdit,
-  onToggle,
-  onTest,
-  onDelete,
-}: {
-  workbench: ReturnType<typeof useBillingWorkbench>
-  onCreate: () => void
-  onEdit: (resource: ProxyPoolItem) => void
-  onToggle: (resource: ProxyPoolItem) => void
-  onTest: (resource: ProxyPoolItem) => void
-  onDelete: (resource: ProxyPoolItem) => void
-}) {
-  const { t } = useTranslation()
-  const copy = (value: string) => {
-    void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
-  }
-
-  if (workbench.proxyPoolsLoading) return <Skeleton className="h-[420px] rounded-lg" />
-  if (workbench.proxyPoolsError) {
-    return (
-      <ErrorNotice
-        message={workbench.proxyPoolsError}
-        fallback={t('billingPage.error.description')}
-      />
-    )
-  }
-
-  return (
-    <TableSurface>
-      <TableSurfaceHeader
-        title={t('billingPage.proxies.title')}
-        description={t('billingPage.proxies.description')}
-        actions={
-          <Button onClick={onCreate}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('billingPage.proxies.actions.create')}
-          </Button>
-        }
-      />
-      {workbench.proxyPools.length === 0 ? (
-        <EmptyState>{t('billingPage.proxies.empty')}</EmptyState>
-      ) : (
-        <Table className="min-w-[980px]" containerClassName={containedTableContainerClassName}>
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead>{t('billingPage.proxies.columns.name')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.url')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.state')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.scope')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.priority')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.lastTest')}</TableHead>
-              <TableHead>{t('billingPage.proxies.columns.note')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[256px] text-right">
-                {t('billingPage.common.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workbench.proxyPools.map((resource) => (
-              <TableRow key={resource.id} variant="resource">
-                <TableCell>{resource.name}</TableCell>
-                <TableCell className="max-w-[280px]">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="min-w-0 truncate font-mono text-xs">
-                      {maskUrl(resource.proxyUrl)}
-                    </span>
-                    {resource.proxyUrl ? (
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="icon-xs"
-                        onClick={() => copy(resource.proxyUrl)}
-                      >
-                        <Copy className="size-3" aria-hidden="true" />
-                        <span className="sr-only">{t('billingPage.common.copy')}</span>
-                      </Button>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <StateToggle
-                    enabled={resource.enabled}
-                    disabled={workbench.mutating}
-                    label={t('billingPage.proxies.actions.toggleState', {
-                      name: resource.name,
-                    })}
-                    onToggle={() => onToggle(resource)}
-                  />
-                </TableCell>
-                <TableCell>{t('billingPage.proxies.scope.global')}</TableCell>
-                <TableCell className="tabular-nums">{resource.priority}</TableCell>
-                <TableCell>
-                  {formatDateTime(resource.lastTestedAt, t('billingPage.common.na'))}
-                </TableCell>
-                <TableCell className="max-w-[220px] truncate">
-                  {resource.note || t('billingPage.common.na')}
-                </TableCell>
-                <TableCell className="table-sticky-action-cell w-[256px] text-right transition-colors">
-                  <div className="table-action-cell-content">
-                    <Button
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      disabled={workbench.mutating}
-                      onClick={() => onTest(resource)}
-                    >
-                      <RefreshCw className="size-4" aria-hidden="true" />
-                      {t('billingPage.proxies.actions.test')}
-                    </Button>
-                    <Button
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onEdit(resource)}
-                    >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.edit')}
-                    </Button>
-                    <Button
-                      variant="destructiveText"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onDelete(resource)}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.delete')}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </TableSurface>
-  )
-}
-
 function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
   const { t } = useTranslation()
   const copy = (value: string) => {
@@ -1642,199 +1452,6 @@ function ModelPriceSheet({
   )
 }
 
-function ProxyPoolSheet({
-  mode,
-  mutating,
-  onCancel,
-  onSubmit,
-}: {
-  mode: { type: 'create' } | { type: 'edit'; resource: ProxyPoolItem }
-  mutating: boolean
-  onCancel: () => void
-  onSubmit: (input: ProxyPoolInput) => Promise<void>
-}) {
-  const { t } = useTranslation()
-  const resource = mode.type === 'edit' ? mode.resource : null
-  const [input, setInput] = useState<ProxyPoolInput>({
-    name: resource?.name ?? '',
-    proxyUrl: resource?.proxyUrl ?? '',
-    enabled: resource?.enabled ?? true,
-    priority: resource?.priority ?? 0,
-    note: resource?.note ?? '',
-  })
-  const [error, setError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<{
-    name?: string
-    proxyUrl?: string
-    priority?: string
-  }>({})
-
-  useEffect(() => {
-    setInput({
-      name: resource?.name ?? '',
-      proxyUrl: resource?.proxyUrl ?? '',
-      enabled: resource?.enabled ?? true,
-      priority: resource?.priority ?? 0,
-      note: resource?.note ?? '',
-    })
-    setError(null)
-    setFieldErrors({})
-  }, [resource])
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const nextFieldErrors: typeof fieldErrors = {}
-
-    if (!input.name.trim()) {
-      nextFieldErrors.name = t('billingPage.proxies.validation.nameRequired')
-    }
-    if (!input.proxyUrl.trim()) {
-      nextFieldErrors.proxyUrl = t('billingPage.proxies.validation.urlRequired')
-    } else if (!isValidProxyUrl(input.proxyUrl.trim())) {
-      nextFieldErrors.proxyUrl = t('billingPage.proxies.validation.urlInvalid')
-    }
-    if (!Number.isInteger(input.priority)) {
-      nextFieldErrors.priority = t('billingPage.proxies.validation.priorityInvalid')
-    }
-
-    if (Object.keys(nextFieldErrors).length > 0) {
-      setFieldErrors(nextFieldErrors)
-      setError(null)
-      return
-    }
-
-    setFieldErrors({})
-    setError(null)
-    try {
-      await onSubmit({
-        ...input,
-        name: input.name.trim(),
-        proxyUrl: input.proxyUrl.trim(),
-        note: input.note?.trim() || undefined,
-      })
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
-    }
-  }
-
-  return (
-    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
-      <CompactDrawerFormBody>
-        <section className="grid gap-3">
-          <div>
-            <h3 className="text-sm font-semibold">{t('billingPage.proxies.form.identity')}</h3>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('billingPage.proxies.form.identityHint')}
-            </p>
-          </div>
-          <CompactField label={t('billingPage.proxies.form.name')} error={fieldErrors.name}>
-            <Input
-              value={input.name}
-              aria-label={t('billingPage.proxies.form.name')}
-              aria-invalid={Boolean(fieldErrors.name)}
-              disabled={mutating}
-              onChange={(event) => {
-                setInput((current) => ({ ...current, name: event.target.value }))
-                setFieldErrors((current) => ({ ...current, name: undefined }))
-              }}
-            />
-          </CompactField>
-          <CompactField
-            label={t('billingPage.proxies.form.url')}
-            hint={t('billingPage.proxies.form.urlHint')}
-            error={fieldErrors.proxyUrl}
-          >
-            <Input
-              value={input.proxyUrl}
-              aria-label={t('billingPage.proxies.form.url')}
-              aria-invalid={Boolean(fieldErrors.proxyUrl)}
-              disabled={mutating}
-              onChange={(event) => {
-                setInput((current) => ({ ...current, proxyUrl: event.target.value }))
-                setFieldErrors((current) => ({ ...current, proxyUrl: undefined }))
-              }}
-            />
-          </CompactField>
-        </section>
-        <section className="grid gap-3 rounded-md border px-3 py-3">
-          <div>
-            <h3 className="text-sm font-semibold">{t('billingPage.proxies.form.routing')}</h3>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('billingPage.proxies.form.routingHint')}
-            </p>
-          </div>
-          <div className="grid items-start gap-3 sm:grid-cols-2">
-            <CompactField label={t('billingPage.proxies.form.enabled')}>
-              <Select
-                value={input.enabled ? 'enabled' : 'disabled'}
-                onValueChange={(value) =>
-                  setInput((current) => ({ ...current, enabled: value === 'enabled' }))
-                }
-                disabled={mutating}
-              >
-                <SelectTrigger aria-label={t('billingPage.proxies.form.enabled')}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
-                  <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </CompactField>
-            <CompactField
-              label={t('billingPage.proxies.form.priority')}
-              error={fieldErrors.priority}
-            >
-              <Input
-                type="number"
-                step="1"
-                value={String(input.priority)}
-                aria-label={t('billingPage.proxies.form.priority')}
-                aria-invalid={Boolean(fieldErrors.priority)}
-                disabled={mutating}
-                onChange={(event) => {
-                  setInput((current) => ({ ...current, priority: Number(event.target.value) }))
-                  setFieldErrors((current) => ({ ...current, priority: undefined }))
-                }}
-              />
-            </CompactField>
-          </div>
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('billingPage.proxies.form.priorityHint')}
-          </p>
-          <div className="bg-muted/25 rounded-md border px-3 py-2 text-sm">
-            <CompactSummaryRow
-              label={t('billingPage.proxies.form.scope')}
-              value={t('billingPage.proxies.scope.global')}
-            />
-          </div>
-        </section>
-        <CompactField label={t('billingPage.proxies.form.note')}>
-          <Textarea
-            value={input.note ?? ''}
-            className="min-h-20"
-            aria-label={t('billingPage.proxies.form.note')}
-            disabled={mutating}
-            onChange={(event) => setInput((current) => ({ ...current, note: event.target.value }))}
-          />
-        </CompactField>
-        {error ? <ErrorNotice message={error} fallback={error} /> : null}
-      </CompactDrawerFormBody>
-      <DrawerScaffoldFooter>
-        <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
-          {t('common.cancel')}
-        </Button>
-        <Button type="submit" disabled={mutating}>
-          {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-          {mode.type === 'create'
-            ? t('billingPage.proxies.actions.create')
-            : t('billingPage.proxies.actions.save')}
-        </Button>
-      </DrawerScaffoldFooter>
-    </form>
-  )
-}
-
 export function BillingWorkbenchPage() {
   const { t } = useTranslation()
   const [filters, setFilters] = useState<BillingFilters>(() => createDefaultBillingFilters())
@@ -1855,9 +1472,7 @@ export function BillingWorkbenchPage() {
         ? workbench.chargesFetching
         : activeTab === 'balanceRecords'
           ? workbench.balanceRecordsFetching
-          : activeTab === 'modelPrices'
-            ? workbench.modelPricesFetching
-            : workbench.proxyPoolsFetching
+          : workbench.modelPricesFetching
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -1924,7 +1539,6 @@ export function BillingWorkbenchPage() {
               if (activeTab === 'charges') void workbench.refreshCharges()
               if (activeTab === 'balanceRecords') void workbench.refreshBalanceRecords()
               if (activeTab === 'modelPrices') void workbench.refreshModelPrices()
-              if (activeTab === 'proxyPools') void workbench.refreshProxyPools()
             }}
           >
             <RefreshCw
@@ -2042,29 +1656,6 @@ export function BillingWorkbenchPage() {
           onDelete={(resource) => setPendingDelete({ type: 'model-price', resource })}
         />
       ) : null}
-      {activeTab === 'proxyPools' ? (
-        <ProxyPoolsTab
-          workbench={workbench}
-          onCreate={() => setSheetMode({ type: 'proxy-create' })}
-          onEdit={(resource) => setSheetMode({ type: 'proxy-edit', resource })}
-          onToggle={(resource) => {
-            void workbench
-              .updateProxyPool({
-                resource,
-                input: toProxyPoolInput(resource, !resource.enabled),
-              })
-              .then(() => toast.success(t('billingPage.toast.proxyUpdated')))
-              .catch(showMutationError)
-          }}
-          onTest={(resource) => {
-            void workbench
-              .testProxyPool(resource)
-              .then(() => toast.success(t('billingPage.toast.proxyTested')))
-              .catch(showMutationError)
-          }}
-          onDelete={(resource) => setPendingDelete({ type: 'proxy', resource })}
-        />
-      ) : null}
 
       <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
         <DrawerScaffoldContent className="sm:max-w-2xl">
@@ -2078,20 +1669,14 @@ export function BillingWorkbenchPage() {
                       ? t('billingPage.balanceDetail.title')
                       : sheetMode.type === 'model-price-create'
                         ? t('billingPage.prices.sheet.createTitle')
-                        : sheetMode.type === 'model-price-edit'
-                          ? t('billingPage.prices.sheet.editTitle')
-                          : sheetMode.type === 'proxy-create'
-                            ? t('billingPage.proxies.sheet.createTitle')
-                            : t('billingPage.proxies.sheet.editTitle')}
+                        : t('billingPage.prices.sheet.editTitle')}
                 </SheetTitle>
                 {sheetMode.type === 'model-price-create' ||
                 sheetMode.type === 'model-price-edit' ? null : (
                   <SheetDescription>
                     {sheetMode.type === 'charge-detail'
                       ? t('billingPage.chargeDetail.description')
-                      : sheetMode.type === 'balance-detail'
-                        ? t('billingPage.balanceDetail.description')
-                        : t('billingPage.proxies.sheet.description')}
+                      : t('billingPage.balanceDetail.description')}
                   </SheetDescription>
                 )}
               </DrawerScaffoldHeader>
@@ -2130,27 +1715,6 @@ export function BillingWorkbenchPage() {
                   }}
                 />
               ) : null}
-              {sheetMode.type === 'proxy-create' || sheetMode.type === 'proxy-edit' ? (
-                <ProxyPoolSheet
-                  mode={
-                    sheetMode.type === 'proxy-create'
-                      ? { type: 'create' }
-                      : { type: 'edit', resource: sheetMode.resource }
-                  }
-                  mutating={workbench.mutating}
-                  onCancel={closeSheet}
-                  onSubmit={async (input) => {
-                    if (sheetMode.type === 'proxy-create') {
-                      await workbench.createProxyPool(input)
-                      toast.success(t('billingPage.toast.proxyCreated'))
-                    } else {
-                      await workbench.updateProxyPool({ resource: sheetMode.resource, input })
-                      toast.success(t('billingPage.toast.proxyUpdated'))
-                    }
-                    closeSheet()
-                  }}
-                />
-              ) : null}
             </>
           ) : null}
         </DrawerScaffoldContent>
@@ -2162,19 +1726,11 @@ export function BillingWorkbenchPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingDelete?.type === 'model-price'
-                ? t('billingPage.prices.delete.title')
-                : t('billingPage.proxies.delete.title')}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t('billingPage.prices.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingDelete?.type === 'model-price'
-                ? t('billingPage.prices.delete.description', {
-                    model: pendingDelete.resource.model,
-                  })
-                : t('billingPage.proxies.delete.description', {
-                    name: pendingDelete?.resource.name ?? '',
-                  })}
+              {t('billingPage.prices.delete.description', {
+                model: pendingDelete?.resource.model ?? '',
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -2188,12 +1744,8 @@ export function BillingWorkbenchPage() {
                 event.preventDefault()
                 if (!pendingDelete) return
 
-                const action =
-                  pendingDelete.type === 'model-price'
-                    ? workbench.deleteModelPrice(pendingDelete.resource)
-                    : workbench.deleteProxyPool(pendingDelete.resource)
-
-                void action
+                void workbench
+                  .deleteModelPrice(pendingDelete.resource)
                   .then(() => {
                     toast.success(t('billingPage.toast.deleted'))
                     setPendingDelete(null)
