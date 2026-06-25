@@ -34,6 +34,7 @@ export function AdminConnectPage() {
   const [localError, setLocalError] = useState<string | null>(null)
   const checking = status === 'checking'
   const connected = status === 'connected'
+  const sameOriginDetected = detectedSource === 'same-origin'
   const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
   const detectedEndpointLabel =
     detectedSource === 'same-origin'
@@ -100,7 +101,7 @@ export function AdminConnectPage() {
                 value={draftBaseUrl}
                 onChange={(event) => setDraftBaseUrl(event.target.value)}
                 placeholder="http://127.0.0.1:8327"
-                disabled={checking}
+                disabled={checking || sameOriginDetected}
                 autoComplete="url"
               />
               <span className="text-muted-foreground text-xs leading-5">

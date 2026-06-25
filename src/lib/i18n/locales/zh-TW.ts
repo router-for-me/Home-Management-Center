@@ -103,7 +103,7 @@ export const zhTW = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home 單機模式',
+      'home-standalone': 'Home 執行環境',
       'home-cluster': 'Home 叢集模式',
       unknown: '未知執行環境',
     },
@@ -2393,7 +2393,7 @@ export const zhTW = {
           '商業化控制台首頁將彙整執行狀態、Provider 覆蓋、憑證、存取金鑰、節點和版本訊號。',
         itemOne:
           '讀取 GET /config、GET /latest-version、GET /auth-files、Provider GET 路由，並在可用時讀取 GET /nodes。',
-        itemTwo: '為 CPA、Home standalone 和 Home cluster 呈現基於 capability 的總覽狀態。',
+        itemTwo: '為 CPA、Home 執行環境和 Home 叢集呈現基於 capability 的總覽狀態。',
       },
       providers: {
         title: '供應商',

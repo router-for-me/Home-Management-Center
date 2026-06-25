@@ -103,7 +103,7 @@ export const en = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home standalone',
+      'home-standalone': 'Home runtime',
       'home-cluster': 'Home cluster',
       unknown: 'Unknown runtime',
     },
@@ -2479,8 +2479,7 @@ export const en = {
           'The commercial console homepage will aggregate runtime status, provider coverage, credentials, access keys, nodes, and version signals.',
         itemOne:
           'Read GET /config, GET /latest-version, GET /auth-files, provider GET routes, and GET /nodes when available.',
-        itemTwo:
-          'Render capability-aware overview states for CPA, Home standalone, and Home cluster.',
+        itemTwo: 'Render capability-aware overview states for CPA, Home runtime, and Home cluster.',
       },
       providers: {
         title: 'Providers',

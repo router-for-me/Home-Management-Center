@@ -103,7 +103,7 @@ export const ru = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home standalone',
+      'home-standalone': 'Home runtime',
       'home-cluster': 'Home cluster',
       unknown: 'Неизвестный runtime',
     },
@@ -2494,7 +2494,7 @@ export const ru = {
         itemOne:
           'Читать GET /config, GET /latest-version, GET /auth-files, GET-маршруты провайдеров и GET /nodes, если доступно.',
         itemTwo:
-          'Показывать обзор состояния с учетом capability для CPA, Home standalone и Home cluster.',
+          'Показывать обзор состояния с учетом capability для CPA, Home runtime и Home cluster.',
       },
       providers: {
         title: 'Провайдеры',

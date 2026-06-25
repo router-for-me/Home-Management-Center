@@ -103,7 +103,7 @@ export const zhCN = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home 单机模式',
+      'home-standalone': 'Home 运行时',
       'home-cluster': 'Home 集群模式',
       unknown: '未知运行时',
     },
@@ -2394,7 +2394,7 @@ export const zhCN = {
           '商业化控制台首页将聚合运行状态、Provider 覆盖、凭证、访问密钥、节点和版本信号。',
         itemOne:
           '读取 GET /config、GET /latest-version、GET /auth-files、Provider GET 路由，并在可用时读取 GET /nodes。',
-        itemTwo: '为 CPA、Home standalone 和 Home cluster 渲染基于 capability 的总览状态。',
+        itemTwo: '为 CPA、Home 运行时和 Home 集群渲染基于 capability 的总览状态。',
       },
       providers: {
         title: '供应商',

@@ -181,10 +181,6 @@ function inferRuntimeMode(
     return 'cpa'
   }
 
-  if (capabilities.nodes && !capabilities.usage) {
-    return 'home-cluster'
-  }
-
   if (capabilities.nodes || serverInfo.homeVersion) {
     return 'home-standalone'
   }

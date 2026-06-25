@@ -1,4 +1,7 @@
-import { normalizeManagementBaseUrl, toManagementApiError } from '@/lib/api/management/client'
+import {
+  normalizeManagementSessionBaseUrl,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import { detectLocalManagementRuntime } from '@/lib/api/management/discovery'
 import { probeManagementRuntime } from '@/lib/api/management/probe'
 import type { CapabilityProbeResult } from '@/lib/api/management/types'
@@ -17,7 +20,7 @@ export async function connectManagementSession({
   rememberConnection,
 }: ConnectManagementSessionInput): Promise<CapabilityProbeResult> {
   try {
-    const normalizedBaseUrl = normalizeManagementBaseUrl(baseUrl)
+    const normalizedBaseUrl = normalizeManagementSessionBaseUrl(baseUrl)
     const session = {
       baseUrl: normalizedBaseUrl,
       managementKey,
@@ -51,7 +54,7 @@ export async function bootstrapManagementSession() {
     return null
   }
 
-  const normalizedBaseUrl = normalizeManagementBaseUrl(baseUrl)
+  const normalizedBaseUrl = normalizeManagementSessionBaseUrl(baseUrl)
 
   if (managementKey) {
     try {
