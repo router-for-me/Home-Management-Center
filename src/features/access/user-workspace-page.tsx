@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/table'
 import type { UserApiKeyInput, UserApiKeyResource } from '@/lib/api/user/api-keys'
 import type { UserPasskeyResource } from '@/lib/api/user/auth'
+import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 import { useUserWorkspace } from './use-user-workspace'
@@ -682,7 +683,7 @@ export function UserWorkspacePage() {
 
   const handleLogout = async () => {
     logout()
-    await navigate({ to: '/' })
+    await navigate({ to: '/user/login' })
   }
 
   const handleCopy = async (resource: UserApiKeyResource) => {
@@ -696,10 +697,10 @@ export function UserWorkspacePage() {
     <PublicAccessShell>
       <section className="mx-auto grid max-w-5xl gap-6">
         <Button asChild variant="text" size="sm" className="w-fit px-0">
-          <Link to="/">
+          <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userWorkspace.back')}
-          </Link>
+          </a>
         </Button>
 
         {!authenticated ? (

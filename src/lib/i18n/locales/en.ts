@@ -132,6 +132,28 @@ export const en = {
         managementKeyRequired: 'Management key is required.',
       },
     },
+    embeddedPortal: {
+      shellSubtitle: 'Embedded console',
+      title: 'Choose a Home Center entry',
+      description:
+        'Choose the workspace for your role. Administrators connect the runtime with a management key; users sign in with a Home account to maintain personal access keys and account security.',
+      admin: {
+        badge: 'Management key required',
+        title: 'Admin console',
+        description:
+          'Connect the Management API to manage runtime config, model services, credentials, users, usage logs, and system settings.',
+        primary: 'Connect admin runtime',
+        secondary: 'Open Dashboard',
+      },
+      user: {
+        badge: 'User account required',
+        title: 'User workspace',
+        description:
+          'Sign in with a Home user account to maintain personal client access keys, credit status, and security settings.',
+        primary: 'Sign in',
+        secondary: 'Create account',
+      },
+    },
     accessPortal: {
       shellSubtitle: 'Access entry',
       eyebrow: 'Session entry',

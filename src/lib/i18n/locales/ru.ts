@@ -132,6 +132,28 @@ export const ru = {
         managementKeyRequired: 'Management key обязателен.',
       },
     },
+    embeddedPortal: {
+      shellSubtitle: 'Встроенная консоль',
+      title: 'Выберите вход Home Center',
+      description:
+        'Выберите рабочую область по роли. Администраторы подключают runtime с management key; пользователи входят с аккаунтом Home для личных ключей и безопасности.',
+      admin: {
+        badge: 'Нужен management key',
+        title: 'Admin console',
+        description:
+          'Подключите Management API для управления runtime config, модельными сервисами, credentials, users, usage logs и системными настройками.',
+        primary: 'Подключить admin runtime',
+        secondary: 'Открыть Dashboard',
+      },
+      user: {
+        badge: 'Нужен аккаунт пользователя',
+        title: 'Workspace пользователя',
+        description:
+          'Войдите с аккаунтом Home, чтобы управлять личными client access keys, статусом credits и настройками безопасности.',
+        primary: 'Войти',
+        secondary: 'Создать аккаунт',
+      },
+    },
     accessPortal: {
       shellSubtitle: 'Точка входа',
       eyebrow: 'Вход в сессию',

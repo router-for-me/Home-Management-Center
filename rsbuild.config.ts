@@ -20,6 +20,7 @@ export default defineConfig(({ command }) => {
   return {
     plugins: [pluginReact()],
     server: {
+      publicDir: false,
       proxy: {
         '/v0/management': {
           target: managementProxyTarget,
@@ -40,21 +41,51 @@ export default defineConfig(({ command }) => {
         '@': srcPath,
       },
     },
+    output: {
+      assetPrefix: './',
+      distPath: {
+        js: 'assets/js',
+        jsAsync: 'assets/js',
+        css: 'assets/css',
+        cssAsync: 'assets/css',
+        svg: 'assets/svg',
+        font: 'assets/font',
+        image: 'assets/image',
+        media: 'assets/media',
+        assets: 'assets',
+      },
+      filenameHash: true,
+      inlineScripts: false,
+      inlineStyles: false,
+      legalComments: 'none',
+      sourceMap: false,
+    },
+    splitChunks: isDev
+      ? false
+      : {
+          preset: 'single-vendor',
+        },
     source: {
       entry: {
-        index: './src/main.tsx',
+        index: './src/entries/bridge.tsx',
+        management: './src/entries/management.tsx',
+        user: './src/entries/user.tsx',
       },
     },
     html: {
-      favicon: './src/assets/brand/favicon.png',
       template: './index.html',
+      title({ entryName }) {
+        if (entryName === 'management') return 'Home Center Management'
+        if (entryName === 'user') return 'Home Center User'
+        return 'Home Center'
+      },
     },
     tools: {
       rspack: {
         plugins: [
           tanstackRouter({
             target: 'react',
-            autoCodeSplitting: !isDev,
+            autoCodeSplitting: false,
             routesDirectory: './src/routes',
             generatedRouteTree: './src/routeTree.gen.ts',
             quoteStyle: 'single',

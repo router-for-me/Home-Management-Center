@@ -129,6 +129,27 @@ export const zhTW = {
         managementKeyRequired: '必須填寫 management key。',
       },
     },
+    embeddedPortal: {
+      shellSubtitle: '內嵌控制台',
+      title: '選擇 Home Center 入口',
+      description:
+        '依身分進入對應工作區。管理員使用 management key 連線執行環境；使用者使用 Home 帳號維護個人存取金鑰和帳號安全。',
+      admin: {
+        badge: '需要 management key',
+        title: '管理控制台',
+        description:
+          '連線 Management API 後管理執行環境設定、模型服務、憑證、使用者、用量日誌和系統設定。',
+        primary: '連線管理端',
+        secondary: '開啟 Dashboard',
+      },
+      user: {
+        badge: '需要使用者帳號',
+        title: '使用者工作台',
+        description: '使用 Home 使用者帳號登入，維護個人用戶端存取金鑰、點數狀態和帳號安全設定。',
+        primary: '使用者登入',
+        secondary: '建立帳號',
+      },
+    },
     accessPortal: {
       shellSubtitle: '存取入口',
       eyebrow: '工作階段入口',

@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react'
 
-import { Link } from '@tanstack/react-router'
-
 import { useTranslation } from 'react-i18next'
 
 import productLogo from '@/assets/brand/logo.jpg'
 import { LanguageSwitcher } from '@/components/shell/language-switcher'
 import { ThemeSwitcher } from '@/components/theme-switcher'
+import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 
 type PublicAccessShellProps = {
   children: ReactNode
@@ -19,8 +18,8 @@ export function PublicAccessShell({ children }: PublicAccessShellProps) {
     <div className="bg-background text-foreground min-h-dvh">
       <header className="border-border/80 bg-background/95 sticky top-0 z-10 border-b">
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 md:px-6">
-          <Link
-            to="/"
+          <a
+            href={embeddedEntryLinks.bridge}
             className="focus-visible:ring-ring/50 flex min-w-0 items-center gap-3 rounded-md outline-none focus-visible:ring-3"
           >
             <span className="ring-primary/20 bg-muted flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md ring-1">
@@ -32,7 +31,7 @@ export function PublicAccessShell({ children }: PublicAccessShellProps) {
                 {t('accessPortal.shellSubtitle')}
               </span>
             </span>
-          </Link>
+          </a>
 
           <div className="flex shrink-0 items-center gap-2">
             <ThemeSwitcher />

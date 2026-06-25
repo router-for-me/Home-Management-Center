@@ -13,9 +13,22 @@ const managementOnlyRoutes = new Set([
   '/admin/users',
 ])
 
-function isManagementOnlyRoute() {
+function getCurrentRoutePathname() {
   if (typeof window === 'undefined') return false
-  return managementOnlyRoutes.has(window.location.pathname)
+  const hashPath = window.location.hash.slice(1)
+
+  if (hashPath.startsWith('/')) {
+    return hashPath.split(/[?#]/)[0] || '/'
+  }
+
+  return window.location.pathname
+}
+
+function isManagementOnlyRoute() {
+  const pathname = getCurrentRoutePathname()
+  if (!pathname) return false
+
+  return managementOnlyRoutes.has(pathname)
 }
 
 export function UserSessionBootstrap() {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Link, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 
 import { ArrowLeft, CheckCircle2, KeyRound, Loader2, LogOut } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -13,6 +13,7 @@ import {
   connectManagementSession,
   disconnectManagementSession,
 } from '@/features/session/connect-session'
+import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
@@ -75,10 +76,10 @@ export function AdminConnectPage() {
     <PublicAccessShell>
       <section className="mx-auto grid max-w-2xl gap-6">
         <Button asChild variant="text" size="sm" className="w-fit px-0">
-          <Link to="/">
+          <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('adminAccess.back')}
-          </Link>
+          </a>
         </Button>
 
         <div className="bg-card rounded-lg border shadow-sm">

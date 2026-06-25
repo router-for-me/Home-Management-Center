@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "rsbuild dev",
     "build": "bun run routes:generate && rsbuild build",
+    "build:embedded": "bun run routes:generate && rsbuild build && node scripts/write-panel-manifest.mjs",
     "preview": "rsbuild preview",
     "routes:generate": "tsr generate",
     "typecheck": "bun run routes:generate && tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",

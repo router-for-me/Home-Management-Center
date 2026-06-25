@@ -15,9 +15,21 @@ const managementOnlyRoutes = new Set([
   '/admin/users',
 ])
 
-function isManagementRoute() {
+function getCurrentRoutePathname() {
   if (typeof window === 'undefined') return false
-  const pathname = window.location.pathname
+  const hashPath = window.location.hash.slice(1)
+
+  if (hashPath.startsWith('/')) {
+    return hashPath.split(/[?#]/)[0] || '/'
+  }
+
+  return window.location.pathname
+}
+
+function isManagementRoute() {
+  const pathname = getCurrentRoutePathname()
+  if (!pathname) return false
+
   return managementOnlyRoutes.has(pathname) || pathname === '/'
 }
 

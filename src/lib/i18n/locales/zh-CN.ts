@@ -129,6 +129,27 @@ export const zhCN = {
         managementKeyRequired: '必须填写 management key。',
       },
     },
+    embeddedPortal: {
+      shellSubtitle: '内嵌控制台',
+      title: '选择 Home Center 入口',
+      description:
+        '根据身份进入对应工作区。管理员使用 management key 连接运行时；用户使用 Home 账号维护个人访问密钥和账号安全。',
+      admin: {
+        badge: '需要 management key',
+        title: '管理控制台',
+        description:
+          '连接 Management API 后管理运行时配置、模型服务、凭证、用户、用量日志和系统设置。',
+        primary: '连接管理端',
+        secondary: '打开 Dashboard',
+      },
+      user: {
+        badge: '需要用户账号',
+        title: '用户工作台',
+        description: '使用 Home 用户账号登录，维护个人客户端访问密钥、点数状态和账号安全设置。',
+        primary: '用户登录',
+        secondary: '创建账号',
+      },
+    },
     accessPortal: {
       shellSubtitle: '访问入口',
       eyebrow: '会话入口',

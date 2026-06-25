@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { loginUser, loginUserWithTotp, registerUser } from '@/lib/api/user/auth'
 import { isUserApiError } from '@/lib/api/user/client'
 import { loginUserWithBrowserPasskey } from '@/lib/api/user/passkeys'
-import { useSessionStore } from '@/stores/session-store'
+import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 type UserAuthPageProps = {
@@ -25,7 +25,6 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const status = useUserSessionStore((state) => state.status)
-  const managementBaseUrl = useSessionStore((state) => state.baseUrl)
   const rememberSession = useUserSessionStore((state) => state.rememberSession)
   const setChecking = useUserSessionStore((state) => state.setChecking)
   const setAuthenticated = useUserSessionStore((state) => state.setAuthenticated)
@@ -68,25 +67,20 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
     try {
       setLocalError(null)
       setChecking()
-      const userApiSession = { baseUrl: managementBaseUrl }
-
       const session =
         mode === 'register'
-          ? await registerUser({ username: trimmedUsername, password }, userApiSession)
+          ? await registerUser({ username: trimmedUsername, password })
           : step === 'passkey'
-            ? await loginUserWithBrowserPasskey(trimmedUsername, userApiSession)
+            ? await loginUserWithBrowserPasskey(trimmedUsername)
             : step === 'totp'
-              ? await loginUserWithTotp(
-                  {
-                    username: trimmedUsername,
-                    password,
-                    totpCode,
-                  },
-                  userApiSession,
-                )
-              : await loginUser({ username: trimmedUsername, password }, userApiSession)
+              ? await loginUserWithTotp({
+                  username: trimmedUsername,
+                  password,
+                  totpCode,
+                })
+              : await loginUser({ username: trimmedUsername, password })
 
-      setAuthenticated(session, remember, userApiSession?.baseUrl)
+      setAuthenticated(session, remember)
       await navigate({ to: '/user/workspace' })
     } catch (error) {
       if (isUserApiError(error) && mode === 'login') {
@@ -120,10 +114,10 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
     <PublicAccessShell>
       <section className="mx-auto grid max-w-xl gap-6">
         <Button asChild variant="text" size="sm" className="w-fit px-0">
-          <Link to="/">
+          <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userAccess.back')}
-          </Link>
+          </a>
         </Button>
 
         <div className="bg-card rounded-lg border shadow-sm">
