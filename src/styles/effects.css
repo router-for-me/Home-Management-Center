@@ -482,14 +482,6 @@
   }
 }
 
-.home-intro-footer {
-  background: linear-gradient(
-    180deg,
-    transparent,
-    color-mix(in oklch, var(--card) 32%, transparent)
-  );
-}
-
 @keyframes home-spotlight {
   0% {
     opacity: 0.7;
