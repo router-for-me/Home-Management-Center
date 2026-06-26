@@ -130,24 +130,64 @@ export const zhCN = {
       },
     },
     embeddedPortal: {
-      shellSubtitle: '内嵌控制台',
-      title: '选择 Home Center 入口',
-      description:
-        '根据身份进入对应工作区。管理员使用 management key 连接运行时；用户使用 Home 账号维护个人访问密钥和账号安全。',
-      admin: {
-        badge: '需要 management key',
-        title: '管理控制台',
-        description:
-          '连接 Management API 后管理运行时配置、模型服务、凭证、用户、用量日志和系统设置。',
-        primary: '连接管理端',
-        secondary: '打开 Dashboard',
+      shellSubtitle: 'AI 网关控制面板',
+      header: {
+        adminConnect: '管理员登录',
+        adminConsole: '管理控制台',
+        userLogin: '用户登录',
+        userWorkspace: '用户工作台',
       },
-      user: {
-        badge: '需要用户账号',
-        title: '用户工作台',
-        description: '使用 Home 用户账号登录，维护个人客户端访问密钥、点数状态和账号安全设置。',
-        primary: '用户登录',
-        secondary: '创建账号',
+      hero: {
+        title: '多模型访问，从一个可控入口开始',
+        titleLine1: '多模型访问',
+        titleLine2: '从一个可控入口开始',
+        titleLine2Prefix: '从一个',
+        titleLine2Accent: '可控入口',
+        titleLine2Suffix: '开始',
+        description: '一个入口、一套规则，把模型适配、凭证分发和用量归属留给网关。',
+        adminPrimary: '进入管理控制台',
+        adminResume: '进入管理控制台',
+        userPrimary: '用户登录',
+        userWorkspace: '进入用户工作台',
+      },
+      providers: {
+        title: '主流模型，由同一个网关处理',
+        gateway: 'AI 网关',
+        moreLabel: '更多模型',
+        ariaLabel: '主流模型提供商图标',
+      },
+      capabilities: {
+        title: '一站式管理模型接入与用量统计',
+        description:
+          '繁琐的模型适配、配置、凭证分发与用量归属交给网关处理，让你把精力留给真正重要的产品和服务。',
+        ariaLabel: '首页核心能力',
+        models: {
+          title: '主流模型统一接入',
+          description: '承接市面主流模型供应商的接入差异，将模型配置与可用状态收束到同一处。',
+        },
+        access: {
+          title: '凭证与访问分层治理',
+          description: '供应商凭证、客户端密钥与用户访问范围分开管理，便于分配、轮换和审计。',
+        },
+        review: {
+          title: '用量统计与问题追踪',
+          description: '用量日志、错误记录和配置变化集中留痕，为排障、成本归属和服务判断提供依据。',
+        },
+      },
+      footer: {
+        ariaLabel: '首页页脚导航',
+        slogan: '面向 CLIProxyAPIHome 的可信 AI 控制面板',
+        copyright: '© {{year}} Home Center. MIT License.',
+        product: {
+          title: '产品',
+          about: '关于',
+          backend: 'GitHub',
+        },
+        legal: {
+          title: '法律',
+          privacy: '隐私政策',
+          terms: '服务条款',
+        },
       },
     },
     accessPortal: {
