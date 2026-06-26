@@ -1,16 +1,25 @@
 import { useEffect, useState } from 'react'
 
+import antigravityLogo from '@/assets/icons/antigravity.svg'
+import claudeLogo from '@/assets/icons/claude.svg'
+import codexLogo from '@/assets/icons/codex.svg'
+import geminiLogo from '@/assets/icons/gemini.svg'
+import grokLogo from '@/assets/icons/grok.svg'
+import kimiDarkLogo from '@/assets/icons/kimi-dark.svg'
+import kimiLightLogo from '@/assets/icons/kimi-light.svg'
+import openaiLogo from '@/assets/icons/openai-light.svg'
+import vertexLogo from '@/assets/icons/vertex.svg'
 import { cn } from '@/lib/utils'
 
 const providerLogoUrls: Record<string, { src: string; darkSrc?: string; className?: string }> = {
-  gemini: { src: '/icons/gemini.svg' },
-  claude: { src: '/icons/claude.svg' },
-  codex: { src: '/icons/codex.svg' },
-  vertex: { src: '/icons/vertex.svg' },
-  antigravity: { src: '/icons/antigravity.svg' },
-  kimi: { src: '/icons/kimi-light.svg', darkSrc: '/icons/kimi-dark.svg' },
-  openaiCompatibility: { src: '/icons/openai-light.svg', className: 'dark:invert' },
-  xai: { src: '/icons/grok.svg', className: 'p-0.5 dark:invert' },
+  gemini: { src: geminiLogo },
+  claude: { src: claudeLogo },
+  codex: { src: codexLogo },
+  vertex: { src: vertexLogo },
+  antigravity: { src: antigravityLogo },
+  kimi: { src: kimiLightLogo, darkSrc: kimiDarkLogo },
+  openaiCompatibility: { src: openaiLogo, className: 'dark:invert' },
+  xai: { src: grokLogo, className: 'p-0.5 dark:invert' },
 }
 
 const providerMarks: Record<
