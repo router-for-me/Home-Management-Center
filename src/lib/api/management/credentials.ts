@@ -214,13 +214,24 @@ function normalizeCredentialProvider(value: string | null | undefined) {
 export function isCodexCredentialResource(resource: Pick<CredentialResource, 'provider' | 'type'>) {
   return (
     normalizeCredentialProvider(resource.provider) === 'codex' ||
-    normalizeCredentialProvider(resource.type) === 'codex'
+    normalizeCredentialProvider(resource.provider) === 'codex-api-key' ||
+    normalizeCredentialProvider(resource.type) === 'codex' ||
+    normalizeCredentialProvider(resource.type) === 'codex-api-key'
   )
 }
 
-function readCodexWebsockets(record: UnknownRecord) {
+function readNestedFlexibleBoolean(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) ? readFlexibleBoolean(nested, key) : null
+}
+
+function readCredentialWebsockets(record: UnknownRecord) {
   return (
-    readFlexibleBoolean(record, 'websockets') ?? readFlexibleBoolean(record, 'websocket') ?? false
+    readFlexibleBoolean(record, 'websockets') ??
+    readFlexibleBoolean(record, 'websocket') ??
+    readNestedFlexibleBoolean(record, 'attributes', 'websockets') ??
+    readNestedFlexibleBoolean(record, 'metadata', 'websockets') ??
+    false
   )
 }
 
@@ -352,11 +363,7 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     note: readString(record, 'note'),
     prefix: readString(record, 'prefix'),
     proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
-    websockets:
-      normalizeCredentialProvider(provider) === 'codex' ||
-      normalizeCredentialProvider(type) === 'codex'
-        ? readCodexWebsockets(record)
-        : false,
+    websockets: readCredentialWebsockets(record),
     selector: createSelector(record, index),
     raw: record,
   }

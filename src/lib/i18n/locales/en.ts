@@ -103,7 +103,7 @@ export const en = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home standalone',
+      'home-standalone': 'Home runtime',
       'home-cluster': 'Home cluster',
       unknown: 'Unknown runtime',
     },
@@ -133,25 +133,68 @@ export const en = {
       },
     },
     embeddedPortal: {
-      shellSubtitle: 'Embedded console',
-      title: 'Choose a Home Center entry',
-      description:
-        'Choose the workspace for your role. Administrators connect the runtime with a management key; users sign in with a Home account to maintain personal access keys and account security.',
-      admin: {
-        badge: 'Management key required',
-        title: 'Admin console',
-        description:
-          'Connect the Management API to manage runtime config, model services, credentials, users, usage logs, and system settings.',
-        primary: 'Connect admin runtime',
-        secondary: 'Open Dashboard',
+      shellSubtitle: 'AI gateway control panel',
+      header: {
+        adminConnect: 'Admin sign-in',
+        adminConsole: 'Admin console',
+        userLogin: 'User sign-in',
+        userWorkspace: 'User workspace',
       },
-      user: {
-        badge: 'User account required',
-        title: 'User workspace',
+      hero: {
+        title: 'Multi-model access starts with one controlled entry',
+        titleLine1: 'Multi-model access',
+        titleLine2: 'starts with one controlled entry',
+        titleLine2Prefix: 'starts with one ',
+        titleLine2Accent: 'controlled entry',
+        titleLine2Suffix: '',
         description:
-          'Sign in with a Home user account to maintain personal client access keys, credit status, and security settings.',
-        primary: 'Sign in',
-        secondary: 'Create account',
+          'One entry and one rule set, with model adaptation, credential distribution, and usage attribution handled by the gateway.',
+        adminPrimary: 'Open admin console',
+        adminResume: 'Open admin console',
+        userPrimary: 'Sign in',
+        userWorkspace: 'Open user workspace',
+      },
+      providers: {
+        title: 'Mainstream models, handled by one gateway',
+        gateway: 'AI gateway',
+        moreLabel: 'More models',
+        ariaLabel: 'Mainstream model provider icons',
+      },
+      capabilities: {
+        title: 'Manage model access and usage tracking in one place',
+        description:
+          'Let the gateway handle model adaptation, configuration, credential distribution, and usage attribution, so teams can stay focused on the product.',
+        ariaLabel: 'Homepage core capabilities',
+        models: {
+          title: 'Unified access to mainstream models',
+          description:
+            'Absorb the differences across mainstream model providers and keep model configuration and availability in one place.',
+        },
+        access: {
+          title: 'Layered credential and access governance',
+          description:
+            'Manage provider credentials, client keys, and user access scopes separately for assignment, rotation, and audit.',
+        },
+        review: {
+          title: 'Usage metrics and issue tracing',
+          description:
+            'Keep usage logs, error records, and config changes together as evidence for recovery, cost ownership, and service review.',
+        },
+      },
+      footer: {
+        ariaLabel: 'Homepage footer navigation',
+        slogan: 'A trusted AI control panel for CLIProxyAPIHome',
+        copyright: '© {{year}} Home Center. MIT License.',
+        product: {
+          title: 'Product',
+          about: 'About',
+          backend: 'GitHub',
+        },
+        legal: {
+          title: 'Legal',
+          privacy: 'Privacy policy',
+          terms: 'Terms of service',
+        },
       },
     },
     accessPortal: {
@@ -2479,8 +2522,7 @@ export const en = {
           'The commercial console homepage will aggregate runtime status, provider coverage, credentials, access keys, nodes, and version signals.',
         itemOne:
           'Read GET /config, GET /latest-version, GET /auth-files, provider GET routes, and GET /nodes when available.',
-        itemTwo:
-          'Render capability-aware overview states for CPA, Home standalone, and Home cluster.',
+        itemTwo: 'Render capability-aware overview states for CPA, Home runtime, and Home cluster.',
       },
       providers: {
         title: 'Providers',

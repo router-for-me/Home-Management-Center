@@ -36,6 +36,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
 
   const connected = status === 'connected'
   const checking = status === 'checking'
+  const sameOriginDetected = detectedSource === 'same-origin'
   const hasConnectionChanges =
     draftBaseUrl.trim() !== baseUrl ||
     draftManagementKey.trim() !== managementKey ||
@@ -120,7 +121,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
               value={draftBaseUrl}
               onChange={(event) => setDraftBaseUrl(event.target.value)}
               placeholder="http://127.0.0.1:8317"
-              disabled={checking}
+              disabled={checking || sameOriginDetected}
               autoComplete="url"
             />
             <span className="text-muted-foreground text-xs leading-5">

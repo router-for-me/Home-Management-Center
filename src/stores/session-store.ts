@@ -2,7 +2,9 @@ import { create } from 'zustand'
 
 import {
   DEFAULT_MANAGEMENT_BASE_URL,
+  SAME_ORIGIN_MANAGEMENT_BASE_URL,
   normalizeManagementBaseUrl,
+  normalizeManagementSessionBaseUrl,
 } from '@/lib/api/management/client'
 import type { ManagementApiError } from '@/lib/api/management/types'
 
@@ -44,7 +46,7 @@ function parseStoredSession(raw: string | null): StoredSession | null {
   if (!parsed.baseUrl || !parsed.managementKey) return null
 
   return {
-    baseUrl: normalizeManagementBaseUrl(parsed.baseUrl),
+    baseUrl: normalizeManagementSessionBaseUrl(parsed.baseUrl),
     managementKey: parsed.managementKey,
     rememberConnection: Boolean(parsed.rememberConnection),
   }
@@ -82,6 +84,10 @@ function clearStoredSession() {
   window.sessionStorage.removeItem(SESSION_STORAGE_KEY)
 }
 
+function getSessionBaseUrlSource(baseUrl: string): NonNullable<SessionState['detectedSource']> {
+  return baseUrl === SAME_ORIGIN_MANAGEMENT_BASE_URL ? 'same-origin' : 'runtime'
+}
+
 const initialSession = readStoredSession()
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -95,7 +101,10 @@ export const useSessionStore = create<SessionState>((set) => ({
   error: null,
   connectedAt: null,
   setDetectedRuntime: (baseUrl, source = 'runtime') => {
-    const normalizedBaseUrl = normalizeManagementBaseUrl(baseUrl)
+    const normalizedBaseUrl =
+      source === 'same-origin'
+        ? SAME_ORIGIN_MANAGEMENT_BASE_URL
+        : normalizeManagementBaseUrl(baseUrl)
 
     set((state) => {
       const detectedState = {
@@ -104,12 +113,11 @@ export const useSessionStore = create<SessionState>((set) => ({
         detectedAt: new Date().toISOString(),
       }
 
-      if (
-        source !== 'runtime' ||
-        state.managementKey ||
-        state.status === 'connected' ||
-        state.status === 'checking'
-      ) {
+      if (state.status === 'connected' || state.status === 'checking') {
+        return detectedState
+      }
+
+      if (source === 'runtime' && state.managementKey) {
         return detectedState
       }
 
@@ -124,7 +132,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   setChecking: (session) => {
     const normalizedSession = {
       ...session,
-      baseUrl: normalizeManagementBaseUrl(session.baseUrl),
+      baseUrl: normalizeManagementSessionBaseUrl(session.baseUrl),
     }
 
     set({
@@ -136,17 +144,19 @@ export const useSessionStore = create<SessionState>((set) => ({
   setConnected: (session) => {
     const normalizedSession = {
       ...session,
-      baseUrl: normalizeManagementBaseUrl(session.baseUrl),
+      baseUrl: normalizeManagementSessionBaseUrl(session.baseUrl),
     }
+    const connectedAt = new Date().toISOString()
 
     writeStoredSession(normalizedSession)
     set({
       ...normalizedSession,
       status: 'connected',
       error: null,
-      connectedAt: new Date().toISOString(),
+      connectedAt,
       detectedBaseUrl: normalizedSession.baseUrl,
-      detectedAt: new Date().toISOString(),
+      detectedSource: getSessionBaseUrlSource(normalizedSession.baseUrl),
+      detectedAt: connectedAt,
     })
   },
   setError: (error) => {

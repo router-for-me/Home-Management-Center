@@ -5,6 +5,7 @@ import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/manag
 const MANAGEMENT_PATH = '/v0/management'
 const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
 const DEFAULT_MANAGEMENT_BASE_URL = `${DEFAULT_MANAGEMENT_ORIGIN}${MANAGEMENT_PATH}`
+const SAME_ORIGIN_MANAGEMENT_BASE_URL = MANAGEMENT_PATH
 
 function getCurrentHttpOrigin() {
   if (typeof window === 'undefined') {
@@ -50,6 +51,17 @@ export function normalizeManagementBaseUrl(rawBaseUrl: string) {
   parsed.hash = ''
 
   return parsed.toString().replace(/\/$/, '')
+}
+
+export function normalizeManagementSessionBaseUrl(rawBaseUrl: string) {
+  const normalizedBaseUrl = normalizeManagementBaseUrl(rawBaseUrl)
+  const currentOrigin = getCurrentHttpOrigin()
+
+  if (currentOrigin && normalizedBaseUrl === `${currentOrigin}${MANAGEMENT_PATH}`) {
+    return SAME_ORIGIN_MANAGEMENT_BASE_URL
+  }
+
+  return normalizedBaseUrl
 }
 
 export function createManagementClient({
@@ -125,3 +137,4 @@ export function toManagementApiError(error: unknown): ManagementApiError {
 }
 
 export { DEFAULT_MANAGEMENT_BASE_URL }
+export { SAME_ORIGIN_MANAGEMENT_BASE_URL }

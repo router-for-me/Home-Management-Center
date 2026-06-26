@@ -103,7 +103,7 @@ export const zhTW = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home 單機模式',
+      'home-standalone': 'Home 執行環境',
       'home-cluster': 'Home 叢集模式',
       unknown: '未知執行環境',
     },
@@ -130,24 +130,64 @@ export const zhTW = {
       },
     },
     embeddedPortal: {
-      shellSubtitle: '內嵌控制台',
-      title: '選擇 Home Center 入口',
-      description:
-        '依身分進入對應工作區。管理員使用 management key 連線執行環境；使用者使用 Home 帳號維護個人存取金鑰和帳號安全。',
-      admin: {
-        badge: '需要 management key',
-        title: '管理控制台',
-        description:
-          '連線 Management API 後管理執行環境設定、模型服務、憑證、使用者、用量日誌和系統設定。',
-        primary: '連線管理端',
-        secondary: '開啟 Dashboard',
+      shellSubtitle: 'AI 閘道控制面板',
+      header: {
+        adminConnect: '管理員登入',
+        adminConsole: '管理控制台',
+        userLogin: '使用者登入',
+        userWorkspace: '使用者工作台',
       },
-      user: {
-        badge: '需要使用者帳號',
-        title: '使用者工作台',
-        description: '使用 Home 使用者帳號登入，維護個人用戶端存取金鑰、點數狀態和帳號安全設定。',
-        primary: '使用者登入',
-        secondary: '建立帳號',
+      hero: {
+        title: '多模型存取，從一個可控入口開始',
+        titleLine1: '多模型存取',
+        titleLine2: '從一個可控入口開始',
+        titleLine2Prefix: '從一個',
+        titleLine2Accent: '可控入口',
+        titleLine2Suffix: '開始',
+        description: '一個入口、一套規則，把模型適配、憑證分發和用量歸屬留給閘道。',
+        adminPrimary: '進入管理控制台',
+        adminResume: '進入管理控制台',
+        userPrimary: '使用者登入',
+        userWorkspace: '進入使用者工作台',
+      },
+      providers: {
+        title: '主流模型，由同一個閘道處理',
+        gateway: 'AI 閘道',
+        moreLabel: '更多模型',
+        ariaLabel: '主流模型供應商圖示',
+      },
+      capabilities: {
+        title: '一站式管理模型接入與用量統計',
+        description:
+          '繁瑣的模型適配、設定、憑證分發與用量歸屬交給閘道處理，讓你把精力留給真正重要的產品和服務。',
+        ariaLabel: '首頁核心能力',
+        models: {
+          title: '主流模型統一接入',
+          description: '承接市面主流模型供應商的接入差異，將模型設定與可用狀態收束到同一處。',
+        },
+        access: {
+          title: '憑證與存取分層治理',
+          description: '供應商憑證、用戶端金鑰與使用者存取範圍分開管理，便於分配、輪換和稽核。',
+        },
+        review: {
+          title: '用量統計與問題追蹤',
+          description: '用量日誌、錯誤記錄和設定變化集中留痕，為排障、成本歸屬和服務判斷提供依據。',
+        },
+      },
+      footer: {
+        ariaLabel: '首頁頁腳導覽',
+        slogan: '面向 CLIProxyAPIHome 的可信 AI 控制面板',
+        copyright: '© {{year}} Home Center. MIT License.',
+        product: {
+          title: '產品',
+          about: '關於',
+          backend: 'GitHub',
+        },
+        legal: {
+          title: '法律',
+          privacy: '隱私政策',
+          terms: '服務條款',
+        },
       },
     },
     accessPortal: {
@@ -2393,7 +2433,7 @@ export const zhTW = {
           '商業化控制台首頁將彙整執行狀態、Provider 覆蓋、憑證、存取金鑰、節點和版本訊號。',
         itemOne:
           '讀取 GET /config、GET /latest-version、GET /auth-files、Provider GET 路由，並在可用時讀取 GET /nodes。',
-        itemTwo: '為 CPA、Home standalone 和 Home cluster 呈現基於 capability 的總覽狀態。',
+        itemTwo: '為 CPA、Home 執行環境和 Home 叢集呈現基於 capability 的總覽狀態。',
       },
       providers: {
         title: '供應商',

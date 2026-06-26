@@ -103,7 +103,7 @@ export const ru = {
     },
     runtimeMode: {
       cpa: 'CPA',
-      'home-standalone': 'Home standalone',
+      'home-standalone': 'Home runtime',
       'home-cluster': 'Home cluster',
       unknown: 'Неизвестный runtime',
     },
@@ -133,25 +133,68 @@ export const ru = {
       },
     },
     embeddedPortal: {
-      shellSubtitle: 'Встроенная консоль',
-      title: 'Выберите вход Home Center',
-      description:
-        'Выберите рабочую область по роли. Администраторы подключают runtime с management key; пользователи входят с аккаунтом Home для личных ключей и безопасности.',
-      admin: {
-        badge: 'Нужен management key',
-        title: 'Admin console',
-        description:
-          'Подключите Management API для управления runtime config, модельными сервисами, credentials, users, usage logs и системными настройками.',
-        primary: 'Подключить admin runtime',
-        secondary: 'Открыть Dashboard',
+      shellSubtitle: 'Панель управления AI-gateway',
+      header: {
+        adminConnect: 'Войти как администратор',
+        adminConsole: 'Консоль администратора',
+        userLogin: 'Вход пользователя',
+        userWorkspace: 'Workspace пользователя',
       },
-      user: {
-        badge: 'Нужен аккаунт пользователя',
-        title: 'Workspace пользователя',
+      hero: {
+        title: 'Доступ к разным моделям начинается с одной контролируемой точки',
+        titleLine1: 'Доступ к разным моделям',
+        titleLine2: 'из одной контролируемой точки',
+        titleLine2Prefix: 'из одной ',
+        titleLine2Accent: 'контролируемой точки',
+        titleLine2Suffix: '',
         description:
-          'Войдите с аккаунтом Home, чтобы управлять личными client access keys, статусом credits и настройками безопасности.',
-        primary: 'Войти',
-        secondary: 'Создать аккаунт',
+          'Одна точка входа и единый набор правил, а адаптацию моделей, распределение учетных данных и учет использования берет на себя AI-gateway.',
+        adminPrimary: 'Открыть консоль администратора',
+        adminResume: 'Открыть консоль администратора',
+        userPrimary: 'Войти',
+        userWorkspace: 'Открыть workspace пользователя',
+      },
+      providers: {
+        title: 'Основные модели обрабатываются одним gateway',
+        gateway: 'AI-gateway',
+        moreLabel: 'Другие модели',
+        ariaLabel: 'Иконки основных провайдеров моделей',
+      },
+      capabilities: {
+        title: 'Управляйте доступом к моделям и статистикой usage в одном месте',
+        description:
+          'Gateway берет на себя адаптацию моделей, configuration, выдачу credentials и attribution usage, чтобы команда фокусировалась на продукте.',
+        ariaLabel: 'Ключевые возможности главной страницы',
+        models: {
+          title: 'Единый доступ к основным моделям',
+          description:
+            'Различия mainstream model providers, model configuration и availability собираются в одном месте.',
+        },
+        access: {
+          title: 'Многоуровневое управление credentials и доступом',
+          description:
+            'Provider credentials, client keys и user access scopes управляются отдельно для выдачи, ротации и аудита.',
+        },
+        review: {
+          title: 'Usage metrics и issue tracing',
+          description:
+            'Usage logs, error records и config changes остаются вместе как основа для восстановления, cost ownership и service review.',
+        },
+      },
+      footer: {
+        ariaLabel: 'Навигация в футере главной страницы',
+        slogan: 'Доверенная AI control panel для CLIProxyAPIHome',
+        copyright: '© {{year}} Home Center. MIT License.',
+        product: {
+          title: 'Продукт',
+          about: 'О проекте',
+          backend: 'GitHub',
+        },
+        legal: {
+          title: 'Правовая информация',
+          privacy: 'Политика приватности',
+          terms: 'Условия сервиса',
+        },
       },
     },
     accessPortal: {
@@ -2494,7 +2537,7 @@ export const ru = {
         itemOne:
           'Читать GET /config, GET /latest-version, GET /auth-files, GET-маршруты провайдеров и GET /nodes, если доступно.',
         itemTwo:
-          'Показывать обзор состояния с учетом capability для CPA, Home standalone и Home cluster.',
+          'Показывать обзор состояния с учетом capability для CPA, Home runtime и Home cluster.',
       },
       providers: {
         title: 'Провайдеры',
