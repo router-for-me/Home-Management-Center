@@ -60,10 +60,13 @@ const termsHref = '#'
 export function ProductIntroPage() {
   const { t } = useTranslation()
   const managementStatus = useSessionStore((state) => state.status)
+  const managementKey = useSessionStore((state) => state.managementKey)
   const userStatus = useUserSessionStore((state) => state.status)
   const managementConnected = managementStatus === 'connected'
+  const managementCanResume =
+    managementConnected || (managementStatus !== 'error' && Boolean(managementKey.trim()))
   const userAuthenticated = userStatus === 'authenticated'
-  const managementHref = managementConnected
+  const managementHref = managementCanResume
     ? embeddedEntryLinks.managementDashboard
     : embeddedEntryLinks.managementConnect
   const userHref = userAuthenticated
@@ -103,7 +106,7 @@ export function ProductIntroPage() {
             size="sm"
             className="home-header-action"
             aria-label={
-              managementConnected
+              managementCanResume
                 ? t('embeddedPortal.header.adminConsole')
                 : t('embeddedPortal.header.adminConnect')
             }
@@ -111,7 +114,7 @@ export function ProductIntroPage() {
             <a href={managementHref}>
               <KeyRound className="size-4" aria-hidden="true" />
               <span className="hidden sm:inline">
-                {managementConnected
+                {managementCanResume
                   ? t('embeddedPortal.header.adminConsole')
                   : t('embeddedPortal.header.adminConnect')}
               </span>

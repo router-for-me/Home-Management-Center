@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-import { Loader2, PlugZap, X } from 'lucide-react'
+import { CheckCircle2, Loader2, PlugZap, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -36,7 +36,6 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
 
   const connected = status === 'connected'
   const checking = status === 'checking'
-  const sameOriginDetected = detectedSource === 'same-origin'
   const hasConnectionChanges =
     draftBaseUrl.trim() !== baseUrl ||
     draftManagementKey.trim() !== managementKey ||
@@ -121,7 +120,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
               value={draftBaseUrl}
               onChange={(event) => setDraftBaseUrl(event.target.value)}
               placeholder="http://127.0.0.1:8317"
-              disabled={checking || sameOriginDetected}
+              disabled={checking}
               autoComplete="url"
             />
             <span className="text-muted-foreground text-xs leading-5">
@@ -165,10 +164,17 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
         </div>
 
         {connected ? (
-          <div className="bg-accent text-accent-foreground rounded-md border px-3 py-2 text-sm">
-            {t('connectionDialog.connectedAs', {
-              mode: t(`runtimeMode.${runtimeMode}`),
-            })}
+          <div
+            className="border-success/45 bg-success/10 text-foreground dark:bg-success/15 flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>
+              {t('connectionDialog.connectedAs', {
+                mode: t(`runtimeMode.${runtimeMode}`),
+              })}
+            </span>
           </div>
         ) : null}
 

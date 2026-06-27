@@ -121,6 +121,10 @@ export const useSessionStore = create<SessionState>((set) => ({
         return detectedState
       }
 
+      if (source === 'same-origin') {
+        return detectedState
+      }
+
       return {
         ...detectedState,
         baseUrl: normalizedBaseUrl,

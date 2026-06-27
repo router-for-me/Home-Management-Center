@@ -30,7 +30,7 @@ function isManagementRoute() {
   const pathname = getCurrentRoutePathname()
   if (!pathname) return false
 
-  return managementOnlyRoutes.has(pathname) || pathname === '/'
+  return managementOnlyRoutes.has(pathname) || pathname === '/' || pathname.endsWith('/index.html')
 }
 
 export function ManagementSessionBootstrap() {

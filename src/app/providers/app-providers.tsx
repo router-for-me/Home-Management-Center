@@ -20,7 +20,13 @@ function BaseAppProviders({ children }: AppProvidersProps) {
 }
 
 export function BridgeAppProviders({ children }: AppProvidersProps) {
-  return <BaseAppProviders>{children}</BaseAppProviders>
+  return (
+    <BaseAppProviders>
+      <ManagementSessionBootstrap />
+      <UserSessionBootstrap />
+      {children}
+    </BaseAppProviders>
+  )
 }
 
 export function ManagementAppProviders({ children }: AppProvidersProps) {
