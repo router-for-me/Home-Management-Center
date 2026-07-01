@@ -29,6 +29,7 @@ import {
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
@@ -222,10 +223,6 @@ function ErrorNotice({ message, fallback }: { message: string | null; fallback: 
   )
 }
 
-function EmptyState({ children }: { children: string }) {
-  return <div className="text-muted-foreground px-4 py-10 text-center text-sm">{children}</div>
-}
-
 function CompactDrawerFormBody({ className, children }: ComponentProps<'div'>) {
   return (
     <DrawerScaffoldBody className="p-4 sm:p-5">
@@ -404,12 +401,55 @@ function createDefaultBillingTextFilters() {
   }
 }
 
+function BillingOverviewLoadingState() {
+  const { t } = useTranslation()
+
+  return (
+    <div className="grid gap-4" aria-busy="true">
+      <div className="bg-card rounded-lg border p-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold">{t('billingPage.loading.overviewTitle')}</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-6">
+              {t('billingPage.loading.overviewDescription')}
+            </p>
+          </div>
+          <Skeleton className="h-7 w-28 rounded-md" />
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-md border p-3">
+              <Skeleton className="h-3 w-24 rounded-sm" />
+              <Skeleton className="mt-3 h-6 w-32 rounded-sm" />
+              <Skeleton className="mt-2 h-3 w-20 rounded-sm" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
+          <Skeleton className="h-4 w-32 rounded-sm" />
+          <Skeleton className="mt-4 h-48 rounded-md" />
+        </div>
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
+          <Skeleton className="h-4 w-28 rounded-sm" />
+          <div className="mt-4 grid gap-3">
+            <Skeleton className="h-10 rounded-md" />
+            <Skeleton className="h-10 rounded-md" />
+            <Skeleton className="h-10 rounded-md" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWorkbench> }) {
   const { t } = useTranslation()
   const overview = workbench.overview
 
   if (workbench.overviewLoading) {
-    return <Skeleton className="h-[420px] rounded-lg" />
+    return <BillingOverviewLoadingState />
   }
 
   if (workbench.overviewError) {
@@ -422,7 +462,13 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
   }
 
   if (!overview) {
-    return <EmptyState>{t('billingPage.overview.empty')}</EmptyState>
+    return (
+      <TableEmptyState
+        kind="empty"
+        className="m-0 border-0"
+        title={t('billingPage.overview.empty')}
+      />
+    )
   }
 
   return (
@@ -489,7 +535,12 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
             <BarChart3 className="text-muted-foreground size-4" aria-hidden="true" />
           </div>
           {overview.dailyTrend.length === 0 ? (
-            <EmptyState>{t('billingPage.overview.trend.empty')}</EmptyState>
+            <TableEmptyState
+              compact
+              kind="empty"
+              className="m-0 mt-4 min-h-28"
+              title={t('billingPage.overview.trend.empty')}
+            />
           ) : (
             <div className="mt-4 grid gap-2">
               {overview.dailyTrend.map((point) => (
@@ -522,9 +573,12 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
                 {t(`billingPage.overview.rank.${key as string}`)}
               </h2>
               {(items as typeof overview.topUsers).length === 0 ? (
-                <p className="text-muted-foreground mt-3 text-sm">
-                  {t('billingPage.overview.rank.empty')}
-                </p>
+                <TableEmptyState
+                  compact
+                  kind="empty"
+                  className="m-0 mt-3 min-h-24"
+                  title={t('billingPage.overview.rank.empty')}
+                />
               ) : (
                 <div className="mt-3 grid gap-2">
                   {(items as typeof overview.topUsers).slice(0, 5).map((item) => (
@@ -577,12 +631,14 @@ function ChargeRecordsTab({
   return (
     <TableSurface
       pagination={
-        <PaginationBar
-          pagination={pagination}
-          total={workbench.chargesTotal}
-          disabled={workbench.chargesFetching}
-          onChange={onPaginationChange}
-        />
+        workbench.chargesTotal > 0 ? (
+          <PaginationBar
+            pagination={pagination}
+            total={workbench.chargesTotal}
+            disabled={workbench.chargesFetching}
+            onChange={onPaginationChange}
+          />
+        ) : null
       }
     >
       <TableSurfaceHeader
@@ -590,7 +646,7 @@ function ChargeRecordsTab({
         description={t('billingPage.charges.description')}
       />
       {workbench.charges.length === 0 ? (
-        <EmptyState>{t('billingPage.charges.empty')}</EmptyState>
+        <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
         <Table className="min-w-[1160px]" containerClassName={containedTableContainerClassName}>
           <TableHeader className={stickyTableHeaderClassName}>
@@ -678,12 +734,14 @@ function BalanceRecordsTab({
   return (
     <TableSurface
       pagination={
-        <PaginationBar
-          pagination={pagination}
-          total={workbench.balanceRecordsTotal}
-          disabled={workbench.balanceRecordsFetching}
-          onChange={onPaginationChange}
-        />
+        workbench.balanceRecordsTotal > 0 ? (
+          <PaginationBar
+            pagination={pagination}
+            total={workbench.balanceRecordsTotal}
+            disabled={workbench.balanceRecordsFetching}
+            onChange={onPaginationChange}
+          />
+        ) : null
       }
     >
       <TableSurfaceHeader
@@ -691,7 +749,7 @@ function BalanceRecordsTab({
         description={t('billingPage.balance.description')}
       />
       {workbench.balanceRecords.length === 0 ? (
-        <EmptyState>{t('billingPage.balance.empty')}</EmptyState>
+        <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (
         <Table className="min-w-[1120px]" containerClassName={containedTableContainerClassName}>
           <TableHeader className={stickyTableHeaderClassName}>
@@ -809,7 +867,7 @@ function ModelPricesTab({
         }
       />
       {workbench.modelPrices.length === 0 ? (
-        <EmptyState>{t('billingPage.prices.empty')}</EmptyState>
+        <TableEmptyState kind="empty" title={t('billingPage.prices.empty')} />
       ) : (
         <Table className="min-w-[1180px]" containerClassName={containedTableContainerClassName}>
           <TableHeader className={stickyTableHeaderClassName}>
@@ -1504,6 +1562,10 @@ export function BillingWorkbenchPage() {
     textFilters.user,
   ])
 
+  if (workbench.checking || (workbench.connected && !workbench.ready)) {
+    return <BillingOverviewLoadingState />
+  }
+
   if (!workbench.connected) return <BillingDisconnectedState />
 
   const updateFilters = (patch: Partial<BillingFilters>) => {
@@ -1610,11 +1672,19 @@ export function BillingWorkbenchPage() {
         </div>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto">
+      <div
+        className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"
+        role="tablist"
+        aria-label={t('billingPage.tabs.label')}
+      >
         {tabs.map((tab) => (
           <Button
             key={tab}
-            variant={activeTab === tab ? 'default' : 'outline'}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            variant={activeTab === tab ? 'default' : 'ghost'}
+            className="min-h-10 w-full justify-center sm:w-auto sm:min-w-32"
             onClick={() => setActiveTab(tab)}
           >
             {t(`billingPage.tabs.${tab}`)}

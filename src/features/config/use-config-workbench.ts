@@ -32,13 +32,14 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
     runtimeMode,
   }
 }
 
 export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt, runtimeMode } = useManagementSession()
+  const { session, connected, checking, connectedAt, runtimeMode } = useManagementSession()
   const queryKey = ['management-config', session.baseUrl, connectedAt]
   const modelDefinitionsQueryKey = [
     'management-config-model-definitions',
@@ -49,6 +50,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
   const query = useQuery({
     queryKey,
     enabled: connected && Boolean(session.managementKey),
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchConfigSnapshot(session)
@@ -61,6 +63,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
   const modelDefinitionsQuery = useQuery({
     queryKey: [...modelDefinitionsQueryKey, modelDefinitionChannel],
     enabled: connected && Boolean(session.managementKey) && Boolean(modelDefinitionChannel),
+    retry: false,
     queryFn: async () => {
       if (!modelDefinitionChannel) {
         throw new Error('Missing model definition channel')
@@ -91,6 +94,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
 
   return {
     connected,
+    checking,
     runtimeMode,
     snapshot: query.data,
     isPending: query.isPending,

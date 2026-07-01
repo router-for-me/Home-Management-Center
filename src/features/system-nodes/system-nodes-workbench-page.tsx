@@ -16,6 +16,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -402,9 +403,7 @@ function ConfigSummaryPanel({ config }: { config: SystemConfigSummary | null }) 
 
   if (!config) {
     return (
-      <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
-        {t('systemNodesPage.config.empty')}
-      </div>
+      <TableEmptyState kind="empty" className="m-0" title={t('systemNodesPage.config.empty')} />
     )
   }
 
@@ -464,19 +463,23 @@ function NodesPanel({
 
   if (!available) {
     return (
-      <div className="border-info/30 bg-info/10 text-info rounded-md border px-4 py-8 text-center text-sm">
-        {t('systemNodesPage.nodes.unavailable', {
+      <TableEmptyState
+        kind="unsupported"
+        className="m-0"
+        title={t('systemNodesPage.nodes.unavailable', {
           runtime: runtimeLabel,
         })}
-      </div>
+      />
     )
   }
 
   if (nodes.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
-        {t('systemNodesPage.nodes.emptySupported')}
-      </div>
+      <TableEmptyState
+        kind="empty"
+        className="m-0"
+        title={t('systemNodesPage.nodes.emptySupported')}
+      />
     )
   }
 
@@ -572,7 +575,7 @@ function NodeEnrollmentSheet({
             <p className="text-muted-foreground text-xs font-medium">
               {t('systemNodesPage.nodes.enrollment.jwtLabel')}
             </p>
-            <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-all">
+            <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-all whitespace-pre-wrap">
               {enrollment?.homeJwt ?? ''}
             </pre>
           </div>
@@ -791,11 +794,15 @@ export function SystemNodesWorkbenchPage() {
   const [nodeEnrollmentSheetOpen, setNodeEnrollmentSheetOpen] = useState(false)
   const [nodeEnrollment, setNodeEnrollment] = useState<CertificateClientEnrollment | null>(null)
 
+  if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
+    return <SystemNodesLoadingState />
+  }
+
   if (!workbench.connected) {
     return <SystemNodesDisconnectedState />
   }
 
-  if (!workbench.capabilityReady || workbench.isPending) {
+  if (workbench.isPending) {
     return <SystemNodesLoadingState />
   }
 

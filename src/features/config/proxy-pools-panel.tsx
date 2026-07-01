@@ -10,6 +10,7 @@ import {
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { TableEmptyState } from '@/components/shared/empty-state'
 import {
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -454,9 +455,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
         />
       ) : null}
       {!workbench.loading && !workbench.errorMessage && workbench.items.length === 0 ? (
-        <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
-          {t('configPage.proxyPools.empty')}
-        </div>
+        <TableEmptyState kind="empty" className="m-0" title={t('configPage.proxyPools.empty')} />
       ) : null}
       {!workbench.loading && !workbench.errorMessage && workbench.items.length > 0 ? (
         <div className="overflow-hidden rounded-md border">

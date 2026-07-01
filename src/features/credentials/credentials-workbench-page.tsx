@@ -23,8 +23,15 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
+import {
+  TableSurface,
+  TableSurfaceHeader,
+  containedTableContainerClassName,
+  stickyTableHeaderClassName,
+} from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,7 +105,7 @@ const oauthProviders: CredentialOAuthProvider[] = [
 ]
 const oauthStatusToneClassNames: Record<string, string> = {
   ok: 'border-primary/30 bg-primary/10 text-primary',
-  wait: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  wait: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
   error: 'border-destructive/30 bg-destructive/10 text-destructive',
   unknown: 'border-border bg-muted text-muted-foreground',
 }
@@ -243,9 +250,15 @@ function CredentialDisconnectedState() {
 }
 
 function CredentialLoadingState() {
+  const { t } = useTranslation()
+
   return (
     <section className="grid gap-5">
-      <Skeleton className="h-32 rounded-lg" />
+      <PageHeader
+        title={t('credentialsPage.loading.title')}
+        description={t('credentialsPage.loading.description')}
+        tags={<Skeleton className="h-7 w-36 rounded-md" />}
+      />
       <div className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
         <Skeleton className="h-[560px] rounded-lg" />
         <Skeleton className="h-[560px] rounded-lg" />
@@ -1131,202 +1144,194 @@ function CredentialList({
     !allSelected && resources.some((resource) => selectedResourceIds.has(resource.id))
 
   if (resources.length === 0) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-4 py-10 text-center text-sm">
-        {t('credentialsPage.list.empty')}
-      </div>
-    )
+    return <TableEmptyState kind="empty" className="m-0" title={t('credentialsPage.list.empty')} />
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="overflow-x-auto">
-        <Table className="min-w-[1410px] table-fixed">
-          <colgroup>
-            <col className="w-[44px]" />
-            <col className="w-[320px]" />
-            <col className="w-[130px]" />
-            <col className="w-[105px]" />
-            <col className="w-[105px]" />
-            <col className="w-[170px]" />
-            <col className="w-[180px]" />
-            <col className="w-[336px]" />
-          </colgroup>
-          <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow variant="static">
-              <TableHead>
-                <Checkbox
-                  checked={partiallySelected ? 'indeterminate' : allSelected}
-                  aria-label={t('credentialsPage.bulk.selectAll')}
-                  disabled={mutating}
-                  onCheckedChange={onToggleAll}
-                />
-              </TableHead>
-              <TableHead>{t('credentialsPage.list.credential')}</TableHead>
-              <TableHead>{t('credentialsPage.list.provider')}</TableHead>
-              <TableHead>{t('credentialsPage.list.source')}</TableHead>
-              <TableHead>{t('credentialsPage.list.type')}</TableHead>
-              <TableHead>{t('credentialsPage.list.status')}</TableHead>
-              <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[336px] text-right">
-                {t('credentialsPage.list.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {resources.map((resource) => {
-              const statusTone = getStatusTone(resource)
-              const displayName = getCredentialDisplayName(resource)
-              const providerLabel = getCredentialProviderLabel(t, resource.provider)
-              const sourceLabel = getCredentialSourceLabel(t, resource.source)
-              const updatedAt =
-                formatDateTime(resource.updatedAt ?? resource.modifiedAt) ??
-                t('credentialsPage.status.notAvailable')
+    <Table
+      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+      className="min-w-[1410px] table-fixed"
+    >
+      <colgroup>
+        <col className="w-[44px]" />
+        <col className="w-[320px]" />
+        <col className="w-[130px]" />
+        <col className="w-[105px]" />
+        <col className="w-[105px]" />
+        <col className="w-[170px]" />
+        <col className="w-[180px]" />
+        <col className="w-[336px]" />
+      </colgroup>
+      <TableHeader className={stickyTableHeaderClassName}>
+        <TableRow variant="static">
+          <TableHead>
+            <Checkbox
+              checked={partiallySelected ? 'indeterminate' : allSelected}
+              aria-label={t('credentialsPage.bulk.selectAll')}
+              disabled={mutating}
+              onCheckedChange={onToggleAll}
+            />
+          </TableHead>
+          <TableHead>{t('credentialsPage.list.credential')}</TableHead>
+          <TableHead>{t('credentialsPage.list.provider')}</TableHead>
+          <TableHead>{t('credentialsPage.list.source')}</TableHead>
+          <TableHead>{t('credentialsPage.list.type')}</TableHead>
+          <TableHead>{t('credentialsPage.list.status')}</TableHead>
+          <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
+          <TableHead className="table-sticky-action-head w-[336px] text-right">
+            {t('credentialsPage.list.actions')}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {resources.map((resource) => {
+          const statusTone = getStatusTone(resource)
+          const displayName = getCredentialDisplayName(resource)
+          const providerLabel = getCredentialProviderLabel(t, resource.provider)
+          const sourceLabel = getCredentialSourceLabel(t, resource.source)
+          const updatedAt =
+            formatDateTime(resource.updatedAt ?? resource.modifiedAt) ??
+            t('credentialsPage.status.notAvailable')
 
-              return (
-                <TableRow
-                  key={resource.id}
-                  className={cn(
-                    'group',
-                    resource.id === selectedResourceId ? 'bg-primary/8' : null,
-                  )}
-                  variant="resource"
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedResourceIds.has(resource.id)}
-                      aria-label={t('credentialsPage.bulk.selectOne', {
-                        name: displayName,
-                      })}
-                      disabled={mutating}
-                      onCheckedChange={() => onToggleSelection(resource)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
-                        <FileJson className="size-4" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{displayName}</p>
-                        <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                          {resource.name ?? resource.authIndex ?? resource.identifier}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="truncate">{providerLabel}</p>
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex rounded-md border px-2 py-1 text-xs">
-                      {sourceLabel}
+          return (
+            <TableRow
+              key={resource.id}
+              className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+              variant="resource"
+            >
+              <TableCell>
+                <Checkbox
+                  checked={selectedResourceIds.has(resource.id)}
+                  aria-label={t('credentialsPage.bulk.selectOne', {
+                    name: displayName,
+                  })}
+                  disabled={mutating}
+                  onCheckedChange={() => onToggleSelection(resource)}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
+                    <FileJson className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{displayName}</p>
+                    <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+                      {resource.name ?? resource.authIndex ?? resource.identifier}
+                    </p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <p className="truncate">{providerLabel}</p>
+              </TableCell>
+              <TableCell>
+                <span className="inline-flex rounded-md border px-2 py-1 text-xs">
+                  {sourceLabel}
+                </span>
+              </TableCell>
+              <TableCell>
+                <span className="text-muted-foreground truncate font-mono text-xs">
+                  {resource.type ?? t('credentialsPage.status.notAvailable')}
+                </span>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
+                      statusTone === 'positive'
+                        ? 'border-primary/30 bg-primary/10 text-primary'
+                        : statusTone === 'warning'
+                          ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+                          : 'border-border bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {statusTone === 'warning' ? (
+                      <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
+                    )}
+                    <span className="truncate">
+                      {resource.disabled
+                        ? t('credentialsPage.status.disabled')
+                        : resource.unavailable
+                          ? t('credentialsPage.status.unavailable')
+                          : t(`credentialsPage.status.${resource.status}`, {
+                              defaultValue: resource.status,
+                            })}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground truncate font-mono text-xs">
-                      {resource.type ?? t('credentialsPage.status.notAvailable')}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
-                          statusTone === 'positive'
-                            ? 'border-primary/30 bg-primary/10 text-primary'
-                            : statusTone === 'warning'
-                              ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-                              : 'border-border bg-muted text-muted-foreground',
-                        )}
-                      >
-                        {statusTone === 'warning' ? (
-                          <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-                        ) : (
-                          <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
-                        )}
-                        <span className="truncate">
-                          {resource.disabled
-                            ? t('credentialsPage.status.disabled')
-                            : resource.unavailable
-                              ? t('credentialsPage.status.unavailable')
-                              : t(`credentialsPage.status.${resource.status}`, {
-                                  defaultValue: resource.status,
-                                })}
-                        </span>
-                      </span>
-                      <Switch
-                        checked={!resource.disabled}
-                        disabled={mutating}
-                        aria-label={t('credentialsPage.list.toggleStatus', {
-                          name: displayName,
-                        })}
-                        onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
-                        onClick={(event) => event.stopPropagation()}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="pr-4">
-                    <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[336px] pl-4 text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        aria-label={t('credentialsPage.actions.view')}
-                        onClick={() => onViewResource(resource)}
-                      >
-                        <Eye className="size-4" aria-hidden="true" />
-                        {t('credentialsPage.actions.view')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        aria-label={t('credentialsPage.actions.edit')}
-                        onClick={() => onEditResource(resource)}
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        {t('credentialsPage.actions.edit')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        disabled={mutating}
-                        aria-label={t('credentialsPage.actions.download')}
-                        onClick={() => onDownloadResource(resource)}
-                      >
-                        <Download className="size-4" aria-hidden="true" />
-                        {t('credentialsPage.actions.download')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructiveText"
-                        size="sm"
-                        className="px-2"
-                        disabled={mutating}
-                        aria-label={t('credentialsPage.actions.delete')}
-                        onClick={() => onDeleteResource(resource)}
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        {t('credentialsPage.actions.delete')}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  </span>
+                  <Switch
+                    checked={!resource.disabled}
+                    disabled={mutating}
+                    aria-label={t('credentialsPage.list.toggleStatus', {
+                      name: displayName,
+                    })}
+                    onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+                    onClick={(event) => event.stopPropagation()}
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="pr-4">
+                <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
+              </TableCell>
+              <TableCell className="table-sticky-action-cell w-[336px] pl-4 text-right transition-colors">
+                <div className="table-action-cell-content">
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="px-2"
+                    aria-label={t('credentialsPage.actions.view')}
+                    onClick={() => onViewResource(resource)}
+                  >
+                    <Eye className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.actions.view')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="px-2"
+                    aria-label={t('credentialsPage.actions.edit')}
+                    onClick={() => onEditResource(resource)}
+                  >
+                    <Pencil className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.actions.edit')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="px-2"
+                    disabled={mutating}
+                    aria-label={t('credentialsPage.actions.download')}
+                    onClick={() => onDownloadResource(resource)}
+                  >
+                    <Download className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.actions.download')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructiveText"
+                    size="sm"
+                    className="px-2"
+                    disabled={mutating}
+                    aria-label={t('credentialsPage.actions.delete')}
+                    onClick={() => onDeleteResource(resource)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('credentialsPage.actions.delete')}
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -1596,7 +1601,7 @@ function CredentialDetailContent({
       </dl>
 
       {resource.statusMessage ? (
-        <div className="mt-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm">
+        <div className="border-warning/35 bg-warning/12 mt-4 rounded-md border px-3 py-2.5 text-sm">
           {resource.statusMessage}
         </div>
       ) : null}
@@ -1733,7 +1738,6 @@ export function CredentialsWorkbenchPage() {
   const activeCount = resources.filter(
     (resource) => !resource.disabled && !resource.unavailable,
   ).length
-  const disabledCount = resources.filter((resource) => resource.disabled).length
   const unavailableCount = resources.filter((resource) => resource.unavailable).length
 
   useEffect(() => {
@@ -1754,6 +1758,10 @@ export function CredentialsWorkbenchPage() {
       return nextSelection.size === current.size ? current : nextSelection
     })
   }, [resources])
+
+  if (workbench.checking) {
+    return <CredentialLoadingState />
+  }
 
   if (!workbench.connected) {
     return <CredentialDisconnectedState />
@@ -2041,23 +2049,17 @@ export function CredentialsWorkbenchPage() {
         }
         tags={
           <>
-          <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-            {t('credentialsPage.header.activeResources', {
-              active: activeCount,
-              total: resources.length,
-            })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('credentialsPage.header.disabledCount', { count: disabledCount })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('credentialsPage.header.unavailableCount', { count: unavailableCount })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('credentialsPage.header.updatedAt', {
-              time: formatDateTime(workbench.snapshot.fetchedAt),
-            })}
-          </span>
+            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
+              {t('credentialsPage.header.activeResources', {
+                active: activeCount,
+                total: resources.length,
+              })}
+            </span>
+            {unavailableCount > 0 ? (
+              <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-2.5 py-1 text-xs font-medium">
+                {t('credentialsPage.header.unavailableCount', { count: unavailableCount })}
+              </span>
+            ) : null}
           </>
         }
       />
@@ -2073,28 +2075,27 @@ export function CredentialsWorkbenchPage() {
           onProviderFilterChange={setProviderFilter}
         />
 
-        <div className="bg-card min-w-0 rounded-lg border p-5 shadow-sm">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold">{t('credentialsPage.list.title')}</h2>
-              <p className="text-muted-foreground mt-1 text-sm leading-6">
-                {t('credentialsPage.list.description')}
-              </p>
-            </div>
-            <div className="relative min-w-0 md:w-72">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                className="pl-9"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('credentialsPage.list.filterPlaceholder')}
-              />
-            </div>
-          </div>
-          <div className="mt-4">
+        <TableSurface className="min-w-0">
+          <TableSurfaceHeader
+            title={t('credentialsPage.list.title')}
+            description={t('credentialsPage.list.description')}
+            actions={
+              <div className="relative min-w-0 md:w-72">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <Input
+                  className="pl-9"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t('credentialsPage.list.filterPlaceholder')}
+                />
+              </div>
+            }
+            actionsClassName="w-full md:w-auto"
+          />
+          <div className="p-4">
             {selectedResourceIds.size > 0 ? (
               <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
@@ -2174,7 +2175,7 @@ export function CredentialsWorkbenchPage() {
               }}
             />
           </div>
-        </div>
+        </TableSurface>
       </div>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>

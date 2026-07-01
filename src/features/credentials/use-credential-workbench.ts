@@ -34,12 +34,13 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
   }
 }
 
 export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt } = useManagementSession()
+  const { session, connected, checking, connectedAt } = useManagementSession()
   const queryKey = ['management-credentials', session.baseUrl, connectedAt]
 
   const query = useQuery({
@@ -208,6 +209,7 @@ export function useCredentialWorkbench() {
 
   return {
     connected,
+    checking,
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,

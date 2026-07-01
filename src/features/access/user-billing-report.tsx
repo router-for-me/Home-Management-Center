@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { BarChart3, RefreshCcw, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -77,10 +78,6 @@ function MetricTile({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-sm font-semibold tabular-nums">{value}</p>
     </div>
   )
-}
-
-function EmptyState({ children }: { children: string }) {
-  return <div className="text-muted-foreground px-4 py-8 text-center text-sm">{children}</div>
 }
 
 function ErrorNotice({ message }: { message: string }) {
@@ -263,9 +260,12 @@ export function UserBillingReport() {
                 <BarChart3 className="text-muted-foreground size-4" aria-hidden="true" />
               </div>
               {report.overview.topModels.length === 0 ? (
-                <p className="text-muted-foreground mt-3 text-sm">
-                  {t('userWorkspace.billing.topModels.empty')}
-                </p>
+                <TableEmptyState
+                  compact
+                  kind="empty"
+                  className="m-0 mt-3 min-h-24"
+                  title={t('userWorkspace.billing.topModels.empty')}
+                />
               ) : (
                 <div className="mt-3 grid gap-2">
                   {report.overview.topModels.slice(0, 5).map((item) => (
@@ -287,7 +287,11 @@ export function UserBillingReport() {
             </div>
           </>
         ) : (
-          <EmptyState>{t('userWorkspace.billing.empty')}</EmptyState>
+          <TableEmptyState
+            kind="empty"
+            className="m-0 border-0"
+            title={t('userWorkspace.billing.empty')}
+          />
         )}
       </div>
 
@@ -306,7 +310,7 @@ export function UserBillingReport() {
             <ErrorNotice message={report.chargesError} />
           </div>
         ) : report.charges.length === 0 ? (
-          <EmptyState>{t('userWorkspace.billing.records.empty')}</EmptyState>
+          <TableEmptyState kind="empty" title={t('userWorkspace.billing.records.empty')} />
         ) : (
           <Table className="min-w-[820px]">
             <TableHeader className="bg-muted/70 text-muted-foreground">
@@ -345,12 +349,14 @@ export function UserBillingReport() {
             </TableBody>
           </Table>
         )}
-        <PaginationBar
-          pagination={pagination}
-          total={report.chargesTotal}
-          disabled={report.chargesFetching}
-          onChange={setPagination}
-        />
+        {report.chargesTotal > 0 ? (
+          <PaginationBar
+            pagination={pagination}
+            total={report.chargesTotal}
+            disabled={report.chargesFetching}
+            onChange={setPagination}
+          />
+        ) : null}
       </div>
     </div>
   )

@@ -34,7 +34,14 @@ import {
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
+import {
+  TableSurface,
+  TableSurfaceHeader,
+  containedTableContainerClassName,
+  stickyTableHeaderClassName,
+} from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -281,9 +288,15 @@ function UsersDisconnectedState() {
 }
 
 function UsersLoadingState() {
+  const { t } = useTranslation()
+
   return (
     <section className="grid gap-5">
-      <Skeleton className="h-32 rounded-lg" />
+      <PageHeader
+        title={t('usersPage.loading.title')}
+        description={t('usersPage.loading.description')}
+        tags={<Skeleton className="h-7 w-32 rounded-md" />}
+      />
       <Skeleton className="h-[520px] rounded-lg" />
     </section>
   )
@@ -1451,131 +1464,116 @@ function UsersTable({
     !allSelected && selectableUsers.some((user) => selectedUserIds.has(user.id))
 
   if (users.length === 0) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-4 py-10 text-center text-sm">
-        {t('usersPage.list.empty')}
-      </div>
-    )
+    return <TableEmptyState kind="empty" className="m-0" title={t('usersPage.list.empty')} />
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="overflow-x-auto">
-        <Table className="min-w-[1100px]">
-          <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow variant="static">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={partiallySelected ? 'indeterminate' : allSelected}
-                  disabled={selectableUsers.length === 0}
-                  aria-label={t('usersPage.balance.bulk.selectAll')}
-                  onCheckedChange={onToggleAll}
-                />
-              </TableHead>
-              <TableHead>{t('usersPage.list.user')}</TableHead>
-              <TableHead>{t('usersPage.list.status')}</TableHead>
-              <TableHead>{t('usersPage.list.credits')}</TableHead>
-              <TableHead>{t('usersPage.list.keys')}</TableHead>
-              <TableHead>{t('usersPage.scopes.credential')}</TableHead>
-              <TableHead>{t('usersPage.scopes.model')}</TableHead>
-              <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[280px] text-right">
-                {t('usersPage.list.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => {
-              const keys = getUserKeys(accessKeys, user)
-              const credentialScopeIds = getUnion(keys.map((key) => key.channelGroupIds))
-              const modelScopeIds = getUnion(keys.map((key) => key.modelGroupIds))
-              const balanceTarget = toBalanceOperationTarget(user)
-              const balanceDisabled = !balanceTarget
+    <Table
+      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+      className="min-w-[1100px]"
+    >
+      <TableHeader className={stickyTableHeaderClassName}>
+        <TableRow variant="static">
+          <TableHead className="w-10">
+            <Checkbox
+              checked={partiallySelected ? 'indeterminate' : allSelected}
+              disabled={selectableUsers.length === 0}
+              aria-label={t('usersPage.balance.bulk.selectAll')}
+              onCheckedChange={onToggleAll}
+            />
+          </TableHead>
+          <TableHead>{t('usersPage.list.user')}</TableHead>
+          <TableHead>{t('usersPage.list.status')}</TableHead>
+          <TableHead>{t('usersPage.list.credits')}</TableHead>
+          <TableHead>{t('usersPage.list.keys')}</TableHead>
+          <TableHead>{t('usersPage.scopes.credential')}</TableHead>
+          <TableHead>{t('usersPage.scopes.model')}</TableHead>
+          <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
+          <TableHead className="table-sticky-action-head w-[280px] text-right">
+            {t('usersPage.list.actions')}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => {
+          const keys = getUserKeys(accessKeys, user)
+          const credentialScopeIds = getUnion(keys.map((key) => key.channelGroupIds))
+          const modelScopeIds = getUnion(keys.map((key) => key.modelGroupIds))
+          const balanceTarget = toBalanceOperationTarget(user)
+          const balanceDisabled = !balanceTarget
 
-              return (
-                <TableRow key={user.id} variant="resource" className="group">
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedUserIds.has(user.id)}
-                      disabled={balanceDisabled}
-                      aria-label={t('usersPage.balance.bulk.selectOne', {
-                        user: user.username,
-                      })}
-                      onCheckedChange={() => onToggleSelection(user)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="min-w-0">
-                      <p className="font-medium">{user.username}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge deletedAt={user.deletedAt} />
-                  </TableCell>
-                  <TableCell>{formatNumber(user.credits)}</TableCell>
-                  <TableCell>{formatNumber(keys.length)}</TableCell>
-                  <TableCell className="max-w-[220px] truncate">
-                    {groupListLabel(
-                      channelGroups,
-                      credentialScopeIds,
-                      t('usersPage.scopes.unrestricted'),
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-[220px] truncate">
-                    {groupListLabel(modelGroups, modelScopeIds, t('usersPage.scopes.unrestricted'))}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[280px] text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        onClick={() => onView(user)}
-                      >
-                        <Eye className="size-4" aria-hidden="true" />
-                        {t('usersPage.actions.view')}
-                      </Button>
-                      <Button
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        onClick={() => onEdit(user)}
-                      >
-                        <Pencil className="size-4" aria-hidden="true" />
-                        {t('usersPage.actions.edit')}
-                      </Button>
-                      <Button
-                        variant="text"
-                        size="sm"
-                        className="px-2"
-                        disabled={balanceDisabled}
-                        onClick={() => onBalanceOperation([user])}
-                      >
-                        <CircleDollarSign className="size-4" aria-hidden="true" />
-                        {t('usersPage.balance.actions.balance')}
-                      </Button>
-                      <Button
-                        variant="destructiveText"
-                        size="sm"
-                        className="px-2"
-                        onClick={() => onDelete(user)}
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        {t('usersPage.actions.delete')}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+          return (
+            <TableRow key={user.id} variant="resource" className="group">
+              <TableCell>
+                <Checkbox
+                  checked={selectedUserIds.has(user.id)}
+                  disabled={balanceDisabled}
+                  aria-label={t('usersPage.balance.bulk.selectOne', {
+                    user: user.username,
+                  })}
+                  onCheckedChange={() => onToggleSelection(user)}
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </TableCell>
+              <TableCell>
+                <div className="min-w-0">
+                  <p className="font-medium">{user.username}</p>
+                </div>
+              </TableCell>
+              <TableCell>
+                <StatusBadge deletedAt={user.deletedAt} />
+              </TableCell>
+              <TableCell>{formatNumber(user.credits)}</TableCell>
+              <TableCell>{formatNumber(keys.length)}</TableCell>
+              <TableCell className="max-w-[220px] truncate">
+                {groupListLabel(
+                  channelGroups,
+                  credentialScopeIds,
+                  t('usersPage.scopes.unrestricted'),
+                )}
+              </TableCell>
+              <TableCell className="max-w-[220px] truncate">
+                {groupListLabel(modelGroups, modelScopeIds, t('usersPage.scopes.unrestricted'))}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
+              </TableCell>
+              <TableCell className="table-sticky-action-cell w-[280px] text-right transition-colors">
+                <div className="table-action-cell-content">
+                  <Button variant="text" size="sm" className="px-2" onClick={() => onView(user)}>
+                    <Eye className="size-4" aria-hidden="true" />
+                    {t('usersPage.actions.view')}
+                  </Button>
+                  <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(user)}>
+                    <Pencil className="size-4" aria-hidden="true" />
+                    {t('usersPage.actions.edit')}
+                  </Button>
+                  <Button
+                    variant="text"
+                    size="sm"
+                    className="px-2"
+                    disabled={balanceDisabled}
+                    onClick={() => onBalanceOperation([user])}
+                  >
+                    <CircleDollarSign className="size-4" aria-hidden="true" />
+                    {t('usersPage.balance.actions.balance')}
+                  </Button>
+                  <Button
+                    variant="destructiveText"
+                    size="sm"
+                    className="px-2"
+                    onClick={() => onDelete(user)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('usersPage.actions.delete')}
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          )
+        })}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -1597,81 +1595,72 @@ function AccessKeysTable({
   const { t } = useTranslation()
 
   if (keys.length === 0) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-4 py-10 text-center text-sm">
-        {t('usersPage.keys.empty')}
-      </div>
-    )
+    return <TableEmptyState kind="empty" className="m-0" title={t('usersPage.keys.empty')} />
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="overflow-x-auto">
-        <Table className="min-w-[920px]">
-          <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow variant="static">
-              <TableHead>{t('usersPage.keys.key')}</TableHead>
-              <TableHead>{t('usersPage.keys.owner')}</TableHead>
-              <TableHead>{t('usersPage.scopes.credential')}</TableHead>
-              <TableHead>{t('usersPage.scopes.model')}</TableHead>
-              <TableHead>{t('usersPage.keys.length')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[180px] text-right">
-                {t('usersPage.list.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {keys.map((key) => (
-              <TableRow key={key.id} variant="resource" className="group">
-                <TableCell>
-                  <p className="font-mono text-xs">{key.maskedValue}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {t('usersPage.keys.sequence', { index: key.index + 1 })}
-                  </p>
-                </TableCell>
-                <TableCell>
-                  {userLabel(users, key.userId) ?? (
-                    <span className="text-muted-foreground">{t('usersPage.keys.unassigned')}</span>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-[240px] truncate">
-                  {groupListLabel(
-                    channelGroups,
-                    key.channelGroupIds,
-                    t('usersPage.scopes.unrestricted'),
-                  )}
-                </TableCell>
-                <TableCell className="max-w-[240px] truncate">
-                  {groupListLabel(
-                    modelGroups,
-                    key.modelGroupIds,
-                    t('usersPage.scopes.unrestricted'),
-                  )}
-                </TableCell>
-                <TableCell>{key.length}</TableCell>
-                <TableCell className="table-sticky-action-cell w-[180px] text-right transition-colors">
-                  <div className="table-action-cell-content">
-                    <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(key)}>
-                      <Pencil className="size-4" aria-hidden="true" />
-                      {t('usersPage.actions.edit')}
-                    </Button>
-                    <Button
-                      variant="destructiveText"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onDelete(key)}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      {t('usersPage.actions.delete')}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+    <Table
+      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+      className="min-w-[920px]"
+    >
+      <TableHeader className={stickyTableHeaderClassName}>
+        <TableRow variant="static">
+          <TableHead>{t('usersPage.keys.key')}</TableHead>
+          <TableHead>{t('usersPage.keys.owner')}</TableHead>
+          <TableHead>{t('usersPage.scopes.credential')}</TableHead>
+          <TableHead>{t('usersPage.scopes.model')}</TableHead>
+          <TableHead>{t('usersPage.keys.length')}</TableHead>
+          <TableHead className="table-sticky-action-head w-[180px] text-right">
+            {t('usersPage.list.actions')}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {keys.map((key) => (
+          <TableRow key={key.id} variant="resource" className="group">
+            <TableCell>
+              <p className="font-mono text-xs">{key.maskedValue}</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t('usersPage.keys.sequence', { index: key.index + 1 })}
+              </p>
+            </TableCell>
+            <TableCell>
+              {userLabel(users, key.userId) ?? (
+                <span className="text-muted-foreground">{t('usersPage.keys.unassigned')}</span>
+              )}
+            </TableCell>
+            <TableCell className="max-w-[240px] truncate">
+              {groupListLabel(
+                channelGroups,
+                key.channelGroupIds,
+                t('usersPage.scopes.unrestricted'),
+              )}
+            </TableCell>
+            <TableCell className="max-w-[240px] truncate">
+              {groupListLabel(modelGroups, key.modelGroupIds, t('usersPage.scopes.unrestricted'))}
+            </TableCell>
+            <TableCell>{key.length}</TableCell>
+            <TableCell className="table-sticky-action-cell w-[180px] text-right transition-colors">
+              <div className="table-action-cell-content">
+                <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(key)}>
+                  <Pencil className="size-4" aria-hidden="true" />
+                  {t('usersPage.actions.edit')}
+                </Button>
+                <Button
+                  variant="destructiveText"
+                  size="sm"
+                  className="px-2"
+                  onClick={() => onDelete(key)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t('usersPage.actions.delete')}
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -1696,9 +1685,13 @@ function GroupsTable({
 
   if (groups.length === 0) {
     return (
-      <div className="text-muted-foreground rounded-md border px-4 py-10 text-center text-sm">
-        {kind === 'channel' ? t('usersPage.groups.channelEmpty') : t('usersPage.groups.modelEmpty')}
-      </div>
+      <TableEmptyState
+        kind="empty"
+        className="m-0"
+        title={
+          kind === 'channel' ? t('usersPage.groups.channelEmpty') : t('usersPage.groups.modelEmpty')
+        }
+      />
     )
   }
 
@@ -2130,8 +2123,8 @@ export function UsersWorkbenchPage() {
       ),
     [modelGroupDetails, modelGroups, normalizedSearch],
   )
-  const activeUsers = users.filter((user) => !user.deletedAt)
   const assignedKeyCount = accessKeys.filter((key) => key.userId !== null).length
+  const unassignedKeyCount = Math.max(accessKeys.length - assignedKeyCount, 0)
 
   useEffect(() => {
     if (activeTab === 'users') return
@@ -2150,8 +2143,10 @@ export function UsersWorkbenchPage() {
     })
   }, [users])
 
+  if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
+    return <UsersLoadingState />
+  }
   if (!workbench.connected) return <UsersDisconnectedState />
-  if (!workbench.capabilityReady) return <UsersLoadingState />
   if (!workbench.capabilities.users) {
     return <UsersUnsupportedState runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)} />
   }
@@ -2329,46 +2324,36 @@ export function UsersWorkbenchPage() {
             <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
               {t('usersPage.header.users', { count: users.length })}
             </span>
-            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-              {t('usersPage.header.activeUsers', { count: activeUsers.length })}
-            </span>
-            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-              {t('usersPage.header.keys', { count: accessKeys.length })}
-            </span>
-            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-              {t('usersPage.header.assignedKeys', { count: assignedKeyCount })}
-            </span>
-            <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-              {t('usersPage.header.updatedAt', {
-                time: formatOptionalTime(workbench.fetchedAt, t('usersPage.status.notReturned')),
-              })}
-            </span>
+            {unassignedKeyCount > 0 ? (
+              <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-2.5 py-1 text-xs font-medium">
+                {t('usersPage.header.unassignedKeys', { count: unassignedKeyCount })}
+              </span>
+            ) : null}
           </>
         }
       />
 
-      <div className="bg-card min-w-0 rounded-lg border p-5 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">{t('usersPage.workspace.title')}</h2>
-            <p className="text-muted-foreground mt-1 text-sm leading-6">
-              {t('usersPage.workspace.description')}
-            </p>
-          </div>
-          <div className="relative min-w-0 lg:w-80">
-            <Search
-              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              className="pl-9"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={t('usersPage.workspace.filterPlaceholder')}
-            />
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
+      <TableSurface className="min-w-0">
+        <TableSurfaceHeader
+          title={t('usersPage.workspace.title')}
+          description={t('usersPage.workspace.description')}
+          actions={
+            <div className="relative min-w-0 lg:w-80">
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <Input
+                className="pl-9"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('usersPage.workspace.filterPlaceholder')}
+              />
+            </div>
+          }
+          actionsClassName="w-full lg:w-auto"
+        />
+        <div className="flex flex-wrap gap-2 px-4 pt-4">
           {(['users', 'keys', 'channelGroups', 'modelGroups'] as UsersAccessTab[]).map((tab) => (
             <Button
               key={tab}
@@ -2391,7 +2376,7 @@ export function UsersWorkbenchPage() {
           ))}
         </div>
 
-        <div className="mt-4">
+        <div className="p-4">
           {activeTab === 'users' ? (
             <div className="grid gap-3">
               <div className="flex justify-end">
@@ -2520,7 +2505,7 @@ export function UsersWorkbenchPage() {
             <AccessGroupsUnsupportedState />
           )}
         </div>
-      </div>
+      </TableSurface>
 
       <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
         <DrawerScaffoldContent className="sm:max-w-xl">
