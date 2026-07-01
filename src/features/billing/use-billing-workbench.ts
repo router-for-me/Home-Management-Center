@@ -291,6 +291,18 @@ export function useBillingWorkbench(
     onError: toError,
   })
 
+  const createPricesMutation = useMutation({
+    mutationFn: async (inputs: ModelPriceInput[]) => {
+      for (const input of inputs) {
+        await createModelPrice(session, input)
+      }
+    },
+    onSuccess: () => {
+      void invalidateModelPrices()
+    },
+    onError: toError,
+  })
+
   const updatePriceMutation = useMutation({
     mutationFn: ({ resource, input }: { resource: ModelPrice; input: ModelPriceInput }) =>
       updateModelPrice(session, resource, input),
@@ -350,10 +362,12 @@ export function useBillingWorkbench(
     refreshModelPrices: modelPricesQuery.refetch,
     refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
     createModelPrice: createPriceMutation.mutateAsync,
+    createModelPrices: createPricesMutation.mutateAsync,
     updateModelPrice: updatePriceMutation.mutateAsync,
     deleteModelPrice: deletePriceMutation.mutateAsync,
     mutating:
       createPriceMutation.isPending ||
+      createPricesMutation.isPending ||
       updatePriceMutation.isPending ||
       deletePriceMutation.isPending,
   }

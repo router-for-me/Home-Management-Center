@@ -614,6 +614,8 @@ export const en = {
         empty: 'No model prices yet.',
         actions: {
           create: 'New price',
+          createSelected: 'Create {{count}}',
+          selectModels: 'Select models',
           toggleState: 'Toggle model price {{model}} enabled state',
         },
         columns: {
@@ -646,6 +648,8 @@ export const en = {
           modelCandidateEmpty: 'No models are available for selection.',
           modelSearchEmpty: 'No models match your search.',
           selectedModel: 'Selected model',
+          selectedModelsCount: '{{count}} models selected',
+          clearSelection: 'Clear selection',
           pricingTarget: 'Pricing target',
           selectedModelPlaceholder:
             'Select a model first. The price rule will apply to that model.',
@@ -660,6 +664,8 @@ export const en = {
           pricing: 'Price rules',
           pricingHint:
             'These prices apply to future charge calculations; historical charges keep their original price snapshot.',
+          batchHint:
+            'Select one or more models. Prices apply only to future charges; history is not recalculated.',
           state: 'Record state',
           stateHint:
             'The enabled state only controls whether this price rule applies to future charges.',
@@ -684,6 +690,7 @@ export const en = {
       toast: {
         copied: 'Copied.',
         priceCreated: 'Model price created.',
+        pricesCreated: '{{count}} model prices created.',
         priceUpdated: 'Model price updated.',
         deleted: 'Deleted.',
         actionFailed: 'Action failed. Check the backend response.',
@@ -1044,7 +1051,6 @@ export const en = {
           claude: 'Claude',
           codex: 'Codex',
           vertex: 'Vertex',
-          'gemini-cli': 'Gemini CLI',
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
@@ -1287,16 +1293,11 @@ export const en = {
         authorizationCode: 'Authorization code',
         callbackError: 'Error message',
         submitCallback: 'Submit callback URL',
-        geminiProjectLabel: 'Gemini Project ID',
-        geminiProjectPlaceholder: 'Project ID, optional',
-        geminiProjectHint:
-          'Leave blank to let the runtime choose the first available project. Enter ALL to fetch all projects.',
         callbackUnsupported:
           'This login method is completed by runtime status polling and does not require a manual callback URL.',
         providerHints: {
           claude: 'Create an account credential through Claude OAuth.',
           codex: 'Create an account credential through Codex OAuth.',
-          gemini: 'Create a Google account credential through Gemini CLI OAuth.',
           antigravity: 'Create a Google account credential through Antigravity OAuth.',
           kimi: 'Create an account credential through Kimi device flow.',
           xai: 'Create an account credential through xAI/Grok OAuth.',
@@ -1315,7 +1316,6 @@ export const en = {
         providers: {
           claude: 'Claude',
           codex: 'Codex',
-          gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
           xai: 'xAI / Grok',
@@ -2275,7 +2275,6 @@ export const en = {
           claude: 'Claude',
           gemini: 'Gemini',
           vertex: 'Vertex',
-          'gemini-cli': 'Gemini CLI',
           aistudio: 'AI Studio',
           codex: 'Codex',
           kimi: 'Kimi',

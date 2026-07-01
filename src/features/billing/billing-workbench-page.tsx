@@ -9,8 +9,10 @@ import {
 
 import {
   BarChart3,
+  Check,
   Copy,
   Eye,
+  Info,
   Loader2,
   PackageCheck,
   Pencil,
@@ -104,6 +106,18 @@ type SheetMode =
 type PendingDelete = { type: 'model-price'; resource: ModelPrice }
 
 const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices']
+const modelPriceNumberFields = [
+  'inputPricePerMillion',
+  'outputPricePerMillion',
+  'cacheReadPricePerMillion',
+  'cacheWritePricePerMillion',
+  'requestPrice',
+] as const
+
+type ModelPriceNumberField = (typeof modelPriceNumberFields)[number]
+type ModelPriceDraft = Omit<ModelPriceInput, ModelPriceNumberField> & {
+  [key in ModelPriceNumberField]: string
+}
 
 function toProviderLogoId(provider: string) {
   const normalized = provider.trim().toLowerCase()
@@ -127,6 +141,28 @@ function toModelPriceInput(resource: ModelPrice, enabled = resource.enabled): Mo
     enabled,
     note: resource.note ?? undefined,
   }
+}
+
+function createModelPriceDraft(resource: ModelPrice | null): ModelPriceDraft {
+  return {
+    provider: resource?.provider ?? '',
+    model: resource?.model ?? '',
+    inputPricePerMillion: String(resource?.inputPricePerMillion ?? 0),
+    outputPricePerMillion: String(resource?.outputPricePerMillion ?? 0),
+    cacheReadPricePerMillion: String(resource?.cacheReadPricePerMillion ?? 0),
+    cacheWritePricePerMillion: String(resource?.cacheWritePricePerMillion ?? 0),
+    requestPrice: String(resource?.requestPrice ?? 0),
+    enabled: resource?.enabled ?? true,
+    note: resource?.note ?? '',
+  }
+}
+
+function parsePriceValue(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
 }
 
 function formatDateTime(value: string | null | undefined, fallback: string) {
@@ -1131,6 +1167,7 @@ function ModelPriceSheet({
   onCancel,
   onRetryCandidates,
   onSubmit,
+  onSubmitted,
 }: {
   mode: { type: 'create' } | { type: 'edit'; resource: ModelPrice }
   candidates: BillingModelPriceCandidate[]
@@ -1141,21 +1178,16 @@ function ModelPriceSheet({
   mutating: boolean
   onCancel: () => void
   onRetryCandidates: () => void
-  onSubmit: (input: ModelPriceInput) => Promise<void>
+  onSubmit: (inputs: ModelPriceInput[]) => Promise<void>
+  onSubmitted?: () => void
 }) {
   const { t } = useTranslation()
   const resource = mode.type === 'edit' ? mode.resource : null
-  const [input, setInput] = useState<ModelPriceInput>({
-    provider: resource?.provider ?? '',
-    model: resource?.model ?? '',
-    inputPricePerMillion: resource?.inputPricePerMillion ?? 0,
-    outputPricePerMillion: resource?.outputPricePerMillion ?? 0,
-    cacheReadPricePerMillion: resource?.cacheReadPricePerMillion ?? 0,
-    cacheWritePricePerMillion: resource?.cacheWritePricePerMillion ?? 0,
-    requestPrice: resource?.requestPrice ?? 0,
-    enabled: resource?.enabled ?? true,
-    note: resource?.note ?? '',
-  })
+  const [input, setInput] = useState<ModelPriceDraft>(() => createModelPriceDraft(resource))
+  const [selectedCandidateKeys, setSelectedCandidateKeys] = useState<Set<string>>(
+    () =>
+      new Set(resource ? [createModelPriceCandidateValue(resource.provider, resource.model)] : []),
+  )
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof ModelPriceInput | 'provider' | 'model', string>>
@@ -1182,6 +1214,19 @@ function ModelPriceSheet({
       (candidate) =>
         candidate.provider === input.provider.trim() && candidate.model === input.model.trim(),
     ) ?? currentCandidate
+  const selectedCandidates = useMemo(() => {
+    if (mode.type === 'edit') return selectedCandidate ? [selectedCandidate] : []
+
+    return candidateOptions.filter((candidate) =>
+      selectedCandidateKeys.has(
+        createModelPriceCandidateValue(candidate.provider, candidate.model),
+      ),
+    )
+  }, [candidateOptions, mode.type, selectedCandidate, selectedCandidateKeys])
+  const hasSelectedTargets =
+    mode.type === 'create' ? selectedCandidates.length > 0 : Boolean(selectedCandidate)
+  const representativeCandidate =
+    mode.type === 'create' ? (selectedCandidates[0] ?? null) : selectedCandidate
   const filteredCandidates = useMemo(() => {
     const normalizedSearch = modelSearch.trim().toLowerCase()
     if (!normalizedSearch) return candidateOptions
@@ -1202,24 +1247,17 @@ function ModelPriceSheet({
   }, [candidateOptions, modelSearch])
 
   useEffect(() => {
-    setInput({
-      provider: resource?.provider ?? '',
-      model: resource?.model ?? '',
-      inputPricePerMillion: resource?.inputPricePerMillion ?? 0,
-      outputPricePerMillion: resource?.outputPricePerMillion ?? 0,
-      cacheReadPricePerMillion: resource?.cacheReadPricePerMillion ?? 0,
-      cacheWritePricePerMillion: resource?.cacheWritePricePerMillion ?? 0,
-      requestPrice: resource?.requestPrice ?? 0,
-      enabled: resource?.enabled ?? true,
-      note: resource?.note ?? '',
-    })
+    setInput(createModelPriceDraft(resource))
+    setSelectedCandidateKeys(
+      new Set(resource ? [createModelPriceCandidateValue(resource.provider, resource.model)] : []),
+    )
     setError(null)
     setFieldErrors({})
     setModelSearch('')
   }, [resource])
 
-  const setNumber = (key: keyof ModelPriceInput, value: string) => {
-    setInput((current) => ({ ...current, [key]: Number(value) }))
+  const setNumber = (key: ModelPriceNumberField, value: string) => {
+    setInput((current) => ({ ...current, [key]: value }))
     setFieldErrors((current) => ({ ...current, [key]: undefined }))
   }
 
@@ -1227,20 +1265,20 @@ function ModelPriceSheet({
     event.preventDefault()
     const nextFieldErrors: typeof fieldErrors = {}
 
-    if (!input.provider.trim() || !input.model.trim()) {
+    if (
+      mode.type === 'create'
+        ? selectedCandidates.length === 0
+        : !input.provider.trim() || !input.model.trim()
+    ) {
       nextFieldErrors.model = t('billingPage.prices.validation.modelRequired')
     }
-    const priceFields = [
-      'inputPricePerMillion',
-      'outputPricePerMillion',
-      'cacheReadPricePerMillion',
-      'cacheWritePricePerMillion',
-      'requestPrice',
-    ] as const
-    priceFields.forEach((key) => {
-      const value = input[key]
-      if (!Number.isFinite(value) || value < 0) {
+    const parsedPrices = {} as Record<ModelPriceNumberField, number>
+    modelPriceNumberFields.forEach((key) => {
+      const value = parsePriceValue(input[key])
+      if (value === null) {
         nextFieldErrors[key] = t('billingPage.prices.validation.priceInvalid')
+      } else {
+        parsedPrices[key] = value
       }
     })
 
@@ -1253,12 +1291,33 @@ function ModelPriceSheet({
     setFieldErrors({})
     setError(null)
     try {
-      await onSubmit({
-        ...input,
-        provider: input.provider.trim(),
-        model: input.model.trim(),
+      const baseInput = {
+        ...parsedPrices,
+        enabled: input.enabled,
         note: input.note?.trim() || undefined,
-      })
+      }
+      const inputs =
+        mode.type === 'create'
+          ? selectedCandidates.map((candidate) => ({
+              ...baseInput,
+              provider: candidate.provider,
+              model: candidate.model,
+            }))
+          : [
+              {
+                ...baseInput,
+                provider: input.provider.trim(),
+                model: input.model.trim(),
+              },
+            ]
+
+      await onSubmit(inputs)
+
+      if (mode.type === 'create') {
+        setSelectedCandidateKeys(new Set())
+        setModelSearch('')
+      }
+      onSubmitted?.()
     } catch (error) {
       setError(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
     }
@@ -1275,6 +1334,14 @@ function ModelPriceSheet({
   return (
     <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
       <CompactDrawerFormBody>
+        {mode.type === 'create' ? (
+          <div className="border-info/30 bg-info/10 text-info rounded-md border px-3 py-2 text-xs leading-5">
+            <div className="flex items-start gap-2">
+              <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 text-pretty">{t('billingPage.prices.form.batchHint')}</span>
+            </div>
+          </div>
+        ) : null}
         <section className="grid gap-2">
           <CompactField label={t('billingPage.prices.form.modelSelect')} error={fieldErrors.model}>
             <div className="grid gap-2">
@@ -1298,49 +1365,83 @@ function ModelPriceSheet({
                   aria-label={t('billingPage.prices.form.modelSelect')}
                 >
                   {filteredCandidates.length > 0 ? (
-                    filteredCandidates.map((candidate) => (
-                      <button
-                        key={createModelPriceCandidateValue(candidate.provider, candidate.model)}
-                        type="button"
-                        role="option"
-                        aria-label={`${candidate.label}, ${candidate.model}, ${candidate.provider}`}
-                        aria-selected={
-                          candidate.provider === input.provider.trim() &&
-                          candidate.model === input.model.trim()
-                        }
-                        disabled={mutating}
-                        className={cn(
-                          'hover:bg-accent focus-visible:ring-ring/50 grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
-                          candidate.provider === input.provider.trim() &&
+                    filteredCandidates.map((candidate) => {
+                      const candidateKey = createModelPriceCandidateValue(
+                        candidate.provider,
+                        candidate.model,
+                      )
+                      const selected =
+                        mode.type === 'create'
+                          ? selectedCandidateKeys.has(candidateKey)
+                          : candidate.provider === input.provider.trim() &&
                             candidate.model === input.model.trim()
-                            ? 'border-primary/45 bg-primary/10'
-                            : 'bg-card border-transparent',
-                        )}
-                        onClick={() => {
-                          setInput((current) => ({
-                            ...current,
-                            provider: candidate.provider,
-                            model: candidate.model,
-                          }))
-                          setFieldErrors((current) => ({
-                            ...current,
-                            provider: undefined,
-                            model: undefined,
-                          }))
-                        }}
-                      >
-                        <ProviderLogo providerId={toProviderLogoId(candidate.provider)} size="sm" />
-                        <span className="grid min-w-0 gap-0.5">
-                          <span className="min-w-0 truncate font-medium">{candidate.label}</span>
-                          <span className="text-muted-foreground grid min-w-0 gap-1 text-xs leading-5 sm:grid-cols-[minmax(0,1fr)_auto]">
-                            <span className="min-w-0 truncate">{candidate.model}</span>
-                            <span className="min-w-0 truncate sm:text-right">
-                              {candidate.provider}
+
+                      return (
+                        <button
+                          key={candidateKey}
+                          type="button"
+                          role="option"
+                          aria-label={`${candidate.label}, ${candidate.model}, ${candidate.provider}`}
+                          aria-selected={selected}
+                          disabled={mutating}
+                          className={cn(
+                            'hover:bg-accent focus-visible:ring-ring/50 grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60',
+                            selected
+                              ? 'border-primary/45 bg-primary/10'
+                              : 'bg-card border-transparent',
+                          )}
+                          onClick={() => {
+                            if (mode.type === 'create') {
+                              setSelectedCandidateKeys((current) => {
+                                const next = new Set(current)
+                                if (next.has(candidateKey)) {
+                                  next.delete(candidateKey)
+                                } else {
+                                  next.add(candidateKey)
+                                }
+                                return next
+                              })
+                            } else {
+                              setInput((current) => ({
+                                ...current,
+                                provider: candidate.provider,
+                                model: candidate.model,
+                              }))
+                              setSelectedCandidateKeys(new Set([candidateKey]))
+                            }
+                            setFieldErrors((current) => ({
+                              ...current,
+                              provider: undefined,
+                              model: undefined,
+                            }))
+                          }}
+                        >
+                          <ProviderLogo
+                            providerId={toProviderLogoId(candidate.provider)}
+                            size="sm"
+                          />
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="min-w-0 truncate font-medium">{candidate.label}</span>
+                            <span className="text-muted-foreground grid min-w-0 gap-1 text-xs leading-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+                              <span className="min-w-0 truncate">{candidate.model}</span>
+                              <span className="min-w-0 truncate sm:text-right">
+                                {candidate.provider}
+                              </span>
                             </span>
                           </span>
-                        </span>
-                      </button>
-                    ))
+                          {selected ? (
+                            <span className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full">
+                              <Check className="size-3.5" aria-hidden="true" />
+                            </span>
+                          ) : (
+                            <span
+                              className="border-muted-foreground/30 size-5 shrink-0 rounded-full border"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </button>
+                      )
+                    })
                   ) : (
                     <div className="text-muted-foreground px-2 py-6 text-center text-sm">
                       {modelSearch.trim()
@@ -1387,20 +1488,23 @@ function ModelPriceSheet({
           aria-live="polite"
           className={cn(
             'grid gap-3 rounded-md border px-3 py-3 text-sm',
-            selectedCandidate ? 'border-primary/30 bg-primary/10' : 'bg-muted/25 border-dashed',
+            hasSelectedTargets ? 'border-primary/30 bg-primary/10' : 'bg-muted/25 border-dashed',
           )}
         >
           <div className="flex min-w-0 items-start gap-3">
             <div
               className={cn(
                 'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md border',
-                selectedCandidate
+                hasSelectedTargets
                   ? 'border-primary/30 bg-primary/12 text-primary'
                   : 'bg-background text-muted-foreground',
               )}
             >
-              {selectedCandidate ? (
-                <ProviderLogo providerId={toProviderLogoId(selectedCandidate.provider)} size="sm" />
+              {representativeCandidate ? (
+                <ProviderLogo
+                  providerId={toProviderLogoId(representativeCandidate.provider)}
+                  size="sm"
+                />
               ) : (
                 <PackageCheck className="size-4" aria-hidden="true" />
               )}
@@ -1409,7 +1513,36 @@ function ModelPriceSheet({
               <span className="text-muted-foreground text-xs font-medium">
                 {t('billingPage.prices.form.pricingTarget')}
               </span>
-              {selectedCandidate ? (
+              {mode.type === 'create' && selectedCandidates.length > 0 ? (
+                <>
+                  <span className="font-semibold">
+                    {t('billingPage.prices.form.selectedModelsCount', {
+                      count: selectedCandidates.length,
+                    })}
+                  </span>
+                  <div className="flex max-h-24 flex-wrap gap-1 overflow-y-auto pr-1">
+                    {selectedCandidates.map((candidate) => (
+                      <span
+                        key={createModelPriceCandidateValue(candidate.provider, candidate.model)}
+                        className="bg-background text-muted-foreground inline-flex max-w-full items-center gap-1 rounded border px-2 py-1 text-xs"
+                      >
+                        <ProviderLogo providerId={toProviderLogoId(candidate.provider)} size="xs" />
+                        <span className="min-w-0 truncate">{candidate.model}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="w-fit px-0"
+                    disabled={mutating}
+                    onClick={() => setSelectedCandidateKeys(new Set())}
+                  >
+                    {t('billingPage.prices.form.clearSelection')}
+                  </Button>
+                </>
+              ) : selectedCandidate ? (
                 <>
                   <span className="min-w-0 truncate font-semibold">{selectedCandidate.label}</span>
                   <div className="text-muted-foreground flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs leading-5">
@@ -1445,9 +1578,10 @@ function ModelPriceSheet({
               >
                 <Input
                   type="number"
+                  inputMode="decimal"
                   min="0"
                   step="0.000001"
-                  value={String(input[key] ?? 0)}
+                  value={input[key]}
                   aria-label={t(`billingPage.prices.form.${label}`)}
                   aria-invalid={Boolean(fieldErrors[key])}
                   disabled={mutating}
@@ -1499,10 +1633,17 @@ function ModelPriceSheet({
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
-        <Button type="submit" disabled={mutating}>
+        <Button
+          type="submit"
+          disabled={mutating || (mode.type === 'create' && selectedCandidates.length === 0)}
+        >
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {mode.type === 'create'
-            ? t('billingPage.prices.actions.create')
+            ? selectedCandidates.length > 0
+              ? t('billingPage.prices.actions.createSelected', {
+                  count: selectedCandidates.length,
+                })
+              : t('billingPage.prices.actions.selectModels')
             : t('billingPage.common.save')}
         </Button>
       </DrawerScaffoldFooter>
@@ -1773,16 +1914,19 @@ export function BillingWorkbenchPage() {
                   onRetryCandidates={() => {
                     void workbench.refreshModelPriceCandidates()
                   }}
-                  onSubmit={async (input) => {
+                  onSubmit={async (inputs) => {
                     if (sheetMode.type === 'model-price-create') {
-                      await workbench.createModelPrice(input)
-                      toast.success(t('billingPage.toast.priceCreated'))
+                      await workbench.createModelPrices(inputs)
+                      toast.success(t('billingPage.toast.pricesCreated', { count: inputs.length }))
                     } else {
+                      const [input] = inputs
+                      if (!input) return
                       await workbench.updateModelPrice({ resource: sheetMode.resource, input })
                       toast.success(t('billingPage.toast.priceUpdated'))
+                      closeSheet()
                     }
-                    closeSheet()
                   }}
+                  onSubmitted={sheetMode.type === 'model-price-create' ? closeSheet : undefined}
                 />
               ) : null}
             </>

@@ -615,6 +615,8 @@ export const ru = {
         empty: 'Цены моделей пока не настроены.',
         actions: {
           create: 'Новая цена',
+          createSelected: 'Создать {{count}}',
+          selectModels: 'Выберите модели',
           toggleState: 'Переключить состояние цены модели {{model}}',
         },
         columns: {
@@ -647,6 +649,8 @@ export const ru = {
           modelCandidateEmpty: 'Нет моделей, доступных для выбора.',
           modelSearchEmpty: 'Нет моделей по условиям поиска.',
           selectedModel: 'Выбранная модель',
+          selectedModelsCount: 'Выбрано моделей: {{count}}',
+          clearSelection: 'Очистить выбор',
           pricingTarget: 'Объект тарификации',
           selectedModelPlaceholder:
             'Сначала выберите модель. Правило цены будет применяться к ней.',
@@ -661,6 +665,8 @@ export const ru = {
           pricing: 'Правила цены',
           pricingHint:
             'Эти цены применяются к будущим списаниям; исторические списания сохраняют исходный снимок цены.',
+          batchHint:
+            'Выберите одну или несколько моделей. Цены применяются только к будущим списаниям; история не пересчитывается.',
           state: 'Состояние записи',
           stateHint:
             'Состояние включения определяет, будет ли это правило цены применяться к будущим списаниям.',
@@ -685,6 +691,7 @@ export const ru = {
       toast: {
         copied: 'Скопировано.',
         priceCreated: 'Цена модели создана.',
+        pricesCreated: 'Создано цен моделей: {{count}}.',
         priceUpdated: 'Цена модели обновлена.',
         deleted: 'Удалено.',
         actionFailed: 'Действие не выполнено. Проверьте ответ backend API.',
@@ -1048,7 +1055,6 @@ export const ru = {
           claude: 'Claude',
           codex: 'Codex',
           vertex: 'Vertex',
-          'gemini-cli': 'Gemini CLI',
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
@@ -1290,16 +1296,11 @@ export const ru = {
         authorizationCode: 'Authorization code',
         callbackError: 'Сообщение об ошибке',
         submitCallback: 'Отправить callback URL',
-        geminiProjectLabel: 'Gemini Project ID',
-        geminiProjectPlaceholder: 'Project ID, необязательно',
-        geminiProjectHint:
-          'Оставьте пустым, чтобы runtime выбрал первый доступный project. Введите ALL, чтобы получить все projects.',
         callbackUnsupported:
           'Этот способ входа завершается через опрос статуса runtime и не требует ручного callback URL.',
         providerHints: {
           claude: 'Создать account credential через Claude OAuth.',
           codex: 'Создать account credential через Codex OAuth.',
-          gemini: 'Создать Google account credential через Gemini CLI OAuth.',
           antigravity: 'Создать Google account credential через Antigravity OAuth.',
           kimi: 'Создать account credential через Kimi device flow.',
           xai: 'Создать account credential через xAI/Grok OAuth.',
@@ -1319,7 +1320,6 @@ export const ru = {
         providers: {
           claude: 'Claude',
           codex: 'Codex',
-          gemini: 'Gemini CLI',
           antigravity: 'Antigravity',
           kimi: 'Kimi',
           xai: 'xAI / Grok',
@@ -2287,7 +2287,6 @@ export const ru = {
           claude: 'Claude',
           gemini: 'Gemini',
           vertex: 'Vertex',
-          'gemini-cli': 'Gemini CLI',
           aistudio: 'AI Studio',
           codex: 'Codex',
           kimi: 'Kimi',

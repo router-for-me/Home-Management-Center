@@ -97,7 +97,6 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'claude',
   'codex',
   'vertex',
-  'gemini-cli',
   'aistudio',
   'kimi',
   'antigravity',

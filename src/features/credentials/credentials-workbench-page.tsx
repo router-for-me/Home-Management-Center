@@ -95,14 +95,7 @@ type PendingCredentialConfirmation =
   | { type: 'delete'; resource: CredentialResource }
   | { type: 'bulkDelete'; resources: CredentialResource[] }
 
-const oauthProviders: CredentialOAuthProvider[] = [
-  'claude',
-  'codex',
-  'gemini',
-  'antigravity',
-  'kimi',
-  'xai',
-]
+const oauthProviders: CredentialOAuthProvider[] = ['claude', 'codex', 'antigravity', 'kimi', 'xai']
 const oauthStatusToneClassNames: Record<string, string> = {
   ok: 'border-primary/30 bg-primary/10 text-primary',
   wait: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
@@ -830,31 +823,24 @@ function VertexImportPanel({
 function OAuthStartPanel({
   sessions,
   statuses,
-  geminiProjectId,
   mutating,
-  onGeminiProjectIdChange,
   onStartOAuth,
   onCheckStatus,
   onSubmitCallback,
 }: {
   sessions: OAuthSessionMap
   statuses: OAuthStatusMap
-  geminiProjectId: string
   mutating: boolean
-  onGeminiProjectIdChange: (projectId: string) => void
   onStartOAuth: (provider: CredentialOAuthProvider) => Promise<void>
   onCheckStatus: (provider: CredentialOAuthProvider, state: string) => Promise<void>
   onSubmitCallback: (input: CredentialOAuthCallbackInput) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [advancedProvider, setAdvancedProvider] = useState<CredentialOAuthProvider | null>(null)
 
   return (
     <div className="grid gap-4">
       <div className="grid gap-2">
         {oauthProviders.map((provider) => {
-          const advancedOpen = advancedProvider === provider
-          const isGemini = provider === 'gemini'
           const session = sessions[provider]
           const status = statuses[provider] ?? null
 
@@ -888,36 +874,6 @@ function OAuthStartPanel({
                   {t('credentialsPage.oauth.startLogin')}
                 </Button>
               </div>
-
-              {isGemini ? (
-                <div className="mt-3">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="px-0 text-xs"
-                    onClick={() => setAdvancedProvider(advancedOpen ? null : provider)}
-                  >
-                    {advancedOpen
-                      ? t('credentialsPage.oauth.hideAdvanced')
-                      : t('credentialsPage.oauth.showAdvanced')}
-                  </Button>
-                  {advancedOpen ? (
-                    <label className="mt-2 grid gap-2 text-sm font-medium">
-                      <span>{t('credentialsPage.oauth.geminiProjectLabel')}</span>
-                      <Input
-                        value={geminiProjectId}
-                        placeholder={t('credentialsPage.oauth.geminiProjectPlaceholder')}
-                        disabled={mutating}
-                        onChange={(event) => onGeminiProjectIdChange(event.target.value)}
-                      />
-                      <span className="text-muted-foreground text-xs leading-5">
-                        {t('credentialsPage.oauth.geminiProjectHint')}
-                      </span>
-                    </label>
-                  ) : null}
-                </div>
-              ) : null}
 
               {session ? (
                 <div className="mt-3">
@@ -1023,11 +979,9 @@ function CreateCredentialSheet({
   oauthSessions,
   oauthStatuses,
   vertexImportResult,
-  geminiProjectId,
   mutating,
   onOpenChange,
   onModeChange,
-  onGeminiProjectIdChange,
   onUpload,
   onStartOAuth,
   onCheckOAuthStatus,
@@ -1040,11 +994,9 @@ function CreateCredentialSheet({
   oauthSessions: OAuthSessionMap
   oauthStatuses: OAuthStatusMap
   vertexImportResult: VertexImportResult | null
-  geminiProjectId: string
   mutating: boolean
   onOpenChange: (open: boolean) => void
   onModeChange: (mode: CreateCredentialMode) => void
-  onGeminiProjectIdChange: (projectId: string) => void
   onUpload: (fileList: FileList | null) => Promise<void>
   onStartOAuth: (provider: CredentialOAuthProvider) => Promise<void>
   onCheckOAuthStatus: (provider: CredentialOAuthProvider, state: string) => Promise<void>
@@ -1085,9 +1037,7 @@ function CreateCredentialSheet({
             <OAuthStartPanel
               sessions={oauthSessions}
               statuses={oauthStatuses}
-              geminiProjectId={geminiProjectId}
               mutating={mutating}
-              onGeminiProjectIdChange={onGeminiProjectIdChange}
               onStartOAuth={onStartOAuth}
               onCheckStatus={onCheckOAuthStatus}
               onSubmitCallback={onSubmitOAuthCallback}
@@ -1695,7 +1645,6 @@ export function CredentialsWorkbenchPage() {
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(() => new Set())
   const [panelMode, setPanelMode] = useState<MetadataPanelMode>('detail')
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
-  const [geminiProjectId, setGeminiProjectId] = useState('')
   const [oauthSessions, setOAuthSessions] = useState<OAuthSessionMap>({})
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
@@ -1951,7 +1900,6 @@ export function CredentialsWorkbenchPage() {
     try {
       const result = await workbench.startOAuth({
         provider,
-        projectId: provider === 'gemini' ? geminiProjectId : undefined,
       })
       setOAuthSessions((current) => ({ ...current, [provider]: result }))
       setOAuthStatuses((current) => {
@@ -2212,11 +2160,9 @@ export function CredentialsWorkbenchPage() {
         oauthSessions={oauthSessions}
         oauthStatuses={oauthStatuses}
         vertexImportResult={workbench.vertexImportResult}
-        geminiProjectId={geminiProjectId}
         mutating={workbench.mutating}
         onOpenChange={setCreateSheetOpen}
         onModeChange={setCreateMode}
-        onGeminiProjectIdChange={setGeminiProjectId}
         onUpload={handleUpload}
         onStartOAuth={handleStartOAuth}
         onCheckOAuthStatus={handleCheckOAuthStatus}

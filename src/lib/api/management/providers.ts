@@ -10,7 +10,6 @@ export type ProviderModelChannel =
   | 'claude'
   | 'gemini'
   | 'vertex'
-  | 'gemini-cli'
   | 'aistudio'
   | 'codex'
   | 'kimi'
