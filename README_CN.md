@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-Home Management Center 是面向 [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome) 的配套 Web 管理控制台。CLIProxyAPIHome 是用于 CLIProxyAPI 的凭证管理、调度与分发服务；本项目为其提供专业的浏览器控制台，覆盖服务总览、模型服务、账号凭证、客户端访问密钥、用量日志、系统配置和诊断信息等管理能力。
+Home Management Center 是面向 [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome) 的配套 Web 管理控制台。CLIProxyAPIHome 是用于 CLIProxyAPI 的凭证管理、调度与分发服务；本项目为其提供专业的浏览器控制台，覆盖服务总览、模型服务、账号凭证、客户端访问密钥、请求用量、调用诊断、运行日志、系统配置和诊断信息等管理能力。
 
 ## 功能特性
 
@@ -10,7 +10,9 @@ Home Management Center 是面向 [CLIProxyAPIHome](https://github.com/router-for
 - **模型服务**：管理供应商密钥、检查已配置的模型服务、查看模型参考信息，并支持新建、编辑和删除模型服务条目。
 - **账号凭证**：管理 OAuth 和文件凭证、上传凭证 JSON、导入 Vertex 凭证、编辑元数据、查询可用模型、启用、禁用、下载和删除凭证。
 - **客户端访问密钥**：管理下游客户端使用的访问密钥，支持新建、编辑、替换、删除、复制、掩码展示和批量选择。
-- **用量与日志**：查看 API key 用量、用量队列、运行日志、请求错误日志、文件下载和受保护的清空操作。
+- **请求用量**：查看请求量、Token、成本、聚合排行和执行凭证归因。
+- **调用诊断**：查看实时状态、请求健康、健康归因和请求日志文件。
+- **运行日志**：查看网关运行日志、请求错误日志文件、文件下载和受保护的清空操作。
 - **系统配置**：通过可视化工作台编辑常用配置，或在配置文件模式中使用 diff 预览、校验、重新加载、保存和完整覆盖提醒。
 - **系统信息**：查看运行时版本、节点状态、配置摘要、诊断状态和受保护的 API 调用工具。
 - **主题系统**：支持浅色和深色模式。

@@ -6,7 +6,7 @@ product
 
 ## Product
 
-Home Management Center is the companion Web management console for CLIProxyAPIHome. It helps operators manage service readiness, model services, account credentials, client access keys, usage and logs, system diagnostics, and runtime configuration from a browser.
+Home Management Center is the companion Web management console for CLIProxyAPIHome. It helps operators manage service readiness, model services, account credentials, client access keys, usage reporting, call diagnostics, runtime logs, system diagnostics, and runtime configuration from a browser.
 
 This is not a marketing surface. Design serves people who need to understand whether the management service is ready, what is misconfigured, and which action is safest to take next.
 
@@ -23,7 +23,7 @@ This is not a marketing surface. Design serves people who need to understand whe
 - Show service readiness at a glance.
 - Manage model service keys without confusing them with client access keys.
 - Manage account credentials created through OAuth login or file import.
-- Inspect usage, logs, request errors, nodes, versions, diagnostics, and configuration.
+- Inspect usage reporting, call diagnostics, runtime logs, request errors, nodes, versions, diagnostics, and configuration.
 - Provide a visual configuration workspace for supported runtime settings.
 - Represent unsupported, unavailable, or partially loaded backend data as explicit UI states.
 - Provide a credible global interface in Simplified Chinese, Traditional Chinese, English, and Russian.
@@ -57,7 +57,9 @@ The interface should feel like a serious control plane: clear hierarchy, restrai
 - Model services: provider grouping, model service keys, model reference data, create/edit/delete flows.
 - Account credentials: OAuth and file-backed credentials, metadata, status, import, download, and model availability.
 - Access keys: client-facing keys used by downstream clients.
-- Usage and logs: usage records, queues, runtime logs, request error logs, download and clear flows.
+- Usage: request records, token and cost trends, aggregate rankings, and credential attribution.
+- Call diagnostics: realtime state, request health timelines, health attribution, and request log files.
+- Runtime logs: gateway runtime log records, request error log files, download, and guarded clear flows.
 - System config: visual config sections, change preview, validation, and guarded saving.
 - System information: versions, nodes, runtime diagnostics, config summary, and guarded API call tools.
 
