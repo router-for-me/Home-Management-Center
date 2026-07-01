@@ -28,7 +28,6 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -41,7 +40,6 @@ type AppShellProps = {
 function ConnectionStatusIndicator() {
   const { t } = useTranslation()
   const status = useSessionStore((state) => state.status)
-  const endpoint = useSessionStore((state) => state.baseUrl)
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
   const { state, isMobile } = useSidebar()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
@@ -57,9 +55,6 @@ function ConnectionStatusIndicator() {
       : errored
         ? t('sidebar.connectionStatus.error')
         : t('sidebar.connectionStatus.disconnected')
-  const statusDescription = errored
-    ? t('sidebar.connectionStatus.errorHint')
-    : t('sidebar.connectionStatus.hint')
   const buttonLabel = connected
     ? t('sidebar.connectionStatus.connectedAction', { mode: runtimeLabel })
     : errored
@@ -96,92 +91,45 @@ function ConnectionStatusIndicator() {
     )
   }
 
-  if (connected && endpoint) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-label={buttonLabel}
-            className="group/status hover:bg-sidebar-accent/70 focus-visible:ring-sidebar-ring grid h-auto w-full min-w-0 justify-stretch gap-1.5 rounded-md px-2.5 py-2 text-left"
-            onClick={openConnectionDialog}
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <span
-                className="bg-sidebar-primary size-2 shrink-0 rounded-full shadow-[0_0_0_3px_color-mix(in_oklch,var(--sidebar-primary)_18%,transparent)]"
-                aria-hidden="true"
-              />
-              <span className="text-sidebar-foreground truncate text-xs font-medium">
-                {statusText}
-              </span>
-              <span className="border-sidebar-border bg-sidebar-accent/55 text-sidebar-active-muted-foreground max-w-24 min-w-0 truncate rounded border px-1.5 py-0.5 font-mono text-[10px] leading-none">
-                {runtimeLabel}
-              </span>
-              <Settings2
-                className="text-sidebar-muted-foreground ml-auto size-3.5 opacity-60 transition-opacity group-hover/status:opacity-100 group-focus-visible/status:opacity-100"
-                aria-hidden="true"
-              />
-            </span>
-            <span className="flex min-w-0">
-              <span className="text-sidebar-muted-foreground min-w-0 truncate font-mono text-[10.5px] leading-4">
-                {endpoint}
-              </span>
-            </span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent
-          side="right"
-          align="end"
-          sideOffset={8}
-          className="max-w-[min(24rem,calc(100vw-2rem))] text-left font-mono text-[11px] break-all"
-        >
-          <span className="sr-only">{t('sidebar.connectionStatus.endpoint')}: </span>
-          {endpoint}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
   return (
     <Button
       type="button"
       variant="ghost"
       aria-label={buttonLabel}
       className={cn(
-        'group/status grid h-auto w-full min-w-0 justify-stretch gap-2 overflow-hidden rounded-md border px-3 py-2.5 text-left',
-        errored
-          ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/14'
-          : 'border-sidebar-border bg-sidebar-accent/45 hover:bg-sidebar-accent',
+        'group/status flex h-11 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border px-2.5 text-left',
+        connected
+          ? 'border-sidebar-primary/30 bg-sidebar-primary/10 hover:bg-sidebar-primary/14'
+          : errored
+            ? 'border-destructive/45 bg-destructive/10 hover:bg-destructive/14'
+            : 'border-sidebar-border bg-sidebar-accent/45 hover:bg-sidebar-accent',
       )}
       onClick={openConnectionDialog}
     >
-      <span className="flex min-w-0 items-center gap-2">
-        <span
-          className={cn(
-            'flex size-5 shrink-0 items-center justify-center rounded',
-            errored ? 'text-destructive' : 'text-sidebar-icon',
-          )}
-        >
-          {checking ? (
-            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-          ) : errored ? (
-            <CircleAlert className="size-3.5" aria-hidden="true" />
-          ) : (
-            <Unplug className="size-3.5" aria-hidden="true" />
-          )}
-        </span>
-        <span className="text-sidebar-active-muted-foreground truncate text-xs font-semibold">
-          {statusText}
-        </span>
-        <Settings2
-          className="text-sidebar-muted-foreground ml-auto size-3.5 opacity-0 transition-opacity group-hover/status:opacity-100 group-focus-visible/status:opacity-100"
-          aria-hidden="true"
-        />
+      <span
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded',
+          connected ? 'text-sidebar-primary' : errored ? 'text-destructive' : 'text-sidebar-icon',
+        )}
+      >
+        {checking ? (
+          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+        ) : connected ? (
+          <CheckCircle2 className="size-3.5" aria-hidden="true" />
+        ) : errored ? (
+          <CircleAlert className="size-3.5" aria-hidden="true" />
+        ) : (
+          <Unplug className="size-3.5" aria-hidden="true" />
+        )}
       </span>
-      <span className="text-sidebar-muted-foreground min-w-0 truncate text-[11px] leading-snug">
-        {statusDescription}
+      <span className="min-w-0 flex-1 truncate text-xs font-medium">{statusText}</span>
+      <span className="text-sidebar-muted-foreground max-w-20 min-w-0 truncate text-[10.5px]">
+        {runtimeLabel}
       </span>
+      <Settings2
+        className="text-sidebar-muted-foreground size-3.5 shrink-0 opacity-0 transition-opacity group-hover/status:opacity-100 group-focus-visible/status:opacity-100"
+        aria-hidden="true"
+      />
     </Button>
   )
 }
@@ -204,6 +152,42 @@ function AppSidebarTrigger() {
   )
 }
 
+function HeaderConnectionButton() {
+  const { t } = useTranslation()
+  const status = useSessionStore((state) => state.status)
+  const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
+  const connected = status === 'connected'
+  const checking = status === 'checking'
+  const errored = status === 'error'
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className={cn(
+        'hidden h-9 sm:inline-flex',
+        connected
+          ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+          : errored
+            ? 'border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive'
+            : 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
+      onClick={openConnectionDialog}
+    >
+      {checking ? (
+        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+      ) : connected ? (
+        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+      ) : errored ? (
+        <CircleAlert className="size-3.5" aria-hidden="true" />
+      ) : (
+        <Unplug className="size-3.5" aria-hidden="true" />
+      )}
+      {t('actions.manageConnection')}
+    </Button>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // App Shell Layout
 // ---------------------------------------------------------------------------
@@ -213,12 +197,9 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const connectionDialogOpen = useConsoleUiStore((state) => state.connectionDialogOpen)
   const setConnectionDialogOpen = useConsoleUiStore((state) => state.setConnectionDialogOpen)
-  const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
   const commandPaletteOpen = useConsoleUiStore((state) => state.commandPaletteOpen)
   const setCommandPaletteOpen = useConsoleUiStore((state) => state.setCommandPaletteOpen)
   const openCommandPalette = useConsoleUiStore((state) => state.openCommandPalette)
-  const connectionStatus = useSessionStore((state) => state.status)
-  const connected = connectionStatus === 'connected'
   const currentItem =
     navigationItems.find((item) => pathname.startsWith(item.to)) ?? navigationItems[0]
 
@@ -226,8 +207,8 @@ export function AppShell({ children }: AppShellProps) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-sidebar-border text-sidebar-foreground">
         <SidebarHeader className="border-sidebar-border/80 border-b p-0">
-          <div className="flex h-16 items-center gap-3 px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <div className="ring-sidebar-primary/25 bg-sidebar-accent flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md ring-1">
+          <div className="flex h-14 items-center gap-3 px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            <div className="ring-sidebar-primary/25 bg-sidebar-accent flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md ring-1">
               <img src={productLogo} alt="" aria-hidden="true" className="size-full object-cover" />
             </div>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
@@ -241,20 +222,23 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </SidebarHeader>
 
-        <SidebarContent className="py-4">
+        <SidebarContent className="gap-1 py-2">
           {navigationGroups.map((group, groupIndex) => (
-            <SidebarGroup key={group.id} className={cn(groupIndex > 0 ? 'pt-5' : 'pt-0')}>
-              <SidebarGroupLabel className="text-sidebar-muted-foreground px-2 text-[10px] font-semibold tracking-wider uppercase select-none group-data-[collapsible=icon]:hidden">
+            <SidebarGroup
+              key={group.id}
+              className={cn('px-2 py-1', groupIndex > 0 ? 'pt-2' : 'pt-0')}
+            >
+              <SidebarGroupLabel className="text-sidebar-muted-foreground h-6 px-2 text-[10px] font-semibold tracking-wider uppercase select-none group-data-[collapsible=icon]:hidden">
                 {t(group.labelKey)}
               </SidebarGroupLabel>
               {groupIndex > 0 && (
                 <div
-                  className="bg-sidebar-border mx-auto my-2 hidden h-px w-6 rounded-full group-data-[collapsible=icon]:block"
+                  className="bg-sidebar-border mx-auto my-1 hidden h-px w-6 rounded-full group-data-[collapsible=icon]:block"
                   aria-hidden="true"
                 />
               )}
               <SidebarGroupContent>
-                <SidebarMenu>
+                <SidebarMenu className="gap-0.5">
                   {group.items.map((item) => {
                     const Icon = item.icon
                     const isActive = pathname.startsWith(item.to)
@@ -298,18 +282,8 @@ export function AppShell({ children }: AppShellProps) {
                               aria-hidden="true"
                             />
 
-                            <span className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                              <span className="block truncate">{itemLabel}</span>
-                              <span
-                                className={cn(
-                                  'mt-0.5 block truncate text-xs font-normal',
-                                  isActive
-                                    ? 'text-sidebar-active-muted-foreground'
-                                    : 'text-sidebar-muted-foreground group-hover/nav-item:text-sidebar-icon-hover',
-                                )}
-                              >
-                                {t(item.metaKey)}
-                              </span>
+                            <span className="min-w-0 flex-1 truncate group-data-[collapsible=icon]:hidden">
+                              {itemLabel}
                             </span>
                           </Link>
                         </SidebarMenuButton>
@@ -322,7 +296,7 @@ export function AppShell({ children }: AppShellProps) {
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-sidebar-border/80 border-t p-3 group-data-[collapsible=icon]:p-3 group-data-[collapsible=icon]:px-0">
+        <SidebarFooter className="border-sidebar-border/80 border-t p-2 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:px-0">
           <ConnectionStatusIndicator />
         </SidebarFooter>
       </Sidebar>
@@ -356,17 +330,7 @@ export function AppShell({ children }: AppShellProps) {
             </Button>
             <ThemeSwitcher />
             <LanguageSwitcher />
-            {connected ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary hidden h-9 sm:inline-flex"
-                onClick={openConnectionDialog}
-              >
-                <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                {t('actions.manageConnection')}
-              </Button>
-            ) : null}
+            <HeaderConnectionButton />
           </div>
         </header>
         <main className="min-w-0 flex-1 overflow-x-clip p-4 md:p-6">{children}</main>
