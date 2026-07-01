@@ -14,9 +14,12 @@ import { Route as UserWorkspaceRouteImport } from './routes/user.workspace'
 import { Route as UserRegisterRouteImport } from './routes/user.register'
 import { Route as UserLoginRouteImport } from './routes/user.login'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as AdminUsageLogsRouteImport } from './routes/admin.usage-logs'
+import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminSystemNodesRouteImport } from './routes/admin.system-nodes'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
+import { Route as AdminPluginsRouteImport } from './routes/admin.plugins'
+import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminDiagnosticsRouteImport } from './routes/admin.diagnostics'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
 import { Route as AdminCredentialsRouteImport } from './routes/admin.credentials'
 import { Route as AdminConnectRouteImport } from './routes/admin.connect'
@@ -49,9 +52,9 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminUsageLogsRoute = AdminUsageLogsRouteImport.update({
-  id: '/admin/usage-logs',
-  path: '/admin/usage-logs',
+const AdminUsageRoute = AdminUsageRouteImport.update({
+  id: '/admin/usage',
+  path: '/admin/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSystemNodesRoute = AdminSystemNodesRouteImport.update({
@@ -62,6 +65,21 @@ const AdminSystemNodesRoute = AdminSystemNodesRouteImport.update({
 const AdminProvidersRoute = AdminProvidersRouteImport.update({
   id: '/admin/providers',
   path: '/admin/providers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPluginsRoute = AdminPluginsRouteImport.update({
+  id: '/admin/plugins',
+  path: '/admin/plugins',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLogsRoute = AdminLogsRouteImport.update({
+  id: '/admin/logs',
+  path: '/admin/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDiagnosticsRoute = AdminDiagnosticsRouteImport.update({
+  id: '/admin/diagnostics',
+  path: '/admin/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDashboardRoute = AdminDashboardRouteImport.update({
@@ -103,9 +121,12 @@ export interface FileRoutesByFullPath {
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
-  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
@@ -119,9 +140,12 @@ export interface FileRoutesByTo {
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
-  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
@@ -136,9 +160,12 @@ export interface FileRoutesById {
   '/admin/connect': typeof AdminConnectRoute
   '/admin/credentials': typeof AdminCredentialsRoute
   '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/diagnostics': typeof AdminDiagnosticsRoute
+  '/admin/logs': typeof AdminLogsRoute
+  '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
-  '/admin/usage-logs': typeof AdminUsageLogsRoute
+  '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
@@ -154,9 +181,12 @@ export interface FileRouteTypes {
     | '/admin/connect'
     | '/admin/credentials'
     | '/admin/dashboard'
+    | '/admin/diagnostics'
+    | '/admin/logs'
+    | '/admin/plugins'
     | '/admin/providers'
     | '/admin/system-nodes'
-    | '/admin/usage-logs'
+    | '/admin/usage'
     | '/admin/users'
     | '/user/login'
     | '/user/register'
@@ -170,9 +200,12 @@ export interface FileRouteTypes {
     | '/admin/connect'
     | '/admin/credentials'
     | '/admin/dashboard'
+    | '/admin/diagnostics'
+    | '/admin/logs'
+    | '/admin/plugins'
     | '/admin/providers'
     | '/admin/system-nodes'
-    | '/admin/usage-logs'
+    | '/admin/usage'
     | '/admin/users'
     | '/user/login'
     | '/user/register'
@@ -186,9 +219,12 @@ export interface FileRouteTypes {
     | '/admin/connect'
     | '/admin/credentials'
     | '/admin/dashboard'
+    | '/admin/diagnostics'
+    | '/admin/logs'
+    | '/admin/plugins'
     | '/admin/providers'
     | '/admin/system-nodes'
-    | '/admin/usage-logs'
+    | '/admin/usage'
     | '/admin/users'
     | '/user/login'
     | '/user/register'
@@ -203,9 +239,12 @@ export interface RootRouteChildren {
   AdminConnectRoute: typeof AdminConnectRoute
   AdminCredentialsRoute: typeof AdminCredentialsRoute
   AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminDiagnosticsRoute: typeof AdminDiagnosticsRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminPluginsRoute: typeof AdminPluginsRoute
   AdminProvidersRoute: typeof AdminProvidersRoute
   AdminSystemNodesRoute: typeof AdminSystemNodesRoute
-  AdminUsageLogsRoute: typeof AdminUsageLogsRoute
+  AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
   UserLoginRoute: typeof UserLoginRoute
   UserRegisterRoute: typeof UserRegisterRoute
@@ -249,11 +288,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/usage-logs': {
-      id: '/admin/usage-logs'
-      path: '/admin/usage-logs'
-      fullPath: '/admin/usage-logs'
-      preLoaderRoute: typeof AdminUsageLogsRouteImport
+    '/admin/usage': {
+      id: '/admin/usage'
+      path: '/admin/usage'
+      fullPath: '/admin/usage'
+      preLoaderRoute: typeof AdminUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/system-nodes': {
@@ -268,6 +307,27 @@ declare module '@tanstack/react-router' {
       path: '/admin/providers'
       fullPath: '/admin/providers'
       preLoaderRoute: typeof AdminProvidersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/plugins': {
+      id: '/admin/plugins'
+      path: '/admin/plugins'
+      fullPath: '/admin/plugins'
+      preLoaderRoute: typeof AdminPluginsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/logs': {
+      id: '/admin/logs'
+      path: '/admin/logs'
+      fullPath: '/admin/logs'
+      preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/diagnostics': {
+      id: '/admin/diagnostics'
+      path: '/admin/diagnostics'
+      fullPath: '/admin/diagnostics'
+      preLoaderRoute: typeof AdminDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/dashboard': {
@@ -323,9 +383,12 @@ const rootRouteChildren: RootRouteChildren = {
   AdminConnectRoute: AdminConnectRoute,
   AdminCredentialsRoute: AdminCredentialsRoute,
   AdminDashboardRoute: AdminDashboardRoute,
+  AdminDiagnosticsRoute: AdminDiagnosticsRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminPluginsRoute: AdminPluginsRoute,
   AdminProvidersRoute: AdminProvidersRoute,
   AdminSystemNodesRoute: AdminSystemNodesRoute,
-  AdminUsageLogsRoute: AdminUsageLogsRoute,
+  AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
   UserLoginRoute: UserLoginRoute,
   UserRegisterRoute: UserRegisterRoute,

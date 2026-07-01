@@ -36,7 +36,11 @@ export const en = {
       users: 'Users & Access',
       billing: 'Billing & Reports',
       config: 'System config',
-      usageLogs: 'Usage & Logs',
+      plugins: 'Plugins',
+      usage: 'Usage',
+      diagnostics: 'Call Diagnostics',
+      logs: 'Runtime Logs',
+      usageLogs: 'Observability Data',
       systemNodes: 'System Info',
     },
     navigationGroups: {
@@ -54,7 +58,11 @@ export const en = {
       users: 'Users and access',
       billing: 'Billing and reports',
       config: 'Gateway core settings',
-      usageLogs: 'Requests and logs',
+      plugins: 'Plugin store and cluster rollout',
+      usage: 'Usage trends and cost stats',
+      diagnostics: 'Call health and request logs',
+      logs: 'Gateway runtime and request error logs',
+      usageLogs: 'Usage, diagnostics, logs',
       systemNodes: 'Runtime and diagnostics',
     },
     sidebar: {
@@ -456,7 +464,13 @@ export const en = {
       actions: {
         refresh: 'Refresh current view',
       },
+      loading: {
+        overviewTitle: 'Loading billing overview',
+        overviewDescription:
+          'Reading financial totals, usage metrics, trends, and rankings from the Management API.',
+      },
       tabs: {
+        label: 'Billing views',
         overview: 'Overview',
         charges: 'Charge records',
         balanceRecords: 'Balance records',
@@ -751,6 +765,10 @@ export const en = {
         unavailable: 'Unavailable',
         notAvailableShort: 'N/A',
       },
+      drillDown: {
+        open: 'Open {{title}} details',
+        openIssue: 'Open page for {{title}}',
+      },
       metrics: {
         providers: {
           title: 'Available model keys',
@@ -767,6 +785,72 @@ export const en = {
         nodes: {
           title: 'Runtime nodes',
           detail: '{{count}} nodes reported by the current service',
+        },
+      },
+      operatingKpis: {
+        tokens: {
+          title: 'Total token consumption',
+          detail: 'Across {{value}} active models',
+          unavailable: 'No usage yet',
+        },
+        requests: {
+          title: 'Total requests',
+          detail: '{{value}} failed requests',
+          unavailable: 'No requests yet',
+        },
+        successRate: {
+          title: 'Request success rate',
+          detail: '{{value}} error rate',
+          unavailable: 'No success rate yet',
+        },
+        activeClientKeys: {
+          title: 'Active access keys',
+          detail: '{{value}} execution credentials used',
+          unavailable: 'No active keys yet',
+        },
+      },
+      rankPreview: {
+        requestsTokens: '{{requests}} requests · {{tokens}} tokens',
+        failed: '{{count}} failed',
+      },
+      keyStatus: {
+        title: 'Key status',
+        summary: '{{active}} active · {{quiet}} quiet · {{total}} total',
+        unavailable: 'No key calls in this time range.',
+        emptyTop: 'No key ranking yet.',
+        action: 'View key usage',
+      },
+      modelUsage: {
+        title: 'Model usage distribution',
+        summary: '{{count}} models were used in this time range',
+        unavailable: 'No model calls in this time range.',
+        emptyTop: 'No model ranking yet.',
+        action: 'View usage',
+      },
+      usageConsumptionTrend: {
+        title: 'Overall consumption trend',
+        description: 'Token consumption over the current usage time range.',
+        summary: '{{buckets}} intervals · {{tokens}} tokens total',
+        action: 'View request usage',
+        tooltip: {
+          tokens: 'Token consumption',
+          tokenValue: '{{value}} tokens',
+          requests: 'Requests',
+          pointAria: '{{time}}, token consumption {{tokens}}, requests {{requests}}',
+        },
+      },
+      usageActivity: {
+        title: 'Request health',
+        description: 'Recent usage intervals showing request activity, success rate, and failures.',
+        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        action: 'View diagnostics',
+        bucketTitle: '{{label}}: {{requests}} requests · {{successRate}} success',
+        status: {
+          healthy: 'Healthy',
+          warning: 'Has failures',
+          degraded: 'Degraded',
+          failed: 'Failed',
+          empty: 'No traffic',
         },
       },
       quickActions: {
@@ -796,9 +880,10 @@ export const en = {
       providers: {
         title: 'Model service access',
         description: 'Review total, available, and disabled keys for each model service type.',
+        action: 'Manage services',
         emptyTitle: 'No model services configured',
         emptyDescription:
-          'No model service keys were returned. Add a model service before the gateway can forward requests upstream.',
+          'No model service keys are configured yet. Add a model service before the gateway can forward requests upstream.',
         emptySupportedProviders:
           'Supports Gemini, Claude, Codex, Vertex, and OpenAI-compatible services.',
         configureAction: 'Configure model service',
@@ -816,6 +901,7 @@ export const en = {
       config: {
         title: 'Key switches',
         description: 'Settings that affect logging, usage tracking, and request routing.',
+        action: 'Fix config',
       },
       configChecks: {
         requestLog: 'Request log',
@@ -840,7 +926,7 @@ export const en = {
         title: 'Account credential sources',
         description:
           'Account records grouped by how they are stored, including OAuth login and credential files.',
-        empty: 'No account credential records were returned.',
+        empty: 'No account credential records yet.',
       },
       credentialSourceNames: {
         file: 'File',
@@ -860,6 +946,7 @@ export const en = {
         clientKeys: 'Client keys',
         authFiles: 'Auth files',
         nodes: 'Nodes',
+        usageOverview: 'Usage overview',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
@@ -878,6 +965,11 @@ export const en = {
         title: 'Model provider data could not be loaded',
         description: 'Check the management endpoint, key, and model provider routes.',
         retry: 'Retry',
+      },
+      loading: {
+        title: 'Loading model providers',
+        description:
+          'Reading model service keys, provider groups, and partial backend issues from the Management API.',
       },
       header: {
         eyebrow: 'Model provider workbench',
@@ -903,6 +995,7 @@ export const en = {
       categories: {
         title: 'Model Providers',
         activeCount: '{{active}} / {{total}} active',
+        issue: 'Has an issue',
       },
       providerNames: {
         gemini: 'Gemini',
@@ -1111,6 +1204,11 @@ export const en = {
         description: 'Check the management endpoint, key, and auth-files route.',
         retry: 'Retry',
       },
+      loading: {
+        title: 'Loading credentials',
+        description:
+          'Reading OAuth and file-backed credential resources before enabling credential operations.',
+      },
       header: {
         eyebrow: 'Credential workbench',
         title: 'OAuth and file-backed credentials',
@@ -1288,7 +1386,7 @@ export const en = {
       detail: {
         title: 'Credential detail',
         empty: 'Select a credential to inspect metadata and actions.',
-        noModels: 'No models were returned for this credential.',
+        noModels: 'No models are available for this credential.',
         modelsTitle: 'Available models',
         modelsDescription: 'Query the runtime for models available to this credential.',
         modelCount: '{{count}} models loaded.',
@@ -1366,6 +1464,11 @@ export const en = {
         title: 'Access keys could not be loaded',
         description: 'Check the management endpoint, key, and /api-keys route.',
         retry: 'Retry',
+      },
+      loading: {
+        title: 'Loading access keys',
+        description:
+          'Reading client access keys and related ownership metadata from the Management API.',
       },
       header: {
         eyebrow: 'Client access control',
@@ -1484,6 +1587,11 @@ export const en = {
         description: 'Check the management endpoint, management key, and /users route.',
         retry: 'Retry',
       },
+      loading: {
+        title: 'Loading users and access',
+        description:
+          'Reading users, client key ownership, credential scopes, and model scopes from the Management API.',
+      },
       header: {
         eyebrow: 'Users and access',
         title: 'Users & Access',
@@ -1494,6 +1602,7 @@ export const en = {
         activeUsers: '{{count}} active users',
         keys: '{{count}} client keys',
         assignedKeys: '{{count}} assigned keys',
+        unassignedKeys: '{{count}} unassigned keys',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
@@ -1808,6 +1917,11 @@ export const en = {
         title: 'System config could not be loaded',
         description: 'Check the management endpoint, management key, and config routes.',
         retry: 'Retry',
+      },
+      loading: {
+        title: 'Loading configuration',
+        description:
+          'Reading the current runtime configuration before enabling the visual workspace.',
       },
       header: {
         title: 'Configuration workspace',
@@ -2152,7 +2266,7 @@ export const en = {
         searchPlaceholder: 'Search model ID, name, or owner',
         selectedCount: '{{count}} models selected',
         clearChannel: 'Clear channel',
-        emptyModels: 'No model definitions were returned for this channel.',
+        emptyModels: 'No model definitions are available for this channel.',
         emptyFiltered: 'No matching models.',
         customTitle: 'Custom provider rules',
         customDescription:
@@ -2187,55 +2301,203 @@ export const en = {
         validationFailed: 'Fix config validation issues first.',
       },
     },
+    usagePage: {
+      disconnected: {
+        title: 'Connect a management runtime',
+        description:
+          'Usage data is loaded from the Management API. Connect a runtime before reviewing requests, tokens, cost, and credential attribution.',
+        action: 'Connect runtime',
+      },
+      error: {
+        title: 'Usage could not be loaded',
+        description: 'Check the management endpoint, management key, and usage API availability.',
+        retry: 'Retry',
+      },
+      verdict: {
+        ready: {
+          title: 'Usage data is ready',
+          badge: 'Analyzable',
+          description:
+            'Request overview, request records, aggregate rankings, and execution credential attribution are loaded for assessing requests, tokens, cost, and latency.',
+        },
+        empty: {
+          title: 'No request usage yet',
+          badge: 'No data yet',
+          description:
+            'Usage capabilities are available, but there are no request records in this time range. Adjust the range or refresh after traffic starts.',
+        },
+        partial: {
+          title: 'Usage is partially loaded',
+          badge: 'Partial',
+          description:
+            'Some usage scopes failed to load. The page continues to show the usage facts that are available.',
+        },
+        disabled: {
+          title: 'Usage statistics are disabled',
+          badge: 'Disabled',
+          description:
+            'Enable usage statistics in system config before request usage can be continuously aggregated.',
+        },
+        unsupported: {
+          title: 'Usage is unavailable',
+          badge: 'Unavailable',
+          description:
+            'The current runtime does not provide request usage capabilities, so the page will not show inferred data.',
+        },
+      },
+      unavailable: {
+        title: 'Usage capabilities are unavailable',
+        description: '{{mode}} did not expose request usage routes.',
+      },
+    },
+    callDiagnosticsPage: {
+      disconnected: {
+        title: 'Connect a management runtime',
+        description:
+          'Call diagnostics are loaded from the Management API. Connect a runtime before reviewing realtime state, health attribution, and request log files.',
+        action: 'Connect runtime',
+      },
+      error: {
+        title: 'Call diagnostics could not be loaded',
+        description:
+          'Check the management endpoint, management key, and call diagnostics API availability.',
+        retry: 'Retry',
+      },
+      verdict: {
+        ready: {
+          title: 'Call diagnostics are ready',
+          badge: 'Investigable',
+          description:
+            'Realtime state, request health, health attribution, or request log files are loaded for request-level investigation.',
+        },
+        partial: {
+          title: 'Call diagnostics are partially loaded',
+          badge: 'Partial',
+          description:
+            'Some diagnostics scopes failed to load. Use the available realtime state, health attribution, and request log files first.',
+        },
+        disabled: {
+          title: 'Usage statistics are disabled',
+          badge: 'Disabled',
+          description:
+            'Realtime state and health attribution depend on usage statistics. Request log file availability still depends on file logging.',
+        },
+        unsupported: {
+          title: 'Call diagnostics are unavailable',
+          badge: 'Unavailable',
+          description:
+            '{{mode}} did not return realtime state, health attribution, or request log file capabilities.',
+        },
+      },
+      unavailable: {
+        title: 'Call diagnostics capabilities are unavailable',
+        description:
+          '{{mode}} did not expose realtime state, health attribution, or request log file routes.',
+      },
+      empty: {
+        title: 'No call diagnostics data',
+        description:
+          'The current filter range has no realtime state, health attribution, or request log files.',
+      },
+    },
+    logsPage: {
+      disconnected: {
+        title: 'Connect a management runtime',
+        description:
+          'Runtime logs are loaded from the Management API. Connect a runtime before reviewing gateway logs and request error files.',
+        action: 'Connect runtime',
+      },
+      error: {
+        title: 'Runtime logs could not be loaded',
+        description: 'Check the management endpoint, management key, and log API availability.',
+        retry: 'Retry',
+      },
+      verdict: {
+        ready: {
+          title: 'Runtime logs are ready',
+          badge: 'Readable',
+          description:
+            'The runtime log table and request error log files are available for request investigation.',
+        },
+        partial: {
+          title: 'Runtime logs are partially loaded',
+          badge: 'Partial',
+          description:
+            'Some log scopes failed to load. Use the available runtime facts and review the failed scopes.',
+        },
+        disabled: {
+          title: 'File logging is disabled',
+          badge: 'Disabled',
+          description:
+            'The log route exists, but file logging is disabled. Enable file logging before reading or clearing runtime logs.',
+        },
+        errorFilesOnly: {
+          title: 'Only request error logs are available',
+          badge: 'Error files',
+          description:
+            '{{mode}} returned request error log files but did not expose readable runtime logs.',
+        },
+        unsupported: {
+          title: 'Log routes are unavailable',
+          badge: 'Unsupported',
+          description: '{{mode}} did not return runtime log or request error log capabilities.',
+        },
+      },
+    },
     usageLogsPage: {
       disconnected: {
         title: 'Connect a management runtime',
         description:
-          'Usage and logs are loaded from the Management API. Connect a runtime before reviewing request stats and logs.',
+          'Observability data is loaded from the Management API. Connect a runtime before reviewing usage, call diagnostics, and runtime logs.',
         action: 'Connect runtime',
       },
       error: {
-        title: 'Usage and logs could not be loaded',
-        description: 'Check the management endpoint, management key, and log-related routes.',
+        title: 'Observability data could not be loaded',
+        description: 'Check the management endpoint, management key, and observability routes.',
         retry: 'Retry',
       },
       header: {
-        title: 'Usage & Logs',
+        title: 'Observability Data',
         description:
-          'Review model service request counts, API key usage, runtime logs, and downloadable request error logs.',
+          'Review request usage, call diagnostics, runtime logs, and downloadable log files.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
         refresh: 'Sync data',
         syncing: 'Syncing',
+        exportCsv: 'Export CSV',
+        exportFilteredCsv: 'Export',
+        exportUnsupported: 'Export unavailable',
         clearLogs: 'Clear logs',
         download: 'Download',
         downloadRequestLog: 'Download request log',
         viewLogDetail: 'View details',
+        viewRecordDetail: 'Details',
       },
       capabilities: {
-        usage: 'Usage stats',
+        usageOverview: 'Usage overview',
+        usageRecords: 'Usage records',
+        usageAggregates: 'Aggregates',
+        usageExport: 'Export',
+        usageProviderHealth: 'Provider health',
+        usageCredentialHealth: 'Credential health',
+        usageRealtime: 'Realtime',
+        requestLogIndex: 'Request log files',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
       },
       unavailable: {
-        title: 'This runtime does not expose usage and log routes',
+        title: 'This runtime does not expose observability routes',
         description:
-          '{{mode}} does not expose runtime log or usage query routes. The page keeps capability state visible without inventing missing data.',
+          '{{mode}} does not expose usage, diagnostics, or runtime log routes. The page keeps capability state visible without inventing missing data.',
       },
       verdict: {
         ready: {
-          title: 'Usage data is synced',
-          badge: 'Analyzable',
+          title: 'Observability data is ready',
+          badge: 'Operational',
           description:
-            'The runtime returned API key usage aggregates for reviewing model-service request volume, failures, and provider distribution.',
-        },
-        idle: {
-          title: 'Usage statistics are available, no requests yet',
-          badge: 'No data',
-          description:
-            'The runtime exposes usage routes but returned no API key usage rows. Sync again after the service handles traffic.',
+            'The runtime returned usage, diagnostics, or log capabilities for request-level analysis and investigation.',
         },
         disabled: {
           title: 'Usage statistics are disabled',
@@ -2249,17 +2511,23 @@ export const en = {
           description:
             'The page continues to show loaded usage facts. Review the failed scopes before making a full assessment.',
         },
-        limited: {
-          title: 'Usage data is limited',
-          badge: 'Limited',
+        legacy: {
+          title: 'Only legacy API key usage is available',
+          badge: 'Legacy scope',
           description:
-            '{{mode}} did not return API key usage aggregates, so only logs and error files can be used for investigation.',
+            '{{mode}} only returned the older API key usage route. Tokens, cost, latency, and execution credential attribution are not shown as usage facts.',
+        },
+        logsOnly: {
+          title: 'Only log routes are available',
+          badge: 'Logs only',
+          description:
+            '{{mode}} did not return structured usage routes. Use runtime logs and error files for investigation.',
         },
         unsupported: {
           title: 'This runtime does not expose usage routes',
           badge: 'Unsupported',
           description:
-            '{{mode}} does not expose usage or log routes. Capability state remains visible until backend observability APIs are added.',
+            '{{mode}} does not expose usage, diagnostics, or runtime log routes. Capability state remains visible until backend observability APIs are added.',
         },
       },
       issues: {
@@ -2267,9 +2535,419 @@ export const en = {
       },
       issueScopes: {
         apiKeyUsage: 'Usage stats',
+        usageOverview: 'Usage overview',
+        usageRecords: 'Usage records',
+        usageAggregates: 'Usage aggregates',
+        usageRecordDetails: 'Usage detail',
+        usageExport: 'Usage export',
+        usageProviderHealth: 'Provider health',
+        usageCredentialHealth: 'Credential health',
+        usageRealtime: 'Realtime snapshot',
+        requestLogIndex: 'Request log files',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
         clearLogs: 'Clear logs',
+      },
+      filters: {
+        range: 'Time range',
+        status: 'Status',
+        provider: 'Provider',
+        model: 'Model',
+        credentialType: 'Credential type',
+        homeIp: 'Home node',
+        endpoint: 'Endpoint',
+        executorType: 'Executor type',
+        statusCode: 'Status code',
+        requestId: 'Request ID',
+        user: 'User',
+        clientKey: 'Client key',
+        credentialId: 'Credential ID',
+        authIndex: 'Auth index',
+        minLatencyMs: 'Min latency',
+        maxLatencyMs: 'Max latency',
+        minAmount: 'Min spend',
+        maxAmount: 'Max spend',
+        sort: 'Sort',
+        advanced: 'Advanced filters',
+        hideAdvanced: 'Hide advanced filters',
+        searchPlaceholder: 'Search request / user / model',
+        requestIdPlaceholder: 'Request ID',
+        userPlaceholder: 'User, user ID, or IP',
+        clientKeyPlaceholder: 'Client key or label',
+        credentialIdPlaceholder: 'Credential ID or name',
+        authIndexPlaceholder: 'Auth index',
+        minLatencyPlaceholder: 'Min latency ms',
+        maxLatencyPlaceholder: 'Max latency ms',
+        minAmountPlaceholder: 'Min spend',
+        maxAmountPlaceholder: 'Max spend',
+        rangeInvalid: 'Min must not exceed max.',
+        customFrom: 'Start date',
+        customTo: 'End date',
+        anyProvider: 'All providers',
+        anyModel: 'All models',
+        anyCredentialType: 'All credential types',
+        anyHomeIp: 'All Home nodes',
+        anyEndpoint: 'All endpoints',
+        anyExecutorType: 'All executors',
+        anyStatusCode: 'All status codes',
+        ranges: {
+          last4h: 'Last 4 hours',
+          last12h: 'Last 12 hours',
+          last24h: 'Last 24 hours',
+          today: 'Today',
+          yesterday: 'Yesterday',
+          last7d: 'Last 7 days',
+          last30d: 'Last 30 days',
+          last90d: 'Last 90 days',
+          custom: 'Custom range',
+        },
+        statuses: {
+          all: 'All statuses',
+          success: 'Success',
+          failed: 'Failed',
+        },
+        sorts: {
+          timestamp_desc: 'Newest first',
+          timestamp_asc: 'Oldest first',
+          failed_first: 'Failures first',
+          tokens_desc: 'Highest tokens',
+          tokens_asc: 'Lowest tokens',
+          cost_desc: 'Highest spend',
+          cost_asc: 'Lowest spend',
+          latency_desc: 'Highest latency',
+          latency_asc: 'Lowest latency',
+        },
+      },
+      credentialTypes: {
+        provider_api_key: 'Provider key',
+        oauth: 'OAuth',
+        file_auth: 'File auth',
+        vertex: 'Vertex',
+        unknown: 'Unknown',
+      },
+      kpi: {
+        systemHealth: 'System health',
+        requests: 'Requests',
+        cost: 'Spend',
+        tokens: 'Total tokens',
+        amountValue: '{{value}} credits',
+        emptyTitle: 'No usage yet',
+        emptyDescription: 'There are no requests to summarize in this range.',
+        healthMetrics: {
+          rpm: 'RPM',
+          tpm: 'TPM',
+          errorRate: 'Error rate',
+          p50Latency: 'P50 latency',
+          attention: 'Needs attention',
+        },
+      },
+      realtime: {
+        title: 'Realtime state',
+        updatedAt: 'Updated {{time}}',
+        window: '{{window}} window',
+        bucket: '{{bucket}} interval',
+        groupBy: 'Grouped by {{group}}',
+        latencyDistribution: 'Latency distribution',
+        emptyTitle: 'No realtime data',
+        empty: 'No realtime diagnostic data in the current window.',
+        metrics: {
+          rpm: 'RPM',
+          tpm: 'TPM',
+          errorRate: 'Error rate',
+        },
+      },
+      trend: {
+        title: 'Token usage over time',
+        emptyTitle: 'No trend data',
+        unavailable: 'No trend data is available for this range.',
+        overlay: {
+          requests: 'Requests',
+          cost: 'Spend',
+        },
+        tokenSeries: {
+          input: 'Input',
+          output: 'Output',
+          cache: 'Cache',
+          reasoning: 'Reasoning',
+        },
+      },
+      costBreakdown: {
+        title: 'Cost breakdown',
+        totalCost: 'Total cost',
+        blendedRate: 'Blended rate',
+        perMillion: '{{value}} / M tokens',
+        itemDetail: '{{tokens}} tokens · {{basis}}',
+        itemBasis: 'Billing basis: {{basis}}',
+        billingBasis: {
+          current: 'Current',
+          estimated: 'Estimated',
+        },
+        emptyTitle: 'No cost breakdown',
+        unavailable: 'No attributable cost breakdown is available for this range.',
+        categories: {
+          input: 'Input',
+          output: 'Output',
+          cache: 'Cache',
+          reasoning: 'Reasoning',
+          request: 'Request',
+          other: 'Other',
+        },
+      },
+      rankings: {
+        users: 'User ranking',
+        clientKeys: 'Client key ranking',
+        credentials: 'Credential ranking',
+        models: 'Model ranking',
+        providers: 'Provider ranking',
+        errors: 'Error ranking',
+        topN: 'Top 5',
+        viewDetail: 'View all',
+        viewDetailLabel: 'View full ranking',
+        hideDetail: 'Hide',
+        drilldownTitle: 'Aggregate drill-down',
+        drawerTitle: '{{group}} ranking details',
+        drawerDescription:
+          'Review the full ranking for the current filters, with spend, request, cost-efficiency, and quality metrics.',
+        groupBy: 'Group by',
+        metric: 'Metric',
+        showTop50: 'Show Top 50',
+        showTop10: 'Back to Top 10',
+        columnsButton: 'Columns',
+        columnsMenu: 'Visible columns',
+        columns: {
+          rank: 'Rank',
+          name: 'Name',
+          amount: 'Spend',
+          requests: 'Requests',
+          avgRequestCost: 'Avg request cost',
+          costPerMillionTokens: 'Cost / 1M tokens',
+          successRate: 'Avg success rate',
+          cacheRate: 'Avg cache rate',
+          tokens: 'Total tokens',
+          avgLatency: 'Avg latency',
+        },
+        groups: {
+          user: 'User',
+          client_key: 'Client key',
+          credential: 'Execution credential',
+          provider: 'Provider',
+          model: 'Model',
+          endpoint: 'Endpoint',
+          home_ip: 'Home node',
+          executor_type: 'Executor',
+          status_code: 'Status code',
+        },
+        metrics: {
+          request_count: 'Requests',
+          total_tokens: 'Total tokens',
+          total_amount: 'Cost',
+          failed_count: 'Failures',
+          avg_latency_ms: 'Avg latency',
+          p95_latency_ms: 'P95 latency',
+        },
+        empty: 'No ranked usage in this range.',
+      },
+      records: {
+        title: 'Request records',
+        range: '{{start}}-{{end}} of {{total}}',
+        emptyTitle: 'No request records',
+        emptyDescription: 'No records match the current filters.',
+        empty: 'No records match the current filters.',
+        unavailableTitle: 'Request records are unavailable',
+        unavailable: 'Request-level usage records are not exposed.',
+        errorTitle: 'Request records failed to load',
+        clearFilters: 'Clear filters',
+        pageSize: 'Rows',
+        previous: 'Previous',
+        next: 'Next',
+        ttft: 'TTFT {{value}}',
+        columnsButton: 'Customize columns',
+        columnsMenu: 'Visible columns',
+        sortColumn: 'Sort {{column}} by {{sort}}',
+        clearSortColumn: 'Clear {{column}} sort',
+        columns: {
+          time: 'Time',
+          status: 'Status',
+          model: 'Model',
+          client: 'Client',
+          credential: 'Credential',
+          tokens: 'Tokens',
+          performance: 'Performance',
+          cost: 'Cost',
+          request: 'Request',
+          actions: 'Actions',
+        },
+      },
+      requestLogs: {
+        title: 'Request log files',
+        range: '{{start}}-{{end}} of {{total}}',
+        searchPlaceholder: 'Search request ID, model, provider, or file',
+        emptyTitle: 'No request log files',
+        emptyDescription: 'No request logs match the current search.',
+        empty: 'No request logs match the current filters.',
+        clearSearch: 'Clear search',
+        inlineLog: 'Runtime inline log',
+        unavailableFile: 'No downloadable file for this request',
+        sizeBytes: '{{size}} bytes',
+        columns: {
+          time: 'Time',
+          request: 'Request ID',
+          model: 'Model',
+          homeIp: 'Home IP',
+          file: 'File',
+          size: 'Size',
+          actions: 'Actions',
+        },
+      },
+      detail: {
+        title: 'Request details',
+        loading: 'Loading usage record',
+        tokens: 'Token breakdown',
+        error: 'Error summary',
+        payload: 'Payload summary',
+        logs: 'Log excerpt',
+        related: 'Related data',
+        noLogExcerpt: 'No log excerpt was returned for this request.',
+        requestLogUnavailable: 'No downloadable request log is available for this record.',
+        fields: {
+          requestId: 'Request ID',
+          usageId: 'Usage ID',
+          status: 'Status',
+          homeIp: 'Home IP',
+          client: 'Client user',
+          clientKey: 'Client key',
+          credential: 'Execution credential',
+          authIndex: 'Auth index',
+          model: 'Model',
+          endpoint: 'Endpoint',
+          latency: 'Latency',
+          ttft: 'TTFT',
+          billing: 'Charged amount',
+          chargeId: 'Charge ID',
+        },
+        tokenFields: {
+          input: 'Input',
+          output: 'Output',
+          reasoning: 'Reasoning',
+          cacheRead: 'Cache read',
+          cacheCreate: 'Cache create',
+          total: 'Total',
+        },
+        payloadFields: {
+          method: 'Method',
+          stream: 'Stream',
+          messages: 'Messages',
+          tools: 'Tools',
+        },
+        relatedFields: {
+          requestLog: 'Request log',
+          requestLogHomeIp: 'Log Home IP',
+          downloadUrl: 'Download path',
+        },
+      },
+      credentials: {
+        title: 'Execution credential usage',
+        range: '{{start}}-{{end}} of {{total}}',
+        emptyTitle: 'No execution credential usage',
+        empty: 'No attributable execution credential usage in this range.',
+        unavailableTitle: 'Execution credential usage is unavailable',
+        unavailable: 'Execution credential usage aggregates are not exposed.',
+        errorTitle: 'Execution credential usage failed to load',
+        pageSize: 'Rows',
+        previous: 'Previous',
+        next: 'Next',
+        columnsButton: 'Customize columns',
+        columnsMenu: 'Visible columns',
+        sortColumn: 'Sort {{column}} {{direction}}',
+        clearSortColumn: 'Clear {{column}} sort',
+        sortDirections: {
+          desc: 'descending',
+          asc: 'ascending',
+        },
+        failedShort: 'failed',
+        deltaTooltip: '{{value}} compared with the previous period',
+        deltaLabel: '{{value}} compared with the previous period',
+        cacheRate: 'Cache {{value}}',
+        quotaUnavailable: 'No quota window',
+        quotaTokens: '{{used}} / {{limit}} tokens',
+        quotaWindowLabels: {
+          hours: '{{count}} hours',
+          days: '{{count}} days',
+          weekly: 'Weekly',
+          window: 'Window',
+        },
+        quotaModes: {
+          current: 'Current',
+          estimated: 'Estimated',
+        },
+        statuses: {
+          active: 'Active',
+          enabled: 'Enabled',
+          disabled: 'Disabled',
+          inactive: 'Inactive',
+          unavailable: 'Unavailable',
+          error: 'Error',
+          failed: 'Failed',
+          warning: 'Needs attention',
+          limited: 'Limited',
+          unknown: 'Unknown status',
+        },
+        columns: {
+          credential: 'Credential',
+          provider: 'Provider',
+          status: 'Source / status',
+          requests: 'Requests',
+          tokens: 'Tokens',
+          cost: 'Cost',
+          quota: 'Quota windows',
+          lastUsed: 'Last used',
+        },
+      },
+      activity: {
+        title: 'Request health timeline',
+        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        emptyTitle: 'No health timeline',
+        unavailable: 'Activity intervals are not available.',
+        status: {
+          healthy: 'Healthy',
+          warning: 'Warning',
+          degraded: 'Degraded',
+          failed: 'Failed',
+          empty: 'No traffic',
+        },
+      },
+      health: {
+        title: 'Health attribution',
+        summary: '{{count}} items · {{issues}} need attention · {{window}} window',
+        unavailableTitle: 'Health attribution is unavailable',
+        unavailable: 'Health attribution routes are not exposed.',
+        emptyTitle: 'No health attribution data',
+        empty: 'No health attribution data matches the current filters.',
+        successShort: 'success',
+        failedShort: 'failed',
+        avgLatency: 'avg {{value}}',
+        noError: 'No recent errors',
+        nextRetry: 'retry {{time}}',
+        providers: {
+          title: 'Provider health',
+        },
+        credentials: {
+          title: 'Credential health',
+        },
+        columns: {
+          target: 'Target',
+          status: 'Status',
+          recent: 'Recent window',
+          latency: 'Latency',
+          lastError: 'Latest error',
+        },
+        status: {
+          healthy: 'Healthy',
+          degraded: 'Degraded',
+          unavailable: 'Unavailable',
+          disabled: 'Disabled',
+          unknown: 'Unknown',
+        },
       },
       summary: {
         keys: 'Usage keys',
@@ -2283,9 +2961,10 @@ export const en = {
         title: 'API key usage',
         description:
           'Groups successful and failed requests by model provider, upstream Base URL, and API key.',
-        unavailable: 'The current runtime does not expose API key usage.',
-        empty:
-          'No API key usage records were returned. Confirm usage statistics are enabled and the runtime has handled requests.',
+        unavailableTitle: 'API key usage is unavailable',
+        unavailable: 'The API key usage route is not exposed.',
+        emptyTitle: 'No API key usage',
+        empty: 'No API key usage records in this range.',
         provider: 'Model provider',
         baseUrl: 'Base URL',
         key: 'Key',
@@ -2302,12 +2981,16 @@ export const en = {
         title: 'Runtime logs',
         description:
           'Read runtime logs with pagination. The table shows summaries; open details for full content and request metadata.',
-        unavailable: 'This runtime does not expose the runtime logs route.',
-        fileLoggingDisabled:
-          'File logging is disabled, so there are no runtime log files to read or clear.',
-        empty:
-          'No runtime log lines are available. Confirm file logging is enabled and the runtime has written logs.',
-        emptyPage: 'This page has no log records. Go back one page or sync again.',
+        unavailableTitle: 'Runtime logs are unavailable',
+        unavailable: 'The runtime logs route is not exposed.',
+        fileLoggingDisabledTitle: 'File logging is disabled',
+        fileLoggingDisabled: 'There are no runtime log files to read or clear.',
+        emptyTitle: 'No runtime logs',
+        empty: 'No runtime log lines in this range.',
+        filteredEmptyTitle: 'No matching runtime logs',
+        filteredEmpty: 'No runtime logs match the current filters.',
+        emptyPageTitle: 'No logs on this page',
+        emptyPage: 'Go back one page or sync again.',
         lineCount: '{{count}} lines',
         latest: 'Latest timestamp: {{time}}',
         latestUnavailable: 'Latest timestamp unavailable',
@@ -2322,6 +3005,37 @@ export const en = {
           line: 'Log line',
           summary: 'Summary',
           actions: 'Actions',
+        },
+        filters: {
+          homeIp: 'Home IP',
+          clientIp: 'Client IP',
+          requestId: 'Request ID',
+          level: 'Log level',
+          searchBy: 'Search by',
+          searchPlaceholder: 'Enter {{field}}',
+          dateRange: 'Time range',
+          dateRangePlaceholder: 'Select time range',
+          dateRangeSeparator: 'to',
+          clearDateRange: 'Clear',
+          after: 'Start time',
+          before: 'End time',
+          clear: 'Clear filters',
+          homeIpPlaceholder: 'Home IP',
+          clientIpPlaceholder: 'Client IP',
+          requestIdPlaceholder: 'Request ID',
+          searchFields: {
+            requestId: 'Request ID',
+            homeIp: 'Home IP',
+            clientIp: 'Client IP',
+          },
+          levels: {
+            all: 'All levels',
+            trace: 'Trace',
+            debug: 'Debug',
+            info: 'Info',
+            warn: 'Warn',
+            error: 'Error',
+          },
         },
         pagination: {
           range: '{{start}}-{{end}} of {{total}}',
@@ -2340,8 +3054,10 @@ export const en = {
         title: 'Error log files',
         description:
           'Lists error-*.log files generated when request logging is disabled, with file download support.',
-        unavailable: 'This runtime does not expose the error log file route.',
-        empty: 'No error log files were returned.',
+        unavailableTitle: 'Error log files are unavailable',
+        unavailable: 'The error log file route is not exposed.',
+        emptyTitle: 'No error log files',
+        empty: 'No error log files in this range.',
         meta: '{{size}} bytes · {{time}}',
         searchPlaceholder: 'Search log file name, press Enter',
         columns: {
@@ -2366,6 +3082,7 @@ export const en = {
         logsCleared: 'Logs cleared.',
         fileLoggingDisabled: 'File logging is disabled, so runtime logs cannot be cleared.',
         logDownloaded: 'Log downloaded.',
+        exportDownloaded: 'Usage export downloaded.',
       },
     },
     systemNodesPage: {
@@ -2426,7 +3143,7 @@ export const en = {
         },
       },
       config: {
-        empty: 'No config summary was returned.',
+        empty: 'No config summary yet.',
         title: 'Service config summary',
         fields: {
           debug: 'Debug mode',
@@ -2449,8 +3166,8 @@ export const en = {
         title: 'Node connections',
         addNode: 'Add node',
         unavailable: 'The current {{runtime}} runtime does not expose the node query route.',
-        empty: 'No node connection records were returned.',
-        emptySupported: 'The node route is available, but no connection records were returned.',
+        empty: 'No node connection records yet.',
+        emptySupported: 'The node route is available, but there are no connection records yet.',
         connectedTime: 'Connected at {{time}}',
         enrollment: {
           title: 'Node enrollment token',
@@ -2514,6 +3231,242 @@ export const en = {
         nodeJwtCopied: 'Credential copied to clipboard.',
       },
     },
+    pluginPage: {
+      disconnected: {
+        title: 'Connect a Management API runtime',
+        description:
+          'Plugin store data and rollout reports come from the Management API. Connect a runtime before installing, updating, or uninstalling plugins.',
+        action: 'Connect runtime',
+      },
+      unsupported: {
+        title: 'Plugin store is unavailable',
+        description: 'This backend does not expose the plugin store routes required by this page.',
+      },
+      error: {
+        title: 'Unable to load plugins',
+        description:
+          'Check the Management API endpoint, management key, and plugin store registry access.',
+      },
+      header: {
+        updatedAt: 'Last synced: {{time}}',
+        nodes: 'Node reports: {{status}}',
+      },
+      actions: {
+        refresh: 'Sync data',
+        syncing: 'Syncing',
+        clearFilters: 'Clear filters',
+        details: 'Details',
+        install: 'Install',
+        update: 'Update',
+        uninstall: 'Uninstall',
+        authRequiredHint: 'Store authentication is required before this plugin can be installed.',
+        configureAuth: 'Configure store auth',
+      },
+      verdict: {
+        ready: {
+          title: 'Plugin store is ready',
+          badge: 'Ready',
+          description: 'Registry data is loaded and no required plugin rollout issue is visible.',
+        },
+        unsupported: {
+          title: 'Plugin store is not supported',
+          badge: 'Unsupported',
+          description: 'The connected backend does not expose plugin store management routes.',
+        },
+        storeError: {
+          title: 'Plugin store could not be loaded',
+          badge: 'Failed',
+          description:
+            'The plugin store request failed. Resolve the request error before installing plugins.',
+        },
+        sourceDegraded: {
+          title: 'Plugin store is partially loaded',
+          badge: 'Source issue',
+          description:
+            'At least one registry source failed, but available sources can still be reviewed.',
+        },
+        globalDisabled: {
+          title: 'Plugins are installed but globally disabled',
+          badge: 'Disabled',
+          description:
+            'The store is available, but plugins.enabled is false. Installed plugins will not be effective until plugins are enabled in runtime config.',
+        },
+        rolloutFailed: {
+          title: 'Plugin rollout needs attention',
+          badge: 'Failed report',
+          description:
+            'At least one node reported a plugin task failure. Review rollout details before changing more plugins.',
+        },
+        rolloutPending: {
+          title: 'Plugin rollout is still being observed',
+          badge: 'Pending report',
+          description:
+            'The runtime expects plugin reports, but one or more nodes have missing or partial reports.',
+        },
+        updatesAvailable: {
+          title: 'Plugin updates are available',
+          badge: 'Updates',
+          description:
+            'Installed plugins are loaded, and at least one registry entry has a newer version.',
+        },
+      },
+      summary: {
+        global: 'Global plugin state',
+        pluginsDir: 'Artifact directory: {{dir}}',
+        available: 'Available plugins',
+        sources: '{{count}} registry sources',
+        installed: 'Installed',
+        effectiveHint: 'Installed entries with pinned store manifests',
+        updates: 'Updates',
+        updatesHint: 'Installed plugins with newer registry versions',
+        authRequired: 'Auth blockers',
+        authHint: 'Plugins waiting for configured store auth',
+        rollout: 'Cluster rollout',
+        rolloutHint: 'Self-reported node plugin observations',
+      },
+      sourceErrors: {
+        title: 'Some plugin registry sources failed',
+      },
+      nodeReports: {
+        partial: 'Plugin store loaded, but node plugin reports could not be read: {{message}}',
+      },
+      table: {
+        title: 'Plugin store',
+        description:
+          'Install, update, uninstall, and inspect store-installed plugins. Cluster readiness is based on node reports when available.',
+      },
+      filters: {
+        search: 'Search plugins',
+        status: 'Status filter',
+        source: 'Source filter',
+        all: 'All',
+        installed: 'Installed',
+        notInstalled: 'Not installed',
+        updates: 'Updates',
+        authRequired: 'Auth required',
+        allSources: 'All sources',
+      },
+      columns: {
+        plugin: 'Plugin',
+        source: 'Source',
+        version: 'Version',
+        state: 'State',
+        auth: 'Auth',
+        rollout: 'Rollout',
+        actions: 'Actions',
+      },
+      empty: {
+        title: 'No plugin entries',
+        description: 'No registry entries were returned by the connected backend.',
+        noMatchesTitle: 'No matching plugins',
+        noMatchesDescription: 'Adjust search text, status filter, or source filter.',
+      },
+      badges: {
+        installed: 'Installed',
+        notInstalled: 'Not installed',
+        configured: 'Configured',
+        notConfigured: 'Not configured',
+        registered: 'Registered',
+        notRegistered: 'Not registered',
+        effective: 'Effective',
+        inactive: 'Inactive',
+        authConfigured: 'Auth configured',
+        authRequired: 'Auth required',
+        authNotRequired: 'No auth',
+        globalEnabled: 'Global plugins enabled',
+        globalDisabled: 'Global plugins disabled',
+        reportRequired: 'Reports required',
+        update: 'Update',
+      },
+      status: {
+        unknown: 'Unknown',
+        notAvailable: 'N/A',
+        available: 'Available',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        required: 'Required',
+        notRequired: 'Not required',
+      },
+      rollout: {
+        reported: 'Reported',
+        pending: 'Pending',
+        failed: 'Failed',
+        noReports: 'No report',
+        notInstalled: 'Not installed',
+      },
+      operationNotice: {
+        title: 'Recent plugin change: {{name}}',
+        installSynced:
+          'Store state refreshed after the install/update request. Review rollout reports before treating the plugin as fully ready.',
+        installPending:
+          'The install/update request changed store state, but node rollout reports are still pending or incomplete.',
+        deleteSynced:
+          'Store state refreshed after the uninstall request. Existing node reports may remain until nodes report again.',
+        deletePending:
+          'The uninstall request created delete work, but node reports have not fully converged yet.',
+      },
+      fields: {
+        pluginId: 'Plugin ID',
+        source: 'Source',
+        author: 'Author',
+        repository: 'Repository',
+        homepage: 'Homepage',
+        license: 'License',
+        installType: 'Install type',
+        availableVersion: 'Available version',
+        installedVersion: 'Installed version',
+        platforms: 'Platforms',
+      },
+      detail: {
+        identity: 'Identity',
+        state: 'Runtime state',
+        version: 'Version and compatibility',
+        rollout: 'Rollout reports',
+        reportMeta: 'Phase: {{phase}} · Updated: {{time}} · Plugin state: {{status}}',
+        noReports: 'No node report currently references this plugin.',
+      },
+      version: {
+        updateAvailable: '{{from}} -> {{to}}',
+      },
+      installDialog: {
+        installTitle: 'Install {{name}}?',
+        updateTitle: 'Update {{name}}?',
+        description:
+          'Installation writes a pinned store manifest into runtime config. Nodes apply the change and report plugin status asynchronously.',
+        sourceLabel: 'Registry source',
+        sourceHint:
+          'This plugin ID appears in multiple registry sources. Pick the source to install from.',
+        sourceRequiredError:
+          'The backend requires a registry source for this plugin ID. Select the source and retry.',
+        versionLabel: 'Version',
+        latest: 'Latest available version',
+        versionHint:
+          'Leave blank to use the registry default, or enter a version/tag accepted by the backend.',
+        thirdPartyTitle: 'Third-party plugin risk review',
+        thirdPartyDescription:
+          'This plugin is not from the official router-for-me repository. Plugin code can run inside Home or CPA nodes. Confirm the source before installing.',
+        confirmLabel: 'Type {{token}} to confirm',
+        reportHint:
+          'No node report exists for this plugin yet. After the change, wait for node rollout status before treating it as ready.',
+      },
+      uninstallDialog: {
+        title: 'Uninstall plugin?',
+        description:
+          'Uninstalling {{name}} ({{id}}) removes the store manifest and creates delete tasks for all CPA nodes.',
+        warning:
+          'This is a cluster-wide operation. Existing node reports may remain until nodes report again or are cleaned up.',
+      },
+      toast: {
+        installStarted: 'Install started for {{name}}.',
+        updateStarted: 'Update started for {{name}}.',
+        uninstallStarted: 'Uninstall started for {{name}}.',
+        restartRequired:
+          'A restart or config apply may be required before the plugin is effective.',
+        globalDisabled: 'Plugins are globally disabled, so the installed plugin is not active yet.',
+        reportPending: 'Plugin config changed, but node rollout status is still pending.',
+        deletePending: 'Delete task was created, but node reports have not fully converged yet.',
+      },
+    },
     placeholder: {
       phase: 'Phase 0 scaffold',
       dashboard: {
@@ -2557,9 +3510,9 @@ export const en = {
         itemTwo: 'Keep the product UI on the single visual editing path.',
       },
       usageLogs: {
-        title: 'Usage & Logs',
+        title: 'Observability Data',
         description:
-          'Usage and logs will be capability-aware analysis pages that degrade cleanly when Home cluster does not expose runtime log routes.',
+          'Usage, call diagnostics, and runtime log pages will degrade cleanly when Home cluster does not expose the corresponding routes.',
         itemOne:
           'Use GET /api-key-usage, GET /logs, DELETE /logs, and request error log routes when available.',
         itemTwo:

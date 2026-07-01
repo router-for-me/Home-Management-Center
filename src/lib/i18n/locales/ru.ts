@@ -36,7 +36,11 @@ export const ru = {
       users: 'Пользователи и доступ',
       billing: 'Финансы и отчеты',
       config: 'Системная конфигурация',
-      usageLogs: 'Использование и журналы',
+      plugins: 'Плагины',
+      usage: 'Использование',
+      diagnostics: 'Диагностика вызовов',
+      logs: 'Runtime logs',
+      usageLogs: 'Данные наблюдаемости',
       systemNodes: 'Сведения о системе',
     },
     navigationGroups: {
@@ -54,7 +58,11 @@ export const ru = {
       users: 'Пользователи и доступ',
       billing: 'Биллинг и отчеты',
       config: 'Основные настройки шлюза',
-      usageLogs: 'Запросы и журналы',
+      plugins: 'Магазин плагинов и rollout кластера',
+      usage: 'Статистика использования и затрат',
+      diagnostics: 'Состояние вызовов и журналы запросов',
+      logs: 'Gateway runtime и request error logs',
+      usageLogs: 'Usage, диагностика, logs',
       systemNodes: 'Runtime и диагностика',
     },
     sidebar: {
@@ -456,7 +464,13 @@ export const ru = {
       actions: {
         refresh: 'Обновить текущий вид',
       },
+      loading: {
+        overviewTitle: 'Загрузка обзора биллинга',
+        overviewDescription:
+          'Читаем из Management API финансовые итоги, метрики использования, тренды и рейтинги.',
+      },
       tabs: {
+        label: 'Разделы биллинга',
         overview: 'Обзор',
         charges: 'Списания',
         balanceRecords: 'Баланс',
@@ -752,6 +766,10 @@ export const ru = {
         unavailable: 'Недоступно',
         notAvailableShort: 'Н/Д',
       },
+      drillDown: {
+        open: 'Открыть детали: {{title}}',
+        openIssue: 'Открыть страницу для {{title}}',
+      },
       metrics: {
         providers: {
           title: 'Доступные модельные ключи',
@@ -768,6 +786,74 @@ export const ru = {
         nodes: {
           title: 'Runtime узлы',
           detail: 'Узлов от текущего сервиса: {{count}}',
+        },
+      },
+      operatingKpis: {
+        tokens: {
+          title: 'Общий расход токенов',
+          detail: 'Активных моделей: {{value}}',
+          unavailable: 'Пока нет использования',
+        },
+        requests: {
+          title: 'Всего запросов',
+          detail: 'Неудачных запросов: {{value}}',
+          unavailable: 'Пока нет запросов',
+        },
+        successRate: {
+          title: 'Успешность запросов',
+          detail: 'Доля ошибок: {{value}}',
+          unavailable: 'Пока нет успешности',
+        },
+        activeClientKeys: {
+          title: 'Активные ключи доступа',
+          detail: 'Использовано execution credentials: {{value}}',
+          unavailable: 'Пока нет активных ключей',
+        },
+      },
+      rankPreview: {
+        requestsTokens: '{{requests}} запросов · {{tokens}} токенов',
+        failed: 'Ошибок: {{count}}',
+      },
+      keyStatus: {
+        title: 'Состояние ключей',
+        summary: 'Активных: {{active}} · тихих: {{quiet}} · всего: {{total}}',
+        unavailable: 'В этом периоде нет вызовов по ключам.',
+        emptyTop: 'Рейтинга ключей пока нет.',
+        action: 'Смотреть usage ключей',
+      },
+      modelUsage: {
+        title: 'Распределение моделей',
+        summary: 'Моделей с вызовами за период: {{count}}',
+        unavailable: 'В этом периоде нет вызовов моделей.',
+        emptyTop: 'Рейтинга моделей пока нет.',
+        action: 'Смотреть usage',
+      },
+      usageConsumptionTrend: {
+        title: 'Общий тренд потребления',
+        description: 'Потребление токенов за текущий период usage.',
+        summary: '{{buckets}} интервалов · всего {{tokens}} токенов',
+        action: 'Смотреть usage запросов',
+        tooltip: {
+          tokens: 'Расход токенов',
+          tokenValue: '{{value}} токенов',
+          requests: 'Запросы',
+          pointAria: '{{time}}, расход токенов {{tokens}}, запросов {{requests}}',
+        },
+      },
+      usageActivity: {
+        title: 'Состояние запросов',
+        description:
+          'Последние интервалы использования: активность запросов, доля успеха и распределение отказов.',
+        summary:
+          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+        action: 'Смотреть диагностику',
+        bucketTitle: '{{label}}: запросов {{requests}} · успех {{successRate}}',
+        status: {
+          healthy: 'Healthy',
+          warning: 'Has failures',
+          degraded: 'Degraded',
+          failed: 'Failed',
+          empty: 'No traffic',
         },
       },
       quickActions: {
@@ -798,9 +884,10 @@ export const ru = {
         title: 'Подключение модельных сервисов',
         description:
           'Проверьте общее, доступное и отключенное количество ключей для каждого типа модельного сервиса.',
+        action: 'Управлять сервисами',
         emptyTitle: 'Модельные сервисы не настроены',
         emptyDescription:
-          'Модельные ключи не возвращены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
+          'Модельные ключи пока не настроены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
         emptySupportedProviders:
           'Поддерживаются Gemini, Claude, Codex, Vertex и OpenAI-compatible сервисы.',
         configureAction: 'Настроить модельный сервис',
@@ -818,6 +905,7 @@ export const ru = {
       config: {
         title: 'Ключевые переключатели',
         description: 'Настройки, влияющие на журналы, статистику использования и маршрутизацию.',
+        action: 'Исправить конфиг',
       },
       configChecks: {
         requestLog: 'Журнал запросов',
@@ -842,7 +930,7 @@ export const ru = {
         title: 'Источники учетных данных',
         description:
           'Записи аккаунтов, сгруппированные по способу хранения, включая OAuth-вход и файлы учетных данных.',
-        empty: 'Записи учетных данных аккаунтов не возвращены.',
+        empty: 'Записей учетных данных аккаунтов пока нет.',
       },
       credentialSourceNames: {
         file: 'Файл',
@@ -862,6 +950,7 @@ export const ru = {
         clientKeys: 'Клиентские ключи',
         authFiles: 'Учетные данные аккаунтов',
         nodes: 'Узлы',
+        usageOverview: 'Usage overview',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
@@ -880,6 +969,11 @@ export const ru = {
         title: 'Не удалось загрузить данные поставщиков моделей',
         description: 'Проверьте management endpoint, key и маршруты поставщиков моделей.',
         retry: 'Повторить',
+      },
+      loading: {
+        title: 'Загрузка поставщиков моделей',
+        description:
+          'Читаем из Management API ключи модельных сервисов, группы поставщиков и частичные backend-проблемы.',
       },
       header: {
         eyebrow: 'Рабочая область поставщиков моделей',
@@ -905,6 +999,7 @@ export const ru = {
       categories: {
         title: 'Поставщики моделей',
         activeCount: '{{active}} / {{total}} активных',
+        issue: 'Есть проблема',
       },
       providerNames: {
         gemini: 'Gemini',
@@ -1112,6 +1207,11 @@ export const ru = {
         description: 'Проверьте management endpoint, key и auth-files route.',
         retry: 'Повторить',
       },
+      loading: {
+        title: 'Загрузка credentials',
+        description:
+          'Читаем OAuth и file-backed credential resources перед включением операций с credentials.',
+      },
       header: {
         eyebrow: 'Рабочая область credentials',
         title: 'OAuth и file-backed credentials',
@@ -1290,7 +1390,7 @@ export const ru = {
       detail: {
         title: 'Детали credential',
         empty: 'Выберите credential, чтобы посмотреть metadata и действия.',
-        noModels: 'Для этого credential модели не вернулись.',
+        noModels: 'Для этого credential пока нет моделей.',
         modelsTitle: 'Доступные модели',
         modelsDescription: 'Запросить у runtime модели, доступные для этого credential.',
         modelCount: 'Загружено моделей: {{count}}.',
@@ -1368,6 +1468,11 @@ export const ru = {
         title: 'Не удалось загрузить access keys',
         description: 'Проверьте management endpoint, key и route /api-keys.',
         retry: 'Повторить',
+      },
+      loading: {
+        title: 'Загрузка ключей доступа',
+        description:
+          'Читаем из Management API клиентские ключи доступа и связанные данные владельцев.',
       },
       header: {
         eyebrow: 'Контроль клиентского доступа',
@@ -1486,6 +1591,11 @@ export const ru = {
         description: 'Проверьте management endpoint, management key и маршрут /users.',
         retry: 'Повторить',
       },
+      loading: {
+        title: 'Загрузка пользователей и доступа',
+        description:
+          'Читаем из Management API пользователей, владельцев клиентских ключей, credential scopes и model scopes.',
+      },
       header: {
         eyebrow: 'Пользователи и доступ',
         title: 'Пользователи и доступ',
@@ -1496,6 +1606,7 @@ export const ru = {
         activeUsers: 'Активных пользователей: {{count}}',
         keys: 'Клиентских ключей: {{count}}',
         assignedKeys: 'Назначенных ключей: {{count}}',
+        unassignedKeys: 'Неназначенных ключей: {{count}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
@@ -1816,6 +1927,11 @@ export const ru = {
         title: 'Не удалось загрузить системную конфигурацию',
         description: 'Проверьте management endpoint, management key и маршруты конфигурации.',
         retry: 'Повторить',
+      },
+      loading: {
+        title: 'Загрузка конфигурации',
+        description:
+          'Читаем текущую runtime-конфигурацию перед открытием визуальной рабочей области.',
       },
       header: {
         title: 'Рабочая область конфигурации',
@@ -2162,7 +2278,7 @@ export const ru = {
         searchPlaceholder: 'Искать model ID, name или owner',
         selectedCount: 'Выбрано моделей: {{count}}',
         clearChannel: 'Очистить channel',
-        emptyModels: 'Для этого channel не возвращены model definitions.',
+        emptyModels: 'Для этого channel пока нет model definitions.',
         emptyFiltered: 'Нет подходящих моделей.',
         customTitle: 'Custom provider rules',
         customDescription:
@@ -2197,127 +2313,697 @@ export const ru = {
         validationFailed: 'Сначала исправьте ошибки валидации.',
       },
     },
-    usageLogsPage: {
+    usagePage: {
       disconnected: {
         title: 'Подключите management runtime',
         description:
-          'Usage и logs загружаются из Management API. Подключите runtime, чтобы смотреть статистику запросов и журналы.',
+          'Usage данные загружаются из Management API. Подключите runtime, чтобы смотреть requests, tokens, cost и credential attribution.',
         action: 'Подключить runtime',
       },
       error: {
-        title: 'Не удалось загрузить usage и logs',
-        description: 'Проверьте management endpoint, management key и маршруты журналов.',
+        title: 'Не удалось загрузить usage',
+        description: 'Проверьте management endpoint, management key и доступность usage API.',
+        retry: 'Повторить',
+      },
+      verdict: {
+        ready: {
+          title: 'Данные использования готовы',
+          badge: 'Для анализа',
+          description:
+            'Загружены обзор запросов, записи запросов, агрегированные рейтинги и привязка учетных данных выполнения; их можно использовать для оценки запросов, токенов, стоимости и задержки.',
+        },
+        empty: {
+          title: 'Пока нет использования запросов',
+          badge: 'Нет данных',
+          description:
+            'Возможности usage доступны, но в текущем диапазоне нет записей запросов. Измените диапазон или обновите после появления трафика.',
+        },
+        partial: {
+          title: 'Использование загружено частично',
+          badge: 'Частично',
+          description:
+            'Часть областей использования не загрузилась. Страница продолжит показывать доступные факты использования.',
+        },
+        disabled: {
+          title: 'Статистика использования отключена',
+          badge: 'Отключено',
+          description:
+            'Включите статистику использования в системной конфигурации, чтобы непрерывно агрегировать использование запросов.',
+        },
+        unsupported: {
+          title: 'Использование недоступно',
+          badge: 'Недоступно',
+          description:
+            'Текущий runtime не предоставляет возможности учета запросов, поэтому страница не показывает расчетные данные.',
+        },
+      },
+      unavailable: {
+        title: 'Usage capabilities недоступны',
+        description: '{{mode}} не предоставил request usage routes.',
+      },
+    },
+    callDiagnosticsPage: {
+      disconnected: {
+        title: 'Подключите management runtime',
+        description:
+          'Call diagnostics загружаются из Management API. Подключите runtime, чтобы смотреть realtime state, health attribution и request log files.',
+        action: 'Подключить runtime',
+      },
+      error: {
+        title: 'Не удалось загрузить call diagnostics',
+        description:
+          'Проверьте management endpoint, management key и доступность API call diagnostics.',
+        retry: 'Повторить',
+      },
+      verdict: {
+        ready: {
+          title: 'Call diagnostics готовы',
+          badge: 'Для расследования',
+          description:
+            'Загружены realtime state, request health, health attribution или request log files для расследования на уровне запроса.',
+        },
+        partial: {
+          title: 'Call diagnostics загружены частично',
+          badge: 'Частично',
+          description:
+            'Некоторые области diagnostics не загрузились. Сначала используйте доступные realtime state, health attribution и request log files.',
+        },
+        disabled: {
+          title: 'Статистика использования отключена',
+          badge: 'Отключено',
+          description:
+            'Realtime state и health attribution зависят от usage statistics. Доступность request log files по-прежнему зависит от file logging.',
+        },
+        unsupported: {
+          title: 'Call diagnostics недоступны',
+          badge: 'Недоступно',
+          description:
+            '{{mode}} не вернул capabilities для realtime state, health attribution или request log files.',
+        },
+      },
+      unavailable: {
+        title: 'Call diagnostics capabilities недоступны',
+        description:
+          '{{mode}} не предоставил routes для realtime state, health attribution или request log files.',
+      },
+      empty: {
+        title: 'Нет данных call diagnostics',
+        description:
+          'В текущем диапазоне фильтров нет realtime state, health attribution или request log files.',
+      },
+    },
+    logsPage: {
+      disconnected: {
+        title: 'Подключите management runtime',
+        description:
+          'Runtime logs загружаются из Management API. Подключите runtime, чтобы смотреть gateway logs и request error files.',
+        action: 'Подключить runtime',
+      },
+      error: {
+        title: 'Не удалось загрузить runtime logs',
+        description: 'Проверьте management endpoint, management key и доступность log API.',
+        retry: 'Повторить',
+      },
+      verdict: {
+        ready: {
+          title: 'Runtime logs доступны',
+          badge: 'Читаются',
+          description:
+            'Таблица runtime logs и файлы request error logs доступны для расследования запросов.',
+        },
+        partial: {
+          title: 'Runtime logs загружены частично',
+          badge: 'Частично',
+          description:
+            'Некоторые области logs не загрузились. Используйте доступные runtime facts и проверьте ошибки.',
+        },
+        disabled: {
+          title: 'File logging отключен',
+          badge: 'Отключено',
+          description:
+            'Log route существует, но file logging выключен. Включите его перед чтением или очисткой runtime logs.',
+        },
+        errorFilesOnly: {
+          title: 'Доступны только request error logs',
+          badge: 'Error files',
+          description:
+            '{{mode}} вернул файлы request error logs, но не предоставил читаемые runtime logs.',
+        },
+        unsupported: {
+          title: 'Log routes недоступны',
+          badge: 'Не поддерживается',
+          description: '{{mode}} не вернул capabilities для runtime logs или request error logs.',
+        },
+      },
+    },
+    usageLogsPage: {
+      disconnected: {
+        title: 'Подключите runtime управления',
+        description:
+          'Данные наблюдаемости загружаются из Management API. Подключите runtime, чтобы смотреть использование, диагностику вызовов и журналы runtime.',
+        action: 'Подключить runtime',
+      },
+      error: {
+        title: 'Не удалось загрузить данные наблюдаемости',
+        description: 'Проверьте management endpoint, management key и маршруты наблюдаемости.',
         retry: 'Повторить',
       },
       header: {
-        title: 'Usage & Logs',
+        title: 'Данные наблюдаемости',
         description:
-          'Просмотр счетчиков запросов model services, API key usage, runtime logs и скачиваемых request error logs.',
+          'Просмотр использования запросов, диагностики вызовов, журналов runtime и скачиваемых файлов журналов.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
+        exportCsv: 'Экспорт CSV',
+        exportFilteredCsv: 'Экспорт',
+        exportUnsupported: 'Экспорт недоступен',
         clearLogs: 'Очистить журналы',
         download: 'Скачать',
-        downloadRequestLog: 'Скачать request log',
+        downloadRequestLog: 'Скачать журнал запроса',
         viewLogDetail: 'Подробнее',
+        viewRecordDetail: 'Детали',
       },
       capabilities: {
-        usage: 'Usage stats',
-        logs: 'Runtime logs',
-        requestErrorLogs: 'Error logs',
+        usageOverview: 'Сводка использования',
+        usageRecords: 'Записи использования',
+        usageAggregates: 'Агрегаты',
+        usageExport: 'Экспорт',
+        usageProviderHealth: 'Состояние провайдеров',
+        usageCredentialHealth: 'Состояние учетных данных',
+        usageRealtime: 'Реальное время',
+        requestLogIndex: 'Файлы журналов запросов',
+        logs: 'Журналы runtime',
+        requestErrorLogs: 'Журналы ошибок',
       },
       unavailable: {
-        title: 'Этот runtime не предоставляет маршруты usage и logs',
+        title: 'Этот runtime не предоставляет маршруты наблюдаемости',
         description:
-          '{{mode}} не предоставляет runtime log или usage query routes. Страница показывает состояние capability без выдуманных данных.',
+          '{{mode}} не предоставляет маршруты использования, диагностики или журналов runtime. Страница показывает состояние возможностей без выдуманных данных.',
       },
       verdict: {
         ready: {
-          title: 'Данные usage синхронизированы',
-          badge: 'Можно анализировать',
+          title: 'Данные наблюдаемости готовы',
+          badge: 'Для диагностики',
           description:
-            'Runtime вернул агрегаты API key usage для оценки объема запросов model services, ошибок и распределения по провайдерам.',
-        },
-        idle: {
-          title: 'Usage statistics доступны, запросов пока нет',
-          badge: 'Нет данных',
-          description:
-            'Runtime предоставляет usage routes, но не вернул строки API key usage. Синхронизируйте снова после обработки трафика.',
+            'Runtime вернул возможности использования, диагностики или журналов для анализа и расследования на уровне запроса.',
         },
         disabled: {
-          title: 'Usage statistics отключены',
+          title: 'Статистика использования отключена',
           badge: 'Отключено',
           description:
-            'Runtime предоставляет usage routes, но usage-statistics-enabled отключен в config. Включите его для постоянной агрегации request usage.',
+            'Runtime предоставляет маршруты использования, но usage-statistics-enabled отключен в config. Включите его для постоянной агрегации использования запросов.',
         },
         partial: {
-          title: 'Данные usage синхронизированы частично',
+          title: 'Данные использования синхронизированы частично',
           badge: 'Частично',
           description:
-            'Страница продолжит показывать загруженные usage facts. Проверьте сбойные области перед полной оценкой.',
+            'Страница продолжит показывать загруженные факты использования. Проверьте сбойные области перед полной оценкой.',
         },
-        limited: {
-          title: 'Данные usage ограничены',
-          badge: 'Ограничено',
+        legacy: {
+          title: 'Доступно только старое использование API-ключей',
+          badge: 'Старый режим',
           description:
-            '{{mode}} не вернул API key usage aggregates, поэтому для расследования доступны только logs и error files.',
+            '{{mode}} вернул только старый маршрут использования API-ключей. Токены, расход, задержка и атрибуция исполнительных учетных данных не показываются как факты использования.',
+        },
+        logsOnly: {
+          title: 'Доступны только маршруты журналов',
+          badge: 'Только журналы',
+          description:
+            '{{mode}} не вернул структурированные маршруты использования. Используйте журналы runtime и файлы ошибок для расследования.',
         },
         unsupported: {
-          title: 'Этот runtime не поддерживает usage routes',
+          title: 'Этот runtime не поддерживает маршруты использования',
           badge: 'Не поддерживается',
           description:
-            '{{mode}} не открывает usage или log routes. Capability state остается видимым до появления backend observability APIs.',
+            '{{mode}} не открывает маршруты использования, диагностики или журналов runtime. Состояние возможностей остается видимым до появления backend API наблюдаемости.',
         },
       },
       issues: {
         title: 'Часть данных не загрузилась',
       },
       issueScopes: {
-        apiKeyUsage: 'Usage stats',
-        logs: 'Runtime logs',
-        requestErrorLogs: 'Error logs',
+        apiKeyUsage: 'Статистика использования',
+        usageOverview: 'Сводка использования',
+        usageRecords: 'Записи использования',
+        usageAggregates: 'Агрегаты использования',
+        usageRecordDetails: 'Детали использования',
+        usageExport: 'Экспорт использования',
+        usageProviderHealth: 'Состояние провайдеров',
+        usageCredentialHealth: 'Состояние учетных данных',
+        usageRealtime: 'Снимок реального времени',
+        requestLogIndex: 'Файлы журналов запросов',
+        logs: 'Журналы runtime',
+        requestErrorLogs: 'Журналы ошибок',
         clearLogs: 'Очистить журналы',
       },
+      filters: {
+        range: 'Диапазон',
+        status: 'Статус',
+        provider: 'Провайдер',
+        model: 'Модель',
+        credentialType: 'Тип учетных данных',
+        homeIp: 'Home-узел',
+        endpoint: 'Эндпоинт',
+        executorType: 'Тип исполнителя',
+        statusCode: 'Код статуса',
+        requestId: 'Request ID',
+        user: 'Пользователь',
+        clientKey: 'Клиентский ключ',
+        credentialId: 'Credential ID',
+        authIndex: 'Auth Index',
+        minLatencyMs: 'Мин. задержка',
+        maxLatencyMs: 'Макс. задержка',
+        minAmount: 'Мин. расход',
+        maxAmount: 'Макс. расход',
+        sort: 'Сортировка',
+        advanced: 'Расширенные фильтры',
+        hideAdvanced: 'Скрыть расширенные фильтры',
+        searchPlaceholder: 'Запрос / пользователь / модель',
+        requestIdPlaceholder: 'Request ID',
+        userPlaceholder: 'Пользователь, user ID или IP',
+        clientKeyPlaceholder: 'Клиентский ключ или метка',
+        credentialIdPlaceholder: 'Credential ID или имя',
+        authIndexPlaceholder: 'Auth Index',
+        minLatencyPlaceholder: 'Мин. задержка ms',
+        maxLatencyPlaceholder: 'Макс. задержка ms',
+        minAmountPlaceholder: 'Мин. расход',
+        maxAmountPlaceholder: 'Макс. расход',
+        rangeInvalid: 'Минимум не должен превышать максимум.',
+        customFrom: 'Дата начала',
+        customTo: 'Дата окончания',
+        anyProvider: 'Все провайдеры',
+        anyModel: 'Все модели',
+        anyCredentialType: 'Все типы учетных данных',
+        anyHomeIp: 'Все Home-узлы',
+        anyEndpoint: 'Все эндпоинты',
+        anyExecutorType: 'Все исполнители',
+        anyStatusCode: 'Все коды статуса',
+        ranges: {
+          last4h: 'Последние 4 часа',
+          last12h: 'Последние 12 часов',
+          last24h: 'Последние 24 часа',
+          today: 'Сегодня',
+          yesterday: 'Вчера',
+          last7d: 'Последние 7 дней',
+          last30d: 'Последние 30 дней',
+          last90d: 'Последние 90 дней',
+          custom: 'Пользовательский диапазон',
+        },
+        statuses: {
+          all: 'Все статусы',
+          success: 'Успешно',
+          failed: 'Ошибка',
+        },
+        sorts: {
+          timestamp_desc: 'Сначала новые',
+          timestamp_asc: 'Сначала старые',
+          failed_first: 'Сначала ошибки',
+          tokens_desc: 'Больше токенов',
+          tokens_asc: 'Меньше токенов',
+          cost_desc: 'Больше расход',
+          cost_asc: 'Меньше расход',
+          latency_desc: 'Больше задержка',
+          latency_asc: 'Меньше задержка',
+        },
+      },
+      credentialTypes: {
+        provider_api_key: 'Ключ провайдера',
+        oauth: 'OAuth',
+        file_auth: 'Файловая авторизация',
+        vertex: 'Vertex',
+        unknown: 'Неизвестно',
+      },
+      kpi: {
+        systemHealth: 'Состояние системы',
+        requests: 'Запросы',
+        cost: 'Расход',
+        tokens: 'Всего токенов',
+        amountValue: '{{value}} credits',
+        emptyTitle: 'Пока нет использования',
+        emptyDescription: 'В текущем диапазоне нет запросов для сводки.',
+        healthMetrics: {
+          rpm: 'RPM',
+          tpm: 'TPM',
+          errorRate: 'Доля ошибок',
+          p50Latency: 'Задержка P50',
+          attention: 'Требует внимания',
+        },
+      },
+      realtime: {
+        title: 'Состояние в реальном времени',
+        updatedAt: 'Обновлено {{time}}',
+        window: 'Окно {{window}}',
+        bucket: 'Интервал {{bucket}}',
+        groupBy: 'Группировка: {{group}}',
+        latencyDistribution: 'Распределение задержки',
+        emptyTitle: 'Нет данных реального времени',
+        empty: 'В текущем окне нет диагностических данных реального времени.',
+        metrics: {
+          rpm: 'RPM',
+          tpm: 'TPM',
+          errorRate: 'Доля ошибок',
+        },
+      },
+      trend: {
+        title: 'Динамика токенов',
+        emptyTitle: 'Нет данных тренда',
+        unavailable: 'В текущем диапазоне нет данных тренда.',
+        overlay: {
+          requests: 'Запросы',
+          cost: 'Расход',
+        },
+        tokenSeries: {
+          input: 'Ввод',
+          output: 'Вывод',
+          cache: 'Кэш',
+          reasoning: 'Рассуждение',
+        },
+      },
+      costBreakdown: {
+        title: 'Структура расходов',
+        totalCost: 'Общий расход',
+        blendedRate: 'Смешанная ставка',
+        perMillion: '{{value}} / 1M токенов',
+        itemDetail: '{{tokens}} токенов · {{basis}}',
+        itemBasis: 'Расчетная база: {{basis}}',
+        billingBasis: {
+          current: 'Текущая',
+          estimated: 'Оценка',
+        },
+        emptyTitle: 'Нет структуры расходов',
+        unavailable: 'В текущем диапазоне нет атрибутированной структуры расходов.',
+        categories: {
+          input: 'Ввод',
+          output: 'Вывод',
+          cache: 'Кэш',
+          reasoning: 'Рассуждение',
+          request: 'Запрос',
+          other: 'Другое',
+        },
+      },
+      rankings: {
+        users: 'Рейтинг пользователей',
+        clientKeys: 'Рейтинг клиентских ключей',
+        credentials: 'Рейтинг учетных данных',
+        models: 'Рейтинг моделей',
+        providers: 'Рейтинг провайдеров',
+        errors: 'Рейтинг ошибок',
+        topN: 'Топ-5',
+        viewDetail: 'Все',
+        viewDetailLabel: 'Посмотреть весь рейтинг',
+        hideDetail: 'Скрыть',
+        drilldownTitle: 'Детализация агрегированного рейтинга',
+        drawerTitle: 'Детали рейтинга: {{group}}',
+        drawerDescription:
+          'Просмотрите полный рейтинг для текущих фильтров: расходы, запросы, эффективность затрат и качество.',
+        groupBy: 'Группировать по',
+        metric: 'Метрика',
+        showTop50: 'Показать топ-50',
+        showTop10: 'Вернуться к топ-10',
+        columnsButton: 'Столбцы',
+        columnsMenu: 'Видимые столбцы',
+        columns: {
+          rank: 'Ранг',
+          name: 'Название',
+          amount: 'Расход',
+          requests: 'Запросы',
+          avgRequestCost: 'Средняя цена запроса',
+          costPerMillionTokens: 'Цена за 1M токенов',
+          successRate: 'Средняя успешность',
+          cacheRate: 'Средняя доля кэша',
+          tokens: 'Всего токенов',
+          avgLatency: 'Средняя задержка',
+        },
+        groups: {
+          user: 'Пользователь',
+          client_key: 'Клиентский ключ',
+          credential: 'Исполнительные учетные данные',
+          provider: 'Провайдер',
+          model: 'Модель',
+          endpoint: 'Эндпоинт',
+          home_ip: 'Home-узел',
+          executor_type: 'Исполнитель',
+          status_code: 'Код статуса',
+        },
+        metrics: {
+          request_count: 'Запросы',
+          total_tokens: 'Всего токенов',
+          total_amount: 'Расход',
+          failed_count: 'Ошибки',
+          avg_latency_ms: 'Средняя задержка',
+          p95_latency_ms: 'P95 задержки',
+        },
+        empty: 'В текущем диапазоне нет данных рейтинга.',
+      },
+      records: {
+        title: 'Записи запросов',
+        range: '{{start}}-{{end}} из {{total}}',
+        emptyTitle: 'Нет записей запросов',
+        emptyDescription: 'Нет записей для текущих фильтров.',
+        empty: 'Нет записей для текущих фильтров.',
+        unavailableTitle: 'Записи запросов недоступны',
+        unavailable: 'Записи использования на уровне запроса не открыты.',
+        errorTitle: 'Не удалось загрузить записи запросов',
+        clearFilters: 'Сбросить фильтры',
+        pageSize: 'Строк',
+        previous: 'Назад',
+        next: 'Вперед',
+        ttft: 'TTFT {{value}}',
+        columnsButton: 'Настроить столбцы',
+        columnsMenu: 'Видимые столбцы',
+        sortColumn: 'Сортировать {{column}}: {{sort}}',
+        clearSortColumn: 'Сбросить сортировку {{column}}',
+        columns: {
+          time: 'Время',
+          status: 'Статус',
+          model: 'Модель',
+          client: 'Клиент',
+          credential: 'Учетные данные',
+          tokens: 'Токены',
+          performance: 'Производительность',
+          cost: 'Расход',
+          request: 'Запрос',
+          actions: 'Действия',
+        },
+      },
+      requestLogs: {
+        title: 'Файлы журналов запросов',
+        range: '{{start}}-{{end}} из {{total}}',
+        searchPlaceholder: 'Поиск по Request ID, модели, провайдеру или файлу',
+        emptyTitle: 'Нет файлов журналов запросов',
+        emptyDescription: 'Нет журналов запросов для текущего поиска.',
+        empty: 'Нет журналов запросов для текущих фильтров.',
+        clearSearch: 'Сбросить поиск',
+        inlineLog: 'Встроенный журнал runtime',
+        unavailableFile: 'Для этого запроса нет скачиваемого файла',
+        sizeBytes: '{{size}} bytes',
+        columns: {
+          time: 'Время',
+          request: 'Request ID',
+          model: 'Модель',
+          homeIp: 'Home IP',
+          file: 'Файл',
+          size: 'Размер',
+          actions: 'Действия',
+        },
+      },
+      detail: {
+        title: 'Детали запроса',
+        loading: 'Загрузка записи использования',
+        tokens: 'Разбивка токенов',
+        error: 'Сводка ошибки',
+        payload: 'Сводка полезной нагрузки',
+        logs: 'Фрагмент журнала',
+        related: 'Связанные данные',
+        noLogExcerpt: 'Фрагмент журнала для этого запроса не был возвращен.',
+        requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
+        fields: {
+          requestId: 'Request ID',
+          usageId: 'Usage ID',
+          status: 'Статус',
+          homeIp: 'Home IP',
+          client: 'Клиентский пользователь',
+          clientKey: 'Клиентский ключ',
+          credential: 'Исполнительные учетные данные',
+          authIndex: 'Auth Index',
+          model: 'Модель',
+          endpoint: 'Эндпоинт',
+          latency: 'Задержка',
+          ttft: 'TTFT',
+          billing: 'Списанная сумма',
+          chargeId: 'Charge ID',
+        },
+        tokenFields: {
+          input: 'Ввод',
+          output: 'Вывод',
+          reasoning: 'Рассуждение',
+          cacheRead: 'Чтение кэша',
+          cacheCreate: 'Запись кэша',
+          total: 'Итого',
+        },
+        payloadFields: {
+          method: 'Метод',
+          stream: 'Поток',
+          messages: 'Сообщения',
+          tools: 'Инструменты',
+        },
+        relatedFields: {
+          requestLog: 'Журнал запроса',
+          requestLogHomeIp: 'Home IP журнала',
+          downloadUrl: 'Путь скачивания',
+        },
+      },
+      credentials: {
+        title: 'Использование исполнительных учетных данных',
+        range: '{{start}}-{{end}} из {{total}}',
+        emptyTitle: 'Нет использования учетных данных',
+        empty: 'В этом диапазоне нет атрибутированного использования учетных данных.',
+        unavailableTitle: 'Использование учетных данных недоступно',
+        unavailable: 'Агрегаты использования учетных данных не открыты.',
+        errorTitle: 'Не удалось загрузить использование учетных данных',
+        pageSize: 'Строк',
+        previous: 'Назад',
+        next: 'Далее',
+        columnsButton: 'Настроить столбцы',
+        columnsMenu: 'Видимые столбцы',
+        sortColumn: 'Сортировать {{column}}: {{direction}}',
+        clearSortColumn: 'Сбросить сортировку {{column}}',
+        sortDirections: {
+          desc: 'по убыванию',
+          asc: 'по возрастанию',
+        },
+        failedShort: 'ошибок',
+        deltaTooltip: '{{value}} к предыдущему периоду',
+        deltaLabel: '{{value}} к предыдущему периоду',
+        cacheRate: 'Кэш {{value}}',
+        quotaUnavailable: 'Нет окна квоты',
+        quotaTokens: '{{used}} / {{limit}} токенов',
+        quotaWindowLabels: {
+          hours: '{{count}} ч',
+          days: '{{count}} дн',
+          weekly: 'Еженедельно',
+          window: 'Окно',
+        },
+        quotaModes: {
+          current: 'Текущее',
+          estimated: 'Оценка',
+        },
+        statuses: {
+          active: 'Активно',
+          enabled: 'Включено',
+          disabled: 'Отключено',
+          inactive: 'Неактивно',
+          unavailable: 'Недоступно',
+          error: 'Ошибка',
+          failed: 'Сбой',
+          warning: 'Требует внимания',
+          limited: 'Ограничено',
+          unknown: 'Неизвестный статус',
+        },
+        columns: {
+          credential: 'Учетные данные',
+          provider: 'Провайдер',
+          status: 'Источник / статус',
+          requests: 'Запросы',
+          tokens: 'Токены',
+          cost: 'Расход',
+          quota: 'Окна квот',
+          lastUsed: 'Последнее использование',
+        },
+      },
+      activity: {
+        title: 'Временная шкала состояния запросов',
+        summary:
+          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+        emptyTitle: 'Нет временной шкалы состояния',
+        unavailable: 'Интервалы активности недоступны.',
+        status: {
+          healthy: 'Норма',
+          warning: 'Предупреждение',
+          degraded: 'Снижение',
+          failed: 'Ошибка',
+          empty: 'Нет трафика',
+        },
+      },
+      health: {
+        title: 'Атрибуция состояния',
+        summary: '{{count}} элементов · {{issues}} требуют внимания · окно {{window}}',
+        unavailableTitle: 'Атрибуция состояния недоступна',
+        unavailable: 'Маршруты атрибуции состояния не открыты.',
+        emptyTitle: 'Нет данных атрибуции состояния',
+        empty: 'Нет данных атрибуции состояния для текущих фильтров.',
+        successShort: 'успешно',
+        failedShort: 'ошибок',
+        avgLatency: 'средн. {{value}}',
+        noError: 'Нет недавних ошибок',
+        nextRetry: 'повтор {{time}}',
+        providers: {
+          title: 'Состояние провайдеров',
+        },
+        credentials: {
+          title: 'Состояние учетных данных',
+        },
+        columns: {
+          target: 'Цель',
+          status: 'Статус',
+          recent: 'Недавнее окно',
+          latency: 'Задержка',
+          lastError: 'Последняя ошибка',
+        },
+        status: {
+          healthy: 'Норма',
+          degraded: 'Снижение',
+          unavailable: 'Недоступно',
+          disabled: 'Отключено',
+          unknown: 'Неизвестно',
+        },
+      },
       summary: {
-        keys: 'Usage keys',
-        keysDetail: 'Окон recent requests: {{count}}',
+        keys: 'Ключи использования',
+        keysDetail: 'Окон недавних запросов: {{count}}',
         requests: 'Запросов',
         requestsDetail: '{{success}} успешно / {{failed}} с ошибкой',
-        logs: 'Runtime logs',
-        logsDetail: 'Файлов error logs: {{count}}',
+        logs: 'Журналы runtime',
+        logsDetail: 'Файлов журналов ошибок: {{count}}',
       },
       usage: {
-        title: 'API key usage',
+        title: 'Использование API-ключей',
         description:
-          'Группирует успешные и ошибочные запросы по model provider, upstream Base URL и API key.',
-        unavailable: 'Текущий runtime не предоставляет API key usage.',
-        empty:
-          'API key usage records не возвращены. Проверьте, что usage statistics включены и runtime уже обрабатывал запросы.',
+          'Группирует успешные и ошибочные запросы по провайдеру модели, upstream Base URL и API-ключу.',
+        unavailableTitle: 'Использование API-ключей недоступно',
+        unavailable: 'Маршрут использования API-ключей не открыт.',
+        emptyTitle: 'Нет использования API-ключей',
+        empty: 'В текущем диапазоне нет записей использования API-ключей.',
         provider: 'Провайдер модели',
         baseUrl: 'Base URL',
         key: 'Ключ',
         success: 'Успешно',
         failed: 'Ошибки',
-        recentWindows: 'Recent windows',
+        recentWindows: 'Недавние окна',
       },
       operations: {
-        title: 'Logs и инструменты расследования',
+        title: 'Журналы и инструменты расследования',
         description:
-          'Runtime logs и error logs помогают разбирать цепочку запроса, состояние runtime и ошибочные ответы.',
+          'Журналы runtime и журналы ошибок помогают разбирать цепочку запроса, состояние runtime и ошибочные ответы.',
       },
       logs: {
-        title: 'Runtime logs',
+        title: 'Журналы runtime',
         description:
-          'Показывает runtime logs постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
-        unavailable: 'Этот runtime не предоставляет маршрут runtime logs.',
-        fileLoggingDisabled:
-          'Файловое логирование отключено, поэтому нет runtime log файлов для чтения или очистки.',
-        empty:
-          'Нет строк runtime log для отображения. Проверьте, что file logging включен и runtime уже записывал журналы.',
-        emptyPage: 'На этой странице нет записей. Вернитесь назад или синхронизируйте данные.',
+          'Показывает журналы runtime постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
+        unavailableTitle: 'Журналы runtime недоступны',
+        unavailable: 'Маршрут журналов runtime не открыт.',
+        fileLoggingDisabledTitle: 'Файловое логирование отключено',
+        fileLoggingDisabled: 'Нет файлов журналов runtime для чтения или очистки.',
+        emptyTitle: 'Нет журналов runtime',
+        empty: 'В текущем диапазоне нет строк журналов runtime.',
+        filteredEmptyTitle: 'Нет подходящих журналов runtime',
+        filteredEmpty: 'Нет журналов runtime для текущих фильтров.',
+        emptyPageTitle: 'На странице нет журналов',
+        emptyPage: 'Вернитесь назад или синхронизируйте данные.',
         lineCount: '{{count}} строк',
         latest: 'Последнее время: {{time}}',
         latestUnavailable: 'Последнее время недоступно',
@@ -2333,6 +3019,37 @@ export const ru = {
           summary: 'Сводка',
           actions: 'Действия',
         },
+        filters: {
+          homeIp: 'Home IP',
+          clientIp: 'Client IP',
+          requestId: 'Request ID',
+          level: 'Уровень журнала',
+          searchBy: 'Искать по',
+          searchPlaceholder: 'Введите {{field}}',
+          dateRange: 'Период',
+          dateRangePlaceholder: 'Выберите период',
+          dateRangeSeparator: '-',
+          clearDateRange: 'Очистить',
+          after: 'Начало',
+          before: 'Окончание',
+          clear: 'Сбросить фильтры',
+          homeIpPlaceholder: 'Home IP',
+          clientIpPlaceholder: 'Client IP',
+          requestIdPlaceholder: 'Request ID',
+          searchFields: {
+            requestId: 'Request ID',
+            homeIp: 'Home IP',
+            clientIp: 'Client IP',
+          },
+          levels: {
+            all: 'Все уровни',
+            trace: 'Trace',
+            debug: 'Debug',
+            info: 'Info',
+            warn: 'Warn',
+            error: 'Error',
+          },
+        },
         pagination: {
           range: '{{start}}-{{end}} из {{total}}',
           pageSize: 'Строк',
@@ -2343,17 +3060,19 @@ export const ru = {
           title: 'Детали журнала',
           createdAt: 'Создано',
           content: 'Содержимое журнала',
-          requestLogUnavailable: 'Для этой записи нет доступного request log.',
+          requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
         },
       },
       errorLogs: {
-        title: 'Файлы error logs',
+        title: 'Файлы журналов ошибок',
         description:
           'Показывает файлы error-*.log, созданные при выключенном request logging, и позволяет скачать файл.',
-        unavailable: 'Этот runtime не предоставляет маршрут файлов error logs.',
-        empty: 'Файлы error logs не возвращены.',
+        unavailableTitle: 'Файлы журналов ошибок недоступны',
+        unavailable: 'Маршрут файлов журналов ошибок не открыт.',
+        emptyTitle: 'Нет файлов журналов ошибок',
+        empty: 'В текущем диапазоне нет файлов журналов ошибок.',
         meta: '{{size}} bytes · {{time}}',
-        searchPlaceholder: 'Искать имя log file, нажмите Enter',
+        searchPlaceholder: 'Искать имя файла журнала, нажмите Enter',
         columns: {
           name: 'Журнал',
           modified: 'Обновлено',
@@ -2369,15 +3088,16 @@ export const ru = {
         localHome: 'Локальный Home',
       },
       confirm: {
-        clearLogsTitle: 'Очистить runtime logs?',
+        clearLogsTitle: 'Очистить журналы runtime?',
         clearLogs:
-          'Очистить runtime logs? Это удалит ротированные файлы и обрежет активный журнал.',
+          'Очистить журналы runtime? Это удалит ротированные файлы и обрежет активный журнал.',
       },
       toast: {
         logsCleared: 'Журналы очищены.',
         fileLoggingDisabled:
-          'Файловое логирование отключено, поэтому runtime logs нельзя очистить.',
+          'Файловое логирование отключено, поэтому журналы runtime нельзя очистить.',
         logDownloaded: 'Журнал скачан.',
+        exportDownloaded: 'Экспорт использования скачан.',
       },
     },
     systemNodesPage: {
@@ -2439,7 +3159,7 @@ export const ru = {
         },
       },
       config: {
-        empty: 'Сводка конфигурации не возвращена.',
+        empty: 'Сводки конфигурации пока нет.',
         title: 'Сводка конфигурации сервиса',
         fields: {
           debug: 'Debug mode',
@@ -2462,8 +3182,8 @@ export const ru = {
         title: 'Подключения узлов',
         addNode: 'Добавить узел',
         unavailable: 'Текущий runtime {{runtime}} не предоставляет маршрут запроса узлов.',
-        empty: 'Записи подключений узлов не возвращены.',
-        emptySupported: 'Маршрут узлов доступен, но записи подключений не возвращены.',
+        empty: 'Записей подключений узлов пока нет.',
+        emptySupported: 'Маршрут узлов доступен, но записей подключений пока нет.',
         connectedTime: 'Подключено: {{time}}',
         enrollment: {
           title: 'Токен подключения узла',
@@ -2528,6 +3248,243 @@ export const ru = {
         nodeJwtCopied: 'Учётные данные скопированы в буфер обмена.',
       },
     },
+    pluginPage: {
+      disconnected: {
+        title: 'Подключите Management API runtime',
+        description:
+          'Данные магазина плагинов и отчеты rollout приходят из Management API. Подключите runtime перед установкой, обновлением или удалением плагинов.',
+        action: 'Подключить runtime',
+      },
+      unsupported: {
+        title: 'Магазин плагинов недоступен',
+        description: 'Этот backend не предоставляет маршруты магазина плагинов для этой страницы.',
+      },
+      error: {
+        title: 'Не удалось загрузить плагины',
+        description:
+          'Проверьте Management API endpoint, management key и доступ к registry магазина плагинов.',
+      },
+      header: {
+        updatedAt: 'Последняя синхронизация: {{time}}',
+        nodes: 'Отчеты узлов: {{status}}',
+      },
+      actions: {
+        refresh: 'Синхронизировать',
+        syncing: 'Синхронизация',
+        clearFilters: 'Сбросить фильтры',
+        details: 'Детали',
+        install: 'Установить',
+        update: 'Обновить',
+        uninstall: 'Удалить',
+        authRequiredHint: 'Для установки этого плагина сначала нужна аутентификация магазина.',
+        configureAuth: 'Настроить store auth',
+      },
+      verdict: {
+        ready: {
+          title: 'Магазин плагинов готов',
+          badge: 'Готово',
+          description: 'Данные registry загружены, видимых проблем обязательного rollout нет.',
+        },
+        unsupported: {
+          title: 'Магазин плагинов не поддерживается',
+          badge: 'Не поддерживается',
+          description:
+            'Подключенный backend не предоставляет маршруты управления магазином плагинов.',
+        },
+        storeError: {
+          title: 'Не удалось загрузить магазин плагинов',
+          badge: 'Сбой',
+          description:
+            'Запрос магазина плагинов завершился ошибкой. Исправьте ее перед установкой.',
+        },
+        sourceDegraded: {
+          title: 'Магазин плагинов загружен частично',
+          badge: 'Ошибка источника',
+          description:
+            'Один или несколько registry sources не загрузились, но доступные источники можно просматривать.',
+        },
+        globalDisabled: {
+          title: 'Плагины установлены, но глобально отключены',
+          badge: 'Отключено',
+          description:
+            'Магазин доступен, но plugins.enabled равен false. Установленные плагины не будут effective до включения в конфигурации runtime.',
+        },
+        rolloutFailed: {
+          title: 'Rollout плагинов требует внимания',
+          badge: 'Ошибка отчета',
+          description:
+            'Как минимум один узел сообщил сбой задачи плагина. Проверьте rollout перед новыми изменениями.',
+        },
+        rolloutPending: {
+          title: 'Rollout плагинов еще наблюдается',
+          badge: 'Ожидание отчета',
+          description:
+            'Runtime ожидает отчеты плагинов, но у одного или нескольких узлов отчет отсутствует или частичный.',
+        },
+        updatesAvailable: {
+          title: 'Доступны обновления плагинов',
+          badge: 'Обновления',
+          description:
+            'Установленные плагины загружены, и как минимум одна registry-запись имеет новую версию.',
+        },
+      },
+      summary: {
+        global: 'Глобальное состояние',
+        pluginsDir: 'Каталог артефактов: {{dir}}',
+        available: 'Доступные плагины',
+        sources: 'Registry sources: {{count}}',
+        installed: 'Установлено',
+        effectiveHint: 'Записи с закрепленным store manifest',
+        updates: 'Обновления',
+        updatesHint: 'Установленные плагины с новой registry-версией',
+        authRequired: 'Блокировки auth',
+        authHint: 'Плагины ожидают настроенный store-auth',
+        rollout: 'Rollout кластера',
+        rolloutHint: 'Самоотчеты узлов о плагинах',
+      },
+      sourceErrors: {
+        title: 'Некоторые registry sources плагинов не загрузились',
+      },
+      nodeReports: {
+        partial: 'Магазин плагинов загружен, но отчеты узлов прочитать не удалось: {{message}}',
+      },
+      table: {
+        title: 'Магазин плагинов',
+        description:
+          'Установка, обновление, удаление и просмотр store-installed плагинов. Готовность кластера учитывает отчеты узлов, когда они доступны.',
+      },
+      filters: {
+        search: 'Поиск плагинов',
+        status: 'Фильтр статуса',
+        source: 'Фильтр источника',
+        all: 'Все',
+        installed: 'Установлено',
+        notInstalled: 'Не установлено',
+        updates: 'Обновления',
+        authRequired: 'Требует auth',
+        allSources: 'Все источники',
+      },
+      columns: {
+        plugin: 'Плагин',
+        source: 'Источник',
+        version: 'Версия',
+        state: 'Состояние',
+        auth: 'Auth',
+        rollout: 'Rollout',
+        actions: 'Действия',
+      },
+      empty: {
+        title: 'Нет записей плагинов',
+        description: 'Подключенный backend не вернул registry entries.',
+        noMatchesTitle: 'Нет подходящих плагинов',
+        noMatchesDescription: 'Измените поиск, фильтр статуса или фильтр источника.',
+      },
+      badges: {
+        installed: 'Установлен',
+        notInstalled: 'Не установлен',
+        configured: 'Настроен',
+        notConfigured: 'Не настроен',
+        registered: 'Зарегистрирован',
+        notRegistered: 'Не зарегистрирован',
+        effective: 'Effective',
+        inactive: 'Неактивен',
+        authConfigured: 'Auth настроен',
+        authRequired: 'Нужен auth',
+        authNotRequired: 'Без auth',
+        globalEnabled: 'Плагины включены глобально',
+        globalDisabled: 'Плагины отключены глобально',
+        reportRequired: 'Нужны отчеты',
+        update: 'Обновление',
+      },
+      status: {
+        unknown: 'Неизвестно',
+        notAvailable: 'Н/Д',
+        available: 'Доступно',
+        enabled: 'Включено',
+        disabled: 'Отключено',
+        required: 'Требуется',
+        notRequired: 'Не требуется',
+      },
+      rollout: {
+        reported: 'Отчитался',
+        pending: 'Ожидается',
+        failed: 'Сбой',
+        noReports: 'Нет отчета',
+        notInstalled: 'Не установлен',
+      },
+      operationNotice: {
+        title: 'Недавнее изменение плагина: {{name}}',
+        installSynced:
+          'Состояние магазина обновлено после установки/обновления. Проверьте rollout reports, прежде чем считать плагин полностью готовым.',
+        installPending:
+          'Установка/обновление изменило состояние магазина, но отчеты rollout узлов еще ожидаются или неполные.',
+        deleteSynced:
+          'Состояние магазина обновлено после удаления. Существующие отчеты узлов могут сохраняться до нового отчета.',
+        deletePending: 'Удаление создало delete work, но отчеты узлов еще не полностью сошлись.',
+      },
+      fields: {
+        pluginId: 'Plugin ID',
+        source: 'Источник',
+        author: 'Автор',
+        repository: 'Репозиторий',
+        homepage: 'Homepage',
+        license: 'Лицензия',
+        installType: 'Тип установки',
+        availableVersion: 'Доступная версия',
+        installedVersion: 'Установленная версия',
+        platforms: 'Платформы',
+      },
+      detail: {
+        identity: 'Идентичность',
+        state: 'Runtime state',
+        version: 'Версия и совместимость',
+        rollout: 'Отчеты rollout',
+        reportMeta: 'Фаза: {{phase}} · Обновлено: {{time}} · Состояние плагина: {{status}}',
+        noReports: 'Сейчас нет отчетов узлов, которые ссылаются на этот плагин.',
+      },
+      version: {
+        updateAvailable: '{{from}} -> {{to}}',
+      },
+      installDialog: {
+        installTitle: 'Установить {{name}}?',
+        updateTitle: 'Обновить {{name}}?',
+        description:
+          'Установка записывает закрепленный store manifest в конфигурацию runtime. Узлы применяют изменение и асинхронно сообщают состояние плагина.',
+        sourceLabel: 'Registry source',
+        sourceHint:
+          'Этот plugin ID есть в нескольких registry sources. Выберите источник для установки.',
+        sourceRequiredError:
+          'Backend требует registry source для этого plugin ID. Выберите источник и повторите попытку.',
+        versionLabel: 'Версия',
+        latest: 'Последняя доступная версия',
+        versionHint:
+          'Оставьте пустым для registry default или укажите версию/tag, принимаемый backend.',
+        thirdPartyTitle: 'Проверка риска стороннего плагина',
+        thirdPartyDescription:
+          'Этот плагин не из официального репозитория router-for-me. Код плагина может выполняться внутри Home или CPA nodes. Проверьте источник перед установкой.',
+        confirmLabel: 'Введите {{token}} для подтверждения',
+        reportHint:
+          'Для этого плагина еще нет отчета узла. После изменения дождитесь rollout status перед тем, как считать его ready.',
+      },
+      uninstallDialog: {
+        title: 'Удалить плагин?',
+        description:
+          'Удаление {{name}} ({{id}}) удалит store manifest и создаст delete tasks для всех CPA nodes.',
+        warning:
+          'Это операция на уровне кластера. Существующие отчеты узлов могут сохраняться до нового отчета или очистки.',
+      },
+      toast: {
+        installStarted: 'Установка {{name}} начата.',
+        updateStarted: 'Обновление {{name}} начато.',
+        uninstallStarted: 'Удаление {{name}} начато.',
+        restartRequired:
+          'Для применения плагина может потребоваться restart или повторное применение конфигурации.',
+        globalDisabled:
+          'Плагины глобально отключены, поэтому установленный плагин пока не активен.',
+        reportPending: 'Конфигурация плагина изменилась, но rollout status узлов еще ожидается.',
+        deletePending: 'Delete task создана, но отчеты узлов еще не полностью сошлись.',
+      },
+    },
     placeholder: {
       phase: 'Каркас Phase 0',
       dashboard: {
@@ -2573,9 +3530,9 @@ export const ru = {
         itemTwo: 'В product UI оставлять только один визуальный путь редактирования.',
       },
       usageLogs: {
-        title: 'Использование и журналы',
+        title: 'Данные наблюдаемости',
         description:
-          'Использование и журналы будут capability-aware аналитическими страницами, которые корректно деградируют, если Home cluster не предоставляет runtime log routes.',
+          'Usage, call diagnostics и runtime log pages корректно деградируют, если Home cluster не предоставляет соответствующие routes.',
         itemOne:
           'Использовать GET /api-key-usage, GET /logs, DELETE /logs и request error log routes, если доступно.',
         itemTwo:
