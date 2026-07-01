@@ -97,7 +97,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   detectedBaseUrl: null,
   detectedSource: null,
   detectedAt: null,
-  status: 'disconnected',
+  status: initialSession ? 'checking' : 'disconnected',
   error: null,
   connectedAt: null,
   setDetectedRuntime: (baseUrl, source = 'runtime') => {

@@ -49,8 +49,9 @@ export function disconnectManagementSession() {
 
 export async function bootstrapManagementSession() {
   const { baseUrl, managementKey, rememberConnection, status } = useSessionStore.getState()
+  const capabilityStatus = useCapabilityStore.getState().status
 
-  if (status === 'connected' || status === 'checking') {
+  if (status === 'connected' || (status === 'checking' && capabilityStatus === 'probing')) {
     return null
   }
 

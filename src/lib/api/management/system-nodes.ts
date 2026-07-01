@@ -8,7 +8,45 @@ type UnknownRecord = Record<string, unknown>
 export type SystemNodeResource = {
   id: string
   ip: string
+  nodeId: string | null
   connectedTime: string | null
+  clientCount: number | null
+  healthy: boolean | null
+  pluginReportState: SystemPluginReportState
+  pluginReportStatuses: SystemPluginReportStatus[]
+}
+
+export type SystemPluginReportState =
+  | 'not_required'
+  | 'missing_report'
+  | 'reported_partial'
+  | 'reported_failed'
+  | 'reported_ok'
+  | 'unknown'
+
+export type SystemPluginReportPlugin = {
+  id: string
+  installStatus: string | null
+  loadStatus: string | null
+  deleteStatus: string | null
+  fields: Record<string, string>
+}
+
+export type SystemPluginReportStatus = {
+  schemaVersion: number | null
+  task: string | null
+  nodeType: string | null
+  nodeId: string | null
+  clientIp: string | null
+  status: string | null
+  phase: string | null
+  ok: boolean | null
+  updatedAt: string | null
+  platform: {
+    goos: string | null
+    goarch: string | null
+  }
+  plugins: SystemPluginReportPlugin[]
 }
 
 export type SystemConfigSummary = {
@@ -34,8 +72,17 @@ export type SystemNodesSnapshot = {
   homeVersion: string | null
   latestVersion: string | null
   config: SystemConfigSummary | null
+  pluginReportRequired: boolean
+  pluginReportStatuses: SystemPluginReportStatus[]
   nodes: SystemNodeResource[]
   issues: SystemIssue[]
+}
+
+export type SystemNodePluginReportSnapshot = {
+  fetchedAt: string
+  pluginReportRequired: boolean
+  pluginReportStatuses: SystemPluginReportStatus[]
+  nodes: SystemNodeResource[]
 }
 
 export type ApiCallInput = {
@@ -70,6 +117,11 @@ function readString(record: UnknownRecord, key: string): string | null {
   return typeof value === 'string' && value.trim() ? value : null
 }
 
+function readNumber(record: UnknownRecord, key: string): number | null {
+  const value = record[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
 function readResponseHeader(response: AxiosResponse, name: string): string | null {
   const headers = response.headers as Record<string, unknown>
   const value = headers[name.toLowerCase()]
@@ -89,6 +141,11 @@ function readRoutingStrategy(record: UnknownRecord): string {
 
 function readBoolean(record: UnknownRecord, key: string): boolean {
   return record[key] === true
+}
+
+function readOptionalBoolean(record: UnknownRecord, key: string): boolean | null {
+  const value = record[key]
+  return typeof value === 'boolean' ? value : null
 }
 
 function readArrayRecords(value: unknown, key: string): UnknownRecord[] {
@@ -135,12 +192,106 @@ function normalizeConfigSummary(responseData: unknown): SystemConfigSummary {
   }
 }
 
+function normalizePluginReportState(value: string | null): SystemPluginReportState {
+  if (
+    value === 'not_required' ||
+    value === 'missing_report' ||
+    value === 'reported_partial' ||
+    value === 'reported_failed' ||
+    value === 'reported_ok'
+  ) {
+    return value
+  }
+  return 'unknown'
+}
+
+function normalizePluginReportPlugin(value: unknown): SystemPluginReportPlugin | null {
+  const record = toRecord(value)
+  const id = readString(record, 'id')
+  if (!id) return null
+
+  const fields = Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => key !== 'id')
+      .flatMap(([key, fieldValue]) => {
+        if (typeof fieldValue === 'string' && fieldValue.trim()) {
+          return [[key, fieldValue.trim()]]
+        }
+        if (typeof fieldValue === 'number' || typeof fieldValue === 'boolean') {
+          return [[key, String(fieldValue)]]
+        }
+        return []
+      }),
+  )
+
+  return {
+    id,
+    installStatus: readString(record, 'install_status'),
+    loadStatus: readString(record, 'load_status'),
+    deleteStatus: readString(record, 'delete_status'),
+    fields,
+  }
+}
+
+function normalizePluginReportStatus(value: unknown): SystemPluginReportStatus | null {
+  const record = toRecord(value)
+  const platform = toRecord(record.platform)
+  const plugins = Array.isArray(record.plugins)
+    ? record.plugins.flatMap((item) => {
+        const plugin = normalizePluginReportPlugin(item)
+        return plugin ? [plugin] : []
+      })
+    : []
+  const nodeId = readString(record, 'node_id')
+  const clientIp = readString(record, 'client_ip')
+  const status = readString(record, 'status')
+  const phase = readString(record, 'phase')
+
+  if (!nodeId && !clientIp && !status && !phase && plugins.length === 0) return null
+
+  return {
+    schemaVersion: readNumber(record, 'schema_version'),
+    task: readString(record, 'task'),
+    nodeType: readString(record, 'node_type'),
+    nodeId,
+    clientIp,
+    status,
+    phase,
+    ok: readOptionalBoolean(record, 'ok'),
+    updatedAt: readString(record, 'updated_at'),
+    platform: {
+      goos: readString(platform, 'goos'),
+      goarch: readString(platform, 'goarch'),
+    },
+    plugins,
+  }
+}
+
+function normalizePluginReportStatuses(value: unknown): SystemPluginReportStatus[] {
+  return Array.isArray(value)
+    ? value.flatMap((item) => {
+        const status = normalizePluginReportStatus(item)
+        return status ? [status] : []
+      })
+    : []
+}
+
 function normalizeNodes(responseData: unknown): SystemNodeResource[] {
-  return readArrayRecords(responseData, 'nodes').map((record, index) => ({
-    id: readString(record, 'ip') ?? `node-${index + 1}`,
-    ip: readString(record, 'ip') ?? `node-${index + 1}`,
-    connectedTime: readString(record, 'connected_time'),
-  }))
+  return readArrayRecords(responseData, 'nodes').map((record, index) => {
+    const ip = readString(record, 'ip') ?? `node-${index + 1}`
+    const nodeId = readString(record, 'node_id')
+
+    return {
+      id: nodeId ?? ip,
+      ip,
+      nodeId,
+      connectedTime: readString(record, 'connected_time'),
+      clientCount: readNumber(record, 'client_count'),
+      healthy: readOptionalBoolean(record, 'healthy'),
+      pluginReportState: normalizePluginReportState(readString(record, 'plugin_report_state')),
+      pluginReportStatuses: normalizePluginReportStatuses(record.plugin_report_statuses),
+    }
+  })
 }
 
 function normalizeHeaders(value: unknown): Record<string, string[]> {
@@ -182,7 +333,7 @@ export async function fetchSystemNodesSnapshot(
   let homeVersion: string | null = null
   let latestVersion: string | null = null
 
-  const [, config, nodes] = await Promise.all([
+  const [, config, nodesResponseData] = await Promise.all([
     readOptional(
       issues,
       'latestVersion',
@@ -209,20 +360,39 @@ export async function fetchSystemNodesSnapshot(
           'nodes',
           async () => {
             const response = await client.get<unknown>('/nodes')
-            return normalizeNodes(response.data)
+            return toRecord(response.data)
           },
-          [],
+          {},
         )
-      : Promise.resolve([]),
+      : Promise.resolve({}),
   ])
+  const nodesData = toRecord(nodesResponseData)
+  const nodes = normalizeNodes(nodesData)
 
   return {
     fetchedAt: new Date().toISOString(),
     homeVersion,
     latestVersion,
     config,
+    pluginReportRequired: readBoolean(nodesData, 'plugin_report_required'),
+    pluginReportStatuses: normalizePluginReportStatuses(nodesData.plugin_report_statuses),
     nodes,
     issues,
+  }
+}
+
+export async function fetchSystemNodePluginReports(
+  session: ManagementSessionInput,
+): Promise<SystemNodePluginReportSnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/nodes')
+  const responseData = toRecord(response.data)
+
+  return {
+    fetchedAt: new Date().toISOString(),
+    pluginReportRequired: readBoolean(responseData, 'plugin_report_required'),
+    pluginReportStatuses: normalizePluginReportStatuses(responseData.plugin_report_statuses),
+    nodes: normalizeNodes(responseData),
   }
 }
 

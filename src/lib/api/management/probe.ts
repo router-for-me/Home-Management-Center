@@ -11,7 +11,19 @@ import type {
 } from '@/lib/api/management/types'
 
 const capabilityRequests: Record<
-  Exclude<CapabilityKey, 'usageQueue' | 'logs'>,
+  Exclude<
+    CapabilityKey,
+    | 'usageQueue'
+    | 'logs'
+    | 'usageAggregates'
+    | 'usageRecordDetails'
+    | 'usageExport'
+    | 'usageProviderHealth'
+    | 'usageCredentialHealth'
+    | 'usageRealtime'
+    | 'requestLogIndex'
+    | 'oauthUsage'
+  >,
   {
     path: string
   }
@@ -21,6 +33,12 @@ const capabilityRequests: Record<
   },
   usage: {
     path: '/api-key-usage',
+  },
+  usageOverview: {
+    path: '/usage/overview',
+  },
+  usageRecords: {
+    path: '/usage/records?limit=1',
   },
   requestErrorLogs: {
     path: '/request-error-logs',
@@ -37,6 +55,16 @@ const emptyCapabilities: CapabilityMap = {
   nodes: false,
   usage: false,
   usageQueue: false,
+  usageOverview: false,
+  usageRecords: false,
+  usageRecordDetails: false,
+  usageAggregates: false,
+  usageExport: false,
+  usageProviderHealth: false,
+  usageCredentialHealth: false,
+  usageRealtime: false,
+  requestLogIndex: false,
+  oauthUsage: false,
   logs: false,
   requestErrorLogs: false,
   users: false,
@@ -53,6 +81,20 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 function readBoolean(record: UnknownRecord, key: string) {
   return typeof record[key] === 'boolean' ? record[key] : null
+}
+
+function readString(record: UnknownRecord, key: string) {
+  const value = record[key]
+  return typeof value === 'string' && value.trim() ? value : undefined
+}
+
+function readStringFromKeys(record: UnknownRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = readString(record, key)
+    if (value !== undefined) return value
+  }
+
+  return undefined
 }
 
 function readBooleanFromKeys(record: UnknownRecord, keys: string[]) {
@@ -80,10 +122,6 @@ function readDeclaredCapabilityValue(configData: unknown, keys: string[]) {
   return null
 }
 
-function readDeclaredCapability(configData: unknown, keys: string[]) {
-  return readDeclaredCapabilityValue(configData, keys) === true
-}
-
 function readDeclaredNodesCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['nodes', 'node_management', 'nodeManagement'])
 }
@@ -95,6 +133,71 @@ function readDeclaredUsageCapability(configData: unknown) {
     'apiKeyUsage',
     'api-key-usage',
   ])
+}
+
+function readDeclaredUsageOverviewCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['usage_overview', 'usageOverview'])
+}
+
+function readDeclaredUsageRecordsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['usage_records', 'usageRecords'])
+}
+
+function readDeclaredUsageRecordDetailsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'usage_record_details',
+    'usageRecordDetails',
+    'usage_details',
+    'usageDetails',
+  ])
+}
+
+function readDeclaredUsageAggregatesCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['usage_aggregates', 'usageAggregates'])
+}
+
+function readDeclaredUsageExportCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['usage_export', 'usageExport'])
+}
+
+function readDeclaredUsageProviderHealthCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'usage_provider_health',
+    'usageProviderHealth',
+    'usage_health_providers',
+    'usageHealthProviders',
+  ])
+}
+
+function readDeclaredUsageCredentialHealthCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'usage_credential_health',
+    'usageCredentialHealth',
+    'usage_health_credentials',
+    'usageHealthCredentials',
+  ])
+}
+
+function readDeclaredUsageRealtimeCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'usage_realtime',
+    'usageRealtime',
+    'usage_realtime_snapshot',
+    'usageRealtimeSnapshot',
+  ])
+}
+
+function readDeclaredRequestLogIndexCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_log_index',
+    'requestLogIndex',
+    'request_logs',
+    'requestLogs',
+  ])
+}
+
+function readDeclaredOauthUsageCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['oauth_usage', 'oauthUsage'])
 }
 
 function readDeclaredLogsCapability(configData: unknown) {
@@ -124,21 +227,7 @@ function readDeclaredAccessGroupsCapability(configData: unknown) {
   ])
 }
 
-function readDeclaredCapabilitiesEndpoint(configData: unknown) {
-  return readDeclaredCapability(configData, [
-    'capabilities_endpoint',
-    'capabilitiesEndpoint',
-    'management_capabilities_endpoint',
-    'managementCapabilitiesEndpoint',
-  ])
-}
-
-async function readCapabilitiesPayload(
-  client: AxiosInstance,
-  configData: unknown,
-): Promise<UnknownRecord | null> {
-  if (!readDeclaredCapabilitiesEndpoint(configData)) return null
-
+async function readCapabilitiesPayload(client: AxiosInstance): Promise<UnknownRecord | null> {
   const response = await client.request<unknown>({
     method: 'GET',
     url: '/capabilities',
@@ -170,6 +259,31 @@ function readServerInfo(response: AxiosResponse): ManagementServerInfo {
     homeVersion: getHeader(response, 'x-cpa-home-version'),
     homeCommit: getHeader(response, 'x-cpa-home-commit'),
     homeBuildDate: getHeader(response, 'x-cpa-home-build-date'),
+  }
+}
+
+function readDeclaredServerInfo(capabilitiesData: unknown): Partial<ManagementServerInfo> {
+  if (!isRecord(capabilitiesData)) return {}
+
+  const rawServerInfo = capabilitiesData.server_info ?? capabilitiesData.serverInfo
+  if (!isRecord(rawServerInfo)) return {}
+
+  return {
+    homeVersion: readStringFromKeys(rawServerInfo, ['home_version', 'homeVersion']),
+    homeCommit: readStringFromKeys(rawServerInfo, ['home_commit', 'homeCommit']),
+    homeBuildDate: readStringFromKeys(rawServerInfo, ['home_build_date', 'homeBuildDate']),
+  }
+}
+
+function mergeServerInfo(
+  headerServerInfo: ManagementServerInfo,
+  declaredServerInfo: Partial<ManagementServerInfo>,
+): ManagementServerInfo {
+  return {
+    ...headerServerInfo,
+    homeVersion: declaredServerInfo.homeVersion ?? headerServerInfo.homeVersion,
+    homeCommit: declaredServerInfo.homeCommit ?? headerServerInfo.homeCommit,
+    homeBuildDate: declaredServerInfo.homeBuildDate ?? headerServerInfo.homeBuildDate,
   }
 }
 
@@ -206,11 +320,44 @@ export async function probeManagementRuntime(
 ): Promise<CapabilityProbeResult> {
   const client = createManagementClient(session)
   const configResponse = await client.get<unknown>('/config')
-  const capabilitiesPayload = await readCapabilitiesPayload(client, configResponse.data)
+  const capabilitiesPayload = await readCapabilitiesPayload(client)
   const capabilitySource = capabilitiesPayload ?? configResponse.data
-  const serverInfo = readServerInfo(configResponse)
+  const serverInfo = mergeServerInfo(
+    readServerInfo(configResponse),
+    capabilitiesPayload ? readDeclaredServerInfo(capabilitiesPayload) : {},
+  )
   const declaredNodes = capabilitiesPayload ? readDeclaredNodesCapability(capabilitySource) : null
   const declaredUsage = capabilitiesPayload ? readDeclaredUsageCapability(capabilitySource) : null
+  const declaredUsageOverview = capabilitiesPayload
+    ? readDeclaredUsageOverviewCapability(capabilitySource)
+    : null
+  const declaredUsageRecords = capabilitiesPayload
+    ? readDeclaredUsageRecordsCapability(capabilitySource)
+    : null
+  const declaredUsageRecordDetails = capabilitiesPayload
+    ? readDeclaredUsageRecordDetailsCapability(capabilitySource)
+    : null
+  const declaredUsageAggregates = capabilitiesPayload
+    ? readDeclaredUsageAggregatesCapability(capabilitySource)
+    : null
+  const declaredUsageExport = capabilitiesPayload
+    ? readDeclaredUsageExportCapability(capabilitySource)
+    : null
+  const declaredUsageProviderHealth = capabilitiesPayload
+    ? readDeclaredUsageProviderHealthCapability(capabilitySource)
+    : null
+  const declaredUsageCredentialHealth = capabilitiesPayload
+    ? readDeclaredUsageCredentialHealthCapability(capabilitySource)
+    : null
+  const declaredUsageRealtime = capabilitiesPayload
+    ? readDeclaredUsageRealtimeCapability(capabilitySource)
+    : null
+  const declaredRequestLogIndex = capabilitiesPayload
+    ? readDeclaredRequestLogIndexCapability(capabilitySource)
+    : null
+  const declaredOauthUsage = capabilitiesPayload
+    ? readDeclaredOauthUsageCapability(capabilitySource)
+    : null
   const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
@@ -220,8 +367,12 @@ export async function probeManagementRuntime(
     ? readDeclaredAccessGroupsCapability(capabilitySource)
     : null
 
+  const capabilityKeysToProbe: ProbedCapabilityKey[] = capabilitiesPayload
+    ? ['nodes', 'users', 'accessGroups']
+    : (Object.keys(capabilityRequests) as ProbedCapabilityKey[])
+
   const probedCapabilityEntries = await Promise.all(
-    (Object.keys(capabilityRequests) as ProbedCapabilityKey[]).map(async (key) => {
+    capabilityKeysToProbe.map(async (key) => {
       try {
         return [key, await probeCapability(client, key)] as const
       } catch {
@@ -241,6 +392,17 @@ export async function probeManagementRuntime(
     ...probedCapabilities,
     nodes: declaredNodes ?? probedCapabilities.nodes,
     usage: declaredUsage ?? probedCapabilities.usage,
+    usageOverview: declaredUsageOverview ?? probedCapabilities.usageOverview,
+    usageRecords: declaredUsageRecords ?? probedCapabilities.usageRecords,
+    usageRecordDetails:
+      declaredUsageRecordDetails ?? declaredUsageRecords ?? probedCapabilities.usageRecords,
+    usageAggregates: declaredUsageAggregates ?? false,
+    usageExport: declaredUsageExport ?? false,
+    usageProviderHealth: declaredUsageProviderHealth ?? false,
+    usageCredentialHealth: declaredUsageCredentialHealth ?? false,
+    usageRealtime: declaredUsageRealtime ?? false,
+    requestLogIndex: declaredRequestLogIndex ?? false,
+    oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
     users: declaredUsers ?? probedCapabilities.users,
     usageQueue: false,
     // GET /logs returns 400 when file logging is disabled, so probing it would create
