@@ -1,5 +1,6 @@
 import type { DashboardSnapshot } from '@/lib/api/management/dashboard'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
+import type { UsageActivityStatus, UsageAggregateItem } from '@/lib/api/management/usage-logs'
 
 type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' | 'debug' | 'routing'
 
@@ -42,6 +43,14 @@ export type DashboardMetric = {
   tone: DashboardTone
 }
 
+export type DashboardOperatingKpi = {
+  id: 'tokens' | 'requests' | 'successRate' | 'activeClientKeys'
+  value: number | null
+  detailValue?: number | null
+  tone: DashboardTone
+  format: 'compact' | 'number' | 'percent'
+}
+
 export type DashboardConfigCheck = {
   id: DashboardConfigCheckId
   enabled: boolean
@@ -52,12 +61,14 @@ export type DashboardConfigCheck = {
 export type DashboardCapabilityStatus = {
   id: DashboardCapabilityId
   available: boolean
+  tone: DashboardTone
 }
 
 export type DashboardDataStatusItem = {
   id: string
   labelKey: string
   kind: 'requestIssue' | 'unavailableCapability'
+  tone: DashboardTone
   status?: number
 }
 
@@ -69,17 +80,71 @@ export type DashboardProviderRow = {
   route: string
 }
 
+export type DashboardUsageActivitySummary = {
+  requestCount: number
+  successRate: number
+  errorRate: number
+  activeBucketCount: number
+  buckets: Array<{
+    id: string
+    label: string
+    requestCount: number
+    successRate: number
+    status: UsageActivityStatus
+  }>
+}
+
+export type DashboardUsageConsumptionTrendSummary = {
+  totalTokens: number
+  bucketCount: number
+  activeBucketCount: number
+  points: Array<{
+    id: string
+    label: string
+    tokens: number
+    requestCount: number
+  }>
+}
+
+export type DashboardRankPreviewItem = {
+  id: string
+  label: string
+  requestCount: number
+  totalTokens: number
+  successRate: number
+  failedCount: number
+  lastUsedAt: string | null
+  tone: DashboardTone
+}
+
+export type DashboardKeyStatusSummary = {
+  totalConfigured: number
+  activeCount: number | null
+  quietCount: number | null
+  topClientKeys: DashboardRankPreviewItem[]
+}
+
+export type DashboardModelUsageSummary = {
+  activeCount: number | null
+  topModels: DashboardRankPreviewItem[]
+}
+
 export type DashboardOverviewViewModel = {
   healthSummary: DashboardHealthSummary
   recommendedActions: DashboardRecommendedAction[]
   runtimeMode: RuntimeMode
   fetchedAt: string
   latestVersion: string | null
+  operatingKpis: DashboardOperatingKpi[]
   metrics: DashboardMetric[]
   configChecks: DashboardConfigCheck[]
   capabilities: DashboardCapabilityStatus[]
   dataStatusItems: DashboardDataStatusItem[]
   providerRows: DashboardProviderRow[]
+  usageConsumptionTrendSummary: DashboardUsageConsumptionTrendSummary | null
+  usageActivitySummary: DashboardUsageActivitySummary | null
+  keyStatusSummary: DashboardKeyStatusSummary
+  modelUsageSummary: DashboardModelUsageSummary
   allProvidersEmpty: boolean
   credentialSources: Array<{
     source: string
@@ -108,12 +173,18 @@ function readRoutingStrategy(config: Record<string, unknown>): string {
     : 'unknown'
 }
 
+function getDashboardCapabilityTone(id: DashboardCapabilityId): DashboardTone {
+  if (id === 'users' || id === 'accessGroups') return 'warning'
+  return 'info'
+}
+
 function createHealthSummary({
   activeProviders,
   activeCredentials,
   clientKeys,
   issueCount,
   unavailableCapabilityCount,
+  unavailableWarningCapabilityCount,
   debugEnabled,
   routingStrategy,
 }: {
@@ -122,6 +193,7 @@ function createHealthSummary({
   clientKeys: number
   issueCount: number
   unavailableCapabilityCount: number
+  unavailableWarningCapabilityCount: number
   debugEnabled: boolean
   routingStrategy: string
 }): DashboardHealthSummary {
@@ -139,6 +211,10 @@ function createHealthSummary({
 
   if (issueCount > 0 || debugEnabled || routingStrategy === 'unknown') {
     return { id: 'degraded', tone: 'warning' }
+  }
+
+  if (unavailableWarningCapabilityCount > 0) {
+    return { id: 'limited', tone: 'warning' }
   }
 
   if (unavailableCapabilityCount > 0) {
@@ -206,6 +282,140 @@ function countCredentialSources(authFiles: DashboardSnapshot['authFiles']) {
     .sort((left, right) => right.total - left.total)
 }
 
+function aggregateTone(item: Pick<UsageAggregateItem, 'failedCount' | 'errorRate'>): DashboardTone {
+  if (item.failedCount > 0 || item.errorRate >= 0.05) return 'warning'
+  return 'positive'
+}
+
+function createRankPreviewItems(
+  items: UsageAggregateItem[] | undefined,
+): DashboardRankPreviewItem[] {
+  return (items ?? []).slice(0, 3).map((item) => ({
+    id: item.id,
+    label: item.label,
+    requestCount: item.requestCount,
+    totalTokens: item.totalTokens,
+    successRate: item.successRate,
+    failedCount: item.failedCount,
+    lastUsedAt: item.lastUsedAt,
+    tone: aggregateTone(item),
+  }))
+}
+
+function createOperatingKpis(
+  usageOverview: DashboardSnapshot['usageOverview'],
+): DashboardOperatingKpi[] {
+  const totals = usageOverview?.totals
+
+  return [
+    {
+      id: 'tokens',
+      value: totals?.totalTokens ?? null,
+      detailValue: totals?.activeModelCount ?? null,
+      tone: totals && totals.totalTokens > 0 ? 'positive' : 'neutral',
+      format: 'compact',
+    },
+    {
+      id: 'requests',
+      value: totals?.requestCount ?? null,
+      detailValue: totals?.failedCount ?? null,
+      tone: totals && totals.failedCount > 0 ? 'warning' : totals ? 'positive' : 'neutral',
+      format: 'number',
+    },
+    {
+      id: 'successRate',
+      value: totals?.successRate ?? null,
+      detailValue: totals?.errorRate ?? null,
+      tone:
+        totals && totals.successRate >= 0.98
+          ? 'positive'
+          : totals && totals.successRate >= 0.95
+            ? 'info'
+            : totals
+              ? 'warning'
+              : 'neutral',
+      format: 'percent',
+    },
+    {
+      id: 'activeClientKeys',
+      value: totals?.activeClientKeyCount ?? null,
+      detailValue: totals?.activeCredentialCount ?? null,
+      tone: totals && totals.activeClientKeyCount > 0 ? 'positive' : totals ? 'warning' : 'neutral',
+      format: 'number',
+    },
+  ]
+}
+
+function createKeyStatusSummary(
+  usageOverview: DashboardSnapshot['usageOverview'],
+  totalConfigured: number,
+): DashboardKeyStatusSummary {
+  const activeCount = usageOverview?.totals.activeClientKeyCount ?? null
+  const quietCount = activeCount === null ? null : Math.max(0, totalConfigured - activeCount)
+
+  return {
+    totalConfigured,
+    activeCount,
+    quietCount,
+    topClientKeys: createRankPreviewItems(usageOverview?.top.clientKeys),
+  }
+}
+
+function createModelUsageSummary(
+  usageOverview: DashboardSnapshot['usageOverview'],
+): DashboardModelUsageSummary {
+  return {
+    activeCount: usageOverview?.totals.activeModelCount ?? null,
+    topModels: createRankPreviewItems(usageOverview?.top.models),
+  }
+}
+
+function createUsageConsumptionTrendSummary(
+  usageOverview: DashboardSnapshot['usageOverview'],
+): DashboardUsageConsumptionTrendSummary | null {
+  const buckets = usageOverview?.trend ?? []
+  if (buckets.length === 0 || !usageOverview) return null
+  const totalTokens =
+    usageOverview.totals.totalTokens ??
+    buckets.reduce((total, bucket) => total + bucket.totalTokens, 0)
+
+  return {
+    totalTokens,
+    bucketCount: buckets.length,
+    activeBucketCount: buckets.filter((bucket) => bucket.totalTokens > 0).length,
+    points: buckets.map((bucket) => ({
+      id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
+      label: `${bucket.bucketStart} - ${bucket.bucketEnd}`,
+      tokens: bucket.totalTokens,
+      requestCount: bucket.requestCount,
+    })),
+  }
+}
+
+function createUsageActivitySummary(
+  usageOverview: DashboardSnapshot['usageOverview'],
+): DashboardUsageActivitySummary | null {
+  const buckets = usageOverview?.activity ?? []
+  if (buckets.length === 0 || !usageOverview) return null
+  const requestCount = buckets.reduce((total, bucket) => total + bucket.requestCount, 0)
+  const successCount = buckets.reduce((total, bucket) => total + bucket.successCount, 0)
+  const failedCount = buckets.reduce((total, bucket) => total + bucket.failedCount, 0)
+
+  return {
+    requestCount,
+    successRate: requestCount > 0 ? successCount / requestCount : 0,
+    errorRate: requestCount > 0 ? failedCount / requestCount : 0,
+    activeBucketCount: buckets.filter((bucket) => bucket.requestCount > 0).length,
+    buckets: buckets.slice(-48).map((bucket) => ({
+      id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
+      label: `${bucket.bucketStart} - ${bucket.bucketEnd}`,
+      requestCount: bucket.requestCount,
+      successRate: bucket.successRate,
+      status: bucket.status,
+    })),
+  }
+}
+
 export function createDashboardOverviewViewModel(
   snapshot: DashboardSnapshot,
   capabilities: CapabilityMap,
@@ -242,40 +452,62 @@ export function createDashboardOverviewViewModel(
     metrics.push({
       id: 'nodes',
       value: snapshot.nodes.length,
-      tone: 'neutral',
+      tone: snapshot.nodes.length > 0 ? 'positive' : 'warning',
     })
   }
   const capabilityStatuses: DashboardCapabilityStatus[] = [
-    { id: 'nodes', available: capabilities.nodes },
-    { id: 'usage', available: capabilities.usage },
-    { id: 'logs', available: capabilities.logs },
-    { id: 'requestErrorLogs', available: capabilities.requestErrorLogs },
-    { id: 'users', available: capabilities.users },
-    { id: 'accessGroups', available: capabilities.accessGroups },
+    { id: 'nodes', available: capabilities.nodes, tone: getDashboardCapabilityTone('nodes') },
+    { id: 'usage', available: capabilities.usage, tone: getDashboardCapabilityTone('usage') },
+    { id: 'logs', available: capabilities.logs, tone: getDashboardCapabilityTone('logs') },
+    {
+      id: 'requestErrorLogs',
+      available: capabilities.requestErrorLogs,
+      tone: getDashboardCapabilityTone('requestErrorLogs'),
+    },
+    { id: 'users', available: capabilities.users, tone: getDashboardCapabilityTone('users') },
+    {
+      id: 'accessGroups',
+      available: capabilities.accessGroups,
+      tone: getDashboardCapabilityTone('accessGroups'),
+    },
   ]
   const unavailableCapabilityStatuses = capabilityStatuses.filter(
     (capability) => !capability.available,
   )
+  const unavailableWarningCapabilityCount = unavailableCapabilityStatuses.filter(
+    (capability) => capability.tone === 'warning',
+  ).length
   const dataStatusItems: DashboardDataStatusItem[] = [
     ...snapshot.issues.map((issue) => ({
       id: `issue-${issue.scope}`,
       labelKey: `dashboard.issueScopes.${issue.scope}`,
       kind: 'requestIssue' as const,
+      tone: 'warning' as const,
       status: issue.status,
     })),
     ...unavailableCapabilityStatuses.map((capability) => ({
       id: `capability-${capability.id}`,
       labelKey: `dashboard.capabilityNames.${capability.id}`,
       kind: 'unavailableCapability' as const,
+      tone: capability.tone,
     })),
   ]
   const allProvidersEmpty = snapshot.providers.every((provider) => provider.total === 0)
+  const operatingKpis = createOperatingKpis(snapshot.usageOverview)
+  const usageConsumptionTrendSummary = createUsageConsumptionTrendSummary(snapshot.usageOverview)
+  const usageActivitySummary = createUsageActivitySummary(snapshot.usageOverview)
+  const keyStatusSummary = createKeyStatusSummary(
+    snapshot.usageOverview,
+    snapshot.clientKeys.length,
+  )
+  const modelUsageSummary = createModelUsageSummary(snapshot.usageOverview)
   const healthSummary = createHealthSummary({
     activeProviders,
     activeCredentials,
     clientKeys: snapshot.clientKeys.length,
     issueCount: snapshot.issues.length,
     unavailableCapabilityCount: unavailableCapabilityStatuses.length,
+    unavailableWarningCapabilityCount,
     debugEnabled,
     routingStrategy,
   })
@@ -294,6 +526,7 @@ export function createDashboardOverviewViewModel(
     runtimeMode,
     fetchedAt: snapshot.fetchedAt,
     latestVersion: snapshot.latestVersion,
+    operatingKpis,
     metrics,
     configChecks: [
       {
@@ -327,7 +560,7 @@ export function createDashboardOverviewViewModel(
         tone: routingStrategy !== 'unknown' ? 'positive' : 'warning',
       },
     ],
-    capabilities: capabilityStatuses.filter((capability) => capability.available),
+    capabilities: unavailableCapabilityStatuses,
     dataStatusItems,
     providerRows: snapshot.providers.map((provider) => ({
       id: provider.id,
@@ -336,6 +569,10 @@ export function createDashboardOverviewViewModel(
       disabled: provider.disabled,
       route: provider.path,
     })),
+    usageConsumptionTrendSummary,
+    usageActivitySummary,
+    keyStatusSummary,
+    modelUsageSummary,
     allProvidersEmpty,
     credentialSources: countCredentialSources(snapshot.authFiles),
     issueCount: snapshot.issues.length,

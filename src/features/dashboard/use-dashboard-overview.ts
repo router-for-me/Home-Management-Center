@@ -14,6 +14,7 @@ import { useSessionStore } from '@/stores/session-store'
 
 type DashboardOverviewQueryState = {
   connected: boolean
+  checking: boolean
   capabilityReady: boolean
   snapshot: DashboardSnapshot | undefined
   viewModel: DashboardOverviewViewModel | null
@@ -33,6 +34,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
   const capabilities = useCapabilityStore((state) => state.capabilities)
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
   const connected = sessionStatus === 'connected'
+  const checking = sessionStatus === 'checking'
   const capabilityReady = capabilityStatus === 'ready'
 
   const query = useQuery({
@@ -43,6 +45,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       capabilityStatus,
       capabilities.nodes,
       capabilities.usage,
+      capabilities.usageOverview,
       capabilities.logs,
       capabilities.requestErrorLogs,
       capabilities.users,
@@ -73,6 +76,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
 
   return {
     connected,
+    checking,
     capabilityReady,
     snapshot: query.data,
     viewModel,
