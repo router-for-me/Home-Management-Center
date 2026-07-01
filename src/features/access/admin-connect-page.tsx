@@ -34,7 +34,11 @@ export function AdminConnectPage() {
   const [localError, setLocalError] = useState<string | null>(null)
   const checking = status === 'checking'
   const connected = status === 'connected'
-  const sameOriginDetected = detectedSource === 'same-origin'
+  const hasConnectionChanges =
+    draftBaseUrl.trim() !== baseUrl ||
+    draftManagementKey.trim() !== managementKey ||
+    draftRememberConnection !== rememberConnection
+  const submitDisabled = checking || (connected && !hasConnectionChanges)
   const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
   const detectedEndpointLabel =
     detectedSource === 'same-origin'
@@ -101,7 +105,7 @@ export function AdminConnectPage() {
                 value={draftBaseUrl}
                 onChange={(event) => setDraftBaseUrl(event.target.value)}
                 placeholder="http://127.0.0.1:8327"
-                disabled={checking || sameOriginDetected}
+                disabled={checking}
                 autoComplete="url"
               />
               <span className="text-muted-foreground text-xs leading-5">
@@ -142,9 +146,15 @@ export function AdminConnectPage() {
             </label>
 
             {connected ? (
-              <div className="border-success/30 bg-success/10 text-success-foreground flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
-                <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                {t('connectionDialog.connectedAs', { mode: t(`runtimeMode.${runtimeMode}`) })}
+              <div
+                className="border-success/45 bg-success/10 text-foreground dark:bg-success/15 flex items-start gap-2.5 rounded-md border px-3 py-2.5 text-sm"
+                role="status"
+                aria-live="polite"
+              >
+                <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>
+                  {t('connectionDialog.connectedAs', { mode: t(`runtimeMode.${runtimeMode}`) })}
+                </span>
               </div>
             ) : null}
 
@@ -168,7 +178,7 @@ export function AdminConnectPage() {
               ) : (
                 <span />
               )}
-              <Button type="submit" disabled={checking}>
+              <Button type="submit" disabled={submitDisabled}>
                 {checking ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
                 {checking
                   ? t('connectionDialog.connecting')

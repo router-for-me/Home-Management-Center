@@ -97,7 +97,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   detectedBaseUrl: null,
   detectedSource: null,
   detectedAt: null,
-  status: 'disconnected',
+  status: initialSession ? 'checking' : 'disconnected',
   error: null,
   connectedAt: null,
   setDetectedRuntime: (baseUrl, source = 'runtime') => {
@@ -118,6 +118,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
 
       if (source === 'runtime' && state.managementKey) {
+        return detectedState
+      }
+
+      if (source === 'same-origin') {
         return detectedState
       }
 

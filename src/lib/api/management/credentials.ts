@@ -13,12 +13,11 @@ export type CredentialMetadataInput = {
   websockets?: boolean
 }
 
-export type CredentialOAuthProvider = 'claude' | 'codex' | 'gemini' | 'antigravity' | 'kimi' | 'xai'
+export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai'
 export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
 
 export type CredentialOAuthStartInput = {
   provider: CredentialOAuthProvider
-  projectId?: string
 }
 
 export type CredentialOAuthStatus = {
@@ -132,7 +131,6 @@ type CredentialOAuthStartResult = {
 const oauthRoutes: Record<CredentialOAuthProvider, string> = {
   claude: '/anthropic-auth-url',
   codex: '/codex-auth-url',
-  gemini: '/gemini-cli-auth-url',
   antigravity: '/antigravity-auth-url',
   kimi: '/kimi-auth-url',
   xai: '/xai-auth-url',
@@ -500,11 +498,9 @@ export async function startCredentialOAuth(
   input: CredentialOAuthStartInput,
 ): Promise<CredentialOAuthStartResult> {
   const client = createManagementClient(session)
-  const projectId = input.projectId?.trim()
   const response = await client.get<OAuthUrlResponse>(oauthRoutes[input.provider], {
     params: {
       is_webui: true,
-      project_id: input.provider === 'gemini' && projectId ? projectId : undefined,
     },
   })
 

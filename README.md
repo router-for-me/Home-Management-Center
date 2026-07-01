@@ -10,7 +10,9 @@ Home Management Center is a companion Web management console for [CLIProxyAPIHom
 - **Model services**: manage provider keys, inspect configured model services, review model references, and create, edit, or delete model service entries.
 - **Account credentials**: manage OAuth and file-backed credentials, upload credential JSON files, import Vertex credentials, edit metadata, query available models, enable, disable, download, and delete credentials.
 - **Client access keys**: manage the keys used by downstream clients, including create, edit, replace, delete, copy, masked display, and bulk selection flows.
-- **Usage and logs**: inspect API key usage, runtime logs, request error logs, file downloads, and guarded log clearing.
+- **Usage**: inspect request counts, tokens, cost, rankings, and credential attribution.
+- **Call diagnostics**: review realtime state, request health, health attribution, and request log files.
+- **Runtime logs**: inspect gateway runtime logs, request error log files, file downloads, and guarded log clearing.
 - **System configuration**: edit common settings through a visual workspace or update the full config file with diff preview, validation, reload, save, and replacement warnings.
 - **System information**: review runtime version, node state, config summary, diagnostic status, and guarded API call tools.
 - **Theme system**: light and dark modes.

@@ -1,9 +1,12 @@
 import {
+  Activity,
   BarChart3,
+  FileText,
   Gauge,
   KeyRound,
   type LucideIcon,
   Network,
+  Plug,
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
@@ -21,7 +24,10 @@ type NavigationRoute =
   | '/admin/users'
   | '/admin/billing'
   | '/admin/config'
-  | '/admin/usage-logs'
+  | '/admin/plugins'
+  | '/admin/usage'
+  | '/admin/diagnostics'
+  | '/admin/logs'
   | '/admin/system-nodes'
 
 type NavigationItem = {
@@ -85,10 +91,22 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.observe',
     items: [
       {
-        to: '/admin/usage-logs',
-        labelKey: 'navigation.usageLogs',
-        metaKey: 'navigationMeta.usageLogs',
+        to: '/admin/usage',
+        labelKey: 'navigation.usage',
+        metaKey: 'navigationMeta.usage',
         icon: BarChart3,
+      },
+      {
+        to: '/admin/diagnostics',
+        labelKey: 'navigation.diagnostics',
+        metaKey: 'navigationMeta.diagnostics',
+        icon: Activity,
+      },
+      {
+        to: '/admin/logs',
+        labelKey: 'navigation.logs',
+        metaKey: 'navigationMeta.logs',
+        icon: FileText,
       },
     ],
   },
@@ -113,6 +131,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.config',
         metaKey: 'navigationMeta.config',
         icon: SlidersHorizontal,
+      },
+      {
+        to: '/admin/plugins',
+        labelKey: 'navigation.plugins',
+        metaKey: 'navigationMeta.plugins',
+        icon: Plug,
       },
       {
         to: '/admin/system-nodes',

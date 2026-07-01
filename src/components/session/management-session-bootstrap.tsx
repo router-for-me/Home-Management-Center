@@ -9,9 +9,11 @@ const managementOnlyRoutes = new Set([
   '/admin/connect',
   '/admin/config',
   '/admin/credentials',
+  '/admin/diagnostics',
+  '/admin/logs',
   '/admin/providers',
   '/admin/system-nodes',
-  '/admin/usage-logs',
+  '/admin/usage',
   '/admin/users',
 ])
 
@@ -30,7 +32,7 @@ function isManagementRoute() {
   const pathname = getCurrentRoutePathname()
   if (!pathname) return false
 
-  return managementOnlyRoutes.has(pathname) || pathname === '/'
+  return managementOnlyRoutes.has(pathname) || pathname === '/' || pathname.endsWith('/index.html')
 }
 
 export function ManagementSessionBootstrap() {

@@ -2,21 +2,18 @@ import type { AxiosInstance } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { CapabilityMap, ManagementSessionInput } from '@/lib/api/management/types'
+import { type UsageOverview, fetchUsageOverview } from '@/lib/api/management/usage-logs'
 
 type UnknownRecord = Record<string, unknown>
 
-type DashboardProviderId =
-  | 'gemini'
-  | 'claude'
-  | 'codex'
-  | 'vertex'
-  | 'openaiCompatibility'
+type DashboardProviderId = 'gemini' | 'claude' | 'codex' | 'vertex' | 'openaiCompatibility'
 
 type DashboardRequestIssueScope =
   | 'latestVersion'
   | 'clientKeys'
   | 'authFiles'
   | 'nodes'
+  | 'usageOverview'
   | DashboardProviderId
 
 type DashboardProviderDescriptor = {
@@ -60,6 +57,7 @@ export type DashboardSnapshot = {
   authFiles: DashboardAuthFileSummary[]
   providers: DashboardProviderSummary[]
   nodes: DashboardNodeSummary[]
+  usageOverview: UsageOverview | null
   issues: DashboardRequestIssue[]
 }
 
@@ -207,56 +205,66 @@ export async function fetchManagementDashboardSnapshot(
   const issues: DashboardRequestIssue[] = []
   const fallbackClientKeys = readStringArray(config, 'api-keys')
 
-  const [latestVersion, clientKeys, authFiles, providers, nodes] = await Promise.all([
-    readOptional(
-      issues,
-      'latestVersion',
-      async () => {
-        const response = await client.get<unknown>('/latest-version')
-        return readString(toRecord(response.data)['latest-version'])
-      },
-      null,
-    ),
-    readOptional(
-      issues,
-      'clientKeys',
-      async () => {
-        const response = await client.get<unknown>('/api-keys')
-        return readStringArray(response.data, 'api-keys')
-      },
-      fallbackClientKeys,
-    ),
-    readOptional(
-      issues,
-      'authFiles',
-      async () => {
-        const response = await client.get<unknown>('/auth-files')
-        return normalizeAuthFiles(response.data)
-      },
-      [],
-    ),
-    Promise.all(
-      dashboardProviderDescriptors.map((descriptor) =>
-        readOptional(issues, descriptor.id, async () => fetchProviderSummary(client, descriptor), {
-          ...descriptor,
-          total: 0,
-          active: 0,
-          disabled: 0,
-        }),
+  const [latestVersion, clientKeys, authFiles, providers, nodes, usageOverview] = await Promise.all(
+    [
+      readOptional(
+        issues,
+        'latestVersion',
+        async () => {
+          const response = await client.get<unknown>('/latest-version')
+          return readString(toRecord(response.data)['latest-version'])
+        },
+        null,
       ),
-    ),
-    capabilities.nodes
-      ? readOptional(
-          issues,
-          'nodes',
-          async () => {
-            const response = await client.get<unknown>('/nodes')
-            return normalizeNodes(response.data)
-          },
-          [],
-        )
-      : Promise.resolve([]),
-  ])
+      readOptional(
+        issues,
+        'clientKeys',
+        async () => {
+          const response = await client.get<unknown>('/api-keys')
+          return readStringArray(response.data, 'api-keys')
+        },
+        fallbackClientKeys,
+      ),
+      readOptional(
+        issues,
+        'authFiles',
+        async () => {
+          const response = await client.get<unknown>('/auth-files')
+          return normalizeAuthFiles(response.data)
+        },
+        [],
+      ),
+      Promise.all(
+        dashboardProviderDescriptors.map((descriptor) =>
+          readOptional(
+            issues,
+            descriptor.id,
+            async () => fetchProviderSummary(client, descriptor),
+            {
+              ...descriptor,
+              total: 0,
+              active: 0,
+              disabled: 0,
+            },
+          ),
+        ),
+      ),
+      capabilities.nodes
+        ? readOptional(
+            issues,
+            'nodes',
+            async () => {
+              const response = await client.get<unknown>('/nodes')
+              return normalizeNodes(response.data)
+            },
+            [],
+          )
+        : Promise.resolve([]),
+      capabilities.usageOverview
+        ? readOptional(issues, 'usageOverview', async () => fetchUsageOverview(session), null)
+        : Promise.resolve(null),
+    ],
+  )
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -266,6 +274,7 @@ export async function fetchManagementDashboardSnapshot(
     authFiles,
     providers,
     nodes,
+    usageOverview,
     issues,
   }
 }

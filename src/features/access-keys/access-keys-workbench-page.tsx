@@ -19,7 +19,9 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
+import { TableSurface, TableSurfaceHeader } from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -62,13 +64,6 @@ type PendingAccessKeyConfirmation =
   | { type: 'replace'; values: string[] }
   | { type: 'delete'; resource: AccessKeyResource }
   | { type: 'bulkDelete'; resources: AccessKeyResource[] }
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
 
 function generateAccessKey() {
   const bytes = new Uint8Array(24)
@@ -132,10 +127,35 @@ function AccessKeysDisconnectedState() {
 }
 
 function AccessKeysLoadingState() {
+  const { t } = useTranslation()
+
   return (
     <section className="grid gap-5">
-      <Skeleton className="h-32 rounded-lg" />
-      <Skeleton className="h-[520px] rounded-lg" />
+      <PageHeader
+        title={t('accessKeysPage.loading.title')}
+        description={t('accessKeysPage.loading.description')}
+        tags={<Skeleton className="h-7 w-32 rounded-md" />}
+      />
+      <TableSurface>
+        <TableSurfaceHeader
+          title={t('accessKeysPage.list.title')}
+          description={t('accessKeysPage.list.description')}
+          actions={
+            <>
+              <Skeleton className="h-9 w-28 rounded-md" />
+              <Skeleton className="h-9 w-full rounded-md sm:w-72" />
+            </>
+          }
+          actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center"
+        />
+        <div className="grid gap-3 p-4">
+          <Skeleton className="h-10 rounded-md" />
+          <Skeleton className="h-12 rounded-md" />
+          <Skeleton className="h-12 rounded-md" />
+          <Skeleton className="h-12 rounded-md" />
+          <Skeleton className="h-12 rounded-md" />
+        </div>
+      </TableSurface>
     </section>
   )
 }
@@ -210,11 +230,7 @@ function AccessKeyList({
     !allSelected && resources.some((resource) => selectedKeyIds.has(resource.id))
 
   if (resources.length === 0) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-4 py-10 text-center text-sm">
-        {t('accessKeysPage.list.empty')}
-      </div>
-    )
+    return <TableEmptyState kind="empty" className="m-0" title={t('accessKeysPage.list.empty')} />
   }
 
   return (
@@ -712,6 +728,10 @@ export function AccessKeysWorkbenchPage() {
     })
   }, [resources])
 
+  if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
+    return <AccessKeysLoadingState />
+  }
+
   if (!workbench.connected) {
     return <AccessKeysDisconnectedState />
   }
@@ -925,54 +945,45 @@ export function AccessKeysWorkbenchPage() {
         }
         tags={
           <>
-          <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-            {t('accessKeysPage.header.total', { count: resources.length })}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('accessKeysPage.header.accepted')}
-          </span>
-          <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs">
-            {t('accessKeysPage.header.updatedAt', {
-              time: formatDateTime(workbench.snapshot.fetchedAt),
-            })}
-          </span>
+            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
+              {t('accessKeysPage.header.total', { count: resources.length })}
+            </span>
           </>
         }
       />
 
-      <div className="bg-card min-w-0 rounded-lg border p-5 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">{t('accessKeysPage.list.title')}</h2>
-            <p className="text-muted-foreground mt-1 text-sm leading-6">
-              {t('accessKeysPage.list.description')}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={workbench.mutating}
-              onClick={() => setReplaceSheetOpen(true)}
-            >
-              <Save className="size-4" aria-hidden="true" />
-              {t('accessKeysPage.actions.replace')}
-            </Button>
-            <div className="relative min-w-0 sm:w-72">
-              <Search
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden="true"
-              />
-              <Input
-                className="pl-9"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('accessKeysPage.list.filterPlaceholder')}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="mt-4">
+      <TableSurface className="min-w-0">
+        <TableSurfaceHeader
+          title={t('accessKeysPage.list.title')}
+          description={t('accessKeysPage.list.description')}
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={workbench.mutating}
+                onClick={() => setReplaceSheetOpen(true)}
+              >
+                <Save className="size-4" aria-hidden="true" />
+                {t('accessKeysPage.actions.replace')}
+              </Button>
+              <div className="relative min-w-0 sm:w-72">
+                <Search
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  aria-hidden="true"
+                />
+                <Input
+                  className="pl-9"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={t('accessKeysPage.list.filterPlaceholder')}
+                />
+              </div>
+            </>
+          }
+          actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center"
+        />
+        <div className="p-4">
           {selectedKeyIds.size > 0 ? (
             <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-medium">
@@ -1025,7 +1036,7 @@ export function AccessKeysWorkbenchPage() {
             }}
           />
         </div>
-      </div>
+      </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
         <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">

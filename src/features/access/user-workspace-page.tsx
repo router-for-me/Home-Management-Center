@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
+import { TableEmptyState } from '@/components/shared/empty-state'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -190,9 +191,11 @@ function ApiKeysTable({
 
   if (keys.length === 0) {
     return (
-      <div className="text-muted-foreground px-4 py-10 text-center text-sm">
-        {t('userWorkspace.keys.empty')}
-      </div>
+      <TableEmptyState
+        kind="empty"
+        className="m-0 border-0"
+        title={t('userWorkspace.keys.empty')}
+      />
     )
   }
 

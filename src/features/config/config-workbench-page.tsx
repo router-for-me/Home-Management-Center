@@ -26,6 +26,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import {
   AlertDialog,
@@ -222,7 +223,6 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'claude',
   'gemini',
   'vertex',
-  'gemini-cli',
   'aistudio',
   'codex',
   'kimi',
@@ -300,13 +300,6 @@ function parseJsonDraft(field: ConfigFieldDefinition, value: string): JsonParseR
 
 function stringifyJson(value: unknown) {
   return JSON.stringify(value, null, 2)
-}
-
-function parseListText(value: string) {
-  return value
-    .split(/[\n,]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
 }
 
 function hasOnlyKeys(record: Record<string, unknown>, keys: string[]) {
@@ -457,9 +450,15 @@ function ConfigDisconnectedState() {
 }
 
 function ConfigLoadingState() {
+  const { t } = useTranslation()
+
   return (
     <section className="grid gap-4">
-      <Skeleton className="h-36 rounded-lg" />
+      <PageHeader
+        title={t('configPage.loading.title')}
+        description={t('configPage.loading.description')}
+        tags={<Skeleton className="h-7 w-36 rounded-md" />}
+      />
       <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
         <Skeleton className="hidden h-[520px] rounded-lg xl:block" />
         <div className="grid gap-4">
@@ -760,11 +759,7 @@ function JsonEditorFrame({
 }
 
 function EmptyJsonRows({ label }: { label: string }) {
-  return (
-    <div className="text-muted-foreground rounded-md border border-dashed px-3 py-3 text-sm">
-      {label}
-    </div>
-  )
+  return <TableEmptyState compact kind="empty" className="m-0 min-h-20 px-3 py-4" title={label} />
 }
 
 function FieldHelp({ label, description }: { label: string; description: string }) {
@@ -1625,6 +1620,10 @@ export function ConfigWorkbenchPage() {
     },
     onFilterChange: setOauthModelFilter,
     onRetry: workbench.refetchModelDefinitions,
+  }
+
+  if (workbench.checking) {
+    return <ConfigLoadingState />
   }
 
   if (!workbench.connected) {

@@ -73,6 +73,7 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
     capabilityReady: capabilityStatus === 'ready',
     capabilities,
     runtimeMode,
@@ -85,6 +86,7 @@ export function useSystemNodesWorkbench() {
   const {
     session,
     connected,
+    checking,
     connectedAt,
     capabilityReady,
     capabilities,
@@ -128,6 +130,7 @@ export function useSystemNodesWorkbench() {
 
   return {
     connected,
+    checking,
     capabilityReady,
     capabilities,
     runtimeMode,

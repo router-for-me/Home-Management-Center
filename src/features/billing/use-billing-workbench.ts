@@ -149,6 +149,7 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
     ready: status === 'connected' && capabilityStatus === 'ready' && Boolean(managementKey),
     runtimeMode,
   }
@@ -161,7 +162,7 @@ export function useBillingWorkbench(
   balancePagination: BillingPagination,
 ) {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt, ready, runtimeMode } = useManagementSession()
+  const { session, connected, checking, connectedAt, ready, runtimeMode } = useManagementSession()
   const queryScope = useMemo(
     () => [session.baseUrl, connectedAt, filters] as const,
     [connectedAt, filters, session.baseUrl],
@@ -188,6 +189,7 @@ export function useBillingWorkbench(
   const overviewQuery = useQuery({
     queryKey: overviewQueryKey,
     enabled: ready && activeTab === 'overview',
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchBillingOverview(session, filters)
@@ -200,6 +202,7 @@ export function useBillingWorkbench(
   const chargesQuery = useQuery({
     queryKey: chargesQueryKey,
     enabled: ready && activeTab === 'charges',
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchChargeRecords(session, filters, chargePagination)
@@ -212,6 +215,7 @@ export function useBillingWorkbench(
   const balanceRecordsQuery = useQuery({
     queryKey: balanceRecordsQueryKey,
     enabled: ready && activeTab === 'balanceRecords',
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchBalanceRecords(session, filters, balancePagination)
@@ -224,6 +228,7 @@ export function useBillingWorkbench(
   const modelPricesQuery = useQuery({
     queryKey: modelPricesQueryKey,
     enabled: ready && activeTab === 'modelPrices',
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchModelPrices(session, filters)
@@ -236,6 +241,7 @@ export function useBillingWorkbench(
   const modelPriceCandidatesQuery = useQuery({
     queryKey: modelPriceCandidatesQueryKey,
     enabled: ready && activeTab === 'modelPrices',
+    retry: false,
     queryFn: async (): Promise<BillingModelPriceCandidateSnapshot> => {
       const [availableResult, staticResult] = await Promise.allSettled([
         fetchModelsSnapshot(session, { scope: 'available' }),
@@ -264,6 +270,7 @@ export function useBillingWorkbench(
   const usersQuery = useQuery({
     queryKey: usersQueryKey,
     enabled: ready && activeTab === 'balanceRecords',
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchUsersSnapshot(session)
@@ -278,6 +285,18 @@ export function useBillingWorkbench(
 
   const createPriceMutation = useMutation({
     mutationFn: (input: ModelPriceInput) => createModelPrice(session, input),
+    onSuccess: () => {
+      void invalidateModelPrices()
+    },
+    onError: toError,
+  })
+
+  const createPricesMutation = useMutation({
+    mutationFn: async (inputs: ModelPriceInput[]) => {
+      for (const input of inputs) {
+        await createModelPrice(session, input)
+      }
+    },
     onSuccess: () => {
       void invalidateModelPrices()
     },
@@ -303,6 +322,7 @@ export function useBillingWorkbench(
 
   return {
     connected,
+    checking,
     ready,
     runtimeMode,
     overview: overviewQuery.data?.overview ?? null,
@@ -342,10 +362,12 @@ export function useBillingWorkbench(
     refreshModelPrices: modelPricesQuery.refetch,
     refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
     createModelPrice: createPriceMutation.mutateAsync,
+    createModelPrices: createPricesMutation.mutateAsync,
     updateModelPrice: updatePriceMutation.mutateAsync,
     deleteModelPrice: deletePriceMutation.mutateAsync,
     mutating:
       createPriceMutation.isPending ||
+      createPricesMutation.isPending ||
       updatePriceMutation.isPending ||
       deletePriceMutation.isPending,
   }

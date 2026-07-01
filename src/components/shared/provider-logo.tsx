@@ -56,6 +56,7 @@ const providerMarks: Record<
 }
 
 const sizeClassNames = {
+  xs: 'size-4 text-[8px]',
   sm: 'size-5 text-[9px]',
   md: 'size-6 text-[10px]',
   lg: 'size-7 text-[10px]',

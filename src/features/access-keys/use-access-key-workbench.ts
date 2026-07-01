@@ -29,6 +29,7 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
     capabilityReady: capabilityStatus === 'ready',
     capabilities,
   }
@@ -36,7 +37,8 @@ function useManagementSession() {
 
 export function useAccessKeyWorkbench() {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()
+  const { session, connected, checking, connectedAt, capabilityReady, capabilities } =
+    useManagementSession()
   const queryKey = ['management-access-keys', session.baseUrl, connectedAt]
   const usersQueryKey = [
     'management-access-keys-users',
@@ -57,7 +59,8 @@ export function useAccessKeyWorkbench() {
 
   const query = useQuery({
     queryKey,
-    enabled: connected && Boolean(session.managementKey),
+    enabled: connected && capabilityReady && Boolean(session.managementKey),
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchAccessKeysSnapshot(session)
@@ -69,6 +72,7 @@ export function useAccessKeyWorkbench() {
   const usersQuery = useQuery({
     queryKey: usersQueryKey,
     enabled: canReadUsers,
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchUsersSnapshot(session)
@@ -83,6 +87,7 @@ export function useAccessKeyWorkbench() {
   const groupsQuery = useQuery({
     queryKey: groupsQueryKey,
     enabled: canReadAccessGroups,
+    retry: false,
     queryFn: async () => {
       try {
         return await fetchAccessGroupsSnapshot(session)
@@ -163,15 +168,13 @@ export function useAccessKeyWorkbench() {
 
   return {
     connected,
+    checking,
     capabilityReady,
     capabilities,
     snapshot: query.data,
     users: usersQuery.data?.resources ?? [],
     groups: groupsQuery.data ?? null,
-    isPending:
-      query.isPending ||
-      (canReadUsers && usersQuery.isPending) ||
-      (canReadAccessGroups && groupsQuery.isPending),
+    isPending: query.isPending,
     isFetching:
       query.isFetching ||
       (canReadUsers && usersQuery.isFetching) ||

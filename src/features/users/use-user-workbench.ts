@@ -122,6 +122,7 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
     capabilityReady: capabilityStatus === 'ready',
     capabilities,
     runtimeMode,
@@ -235,7 +236,7 @@ export function useUserWorkbench(
   loadModelCandidates = false,
 ) {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt, capabilityReady, capabilities, runtimeMode } =
+  const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
   const usersEnabled =
     connected && capabilityReady && capabilities.users && Boolean(session.managementKey)
@@ -646,6 +647,7 @@ export function useUserWorkbench(
 
   return {
     connected,
+    checking,
     capabilityReady,
     capabilities,
     runtimeMode,

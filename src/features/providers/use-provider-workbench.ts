@@ -32,6 +32,7 @@ function useManagementSession() {
     },
     connectedAt,
     connected: status === 'connected',
+    checking: status === 'checking',
   }
 }
 
@@ -42,7 +43,7 @@ function toError(error: unknown) {
 
 export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
   const queryClient = useQueryClient()
-  const { session, connected, connectedAt } = useManagementSession()
+  const { session, connected, checking, connectedAt } = useManagementSession()
   const queryKey = ['management-providers', session.baseUrl, connectedAt]
   const modelDefinitionsQueryKey = [
     'management-provider-model-definitions',
@@ -149,6 +150,7 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
 
   return {
     connected,
+    checking,
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,
