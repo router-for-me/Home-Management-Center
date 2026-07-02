@@ -58,7 +58,7 @@ export const ru = {
       users: 'Пользователи и доступ',
       billing: 'Биллинг и отчеты',
       config: 'Основные настройки шлюза',
-      plugins: 'Магазин плагинов и rollout кластера',
+      plugins: 'Магазин плагинов и отчеты узлов',
       usage: 'Статистика использования и затрат',
       diagnostics: 'Состояние вызовов и журналы запросов',
       logs: 'Gateway runtime и request error logs',
@@ -1984,6 +1984,12 @@ export const ru = {
           shortTitle: 'Auth',
           description: 'Управление клиентской аутентификацией, включая WebSocket auth.',
         },
+        plugins: {
+          title: 'Настройки плагинов',
+          shortTitle: 'Плагины',
+          description:
+            'Настройка включения плагинов, каталога артефактов, сторонних источников магазина и правил store auth.',
+        },
         oauthRules: {
           title: 'Правила моделей OAuth',
           shortTitle: 'OAuth rules',
@@ -2087,6 +2093,28 @@ export const ru = {
         wsAuth: {
           label: 'WebSocket auth',
           description: 'Требовать аутентификацию для WebSocket подключений.',
+        },
+        pluginsEnabled: {
+          label: 'Включить систему плагинов',
+          description:
+            'Разрешить Home и downstream nodes загружать настроенные плагины. Каждый плагин все равно нужно установить и включить отдельно.',
+        },
+        pluginsDir: {
+          label: 'Каталог артефактов плагинов',
+          description: 'Локальный каталог, который каждый узел использует для артефактов плагинов.',
+          placeholder: 'plugins',
+        },
+        pluginStoreSourcesJson: {
+          label: 'Сторонние источники плагинов',
+          description:
+            'Дополнительные URL plugin store registry. Встроенный официальный источник всегда сохраняется.',
+          placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        },
+        pluginStoreAuthJson: {
+          label: 'Правила store auth',
+          description:
+            'Настройка auth для private registry, GitHub Release metadata или artifact downloads. Правила ссылаются только на имена переменных окружения.',
+          placeholder: '[]',
         },
         requestRetry: {
           label: 'Повторы запросов',
@@ -2212,6 +2240,48 @@ export const ru = {
           tested: 'Тест подключения proxy завершен.',
           deleted: 'Proxy-запись удалена.',
           actionFailed: 'Действие не выполнено. Проверьте ответ backend API.',
+        },
+      },
+      pluginStoreSources: {
+        placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        hint: 'Один registry.json URL на строку. Пустые строки игнорируются при сохранении.',
+        count: 'Сторонних источников настроено: {{count}}',
+      },
+      pluginStoreAuth: {
+        secretHint:
+          'Указывайте только имена переменных окружения, без реальных tokens или passwords. Backend читает значения из runtime environment.',
+        empty: 'Правила auth не настроены. Публичные источники плагинов не требуют правил.',
+        ruleTitle: 'Правило auth {{index}}',
+        add: 'Добавить правило auth',
+        remove: 'Удалить правило',
+        match: 'Префикс URL для совпадения',
+        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
+        type: 'Тип auth',
+        applyTo: 'Применять к',
+        applyToHint:
+          'Если ничего не выбрано, правило применяется ко всем registry, metadata и artifact requests.',
+        tokenEnv: 'Переменная окружения token',
+        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
+        usernameEnv: 'Переменная окружения username',
+        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
+        passwordEnv: 'Переменная окружения password',
+        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
+        headerName: 'Имя Header',
+        headerNamePlaceholder: 'X-Plugin-Token',
+        headerValueEnv: 'Переменная окружения значения Header',
+        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
+        allowInsecure: 'Разрешить небезопасные HTTP URLs',
+        types: {
+          none: 'Без auth',
+          bearer: 'Bearer',
+          'github-token': 'GitHub Token',
+          basic: 'Basic',
+          header: 'Custom header',
+        },
+        applyToOptions: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
         },
       },
       validation: {
@@ -3251,7 +3321,7 @@ export const ru = {
       disconnected: {
         title: 'Подключите Management API runtime',
         description:
-          'Данные магазина плагинов и отчеты rollout приходят из Management API. Подключите runtime перед установкой, обновлением или удалением плагинов.',
+          'Данные магазина плагинов и отчеты узлов приходят из Management API. Подключите runtime перед установкой, обновлением или удалением плагинов.',
         action: 'Подключить runtime',
       },
       unsupported: {
@@ -3282,7 +3352,7 @@ export const ru = {
         ready: {
           title: 'Магазин плагинов готов',
           badge: 'Готово',
-          description: 'Данные registry загружены, видимых проблем обязательного rollout нет.',
+          description: 'Данные registry загружены, видимых проблем с отчетами узлов нет.',
         },
         unsupported: {
           title: 'Магазин плагинов не поддерживается',
@@ -3309,13 +3379,13 @@ export const ru = {
             'Магазин доступен, но plugins.enabled равен false. Установленные плагины не будут effective до включения в конфигурации runtime.',
         },
         rolloutFailed: {
-          title: 'Rollout плагинов требует внимания',
+          title: 'Отчеты узлов требуют внимания',
           badge: 'Ошибка отчета',
           description:
-            'Как минимум один узел сообщил сбой задачи плагина. Проверьте rollout перед новыми изменениями.',
+            'Как минимум один узел сообщил сбой задачи плагина. Проверьте отчеты узлов перед новыми изменениями.',
         },
         rolloutPending: {
-          title: 'Rollout плагинов еще наблюдается',
+          title: 'Ожидаются отчеты узлов',
           badge: 'Ожидание отчета',
           description:
             'Runtime ожидает отчеты плагинов, но у одного или нескольких узлов отчет отсутствует или частичный.',
@@ -3338,8 +3408,9 @@ export const ru = {
         updatesHint: 'Установленные плагины с новой registry-версией',
         authRequired: 'Блокировки auth',
         authHint: 'Плагины ожидают настроенный store-auth',
-        rollout: 'Rollout кластера',
-        rolloutHint: 'Самоотчеты узлов о плагинах',
+        rollout: 'Отчеты узлов',
+        rolloutHint:
+          'Последние отчеты CPA-узлов по задачам установки, загрузки или удаления плагинов',
       },
       sourceErrors: {
         title: 'Некоторые registry sources плагинов не загрузились',
@@ -3369,7 +3440,7 @@ export const ru = {
         version: 'Версия',
         state: 'Состояние',
         auth: 'Auth',
-        rollout: 'Rollout',
+        rollout: 'Отчеты узлов',
         actions: 'Действия',
       },
       empty: {
@@ -3405,18 +3476,18 @@ export const ru = {
         notRequired: 'Не требуется',
       },
       rollout: {
-        reported: 'Отчитался',
-        pending: 'Ожидается',
-        failed: 'Сбой',
+        reported: 'Отчет получен',
+        pending: 'Ожидается отчет',
+        failed: 'Ошибка выполнения',
         noReports: 'Нет отчета',
         notInstalled: 'Не установлен',
       },
       operationNotice: {
         title: 'Недавнее изменение плагина: {{name}}',
         installSynced:
-          'Состояние магазина обновлено после установки/обновления. Проверьте rollout reports, прежде чем считать плагин полностью готовым.',
+          'Состояние магазина обновлено после установки/обновления. Проверьте отчеты узлов, прежде чем считать плагин полностью готовым.',
         installPending:
-          'Установка/обновление изменило состояние магазина, но отчеты rollout узлов еще ожидаются или неполные.',
+          'Установка/обновление изменило состояние магазина, но отчеты узлов еще ожидаются или неполные.',
         deleteSynced:
           'Состояние магазина обновлено после удаления. Существующие отчеты узлов могут сохраняться до нового отчета.',
         deletePending: 'Удаление создало delete work, но отчеты узлов еще не полностью сошлись.',
@@ -3437,7 +3508,7 @@ export const ru = {
         identity: 'Идентичность',
         state: 'Runtime state',
         version: 'Версия и совместимость',
-        rollout: 'Отчеты rollout',
+        rollout: 'Детали отчетов узлов',
         reportMeta: 'Фаза: {{phase}} · Обновлено: {{time}} · Состояние плагина: {{status}}',
         noReports: 'Сейчас нет отчетов узлов, которые ссылаются на этот плагин.',
       },
@@ -3463,7 +3534,7 @@ export const ru = {
           'Этот плагин не из официального репозитория router-for-me. Код плагина может выполняться внутри Home или CPA nodes. Проверьте источник перед установкой.',
         confirmLabel: 'Введите {{token}} для подтверждения',
         reportHint:
-          'Для этого плагина еще нет отчета узла. После изменения дождитесь rollout status перед тем, как считать его ready.',
+          'Для этого плагина еще нет отчета узла. После изменения дождитесь статуса отчета узла перед тем, как считать его ready.',
       },
       uninstallDialog: {
         title: 'Удалить плагин?',
@@ -3480,7 +3551,7 @@ export const ru = {
           'Для применения плагина может потребоваться restart или повторное применение конфигурации.',
         globalDisabled:
           'Плагины глобально отключены, поэтому установленный плагин пока не активен.',
-        reportPending: 'Конфигурация плагина изменилась, но rollout status узлов еще ожидается.',
+        reportPending: 'Конфигурация плагина изменилась, но статус отчета узла еще ожидается.',
         deletePending: 'Delete task создана, но отчеты узлов еще не полностью сошлись.',
       },
     },

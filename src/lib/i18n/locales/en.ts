@@ -58,7 +58,7 @@ export const en = {
       users: 'Users and access',
       billing: 'Billing and reports',
       config: 'Gateway core settings',
-      plugins: 'Plugin store and cluster rollout',
+      plugins: 'Plugin store and node reports',
       usage: 'Usage trends and cost stats',
       diagnostics: 'Call health and request logs',
       logs: 'Gateway runtime and request error logs',
@@ -1973,6 +1973,12 @@ export const en = {
           shortTitle: 'Auth',
           description: 'Control client authentication behavior such as WebSocket auth.',
         },
+        plugins: {
+          title: 'Plugin settings',
+          shortTitle: 'Plugins',
+          description:
+            'Configure plugin enablement, artifact directory, third-party store sources, and store auth rules.',
+        },
         oauthRules: {
           title: 'OAuth model rules',
           shortTitle: 'OAuth rules',
@@ -2075,6 +2081,28 @@ export const en = {
         wsAuth: {
           label: 'WebSocket auth',
           description: 'Require authentication for WebSocket connections.',
+        },
+        pluginsEnabled: {
+          label: 'Enable plugin system',
+          description:
+            'Allow Home and downstream nodes to load configured plugins. Individual plugins still need to be installed and enabled.',
+        },
+        pluginsDir: {
+          label: 'Plugin artifact directory',
+          description: 'Local directory used by each node to store plugin artifacts.',
+          placeholder: 'plugins',
+        },
+        pluginStoreSourcesJson: {
+          label: 'Third-party plugin sources',
+          description:
+            'Append plugin store registry URLs. The built-in official source is always kept.',
+          placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        },
+        pluginStoreAuthJson: {
+          label: 'Store auth rules',
+          description:
+            'Configure auth for private registries, GitHub Release metadata, or artifact downloads. Rules reference environment variable names only.',
+          placeholder: '[]',
         },
         requestRetry: {
           label: 'Request retries',
@@ -2200,6 +2228,48 @@ export const en = {
           tested: 'Proxy connectivity test completed.',
           deleted: 'Proxy record deleted.',
           actionFailed: 'Action failed. Check the backend response.',
+        },
+      },
+      pluginStoreSources: {
+        placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        hint: 'One registry.json URL per line. Empty lines are ignored when saving.',
+        count: '{{count}} third-party sources configured',
+      },
+      pluginStoreAuth: {
+        secretHint:
+          'Enter environment variable names only, never real tokens or passwords. The backend reads the actual values from its runtime environment.',
+        empty: 'No auth rules configured. Public plugin sources do not require one.',
+        ruleTitle: 'Auth rule {{index}}',
+        add: 'Add auth rule',
+        remove: 'Remove rule',
+        match: 'Matching URL prefix',
+        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
+        type: 'Auth type',
+        applyTo: 'Apply to',
+        applyToHint:
+          'When nothing is selected, the rule applies to all registry, metadata, and artifact requests.',
+        tokenEnv: 'Token environment variable',
+        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
+        usernameEnv: 'Username environment variable',
+        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
+        passwordEnv: 'Password environment variable',
+        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
+        headerName: 'Header name',
+        headerNamePlaceholder: 'X-Plugin-Token',
+        headerValueEnv: 'Header value environment variable',
+        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
+        allowInsecure: 'Allow insecure HTTP URLs',
+        types: {
+          none: 'No auth',
+          bearer: 'Bearer',
+          'github-token': 'GitHub Token',
+          basic: 'Basic',
+          header: 'Custom header',
+        },
+        applyToOptions: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
         },
       },
       validation: {
@@ -3234,7 +3304,7 @@ export const en = {
       disconnected: {
         title: 'Connect a Management API runtime',
         description:
-          'Plugin store data and rollout reports come from the Management API. Connect a runtime before installing, updating, or uninstalling plugins.',
+          'Plugin store data and node reports come from the Management API. Connect a runtime before installing, updating, or uninstalling plugins.',
         action: 'Connect runtime',
       },
       unsupported: {
@@ -3265,7 +3335,7 @@ export const en = {
         ready: {
           title: 'Plugin store is ready',
           badge: 'Ready',
-          description: 'Registry data is loaded and no required plugin rollout issue is visible.',
+          description: 'Registry data is loaded and no required node report issue is visible.',
         },
         unsupported: {
           title: 'Plugin store is not supported',
@@ -3291,14 +3361,14 @@ export const en = {
             'The store is available, but plugins.enabled is false. Installed plugins will not be effective until plugins are enabled in runtime config.',
         },
         rolloutFailed: {
-          title: 'Plugin rollout needs attention',
+          title: 'Node reports need attention',
           badge: 'Failed report',
           description:
-            'At least one node reported a plugin task failure. Review rollout details before changing more plugins.',
+            'At least one node reported a plugin task failure. Review node report details before changing more plugins.',
         },
         rolloutPending: {
-          title: 'Plugin rollout is still being observed',
-          badge: 'Pending report',
+          title: 'Node reports are still pending',
+          badge: 'Awaiting report',
           description:
             'The runtime expects plugin reports, but one or more nodes have missing or partial reports.',
         },
@@ -3320,8 +3390,8 @@ export const en = {
         updatesHint: 'Installed plugins with newer registry versions',
         authRequired: 'Auth blockers',
         authHint: 'Plugins waiting for configured store auth',
-        rollout: 'Cluster rollout',
-        rolloutHint: 'Self-reported node plugin observations',
+        rollout: 'Node reports',
+        rolloutHint: 'Latest CPA node reports for plugin install, load, or delete tasks',
       },
       sourceErrors: {
         title: 'Some plugin registry sources failed',
@@ -3351,7 +3421,7 @@ export const en = {
         version: 'Version',
         state: 'State',
         auth: 'Auth',
-        rollout: 'Rollout',
+        rollout: 'Node reports',
         actions: 'Actions',
       },
       empty: {
@@ -3387,18 +3457,18 @@ export const en = {
         notRequired: 'Not required',
       },
       rollout: {
-        reported: 'Reported',
-        pending: 'Pending',
-        failed: 'Failed',
+        reported: 'Report received',
+        pending: 'Awaiting report',
+        failed: 'Execution failed',
         noReports: 'No report',
         notInstalled: 'Not installed',
       },
       operationNotice: {
         title: 'Recent plugin change: {{name}}',
         installSynced:
-          'Store state refreshed after the install/update request. Review rollout reports before treating the plugin as fully ready.',
+          'Store state refreshed after the install/update request. Review node reports before treating the plugin as fully ready.',
         installPending:
-          'The install/update request changed store state, but node rollout reports are still pending or incomplete.',
+          'The install/update request changed store state, but node reports are still pending or incomplete.',
         deleteSynced:
           'Store state refreshed after the uninstall request. Existing node reports may remain until nodes report again.',
         deletePending:
@@ -3420,7 +3490,7 @@ export const en = {
         identity: 'Identity',
         state: 'Runtime state',
         version: 'Version and compatibility',
-        rollout: 'Rollout reports',
+        rollout: 'Node report details',
         reportMeta: 'Phase: {{phase}} · Updated: {{time}} · Plugin state: {{status}}',
         noReports: 'No node report currently references this plugin.',
       },
@@ -3446,7 +3516,7 @@ export const en = {
           'This plugin is not from the official router-for-me repository. Plugin code can run inside Home or CPA nodes. Confirm the source before installing.',
         confirmLabel: 'Type {{token}} to confirm',
         reportHint:
-          'No node report exists for this plugin yet. After the change, wait for node rollout status before treating it as ready.',
+          'No node report exists for this plugin yet. After the change, wait for node report status before treating it as ready.',
       },
       uninstallDialog: {
         title: 'Uninstall plugin?',
@@ -3462,7 +3532,7 @@ export const en = {
         restartRequired:
           'A restart or config apply may be required before the plugin is effective.',
         globalDisabled: 'Plugins are globally disabled, so the installed plugin is not active yet.',
-        reportPending: 'Plugin config changed, but node rollout status is still pending.',
+        reportPending: 'Plugin config changed, but node report status is still pending.',
         deletePending: 'Delete task was created, but node reports have not fully converged yet.',
       },
     },

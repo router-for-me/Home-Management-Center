@@ -58,7 +58,7 @@ export const zhTW = {
       users: '使用者與存取',
       billing: '計費與報表',
       config: '閘道核心設定',
-      plugins: '外掛商店與叢集投放',
+      plugins: '外掛商店與節點回報',
       usage: '用量趨勢與成本統計',
       diagnostics: '調用健康與請求日誌',
       logs: '執行與請求錯誤日誌',
@@ -1909,6 +1909,11 @@ export const zhTW = {
           shortTitle: '認證',
           description: '控制 WebSocket 等用戶端存取認證行為。',
         },
+        plugins: {
+          title: '外掛設定',
+          shortTitle: '外掛',
+          description: '設定外掛系統開關、產物目錄、第三方外掛源和商店認證規則。',
+        },
         oauthRules: {
           title: 'OAuth 模型規則',
           shortTitle: 'OAuth 規則',
@@ -2009,6 +2014,26 @@ export const zhTW = {
         wsAuth: {
           label: 'WebSocket 認證',
           description: '要求 WebSocket 連線攜帶認證資訊。',
+        },
+        pluginsEnabled: {
+          label: '啟用外掛系統',
+          description: '開啟後 Home 與下游節點可以載入已設定外掛；具體外掛仍需單獨安裝和啟用。',
+        },
+        pluginsDir: {
+          label: '外掛產物目錄',
+          description: '每個節點用於保存外掛產物的本地目錄。',
+          placeholder: 'plugins',
+        },
+        pluginStoreSourcesJson: {
+          label: '第三方外掛源',
+          description: '追加外掛商店 registry URL。內建官方源始終保留。',
+          placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        },
+        pluginStoreAuthJson: {
+          label: '商店認證規則',
+          description:
+            '為私有 registry、GitHub Release metadata 或下載位址設定認證，規則只引用環境變數名。',
+          placeholder: '[]',
         },
         requestRetry: {
           label: '請求重試次數',
@@ -2126,6 +2151,46 @@ export const zhTW = {
           tested: '代理連通性測試完成。',
           deleted: '代理記錄已刪除。',
           actionFailed: '操作失敗，請檢查後端介面回應。',
+        },
+      },
+      pluginStoreSources: {
+        placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        hint: '每行一個 registry.json URL，儲存時會過濾空行。',
+        count: '已設定 {{count}} 個第三方來源',
+      },
+      pluginStoreAuth: {
+        secretHint: '這裡只填寫環境變數名，不填寫真實 token 或密碼；後端會從執行環境讀取實際值。',
+        empty: '暫未設定認證規則。公開外掛源不需要設定。',
+        ruleTitle: '認證規則 {{index}}',
+        add: '新增認證規則',
+        remove: '移除規則',
+        match: '匹配 URL 前綴',
+        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
+        type: '認證類型',
+        applyTo: '套用到',
+        applyToHint: '不選擇時套用到 registry、metadata 和 artifact 的所有請求。',
+        tokenEnv: 'Token 環境變數名',
+        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
+        usernameEnv: '使用者名稱環境變數名',
+        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
+        passwordEnv: '密碼環境變數名',
+        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
+        headerName: 'Header 名稱',
+        headerNamePlaceholder: 'X-Plugin-Token',
+        headerValueEnv: 'Header 值環境變數名',
+        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
+        allowInsecure: '允許 HTTP 非安全位址',
+        types: {
+          none: '無認證',
+          bearer: 'Bearer',
+          'github-token': 'GitHub Token',
+          basic: 'Basic',
+          header: '自訂 Header',
+        },
+        applyToOptions: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
         },
       },
       validation: {
@@ -3127,7 +3192,7 @@ export const zhTW = {
       disconnected: {
         title: '連線 Management API 執行環境',
         description:
-          '外掛商店資料和叢集投放上報來自 Management API。連線執行環境後，才能安裝、更新或卸載外掛。',
+          '外掛商店資料和節點回報來自 Management API。連線執行環境後，才能安裝、更新或卸載外掛。',
         action: '連線執行環境',
       },
       unsupported: {
@@ -3140,7 +3205,7 @@ export const zhTW = {
       },
       header: {
         updatedAt: '最近同步：{{time}}',
-        nodes: '節點上報：{{status}}',
+        nodes: '節點回報：{{status}}',
       },
       actions: {
         refresh: '同步資料',
@@ -3157,7 +3222,7 @@ export const zhTW = {
         ready: {
           title: '外掛商店已就緒',
           badge: '正常',
-          description: 'Registry 資料已載入，目前未看到需要處理的外掛投放上報問題。',
+          description: 'Registry 資料已載入，目前未看到需要處理的節點回報問題。',
         },
         unsupported: {
           title: '目前後端不支援外掛商店',
@@ -3181,14 +3246,14 @@ export const zhTW = {
             '外掛商店可用，但 plugins.enabled 為 false。啟用執行環境外掛設定前，已安裝外掛不會生效。',
         },
         rolloutFailed: {
-          title: '外掛投放需要處理',
-          badge: '上報失敗',
-          description: '至少一個節點上報了外掛任務失敗。繼續變更外掛前，請先查看投放詳情。',
+          title: '節點回報需要處理',
+          badge: '回報失敗',
+          description: '至少一個節點回報了外掛任務失敗。繼續變更外掛前，請先查看節點回報詳情。',
         },
         rolloutPending: {
-          title: '外掛投放仍在觀測中',
-          badge: '上報等待',
-          description: '執行環境需要外掛上報，但一個或多個節點仍缺少上報或只有部分上報。',
+          title: '等待節點回報',
+          badge: '等待回報',
+          description: '執行環境需要節點回報，但一個或多個節點仍缺少回報或只有部分回報。',
         },
         updatesAvailable: {
           title: '外掛有可用更新',
@@ -3207,19 +3272,19 @@ export const zhTW = {
         updatesHint: '已安裝且 registry 有更新版本',
         authRequired: '認證阻斷',
         authHint: '等待設定 store-auth 的外掛',
-        rollout: '叢集投放',
-        rolloutHint: '節點自報告的外掛觀測狀態',
+        rollout: '節點回報',
+        rolloutHint: 'CPA 節點對外掛安裝、載入或刪除任務的最近回報',
       },
       sourceErrors: {
         title: '部分外掛 registry 來源失敗',
       },
       nodeReports: {
-        partial: '外掛商店已載入，但無法讀取節點外掛上報：{{message}}',
+        partial: '外掛商店已載入，但無法讀取節點外掛回報：{{message}}',
       },
       table: {
         title: '外掛商店',
         description:
-          '安裝、更新、卸載和查看 store 安裝的外掛。可用時，叢集就緒狀態會參考節點上報。',
+          '安裝、更新、卸載和查看 store 安裝的外掛。可用時，叢集就緒狀態會參考節點回報。',
       },
       filters: {
         search: '搜尋外掛',
@@ -3238,7 +3303,7 @@ export const zhTW = {
         version: '版本',
         state: '狀態',
         auth: '認證',
-        rollout: '投放',
+        rollout: '節點回報',
         actions: '操作',
       },
       empty: {
@@ -3261,7 +3326,7 @@ export const zhTW = {
         authNotRequired: '無需認證',
         globalEnabled: '全域外掛已啟用',
         globalDisabled: '全域外掛已停用',
-        reportRequired: '需要節點上報',
+        reportRequired: '需要節點回報',
         update: '可更新',
       },
       status: {
@@ -3274,18 +3339,18 @@ export const zhTW = {
         notRequired: '不需要',
       },
       rollout: {
-        reported: '已上報',
-        pending: '等待中',
-        failed: '失敗',
-        noReports: '無上報',
+        reported: '已回報',
+        pending: '等待回報',
+        failed: '執行失敗',
+        noReports: '無回報',
         notInstalled: '未安裝',
       },
       operationNotice: {
         title: '最近外掛變更：{{name}}',
-        installSynced: '安裝/更新請求後已刷新商店狀態。將外掛視為完全就緒前，請查看投放上報。',
-        installPending: '安裝/更新請求已變更商店狀態，但節點投放上報仍在等待或不完整。',
-        deleteSynced: '卸載請求後已刷新商店狀態。既有節點上報可能會保留到節點再次上報。',
-        deletePending: '卸載請求已建立刪除任務，但節點上報尚未完全收斂。',
+        installSynced: '安裝/更新請求後已刷新商店狀態。將外掛視為完全就緒前，請查看節點回報。',
+        installPending: '安裝/更新請求已變更商店狀態，但節點回報仍在等待或不完整。',
+        deleteSynced: '卸載請求後已刷新商店狀態。既有節點回報可能會保留到節點再次回報。',
+        deletePending: '卸載請求已建立刪除任務，但節點回報尚未完全收斂。',
       },
       fields: {
         pluginId: '外掛 ID',
@@ -3303,9 +3368,9 @@ export const zhTW = {
         identity: '身分資訊',
         state: '執行狀態',
         version: '版本與相容性',
-        rollout: '投放上報',
+        rollout: '節點回報詳情',
         reportMeta: '階段：{{phase}} · 更新時間：{{time}} · 外掛狀態：{{status}}',
-        noReports: '目前沒有節點上報引用此外掛。',
+        noReports: '目前沒有節點回報引用此外掛。',
       },
       version: {
         updateAvailable: '{{from}} -> {{to}}',
@@ -3314,7 +3379,7 @@ export const zhTW = {
         installTitle: '安裝 {{name}}？',
         updateTitle: '更新 {{name}}？',
         description:
-          '安裝會把固定 store manifest 寫入執行環境設定。節點會非同步套用變更並上報外掛狀態。',
+          '安裝會把固定 store manifest 寫入執行環境設定。節點會非同步套用變更並回報外掛狀態。',
         sourceLabel: 'Registry 來源',
         sourceHint: '此外掛 ID 出現在多個 registry 來源中。請選擇要安裝的來源。',
         sourceRequiredError: '後端要求為此外掛 ID 指定 registry 來源。請選擇來源後重試。',
@@ -3325,13 +3390,13 @@ export const zhTW = {
         thirdPartyDescription:
           '此外掛不來自官方 router-for-me 倉庫。外掛程式碼可能在 Home 或 CPA 節點進程內執行，安裝前請確認來源可信。',
         confirmLabel: '輸入 {{token}} 以確認',
-        reportHint: '此外掛暫無節點上報。變更後請等待節點投放狀態，再把它視為就緒。',
+        reportHint: '此外掛暫無節點回報。變更後請等待節點回報狀態，再把它視為就緒。',
       },
       uninstallDialog: {
         title: '卸載外掛？',
         description:
           '卸載 {{name}}（{{id}}）會移除 store manifest，並為所有 CPA 節點建立刪除任務。',
-        warning: '這是叢集級操作。既有節點上報可能會保留到節點再次上報或被清理。',
+        warning: '這是叢集級操作。既有節點回報可能會保留到節點再次回報或被清理。',
       },
       toast: {
         installStarted: '{{name}} 安裝已開始。',
@@ -3339,8 +3404,8 @@ export const zhTW = {
         uninstallStarted: '{{name}} 卸載已開始。',
         restartRequired: '外掛生效前可能需要重啟或重新套用設定。',
         globalDisabled: '全域外掛已停用，因此已安裝外掛暫未啟用。',
-        reportPending: '外掛設定已變更，但節點投放狀態仍在等待。',
-        deletePending: '刪除任務已建立，但節點上報尚未完全收斂。',
+        reportPending: '外掛設定已變更，但節點回報狀態仍在等待。',
+        deletePending: '刪除任務已建立，但節點回報尚未完全收斂。',
       },
     },
     placeholder: {
