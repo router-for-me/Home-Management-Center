@@ -58,7 +58,7 @@ export const zhCN = {
       users: '用户与访问',
       billing: '计费与报表',
       config: '网关核心设置',
-      plugins: '插件商店与集群投放',
+      plugins: '插件商店与节点回报',
       usage: '用量趋势与成本统计',
       diagnostics: '调用健康与请求日志',
       logs: '运行与请求错误日志',
@@ -1910,6 +1910,11 @@ export const zhCN = {
           shortTitle: '认证',
           description: '控制 WebSocket 等客户端访问认证行为。',
         },
+        plugins: {
+          title: '插件设置',
+          shortTitle: '插件',
+          description: '配置插件系统开关、产物目录、第三方插件源和商店认证规则。',
+        },
         oauthRules: {
           title: 'OAuth 模型规则',
           shortTitle: 'OAuth 规则',
@@ -2010,6 +2015,26 @@ export const zhCN = {
         wsAuth: {
           label: 'WebSocket 认证',
           description: '要求 WebSocket 连接携带认证信息。',
+        },
+        pluginsEnabled: {
+          label: '启用插件系统',
+          description: '开启后 Home 与下游节点可以加载已配置插件；具体插件仍需单独安装和启用。',
+        },
+        pluginsDir: {
+          label: '插件产物目录',
+          description: '每个节点用于保存插件产物的本地目录。',
+          placeholder: 'plugins',
+        },
+        pluginStoreSourcesJson: {
+          label: '第三方插件源',
+          description: '追加插件商店 registry URL。内置官方源始终保留。',
+          placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        },
+        pluginStoreAuthJson: {
+          label: '商店认证规则',
+          description:
+            '为私有 registry、GitHub Release 元数据或下载地址配置认证，规则只引用环境变量名。',
+          placeholder: '[]',
         },
         requestRetry: {
           label: '请求重试次数',
@@ -2127,6 +2152,46 @@ export const zhCN = {
           tested: '代理连通性测试完成。',
           deleted: '代理记录已删除。',
           actionFailed: '操作失败，请检查后端接口响应。',
+        },
+      },
+      pluginStoreSources: {
+        placeholder: 'https://example.com/cliproxy-plugins/registry.json',
+        hint: '每行一个 registry.json URL，保存时会过滤空行。',
+        count: '已配置 {{count}} 个第三方来源',
+      },
+      pluginStoreAuth: {
+        secretHint: '这里只填写环境变量名，不填写真实 token 或密码；后端会从运行环境读取实际值。',
+        empty: '暂未配置认证规则。公开插件源不需要配置。',
+        ruleTitle: '认证规则 {{index}}',
+        add: '添加认证规则',
+        remove: '移除规则',
+        match: '匹配 URL 前缀',
+        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
+        type: '认证类型',
+        applyTo: '应用到',
+        applyToHint: '不选择时应用到 registry、metadata 和 artifact 的所有请求。',
+        tokenEnv: 'Token 环境变量名',
+        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
+        usernameEnv: '用户名环境变量名',
+        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
+        passwordEnv: '密码环境变量名',
+        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
+        headerName: 'Header 名称',
+        headerNamePlaceholder: 'X-Plugin-Token',
+        headerValueEnv: 'Header 值环境变量名',
+        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
+        allowInsecure: '允许 HTTP 非安全地址',
+        types: {
+          none: '无认证',
+          bearer: 'Bearer',
+          'github-token': 'GitHub Token',
+          basic: 'Basic',
+          header: '自定义 Header',
+        },
+        applyToOptions: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
         },
       },
       validation: {
@@ -3127,7 +3192,7 @@ export const zhCN = {
       disconnected: {
         title: '连接 Management API 运行时',
         description:
-          '插件商店数据和集群投放上报来自 Management API。连接运行时后，才能安装、更新或卸载插件。',
+          '插件商店数据和节点回报来自 Management API。连接运行时后，才能安装、更新或卸载插件。',
         action: '连接运行时',
       },
       unsupported: {
@@ -3140,7 +3205,7 @@ export const zhCN = {
       },
       header: {
         updatedAt: '最近同步：{{time}}',
-        nodes: '节点上报：{{status}}',
+        nodes: '节点回报：{{status}}',
       },
       actions: {
         refresh: '同步数据',
@@ -3157,7 +3222,7 @@ export const zhCN = {
         ready: {
           title: '插件商店已就绪',
           badge: '正常',
-          description: 'Registry 数据已加载，当前未看到需要处理的插件投放上报问题。',
+          description: 'Registry 数据已加载，当前未看到需要处理的节点回报问题。',
         },
         unsupported: {
           title: '当前后端不支持插件商店',
@@ -3181,14 +3246,14 @@ export const zhCN = {
             '插件商店可用，但 plugins.enabled 为 false。启用运行时插件配置前，已安装插件不会生效。',
         },
         rolloutFailed: {
-          title: '插件投放需要处理',
-          badge: '上报失败',
-          description: '至少一个节点上报了插件任务失败。继续变更插件前，请先查看投放详情。',
+          title: '节点回报需要处理',
+          badge: '回报失败',
+          description: '至少一个节点回报了插件任务失败。继续变更插件前，请先查看节点回报详情。',
         },
         rolloutPending: {
-          title: '插件投放仍在观测中',
-          badge: '上报等待',
-          description: '运行时需要插件上报，但一个或多个节点仍缺少上报或只有部分上报。',
+          title: '等待节点回报',
+          badge: '等待回报',
+          description: '运行时需要节点回报，但一个或多个节点仍缺少回报或只有部分回报。',
         },
         updatesAvailable: {
           title: '插件有可用更新',
@@ -3207,19 +3272,19 @@ export const zhCN = {
         updatesHint: '已安装且 registry 有更新版本',
         authRequired: '认证阻断',
         authHint: '等待配置 store-auth 的插件',
-        rollout: '集群投放',
-        rolloutHint: '节点自报告的插件观测状态',
+        rollout: '节点回报',
+        rolloutHint: 'CPA 节点对插件安装、加载或删除任务的最近回报',
       },
       sourceErrors: {
         title: '部分插件 registry 来源失败',
       },
       nodeReports: {
-        partial: '插件商店已加载，但无法读取节点插件上报：{{message}}',
+        partial: '插件商店已加载，但无法读取节点插件回报：{{message}}',
       },
       table: {
         title: '插件商店',
         description:
-          '安装、更新、卸载和查看 store 安装的插件。可用时，集群就绪状态会参考节点上报。',
+          '安装、更新、卸载和查看 store 安装的插件。可用时，集群就绪状态会参考节点回报。',
       },
       filters: {
         search: '搜索插件',
@@ -3238,7 +3303,7 @@ export const zhCN = {
         version: '版本',
         state: '状态',
         auth: '认证',
-        rollout: '投放',
+        rollout: '节点回报',
         actions: '操作',
       },
       empty: {
@@ -3261,7 +3326,7 @@ export const zhCN = {
         authNotRequired: '无需认证',
         globalEnabled: '全局插件已启用',
         globalDisabled: '全局插件已禁用',
-        reportRequired: '需要节点上报',
+        reportRequired: '需要节点回报',
         update: '可更新',
       },
       status: {
@@ -3274,18 +3339,18 @@ export const zhCN = {
         notRequired: '不需要',
       },
       rollout: {
-        reported: '已上报',
-        pending: '等待中',
-        failed: '失败',
-        noReports: '无上报',
+        reported: '已回报',
+        pending: '等待回报',
+        failed: '执行失败',
+        noReports: '无回报',
         notInstalled: '未安装',
       },
       operationNotice: {
         title: '最近插件变更：{{name}}',
-        installSynced: '安装/更新请求后已刷新商店状态。将插件视为完全就绪前，请查看投放上报。',
-        installPending: '安装/更新请求已变更商店状态，但节点投放上报仍在等待或不完整。',
-        deleteSynced: '卸载请求后已刷新商店状态。现有节点上报可能会保留到节点再次上报。',
-        deletePending: '卸载请求已创建删除任务，但节点上报尚未完全收敛。',
+        installSynced: '安装/更新请求后已刷新商店状态。将插件视为完全就绪前，请查看节点回报。',
+        installPending: '安装/更新请求已变更商店状态，但节点回报仍在等待或不完整。',
+        deleteSynced: '卸载请求后已刷新商店状态。现有节点回报可能会保留到节点再次回报。',
+        deletePending: '卸载请求已创建删除任务，但节点回报尚未完全收敛。',
       },
       fields: {
         pluginId: '插件 ID',
@@ -3303,9 +3368,9 @@ export const zhCN = {
         identity: '身份信息',
         state: '运行状态',
         version: '版本与兼容性',
-        rollout: '投放上报',
+        rollout: '节点回报详情',
         reportMeta: '阶段：{{phase}} · 更新时间：{{time}} · 插件状态：{{status}}',
-        noReports: '当前没有节点上报引用此插件。',
+        noReports: '当前没有节点回报引用此插件。',
       },
       version: {
         updateAvailable: '{{from}} -> {{to}}',
@@ -3314,7 +3379,7 @@ export const zhCN = {
         installTitle: '安装 {{name}}？',
         updateTitle: '更新 {{name}}？',
         description:
-          '安装会把固定 store manifest 写入运行时配置。节点会异步应用变更并上报插件状态。',
+          '安装会把固定 store manifest 写入运行时配置。节点会异步应用变更并回报插件状态。',
         sourceLabel: 'Registry 来源',
         sourceHint: '此插件 ID 出现在多个 registry 来源中。请选择要安装的来源。',
         sourceRequiredError: '后端要求为此插件 ID 指定 registry 来源。请选择来源后重试。',
@@ -3325,13 +3390,13 @@ export const zhCN = {
         thirdPartyDescription:
           '此插件不来自官方 router-for-me 仓库。插件代码可能在 Home 或 CPA 节点进程内运行，安装前请确认来源可信。',
         confirmLabel: '输入 {{token}} 以确认',
-        reportHint: '此插件暂无节点上报。变更后请等待节点投放状态，再把它视为就绪。',
+        reportHint: '此插件暂无节点回报。变更后请等待节点回报状态，再把它视为就绪。',
       },
       uninstallDialog: {
         title: '卸载插件？',
         description:
           '卸载 {{name}}（{{id}}）会移除 store manifest，并为所有 CPA 节点创建删除任务。',
-        warning: '这是集群级操作。现有节点上报可能会保留到节点再次上报或被清理。',
+        warning: '这是集群级操作。现有节点回报可能会保留到节点再次回报或被清理。',
       },
       toast: {
         installStarted: '{{name}} 安装已开始。',
@@ -3339,8 +3404,8 @@ export const zhCN = {
         uninstallStarted: '{{name}} 卸载已开始。',
         restartRequired: '插件生效前可能需要重启或重新应用配置。',
         globalDisabled: '全局插件已禁用，因此已安装插件暂未激活。',
-        reportPending: '插件配置已变更，但节点投放状态仍在等待。',
-        deletePending: '删除任务已创建，但节点上报尚未完全收敛。',
+        reportPending: '插件配置已变更，但节点回报状态仍在等待。',
+        deletePending: '删除任务已创建，但节点回报尚未完全收敛。',
       },
     },
     placeholder: {

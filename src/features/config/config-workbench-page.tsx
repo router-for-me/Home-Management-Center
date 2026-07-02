@@ -14,6 +14,7 @@ import {
   KeyRound,
   Loader2,
   Network,
+  Plug,
   Plus,
   RefreshCw,
   Route,
@@ -22,6 +23,7 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
+  Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -57,6 +59,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
@@ -74,6 +77,7 @@ type ConfigSectionId =
   | 'tls'
   | 'remoteManagement'
   | 'authentication'
+  | 'plugins'
   | 'oauthRules'
   | 'system'
   | 'network'
@@ -90,7 +94,11 @@ type ConfigFieldKind =
   | 'jsonArray'
   | 'jsonObject'
 
-type JsonConfigFieldKey = 'oauthExcludedModelsJson' | 'oauthModelAliasJson'
+type JsonConfigFieldKey =
+  | 'oauthExcludedModelsJson'
+  | 'oauthModelAliasJson'
+  | 'pluginStoreSourcesJson'
+  | 'pluginStoreAuthJson'
 
 type OAuthModelCatalogState = {
   channel: ProviderModelChannel
@@ -108,6 +116,22 @@ type AliasRule = {
   name?: string
   alias?: string
   fork?: boolean
+}
+
+type PluginStoreAuthType = 'none' | 'bearer' | 'github-token' | 'basic' | 'header'
+
+type PluginStoreAuthApplyTo = 'registry' | 'metadata' | 'artifact'
+
+type PluginStoreAuthRule = {
+  match: string
+  applyTo: PluginStoreAuthApplyTo[]
+  type: PluginStoreAuthType
+  tokenEnv: string
+  usernameEnv: string
+  passwordEnv: string
+  headerName: string
+  headerValueEnv: string
+  allowInsecure: boolean
 }
 
 type NetworkProxyPanel = 'current' | 'pool'
@@ -171,6 +195,15 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
   {
     id: 'authentication',
     fields: [{ key: 'wsAuth', kind: 'boolean', sectionId: 'authentication' }],
+  },
+  {
+    id: 'plugins',
+    fields: [
+      { key: 'pluginsEnabled', kind: 'boolean', sectionId: 'plugins' },
+      { key: 'pluginsDir', kind: 'text', sectionId: 'plugins' },
+      { key: 'pluginStoreSourcesJson', kind: 'jsonArray', sectionId: 'plugins' },
+      { key: 'pluginStoreAuthJson', kind: 'jsonArray', sectionId: 'plugins' },
+    ],
   },
   {
     id: 'oauthRules',
@@ -244,6 +277,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   tls: ShieldCheck,
   remoteManagement: Network,
   authentication: KeyRound,
+  plugins: Plug,
   oauthRules: Route,
   system: Database,
   network: Network,
@@ -255,7 +289,19 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
+  'pluginStoreSourcesJson',
+  'pluginStoreAuthJson',
 ])
+
+const pluginStoreAuthTypes: PluginStoreAuthType[] = [
+  'none',
+  'bearer',
+  'github-token',
+  'basic',
+  'header',
+]
+
+const pluginStoreAuthApplyToOptions: PluginStoreAuthApplyTo[] = ['registry', 'metadata', 'artifact']
 
 type JsonParseResult =
   | {
@@ -332,6 +378,120 @@ function canEditModelAliases(value: unknown) {
   )
 }
 
+function normalizePluginStoreSources(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
+function canEditPluginStoreSources(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false
+
+  return value.every((item) => typeof item === 'string')
+}
+
+function hasKnownPluginStoreAuthKeys(value: Record<string, unknown>) {
+  return hasOnlyKeys(value, [
+    'match',
+    'apply-to',
+    'apply_to',
+    'type',
+    'token-env',
+    'username-env',
+    'password-env',
+    'header-name',
+    'header-value-env',
+    'allow-insecure',
+    'allow_insecure',
+  ])
+}
+
+function normalizePluginStoreAuthRule(value: Record<string, unknown>): PluginStoreAuthRule {
+  const typeValue = typeof value.type === 'string' ? value.type : 'none'
+  const type = pluginStoreAuthTypes.includes(typeValue as PluginStoreAuthType)
+    ? (typeValue as PluginStoreAuthType)
+    : 'none'
+  const applyToRaw = value['apply-to'] ?? value.apply_to
+  const applyTo = Array.isArray(applyToRaw)
+    ? applyToRaw.filter((item): item is PluginStoreAuthApplyTo =>
+        pluginStoreAuthApplyToOptions.includes(item as PluginStoreAuthApplyTo),
+      )
+    : []
+
+  return {
+    match: typeof value.match === 'string' ? value.match : '',
+    applyTo,
+    type,
+    tokenEnv: typeof value['token-env'] === 'string' ? value['token-env'] : '',
+    usernameEnv: typeof value['username-env'] === 'string' ? value['username-env'] : '',
+    passwordEnv: typeof value['password-env'] === 'string' ? value['password-env'] : '',
+    headerName: typeof value['header-name'] === 'string' ? value['header-name'] : '',
+    headerValueEnv: typeof value['header-value-env'] === 'string' ? value['header-value-env'] : '',
+    allowInsecure: Boolean(value['allow-insecure'] ?? value.allow_insecure),
+  }
+}
+
+function normalizePluginStoreAuthRules(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .filter(isRecord)
+    .map(normalizePluginStoreAuthRule)
+    .filter(
+      (rule) =>
+        rule.match.trim() ||
+        rule.type !== 'none' ||
+        rule.applyTo.length > 0 ||
+        rule.tokenEnv.trim() ||
+        rule.usernameEnv.trim() ||
+        rule.passwordEnv.trim() ||
+        rule.headerName.trim() ||
+        rule.headerValueEnv.trim() ||
+        rule.allowInsecure,
+    )
+}
+
+function canEditPluginStoreAuthRules(value: unknown): value is Record<string, unknown>[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => isRecord(item) && hasKnownPluginStoreAuthKeys(item))
+  )
+}
+
+function serializePluginStoreAuthRule(rule: PluginStoreAuthRule) {
+  const nextRule: Record<string, unknown> = {}
+  const match = rule.match.trim()
+  const tokenEnv = rule.tokenEnv.trim()
+  const usernameEnv = rule.usernameEnv.trim()
+  const passwordEnv = rule.passwordEnv.trim()
+  const headerName = rule.headerName.trim()
+  const headerValueEnv = rule.headerValueEnv.trim()
+
+  if (match) nextRule.match = match
+  if (rule.applyTo.length > 0) nextRule['apply-to'] = rule.applyTo
+  nextRule.type = rule.type
+
+  if (rule.type === 'bearer' || rule.type === 'github-token') {
+    if (tokenEnv) nextRule['token-env'] = tokenEnv
+  }
+
+  if (rule.type === 'basic') {
+    if (usernameEnv) nextRule['username-env'] = usernameEnv
+    if (passwordEnv) nextRule['password-env'] = passwordEnv
+  }
+
+  if (rule.type === 'header') {
+    if (headerName) nextRule['header-name'] = headerName
+    if (headerValueEnv) nextRule['header-value-env'] = headerValueEnv
+  }
+
+  if (rule.allowInsecure) nextRule['allow-insecure'] = true
+
+  return nextRule
+}
+
 function getModelDisplayName(model: ProviderModelDefinition) {
   return model.displayName || model.name || model.id
 }
@@ -342,6 +502,10 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
       return canEditModelAliases(value)
+    case 'pluginStoreSourcesJson':
+      return canEditPluginStoreSources(value)
+    case 'pluginStoreAuthJson':
+      return canEditPluginStoreAuthRules(value)
   }
 }
 
@@ -1191,6 +1355,312 @@ function ModelAliasEditor({
   )
 }
 
+function PluginStoreSourcesEditor({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string[]
+  disabled: boolean
+  onChange: (value: string[]) => void
+}) {
+  const { t } = useTranslation()
+  const normalizedValue = normalizePluginStoreSources(value).join('\n')
+  const [draft, setDraft] = useState(normalizedValue)
+
+  useEffect(() => {
+    const normalizedDraft = draft
+      .split('\n')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .join('\n')
+
+    if (normalizedDraft !== normalizedValue) {
+      setDraft(normalizedValue)
+    }
+  }, [draft, normalizedValue])
+
+  const commitDraft = (nextDraft: string) => {
+    onChange(
+      nextDraft
+        .split('\n')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    )
+  }
+
+  return (
+    <div className="grid gap-3">
+      <Textarea
+        value={draft}
+        disabled={disabled}
+        className="min-h-28 font-mono text-sm"
+        placeholder={t('configPage.pluginStoreSources.placeholder')}
+        onChange={(event) => {
+          setDraft(event.target.value)
+          commitDraft(event.target.value)
+        }}
+      />
+      <div className="text-muted-foreground flex flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
+        <span>{t('configPage.pluginStoreSources.hint')}</span>
+        <span>
+          {t('configPage.pluginStoreSources.count', {
+            count: normalizePluginStoreSources(value).length,
+          })}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function createPluginStoreAuthRule(): PluginStoreAuthRule {
+  return {
+    match: '',
+    applyTo: [],
+    type: 'bearer',
+    tokenEnv: '',
+    usernameEnv: '',
+    passwordEnv: '',
+    headerName: '',
+    headerValueEnv: '',
+    allowInsecure: false,
+  }
+}
+
+function PluginStoreAuthEditor({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: PluginStoreAuthRule[]
+  disabled: boolean
+  onChange: (value: PluginStoreAuthRule[]) => void
+}) {
+  const { t } = useTranslation()
+  const updateRule = (index: number, patch: Partial<PluginStoreAuthRule>) => {
+    onChange(value.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)))
+  }
+  const addRule = () => onChange([...value, createPluginStoreAuthRule()])
+  const removeRule = (index: number) => {
+    onChange(value.filter((_, ruleIndex) => ruleIndex !== index))
+  }
+  const toggleApplyTo = (index: number, item: PluginStoreAuthApplyTo) => {
+    const rule = value[index]
+    if (!rule) return
+    const nextApplyTo = rule.applyTo.includes(item)
+      ? rule.applyTo.filter((current) => current !== item)
+      : [...rule.applyTo, item]
+    updateRule(index, { applyTo: nextApplyTo })
+  }
+
+  return (
+    <div className="grid gap-3">
+      <div className="border-info/25 bg-info/10 text-info rounded-md border px-3 py-2 text-xs leading-5">
+        {t('configPage.pluginStoreAuth.secretHint')}
+      </div>
+
+      {value.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.pluginStoreAuth.empty')} />
+      ) : (
+        <div className="grid gap-3">
+          {value.map((rule, index) => {
+            const usesToken = rule.type === 'bearer' || rule.type === 'github-token'
+            const usesBasic = rule.type === 'basic'
+            const usesHeader = rule.type === 'header'
+
+            return (
+              <div key={index} className="grid gap-3 rounded-md border px-3 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">
+                      {rule.match.trim() ||
+                        t('configPage.pluginStoreAuth.ruleTitle', { index: index + 1 })}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {t(`configPage.pluginStoreAuth.types.${rule.type}`)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="text-destructive hover:text-destructive justify-start sm:justify-center"
+                    disabled={disabled}
+                    onClick={() => removeRule(index)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('configPage.pluginStoreAuth.remove')}
+                  </Button>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-[minmax(16rem,1.4fr)_minmax(12rem,0.7fr)]">
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {t('configPage.pluginStoreAuth.match')}
+                    </span>
+                    <Input
+                      value={rule.match}
+                      disabled={disabled}
+                      className="font-mono"
+                      placeholder={t('configPage.pluginStoreAuth.matchPlaceholder')}
+                      onChange={(event) => updateRule(index, { match: event.target.value })}
+                    />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {t('configPage.pluginStoreAuth.type')}
+                    </span>
+                    <Select
+                      value={rule.type}
+                      disabled={disabled}
+                      onValueChange={(type) =>
+                        updateRule(index, { type: type as PluginStoreAuthType })
+                      }
+                    >
+                      <SelectTrigger aria-label={t('configPage.pluginStoreAuth.type')}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pluginStoreAuthTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {t(`configPage.pluginStoreAuth.types.${type}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                </div>
+
+                <div className="grid gap-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t('configPage.pluginStoreAuth.applyTo')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {pluginStoreAuthApplyToOptions.map((item) => (
+                      <label
+                        key={item}
+                        className="border-input bg-background flex h-8 items-center gap-2 rounded-md border px-3 text-sm"
+                      >
+                        <Checkbox
+                          checked={rule.applyTo.includes(item)}
+                          disabled={disabled}
+                          onCheckedChange={() => toggleApplyTo(index, item)}
+                        />
+                        <span>{t(`configPage.pluginStoreAuth.applyToOptions.${item}`)}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-5">
+                    {t('configPage.pluginStoreAuth.applyToHint')}
+                  </p>
+                </div>
+
+                {usesToken ? (
+                  <label className="grid gap-1.5 lg:max-w-md">
+                    <span className="text-muted-foreground text-xs font-medium">
+                      {t('configPage.pluginStoreAuth.tokenEnv')}
+                    </span>
+                    <Input
+                      value={rule.tokenEnv}
+                      disabled={disabled}
+                      className="font-mono"
+                      placeholder={t('configPage.pluginStoreAuth.tokenEnvPlaceholder')}
+                      onChange={(event) => updateRule(index, { tokenEnv: event.target.value })}
+                    />
+                  </label>
+                ) : null}
+
+                {usesBasic ? (
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('configPage.pluginStoreAuth.usernameEnv')}
+                      </span>
+                      <Input
+                        value={rule.usernameEnv}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder={t('configPage.pluginStoreAuth.usernameEnvPlaceholder')}
+                        onChange={(event) => updateRule(index, { usernameEnv: event.target.value })}
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('configPage.pluginStoreAuth.passwordEnv')}
+                      </span>
+                      <Input
+                        value={rule.passwordEnv}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder={t('configPage.pluginStoreAuth.passwordEnvPlaceholder')}
+                        onChange={(event) => updateRule(index, { passwordEnv: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                {usesHeader ? (
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('configPage.pluginStoreAuth.headerName')}
+                      </span>
+                      <Input
+                        value={rule.headerName}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder={t('configPage.pluginStoreAuth.headerNamePlaceholder')}
+                        onChange={(event) => updateRule(index, { headerName: event.target.value })}
+                      />
+                    </label>
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('configPage.pluginStoreAuth.headerValueEnv')}
+                      </span>
+                      <Input
+                        value={rule.headerValueEnv}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder={t('configPage.pluginStoreAuth.headerValueEnvPlaceholder')}
+                        onChange={(event) =>
+                          updateRule(index, { headerValueEnv: event.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                <label className="border-input bg-background flex w-fit items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                  <Checkbox
+                    checked={rule.allowInsecure}
+                    disabled={disabled}
+                    onCheckedChange={(checked) =>
+                      updateRule(index, { allowInsecure: checked === true })
+                    }
+                  />
+                  <span>{t('configPage.pluginStoreAuth.allowInsecure')}</span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-fit"
+        disabled={disabled}
+        onClick={addRule}
+      >
+        <Plus className="size-4" aria-hidden="true" />
+        {t('configPage.pluginStoreAuth.add')}
+      </Button>
+    </div>
+  )
+}
+
 function StructuredJsonEditor({
   fieldKey,
   value,
@@ -1220,6 +1690,22 @@ function StructuredJsonEditor({
           value={value as Record<string, AliasRule[]>}
           disabled={disabled}
           onChange={onChange}
+        />
+      )
+    case 'pluginStoreSourcesJson':
+      return (
+        <PluginStoreSourcesEditor
+          value={normalizePluginStoreSources(value)}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      )
+    case 'pluginStoreAuthJson':
+      return (
+        <PluginStoreAuthEditor
+          value={normalizePluginStoreAuthRules(value)}
+          disabled={disabled}
+          onChange={(nextValue) => onChange(nextValue.map(serializePluginStoreAuthRule))}
         />
       )
   }

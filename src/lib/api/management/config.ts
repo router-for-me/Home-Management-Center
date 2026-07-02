@@ -8,6 +8,10 @@ type UnknownRecord = Record<string, unknown>
 
 export type ConfigFieldKey =
   | 'debug'
+  | 'pluginsEnabled'
+  | 'pluginsDir'
+  | 'pluginStoreSourcesJson'
+  | 'pluginStoreAuthJson'
   | 'loggingToFile'
   | 'logsMaxTotalSizeMb'
   | 'errorLogsMaxFiles'
@@ -71,6 +75,10 @@ const yamlBackedConfigKeys = new Set<ConfigFieldKey>([
   'remoteManagementDisableControlPanel',
   'remoteManagementDisableAutoUpdatePanel',
   'remoteManagementPanelGithubRepository',
+  'pluginsEnabled',
+  'pluginsDir',
+  'pluginStoreSourcesJson',
+  'pluginStoreAuthJson',
 ])
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -195,6 +203,7 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
   const parsed = toRecord(parsedRaw)
   const tls = toRecord(parsed.tls)
   const remoteManagement = toRecord(parsed['remote-management'])
+  const plugins = toRecord(parsed.plugins)
 
   return {
     tls: {
@@ -210,6 +219,12 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
       'panel-github-repository':
         readString(remoteManagement, 'panel-github-repository') ||
         readString(remoteManagement, 'panel-repo'),
+    },
+    plugins: {
+      enabled: readBoolean(plugins, 'enabled'),
+      dir: readString(plugins, 'dir', 'plugins'),
+      'store-sources': Array.isArray(plugins['store-sources']) ? plugins['store-sources'] : [],
+      'store-auth': Array.isArray(plugins['store-auth']) ? plugins['store-auth'] : [],
     },
   }
 }
@@ -273,6 +288,36 @@ function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
           doc.deleteIn(['remote-management', 'panel-repo'])
         }
         break
+      case 'pluginsEnabled':
+        ensureMapInDoc(doc, ['plugins'])
+        setBooleanInDoc(doc, ['plugins', 'enabled'], Boolean(change.nextValue))
+        break
+      case 'pluginsDir':
+        ensureMapInDoc(doc, ['plugins'])
+        setStringInDoc(doc, ['plugins', 'dir'], change.nextValue)
+        break
+      case 'pluginStoreSourcesJson': {
+        ensureMapInDoc(doc, ['plugins'])
+        const sources = parseJsonArrayText(change.nextValue)
+          .map((item) => (typeof item === 'string' ? item.trim() : ''))
+          .filter((item) => item.length > 0)
+        if (sources.length > 0) {
+          doc.setIn(['plugins', 'store-sources'], sources)
+        } else if (docHas(doc, ['plugins', 'store-sources'])) {
+          doc.deleteIn(['plugins', 'store-sources'])
+        }
+        break
+      }
+      case 'pluginStoreAuthJson': {
+        ensureMapInDoc(doc, ['plugins'])
+        const authRules = parseJsonArrayText(change.nextValue)
+        if (authRules.length > 0) {
+          doc.setIn(['plugins', 'store-auth'], authRules)
+        } else if (docHas(doc, ['plugins', 'store-auth'])) {
+          doc.deleteIn(['plugins', 'store-auth'])
+        }
+        break
+      }
       default:
         break
     }
@@ -280,6 +325,7 @@ function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
 
   deleteIfMapEmpty(doc, ['tls'])
   deleteIfMapEmpty(doc, ['remote-management'])
+  deleteIfMapEmpty(doc, ['plugins'])
 
   return doc.toString()
 }
@@ -345,6 +391,10 @@ function createYamlBackedChangeTextPatch(
         ['remote-management', 'panel-github-repository'],
         String(change.nextValue),
       )
+    case 'pluginsEnabled':
+      return createExistingYamlScalarPatch(doc, ['plugins', 'enabled'], Boolean(change.nextValue))
+    case 'pluginsDir':
+      return createExistingYamlScalarPatch(doc, ['plugins', 'dir'], String(change.nextValue))
     default:
       return null
   }
@@ -355,11 +405,16 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
   const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
   const tls = toRecord(rawConfig.tls)
   const remoteManagement = toRecord(rawConfig['remote-management'])
+  const plugins = toRecord(rawConfig.plugins)
   const oauthExcludedModels = toRecord(rawConfig['oauth-excluded-models'])
   const oauthModelAlias = toRecord(rawConfig['oauth-model-alias'])
 
   return {
     debug: readBoolean(rawConfig, 'debug'),
+    pluginsEnabled: readBoolean(plugins, 'enabled'),
+    pluginsDir: readString(plugins, 'dir', 'plugins'),
+    pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
+    pluginStoreAuthJson: stringifyJsonArray(plugins['store-auth']),
     loggingToFile: readBoolean(rawConfig, 'logging-to-file'),
     logsMaxTotalSizeMb: readNumber(rawConfig, 'logs-max-total-size-mb'),
     errorLogsMaxFiles: readNumber(rawConfig, 'error-logs-max-files', 10),
