@@ -2138,7 +2138,8 @@ export const en = {
           label: 'Model aliases',
           description:
             'Configure client-visible model aliases by channel and map them to upstream model names.',
-          placeholder: '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true}]}',
+          placeholder:
+            '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
         },
       },
       routingStrategies: {
@@ -2296,6 +2297,7 @@ export const en = {
           name: 'Upstream model',
           alias: 'Client alias',
           fork: 'Fork',
+          forceMapping: 'force-mapping',
           from: 'Requested model',
           to: 'Upstream model',
           regex: 'Regex',
@@ -2308,6 +2310,8 @@ export const en = {
           name: 'Model ID actually sent to the upstream provider.',
           alias: 'Model alias that clients can request.',
           fork: 'Advanced option. The API only defines this as fork alias behavior; leave it off unless you need it.',
+          forceMapping:
+            'When enabled, response model fields are written back as the mapped upstream model name.',
           from: 'Amp model name in the client request. When Regex is enabled, this is treated as a regular expression.',
           to: 'Target upstream model name after a match.',
           regex:

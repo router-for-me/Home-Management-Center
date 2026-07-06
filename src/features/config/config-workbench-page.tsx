@@ -116,6 +116,8 @@ type AliasRule = {
   name?: string
   alias?: string
   fork?: boolean
+  forceMapping?: boolean
+  'force-mapping'?: boolean
 }
 
 type PluginStoreAuthType = 'none' | 'bearer' | 'github-token' | 'basic' | 'header'
@@ -370,11 +372,62 @@ function canEditModelAliases(value: unknown) {
       items.every(
         (item) =>
           isRecord(item) &&
-          hasOnlyKeys(item, ['name', 'alias', 'fork']) &&
+          hasOnlyKeys(item, ['name', 'alias', 'fork', 'force-mapping', 'forceMapping']) &&
           (item.name === undefined || typeof item.name === 'string') &&
           (item.alias === undefined || typeof item.alias === 'string') &&
-          (item.fork === undefined || typeof item.fork === 'boolean'),
+          (item.fork === undefined || typeof item.fork === 'boolean') &&
+          (item['force-mapping'] === undefined || typeof item['force-mapping'] === 'boolean') &&
+          (item.forceMapping === undefined || typeof item.forceMapping === 'boolean'),
       ),
+  )
+}
+
+function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
+  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
+
+  return {
+    ...(typeof rule.name === 'string' ? { name: rule.name } : {}),
+    ...(typeof rule.alias === 'string' ? { alias: rule.alias } : {}),
+    ...(typeof rule.fork === 'boolean' ? { fork: rule.fork } : {}),
+    ...(typeof forceMapping === 'boolean' ? { forceMapping } : {}),
+  }
+}
+
+function normalizeModelAliases(value: unknown): Record<string, AliasRule[]> {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<Record<string, AliasRule[]>>(
+    (nextValue, [channel, rules]) => {
+      if (!Array.isArray(rules)) return nextValue
+
+      return {
+        ...nextValue,
+        [channel]: rules.filter(isRecord).map((rule) => normalizeModelAliasRule(rule)),
+      }
+    },
+    {},
+  )
+}
+
+function serializeModelAliasRule(rule: AliasRule) {
+  const nextRule: Record<string, string | boolean> = {}
+  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
+
+  if (rule.name !== undefined) nextRule.name = rule.name
+  if (rule.alias !== undefined) nextRule.alias = rule.alias
+  if (typeof rule.fork === 'boolean') nextRule.fork = rule.fork
+  if (forceMapping === true) nextRule['force-mapping'] = true
+
+  return nextRule
+}
+
+function serializeModelAliases(value: Record<string, AliasRule[]>) {
+  return Object.entries(value).reduce<Record<string, ReturnType<typeof serializeModelAliasRule>[]>>(
+    (nextValue, [channel, rules]) => ({
+      ...nextValue,
+      [channel]: rules.map(serializeModelAliasRule),
+    }),
+    {},
   )
 }
 
@@ -1202,7 +1255,7 @@ function ModelAliasEditor({
     })),
   )
   const columnsClass =
-    'lg:grid-cols-[minmax(9rem,0.75fr)_minmax(12rem,1fr)_minmax(11rem,0.9fr)_minmax(8rem,auto)_auto]'
+    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
 
   const updateRow = (rowIndex: number, patch: Partial<{ channel: string; item: AliasRule }>) => {
     const nextRows = rows.map((row, index) => ({
@@ -1277,6 +1330,10 @@ function ModelAliasEditor({
               label={t('configPage.json.columns.fork')}
               description={t('configPage.json.columnDescriptions.fork')}
             />
+            <TableHeaderCell
+              label={t('configPage.json.columns.forceMapping')}
+              description={t('configPage.json.columnDescriptions.forceMapping')}
+            />
             <TableHeaderCell label={t('configPage.json.columns.actions')} />
           </div>
 
@@ -1335,6 +1392,16 @@ function ModelAliasEditor({
                     }
                   />
                   <span>{t('configPage.json.columns.fork')}</span>
+                </label>
+                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
+                  <Checkbox
+                    checked={Boolean(item.forceMapping ?? item['force-mapping'])}
+                    disabled={disabled}
+                    onCheckedChange={(checked) =>
+                      updateRow(rowIndex, { item: { forceMapping: checked === true } })
+                    }
+                  />
+                  <span>{t('configPage.json.columns.forceMapping')}</span>
                 </label>
                 <Button
                   type="button"
@@ -1687,9 +1754,9 @@ function StructuredJsonEditor({
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
-          value={value as Record<string, AliasRule[]>}
+          value={normalizeModelAliases(value)}
           disabled={disabled}
-          onChange={onChange}
+          onChange={(nextValue) => onChange(serializeModelAliases(nextValue))}
         />
       )
     case 'pluginStoreSourcesJson':

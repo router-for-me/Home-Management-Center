@@ -2067,7 +2067,8 @@ export const zhTW = {
         oauthModelAliasJson: {
           label: '模型別名',
           description: '按通道設定用戶端可見模型別名，以及別名對應的上游模型名。',
-          placeholder: '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true}]}',
+          placeholder:
+            '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
         },
       },
       routingStrategies: {
@@ -2216,6 +2217,7 @@ export const zhTW = {
           name: '上游模型名',
           alias: '用戶端別名',
           fork: 'Fork',
+          forceMapping: 'force-mapping',
           from: '請求模型',
           to: '上游模型',
           regex: 'Regex',
@@ -2228,6 +2230,7 @@ export const zhTW = {
           name: '實際轉發到上游的模型 ID。',
           alias: '用戶端請求時可使用的模型別名。',
           fork: '進階選項。API 文件僅定義為 fork alias 行為；不確定時保持關閉。',
+          forceMapping: '開啟後回應中的 model 欄位會回寫為映射後的上游模型名。',
           from: '用戶端請求中的 Amp 模型名。啟用 Regex 後按正則表達式匹配。',
           to: '匹配後轉發到上游的目標模型名。',
           regex: '關閉時按完整模型名匹配；開啟時將請求模型作為正則表達式處理。',
