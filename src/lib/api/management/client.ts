@@ -4,8 +4,9 @@ import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/manag
 
 const MANAGEMENT_PATH = '/v0/management'
 const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
-const DEFAULT_MANAGEMENT_BASE_URL = `${DEFAULT_MANAGEMENT_ORIGIN}${MANAGEMENT_PATH}`
 const SAME_ORIGIN_MANAGEMENT_BASE_URL = MANAGEMENT_PATH
+const CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT = import.meta.env.DEV
+const DEFAULT_MANAGEMENT_BASE_URL = SAME_ORIGIN_MANAGEMENT_BASE_URL
 
 function getCurrentHttpOrigin() {
   if (typeof window === 'undefined') {
@@ -54,6 +55,10 @@ export function normalizeManagementBaseUrl(rawBaseUrl: string) {
 }
 
 export function normalizeManagementSessionBaseUrl(rawBaseUrl: string) {
+  if (!CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT) {
+    return SAME_ORIGIN_MANAGEMENT_BASE_URL
+  }
+
   const normalizedBaseUrl = normalizeManagementBaseUrl(rawBaseUrl)
   const currentOrigin = getCurrentHttpOrigin()
 
@@ -137,4 +142,5 @@ export function toManagementApiError(error: unknown): ManagementApiError {
 }
 
 export { DEFAULT_MANAGEMENT_BASE_URL }
+export { CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT }
 export { SAME_ORIGIN_MANAGEMENT_BASE_URL }

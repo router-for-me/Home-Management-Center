@@ -46,6 +46,10 @@ import type {
   DashboardUsageConsumptionTrendSummary,
 } from '@/features/dashboard/dashboard-model'
 import { useDashboardOverview } from '@/features/dashboard/use-dashboard-overview'
+import {
+  CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
+  SAME_ORIGIN_MANAGEMENT_BASE_URL,
+} from '@/lib/api/management/client'
 import { cn } from '@/lib/utils'
 import { useSessionStore } from '@/stores/session-store'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -891,13 +895,6 @@ function DashboardDataStatusRow({ item }: { item: DashboardDataStatusItem }) {
 function DashboardDisconnectedState() {
   const { t } = useTranslation()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
-  const detectedBaseUrl = useSessionStore((state) => state.detectedBaseUrl)
-  const detectedSource = useSessionStore((state) => state.detectedSource)
-  const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
-  const detectedEndpointLabel =
-    detectedSource === 'same-origin'
-      ? 'dashboard.disconnected.detectedProxyEndpoint'
-      : 'dashboard.disconnected.detectedRuntime'
 
   return (
     <section className="mx-auto grid w-full max-w-5xl gap-4">
@@ -914,13 +911,7 @@ function DashboardDisconnectedState() {
               <p className="text-muted-foreground mt-2 max-w-2xl text-sm leading-6">
                 {t('dashboard.disconnected.description')}
               </p>
-              {detectedBaseUrl ? (
-                <p className="text-primary mt-3 max-w-2xl text-sm leading-6">
-                  {t(detectedEndpointLabel, {
-                    endpoint: detectedEndpoint,
-                  })}
-                </p>
-              ) : null}
+              {CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT ? <DashboardDetectedEndpoint /> : null}
             </div>
           </div>
           <Button className="md:shrink-0" onClick={openConnectionDialog}>
@@ -930,6 +921,28 @@ function DashboardDisconnectedState() {
         </div>
       </div>
     </section>
+  )
+}
+
+function DashboardDetectedEndpoint() {
+  const { t } = useTranslation()
+  const detectedBaseUrl = useSessionStore((state) => state.detectedBaseUrl)
+  const detectedSource = useSessionStore((state) => state.detectedSource)
+  const detectedEndpoint =
+    detectedSource === 'same-origin' ? SAME_ORIGIN_MANAGEMENT_BASE_URL : detectedBaseUrl
+  const detectedEndpointLabel =
+    detectedSource === 'same-origin'
+      ? 'dashboard.disconnected.detectedProxyEndpoint'
+      : 'dashboard.disconnected.detectedRuntime'
+
+  if (!detectedBaseUrl) return null
+
+  return (
+    <p className="text-primary mt-3 max-w-2xl text-sm leading-6">
+      {t(detectedEndpointLabel, {
+        endpoint: detectedEndpoint,
+      })}
+    </p>
   )
 }
 

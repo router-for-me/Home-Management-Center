@@ -117,17 +117,16 @@ export const ru = {
     },
     connectionDialog: {
       title: 'Подключиться к запущенному серверу',
-      description:
-        'Введите endpoint сервера gateway и management key, чтобы активировать все возможности управления.',
+      description: 'Введите management key для подключения к консоли управления.',
       cancel: 'Отмена',
       close: 'Закрыть окно подключения',
       baseUrl: 'Management endpoint',
-      baseUrlHint:
-        'Можно указать origin сервиса или endpoint /v0/management. Консоль нормализует адрес автоматически.',
+      baseUrlHintDev:
+        'Только dev. Укажите URL backend-сервиса, например http://127.0.0.1:8327. /v0/management добавится автоматически.',
       detectedRuntime: 'Доступный management endpoint обнаружен: {{endpoint}}',
       detectedProxyEndpoint: 'Обнаружен same-origin proxy endpoint: {{endpoint}}',
       managementKey: 'Management key',
-      managementKeyPlaceholder: 'Вставьте management key',
+      managementKeyPlaceholder: 'Введите Management Key',
       remember: 'Запомнить подключение',
       rememberHint:
         'Сохраняет endpoint и key в этом браузере. Оставьте выключенным, чтобы хранить их только в сессии этой вкладки.',
@@ -234,8 +233,7 @@ export const ru = {
     adminAccess: {
       back: 'Назад к выбору входа',
       title: 'Подключение администратора',
-      description:
-        'Подключитесь через Management API endpoint и management key. Этот вход предназначен для глобального администрирования, а не для обычного пользователя.',
+      description: 'Подключитесь с помощью management key.',
     },
     userAccess: {
       back: 'Назад к выбору входа',
@@ -700,8 +698,7 @@ export const ru = {
     dashboard: {
       disconnected: {
         title: 'Подключите management runtime',
-        description:
-          'Подключите Home Center Management API, чтобы увидеть состояние сервера, модельные сервисы, учетные данные аккаунтов, клиентские ключи и узлы.',
+        description: 'Введите management key для подключения к консоли управления.',
         detectedRuntime:
           'Доступный Management API найден. Введите management key, чтобы завершить подключение: {{endpoint}}',
         detectedProxyEndpoint:
