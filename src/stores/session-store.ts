@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import {
+  CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
   DEFAULT_MANAGEMENT_BASE_URL,
   SAME_ORIGIN_MANAGEMENT_BASE_URL,
   normalizeManagementBaseUrl,
@@ -101,15 +102,16 @@ export const useSessionStore = create<SessionState>((set) => ({
   error: null,
   connectedAt: null,
   setDetectedRuntime: (baseUrl, source = 'runtime') => {
+    const effectiveSource = CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT ? source : 'same-origin'
     const normalizedBaseUrl =
-      source === 'same-origin'
+      effectiveSource === 'same-origin'
         ? SAME_ORIGIN_MANAGEMENT_BASE_URL
         : normalizeManagementBaseUrl(baseUrl)
 
     set((state) => {
       const detectedState = {
         detectedBaseUrl: normalizedBaseUrl,
-        detectedSource: source,
+        detectedSource: effectiveSource,
         detectedAt: new Date().toISOString(),
       }
 
@@ -117,11 +119,11 @@ export const useSessionStore = create<SessionState>((set) => ({
         return detectedState
       }
 
-      if (source === 'runtime' && state.managementKey) {
+      if (effectiveSource === 'runtime' && state.managementKey) {
         return detectedState
       }
 
-      if (source === 'same-origin') {
+      if (effectiveSource === 'same-origin') {
         return detectedState
       }
 
@@ -173,6 +175,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   disconnect: () => {
     clearStoredSession()
     set({
+      baseUrl: DEFAULT_MANAGEMENT_BASE_URL,
       managementKey: '',
       rememberConnection: false,
       status: 'disconnected',

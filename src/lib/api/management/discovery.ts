@@ -1,4 +1,7 @@
-import { normalizeManagementBaseUrl } from '@/lib/api/management/client'
+import {
+  CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
+  normalizeManagementBaseUrl,
+} from '@/lib/api/management/client'
 
 const PROBE_TIMEOUT_MS = 1_800
 
@@ -16,14 +19,19 @@ function getCandidateSource(baseUrl: string | undefined): ManagementRuntimeDisco
 
 function getCandidateBaseUrls() {
   const envBaseUrl = import.meta.env.PUBLIC_MANAGEMENT_BASE_URL
+  const devCandidates = CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT
+    ? [
+        { baseUrl: envBaseUrl, source: getCandidateSource(envBaseUrl) },
+        { baseUrl: 'http://127.0.0.1:8327', source: 'runtime' },
+        { baseUrl: 'http://localhost:8327', source: 'runtime' },
+        { baseUrl: 'http://127.0.0.1:8317', source: 'runtime' },
+        { baseUrl: 'http://localhost:8317', source: 'runtime' },
+        { baseUrl: 'http://127.0.0.1:8137', source: 'runtime' },
+        { baseUrl: 'http://localhost:8137', source: 'runtime' },
+      ]
+    : []
   const candidates = [
-    { baseUrl: envBaseUrl, source: getCandidateSource(envBaseUrl) },
-    { baseUrl: 'http://127.0.0.1:8327', source: 'runtime' },
-    { baseUrl: 'http://localhost:8327', source: 'runtime' },
-    { baseUrl: 'http://127.0.0.1:8317', source: 'runtime' },
-    { baseUrl: 'http://localhost:8317', source: 'runtime' },
-    { baseUrl: 'http://127.0.0.1:8137', source: 'runtime' },
-    { baseUrl: 'http://localhost:8137', source: 'runtime' },
+    ...devCandidates,
     {
       baseUrl: typeof window === 'undefined' ? null : window.location.origin,
       source: 'same-origin',

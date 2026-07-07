@@ -117,17 +117,16 @@ export const en = {
     },
     connectionDialog: {
       title: 'Connect to started server',
-      description:
-        'Enter the gateway endpoint and management key to activate full management capabilities.',
+      description: 'Enter the management key to connect to the management console.',
       cancel: 'Cancel',
       close: 'Close connection dialog',
       baseUrl: 'Management endpoint',
-      baseUrlHint:
-        'You can enter the service origin or /v0/management endpoint. The console normalizes it automatically.',
+      baseUrlHintDev:
+        'Dev only. Enter the backend service URL, e.g. http://127.0.0.1:8327. /v0/management is added automatically.',
       detectedRuntime: 'Available management endpoint detected: {{endpoint}}',
       detectedProxyEndpoint: 'Same-origin proxy endpoint detected: {{endpoint}}',
       managementKey: 'Management key',
-      managementKeyPlaceholder: 'Paste management key',
+      managementKeyPlaceholder: 'Enter Management Key',
       remember: 'Remember this connection',
       rememberHint:
         'Keeps the endpoint and key in this browser. Leave unchecked to keep them only for this tab session.',
@@ -234,8 +233,7 @@ export const en = {
     adminAccess: {
       back: 'Back to entry',
       title: 'Administrator connection',
-      description:
-        'Connect with the Management API endpoint and management key. This entry is for global administration, not regular user login.',
+      description: 'Connect with the management key.',
     },
     userAccess: {
       back: 'Back to entry',
@@ -699,8 +697,7 @@ export const en = {
     dashboard: {
       disconnected: {
         title: 'Connect a management runtime',
-        description:
-          'Connect the Home Center management API to view server status, model services, account credentials, client keys, and node information.',
+        description: 'Enter the management key to connect to the management console.',
         detectedRuntime:
           'An available Management API was found. Enter the management key to finish connecting: {{endpoint}}',
         detectedProxyEndpoint:

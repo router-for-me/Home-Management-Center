@@ -117,15 +117,16 @@ export const zhCN = {
     },
     connectionDialog: {
       title: '连接已启动的服务端',
-      description: '输入 网关服务端地址和 management key，以激活控制台的完整管理能力。',
+      description: '输入 management key 连接管理端。',
       cancel: '取消',
       close: '关闭连接弹窗',
       baseUrl: '管理端地址',
-      baseUrlHint: '可以输入服务 origin 或 /v0/management 地址，控制台会自动规范化。',
+      baseUrlHintDev:
+        '开发联调：填写后端服务地址，例如 http://127.0.0.1:8327；会自动补齐 /v0/management。',
       detectedRuntime: '已检测到可用管理端：{{endpoint}}',
       detectedProxyEndpoint: '已检测到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
-      managementKeyPlaceholder: '粘贴 management key',
+      managementKeyPlaceholder: '请输入 Management Key',
       remember: '记住此连接',
       rememberHint: '勾选后长期保存在当前浏览器中；不勾选则仅保存在当前标签页会话。',
       connect: '连接',
@@ -225,8 +226,7 @@ export const zhCN = {
     adminAccess: {
       back: '返回入口选择',
       title: '管理员连接',
-      description:
-        '使用 Management API 地址和 management key 建立管理员会话。该入口用于全局管理能力，不是普通用户登录。',
+      description: '使用 management key 建立管理员会话。',
     },
     userAccess: {
       back: '返回入口选择',
@@ -676,8 +676,7 @@ export const zhCN = {
     dashboard: {
       disconnected: {
         title: '连接管理端运行时',
-        description:
-          '控制台需要先连接 Home Center 管理接口，才能展示服务端状态、模型服务、账号凭证、客户端密钥和节点信息。',
+        description: '输入 management key 连接管理端。',
         detectedRuntime:
           '已发现可用 Management API，可直接输入 management key 完成连接：{{endpoint}}',
         detectedProxyEndpoint:

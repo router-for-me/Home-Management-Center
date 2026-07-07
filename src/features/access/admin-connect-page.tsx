@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, KeyRound, Loader2, LogOut } from 'lucide-react
 import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
+import { ManagementEndpointField } from '@/components/session/management-endpoint-field'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -13,6 +14,10 @@ import {
   connectManagementSession,
   disconnectManagementSession,
 } from '@/features/session/connect-session'
+import {
+  CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
+  SAME_ORIGIN_MANAGEMENT_BASE_URL,
+} from '@/lib/api/management/client'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -23,8 +28,6 @@ export function AdminConnectPage() {
   const baseUrl = useSessionStore((state) => state.baseUrl)
   const managementKey = useSessionStore((state) => state.managementKey)
   const rememberConnection = useSessionStore((state) => state.rememberConnection)
-  const detectedBaseUrl = useSessionStore((state) => state.detectedBaseUrl)
-  const detectedSource = useSessionStore((state) => state.detectedSource)
   const status = useSessionStore((state) => state.status)
   const error = useSessionStore((state) => state.error)
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
@@ -34,16 +37,15 @@ export function AdminConnectPage() {
   const [localError, setLocalError] = useState<string | null>(null)
   const checking = status === 'checking'
   const connected = status === 'connected'
+  const showManagementEndpointField = CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT
   const hasConnectionChanges =
-    draftBaseUrl.trim() !== baseUrl ||
+    (showManagementEndpointField && draftBaseUrl.trim() !== baseUrl) ||
     draftManagementKey.trim() !== managementKey ||
     draftRememberConnection !== rememberConnection
   const submitDisabled = checking || (connected && !hasConnectionChanges)
-  const detectedEndpoint = detectedSource === 'same-origin' ? '/v0/management' : detectedBaseUrl
-  const detectedEndpointLabel =
-    detectedSource === 'same-origin'
-      ? 'connectionDialog.detectedProxyEndpoint'
-      : 'connectionDialog.detectedRuntime'
+  const effectiveBaseUrl = showManagementEndpointField
+    ? draftBaseUrl
+    : SAME_ORIGIN_MANAGEMENT_BASE_URL
 
   useEffect(() => {
     setDraftBaseUrl(baseUrl)
@@ -62,7 +64,7 @@ export function AdminConnectPage() {
     try {
       setLocalError(null)
       await connectManagementSession({
-        baseUrl: draftBaseUrl,
+        baseUrl: effectiveBaseUrl,
         managementKey: draftManagementKey.trim(),
         rememberConnection: draftRememberConnection,
       })
@@ -99,24 +101,14 @@ export function AdminConnectPage() {
           </div>
 
           <form className="grid gap-5 p-5 md:p-6" onSubmit={(event) => void handleSubmit(event)}>
-            <label className="grid gap-2 text-sm font-medium">
-              <span>{t('connectionDialog.baseUrl')}</span>
-              <Input
+            {showManagementEndpointField ? (
+              <ManagementEndpointField
                 value={draftBaseUrl}
-                onChange={(event) => setDraftBaseUrl(event.target.value)}
+                onChange={setDraftBaseUrl}
                 placeholder="http://127.0.0.1:8327"
                 disabled={checking}
-                autoComplete="url"
               />
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('connectionDialog.baseUrlHint')}
-              </span>
-              {detectedBaseUrl ? (
-                <span className="text-primary text-xs leading-5">
-                  {t(detectedEndpointLabel, { endpoint: detectedEndpoint })}
-                </span>
-              ) : null}
-            </label>
+            ) : null}
 
             <label className="grid gap-2 text-sm font-medium">
               <span>{t('connectionDialog.managementKey')}</span>

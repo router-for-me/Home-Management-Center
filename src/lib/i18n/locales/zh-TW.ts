@@ -117,15 +117,16 @@ export const zhTW = {
     },
     connectionDialog: {
       title: '連線已啟動的伺服端',
-      description: '輸入 閘道伺服端位址和 management key，以啟動控制台的完整管理能力。',
+      description: '輸入 management key 連線管理端。',
       cancel: '取消',
       close: '關閉連線視窗',
       baseUrl: '管理端位址',
-      baseUrlHint: '可以輸入服務 origin 或 /v0/management 位址，控制台會自動規範化。',
+      baseUrlHintDev:
+        '開發聯調：填寫後端服務位址，例如 http://127.0.0.1:8327；會自動補齊 /v0/management。',
       detectedRuntime: '已偵測到可用管理端：{{endpoint}}',
       detectedProxyEndpoint: '已偵測到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
-      managementKeyPlaceholder: '貼上 management key',
+      managementKeyPlaceholder: '請輸入 Management Key',
       remember: '記住此連線',
       rememberHint: '勾選後長期保存在目前瀏覽器中；不勾選則僅保存在目前分頁工作階段。',
       connect: '連線',
@@ -225,8 +226,7 @@ export const zhTW = {
     adminAccess: {
       back: '返回入口選擇',
       title: '管理員連線',
-      description:
-        '使用 Management API 位址和 management key 建立管理員工作階段。此入口用於全域管理能力，不是普通使用者登入。',
+      description: '使用 management key 建立管理員工作階段。',
     },
     userAccess: {
       back: '返回入口選擇',
@@ -676,8 +676,7 @@ export const zhTW = {
     dashboard: {
       disconnected: {
         title: '連線管理端執行環境',
-        description:
-          '控制台需要先連線 Home Center 管理介面，才能展示服務端狀態、模型服務、帳號憑證、用戶端金鑰和節點資訊。',
+        description: '輸入 management key 連線管理端。',
         detectedRuntime:
           '已發現可用 Management API，可直接輸入 management key 完成連線：{{endpoint}}',
         detectedProxyEndpoint:
