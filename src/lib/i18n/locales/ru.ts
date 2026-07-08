@@ -2302,6 +2302,34 @@ export const ru = {
         protocol: 'Protocol',
         protocolHelp: 'Это translator protocol, а не provider или auth channel.',
         anyProtocol: 'Любой protocol',
+        advancedMatchers: 'Расширенные условия',
+        hideAdvancedMatchers: 'Скрыть расширенные',
+        advancedMatcherCount: '{{count}} поз.',
+        advancedMatchersSummary:
+          'Уточняют model matching по source protocol, Header или условиям payload.',
+        fromProtocol: 'Source protocol',
+        fromProtocolHelp:
+          'Protocol до преобразования запроса. Оставьте пустым, чтобы не ограничивать source.',
+        headers: 'Request Headers',
+        addHeader: 'Добавить Header',
+        headerName: 'Имя Header',
+        headerNameHelp: 'Имя Header, который должен присутствовать в запросе.',
+        headerNamePlaceholder: 'X-Client-Tier',
+        headerValue: 'Значение Header',
+        headerValueHelp: 'Поддерживает backend wildcard matching.',
+        headerValuePlaceholder: 'tenant-*',
+        matchConditions: 'Должно совпадать',
+        notMatchConditions: 'Не должно совпадать',
+        addCondition: 'Добавить условие',
+        conditionPath: 'JSON path условия',
+        conditionPathHelp:
+          'Используйте поддерживаемый backend gjson/sjson path для match по payload запроса.',
+        conditionPathPlaceholder: 'metadata.client',
+        conditionValue: 'Значение условия',
+        conditionValueHelp: 'Значение по этому path должно удовлетворять условию match.',
+        existPaths: 'Должно существовать',
+        notExistPaths: 'Не должно существовать',
+        addPath: 'Добавить path',
         paramPath: 'JSON path',
         paramPathHelp: 'Используйте поддерживаемый backend gjson/sjson path для записи параметра.',
         filterParamPathHelp: 'Используйте JSON path параметра, который нужно удалить из payload.',
@@ -2336,6 +2364,11 @@ export const ru = {
           'Сначала заполните имя текущей модели, затем добавьте следующую.',
         completeCurrentParamFirst:
           'Сначала заполните JSON path текущего параметра, затем добавьте следующий.',
+        completeCurrentHeaderFirst:
+          'Сначала заполните имя текущего Header, затем добавьте следующий.',
+        completeCurrentConditionFirst:
+          'Сначала заполните JSON path текущего условия, затем добавьте следующее.',
+        completeCurrentPathFirst: 'Сначала заполните текущий path, затем добавьте следующий.',
         remove: 'Удалить',
         needsAttention: 'Проблем: {{count}}',
         draftCount: 'Правил для завершения: {{count}}',
@@ -2345,6 +2378,10 @@ export const ru = {
         emptyRules: 'Правила не настроены.',
         emptyParams: 'В этом правиле пока нет параметров.',
         emptyFilterParams: 'В этом правиле пока нет параметров для удаления.',
+        emptyHeaders: 'У этой модели нет Header conditions.',
+        emptyConditions: 'У этой модели нет условий match по значению payload.',
+        emptyExistPaths: 'У этой модели нет обязательных существующих path.',
+        emptyNotExistPaths: 'У этой модели нет обязательных отсутствующих path.',
         ruleTitle: 'Правило {{index}}',
         ruleSummary: 'Моделей: {{models}} · параметров: {{params}}',
         preview: 'Посмотреть payload JSON для сохранения',
@@ -2362,6 +2399,9 @@ export const ru = {
           number: 'Введите корректное число.',
           boolean: 'Выберите true или false.',
           json: 'Введите корректный JSON.',
+          headerName: 'Имя Header не может быть пустым.',
+          conditionPath: 'JSON path условия не может быть пустым.',
+          pathRequired: 'Path не может быть пустым.',
         },
         ruleIssues: {
           modelRequired: 'Добавьте хотя бы одну модель, иначе правило нельзя сохранить.',
@@ -2378,15 +2418,15 @@ export const ru = {
         intentOptions: {
           fill: {
             title: 'Заполнить отсутствующее',
-            description: 'Записывает значение только если параметр отсутствует в запросе.',
+            description: 'Заполняет отсутствующие значения.',
           },
           override: {
             title: 'Принудительно перезаписать',
-            description: 'Всегда перезаписывает существующие значения запроса.',
+            description: 'Всегда перезаписывает значения.',
           },
           filter: {
             title: 'Удалить параметр',
-            description: 'Удаляет параметры из сопоставленных запросов по JSON path.',
+            description: 'Удаляет по JSON path.',
           },
         },
         sections: {
