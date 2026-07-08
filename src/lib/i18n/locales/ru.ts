@@ -2012,13 +2012,14 @@ export const ru = {
         streaming: {
           title: 'Повторы и маршрутизация',
           shortTitle: 'Роутинг',
-          description: 'Управление retry timing и маршрутизацией модельных сервисов.',
+          description:
+            'Управление повторами запросов, совпадением prefix модели и маршрутизацией модельных сервисов.',
         },
         payload: {
-          title: 'Payload rules',
-          shortTitle: 'Payload',
+          title: 'Перезапись параметров запроса',
+          shortTitle: 'Параметры',
           description:
-            'Управление model prefix. Полное редактирование payload rules пока недоступно в этой рабочей области.',
+            'Сопоставляет запросы по модели и protocol, затем дополняет, принудительно задает или удаляет параметры.',
         },
       },
       fields: {
@@ -2123,8 +2124,9 @@ export const ru = {
           description: 'Верхняя граница ожидания перед повтором.',
         },
         forceModelPrefix: {
-          label: 'Принудительный prefix модели',
-          description: 'Применять правила model prefix к запрошенным именам моделей.',
+          label: 'Требовать совпадение prefix модели',
+          description:
+            'Если включено, запросы без prefix модели используют только учетные данные без Prefix.',
         },
         routingStrategy: {
           label: 'Стратегия маршрутизации',
@@ -2150,6 +2152,12 @@ export const ru = {
             'Настройте client-visible model aliases по channel и сопоставьте их с upstream model names.',
           placeholder:
             '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
+        },
+        payloadRulesJson: {
+          label: 'Правила параметров запроса',
+          description:
+            'Настройка заполнения, принудительной замены и удаления параметров запроса. Сохранение пишет backend payload config.',
+          placeholder: '{"override":[]}',
         },
       },
       routingStrategies: {
@@ -2281,6 +2289,138 @@ export const ru = {
           registry: 'Registry',
           metadata: 'Metadata',
           artifact: 'Artifact',
+        },
+      },
+      payload: {
+        summaryTitle: 'Перезапись payload запроса',
+        impactSummary:
+          'Заполнение: {{fill}} (raw {{rawFill}}), перезапись: {{force}} (raw {{rawForce}}), удаление: {{remove}}. Цели: {{targets}}.',
+        emptyImpactSummary:
+          'Правила payload не настроены. Выберите намерение ниже, чтобы добавить правило.',
+        emptyRootWarning:
+          'Сохранение 0 правил удаляет payload root, поэтому перезапись payload во время выполнения применяться не будет.',
+        totalRules: 'Правил: {{count}}',
+        moreTargets: 'и еще {{count}}',
+        noTargets: 'Модель не выбрана',
+        models: 'Сопоставляемые модели',
+        params: 'Записываемые параметры',
+        removeParams: 'Удаляемые параметры',
+        modelName: 'Имя модели',
+        modelNameHelp: 'Укажите имя модели или wildcard-шаблон, например gpt-*.',
+        modelNamePlaceholder: 'gpt-*',
+        protocol: 'Protocol',
+        protocolHelp: 'Это translator protocol, а не provider или auth channel.',
+        anyProtocol: 'Любой protocol',
+        paramPath: 'JSON path',
+        paramPathHelp: 'Используйте поддерживаемый backend gjson/sjson path для записи параметра.',
+        filterParamPathHelp: 'Используйте JSON path параметра, который нужно удалить из payload.',
+        paramPathPlaceholder: 'reasoning.effort',
+        paramValue: 'Значение параметра',
+        paramValueHelp: 'Сохраняется как строка, число, boolean или JSON в зависимости от типа.',
+        valueType: 'Тип значения',
+        valueTypeHelp:
+          'Raw-правила всегда используют JSON-фрагменты; обычные правила выбирают тип.',
+        rawValueHelp:
+          'Raw-значения должны быть валидным JSON и сохраняются как raw JSON-фрагменты.',
+        rawValuePlaceholder: '{"type":"object"}',
+        jsonValuePlaceholder: '{"key":"value"}',
+        booleanTrue: 'true',
+        booleanFalse: 'false',
+        addRuleTitle: 'Выберите намерение перезаписи параметров',
+        addRuleDescription:
+          'Сначала выберите заполнение, перезапись или удаление. Уже созданные правила открывают свой раздел без дубликатов.',
+        valueModeHint:
+          'Типизированное значение может быть string, number, boolean или JSON. Raw JSON записывается как raw JSON-фрагмент.',
+        addRule: 'Добавить еще одно правило',
+        draftBlockingHint: 'Завершите текущее правило, затем можно добавить новое.',
+        viewExistingRules: 'Открыть существующие: {{count}}',
+        removeRule: 'Удалить правило',
+        duplicateRule: 'Дублировать правило',
+        restoreRule: 'Восстановить',
+        removedRuleNotice:
+          'Одно правило удалено из {{section}}. Его можно восстановить до сохранения.',
+        addModel: 'Добавить модель',
+        addParam: 'Добавить параметр',
+        completeCurrentModelFirst:
+          'Сначала заполните имя текущей модели, затем добавьте следующую.',
+        completeCurrentParamFirst:
+          'Сначала заполните JSON path текущего параметра, затем добавьте следующий.',
+        remove: 'Удалить',
+        needsAttention: 'Проблем: {{count}}',
+        draftCount: 'Правил для завершения: {{count}}',
+        draftHint: 'Правило не завершено. Заполните модель и параметр перед сохранением.',
+        groupingHint:
+          'Добавляйте несколько параметров в одно совпадение model/protocol. Новое правило нужно только для другого совпадения.',
+        emptyRules: 'Правила не настроены.',
+        emptyParams: 'В этом правиле пока нет параметров.',
+        emptyFilterParams: 'В этом правиле пока нет параметров для удаления.',
+        ruleTitle: 'Правило {{index}}',
+        ruleSummary: 'Моделей: {{models}} · параметров: {{params}}',
+        preview: 'Посмотреть payload JSON для сохранения',
+        valueTypes: {
+          string: 'String',
+          number: 'Number',
+          boolean: 'Boolean',
+          json: 'JSON',
+        },
+        valuePlaceholders: {
+          string: 'high',
+          number: '32768',
+        },
+        validation: {
+          number: 'Введите корректное число.',
+          boolean: 'Выберите true или false.',
+          json: 'Введите корректный JSON.',
+        },
+        ruleIssues: {
+          modelRequired: 'Добавьте хотя бы одну модель, иначе правило нельзя сохранить.',
+          paramRequired: 'Добавьте хотя бы один параметр, иначе правило не будет иметь эффекта.',
+          paramPathRequired: 'JSON path параметра не может быть пустым.',
+        },
+        addRuleActions: {
+          default: 'Типизированное значение',
+          'default-raw': 'Raw JSON',
+          override: 'Типизированное значение',
+          'override-raw': 'Raw JSON',
+          filter: 'Удалить параметр',
+        },
+        intentOptions: {
+          fill: {
+            title: 'Заполнить отсутствующее',
+            description: 'Записывает значение только если параметр отсутствует в запросе.',
+          },
+          override: {
+            title: 'Принудительно перезаписать',
+            description: 'Всегда перезаписывает существующие значения запроса.',
+          },
+          filter: {
+            title: 'Удалить параметр',
+            description: 'Удаляет параметры из сопоставленных запросов по JSON path.',
+          },
+        },
+        sections: {
+          default: {
+            title: 'Заполнение по умолчанию',
+            description: 'Задает параметры только если они отсутствуют в payload запроса.',
+          },
+          'default-raw': {
+            title: 'Заполнение Raw по умолчанию',
+            description:
+              'Задает raw JSON-фрагменты только если параметры отсутствуют. Значения должны быть корректным JSON.',
+          },
+          override: {
+            title: 'Правила перезаписи',
+            description: 'Всегда задает параметры и перезаписывает существующие значения запроса.',
+          },
+          'override-raw': {
+            title: 'Перезапись Raw',
+            description:
+              'Всегда задает raw JSON-фрагменты и перезаписывает существующие значения. Значения должны быть корректным JSON.',
+          },
+          filter: {
+            title: 'Фильтр параметров',
+            description: 'Удаляет параметры из сопоставленных запросов по JSON path.',
+          },
         },
       },
       validation: {

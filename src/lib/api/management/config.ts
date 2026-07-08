@@ -35,6 +35,7 @@ export type ConfigFieldKey =
   | 'quotaSwitchPreviewModel'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'payloadRulesJson'
 
 export type ConfigStructuredValues = Record<ConfigFieldKey, boolean | number | string>
 
@@ -172,6 +173,22 @@ function stringifyJsonArray(value: unknown) {
 
 function stringifyJsonObject(value: unknown) {
   return JSON.stringify(isRecord(value) ? value : {}, null, 2)
+}
+
+function stringifyPayload(value: unknown) {
+  const payload = toRecord(value)
+
+  return JSON.stringify(
+    {
+      default: Array.isArray(payload.default) ? payload.default : [],
+      'default-raw': Array.isArray(payload['default-raw']) ? payload['default-raw'] : [],
+      override: Array.isArray(payload.override) ? payload.override : [],
+      'override-raw': Array.isArray(payload['override-raw']) ? payload['override-raw'] : [],
+      filter: Array.isArray(payload.filter) ? payload.filter : [],
+    },
+    null,
+    2,
+  )
 }
 
 function parseJsonArrayText(value: unknown) {
@@ -441,6 +458,7 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
     oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),
     oauthModelAliasJson: stringifyJsonObject(oauthModelAlias),
+    payloadRulesJson: stringifyPayload(rawConfig.payload),
   }
 }
 
@@ -496,6 +514,19 @@ export async function fetchConfigSnapshot(
     }
   } catch (error) {
     issues.push(normalizeIssue('oauthRules', error))
+  }
+
+  try {
+    const payloadResponse = await client.get<unknown>('/payload')
+    const payloadRoot = toRecord(payloadResponse.data)
+    const payload = isRecord(payloadRoot.payload) ? payloadRoot.payload : payloadRoot
+
+    rawConfig = {
+      ...rawConfig,
+      payload,
+    }
+  } catch (error) {
+    issues.push(normalizeIssue('config', error))
   }
 
   try {
@@ -575,6 +606,20 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
     case 'oauthModelAliasJson':
       await client.put('/oauth-model-alias', parseJsonObjectText(value))
       return
+    case 'payloadRulesJson': {
+      const payload = parseJsonObjectText(value)
+      const hasRules = Object.values(payload).some(
+        (section) => Array.isArray(section) && section.length > 0,
+      )
+
+      if (hasRules) {
+        await client.put('/payload', { payload })
+        return
+      }
+
+      await client.delete('/payload')
+      return
+    }
   }
 }
 
