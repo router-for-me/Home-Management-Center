@@ -1904,11 +1904,6 @@ export const zhTW = {
           shortTitle: '管理',
           description: '控制管理端遠端存取、管理金鑰和控制面板更新策略。',
         },
-        authentication: {
-          title: '認證與存取',
-          shortTitle: '認證',
-          description: '控制 WebSocket 等用戶端存取認證行為。',
-        },
         plugins: {
           title: '外掛設定',
           shortTitle: '外掛',
@@ -2010,10 +2005,6 @@ export const zhTW = {
         requestLog: {
           label: '請求日誌',
           description: '記錄請求級日誌，便於排查呼叫鏈路。',
-        },
-        wsAuth: {
-          label: 'WebSocket 認證',
-          description: '要求 WebSocket 連線攜帶認證資訊。',
         },
         pluginsEnabled: {
           label: '啟用外掛系統',

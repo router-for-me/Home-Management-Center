@@ -26,7 +26,6 @@ export type ConfigFieldKey =
   | 'remoteManagementPanelGithubRepository'
   | 'proxyUrl'
   | 'requestLog'
-  | 'wsAuth'
   | 'requestRetry'
   | 'maxRetryInterval'
   | 'forceModelPrefix'
@@ -449,7 +448,6 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     remoteManagementPanelGithubRepository: readString(remoteManagement, 'panel-github-repository'),
     proxyUrl: readString(rawConfig, 'proxy-url'),
     requestLog: readBoolean(rawConfig, 'request-log'),
-    wsAuth: readBoolean(rawConfig, 'ws-auth'),
     requestRetry: readNumber(rawConfig, 'request-retry'),
     maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
     forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
@@ -578,9 +576,6 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
       return
     case 'requestLog':
       await client.put('/request-log', { value })
-      return
-    case 'wsAuth':
-      await client.put('/ws-auth', { value })
       return
     case 'requestRetry':
       await client.put('/request-retry', { value })

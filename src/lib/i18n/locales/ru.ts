@@ -1977,11 +1977,6 @@ export const ru = {
           description:
             'Управление удаленным доступом к Management API, management key и обновлением панели.',
         },
-        authentication: {
-          title: 'Аутентификация',
-          shortTitle: 'Auth',
-          description: 'Управление клиентской аутентификацией, включая WebSocket auth.',
-        },
         plugins: {
           title: 'Настройки плагинов',
           shortTitle: 'Плагины',
@@ -2088,10 +2083,6 @@ export const ru = {
         requestLog: {
           label: 'Request log',
           description: 'Записывать request-level logs для диагностики.',
-        },
-        wsAuth: {
-          label: 'WebSocket auth',
-          description: 'Требовать аутентификацию для WebSocket подключений.',
         },
         pluginsEnabled: {
           label: 'Включить систему плагинов',

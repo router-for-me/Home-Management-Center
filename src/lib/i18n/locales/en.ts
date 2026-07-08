@@ -1966,11 +1966,6 @@ export const en = {
           description:
             'Control remote Management API access, the management key, and control panel update behavior.',
         },
-        authentication: {
-          title: 'Authentication',
-          shortTitle: 'Auth',
-          description: 'Control client authentication behavior such as WebSocket auth.',
-        },
         plugins: {
           title: 'Plugin settings',
           shortTitle: 'Plugins',
@@ -2075,10 +2070,6 @@ export const en = {
         requestLog: {
           label: 'Request log',
           description: 'Record request-level logs for troubleshooting.',
-        },
-        wsAuth: {
-          label: 'WebSocket auth',
-          description: 'Require authentication for WebSocket connections.',
         },
         pluginsEnabled: {
           label: 'Enable plugin system',

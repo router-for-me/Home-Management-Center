@@ -1905,11 +1905,6 @@ export const zhCN = {
           shortTitle: '管理',
           description: '控制管理端远程访问、管理密钥和控制面板更新策略。',
         },
-        authentication: {
-          title: '认证与访问',
-          shortTitle: '认证',
-          description: '控制 WebSocket 等客户端访问认证行为。',
-        },
         plugins: {
           title: '插件设置',
           shortTitle: '插件',
@@ -2011,10 +2006,6 @@ export const zhCN = {
         requestLog: {
           label: '请求日志',
           description: '记录请求级日志，便于排查调用链路。',
-        },
-        wsAuth: {
-          label: 'WebSocket 认证',
-          description: '要求 WebSocket 连接携带认证信息。',
         },
         pluginsEnabled: {
           label: '启用插件系统',

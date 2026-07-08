@@ -12,7 +12,6 @@ import {
   Filter,
   Gauge,
   Info,
-  KeyRound,
   Loader2,
   Network,
   Plug,
@@ -78,7 +77,6 @@ type ConfigSectionId =
   | 'server'
   | 'tls'
   | 'remoteManagement'
-  | 'authentication'
   | 'plugins'
   | 'oauthRules'
   | 'system'
@@ -249,10 +247,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'authentication',
-    fields: [{ key: 'wsAuth', kind: 'boolean', sectionId: 'authentication' }],
-  },
-  {
     id: 'plugins',
     fields: [
       { key: 'pluginsEnabled', kind: 'boolean', sectionId: 'plugins' },
@@ -333,7 +327,6 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   server: ServerCog,
   tls: ShieldCheck,
   remoteManagement: Network,
-  authentication: KeyRound,
   plugins: Plug,
   oauthRules: Route,
   system: Database,
