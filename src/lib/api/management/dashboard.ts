@@ -46,6 +46,8 @@ type DashboardAuthFileSummary = {
 
 type DashboardNodeSummary = {
   ip: string
+  homeIp: string | null
+  homePort: number | null
   connectedTime: string | null
 }
 
@@ -103,6 +105,10 @@ function readString(value: unknown): string | null {
 
 function readBoolean(value: unknown): boolean {
   return value === true
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function readArrayRecords(value: unknown, key: string): UnknownRecord[] {
@@ -183,6 +189,8 @@ function normalizeAuthFiles(responseData: unknown): DashboardAuthFileSummary[] {
 function normalizeNodes(responseData: unknown): DashboardNodeSummary[] {
   return readArrayRecords(responseData, 'nodes').map((record, index) => ({
     ip: readString(record.ip) ?? `node-${index + 1}`,
+    homeIp: readString(record.home_ip),
+    homePort: readNumber(record.home_port),
     connectedTime: readString(record.connected_time),
   }))
 }

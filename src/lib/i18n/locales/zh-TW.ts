@@ -767,6 +767,7 @@ export const zhTW = {
         nodes: {
           title: '執行節點',
           detail: '目前服務回傳 {{count}} 個節點',
+          clusterDetail: '分布在 {{count}} 個 Home 節點下',
         },
       },
       operatingKpis: {
@@ -3098,6 +3099,7 @@ export const zhTW = {
           config: '設定摘要：{{status}}',
           version: '版本資訊：{{status}}',
           nodes: '節點記錄：{{count}}',
+          nodesCluster: '節點記錄：{{count}} 個 CPA / {{homeCount}} 個 Home',
           nodesUnsupported: '節點介面：未開放',
           issues: '載入異常：{{count}}',
           noIssues: '無載入異常',
@@ -3129,7 +3131,13 @@ export const zhTW = {
         unavailable: '目前 {{runtime}} 執行環境未開放節點查詢介面。',
         empty: '暫無節點連線記錄。',
         emptySupported: '節點介面可用，暫無連線記錄。',
-        connectedTime: '連線時間：{{time}}',
+        fields: {
+          cpaIp: 'CPA 節點 IP',
+          nodeId: 'CPA Node ID',
+          servingHome: '服務 Home',
+          connectedTime: '連線時間',
+          lastSeen: '最後回報',
+        },
         enrollment: {
           title: '節點接入憑證',
           description: '將憑證設定到待接入節點後即可建立連線。請妥善保存，關閉後需重新建立。',
@@ -3177,6 +3185,7 @@ export const zhTW = {
         nodesAvailable: '節點介面可用',
         nodesEmpty: '節點介面可用，暫無連線記錄',
         nodesConnected: '已回傳 {{count}} 個節點',
+        nodesClusterConnected: '{{cpaCount}} 個 CPA 節點，分布在 {{homeCount}} 個 Home 節點下',
         nodesUnavailable: '目前執行環境未開放節點查詢介面',
         config: '設定摘要',
         configAvailable: '已讀取執行環境設定摘要',
@@ -3372,6 +3381,7 @@ export const zhTW = {
         version: '版本與相容性',
         rollout: '節點回報詳情',
         reportMeta: '階段：{{phase}} · 更新時間：{{time}} · 外掛狀態：{{status}}',
+        reportServingHome: 'Serving Home：{{home}}',
         noReports: '目前沒有節點回報引用此外掛。',
       },
       version: {

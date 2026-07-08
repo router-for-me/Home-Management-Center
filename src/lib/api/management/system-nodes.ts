@@ -9,6 +9,9 @@ export type SystemNodeResource = {
   id: string
   ip: string
   nodeId: string | null
+  homeIp: string | null
+  homePort: number | null
+  lastSeenAt: string | null
   connectedTime: string | null
   clientCount: number | null
   healthy: boolean | null
@@ -280,11 +283,18 @@ function normalizeNodes(responseData: unknown): SystemNodeResource[] {
   return readArrayRecords(responseData, 'nodes').map((record, index) => {
     const ip = readString(record, 'ip') ?? `node-${index + 1}`
     const nodeId = readString(record, 'node_id')
+    const homeIp = readString(record, 'home_ip')
+    const homePort = readNumber(record, 'home_port')
+    const homeKey = `${homeIp ?? 'unknown'}:${homePort ?? 0}`
+    const nodeKey = nodeId ?? ip
 
     return {
-      id: nodeId ?? ip,
+      id: `${homeKey}/${nodeKey}`,
       ip,
       nodeId,
+      homeIp,
+      homePort,
+      lastSeenAt: readString(record, 'last_seen_at'),
       connectedTime: readString(record, 'connected_time'),
       clientCount: readNumber(record, 'client_count'),
       healthy: readOptionalBoolean(record, 'healthy'),

@@ -40,6 +40,7 @@ export type DashboardMetric = {
   id: 'providers' | 'credentials' | 'clientKeys' | 'nodes'
   value: number | null
   detailValue?: number | string
+  detailKey?: string
   tone: DashboardTone
 }
 
@@ -428,6 +429,12 @@ export function createDashboardOverviewViewModel(
   ).length
   const routingStrategy = readRoutingStrategy(snapshot.config)
   const debugEnabled = readBoolean(snapshot.config, 'debug')
+  const homeNodeCount = new Set(
+    snapshot.nodes.flatMap((node) => {
+      if (!node.homeIp) return []
+      return [`${node.homeIp}:${node.homePort ?? 0}`]
+    }),
+  ).size
   const metrics: DashboardMetric[] = [
     {
       id: 'providers',
@@ -452,6 +459,8 @@ export function createDashboardOverviewViewModel(
     metrics.push({
       id: 'nodes',
       value: snapshot.nodes.length,
+      detailValue: homeNodeCount > 0 ? homeNodeCount : snapshot.nodes.length,
+      detailKey: homeNodeCount > 0 ? 'dashboard.metrics.nodes.clusterDetail' : undefined,
       tone: snapshot.nodes.length > 0 ? 'positive' : 'warning',
     })
   }

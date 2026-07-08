@@ -126,10 +126,37 @@ async function copyTextToClipboard(value: string) {
 
 function formatDateTime(value: string | null) {
   if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(value))
+  }).format(date)
+}
+
+function formatServingHome(node: SystemNodeResource) {
+  if (!node.homeIp) return null
+  return node.homePort ? `${node.homeIp}:${node.homePort}` : node.homeIp
+}
+
+function getServingHomeCount(nodes: SystemNodeResource[]) {
+  return new Set(
+    nodes.flatMap((node) => {
+      if (!node.homeIp) return []
+      return [`${node.homeIp}:${node.homePort ?? 0}`]
+    }),
+  ).size
+}
+
+function NodeDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md border px-2.5 py-2">
+      <p className="text-muted-foreground text-xs font-medium">{label}</p>
+      <p className="mt-1 truncate font-mono text-xs" title={value}>
+        {value}
+      </p>
+    </div>
+  )
 }
 
 function SystemNodesDisconnectedState() {
@@ -255,6 +282,7 @@ function OperationalVerdictPanel({
   runtimeLabel,
   probedAt,
   fetchedAt,
+  servingHomeCount,
   isFetching,
   onRefresh,
   onOpenDiagnostics,
@@ -263,6 +291,7 @@ function OperationalVerdictPanel({
   runtimeLabel: string
   probedAt: string | null
   fetchedAt: string | null
+  servingHomeCount: number
   isFetching: boolean
   onRefresh: () => void
   onOpenDiagnostics: () => void
@@ -290,7 +319,12 @@ function OperationalVerdictPanel({
     },
     {
       label: status.nodesSupported
-        ? t('systemNodesPage.verdict.facts.nodes', { count: status.nodeCount })
+        ? servingHomeCount > 0
+          ? t('systemNodesPage.verdict.facts.nodesCluster', {
+              count: status.nodeCount,
+              homeCount: servingHomeCount,
+            })
+          : t('systemNodesPage.verdict.facts.nodes', { count: status.nodeCount })
         : t('systemNodesPage.verdict.facts.nodesUnsupported'),
       tone: status.nodesSupported ? (status.nodeCount > 0 ? 'success' : 'neutral') : 'info',
     },
@@ -488,16 +522,34 @@ function NodesPanel({
       {nodes.map((node) => (
         <div key={node.id} className="rounded-md border px-3 py-2.5">
           <div className="flex min-w-0 items-center justify-between gap-3">
-            <p className="truncate font-mono text-sm">{node.ip}</p>
+            <div className="min-w-0">
+              <p className="text-muted-foreground text-xs font-medium">
+                {t('systemNodesPage.nodes.fields.cpaIp')}
+              </p>
+              <p className="mt-1 truncate font-mono text-sm">{node.ip}</p>
+            </div>
             <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2 py-1 text-xs font-medium">
               {t('systemNodesPage.status.connected')}
             </span>
           </div>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {t('systemNodesPage.nodes.connectedTime', {
-              time: formatDateTime(node.connectedTime) ?? t('systemNodesPage.status.notAvailable'),
-            })}
-          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <NodeDetail
+              label={t('systemNodesPage.nodes.fields.nodeId')}
+              value={node.nodeId ?? t('systemNodesPage.status.notAvailable')}
+            />
+            <NodeDetail
+              label={t('systemNodesPage.nodes.fields.servingHome')}
+              value={formatServingHome(node) ?? t('systemNodesPage.status.notAvailable')}
+            />
+            <NodeDetail
+              label={t('systemNodesPage.nodes.fields.connectedTime')}
+              value={formatDateTime(node.connectedTime) ?? t('systemNodesPage.status.notAvailable')}
+            />
+            <NodeDetail
+              label={t('systemNodesPage.nodes.fields.lastSeen')}
+              value={formatDateTime(node.lastSeenAt) ?? t('systemNodesPage.status.notAvailable')}
+            />
+          </div>
         </div>
       ))}
     </div>
@@ -818,9 +870,15 @@ export function SystemNodesWorkbenchPage() {
     workbench.serverInfo.cpaVersion ??
     t('systemNodesPage.status.unknown')
   const serverVersionAvailable = serverVersion !== t('systemNodesPage.status.unknown')
+  const servingHomeCount = getServingHomeCount(workbench.snapshot.nodes)
   const nodesSummaryDetail = workbench.capabilities.nodes
     ? workbench.snapshot.nodes.length > 0
-      ? t('systemNodesPage.summary.nodesConnected', { count: workbench.snapshot.nodes.length })
+      ? servingHomeCount > 0
+        ? t('systemNodesPage.summary.nodesClusterConnected', {
+            cpaCount: workbench.snapshot.nodes.length,
+            homeCount: servingHomeCount,
+          })
+        : t('systemNodesPage.summary.nodesConnected', { count: workbench.snapshot.nodes.length })
       : t('systemNodesPage.summary.nodesEmpty')
     : t('systemNodesPage.summary.nodesUnavailable')
   const nodesSummaryTone: StatusTone = workbench.capabilities.nodes
@@ -858,6 +916,7 @@ export function SystemNodesWorkbenchPage() {
         runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)}
         probedAt={formatDateTime(workbench.probedAt)}
         fetchedAt={formatDateTime(workbench.snapshot.fetchedAt)}
+        servingHomeCount={servingHomeCount}
         isFetching={workbench.isFetching}
         onRefresh={workbench.refetch}
         onOpenDiagnostics={() => setApiCallSheetOpen(true)}

@@ -790,6 +790,7 @@ export const ru = {
         nodes: {
           title: 'Runtime узлы',
           detail: 'Узлов от текущего сервиса: {{count}}',
+          clusterDetail: 'На {{count}} Home nodes',
         },
       },
       operatingKpis: {
@@ -3223,6 +3224,7 @@ export const ru = {
           config: 'Сводка конфигурации: {{status}}',
           version: 'Информация о версии: {{status}}',
           nodes: 'Записи узлов: {{count}}',
+          nodesCluster: 'Записи узлов: CPA {{count}} / Home {{homeCount}}',
           nodesUnsupported: 'Маршрут узлов: недоступен',
           issues: 'Ошибки загрузки: {{count}}',
           noIssues: 'Нет ошибок загрузки',
@@ -3254,7 +3256,13 @@ export const ru = {
         unavailable: 'Текущий runtime {{runtime}} не предоставляет маршрут запроса узлов.',
         empty: 'Записей подключений узлов пока нет.',
         emptySupported: 'Маршрут узлов доступен, но записей подключений пока нет.',
-        connectedTime: 'Подключено: {{time}}',
+        fields: {
+          cpaIp: 'CPA node IP',
+          nodeId: 'CPA Node ID',
+          servingHome: 'Serving Home',
+          connectedTime: 'Время подключения',
+          lastSeen: 'Последний сигнал',
+        },
         enrollment: {
           title: 'Токен подключения узла',
           description:
@@ -3305,6 +3313,7 @@ export const ru = {
         nodesAvailable: 'Маршрут узлов доступен',
         nodesEmpty: 'Маршрут узлов доступен, записей подключений пока нет',
         nodesConnected: 'Возвращено узлов: {{count}}',
+        nodesClusterConnected: 'CPA nodes: {{cpaCount}}, Home nodes: {{homeCount}}',
         nodesUnavailable: 'Этот runtime не предоставляет запросы nodes',
         config: 'Сводка конфигурации',
         configAvailable: 'Сводка конфигурации runtime загружена',
@@ -3511,6 +3520,7 @@ export const ru = {
         version: 'Версия и совместимость',
         rollout: 'Детали отчетов узлов',
         reportMeta: 'Фаза: {{phase}} · Обновлено: {{time}} · Состояние плагина: {{status}}',
+        reportServingHome: 'Serving Home: {{home}}',
         noReports: 'Сейчас нет отчетов узлов, которые ссылаются на этот плагин.',
       },
       version: {

@@ -789,6 +789,7 @@ export const en = {
         nodes: {
           title: 'Runtime nodes',
           detail: '{{count}} nodes reported by the current service',
+          clusterDetail: 'Across {{count}} Home nodes',
         },
       },
       operatingKpis: {
@@ -3207,6 +3208,7 @@ export const en = {
           config: 'Config summary: {{status}}',
           version: 'Version info: {{status}}',
           nodes: 'Node records: {{count}}',
+          nodesCluster: 'Node records: {{count}} CPA / {{homeCount}} Home',
           nodesUnsupported: 'Node route: unavailable',
           issues: 'Load issues: {{count}}',
           noIssues: 'No load issues',
@@ -3238,7 +3240,13 @@ export const en = {
         unavailable: 'The current {{runtime}} runtime does not expose the node query route.',
         empty: 'No node connection records yet.',
         emptySupported: 'The node route is available, but there are no connection records yet.',
-        connectedTime: 'Connected at {{time}}',
+        fields: {
+          cpaIp: 'CPA node IP',
+          nodeId: 'CPA Node ID',
+          servingHome: 'Serving Home',
+          connectedTime: 'Connected time',
+          lastSeen: 'Last seen',
+        },
         enrollment: {
           title: 'Node enrollment token',
           description:
@@ -3288,6 +3296,7 @@ export const en = {
         nodesAvailable: 'Node route is available',
         nodesEmpty: 'Node route is available, no connection records yet',
         nodesConnected: '{{count}} nodes returned',
+        nodesClusterConnected: '{{cpaCount}} CPA nodes across {{homeCount}} Home nodes',
         nodesUnavailable: 'This runtime does not expose node queries',
         config: 'Config summary',
         configAvailable: 'Runtime config summary has been loaded',
@@ -3493,6 +3502,7 @@ export const en = {
         version: 'Version and compatibility',
         rollout: 'Node report details',
         reportMeta: 'Phase: {{phase}} · Updated: {{time}} · Plugin state: {{status}}',
+        reportServingHome: 'Serving Home: {{home}}',
         noReports: 'No node report currently references this plugin.',
       },
       version: {

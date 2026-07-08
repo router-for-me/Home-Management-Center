@@ -767,6 +767,7 @@ export const zhCN = {
         nodes: {
           title: '运行节点',
           detail: '当前服务返回 {{count}} 个节点',
+          clusterDetail: '分布在 {{count}} 个 Home 节点下',
         },
       },
       operatingKpis: {
@@ -3098,6 +3099,7 @@ export const zhCN = {
           config: '配置摘要：{{status}}',
           version: '版本信息：{{status}}',
           nodes: '节点记录：{{count}}',
+          nodesCluster: '节点记录：{{count}} 个 CPA / {{homeCount}} 个 Home',
           nodesUnsupported: '节点接口：未开放',
           issues: '加载异常：{{count}}',
           noIssues: '无加载异常',
@@ -3129,7 +3131,13 @@ export const zhCN = {
         unavailable: '当前 {{runtime}} 运行时未开放节点查询接口。',
         empty: '暂无节点连接记录。',
         emptySupported: '节点接口可用，暂无连接记录。',
-        connectedTime: '连接时间：{{time}}',
+        fields: {
+          cpaIp: 'CPA 节点 IP',
+          nodeId: 'CPA Node ID',
+          servingHome: '服务 Home',
+          connectedTime: '连接时间',
+          lastSeen: '最后上报',
+        },
         enrollment: {
           title: '节点接入凭证',
           description: '将凭证配置到待接入节点后即可建立连接。请妥善保存，关闭后需重新创建。',
@@ -3177,6 +3185,7 @@ export const zhCN = {
         nodesAvailable: '节点接口可用',
         nodesEmpty: '节点接口可用，暂无连接记录',
         nodesConnected: '已返回 {{count}} 个节点',
+        nodesClusterConnected: '{{cpaCount}} 个 CPA 节点，分布在 {{homeCount}} 个 Home 节点下',
         nodesUnavailable: '当前运行时未开放节点查询接口',
         config: '配置摘要',
         configAvailable: '已读取运行时配置摘要',
@@ -3372,6 +3381,7 @@ export const zhCN = {
         version: '版本与兼容性',
         rollout: '节点回报详情',
         reportMeta: '阶段：{{phase}} · 更新时间：{{time}} · 插件状态：{{status}}',
+        reportServingHome: 'Serving Home：{{home}}',
         noReports: '当前没有节点回报引用此插件。',
       },
       version: {
