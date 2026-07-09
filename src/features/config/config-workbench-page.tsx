@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Code2,
+  Copy,
   Database,
   Eye,
   EyeOff,
@@ -11,7 +12,6 @@ import {
   Filter,
   Gauge,
   Info,
-  KeyRound,
   Loader2,
   Network,
   Plug,
@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
+  Undo2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -76,7 +77,6 @@ type ConfigSectionId =
   | 'server'
   | 'tls'
   | 'remoteManagement'
-  | 'authentication'
   | 'plugins'
   | 'oauthRules'
   | 'system'
@@ -99,6 +99,7 @@ type JsonConfigFieldKey =
   | 'oauthModelAliasJson'
   | 'pluginStoreSourcesJson'
   | 'pluginStoreAuthJson'
+  | 'payloadRulesJson'
 
 type OAuthModelCatalogState = {
   channel: ProviderModelChannel
@@ -135,6 +136,68 @@ type PluginStoreAuthRule = {
   headerValueEnv: string
   allowInsecure: boolean
 }
+
+type PayloadParamValueType = 'string' | 'number' | 'boolean' | 'json'
+
+type PayloadParamEntry = {
+  path: string
+  valueType: PayloadParamValueType
+  value: string
+}
+
+type PayloadHeaderEntry = {
+  name: string
+  value: string
+}
+
+type PayloadModelEntry = {
+  name: string
+  protocol: string
+  fromProtocol: string
+  headers: PayloadHeaderEntry[]
+  match: PayloadParamEntry[]
+  notMatch: PayloadParamEntry[]
+  exist: string[]
+  notExist: string[]
+}
+
+type PayloadRule = {
+  models: PayloadModelEntry[]
+  params: PayloadParamEntry[]
+}
+
+type PayloadFilterRule = {
+  models: PayloadModelEntry[]
+  params: string[]
+}
+
+type PayloadRulesConfig = {
+  default: PayloadRule[]
+  'default-raw': PayloadRule[]
+  override: PayloadRule[]
+  'override-raw': PayloadRule[]
+  filter: PayloadFilterRule[]
+}
+
+type PayloadRuleSection = 'default' | 'default-raw' | 'override' | 'override-raw'
+
+type PayloadSectionKey = PayloadRuleSection | 'filter'
+
+type PayloadRuleIntentId = 'fill' | 'override' | 'filter'
+
+type PayloadRuleIssueKey = 'modelRequired' | 'paramRequired' | 'paramPathRequired'
+
+type RemovedPayloadRule =
+  | {
+      sectionKey: PayloadRuleSection
+      index: number
+      rule: PayloadRule
+    }
+  | {
+      sectionKey: 'filter'
+      index: number
+      rule: PayloadFilterRule
+    }
 
 type NetworkProxyPanel = 'current' | 'pool'
 
@@ -195,10 +258,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'authentication',
-    fields: [{ key: 'wsAuth', kind: 'boolean', sectionId: 'authentication' }],
-  },
-  {
     id: 'plugins',
     fields: [
       { key: 'pluginsEnabled', kind: 'boolean', sectionId: 'plugins' },
@@ -240,6 +299,7 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'requestRetry', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'maxRetryInterval', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'forceModelPrefix', kind: 'boolean', sectionId: 'streaming' },
       {
         key: 'routingStrategy',
         kind: 'select',
@@ -250,7 +310,7 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
   },
   {
     id: 'payload',
-    fields: [{ key: 'forceModelPrefix', kind: 'boolean', sectionId: 'payload' }],
+    fields: [{ key: 'payloadRulesJson', kind: 'jsonObject', sectionId: 'payload' }],
   },
 ]
 
@@ -278,7 +338,6 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   server: ServerCog,
   tls: ShieldCheck,
   remoteManagement: Network,
-  authentication: KeyRound,
   plugins: Plug,
   oauthRules: Route,
   system: Database,
@@ -293,7 +352,30 @@ const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthModelAliasJson',
   'pluginStoreSourcesJson',
   'pluginStoreAuthJson',
+  'payloadRulesJson',
 ])
+
+const payloadRuleSections: PayloadRuleSection[] = [
+  'default',
+  'default-raw',
+  'override',
+  'override-raw',
+]
+
+const payloadSectionKeys: PayloadSectionKey[] = [...payloadRuleSections, 'filter']
+const payloadDraftValueTypeKey = '__hmc_payload_value_type'
+const payloadDraftValueKey = '__hmc_payload_value'
+
+const payloadRuleIntentGroups: Array<{
+  id: PayloadRuleIntentId
+  sectionKeys: PayloadSectionKey[]
+}> = [
+  { id: 'fill', sectionKeys: ['default', 'default-raw'] },
+  { id: 'override', sectionKeys: ['override', 'override-raw'] },
+  { id: 'filter', sectionKeys: ['filter'] },
+]
+
+const payloadProtocols = ['openai', 'responses', 'gemini', 'claude', 'codex', 'antigravity']
 
 const pluginStoreAuthTypes: PluginStoreAuthType[] = [
   'none',
@@ -545,6 +627,781 @@ function serializePluginStoreAuthRule(rule: PluginStoreAuthRule) {
   return nextRule
 }
 
+function parsePayloadParamValue(value: unknown): {
+  valueType: PayloadParamValueType
+  value: string
+} {
+  if (isRecord(value) && typeof value[payloadDraftValueTypeKey] === 'string') {
+    const valueType = value[payloadDraftValueTypeKey]
+
+    if (
+      valueType === 'string' ||
+      valueType === 'number' ||
+      valueType === 'boolean' ||
+      valueType === 'json'
+    ) {
+      return {
+        valueType,
+        value:
+          typeof value[payloadDraftValueKey] === 'string'
+            ? value[payloadDraftValueKey]
+            : stringifyPayloadPrimitiveValue(value[payloadDraftValueKey]),
+      }
+    }
+  }
+
+  if (typeof value === 'number') {
+    return { valueType: 'number', value: String(value) }
+  }
+  if (typeof value === 'boolean') {
+    return { valueType: 'boolean', value: String(value) }
+  }
+  if (value !== null && typeof value === 'object') {
+    return { valueType: 'json', value: JSON.stringify(value, null, 2) }
+  }
+
+  return { valueType: 'string', value: stringifyPayloadPrimitiveValue(value) }
+}
+
+function parseRawPayloadParamValue(value: unknown) {
+  if (typeof value === 'string') return value
+  return JSON.stringify(value, null, 2) ?? ''
+}
+
+function stringifyPayloadPrimitiveValue(value: unknown) {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value)
+  }
+  return ''
+}
+
+function normalizePayloadModels(value: unknown): PayloadModelEntry[] {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return createPayloadModel({ name: item })
+      if (!isRecord(item)) return null
+      const name = typeof item.name === 'string' ? item.name : ''
+      const protocol = typeof item.protocol === 'string' ? item.protocol : ''
+      const fromProtocol = typeof item['from-protocol'] === 'string' ? item['from-protocol'] : ''
+
+      return createPayloadModel({
+        name,
+        protocol,
+        fromProtocol,
+        headers: normalizePayloadHeaders(item.headers),
+        match: normalizePayloadConditions(item.match),
+        notMatch: normalizePayloadConditions(item['not-match']),
+        exist: normalizePayloadStringList(item.exist),
+        notExist: normalizePayloadStringList(item['not-exist']),
+      })
+    })
+    .filter((item): item is PayloadModelEntry => Boolean(item))
+}
+
+function normalizePayloadHeaders(value: unknown): PayloadHeaderEntry[] {
+  if (!isRecord(value)) return []
+
+  return Object.entries(value).map(([name, headerValue]) => ({
+    name,
+    value: stringifyPayloadPrimitiveValue(headerValue),
+  }))
+}
+
+function normalizePayloadConditions(value: unknown): PayloadParamEntry[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return []
+
+    return Object.entries(item).map(([path, conditionValue]) => {
+      const parsed = parsePayloadParamValue(conditionValue)
+
+      return {
+        path,
+        valueType: parsed.valueType,
+        value: parsed.value,
+      }
+    })
+  })
+}
+
+function normalizePayloadStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  return value.map((item) => stringifyPayloadPrimitiveValue(item))
+}
+
+function normalizePayloadRules(value: unknown, rawValues = false): PayloadRule[] {
+  if (!Array.isArray(value)) return []
+
+  return value.map((item) => {
+    const record = isRecord(item) ? item : {}
+    const params = isRecord(record.params)
+      ? Object.entries(record.params).map(([path, paramValue]) => {
+          const parsed = rawValues
+            ? { valueType: 'json' as const, value: parseRawPayloadParamValue(paramValue) }
+            : parsePayloadParamValue(paramValue)
+
+          return {
+            path,
+            valueType: parsed.valueType,
+            value: parsed.value,
+          }
+        })
+      : []
+
+    return {
+      models: normalizePayloadModels(record.models),
+      params,
+    }
+  })
+}
+
+function normalizePayloadFilterRules(value: unknown): PayloadFilterRule[] {
+  if (!Array.isArray(value)) return []
+
+  return value.map((item) => {
+    const record = isRecord(item) ? item : {}
+    const params = Array.isArray(record.params)
+      ? record.params.map((param) => stringifyPayloadPrimitiveValue(param))
+      : []
+
+    return {
+      models: normalizePayloadModels(record.models),
+      params,
+    }
+  })
+}
+
+function normalizePayloadConfig(value: unknown): PayloadRulesConfig {
+  const record = isRecord(value) ? value : {}
+
+  return {
+    default: normalizePayloadRules(record.default),
+    'default-raw': normalizePayloadRules(record['default-raw'], true),
+    override: normalizePayloadRules(record.override),
+    'override-raw': normalizePayloadRules(record['override-raw'], true),
+    filter: normalizePayloadFilterRules(record.filter),
+  }
+}
+
+function serializePayloadParamValue(param: PayloadParamEntry): unknown {
+  const value = param.value.trim()
+
+  if (param.valueType === 'number') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : param.value
+  }
+  if (param.valueType === 'boolean') {
+    return value.toLowerCase() === 'true'
+  }
+  if (param.valueType === 'json') {
+    try {
+      return JSON.parse(param.value) as unknown
+    } catch {
+      return param.value
+    }
+  }
+
+  return param.value
+}
+
+function serializePayloadDraftParamValue(param: PayloadParamEntry): unknown {
+  const validationError = getPayloadParamValidationError(param)
+
+  if (validationError) {
+    return {
+      [payloadDraftValueTypeKey]: param.valueType,
+      [payloadDraftValueKey]: param.value,
+    }
+  }
+
+  return serializePayloadParamValue(param)
+}
+
+function serializePayloadModels(models: PayloadModelEntry[]) {
+  return models
+    .map((model) => {
+      const name = model.name.trim()
+      const protocol = model.protocol.trim()
+      const fromProtocol = model.fromProtocol.trim()
+      const headers = serializePayloadHeaders(model.headers)
+      const match = serializePayloadConditions(model.match)
+      const notMatch = serializePayloadConditions(model.notMatch)
+      const exist = serializePayloadStringList(model.exist)
+      const notExist = serializePayloadStringList(model.notExist)
+      if (!name) return null
+
+      return {
+        name,
+        ...(protocol ? { protocol } : {}),
+        ...(fromProtocol ? { 'from-protocol': fromProtocol } : {}),
+        ...(Object.keys(headers).length > 0 ? { headers } : {}),
+        ...(match.length > 0 ? { match } : {}),
+        ...(notMatch.length > 0 ? { 'not-match': notMatch } : {}),
+        ...(exist.length > 0 ? { exist } : {}),
+        ...(notExist.length > 0 ? { 'not-exist': notExist } : {}),
+      }
+    })
+    .filter(
+      (
+        model,
+      ): model is {
+        name: string
+        protocol?: string
+        'from-protocol'?: string
+        headers?: Record<string, string>
+        match?: Array<Record<string, unknown>>
+        'not-match'?: Array<Record<string, unknown>>
+        exist?: string[]
+        'not-exist'?: string[]
+      } => Boolean(model),
+    )
+}
+
+function serializePayloadHeaders(headers: PayloadHeaderEntry[]) {
+  return headers.reduce<Record<string, string>>((nextHeaders, header) => {
+    const name = header.name.trim()
+    if (!name) return nextHeaders
+
+    return {
+      ...nextHeaders,
+      [name]: header.value,
+    }
+  }, {})
+}
+
+function serializePayloadConditions(conditions: PayloadParamEntry[]) {
+  return conditions
+    .map((condition) => {
+      const path = condition.path.trim()
+      if (!path) return null
+
+      return { [path]: serializePayloadParamValue(condition) }
+    })
+    .filter((condition): condition is Record<string, unknown> => Boolean(condition))
+}
+
+function serializePayloadStringList(items: string[]) {
+  return items.map((item) => item.trim()).filter(Boolean)
+}
+
+function serializePayloadRules(rules: PayloadRule[], rawValues = false) {
+  return rules
+    .map((rule) => {
+      const models = serializePayloadModels(rule.models)
+      const params = rule.params.reduce<Record<string, unknown>>((nextParams, param) => {
+        const path = param.path.trim()
+        if (!path) return nextParams
+
+        return {
+          ...nextParams,
+          [path]: rawValues ? param.value : serializePayloadParamValue(param),
+        }
+      }, {})
+
+      return { models, params }
+    })
+    .filter((rule) => rule.models.length > 0)
+}
+
+function serializePayloadFilterRules(rules: PayloadFilterRule[]) {
+  return rules
+    .map((rule) => {
+      const models = serializePayloadModels(rule.models)
+      const params = rule.params.map((param) => param.trim()).filter(Boolean)
+
+      return { models, params }
+    })
+    .filter((rule) => rule.models.length > 0)
+}
+
+function serializePayloadConfig(config: PayloadRulesConfig) {
+  return {
+    default: serializePayloadRules(config.default),
+    'default-raw': serializePayloadRules(config['default-raw'], true),
+    override: serializePayloadRules(config.override),
+    'override-raw': serializePayloadRules(config['override-raw'], true),
+    filter: serializePayloadFilterRules(config.filter),
+  }
+}
+
+function serializePayloadDraftModels(models: PayloadModelEntry[]) {
+  return models.map((model) => {
+    const name = model.name.trim()
+    const protocol = model.protocol.trim()
+    const fromProtocol = model.fromProtocol.trim()
+    const headers = serializePayloadDraftHeaders(model.headers)
+    const match = serializePayloadDraftConditions(model.match)
+    const notMatch = serializePayloadDraftConditions(model.notMatch)
+    const exist = model.exist.map((item) => item.trim())
+    const notExist = model.notExist.map((item) => item.trim())
+
+    return {
+      name,
+      ...(protocol ? { protocol } : {}),
+      ...(fromProtocol ? { 'from-protocol': fromProtocol } : {}),
+      ...(headers.length > 0
+        ? {
+            headers: headers.reduce<Record<string, string>>(
+              (nextHeaders, header) => ({ ...nextHeaders, [header.name]: header.value }),
+              {},
+            ),
+          }
+        : {}),
+      ...(match.length > 0 ? { match } : {}),
+      ...(notMatch.length > 0 ? { 'not-match': notMatch } : {}),
+      ...(exist.length > 0 ? { exist } : {}),
+      ...(notExist.length > 0 ? { 'not-exist': notExist } : {}),
+    }
+  })
+}
+
+function serializePayloadDraftHeaders(headers: PayloadHeaderEntry[]) {
+  return headers.map((header) => ({
+    name: header.name.trim(),
+    value: header.value,
+  }))
+}
+
+function serializePayloadDraftConditions(conditions: PayloadParamEntry[]) {
+  return conditions.map((condition) => ({
+    [condition.path.trim()]: serializePayloadDraftParamValue(condition),
+  }))
+}
+
+function serializePayloadDraftRules(rules: PayloadRule[], rawValues = false) {
+  return rules.map((rule) => {
+    const models = serializePayloadDraftModels(rule.models)
+    const params = rule.params.reduce<Record<string, unknown>>((nextParams, param) => {
+      const path = param.path.trim()
+
+      return {
+        ...nextParams,
+        [path]: rawValues ? param.value : serializePayloadDraftParamValue(param),
+      }
+    }, {})
+
+    return { models, params }
+  })
+}
+
+function serializePayloadDraftFilterRules(rules: PayloadFilterRule[]) {
+  return rules.map((rule) => ({
+    models: serializePayloadDraftModels(rule.models),
+    params: rule.params.map((param) => param.trim()),
+  }))
+}
+
+function serializePayloadDraftConfig(config: PayloadRulesConfig) {
+  return {
+    default: serializePayloadDraftRules(config.default),
+    'default-raw': serializePayloadDraftRules(config['default-raw'], true),
+    override: serializePayloadDraftRules(config.override),
+    'override-raw': serializePayloadDraftRules(config['override-raw'], true),
+    filter: serializePayloadDraftFilterRules(config.filter),
+  }
+}
+
+function clonePayloadRule(rule: PayloadRule): PayloadRule {
+  return {
+    models: rule.models.map(clonePayloadModel),
+    params: rule.params.map((param) => ({ ...param })),
+  }
+}
+
+function clonePayloadFilterRule(rule: PayloadFilterRule): PayloadFilterRule {
+  return {
+    models: rule.models.map(clonePayloadModel),
+    params: [...rule.params],
+  }
+}
+
+function clonePayloadModel(model: PayloadModelEntry): PayloadModelEntry {
+  return {
+    ...model,
+    headers: model.headers.map((header) => ({ ...header })),
+    match: model.match.map((condition) => ({ ...condition })),
+    notMatch: model.notMatch.map((condition) => ({ ...condition })),
+    exist: [...model.exist],
+    notExist: [...model.notExist],
+  }
+}
+
+function insertAt<T>(items: T[], index: number, item: T) {
+  const nextItems = [...items]
+  nextItems.splice(Math.min(Math.max(index, 0), nextItems.length), 0, item)
+  return nextItems
+}
+
+function countPayloadRules(config: PayloadRulesConfig) {
+  return (
+    config.default.length +
+    config['default-raw'].length +
+    config.override.length +
+    config['override-raw'].length +
+    config.filter.length
+  )
+}
+
+function isPayloadRuleComplete(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  return countPayloadRuleIssues(rule, sectionKey) === 0
+}
+
+function countPayloadSectionDrafts(config: PayloadRulesConfig, sectionKey: PayloadSectionKey) {
+  const rules = sectionKey === 'filter' ? config.filter : config[sectionKey]
+
+  return rules.filter((rule) => !isPayloadRuleComplete(rule, sectionKey)).length
+}
+
+function countPayloadDrafts(value: unknown) {
+  const config = normalizePayloadConfig(value)
+
+  return payloadSectionKeys.reduce(
+    (total, sectionKey) => total + countPayloadSectionDrafts(config, sectionKey),
+    0,
+  )
+}
+
+function hasBlankPayloadParam(params: PayloadParamEntry[]) {
+  return params.some((param) => !param.path.trim())
+}
+
+function hasBlankPayloadModel(models: PayloadModelEntry[]) {
+  return models.some((model) => !model.name.trim())
+}
+
+function hasBlankPayloadHeader(headers: PayloadHeaderEntry[]) {
+  return headers.some((header) => !header.name.trim())
+}
+
+function hasBlankPayloadCondition(conditions: PayloadParamEntry[]) {
+  return conditions.some((condition) => !condition.path.trim())
+}
+
+function hasBlankPayloadPath(items: string[]) {
+  return items.some((item) => !item.trim())
+}
+
+function hasPayloadModelContent(models: PayloadModelEntry[]) {
+  return models.some(
+    (model) =>
+      model.name.trim() ||
+      model.protocol.trim() ||
+      model.fromProtocol.trim() ||
+      model.headers.some((header) => header.name.trim() || header.value.trim()) ||
+      model.match.some((condition) => condition.path.trim() || condition.value.trim()) ||
+      model.notMatch.some((condition) => condition.path.trim() || condition.value.trim()) ||
+      model.exist.some((item) => item.trim()) ||
+      model.notExist.some((item) => item.trim()),
+  )
+}
+
+function hasPayloadModelAdvancedSettings(model: PayloadModelEntry) {
+  return Boolean(
+    model.fromProtocol.trim() ||
+    model.headers.some((header) => header.name.trim() || header.value.trim()) ||
+    model.match.some((condition) => condition.path.trim() || condition.value.trim()) ||
+    model.notMatch.some((condition) => condition.path.trim() || condition.value.trim()) ||
+    model.exist.some((item) => item.trim()) ||
+    model.notExist.some((item) => item.trim()),
+  )
+}
+
+function countPayloadModelAdvancedItems(model: PayloadModelEntry) {
+  return (
+    (model.fromProtocol.trim() ? 1 : 0) +
+    model.headers.filter((header) => header.name.trim() || header.value.trim()).length +
+    model.match.filter((condition) => condition.path.trim() || condition.value.trim()).length +
+    model.notMatch.filter((condition) => condition.path.trim() || condition.value.trim()).length +
+    model.exist.filter((item) => item.trim()).length +
+    model.notExist.filter((item) => item.trim()).length
+  )
+}
+
+function getPayloadHeaderValidationError(header: PayloadHeaderEntry) {
+  if (!header.name.trim() && header.value.trim()) return 'headerName'
+  return null
+}
+
+function getPayloadConditionValidationError(condition: PayloadParamEntry) {
+  if (!condition.path.trim() && !condition.value.trim()) return null
+  if (!condition.path.trim()) return 'conditionPath'
+  return getPayloadParamValidationError(condition)
+}
+
+function getDefaultPayloadParamValue(valueType: PayloadParamValueType) {
+  return valueType === 'boolean' ? 'true' : ''
+}
+
+function countPayloadModelIssues(model: PayloadModelEntry) {
+  return (
+    model.headers.filter((header) => Boolean(getPayloadHeaderValidationError(header))).length +
+    model.match.filter((condition) => Boolean(getPayloadConditionValidationError(condition)))
+      .length +
+    model.notMatch.filter((condition) => Boolean(getPayloadConditionValidationError(condition)))
+      .length
+  )
+}
+
+function countPayloadModelIssuesForRule(rule: PayloadRule | PayloadFilterRule) {
+  return rule.models.reduce((total, model) => total + countPayloadModelIssues(model), 0)
+}
+
+function countPayloadValueIssues(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  const modelIssueCount = countPayloadModelIssuesForRule(rule)
+  if (sectionKey === 'filter') return modelIssueCount
+
+  const paramValidationCount = (rule as PayloadRule).params.filter((param) =>
+    Boolean(
+      getPayloadParamValidationError(
+        sectionKey.endsWith('-raw') ? { ...param, valueType: 'json' } : param,
+      ),
+    ),
+  ).length
+
+  return modelIssueCount + paramValidationCount
+}
+
+function hasPayloadRuleSavableModel(rule: PayloadRule | PayloadFilterRule) {
+  return serializePayloadModels(rule.models).length > 0
+}
+
+function hasPayloadRuleTargetParam(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  if (sectionKey === 'filter') {
+    return (rule as PayloadFilterRule).params.some((param) => param.trim())
+  }
+
+  return (rule as PayloadRule).params.some((param) => param.path.trim())
+}
+
+function shouldShowPayloadRuleIssues(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  if (countPayloadValueIssues(rule, sectionKey) > 0) return true
+
+  const ruleIssues = getPayloadRuleIssueKeys(rule, sectionKey)
+  if (ruleIssues.length === 0) return false
+
+  return hasPayloadRuleSavableModel(rule) && hasPayloadRuleTargetParam(rule, sectionKey)
+}
+
+function hasBlankPayloadFilterParam(params: string[]) {
+  return params.some((param) => !param.trim())
+}
+
+function getPayloadRuleIssueKeys(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+): PayloadRuleIssueKey[] {
+  const issues: PayloadRuleIssueKey[] = []
+
+  if (serializePayloadModels(rule.models).length === 0) {
+    issues.push('modelRequired')
+  }
+
+  if (sectionKey === 'filter') {
+    const params = (rule as PayloadFilterRule).params
+    if (params.length === 0) {
+      issues.push('paramRequired')
+    } else if (params.some((param) => !param.trim())) {
+      issues.push('paramPathRequired')
+    }
+
+    return issues
+  }
+
+  const params = (rule as PayloadRule).params
+  if (params.length === 0) {
+    issues.push('paramRequired')
+  } else if (params.some((param) => !param.path.trim())) {
+    issues.push('paramPathRequired')
+  }
+
+  return issues
+}
+
+function countPayloadRuleIssues(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  return (
+    getPayloadRuleIssueKeys(rule, sectionKey).length + countPayloadValueIssues(rule, sectionKey)
+  )
+}
+
+function countPayloadSectionIssues(config: PayloadRulesConfig, sectionKey: PayloadSectionKey) {
+  if (sectionKey === 'filter') {
+    return config.filter.reduce(
+      (total, rule) => total + countPayloadRuleIssues(rule, sectionKey),
+      0,
+    )
+  }
+
+  return config[sectionKey].reduce(
+    (total, rule) => total + countPayloadRuleIssues(rule, sectionKey),
+    0,
+  )
+}
+
+function countPayloadSectionVisibleIssues(
+  config: PayloadRulesConfig,
+  sectionKey: PayloadSectionKey,
+) {
+  const rules = sectionKey === 'filter' ? config.filter : config[sectionKey]
+
+  return rules.reduce(
+    (total, rule) =>
+      total +
+      (shouldShowPayloadRuleIssues(rule, sectionKey)
+        ? countPayloadRuleIssues(rule, sectionKey)
+        : 0),
+    0,
+  )
+}
+
+function getPayloadRuleAnchor(
+  rule: PayloadRule | PayloadFilterRule,
+  sectionKey: PayloadSectionKey,
+) {
+  const model = rule.models.find((item) => item.name.trim())
+  const modelTarget = model
+    ? [model.protocol.trim(), model.name.trim()].filter(Boolean).join('/')
+    : ''
+
+  if (sectionKey === 'filter') {
+    const param = (rule as PayloadFilterRule).params.find((item) => item.trim())?.trim() ?? ''
+    return [modelTarget, param].filter(Boolean).join(' -> ')
+  }
+
+  const param = (rule as PayloadRule).params.find((item) => item.path.trim())?.path.trim() ?? ''
+  return [modelTarget, param].filter(Boolean).join(' -> ')
+}
+
+function getPayloadAffectedTargets(config: PayloadRulesConfig) {
+  const targets = payloadSectionKeys.flatMap((sectionKey) => {
+    const rules = sectionKey === 'filter' ? config.filter : config[sectionKey]
+
+    return rules.flatMap((rule) =>
+      rule.models
+        .map((model) => [model.protocol.trim(), model.name.trim()].filter(Boolean).join('/').trim())
+        .filter(Boolean),
+    )
+  })
+
+  return Array.from(new Set(targets))
+}
+
+function canEditPayloadHeaders(value: unknown) {
+  return isRecord(value) && Object.values(value).every((item) => typeof item === 'string')
+}
+
+function canEditPayloadConditions(value: unknown) {
+  return Array.isArray(value) && value.every((item) => isRecord(item))
+}
+
+function canEditPayloadStringList(value: unknown) {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function canEditPayloadModel(model: unknown) {
+  if (typeof model === 'string') return true
+  if (!isRecord(model)) return false
+  if (
+    !hasOnlyKeys(model, [
+      'name',
+      'protocol',
+      'from-protocol',
+      'headers',
+      'match',
+      'not-match',
+      'exist',
+      'not-exist',
+    ])
+  ) {
+    return false
+  }
+
+  return (
+    (model.name === undefined || typeof model.name === 'string') &&
+    (model.protocol === undefined || typeof model.protocol === 'string') &&
+    (model['from-protocol'] === undefined || typeof model['from-protocol'] === 'string') &&
+    (model.headers === undefined || canEditPayloadHeaders(model.headers)) &&
+    (model.match === undefined || canEditPayloadConditions(model.match)) &&
+    (model['not-match'] === undefined || canEditPayloadConditions(model['not-match'])) &&
+    (model.exist === undefined || canEditPayloadStringList(model.exist)) &&
+    (model['not-exist'] === undefined || canEditPayloadStringList(model['not-exist']))
+  )
+}
+
+function canEditPayloadConfig(value: unknown) {
+  if (!isRecord(value)) return false
+
+  return Object.entries(value).every(([key, rules]) => {
+    if (!payloadSectionKeys.includes(key as PayloadSectionKey)) return false
+    if (!Array.isArray(rules)) return false
+
+    return rules.every((rule) => {
+      if (!isRecord(rule)) return false
+      if (!hasOnlyKeys(rule, ['models', 'params'])) return false
+      if (!Array.isArray(rule.models)) return false
+      const modelsValid = rule.models.every(canEditPayloadModel)
+      if (!modelsValid) return false
+      if (key === 'filter') return Array.isArray(rule.params)
+
+      return isRecord(rule.params)
+    })
+  })
+}
+
+function getPayloadParamValidationError(param: PayloadParamEntry) {
+  const value = param.value.trim()
+
+  if (param.valueType === 'number') {
+    return value && Number.isFinite(Number(value)) ? null : 'number'
+  }
+  if (param.valueType === 'boolean') {
+    const normalized = value.toLowerCase()
+    return normalized === 'true' || normalized === 'false' ? null : 'boolean'
+  }
+  if (param.valueType === 'json') {
+    if (!value) return 'json'
+    try {
+      JSON.parse(param.value)
+      return null
+    } catch {
+      return 'json'
+    }
+  }
+
+  return null
+}
+
+function hasPayloadValidationErrors(value: unknown) {
+  const config = normalizePayloadConfig(value)
+
+  return payloadSectionKeys.some((section) => countPayloadSectionIssues(config, section) > 0)
+}
+
+function hasVisiblePayloadValidationErrors(value: unknown) {
+  const config = normalizePayloadConfig(value)
+
+  return payloadSectionKeys.some((section) => countPayloadSectionVisibleIssues(config, section) > 0)
+}
+
 function getModelDisplayName(model: ProviderModelDefinition) {
   return model.displayName || model.name || model.id
 }
@@ -559,6 +1416,8 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
       return canEditPluginStoreSources(value)
     case 'pluginStoreAuthJson':
       return canEditPluginStoreAuthRules(value)
+    case 'payloadRulesJson':
+      return canEditPayloadConfig(value)
   }
 }
 
@@ -578,6 +1437,13 @@ function scrollToSection(sectionId: ConfigSectionId) {
 
 function scrollToField(key: ConfigFieldKey) {
   scrollToSection(fieldDefinitionByKey[key].sectionId)
+}
+
+function scrollToPayloadSection(sectionKey: PayloadSectionKey) {
+  document.getElementById(`payload-section-${sectionKey}`)?.scrollIntoView({
+    block: 'start',
+    behavior: 'smooth',
+  })
 }
 
 function areConfigValuesEqual(
@@ -601,6 +1467,17 @@ function getStructuredChanges(
 }
 
 function getValidationErrors(draft: ConfigStructuredValues) {
+  return getValidationErrorsWithOptions(draft, { visibleOnly: false })
+}
+
+function getVisibleValidationErrors(draft: ConfigStructuredValues) {
+  return getValidationErrorsWithOptions(draft, { visibleOnly: true })
+}
+
+function getValidationErrorsWithOptions(
+  draft: ConfigStructuredValues,
+  { visibleOnly }: { visibleOnly: boolean },
+) {
   return fieldDefinitions
     .filter((field) => {
       const value = draft[field.key]
@@ -621,7 +1498,16 @@ function getValidationErrors(draft: ConfigStructuredValues) {
       if (field.kind === 'jsonObject') {
         try {
           const parsed: unknown = JSON.parse(String(value || '{}'))
-          return typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)
+          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return true
+          if (field.key === 'payloadRulesJson') {
+            return (
+              !canEditPayloadConfig(parsed) ||
+              (visibleOnly
+                ? hasVisiblePayloadValidationErrors(parsed)
+                : hasPayloadValidationErrors(parsed))
+            )
+          }
+          return false
         } catch {
           return true
         }
@@ -1728,6 +2614,1640 @@ function PluginStoreAuthEditor({
   )
 }
 
+function createPayloadModel(patch: Partial<PayloadModelEntry> = {}): PayloadModelEntry {
+  return {
+    name: patch.name ?? '',
+    protocol: patch.protocol ?? '',
+    fromProtocol: patch.fromProtocol ?? '',
+    headers: patch.headers?.map((header) => ({ ...header })) ?? [],
+    match: patch.match?.map((condition) => ({ ...condition })) ?? [],
+    notMatch: patch.notMatch?.map((condition) => ({ ...condition })) ?? [],
+    exist: patch.exist ? [...patch.exist] : [],
+    notExist: patch.notExist ? [...patch.notExist] : [],
+  }
+}
+
+function createPayloadHeader(): PayloadHeaderEntry {
+  return { name: '', value: '' }
+}
+
+function createPayloadCondition(): PayloadParamEntry {
+  return { path: '', valueType: 'string', value: '' }
+}
+
+function createPayloadParam(rawValues = false): PayloadParamEntry {
+  return { path: '', valueType: rawValues ? 'json' : 'string', value: rawValues ? '{}' : '' }
+}
+
+function createPayloadRule(rawValues = false): PayloadRule {
+  return {
+    models: [createPayloadModel()],
+    params: [createPayloadParam(rawValues)],
+  }
+}
+
+function createPayloadFilterRule(): PayloadFilterRule {
+  return {
+    models: [createPayloadModel()],
+    params: [''],
+  }
+}
+
+function PayloadIntentAction({
+  sectionKey,
+  count,
+  draftCount,
+  disabled,
+  onAddRule,
+  onFocusSection,
+}: {
+  sectionKey: PayloadSectionKey
+  count: number
+  draftCount: number
+  disabled: boolean
+  onAddRule: (sectionKey: PayloadSectionKey) => void
+  onFocusSection: (sectionKey: PayloadSectionKey) => void
+}) {
+  const { t } = useTranslation()
+  const hasSection = count > 0
+  const addDisabled = disabled || (!hasSection && draftCount > 0)
+
+  return (
+    <Button
+      type="button"
+      variant={hasSection ? 'secondary' : 'outline'}
+      size="sm"
+      className="h-auto min-h-9 justify-start whitespace-normal"
+      disabled={addDisabled}
+      onClick={() => {
+        if (hasSection) {
+          onFocusSection(sectionKey)
+          return
+        }
+
+        onAddRule(sectionKey)
+      }}
+    >
+      {hasSection
+        ? t('configPage.payload.viewExistingRules', { count })
+        : t(`configPage.payload.addRuleActions.${sectionKey}`)}
+    </Button>
+  )
+}
+
+function PayloadAddRulePanel({
+  disabled,
+  value,
+  draftCount,
+  onAddRule,
+  onFocusSection,
+}: {
+  disabled: boolean
+  value: PayloadRulesConfig
+  draftCount: number
+  onAddRule: (sectionKey: PayloadSectionKey) => void
+  onFocusSection: (sectionKey: PayloadSectionKey) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-muted/20 grid gap-3 rounded-md border px-3 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{t('configPage.payload.addRuleTitle')}</p>
+        <p className="text-muted-foreground mt-1 text-xs leading-5">
+          {t('configPage.payload.addRuleDescription')}
+        </p>
+        <p className="text-muted-foreground mt-1 text-xs leading-5">
+          {t('configPage.payload.valueModeHint')}
+        </p>
+      </div>
+      {draftCount > 0 ? (
+        <div className="bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
+          {t('configPage.payload.draftBlockingHint')}
+        </div>
+      ) : null}
+      <div className="grid gap-2 lg:grid-cols-3">
+        {payloadRuleIntentGroups.map((intent) => (
+          <div
+            key={intent.id}
+            className="bg-background/50 grid content-start gap-3 rounded-md border p-3"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                {t(`configPage.payload.intentOptions.${intent.id}.title`)}
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {t(`configPage.payload.intentOptions.${intent.id}.description`)}
+              </p>
+            </div>
+            <div className="grid gap-2">
+              {intent.sectionKeys.map((sectionKey) => (
+                <PayloadIntentAction
+                  key={sectionKey}
+                  sectionKey={sectionKey}
+                  count={value[sectionKey].length}
+                  draftCount={draftCount}
+                  disabled={disabled}
+                  onAddRule={onAddRule}
+                  onFocusSection={onFocusSection}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PayloadHeaderRows({
+  headers,
+  disabled,
+  onChange,
+}: {
+  headers: PayloadHeaderEntry[]
+  disabled: boolean
+  onChange: (headers: PayloadHeaderEntry[]) => void
+}) {
+  const { t } = useTranslation()
+  const hasBlankHeader = hasBlankPayloadHeader(headers)
+  const updateHeader = (index: number, patch: Partial<PayloadHeaderEntry>) => {
+    onChange(
+      headers.map((header, headerIndex) =>
+        headerIndex === index ? { ...header, ...patch } : header,
+      ),
+    )
+  }
+  const addHeader = () => onChange([...headers, createPayloadHeader()])
+  const removeHeader = (index: number) =>
+    onChange(headers.filter((_, headerIndex) => headerIndex !== index))
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t('configPage.payload.headers')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={disabled || hasBlankHeader}
+          onClick={addHeader}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addHeader')}
+        </Button>
+      </div>
+      {hasBlankHeader ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentHeaderFirst')}
+        </p>
+      ) : null}
+      {headers.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.payload.emptyHeaders')} />
+      ) : (
+        <div className="grid gap-2">
+          <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <TableHeaderCell
+              label={t('configPage.payload.headerName')}
+              description={t('configPage.payload.headerNameHelp')}
+              className="px-0 py-0"
+            />
+            <TableHeaderCell
+              label={t('configPage.payload.headerValue')}
+              description={t('configPage.payload.headerValueHelp')}
+              className="px-0 py-0"
+            />
+            <div aria-hidden="true" />
+          </div>
+          {headers.map((header, index) => {
+            const validationError = getPayloadHeaderValidationError(header)
+
+            return (
+              <div key={index} className="grid gap-1.5">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+                      {t('configPage.payload.headerName')}
+                    </span>
+                    <Input
+                      value={header.name}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.headerName')}
+                      placeholder={t('configPage.payload.headerNamePlaceholder')}
+                      onChange={(event) => updateHeader(index, { name: event.target.value })}
+                    />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+                      {t('configPage.payload.headerValue')}
+                    </span>
+                    <Input
+                      value={header.value}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.headerValue')}
+                      placeholder={t('configPage.payload.headerValuePlaceholder')}
+                      onChange={(event) => updateHeader(index, { value: event.target.value })}
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => removeHeader(index)}
+                  >
+                    {t('configPage.payload.remove')}
+                  </Button>
+                </div>
+                {validationError ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    {t(`configPage.payload.validation.${validationError}`)}
+                  </p>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadConditionRows({
+  title,
+  emptyLabel,
+  conditions,
+  disabled,
+  onChange,
+}: {
+  title: string
+  emptyLabel: string
+  conditions: PayloadParamEntry[]
+  disabled: boolean
+  onChange: (conditions: PayloadParamEntry[]) => void
+}) {
+  const { t } = useTranslation()
+  const [valueMemory, setValueMemory] = useState<
+    Record<number, Partial<Record<PayloadParamValueType, string>>>
+  >({})
+  const hasBlankCondition = hasBlankPayloadCondition(conditions)
+  const updateCondition = (index: number, patch: Partial<PayloadParamEntry>) => {
+    onChange(
+      conditions.map((condition, conditionIndex) =>
+        conditionIndex === index ? { ...condition, ...patch } : condition,
+      ),
+    )
+  }
+  const updateConditionValue = (index: number, condition: PayloadParamEntry, value: string) => {
+    setValueMemory((current) => ({
+      ...current,
+      [index]: {
+        ...current[index],
+        [condition.valueType]: value,
+      },
+    }))
+    updateCondition(index, { value })
+  }
+  const updateConditionValueType = (
+    index: number,
+    condition: PayloadParamEntry,
+    valueType: PayloadParamValueType,
+  ) => {
+    const cachedValue = valueMemory[index]?.[valueType]
+    setValueMemory((current) => ({
+      ...current,
+      [index]: {
+        ...current[index],
+        [condition.valueType]: condition.value,
+      },
+    }))
+    updateCondition(index, {
+      valueType,
+      value: cachedValue ?? getDefaultPayloadParamValue(valueType),
+    })
+  }
+  const addCondition = () => onChange([...conditions, createPayloadCondition()])
+  const removeCondition = (index: number) =>
+    onChange(conditions.filter((_, conditionIndex) => conditionIndex !== index))
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">{title}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={disabled || hasBlankCondition}
+          onClick={addCondition}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addCondition')}
+        </Button>
+      </div>
+      {hasBlankCondition ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentConditionFirst')}
+        </p>
+      ) : null}
+      {conditions.length === 0 ? (
+        <EmptyJsonRows label={emptyLabel} />
+      ) : (
+        <div className="grid gap-2">
+          <div className="hidden gap-2 lg:grid lg:grid-cols-[minmax(10rem,0.8fr)_9rem_minmax(12rem,1.2fr)_auto]">
+            <TableHeaderCell
+              label={t('configPage.payload.conditionPath')}
+              description={t('configPage.payload.conditionPathHelp')}
+              className="px-0 py-0"
+            />
+            <TableHeaderCell
+              label={t('configPage.payload.valueType')}
+              description={t('configPage.payload.valueTypeHelp')}
+              className="px-0 py-0"
+            />
+            <TableHeaderCell
+              label={t('configPage.payload.conditionValue')}
+              description={t('configPage.payload.conditionValueHelp')}
+              className="px-0 py-0"
+            />
+            <div aria-hidden="true" />
+          </div>
+          {conditions.map((condition, index) => {
+            const validationError = getPayloadConditionValidationError(condition)
+
+            return (
+              <div key={index} className="grid gap-1.5">
+                <div className="grid gap-2 lg:grid-cols-[minmax(10rem,0.8fr)_9rem_minmax(12rem,1.2fr)_auto]">
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                      {t('configPage.payload.conditionPath')}
+                    </span>
+                    <Input
+                      value={condition.path}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.conditionPath')}
+                      placeholder={t('configPage.payload.conditionPathPlaceholder')}
+                      onChange={(event) => updateCondition(index, { path: event.target.value })}
+                    />
+                  </label>
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                      {t('configPage.payload.valueType')}
+                    </span>
+                    <Select
+                      value={condition.valueType}
+                      disabled={disabled}
+                      onValueChange={(value) =>
+                        updateConditionValueType(index, condition, value as PayloadParamValueType)
+                      }
+                    >
+                      <SelectTrigger aria-label={t('configPage.payload.valueType')}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(['string', 'number', 'boolean', 'json'] as const).map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {t(`configPage.payload.valueTypes.${type}`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                  {condition.valueType === 'json' ? (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.conditionValue')}
+                      </span>
+                      <Textarea
+                        value={condition.value}
+                        disabled={disabled}
+                        className="min-h-9 font-mono text-sm"
+                        aria-label={t('configPage.payload.conditionValue')}
+                        placeholder={t('configPage.payload.jsonValuePlaceholder')}
+                        onChange={(event) =>
+                          updateConditionValue(index, condition, event.target.value)
+                        }
+                      />
+                    </label>
+                  ) : condition.valueType === 'boolean' ? (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.conditionValue')}
+                      </span>
+                      <Select
+                        value={condition.value.toLowerCase() === 'false' ? 'false' : 'true'}
+                        disabled={disabled}
+                        onValueChange={(value) => updateConditionValue(index, condition, value)}
+                      >
+                        <SelectTrigger aria-label={t('configPage.payload.conditionValue')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">
+                            {t('configPage.payload.booleanTrue')}
+                          </SelectItem>
+                          <SelectItem value="false">
+                            {t('configPage.payload.booleanFalse')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  ) : (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.conditionValue')}
+                      </span>
+                      <Input
+                        value={condition.value}
+                        disabled={disabled}
+                        className="font-mono"
+                        aria-label={t('configPage.payload.conditionValue')}
+                        placeholder={t(
+                          `configPage.payload.valuePlaceholders.${condition.valueType}`,
+                        )}
+                        onChange={(event) =>
+                          updateConditionValue(index, condition, event.target.value)
+                        }
+                      />
+                    </label>
+                  )}
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => removeCondition(index)}
+                  >
+                    {t('configPage.payload.remove')}
+                  </Button>
+                </div>
+                {validationError ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    {t(`configPage.payload.validation.${validationError}`)}
+                  </p>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadPathListRows({
+  title,
+  emptyLabel,
+  paths,
+  disabled,
+  onChange,
+}: {
+  title: string
+  emptyLabel: string
+  paths: string[]
+  disabled: boolean
+  onChange: (paths: string[]) => void
+}) {
+  const { t } = useTranslation()
+  const hasBlankPath = hasBlankPayloadPath(paths)
+  const addPath = () => onChange([...paths, ''])
+  const updatePath = (index: number, value: string) => {
+    onChange(paths.map((path, pathIndex) => (pathIndex === index ? value : path)))
+  }
+  const removePath = (index: number) =>
+    onChange(paths.filter((_, pathIndex) => pathIndex !== index))
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">{title}</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={disabled || hasBlankPath}
+          onClick={addPath}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addPath')}
+        </Button>
+      </div>
+      {hasBlankPath ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentPathFirst')}
+        </p>
+      ) : null}
+      {paths.length === 0 ? (
+        <EmptyJsonRows label={emptyLabel} />
+      ) : (
+        <div className="grid gap-2">
+          <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto]">
+            <TableHeaderCell
+              label={t('configPage.payload.conditionPath')}
+              description={t('configPage.payload.conditionPathHelp')}
+              className="px-0 py-0"
+            />
+            <div aria-hidden="true" />
+          </div>
+          {paths.map((path, index) => (
+            <div key={index} className="grid gap-1.5">
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <label className="grid gap-1.5">
+                  <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+                    {t('configPage.payload.conditionPath')}
+                  </span>
+                  <Input
+                    value={path}
+                    disabled={disabled}
+                    className="font-mono"
+                    aria-label={t('configPage.payload.conditionPath')}
+                    placeholder={t('configPage.payload.conditionPathPlaceholder')}
+                    onChange={(event) => updatePath(index, event.target.value)}
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => removePath(index)}
+                >
+                  {t('configPage.payload.remove')}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadModelAdvancedFields({
+  model,
+  disabled,
+  protocolOptions,
+  onChange,
+}: {
+  model: PayloadModelEntry
+  disabled: boolean
+  protocolOptions: string[]
+  onChange: (patch: Partial<PayloadModelEntry>) => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="bg-muted/15 grid gap-4 rounded-md border px-3 py-3">
+      <p className="text-muted-foreground text-xs leading-5">
+        {t('configPage.payload.advancedMatchersSummary')}
+      </p>
+      <label className="grid max-w-sm gap-1.5">
+        <span className="text-muted-foreground text-xs font-medium">
+          {t('configPage.payload.fromProtocol')}
+        </span>
+        <Select
+          value={model.fromProtocol || '__any__'}
+          disabled={disabled}
+          onValueChange={(value) => onChange({ fromProtocol: value === '__any__' ? '' : value })}
+        >
+          <SelectTrigger aria-label={t('configPage.payload.fromProtocol')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__any__">{t('configPage.payload.anyProtocol')}</SelectItem>
+            {protocolOptions.map((protocol) => (
+              <SelectItem key={protocol} value={protocol}>
+                {protocol}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.fromProtocolHelp')}
+        </span>
+      </label>
+
+      <PayloadHeaderRows
+        headers={model.headers}
+        disabled={disabled}
+        onChange={(headers) => onChange({ headers })}
+      />
+      <PayloadConditionRows
+        title={t('configPage.payload.matchConditions')}
+        emptyLabel={t('configPage.payload.emptyConditions')}
+        conditions={model.match}
+        disabled={disabled}
+        onChange={(match) => onChange({ match })}
+      />
+      <PayloadConditionRows
+        title={t('configPage.payload.notMatchConditions')}
+        emptyLabel={t('configPage.payload.emptyConditions')}
+        conditions={model.notMatch}
+        disabled={disabled}
+        onChange={(notMatch) => onChange({ notMatch })}
+      />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PayloadPathListRows
+          title={t('configPage.payload.existPaths')}
+          emptyLabel={t('configPage.payload.emptyExistPaths')}
+          paths={model.exist}
+          disabled={disabled}
+          onChange={(exist) => onChange({ exist })}
+        />
+        <PayloadPathListRows
+          title={t('configPage.payload.notExistPaths')}
+          emptyLabel={t('configPage.payload.emptyNotExistPaths')}
+          paths={model.notExist}
+          disabled={disabled}
+          onChange={(notExist) => onChange({ notExist })}
+        />
+      </div>
+    </div>
+  )
+}
+
+function PayloadModelRow({
+  model,
+  disabled,
+  canRemove,
+  protocolOptions,
+  onChange,
+  onRemove,
+}: {
+  model: PayloadModelEntry
+  disabled: boolean
+  canRemove: boolean
+  protocolOptions: string[]
+  onChange: (patch: Partial<PayloadModelEntry>) => void
+  onRemove: () => void
+}) {
+  const { t } = useTranslation()
+  const hasAdvancedSettings = hasPayloadModelAdvancedSettings(model)
+  const advancedCount = countPayloadModelAdvancedItems(model)
+  const [advancedExpanded, setAdvancedExpanded] = useState(hasAdvancedSettings)
+
+  useEffect(() => {
+    if (hasAdvancedSettings) setAdvancedExpanded(true)
+  }, [hasAdvancedSettings])
+
+  return (
+    <div className="grid gap-2 rounded-md border p-2 sm:border-0 sm:p-0">
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
+        <label className="grid gap-1.5">
+          <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+            {t('configPage.payload.modelName')}
+          </span>
+          <Input
+            value={model.name}
+            disabled={disabled}
+            className="font-mono"
+            aria-label={t('configPage.payload.modelName')}
+            placeholder={t('configPage.payload.modelNamePlaceholder')}
+            onChange={(event) => onChange({ name: event.target.value })}
+          />
+        </label>
+        <label className="grid gap-1.5">
+          <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+            {t('configPage.payload.protocol')}
+          </span>
+          <Select
+            value={model.protocol || '__any__'}
+            disabled={disabled}
+            onValueChange={(value) => onChange({ protocol: value === '__any__' ? '' : value })}
+          >
+            <SelectTrigger aria-label={t('configPage.payload.protocol')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any__">{t('configPage.payload.anyProtocol')}</SelectItem>
+              {protocolOptions.map((protocol) => (
+                <SelectItem key={protocol} value={protocol}>
+                  {protocol}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <Button
+          type="button"
+          variant={advancedExpanded ? 'secondary' : 'outline'}
+          size="sm"
+          className="w-full justify-start"
+          disabled={disabled}
+          onClick={() => setAdvancedExpanded((expanded) => !expanded)}
+        >
+          <SlidersHorizontal className="size-4" aria-hidden="true" />
+          {advancedExpanded
+            ? t('configPage.payload.hideAdvancedMatchers')
+            : t('configPage.payload.advancedMatchers')}
+          {advancedCount > 0 ? (
+            <span className="bg-background text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px] leading-none">
+              {advancedCount}
+            </span>
+          ) : null}
+        </Button>
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          disabled={disabled || !canRemove}
+          onClick={onRemove}
+        >
+          {t('configPage.payload.remove')}
+        </Button>
+      </div>
+      {advancedExpanded ? (
+        <PayloadModelAdvancedFields
+          model={model}
+          disabled={disabled}
+          protocolOptions={protocolOptions}
+          onChange={onChange}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function PayloadModelRows({
+  models,
+  disabled,
+  onChange,
+}: {
+  models: PayloadModelEntry[]
+  disabled: boolean
+  onChange: (models: PayloadModelEntry[]) => void
+}) {
+  const { t } = useTranslation()
+  const rows = models.length > 0 ? models : [createPayloadModel()]
+  const hasBlankModel = hasBlankPayloadModel(rows)
+  const showBlankModelHint = hasBlankModel && (rows.length > 1 || hasPayloadModelContent(rows))
+  const protocolOptions = Array.from(
+    new Set([
+      ...payloadProtocols,
+      ...rows.map((model) => model.protocol).filter(Boolean),
+      ...rows.map((model) => model.fromProtocol).filter(Boolean),
+    ]),
+  )
+  const updateModel = (index: number, patch: Partial<PayloadModelEntry>) => {
+    onChange(
+      rows.map((model, modelIndex) => (modelIndex === index ? { ...model, ...patch } : model)),
+    )
+  }
+  const addModel = () => onChange([...rows, createPayloadModel()])
+  const removeModel = (index: number) => {
+    onChange(rows.filter((_, modelIndex) => modelIndex !== index))
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t('configPage.payload.models')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={disabled || hasBlankModel}
+          onClick={addModel}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addModel')}
+        </Button>
+      </div>
+      {showBlankModelHint ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentModelFirst')}
+        </p>
+      ) : null}
+      <div className="grid gap-2">
+        <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
+          <TableHeaderCell
+            label={t('configPage.payload.modelName')}
+            description={t('configPage.payload.modelNameHelp')}
+            className="px-0 py-0"
+          />
+          <TableHeaderCell
+            label={t('configPage.payload.protocol')}
+            description={t('configPage.payload.protocolHelp')}
+            className="px-0 py-0"
+          />
+          <TableHeaderCell
+            label={t('configPage.payload.advancedMatchers')}
+            description={t('configPage.payload.advancedMatchersSummary')}
+            className="px-0 py-0"
+          />
+          <div aria-hidden="true" />
+        </div>
+        {rows.map((model, index) => (
+          <PayloadModelRow
+            key={index}
+            model={model}
+            disabled={disabled}
+            canRemove={rows.length > 1}
+            protocolOptions={protocolOptions}
+            onChange={(patch) => updateModel(index, patch)}
+            onRemove={() => removeModel(index)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PayloadParamRows({
+  params,
+  disabled,
+  rawValues,
+  onChange,
+}: {
+  params: PayloadParamEntry[]
+  disabled: boolean
+  rawValues: boolean
+  onChange: (params: PayloadParamEntry[]) => void
+}) {
+  const { t } = useTranslation()
+  const [valueMemory, setValueMemory] = useState<
+    Record<number, Partial<Record<PayloadParamValueType, string>>>
+  >({})
+  const hasBlankParam = hasBlankPayloadParam(params)
+  const addParamDisabled = disabled || hasBlankParam
+  const updateParam = (index: number, patch: Partial<PayloadParamEntry>) => {
+    onChange(
+      params.map((param, paramIndex) => (paramIndex === index ? { ...param, ...patch } : param)),
+    )
+  }
+  const updateParamValue = (index: number, param: PayloadParamEntry, value: string) => {
+    setValueMemory((current) => ({
+      ...current,
+      [index]: {
+        ...current[index],
+        [param.valueType]: value,
+      },
+    }))
+    updateParam(index, { value })
+  }
+  const updateParamValueType = (
+    index: number,
+    param: PayloadParamEntry,
+    valueType: PayloadParamValueType,
+  ) => {
+    const cachedValue = valueMemory[index]?.[valueType]
+    setValueMemory((current) => ({
+      ...current,
+      [index]: {
+        ...current[index],
+        [param.valueType]: param.value,
+      },
+    }))
+    updateParam(index, {
+      valueType,
+      value: cachedValue ?? getDefaultPayloadParamValue(valueType),
+    })
+  }
+  const addParam = () => onChange([...params, createPayloadParam(rawValues)])
+  const removeParam = (index: number) =>
+    onChange(params.filter((_, paramIndex) => paramIndex !== index))
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t('configPage.payload.params')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={addParamDisabled}
+          onClick={addParam}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addParam')}
+        </Button>
+      </div>
+      {hasBlankParam ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentParamFirst')}
+        </p>
+      ) : null}
+      {params.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.payload.emptyParams')} />
+      ) : (
+        <div className="grid gap-2">
+          <div
+            className={cn(
+              'hidden gap-2 lg:grid lg:grid-cols-[minmax(10rem,0.8fr)_9rem_minmax(12rem,1.2fr)_auto]',
+              rawValues ? 'lg:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.4fr)_auto]' : null,
+            )}
+          >
+            <TableHeaderCell
+              label={t('configPage.payload.paramPath')}
+              description={t('configPage.payload.paramPathHelp')}
+              className="px-0 py-0"
+            />
+            {rawValues ? null : (
+              <TableHeaderCell
+                label={t('configPage.payload.valueType')}
+                description={t('configPage.payload.valueTypeHelp')}
+                className="px-0 py-0"
+              />
+            )}
+            <TableHeaderCell
+              label={t('configPage.payload.paramValue')}
+              description={
+                rawValues
+                  ? t('configPage.payload.rawValueHelp')
+                  : t('configPage.payload.paramValueHelp')
+              }
+              className="px-0 py-0"
+            />
+            <div aria-hidden="true" />
+          </div>
+          {params.map((param, index) => {
+            const validationError = getPayloadParamValidationError(
+              rawValues ? { ...param, valueType: 'json' } : param,
+            )
+
+            return (
+              <div key={index} className="grid gap-1.5">
+                <div
+                  className={cn(
+                    'grid gap-2 lg:grid-cols-[minmax(10rem,0.8fr)_9rem_minmax(12rem,1.2fr)_auto]',
+                    rawValues
+                      ? 'lg:grid-cols-[minmax(10rem,0.8fr)_minmax(14rem,1.4fr)_auto]'
+                      : null,
+                  )}
+                >
+                  <label className="grid gap-1.5">
+                    <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                      {t('configPage.payload.paramPath')}
+                    </span>
+                    <Input
+                      value={param.path}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.paramPath')}
+                      placeholder={t('configPage.payload.paramPathPlaceholder')}
+                      onChange={(event) => updateParam(index, { path: event.target.value })}
+                    />
+                  </label>
+                  {rawValues ? null : (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.valueType')}
+                      </span>
+                      <Select
+                        value={param.valueType}
+                        disabled={disabled}
+                        onValueChange={(value) =>
+                          updateParamValueType(index, param, value as PayloadParamValueType)
+                        }
+                      >
+                        <SelectTrigger aria-label={t('configPage.payload.valueType')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(['string', 'number', 'boolean', 'json'] as const).map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {t(`configPage.payload.valueTypes.${type}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  )}
+                  {param.valueType === 'json' || rawValues ? (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.paramValue')}
+                      </span>
+                      <Textarea
+                        value={param.value}
+                        disabled={disabled}
+                        className="min-h-9 font-mono text-sm"
+                        aria-label={t('configPage.payload.paramValue')}
+                        placeholder={
+                          rawValues
+                            ? t('configPage.payload.rawValuePlaceholder')
+                            : t('configPage.payload.jsonValuePlaceholder')
+                        }
+                        onChange={(event) => updateParamValue(index, param, event.target.value)}
+                      />
+                    </label>
+                  ) : param.valueType === 'boolean' ? (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.paramValue')}
+                      </span>
+                      <Select
+                        value={param.value.toLowerCase() === 'false' ? 'false' : 'true'}
+                        disabled={disabled}
+                        onValueChange={(value) => updateParamValue(index, param, value)}
+                      >
+                        <SelectTrigger aria-label={t('configPage.payload.paramValue')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="true">
+                            {t('configPage.payload.booleanTrue')}
+                          </SelectItem>
+                          <SelectItem value="false">
+                            {t('configPage.payload.booleanFalse')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </label>
+                  ) : (
+                    <label className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium lg:sr-only">
+                        {t('configPage.payload.paramValue')}
+                      </span>
+                      <Input
+                        value={param.value}
+                        disabled={disabled}
+                        className="font-mono"
+                        aria-label={t('configPage.payload.paramValue')}
+                        placeholder={t(`configPage.payload.valuePlaceholders.${param.valueType}`)}
+                        onChange={(event) => updateParamValue(index, param, event.target.value)}
+                      />
+                    </label>
+                  )}
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => removeParam(index)}
+                  >
+                    {t('configPage.payload.remove')}
+                  </Button>
+                </div>
+                {validationError ? (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    {t(`configPage.payload.validation.${validationError}`)}
+                  </p>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadFilterParamRows({
+  params,
+  disabled,
+  onChange,
+}: {
+  params: string[]
+  disabled: boolean
+  onChange: (params: string[]) => void
+}) {
+  const { t } = useTranslation()
+  const hasBlankParam = hasBlankPayloadFilterParam(params)
+  const addParamDisabled = disabled || hasBlankParam
+  const addParam = () => onChange([...params, ''])
+  const updateParam = (index: number, value: string) => {
+    onChange(params.map((param, paramIndex) => (paramIndex === index ? value : param)))
+  }
+  const removeParam = (index: number) =>
+    onChange(params.filter((_, paramIndex) => paramIndex !== index))
+
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t('configPage.payload.removeParams')}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          disabled={addParamDisabled}
+          onClick={addParam}
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          {t('configPage.payload.addParam')}
+        </Button>
+      </div>
+      {hasBlankParam ? (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('configPage.payload.completeCurrentParamFirst')}
+        </p>
+      ) : null}
+      {params.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.payload.emptyFilterParams')} />
+      ) : (
+        <div className="grid gap-2">
+          <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto]">
+            <TableHeaderCell
+              label={t('configPage.payload.paramPath')}
+              description={t('configPage.payload.filterParamPathHelp')}
+              className="px-0 py-0"
+            />
+            <div aria-hidden="true" />
+          </div>
+          {params.map((param, index) => (
+            <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <label className="grid gap-1.5">
+                <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+                  {t('configPage.payload.paramPath')}
+                </span>
+                <Input
+                  value={param}
+                  disabled={disabled}
+                  className="font-mono"
+                  aria-label={t('configPage.payload.paramPath')}
+                  placeholder={t('configPage.payload.paramPathPlaceholder')}
+                  onChange={(event) => updateParam(index, event.target.value)}
+                />
+              </label>
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={disabled}
+                onClick={() => removeParam(index)}
+              >
+                {t('configPage.payload.remove')}
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadRuleEditor({
+  sectionKey,
+  rules,
+  disabled,
+  onChange,
+  onRemoveRule,
+}: {
+  sectionKey: PayloadRuleSection
+  rules: PayloadRule[]
+  disabled: boolean
+  onChange: (rules: PayloadRule[]) => void
+  onRemoveRule: (sectionKey: PayloadRuleSection, index: number) => void
+}) {
+  const { t } = useTranslation()
+  const rawValues = sectionKey.endsWith('-raw')
+  const updateRule = (index: number, patch: Partial<PayloadRule>) => {
+    onChange(rules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)))
+  }
+  const duplicateRule = (index: number) => {
+    const rule = rules[index]
+    if (!rule) return
+    onChange(insertAt(rules, index + 1, clonePayloadRule(rule)))
+  }
+
+  return (
+    <div className="grid gap-3">
+      {rules.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.payload.emptyRules')} />
+      ) : (
+        rules.map((rule, index) => {
+          const ruleIssues = getPayloadRuleIssueKeys(rule, sectionKey)
+          const issueCount = countPayloadRuleIssues(rule, sectionKey)
+          const showIssues = shouldShowPayloadRuleIssues(rule, sectionKey)
+          const isDraft = issueCount > 0 && !showIssues
+          const anchor = getPayloadRuleAnchor(rule, sectionKey)
+
+          return (
+            <div
+              key={index}
+              className={cn(
+                'grid gap-4 rounded-md border px-3 py-3',
+                showIssues ? 'border-amber-500/35 bg-amber-500/5' : null,
+              )}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium">
+                      {t('configPage.payload.ruleTitle', { index: index + 1 })}
+                    </p>
+                    {anchor ? (
+                      <code className="bg-muted text-muted-foreground max-w-full truncate rounded px-1.5 py-0.5 font-mono text-[11px]">
+                        {anchor}
+                      </code>
+                    ) : null}
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    {t('configPage.payload.ruleSummary', {
+                      models: rule.models.filter((model) => model.name.trim()).length,
+                      params: rule.params.filter((param) => param.path.trim()).length,
+                    })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    disabled={disabled || issueCount > 0}
+                    onClick={() => duplicateRule(index)}
+                  >
+                    <Copy className="size-4" aria-hidden="true" />
+                    {t('configPage.payload.duplicateRule')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="text-destructive hover:text-destructive justify-start"
+                    disabled={disabled}
+                    onClick={() => onRemoveRule(sectionKey, index)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('configPage.payload.removeRule')}
+                  </Button>
+                </div>
+              </div>
+              {isDraft ? (
+                <div className="bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
+                  {t('configPage.payload.draftHint')}
+                </div>
+              ) : null}
+              {showIssues && ruleIssues.length > 0 ? (
+                <div className="grid gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+                  {ruleIssues.map((issue) => (
+                    <p key={issue}>{t(`configPage.payload.ruleIssues.${issue}`)}</p>
+                  ))}
+                </div>
+              ) : null}
+              <PayloadModelRows
+                models={rule.models}
+                disabled={disabled}
+                onChange={(models) => updateRule(index, { models })}
+              />
+              <PayloadParamRows
+                params={rule.params}
+                disabled={disabled}
+                rawValues={rawValues}
+                onChange={(params) => updateRule(index, { params })}
+              />
+            </div>
+          )
+        })
+      )}
+    </div>
+  )
+}
+
+function PayloadFilterEditor({
+  rules,
+  disabled,
+  onChange,
+  onRemoveRule,
+}: {
+  rules: PayloadFilterRule[]
+  disabled: boolean
+  onChange: (rules: PayloadFilterRule[]) => void
+  onRemoveRule: (index: number) => void
+}) {
+  const { t } = useTranslation()
+  const updateRule = (index: number, patch: Partial<PayloadFilterRule>) => {
+    onChange(rules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)))
+  }
+  const duplicateRule = (index: number) => {
+    const rule = rules[index]
+    if (!rule) return
+    onChange(insertAt(rules, index + 1, clonePayloadFilterRule(rule)))
+  }
+
+  return (
+    <div className="grid gap-3">
+      {rules.length === 0 ? (
+        <EmptyJsonRows label={t('configPage.payload.emptyRules')} />
+      ) : (
+        rules.map((rule, index) => {
+          const ruleIssues = getPayloadRuleIssueKeys(rule, 'filter')
+          const issueCount = countPayloadRuleIssues(rule, 'filter')
+          const showIssues = shouldShowPayloadRuleIssues(rule, 'filter')
+          const isDraft = issueCount > 0 && !showIssues
+          const anchor = getPayloadRuleAnchor(rule, 'filter')
+
+          return (
+            <div
+              key={index}
+              className={cn(
+                'grid gap-4 rounded-md border px-3 py-3',
+                showIssues ? 'border-amber-500/35 bg-amber-500/5' : null,
+              )}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-medium">
+                      {t('configPage.payload.ruleTitle', { index: index + 1 })}
+                    </p>
+                    {anchor ? (
+                      <code className="bg-muted text-muted-foreground max-w-full truncate rounded px-1.5 py-0.5 font-mono text-[11px]">
+                        {anchor}
+                      </code>
+                    ) : null}
+                  </div>
+                  <p className="text-muted-foreground mt-1 text-xs leading-5">
+                    {t('configPage.payload.ruleSummary', {
+                      models: rule.models.filter((model) => model.name.trim()).length,
+                      params: rule.params.filter((param) => param.trim()).length,
+                    })}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    disabled={disabled || issueCount > 0}
+                    onClick={() => duplicateRule(index)}
+                  >
+                    <Copy className="size-4" aria-hidden="true" />
+                    {t('configPage.payload.duplicateRule')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="sm"
+                    className="text-destructive hover:text-destructive justify-start"
+                    disabled={disabled}
+                    onClick={() => onRemoveRule(index)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    {t('configPage.payload.removeRule')}
+                  </Button>
+                </div>
+              </div>
+              {isDraft ? (
+                <div className="bg-muted/30 text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
+                  {t('configPage.payload.draftHint')}
+                </div>
+              ) : null}
+              {showIssues && ruleIssues.length > 0 ? (
+                <div className="grid gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+                  {ruleIssues.map((issue) => (
+                    <p key={issue}>{t(`configPage.payload.ruleIssues.${issue}`)}</p>
+                  ))}
+                </div>
+              ) : null}
+              <PayloadModelRows
+                models={rule.models}
+                disabled={disabled}
+                onChange={(models) => updateRule(index, { models })}
+              />
+              <PayloadFilterParamRows
+                params={rule.params}
+                disabled={disabled}
+                onChange={(params) => updateRule(index, { params })}
+              />
+            </div>
+          )
+        })
+      )}
+    </div>
+  )
+}
+
+function PayloadRulesEditor({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: PayloadRulesConfig
+  disabled: boolean
+  onChange: (value: PayloadRulesConfig) => void
+}) {
+  const { t } = useTranslation()
+  const [removedRule, setRemovedRule] = useState<RemovedPayloadRule | null>(null)
+  const serialized = serializePayloadConfig(value)
+  const totalRules = countPayloadRules(value)
+  const totalDrafts = countPayloadDrafts(value)
+  const activeSections = payloadSectionKeys.filter((sectionKey) => value[sectionKey].length > 0)
+  const affectedTargets = getPayloadAffectedTargets(value)
+  const visibleTargets =
+    affectedTargets.length > 0
+      ? [
+          affectedTargets.slice(0, 3).join(', '),
+          affectedTargets.length > 3
+            ? t('configPage.payload.moreTargets', { count: affectedTargets.length - 3 })
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+      : t('configPage.payload.noTargets')
+  const updateSection = <T extends PayloadSectionKey>(
+    sectionKey: T,
+    rules: PayloadRulesConfig[T],
+  ) => {
+    onChange({ ...value, [sectionKey]: rules })
+  }
+  const addRuleToSection = (sectionKey: PayloadSectionKey) => {
+    setRemovedRule(null)
+
+    if (sectionKey === 'filter') {
+      updateSection('filter', [...value.filter, createPayloadFilterRule()])
+      return
+    }
+
+    updateSection(sectionKey, [
+      ...value[sectionKey],
+      createPayloadRule(sectionKey.endsWith('-raw')),
+    ])
+  }
+  const removePayloadRule = (sectionKey: PayloadRuleSection, index: number) => {
+    const rule = value[sectionKey][index]
+    if (!rule) return
+    setRemovedRule({ sectionKey, index, rule: clonePayloadRule(rule) })
+    updateSection(
+      sectionKey,
+      value[sectionKey].filter((_, ruleIndex) => ruleIndex !== index),
+    )
+  }
+  const removeFilterRule = (index: number) => {
+    const rule = value.filter[index]
+    if (!rule) return
+    setRemovedRule({ sectionKey: 'filter', index, rule: clonePayloadFilterRule(rule) })
+    updateSection(
+      'filter',
+      value.filter.filter((_, ruleIndex) => ruleIndex !== index),
+    )
+  }
+  const restoreRemovedRule = () => {
+    if (!removedRule) return
+
+    if (removedRule.sectionKey === 'filter') {
+      updateSection(
+        'filter',
+        insertAt(value.filter, removedRule.index, clonePayloadFilterRule(removedRule.rule)),
+      )
+    } else {
+      updateSection(
+        removedRule.sectionKey,
+        insertAt(
+          value[removedRule.sectionKey],
+          removedRule.index,
+          clonePayloadRule(removedRule.rule),
+        ),
+      )
+    }
+
+    setRemovedRule(null)
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="bg-muted/30 grid gap-3 rounded-md border px-3 py-3 text-sm">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-medium">{t('configPage.payload.summaryTitle')}</p>
+            <span className="bg-background text-muted-foreground w-fit rounded-md border px-2.5 py-1 text-xs">
+              {t('configPage.payload.totalRules', { count: totalRules })}
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-1 text-xs leading-5">
+            {totalRules > 0
+              ? t('configPage.payload.impactSummary', {
+                  fill: value.default.length,
+                  rawFill: value['default-raw'].length,
+                  force: value.override.length,
+                  rawForce: value['override-raw'].length,
+                  remove: value.filter.length,
+                  targets: visibleTargets,
+                })
+              : t('configPage.payload.emptyImpactSummary')}
+          </p>
+        </div>
+        {totalRules === 0 && removedRule ? (
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-800 dark:text-amber-200">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+            <span>{t('configPage.payload.emptyRootWarning')}</span>
+          </div>
+        ) : null}
+      </div>
+
+      <PayloadAddRulePanel
+        disabled={disabled}
+        value={value}
+        draftCount={totalDrafts}
+        onAddRule={addRuleToSection}
+        onFocusSection={scrollToPayloadSection}
+      />
+
+      {removedRule ? (
+        <div className="flex flex-col gap-2 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 sm:flex-row sm:items-center sm:justify-between dark:text-amber-200">
+          <span>
+            {t('configPage.payload.removedRuleNotice', {
+              section: t(`configPage.payload.sections.${removedRule.sectionKey}.title`),
+            })}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="bg-background/70 w-fit border-amber-500/40"
+            disabled={disabled}
+            onClick={restoreRemovedRule}
+          >
+            <Undo2 className="size-4" aria-hidden="true" />
+            {t('configPage.payload.restoreRule')}
+          </Button>
+        </div>
+      ) : null}
+
+      {activeSections.length > 0
+        ? activeSections.map((sectionKey) => {
+            const issueCount = countPayloadSectionVisibleIssues(value, sectionKey)
+            const draftCount = countPayloadSectionDrafts(value, sectionKey)
+
+            return (
+              <div
+                key={sectionKey}
+                id={`payload-section-${sectionKey}`}
+                className="grid scroll-mt-28 gap-3 rounded-lg border px-3 py-3"
+              >
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-medium">
+                        {t(`configPage.payload.sections.${sectionKey}.title`)}
+                      </p>
+                      <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 font-mono text-[11px]">
+                        {sectionKey}
+                      </code>
+                      {issueCount > 0 ? (
+                        <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                          {t('configPage.payload.needsAttention', { count: issueCount })}
+                        </span>
+                      ) : null}
+                      {draftCount > 0 ? (
+                        <span className="bg-muted text-muted-foreground rounded-md border px-2 py-0.5 text-xs font-medium">
+                          {t('configPage.payload.draftCount', { count: draftCount })}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                      {t(`configPage.payload.sections.${sectionKey}.description`)}
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                      {t('configPage.payload.groupingHint')}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-fit"
+                    disabled={disabled || draftCount > 0}
+                    onClick={() => addRuleToSection(sectionKey)}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    {t('configPage.payload.addRule')}
+                  </Button>
+                </div>
+                {sectionKey === 'filter' ? (
+                  <PayloadFilterEditor
+                    rules={value.filter}
+                    disabled={disabled}
+                    onChange={(rules) => updateSection('filter', rules)}
+                    onRemoveRule={removeFilterRule}
+                  />
+                ) : (
+                  <PayloadRuleEditor
+                    sectionKey={sectionKey}
+                    rules={value[sectionKey]}
+                    disabled={disabled}
+                    onChange={(rules) => updateSection(sectionKey, rules)}
+                    onRemoveRule={removePayloadRule}
+                  />
+                )}
+              </div>
+            )
+          })
+        : null}
+
+      <details className="group bg-muted/20 rounded-lg border px-3 py-3">
+        <summary className="cursor-pointer text-sm font-medium">
+          {t('configPage.payload.preview')}
+        </summary>
+        <pre className="bg-background mt-3 max-h-96 overflow-auto rounded-md border p-3 font-mono text-xs leading-5">
+          {JSON.stringify(serialized, null, 2)}
+        </pre>
+      </details>
+    </div>
+  )
+}
+
 function StructuredJsonEditor({
   fieldKey,
   value,
@@ -1773,6 +4293,14 @@ function StructuredJsonEditor({
           value={normalizePluginStoreAuthRules(value)}
           disabled={disabled}
           onChange={(nextValue) => onChange(nextValue.map(serializePluginStoreAuthRule))}
+        />
+      )
+    case 'payloadRulesJson':
+      return (
+        <PayloadRulesEditor
+          value={normalizePayloadConfig(value)}
+          disabled={disabled}
+          onChange={(nextValue) => onChange(serializePayloadDraftConfig(nextValue))}
         />
       )
   }
@@ -1938,6 +4466,7 @@ function StructuredWorkspace({
 function ConfigActionBar({
   changeCount,
   validationCount,
+  draftCount,
   isFetching,
   mutating,
   runtimeMode,
@@ -1949,6 +4478,7 @@ function ConfigActionBar({
 }: {
   changeCount: number
   validationCount: number
+  draftCount: number
   isFetching: boolean
   mutating: boolean
   runtimeMode: string
@@ -1992,6 +4522,11 @@ function ConfigActionBar({
             {validationCount > 0 ? (
               <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 dark:text-amber-300">
                 {t('configPage.validation.summary', { count: validationCount })}
+              </span>
+            ) : null}
+            {validationCount === 0 && draftCount > 0 ? (
+              <span className="bg-muted text-muted-foreground rounded-md border px-2.5 py-1 text-xs font-medium">
+                {t('configPage.payload.draftCount', { count: draftCount })}
               </span>
             ) : null}
           </div>
@@ -2158,6 +4693,21 @@ export function ConfigWorkbenchPage() {
     () => (structuredDraft ? getValidationErrors(structuredDraft) : []),
     [structuredDraft],
   )
+  const visibleValidationErrors = useMemo(
+    () => (structuredDraft ? getVisibleValidationErrors(structuredDraft) : []),
+    [structuredDraft],
+  )
+  const draftCount = useMemo(() => {
+    if (!structuredDraft) return 0
+
+    try {
+      return countPayloadDrafts(
+        JSON.parse(String(structuredDraft.payloadRulesJson || '{}')) as unknown,
+      )
+    } catch {
+      return 0
+    }
+  }, [structuredDraft])
   const isDirty = changes.length > 0
   const saveDisabled = !isDirty || workbench.mutating || validationErrors.length > 0
   const oauthModelCatalog: OAuthModelCatalogState = {
@@ -2245,7 +4795,8 @@ export function ConfigWorkbenchPage() {
 
       <ConfigActionBar
         changeCount={changes.length}
-        validationCount={validationErrors.length}
+        validationCount={visibleValidationErrors.length}
+        draftCount={draftCount}
         isFetching={workbench.isFetching}
         mutating={workbench.mutating}
         runtimeMode={workbench.runtimeMode}
@@ -2274,7 +4825,7 @@ export function ConfigWorkbenchPage() {
       <StructuredWorkspace
         draft={structuredDraft}
         changes={changes}
-        validationErrors={validationErrors}
+        validationErrors={visibleValidationErrors}
         disabled={workbench.mutating}
         oauthModelCatalog={oauthModelCatalog}
         onChange={handleStructuredChange}

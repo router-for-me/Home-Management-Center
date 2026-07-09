@@ -1,5 +1,6 @@
 export type CapabilityKey =
   | 'nodes'
+  | 'topology'
   | 'usage'
   | 'usageQueue'
   | 'usageOverview'

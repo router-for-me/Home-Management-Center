@@ -40,6 +40,7 @@ export type DashboardMetric = {
   id: 'providers' | 'credentials' | 'clientKeys' | 'nodes'
   value: number | null
   detailValue?: number | string
+  detailKey?: string
   tone: DashboardTone
 }
 
@@ -428,6 +429,9 @@ export function createDashboardOverviewViewModel(
   ).length
   const routingStrategy = readRoutingStrategy(snapshot.config)
   const debugEnabled = readBoolean(snapshot.config, 'debug')
+  const nodeTopologySupported = capabilities.topology || capabilities.nodes
+  const nodeCount = snapshot.nodeTopology?.cpaCount ?? snapshot.nodes.length
+  const homeNodeCount = snapshot.nodeTopology?.homeCount ?? 0
   const metrics: DashboardMetric[] = [
     {
       id: 'providers',
@@ -448,15 +452,17 @@ export function createDashboardOverviewViewModel(
     },
   ]
 
-  if (capabilities.nodes) {
+  if (nodeTopologySupported) {
     metrics.push({
       id: 'nodes',
-      value: snapshot.nodes.length,
-      tone: snapshot.nodes.length > 0 ? 'positive' : 'warning',
+      value: nodeCount,
+      detailValue: homeNodeCount > 0 ? homeNodeCount : nodeCount,
+      detailKey: homeNodeCount > 0 ? 'dashboard.metrics.nodes.clusterDetail' : undefined,
+      tone: nodeCount > 0 ? 'positive' : 'warning',
     })
   }
   const capabilityStatuses: DashboardCapabilityStatus[] = [
-    { id: 'nodes', available: capabilities.nodes, tone: getDashboardCapabilityTone('nodes') },
+    { id: 'nodes', available: nodeTopologySupported, tone: getDashboardCapabilityTone('nodes') },
     { id: 'usage', available: capabilities.usage, tone: getDashboardCapabilityTone('usage') },
     { id: 'logs', available: capabilities.logs, tone: getDashboardCapabilityTone('logs') },
     {

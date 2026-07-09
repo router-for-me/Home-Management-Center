@@ -26,7 +26,6 @@ export type ConfigFieldKey =
   | 'remoteManagementPanelGithubRepository'
   | 'proxyUrl'
   | 'requestLog'
-  | 'wsAuth'
   | 'requestRetry'
   | 'maxRetryInterval'
   | 'forceModelPrefix'
@@ -35,6 +34,7 @@ export type ConfigFieldKey =
   | 'quotaSwitchPreviewModel'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'payloadRulesJson'
 
 export type ConfigStructuredValues = Record<ConfigFieldKey, boolean | number | string>
 
@@ -174,6 +174,22 @@ function stringifyJsonObject(value: unknown) {
   return JSON.stringify(isRecord(value) ? value : {}, null, 2)
 }
 
+function stringifyPayload(value: unknown) {
+  const payload = toRecord(value)
+
+  return JSON.stringify(
+    {
+      default: Array.isArray(payload.default) ? payload.default : [],
+      'default-raw': Array.isArray(payload['default-raw']) ? payload['default-raw'] : [],
+      override: Array.isArray(payload.override) ? payload.override : [],
+      'override-raw': Array.isArray(payload['override-raw']) ? payload['override-raw'] : [],
+      filter: Array.isArray(payload.filter) ? payload.filter : [],
+    },
+    null,
+    2,
+  )
+}
+
 function parseJsonArrayText(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) return []
   const parsed = parseJsonText(value)
@@ -194,6 +210,131 @@ function parseJsonObjectText(value: unknown) {
   }
 
   return parsed
+}
+
+function sanitizePayloadStringMap(value: unknown) {
+  if (!isRecord(value)) return {}
+
+  return Object.entries(value).reduce<Record<string, string>>((nextValue, [key, item]) => {
+    const name = key.trim()
+    if (!name || typeof item !== 'string') return nextValue
+
+    return {
+      ...nextValue,
+      [name]: item,
+    }
+  }, {})
+}
+
+function sanitizePayloadConditions(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    if (!isRecord(item)) return []
+
+    return Object.entries(item).flatMap(([path, conditionValue]) => {
+      const normalizedPath = path.trim()
+      if (!normalizedPath) return []
+
+      return [{ [normalizedPath]: conditionValue }]
+    })
+  })
+}
+
+function sanitizePayloadStringList(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => (typeof item === 'string' && item.trim() ? [item.trim()] : []))
+}
+
+function sanitizePayloadModel(value: unknown) {
+  if (typeof value === 'string') {
+    const name = value.trim()
+    return name ? { name } : null
+  }
+  if (!isRecord(value)) return null
+
+  const name = typeof value.name === 'string' ? value.name.trim() : ''
+  if (!name) return null
+
+  const protocol = typeof value.protocol === 'string' ? value.protocol.trim() : ''
+  const fromProtocol =
+    typeof value['from-protocol'] === 'string' ? value['from-protocol'].trim() : ''
+  const headers = sanitizePayloadStringMap(value.headers)
+  const match = sanitizePayloadConditions(value.match)
+  const notMatch = sanitizePayloadConditions(value['not-match'])
+  const exist = sanitizePayloadStringList(value.exist)
+  const notExist = sanitizePayloadStringList(value['not-exist'])
+
+  return {
+    name,
+    ...(protocol ? { protocol } : {}),
+    ...(fromProtocol ? { 'from-protocol': fromProtocol } : {}),
+    ...(Object.keys(headers).length > 0 ? { headers } : {}),
+    ...(match.length > 0 ? { match } : {}),
+    ...(notMatch.length > 0 ? { 'not-match': notMatch } : {}),
+    ...(exist.length > 0 ? { exist } : {}),
+    ...(notExist.length > 0 ? { 'not-exist': notExist } : {}),
+  }
+}
+
+function sanitizePayloadModels(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    const model = sanitizePayloadModel(item)
+    return model ? [model] : []
+  })
+}
+
+function sanitizePayloadRuleSection(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    const rule = toRecord(item)
+    const models = sanitizePayloadModels(rule.models)
+    const params = toRecord(rule.params)
+    const nextParams = Object.entries(params).reduce<Record<string, unknown>>(
+      (nextValue, [path, paramValue]) => {
+        const normalizedPath = path.trim()
+        if (!normalizedPath) return nextValue
+
+        return {
+          ...nextValue,
+          [normalizedPath]: paramValue,
+        }
+      },
+      {},
+    )
+
+    if (models.length === 0 || Object.keys(nextParams).length === 0) return []
+
+    return [{ models, params: nextParams }]
+  })
+}
+
+function sanitizePayloadFilterSection(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item) => {
+    const rule = toRecord(item)
+    const models = sanitizePayloadModels(rule.models)
+    const params = sanitizePayloadStringList(rule.params)
+
+    if (models.length === 0 || params.length === 0) return []
+
+    return [{ models, params }]
+  })
+}
+
+function sanitizePayloadForWrite(value: UnknownRecord) {
+  return {
+    default: sanitizePayloadRuleSection(value.default),
+    'default-raw': sanitizePayloadRuleSection(value['default-raw']),
+    override: sanitizePayloadRuleSection(value.override),
+    'override-raw': sanitizePayloadRuleSection(value['override-raw']),
+    filter: sanitizePayloadFilterSection(value.filter),
+  }
 }
 
 function readYamlBackedConfig(yaml: string): UnknownRecord {
@@ -432,7 +573,6 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     remoteManagementPanelGithubRepository: readString(remoteManagement, 'panel-github-repository'),
     proxyUrl: readString(rawConfig, 'proxy-url'),
     requestLog: readBoolean(rawConfig, 'request-log'),
-    wsAuth: readBoolean(rawConfig, 'ws-auth'),
     requestRetry: readNumber(rawConfig, 'request-retry'),
     maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
     forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
@@ -441,6 +581,7 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
     oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),
     oauthModelAliasJson: stringifyJsonObject(oauthModelAlias),
+    payloadRulesJson: stringifyPayload(rawConfig.payload),
   }
 }
 
@@ -499,6 +640,19 @@ export async function fetchConfigSnapshot(
   }
 
   try {
+    const payloadResponse = await client.get<unknown>('/payload')
+    const payloadRoot = toRecord(payloadResponse.data)
+    const payload = isRecord(payloadRoot.payload) ? payloadRoot.payload : payloadRoot
+
+    rawConfig = {
+      ...rawConfig,
+      payload,
+    }
+  } catch (error) {
+    issues.push(normalizeIssue('config', error))
+  }
+
+  try {
     const yamlResponse = await client.get<unknown>('/config.yaml', {
       responseType: 'text',
       transformResponse: [(data: unknown) => data],
@@ -548,9 +702,6 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
     case 'requestLog':
       await client.put('/request-log', { value })
       return
-    case 'wsAuth':
-      await client.put('/ws-auth', { value })
-      return
     case 'requestRetry':
       await client.put('/request-retry', { value })
       return
@@ -575,6 +726,20 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
     case 'oauthModelAliasJson':
       await client.put('/oauth-model-alias', parseJsonObjectText(value))
       return
+    case 'payloadRulesJson': {
+      const payload = sanitizePayloadForWrite(parseJsonObjectText(value))
+      const hasRules = Object.values(payload).some(
+        (section) => Array.isArray(section) && section.length > 0,
+      )
+
+      if (hasRules) {
+        await client.patch('/payload', { payload })
+        return
+      }
+
+      await client.delete('/payload')
+      return
+    }
   }
 }
 

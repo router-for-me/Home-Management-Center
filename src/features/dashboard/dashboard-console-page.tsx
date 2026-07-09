@@ -321,13 +321,14 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
   const { t } = useTranslation()
   const Icon = metricIcons[metric.id]
   const detailKey =
-    metric.id === 'providers'
+    metric.detailKey ??
+    (metric.id === 'providers'
       ? 'dashboard.metrics.providers.detail'
       : metric.id === 'credentials'
         ? 'dashboard.metrics.credentials.detail'
         : metric.id === 'clientKeys'
           ? 'dashboard.metrics.clientKeys.detail'
-          : 'dashboard.metrics.nodes.detail'
+          : 'dashboard.metrics.nodes.detail')
   const value =
     metric.value === null ? t('dashboard.status.notAvailableShort') : String(metric.value)
   const title = t(`dashboard.metrics.${metric.id}.title`)

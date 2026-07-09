@@ -75,6 +75,10 @@ import { useConsoleUiStore } from '@/stores/ui-store'
 
 type BadgeTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
 
+type PluginReportView = SystemPluginReportStatus & {
+  servingHome: string | null
+}
+
 type PluginOperationNotice = {
   pluginId: string
   sourceKey: string
@@ -117,10 +121,12 @@ function StatusBadge({ children, tone = 'neutral' }: { children: ReactNode; tone
 
 function formatDateTime(value: string | null | undefined) {
   if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(value))
+  }).format(date)
 }
 
 function getPluginTitle(plugin: PluginStoreEntry) {
@@ -184,24 +190,59 @@ function getPluginReports(
   )
 }
 
+function getReportKey(report: SystemPluginReportStatus) {
+  return [
+    report.nodeType,
+    report.nodeId,
+    report.clientIp,
+    report.task,
+    report.phase,
+    report.updatedAt,
+    report.status,
+  ]
+    .map((value) => value ?? '')
+    .join('|')
+}
+
 function getAllPluginReports(
   plugin: PluginStoreEntry,
   workbench: ReturnType<typeof usePluginWorkbench>,
 ) {
-  const rootReports = getPluginReports(
-    plugin,
-    workbench.snapshot?.nodeReports?.pluginReportStatuses,
-  )
-  const nodeReports =
-    workbench.snapshot?.nodeReports?.nodes.flatMap((node) =>
-      getPluginReports(plugin, node.pluginReportStatuses).map((report) => ({
-        ...report,
-        clientIp: report.clientIp ?? node.ip,
-        nodeId: report.nodeId ?? node.nodeId,
-      })),
-    ) ?? []
+  const reportsByKey = new Map<string, PluginReportView>()
+  const addReport = (report: SystemPluginReportStatus, servingHome: string | null) => {
+    const key = getReportKey(report)
+    const current = reportsByKey.get(key)
+    reportsByKey.set(key, {
+      ...current,
+      ...report,
+      servingHome: current?.servingHome ?? servingHome,
+    })
+  }
 
-  return [...rootReports, ...nodeReports]
+  getPluginReports(plugin, workbench.snapshot?.nodeReports?.pluginReportStatuses).forEach(
+    (report) => addReport(report, null),
+  )
+
+  workbench.snapshot?.nodeReports?.nodes.forEach((node) => {
+    const servingHome = node.homeIp
+      ? node.homePort
+        ? `${node.homeIp}:${node.homePort}`
+        : node.homeIp
+      : null
+
+    getPluginReports(plugin, node.pluginReportStatuses).forEach((report) =>
+      addReport(
+        {
+          ...report,
+          clientIp: report.clientIp ?? node.ip,
+          nodeId: report.nodeId ?? node.nodeId,
+        },
+        servingHome,
+      ),
+    )
+  })
+
+  return [...reportsByKey.values()]
 }
 
 function getPluginRolloutBadge(plugin: PluginStoreEntry, reports: SystemPluginReportStatus[]) {
@@ -402,7 +443,7 @@ function PluginDetailSheet({
 }: {
   plugin: PluginStoreEntry | null
   onClose: () => void
-  reports: SystemPluginReportStatus[]
+  reports: PluginReportView[]
 }) {
   const { t } = useTranslation()
   if (!plugin) return null
@@ -535,6 +576,13 @@ function PluginDetailSheet({
                           status: reportStatus || t('pluginPage.status.notAvailable'),
                         })}
                       </p>
+                      {report.servingHome ? (
+                        <p className="text-muted-foreground mt-1 text-xs leading-5">
+                          {t('pluginPage.detail.reportServingHome', {
+                            home: report.servingHome,
+                          })}
+                        </p>
+                      ) : null}
                     </div>
                   )
                 })}
@@ -729,9 +777,10 @@ export function PluginsWorkbenchPage() {
             </span>
             <span>
               {t('pluginPage.header.nodes', {
-                status: workbench.capabilities.nodes
-                  ? t('pluginPage.status.available')
-                  : t('pluginPage.status.notAvailable'),
+                status:
+                  workbench.capabilities.topology || workbench.capabilities.nodes
+                    ? t('pluginPage.status.available')
+                    : t('pluginPage.status.notAvailable'),
               })}
             </span>
           </>

@@ -12,6 +12,7 @@ type DashboardRequestIssueScope =
   | 'latestVersion'
   | 'clientKeys'
   | 'authFiles'
+  | 'topology'
   | 'nodes'
   | 'usageOverview'
   | DashboardProviderId
@@ -46,7 +47,17 @@ type DashboardAuthFileSummary = {
 
 type DashboardNodeSummary = {
   ip: string
+  homeIp: string | null
+  homePort: number | null
   connectedTime: string | null
+}
+
+export type DashboardNodeTopologySummary = {
+  source: 'topology' | 'nodes'
+  homeCount: number
+  cpaCount: number
+  healthyHomeCount: number | null
+  healthyCpaCount: number | null
 }
 
 export type DashboardSnapshot = {
@@ -57,6 +68,7 @@ export type DashboardSnapshot = {
   authFiles: DashboardAuthFileSummary[]
   providers: DashboardProviderSummary[]
   nodes: DashboardNodeSummary[]
+  nodeTopology: DashboardNodeTopologySummary | null
   usageOverview: UsageOverview | null
   issues: DashboardRequestIssue[]
 }
@@ -103,6 +115,10 @@ function readString(value: unknown): string | null {
 
 function readBoolean(value: unknown): boolean {
   return value === true
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
 function readArrayRecords(value: unknown, key: string): UnknownRecord[] {
@@ -183,8 +199,41 @@ function normalizeAuthFiles(responseData: unknown): DashboardAuthFileSummary[] {
 function normalizeNodes(responseData: unknown): DashboardNodeSummary[] {
   return readArrayRecords(responseData, 'nodes').map((record, index) => ({
     ip: readString(record.ip) ?? `node-${index + 1}`,
+    homeIp: readString(record.home_ip),
+    homePort: readNumber(record.home_port),
     connectedTime: readString(record.connected_time),
   }))
+}
+
+function countServingHomes(nodes: DashboardNodeSummary[]): number {
+  return new Set(
+    nodes.flatMap((node) => {
+      if (!node.homeIp) return []
+      return [`${node.homeIp}:${node.homePort ?? 0}`]
+    }),
+  ).size
+}
+
+function normalizeTopologySummary(responseData: unknown): DashboardNodeTopologySummary {
+  const summary = toRecord(toRecord(responseData).summary)
+
+  return {
+    source: 'topology',
+    homeCount: readNumber(summary.home_count) ?? 0,
+    cpaCount: readNumber(summary.cpa_count) ?? 0,
+    healthyHomeCount: readNumber(summary.healthy_home_count),
+    healthyCpaCount: readNumber(summary.healthy_cpa_count),
+  }
+}
+
+function createNodesTopologySummary(nodes: DashboardNodeSummary[]): DashboardNodeTopologySummary {
+  return {
+    source: 'nodes',
+    homeCount: countServingHomes(nodes),
+    cpaCount: nodes.length,
+    healthyHomeCount: null,
+    healthyCpaCount: null,
+  }
 }
 
 async function fetchProviderSummary(
@@ -205,8 +254,8 @@ export async function fetchManagementDashboardSnapshot(
   const issues: DashboardRequestIssue[] = []
   const fallbackClientKeys = readStringArray(config, 'api-keys')
 
-  const [latestVersion, clientKeys, authFiles, providers, nodes, usageOverview] = await Promise.all(
-    [
+  const [latestVersion, clientKeys, authFiles, providers, topology, nodes, usageOverview] =
+    await Promise.all([
       readOptional(
         issues,
         'latestVersion',
@@ -249,7 +298,18 @@ export async function fetchManagementDashboardSnapshot(
           ),
         ),
       ),
-      capabilities.nodes
+      capabilities.topology
+        ? readOptional(
+            issues,
+            'topology',
+            async () => {
+              const response = await client.get<unknown>('/topology')
+              return normalizeTopologySummary(response.data)
+            },
+            null,
+          )
+        : Promise.resolve(null),
+      !capabilities.topology && capabilities.nodes
         ? readOptional(
             issues,
             'nodes',
@@ -263,8 +323,21 @@ export async function fetchManagementDashboardSnapshot(
       capabilities.usageOverview
         ? readOptional(issues, 'usageOverview', async () => fetchUsageOverview(session), null)
         : Promise.resolve(null),
-    ],
-  )
+    ])
+  const fallbackNodes =
+    !topology && capabilities.topology && capabilities.nodes
+      ? await readOptional(
+          issues,
+          'nodes',
+          async () => {
+            const response = await client.get<unknown>('/nodes')
+            return normalizeNodes(response.data)
+          },
+          [],
+        )
+      : nodes
+  const nodeTopology =
+    topology ?? (capabilities.nodes ? createNodesTopologySummary(fallbackNodes) : null)
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -273,7 +346,8 @@ export async function fetchManagementDashboardSnapshot(
     clientKeys,
     authFiles,
     providers,
-    nodes,
+    nodes: fallbackNodes,
+    nodeTopology,
     usageOverview,
     issues,
   }

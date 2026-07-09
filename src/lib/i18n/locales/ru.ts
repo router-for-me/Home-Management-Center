@@ -788,8 +788,9 @@ export const ru = {
           detail: 'Ключей для вызова серверного API: {{count}}',
         },
         nodes: {
-          title: 'Runtime узлы',
-          detail: 'Узлов от текущего сервиса: {{count}}',
+          title: 'Узлы runtime',
+          detail: 'CPA-узлов: {{count}}',
+          clusterDetail: 'На {{count}} Home-узлах',
         },
       },
       operatingKpis: {
@@ -923,7 +924,7 @@ export const ru = {
         description: 'Функции управления, поддерживаемые подключенным сервисом.',
       },
       capabilityNames: {
-        nodes: 'Управление узлами',
+        nodes: 'Топология узлов',
         usage: 'Статистика использования',
         logs: 'Журналы запросов',
         requestErrorLogs: 'Журналы ошибок',
@@ -953,6 +954,7 @@ export const ru = {
         latestVersion: 'Последняя версия',
         clientKeys: 'Клиентские ключи',
         authFiles: 'Учетные данные аккаунтов',
+        topology: 'Топология кластера',
         nodes: 'Узлы',
         usageOverview: 'Usage overview',
         gemini: 'Gemini',
@@ -1976,11 +1978,6 @@ export const ru = {
           description:
             'Управление удаленным доступом к Management API, management key и обновлением панели.',
         },
-        authentication: {
-          title: 'Аутентификация',
-          shortTitle: 'Auth',
-          description: 'Управление клиентской аутентификацией, включая WebSocket auth.',
-        },
         plugins: {
           title: 'Настройки плагинов',
           shortTitle: 'Плагины',
@@ -2011,13 +2008,14 @@ export const ru = {
         streaming: {
           title: 'Повторы и маршрутизация',
           shortTitle: 'Роутинг',
-          description: 'Управление retry timing и маршрутизацией модельных сервисов.',
+          description:
+            'Управление повторами запросов, совпадением prefix модели и маршрутизацией модельных сервисов.',
         },
         payload: {
-          title: 'Payload rules',
-          shortTitle: 'Payload',
+          title: 'Перезапись параметров запроса',
+          shortTitle: 'Параметры',
           description:
-            'Управление model prefix. Полное редактирование payload rules пока недоступно в этой рабочей области.',
+            'Сопоставляет запросы по модели и protocol, затем дополняет, принудительно задает или удаляет параметры.',
         },
       },
       fields: {
@@ -2087,10 +2085,6 @@ export const ru = {
           label: 'Request log',
           description: 'Записывать request-level logs для диагностики.',
         },
-        wsAuth: {
-          label: 'WebSocket auth',
-          description: 'Требовать аутентификацию для WebSocket подключений.',
-        },
         pluginsEnabled: {
           label: 'Включить систему плагинов',
           description:
@@ -2122,8 +2116,9 @@ export const ru = {
           description: 'Верхняя граница ожидания перед повтором.',
         },
         forceModelPrefix: {
-          label: 'Принудительный prefix модели',
-          description: 'Применять правила model prefix к запрошенным именам моделей.',
+          label: 'Требовать совпадение prefix модели',
+          description:
+            'Если включено, запросы без prefix модели используют только учетные данные без Prefix.',
         },
         routingStrategy: {
           label: 'Стратегия маршрутизации',
@@ -2149,6 +2144,12 @@ export const ru = {
             'Настройте client-visible model aliases по channel и сопоставьте их с upstream model names.',
           placeholder:
             '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
+        },
+        payloadRulesJson: {
+          label: 'Правила параметров запроса',
+          description:
+            'Настройка заполнения, принудительной замены и удаления параметров запроса. Сохранение пишет backend payload config.',
+          placeholder: '{"override":[]}',
         },
       },
       routingStrategies: {
@@ -2280,6 +2281,178 @@ export const ru = {
           registry: 'Registry',
           metadata: 'Metadata',
           artifact: 'Artifact',
+        },
+      },
+      payload: {
+        summaryTitle: 'Перезапись payload запроса',
+        impactSummary:
+          'Заполнение: {{fill}} (raw {{rawFill}}), перезапись: {{force}} (raw {{rawForce}}), удаление: {{remove}}. Цели: {{targets}}.',
+        emptyImpactSummary:
+          'Правила payload не настроены. Выберите намерение ниже, чтобы добавить правило.',
+        emptyRootWarning:
+          'Сохранение 0 правил удаляет payload root, поэтому перезапись payload во время выполнения применяться не будет.',
+        totalRules: 'Правил: {{count}}',
+        moreTargets: 'и еще {{count}}',
+        noTargets: 'Модель не выбрана',
+        models: 'Сопоставляемые модели',
+        params: 'Записываемые параметры',
+        removeParams: 'Удаляемые параметры',
+        modelName: 'Имя модели',
+        modelNameHelp: 'Укажите имя модели или wildcard-шаблон, например gpt-*.',
+        modelNamePlaceholder: 'gpt-*',
+        protocol: 'Protocol',
+        protocolHelp: 'Это translator protocol, а не provider или auth channel.',
+        anyProtocol: 'Любой protocol',
+        advancedMatchers: 'Расширенные условия',
+        hideAdvancedMatchers: 'Скрыть расширенные',
+        advancedMatcherCount: '{{count}} поз.',
+        advancedMatchersSummary:
+          'Уточняют model matching по source protocol, Header или условиям payload.',
+        fromProtocol: 'Source protocol',
+        fromProtocolHelp:
+          'Protocol до преобразования запроса. Оставьте пустым, чтобы не ограничивать source.',
+        headers: 'Request Headers',
+        addHeader: 'Добавить Header',
+        headerName: 'Имя Header',
+        headerNameHelp: 'Имя Header, который должен присутствовать в запросе.',
+        headerNamePlaceholder: 'X-Client-Tier',
+        headerValue: 'Значение Header',
+        headerValueHelp: 'Поддерживает backend wildcard matching.',
+        headerValuePlaceholder: 'tenant-*',
+        matchConditions: 'Должно совпадать',
+        notMatchConditions: 'Не должно совпадать',
+        addCondition: 'Добавить условие',
+        conditionPath: 'JSON path условия',
+        conditionPathHelp:
+          'Используйте поддерживаемый backend gjson/sjson path для match по payload запроса.',
+        conditionPathPlaceholder: 'metadata.client',
+        conditionValue: 'Значение условия',
+        conditionValueHelp: 'Значение по этому path должно удовлетворять условию match.',
+        existPaths: 'Должно существовать',
+        notExistPaths: 'Не должно существовать',
+        addPath: 'Добавить path',
+        paramPath: 'JSON path',
+        paramPathHelp: 'Используйте поддерживаемый backend gjson/sjson path для записи параметра.',
+        filterParamPathHelp: 'Используйте JSON path параметра, который нужно удалить из payload.',
+        paramPathPlaceholder: 'reasoning.effort',
+        paramValue: 'Значение параметра',
+        paramValueHelp: 'Сохраняется как строка, число, boolean или JSON в зависимости от типа.',
+        valueType: 'Тип значения',
+        valueTypeHelp:
+          'Raw-правила всегда используют JSON-фрагменты; обычные правила выбирают тип.',
+        rawValueHelp:
+          'Raw-значения должны быть валидным JSON и сохраняются как raw JSON-фрагменты.',
+        rawValuePlaceholder: '{"type":"object"}',
+        jsonValuePlaceholder: '{"key":"value"}',
+        booleanTrue: 'true',
+        booleanFalse: 'false',
+        addRuleTitle: 'Выберите намерение перезаписи параметров',
+        addRuleDescription:
+          'Сначала выберите заполнение, перезапись или удаление. Уже созданные правила открывают свой раздел без дубликатов.',
+        valueModeHint:
+          'Типизированное значение может быть string, number, boolean или JSON. Raw JSON записывается как raw JSON-фрагмент.',
+        addRule: 'Добавить еще одно правило',
+        draftBlockingHint: 'Завершите текущее правило, затем можно добавить новое.',
+        viewExistingRules: 'Открыть существующие: {{count}}',
+        removeRule: 'Удалить правило',
+        duplicateRule: 'Дублировать правило',
+        restoreRule: 'Восстановить',
+        removedRuleNotice:
+          'Одно правило удалено из {{section}}. Его можно восстановить до сохранения.',
+        addModel: 'Добавить модель',
+        addParam: 'Добавить параметр',
+        completeCurrentModelFirst:
+          'Сначала заполните имя текущей модели, затем добавьте следующую.',
+        completeCurrentParamFirst:
+          'Сначала заполните JSON path текущего параметра, затем добавьте следующий.',
+        completeCurrentHeaderFirst:
+          'Сначала заполните имя текущего Header, затем добавьте следующий.',
+        completeCurrentConditionFirst:
+          'Сначала заполните JSON path текущего условия, затем добавьте следующее.',
+        completeCurrentPathFirst: 'Сначала заполните текущий path, затем добавьте следующий.',
+        remove: 'Удалить',
+        needsAttention: 'Проблем: {{count}}',
+        draftCount: 'Правил для завершения: {{count}}',
+        draftHint: 'Правило не завершено. Заполните модель и параметр перед сохранением.',
+        groupingHint:
+          'Добавляйте несколько параметров в одно совпадение model/protocol. Новое правило нужно только для другого совпадения.',
+        emptyRules: 'Правила не настроены.',
+        emptyParams: 'В этом правиле пока нет параметров.',
+        emptyFilterParams: 'В этом правиле пока нет параметров для удаления.',
+        emptyHeaders: 'У этой модели нет Header conditions.',
+        emptyConditions: 'У этой модели нет условий match по значению payload.',
+        emptyExistPaths: 'У этой модели нет обязательных существующих path.',
+        emptyNotExistPaths: 'У этой модели нет обязательных отсутствующих path.',
+        ruleTitle: 'Правило {{index}}',
+        ruleSummary: 'Моделей: {{models}} · параметров: {{params}}',
+        preview: 'Посмотреть payload JSON для сохранения',
+        valueTypes: {
+          string: 'String',
+          number: 'Number',
+          boolean: 'Boolean',
+          json: 'JSON',
+        },
+        valuePlaceholders: {
+          string: 'high',
+          number: '32768',
+        },
+        validation: {
+          number: 'Введите корректное число.',
+          boolean: 'Выберите true или false.',
+          json: 'Введите корректный JSON.',
+          headerName: 'Имя Header не может быть пустым.',
+          conditionPath: 'JSON path условия не может быть пустым.',
+          pathRequired: 'Path не может быть пустым.',
+        },
+        ruleIssues: {
+          modelRequired: 'Добавьте хотя бы одну модель, иначе правило нельзя сохранить.',
+          paramRequired: 'Добавьте хотя бы один параметр, иначе правило не будет иметь эффекта.',
+          paramPathRequired: 'JSON path параметра не может быть пустым.',
+        },
+        addRuleActions: {
+          default: 'Типизированное значение',
+          'default-raw': 'Raw JSON',
+          override: 'Типизированное значение',
+          'override-raw': 'Raw JSON',
+          filter: 'Удалить параметр',
+        },
+        intentOptions: {
+          fill: {
+            title: 'Заполнить отсутствующее',
+            description: 'Заполняет отсутствующие значения.',
+          },
+          override: {
+            title: 'Принудительно перезаписать',
+            description: 'Всегда перезаписывает значения.',
+          },
+          filter: {
+            title: 'Удалить параметр',
+            description: 'Удаляет по JSON path.',
+          },
+        },
+        sections: {
+          default: {
+            title: 'Заполнение по умолчанию',
+            description: 'Задает параметры только если они отсутствуют в payload запроса.',
+          },
+          'default-raw': {
+            title: 'Заполнение Raw по умолчанию',
+            description:
+              'Задает raw JSON-фрагменты только если параметры отсутствуют. Значения должны быть корректным JSON.',
+          },
+          override: {
+            title: 'Правила перезаписи',
+            description: 'Всегда задает параметры и перезаписывает существующие значения запроса.',
+          },
+          'override-raw': {
+            title: 'Перезапись Raw',
+            description:
+              'Всегда задает raw JSON-фрагменты и перезаписывает существующие значения. Значения должны быть корректным JSON.',
+          },
+          filter: {
+            title: 'Фильтр параметров',
+            description: 'Удаляет параметры из сопоставленных запросов по JSON path.',
+          },
         },
       },
       validation: {
@@ -3184,9 +3357,9 @@ export const ru = {
         retry: 'Повторить',
       },
       header: {
-        title: 'Runtime и диагностика',
-        runtime: 'Runtime: {{mode}}',
-        probedAt: 'Capabilities проверены: {{time}}',
+        title: 'Среда выполнения и диагностика',
+        runtime: 'Среда выполнения: {{mode}}',
+        probedAt: 'Возможности проверены: {{time}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
@@ -3199,13 +3372,13 @@ export const ru = {
           title: 'Системная информация синхронизирована',
           badge: 'Норма',
           description:
-            'Версия, конфигурация и состояние подключений узлов синхронизированы для оценки текущего runtime.',
+            'Версия, конфигурация и состояние подключений узлов синхронизированы для оценки текущей среды выполнения.',
         },
         limited: {
           title: 'Системная информация синхронизирована',
           badge: 'Узлы недоступны',
           description:
-            'Этот runtime не предоставляет маршрут запроса узлов. Используйте версию и сводку конфигурации как основные сигналы.',
+            'Эта среда выполнения не предоставляет маршрут запроса узлов. Используйте версию и сводку конфигурации как основные сигналы.',
         },
         degraded: {
           title: 'Системная информация синхронизирована частично',
@@ -3217,12 +3390,13 @@ export const ru = {
           title: 'Системная информация недоступна',
           badge: 'Недоступно',
           description:
-            'Ключевые диагностические маршруты не вернули пригодные данные. Проверьте Management API, management key и диагностические возможности runtime.',
+            'Ключевые диагностические маршруты не вернули пригодные данные. Проверьте Management API, management key и диагностические возможности среды выполнения.',
         },
         facts: {
           config: 'Сводка конфигурации: {{status}}',
           version: 'Информация о версии: {{status}}',
           nodes: 'Записи узлов: {{count}}',
+          nodesCluster: 'Записи узлов: CPA {{count}} / Home {{homeCount}}',
           nodesUnsupported: 'Маршрут узлов: недоступен',
           issues: 'Ошибки загрузки: {{count}}',
           noIssues: 'Нет ошибок загрузки',
@@ -3230,13 +3404,18 @@ export const ru = {
       },
       config: {
         empty: 'Сводки конфигурации пока нет.',
-        title: 'Сводка конфигурации сервиса',
+        title: 'Сигналы конфигурации среды выполнения',
+        description: 'Сигналы только для чтения: диагностические логи и стратегия маршрутизации.',
+        groups: {
+          diagnostics: 'Диагностические логи',
+          runtime: 'Маршрутизация среды выполнения',
+        },
         fields: {
-          debug: 'Debug mode',
+          debug: 'Режим отладки',
           requestLog: 'Журналы запросов',
-          usageStatistics: 'Статистика usage',
+          usageStatistics: 'Статистика использования',
           loggingToFile: 'Запись в файл',
-          proxyConfigured: 'Proxy endpoint',
+          proxyConfigured: 'Адрес прокси',
           routingStrategy: 'Стратегия маршрутизации',
         },
       },
@@ -3244,17 +3423,66 @@ export const ru = {
         enabled: 'Включено',
         disabled: 'Отключено',
         connected: 'Подключено',
+        healthy: 'Здоров',
+        unhealthy: 'Сбой',
+        partial: 'Частичные данные',
         notAvailable: 'Н/Д',
         unknown: 'Неизвестно',
         available: 'Доступно',
       },
+      healthStates: {
+        healthy: 'Здоров',
+        stale: 'Устарел',
+        unknown: 'Неизвестно',
+      },
+      homeRoles: {
+        master: 'Master',
+        follower: 'Follower',
+        unknown: 'Неизвестная роль',
+      },
+      topologySources: {
+        topology: 'Топология кластера',
+        nodes: 'Частичная топология',
+        unsupported: 'Недоступно',
+      },
       nodes: {
-        title: 'Подключения узлов',
+        title: 'Топология Home / CPA',
         addNode: 'Добавить узел',
         unavailable: 'Текущий runtime {{runtime}} не предоставляет маршрут запроса узлов.',
         empty: 'Записей подключений узлов пока нет.',
         emptySupported: 'Маршрут узлов доступен, но записей подключений пока нет.',
-        connectedTime: 'Подключено: {{time}}',
+        homeSectionTitle: 'Узлы Home',
+        homeRecordsStatus: 'Home: {{count}}',
+        homeUnsupported: 'Отдельного списка узлов Home пока нет.',
+        cpaSectionTitle: 'CPA-узлы по Home',
+        cpaGroupStatus: 'Групп Home: {{count}}',
+        cpaRecordsStatus: 'CPA: {{count}}',
+        noCpaInHome: 'У этого Home пока нет записей подключений CPA.',
+        unknownHome: 'Неизвестный Home',
+        unknownHomeDescription: 'Эти CPA пока нельзя сопоставить с Home.',
+        healthyRatio: 'Здоровы: {{healthy}} / {{total}}',
+        fields: {
+          homeEndpoint: 'Адрес Home',
+          homeRole: 'Роль Home',
+          cpaIp: 'IP CPA-узла',
+          nodeId: 'ID CPA-узла',
+          servingHome: 'Home узла',
+          connectedTime: 'Время подключения',
+          connectedSince: 'Подключен с',
+          lastSeen: 'Последний сигнал',
+          clientCount: 'Клиенты',
+          cpaCount: 'CPA-узлы',
+          healthyCpa: 'Здоровые CPA',
+          health: 'Состояние',
+        },
+        pluginStates: {
+          not_required: 'Не требуется',
+          missing_report: 'Нет отчета',
+          reported_partial: 'Частичный отчет',
+          reported_failed: 'Отчет: ошибка',
+          reported_ok: 'Отчет OK',
+          unknown: 'Отчет: неизвестно',
+        },
         enrollment: {
           title: 'Токен подключения узла',
           description:
@@ -3272,45 +3500,60 @@ export const ru = {
         latestVersion: 'Последняя версия',
         config: 'Сводка конфигурации',
         nodes: 'Подключения узлов',
+        topology: 'Топология кластера',
         apiCall: 'Диагностический запрос',
       },
       apiCall: {
         title: 'Диагностический запрос Management API',
         description:
-          'Отправляет один upstream-запрос с сервера для диагностики подключения, учетных данных или upstream API.',
+          'Отправляет один серверный запрос для диагностики подключения, учетных данных или вышестоящего API.',
         riskTitle: 'Диагностическое действие с повышенными правами',
         warning:
-          'Инструмент отправляет один upstream-запрос с сервера. Используйте его только для диагностики подключения, учетных данных или upstream API. Не отправляйте production-sensitive данные.',
+          'Инструмент отправляет один серверный запрос. Используйте его только для диагностики подключения, учетных данных или вышестоящего API. Не отправляйте чувствительные данные рабочей среды.',
         method: 'Метод',
-        url: 'Target URL',
+        url: 'Целевой URL',
         urlPlaceholder: 'https://api.example.com/v1/ping',
         authIndex: 'Индекс учетных данных',
         authIndexPlaceholder:
           'Необязательно, пустое значение использует учетные данные по умолчанию',
-        headers: 'Headers JSON',
-        body: 'Body',
+        headers: 'Заголовки JSON',
+        body: 'Тело запроса',
         bodyPlaceholder: 'Необязательно, тело отправляется как введено',
         validation: {
-          urlRequired: 'Введите target URL.',
-          headersJsonInvalid: 'Headers должны быть валидным JSON.',
-          headersObjectRequired: 'Headers JSON должен быть объектом.',
+          urlRequired: 'Введите целевой URL.',
+          headersJsonInvalid: 'Заголовки должны быть валидным JSON.',
+          headersObjectRequired: 'JSON заголовков должен быть объектом.',
         },
         run: 'Отправить диагностический запрос',
         responseStatus: 'Статус ответа: {{status}}',
       },
       summary: {
-        version: 'Версия сервиса',
-        latestVersion: 'Последняя версия: {{version}}',
+        version: 'Версия',
+        latestVersion: 'Последняя: {{version}}',
+        endpoint: 'Адрес',
+        endpointDetail: 'Текущий management-адрес',
+        masterHome: 'Master: {{home}}',
+        homes: 'Home',
+        homesHealthy: 'Здоровы: {{healthy}} / {{total}}',
+        homesInferred: 'Выведено: {{count}}',
+        homesUnavailable: 'Списка Home пока нет',
+        cpas: 'CPA',
+        cpasHealthy: 'Здоровы: {{healthy}} / {{total}}',
+        attention: 'Требует внимания',
+        attentionDetail: 'Проверьте топологию',
+        attentionClear: 'Нет замечаний',
         nodes: 'Узлы',
         nodesAvailable: 'Маршрут узлов доступен',
         nodesEmpty: 'Маршрут узлов доступен, записей подключений пока нет',
         nodesConnected: 'Возвращено узлов: {{count}}',
-        nodesUnavailable: 'Этот runtime не предоставляет запросы nodes',
-        config: 'Сводка конфигурации',
-        configAvailable: 'Сводка конфигурации runtime загружена',
-        configUnavailable: 'Маршрут сводки конфигурации не вернул пригодные данные',
+        nodesClusterConnected: 'CPA: {{cpaCount}}, Home: {{homeCount}}',
+        topologyConnected: 'CPA: {{cpaCount}}, Home: {{homeCount}}',
+        nodesUnavailable: 'Эта среда выполнения не предоставляет запросы узлов',
+        config: 'Конфиг',
+        configAvailable: 'Сводка загружена',
+        configUnavailable: 'Сводка недоступна',
         apiCall: 'API диагностика',
-        apiCallDetail: 'Используйте /api-call для проверки upstream connectivity',
+        apiCallDetail: 'Используйте /api-call для проверки связи с вышестоящим сервисом',
       },
       toast: {
         apiCallComplete: 'Диагностический запрос завершен.',
@@ -3511,6 +3754,7 @@ export const ru = {
         version: 'Версия и совместимость',
         rollout: 'Детали отчетов узлов',
         reportMeta: 'Фаза: {{phase}} · Обновлено: {{time}} · Состояние плагина: {{status}}',
+        reportServingHome: 'Serving Home: {{home}}',
         noReports: 'Сейчас нет отчетов узлов, которые ссылаются на этот плагин.',
       },
       version: {

@@ -32,7 +32,7 @@ function deriveSystemNodesOperationalStatus(
   const configAvailable = Boolean(snapshot.config)
   const latestVersionAvailable = Boolean(snapshot.homeVersion || snapshot.latestVersion)
   const issueCount = snapshot.issues.length
-  const nodesSupported = capabilities.nodes
+  const nodesSupported = capabilities.topology || capabilities.nodes
   const nodeCount = snapshot.nodes.length
 
   let level: SystemNodesOperationalLevel = 'ready'
@@ -94,7 +94,13 @@ export function useSystemNodesWorkbench() {
     serverInfo,
     probedAt,
   } = useManagementSession()
-  const queryKey = ['management-system-nodes', session.baseUrl, connectedAt, capabilities.nodes]
+  const queryKey = [
+    'management-system-nodes',
+    session.baseUrl,
+    connectedAt,
+    capabilities.topology,
+    capabilities.nodes,
+  ]
 
   const query = useQuery({
     queryKey,
@@ -133,6 +139,7 @@ export function useSystemNodesWorkbench() {
     checking,
     capabilityReady,
     capabilities,
+    managementEndpoint: session.baseUrl,
     runtimeMode,
     serverInfo,
     probedAt,
