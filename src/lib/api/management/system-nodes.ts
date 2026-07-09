@@ -9,8 +9,10 @@ export type SystemNodeResource = {
   id: string
   ip: string
   nodeId: string | null
+  homeId: string | null
   homeIp: string | null
   homePort: number | null
+  health: SystemNodeHealth
   lastSeenAt: string | null
   connectedTime: string | null
   clientCount: number | null
@@ -26,6 +28,60 @@ export type SystemPluginReportState =
   | 'reported_failed'
   | 'reported_ok'
   | 'unknown'
+
+export type SystemNodeHealth = 'healthy' | 'stale' | 'unknown'
+
+export type SystemHomeRole = 'master' | 'follower' | 'unknown'
+
+export type SystemTopologySource = 'topology' | 'nodes' | 'unsupported'
+
+export type SystemTopologySummary = {
+  homeCount: number
+  healthyHomeCount: number
+  staleHomeCount: number
+  unknownHomeCount: number
+  cpaCount: number
+  healthyCpaCount: number
+  staleCpaCount: number
+  unknownCpaCount: number
+  pluginAttentionCount: number
+  attentionCount: number
+  missingMaster: boolean
+  staleAfterSeconds: number | null
+  retentionAfterSeconds: number | null
+}
+
+export type SystemTopologyHomeIdentity = {
+  id: string | null
+  ip: string | null
+  port: number | null
+}
+
+export type SystemHomeTopologyResource = {
+  id: string
+  ip: string | null
+  port: number | null
+  role: SystemHomeRole
+  isMaster: boolean
+  reportedMaster: boolean | null
+  health: SystemNodeHealth
+  healthy: boolean | null
+  clientCount: number | null
+  startedAt: string | null
+  lastSeenAt: string | null
+  cpaCount: number
+  healthyCpaCount: number
+  staleCpaCount: number
+  unknownCpaCount: number
+}
+
+export type SystemTopologySnapshot = {
+  summary: SystemTopologySummary
+  management: SystemTopologyHomeIdentity | null
+  master: SystemHomeTopologyResource | null
+  homes: SystemHomeTopologyResource[]
+  cpas: SystemNodeResource[]
+}
 
 export type SystemPluginReportPlugin = {
   id: string
@@ -61,7 +117,7 @@ export type SystemConfigSummary = {
   proxyConfigured: boolean
 }
 
-export type SystemIssueScope = 'latestVersion' | 'config' | 'nodes' | 'apiCall'
+export type SystemIssueScope = 'latestVersion' | 'config' | 'nodes' | 'topology' | 'apiCall'
 
 export type SystemIssue = {
   scope: SystemIssueScope
@@ -77,6 +133,9 @@ export type SystemNodesSnapshot = {
   config: SystemConfigSummary | null
   pluginReportRequired: boolean
   pluginReportStatuses: SystemPluginReportStatus[]
+  topologySource: SystemTopologySource
+  topology: SystemTopologySnapshot | null
+  homes: SystemHomeTopologyResource[]
   nodes: SystemNodeResource[]
   issues: SystemIssue[]
 }
@@ -123,6 +182,10 @@ function readString(record: UnknownRecord, key: string): string | null {
 function readNumber(record: UnknownRecord, key: string): number | null {
   const value = record[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function readNumberOrDefault(record: UnknownRecord, key: string, fallback = 0): number {
+  return readNumber(record, key) ?? fallback
 }
 
 function readResponseHeader(response: AxiosResponse, name: string): string | null {
@@ -208,6 +271,18 @@ function normalizePluginReportState(value: string | null): SystemPluginReportSta
   return 'unknown'
 }
 
+function normalizeNodeHealth(value: string | null, healthy: boolean | null): SystemNodeHealth {
+  if (value === 'healthy' || value === 'stale' || value === 'unknown') return value
+  if (healthy === true) return 'healthy'
+  if (healthy === false) return 'stale'
+  return 'unknown'
+}
+
+function normalizeHomeRole(value: string | null): SystemHomeRole {
+  if (value === 'master' || value === 'follower' || value === 'unknown') return value
+  return 'unknown'
+}
+
 function normalizePluginReportPlugin(value: unknown): SystemPluginReportPlugin | null {
   const record = toRecord(value)
   const id = readString(record, 'id')
@@ -285,23 +360,138 @@ function normalizeNodes(responseData: unknown): SystemNodeResource[] {
     const nodeId = readString(record, 'node_id')
     const homeIp = readString(record, 'home_ip')
     const homePort = readNumber(record, 'home_port')
-    const homeKey = `${homeIp ?? 'unknown'}:${homePort ?? 0}`
+    const homeId = readString(record, 'home_id') ?? (homeIp ? `${homeIp}:${homePort ?? 0}` : null)
+    const homeKey = homeId ?? `${homeIp ?? 'unknown'}:${homePort ?? 0}`
     const nodeKey = nodeId ?? ip
+    const healthy = readOptionalBoolean(record, 'healthy')
 
     return {
       id: `${homeKey}/${nodeKey}`,
       ip,
       nodeId,
+      homeId,
       homeIp,
       homePort,
+      health: normalizeNodeHealth(readString(record, 'health'), healthy),
       lastSeenAt: readString(record, 'last_seen_at'),
       connectedTime: readString(record, 'connected_time'),
       clientCount: readNumber(record, 'client_count'),
-      healthy: readOptionalBoolean(record, 'healthy'),
+      healthy,
       pluginReportState: normalizePluginReportState(readString(record, 'plugin_report_state')),
       pluginReportStatuses: normalizePluginReportStatuses(record.plugin_report_statuses),
     }
   })
+}
+
+function normalizeTopologySummary(value: unknown): SystemTopologySummary {
+  const summary = toRecord(value)
+
+  return {
+    homeCount: readNumberOrDefault(summary, 'home_count'),
+    healthyHomeCount: readNumberOrDefault(summary, 'healthy_home_count'),
+    staleHomeCount: readNumberOrDefault(summary, 'stale_home_count'),
+    unknownHomeCount: readNumberOrDefault(summary, 'unknown_home_count'),
+    cpaCount: readNumberOrDefault(summary, 'cpa_count'),
+    healthyCpaCount: readNumberOrDefault(summary, 'healthy_cpa_count'),
+    staleCpaCount: readNumberOrDefault(summary, 'stale_cpa_count'),
+    unknownCpaCount: readNumberOrDefault(summary, 'unknown_cpa_count'),
+    pluginAttentionCount: readNumberOrDefault(summary, 'plugin_attention_count'),
+    attentionCount: readNumberOrDefault(summary, 'attention_count'),
+    missingMaster: readBoolean(summary, 'missing_master'),
+    staleAfterSeconds: readNumber(summary, 'stale_after_seconds'),
+    retentionAfterSeconds: readNumber(summary, 'retention_after_seconds'),
+  }
+}
+
+function normalizeTopologyIdentity(value: unknown): SystemTopologyHomeIdentity | null {
+  const record = toRecord(value)
+  const id = readString(record, 'home_id') ?? readString(record, 'id')
+  const ip = readString(record, 'home_ip') ?? readString(record, 'ip')
+  const port = readNumber(record, 'home_port') ?? readNumber(record, 'port')
+
+  if (!id && !ip && port === null) return null
+
+  return {
+    id: id ?? (ip ? (port ? `${ip}:${port}` : ip) : null),
+    ip,
+    port,
+  }
+}
+
+function normalizeTopologyHome(value: unknown, index: number): SystemHomeTopologyResource | null {
+  const record = toRecord(value)
+  const identity = normalizeTopologyIdentity(record)
+  const id = identity?.id ?? `home-${index + 1}`
+  const healthy = readOptionalBoolean(record, 'healthy')
+  const isMaster = readOptionalBoolean(record, 'is_master') === true
+  const role = normalizeHomeRole(readString(record, 'role') ?? (isMaster ? 'master' : null))
+
+  if (!identity?.id && !identity?.ip && role === 'unknown' && healthy === null) return null
+
+  return {
+    id,
+    ip: identity?.ip ?? null,
+    port: identity?.port ?? null,
+    role,
+    isMaster: isMaster || role === 'master',
+    reportedMaster: readOptionalBoolean(record, 'reported_master'),
+    health: normalizeNodeHealth(readString(record, 'health'), healthy),
+    healthy,
+    clientCount: readNumber(record, 'client_count'),
+    startedAt: readString(record, 'started_at'),
+    lastSeenAt: readString(record, 'last_seen_at'),
+    cpaCount: readNumberOrDefault(record, 'cpa_count'),
+    healthyCpaCount: readNumberOrDefault(record, 'healthy_cpa_count'),
+    staleCpaCount: readNumberOrDefault(record, 'stale_cpa_count'),
+    unknownCpaCount: readNumberOrDefault(record, 'unknown_cpa_count'),
+  }
+}
+
+function normalizeTopologyCpas(responseData: unknown): SystemNodeResource[] {
+  return readArrayRecords(responseData, 'cpas').map((record, index) => {
+    const ip = readString(record, 'ip') ?? `cpa-${index + 1}`
+    const nodeId = readString(record, 'node_id')
+    const homeIp = readString(record, 'home_ip')
+    const homePort = readNumber(record, 'home_port')
+    const homeId = readString(record, 'home_id') ?? (homeIp ? `${homeIp}:${homePort ?? 0}` : null)
+    const homeKey = homeId ?? `${homeIp ?? 'unknown'}:${homePort ?? 0}`
+    const nodeKey = nodeId ?? ip
+    const healthy = readOptionalBoolean(record, 'healthy')
+
+    return {
+      id: `${homeKey}/${nodeKey}`,
+      ip,
+      nodeId,
+      homeId,
+      homeIp,
+      homePort,
+      health: normalizeNodeHealth(readString(record, 'health'), healthy),
+      lastSeenAt: readString(record, 'last_seen_at'),
+      connectedTime: readString(record, 'connected_time'),
+      clientCount: readNumber(record, 'client_count'),
+      healthy,
+      pluginReportState: normalizePluginReportState(readString(record, 'plugin_report_state')),
+      pluginReportStatuses: normalizePluginReportStatuses(record.plugin_report_statuses),
+    }
+  })
+}
+
+function normalizeTopology(responseData: unknown): SystemTopologySnapshot {
+  const data = toRecord(responseData)
+  const homes = readArrayRecords(data, 'homes').flatMap((item, index) => {
+    const home = normalizeTopologyHome(item, index)
+    return home ? [home] : []
+  })
+  const master = normalizeTopologyHome(data.master, -1)
+  const cpas = normalizeTopologyCpas(data)
+
+  return {
+    summary: normalizeTopologySummary(data.summary),
+    management: normalizeTopologyIdentity(data.management),
+    master,
+    homes,
+    cpas,
+  }
 }
 
 function normalizeHeaders(value: unknown): Record<string, string[]> {
@@ -343,7 +533,7 @@ export async function fetchSystemNodesSnapshot(
   let homeVersion: string | null = null
   let latestVersion: string | null = null
 
-  const [, config, nodesResponseData] = await Promise.all([
+  const [, config, topologyResponseData, nodesResponseData] = await Promise.all([
     readOptional(
       issues,
       'latestVersion',
@@ -364,7 +554,18 @@ export async function fetchSystemNodesSnapshot(
       },
       null,
     ),
-    capabilities.nodes
+    capabilities.topology
+      ? readOptional(
+          issues,
+          'topology',
+          async () => {
+            const response = await client.get<unknown>('/topology')
+            return toRecord(response.data)
+          },
+          {},
+        )
+      : Promise.resolve({}),
+    !capabilities.topology && capabilities.nodes
       ? readOptional(
           issues,
           'nodes',
@@ -376,8 +577,31 @@ export async function fetchSystemNodesSnapshot(
         )
       : Promise.resolve({}),
   ])
-  const nodesData = toRecord(nodesResponseData)
-  const nodes = normalizeNodes(nodesData)
+  const topologyData = toRecord(topologyResponseData)
+  let nodesData = toRecord(nodesResponseData)
+  const topology =
+    capabilities.topology && Object.keys(topologyData).length > 0
+      ? normalizeTopology(topologyData)
+      : null
+
+  if (!topology && capabilities.nodes && Object.keys(nodesData).length === 0) {
+    nodesData = await readOptional(
+      issues,
+      'nodes',
+      async () => {
+        const response = await client.get<unknown>('/nodes')
+        return toRecord(response.data)
+      },
+      {},
+    )
+  }
+
+  const nodes = topology ? topology.cpas : normalizeNodes(nodesData)
+  const topologySource: SystemTopologySource = topology
+    ? 'topology'
+    : capabilities.nodes
+      ? 'nodes'
+      : 'unsupported'
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -386,6 +610,9 @@ export async function fetchSystemNodesSnapshot(
     config,
     pluginReportRequired: readBoolean(nodesData, 'plugin_report_required'),
     pluginReportStatuses: normalizePluginReportStatuses(nodesData.plugin_report_statuses),
+    topologySource,
+    topology,
+    homes: topology?.homes ?? [],
     nodes,
     issues,
   }
@@ -393,8 +620,30 @@ export async function fetchSystemNodesSnapshot(
 
 export async function fetchSystemNodePluginReports(
   session: ManagementSessionInput,
+  capabilities?: Pick<CapabilityMap, 'topology' | 'nodes'>,
 ): Promise<SystemNodePluginReportSnapshot> {
   const client = createManagementClient(session)
+
+  if (capabilities?.topology) {
+    try {
+      const response = await client.get<unknown>('/topology')
+      const topology = normalizeTopology(response.data)
+      const pluginReportStatuses = topology.cpas.flatMap((node) => node.pluginReportStatuses)
+
+      return {
+        fetchedAt: new Date().toISOString(),
+        pluginReportRequired: topology.cpas.some(
+          (node) =>
+            node.pluginReportState !== 'not_required' && node.pluginReportState !== 'unknown',
+        ),
+        pluginReportStatuses,
+        nodes: topology.cpas,
+      }
+    } catch (error) {
+      if (!capabilities.nodes) throw error
+    }
+  }
+
   const response = await client.get<unknown>('/nodes')
   const responseData = toRecord(response.data)
 

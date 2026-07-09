@@ -28,6 +28,9 @@ const capabilityRequests: Record<
     path: string
   }
 > = {
+  topology: {
+    path: '/topology',
+  },
   nodes: {
     path: '/nodes',
   },
@@ -53,6 +56,7 @@ const capabilityRequests: Record<
 
 const emptyCapabilities: CapabilityMap = {
   nodes: false,
+  topology: false,
   usage: false,
   usageQueue: false,
   usageOverview: false,
@@ -124,6 +128,14 @@ function readDeclaredCapabilityValue(configData: unknown, keys: string[]) {
 
 function readDeclaredNodesCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['nodes', 'node_management', 'nodeManagement'])
+}
+
+function readDeclaredTopologyCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'topology',
+    'cluster_topology',
+    'clusterTopology',
+  ])
 }
 
 function readDeclaredUsageCapability(configData: unknown) {
@@ -291,8 +303,12 @@ function inferRuntimeMode(
   capabilities: CapabilityMap,
   serverInfo: ManagementServerInfo,
 ): RuntimeMode {
-  if (!capabilities.nodes && !serverInfo.homeVersion) {
+  if (!capabilities.topology && !capabilities.nodes && !serverInfo.homeVersion) {
     return 'cpa'
+  }
+
+  if (capabilities.topology) {
+    return 'home-cluster'
   }
 
   if (capabilities.nodes || serverInfo.homeVersion) {
@@ -327,6 +343,9 @@ export async function probeManagementRuntime(
     capabilitiesPayload ? readDeclaredServerInfo(capabilitiesPayload) : {},
   )
   const declaredNodes = capabilitiesPayload ? readDeclaredNodesCapability(capabilitySource) : null
+  const declaredTopology = capabilitiesPayload
+    ? readDeclaredTopologyCapability(capabilitySource)
+    : null
   const declaredUsage = capabilitiesPayload ? readDeclaredUsageCapability(capabilitySource) : null
   const declaredUsageOverview = capabilitiesPayload
     ? readDeclaredUsageOverviewCapability(capabilitySource)
@@ -368,7 +387,12 @@ export async function probeManagementRuntime(
     : null
 
   const capabilityKeysToProbe: ProbedCapabilityKey[] = capabilitiesPayload
-    ? ['nodes', 'users', 'accessGroups']
+    ? [
+        ...(declaredTopology === null ? (['topology'] as const) : []),
+        ...(declaredTopology !== true && declaredNodes === null ? (['nodes'] as const) : []),
+        'users',
+        'accessGroups',
+      ]
     : (Object.keys(capabilityRequests) as ProbedCapabilityKey[])
 
   const probedCapabilityEntries = await Promise.all(
@@ -390,6 +414,7 @@ export async function probeManagementRuntime(
   )
   const capabilities: CapabilityMap = {
     ...probedCapabilities,
+    topology: declaredTopology ?? probedCapabilities.topology,
     nodes: declaredNodes ?? probedCapabilities.nodes,
     usage: declaredUsage ?? probedCapabilities.usage,
     usageOverview: declaredUsageOverview ?? probedCapabilities.usageOverview,

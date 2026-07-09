@@ -777,9 +777,10 @@ export function PluginsWorkbenchPage() {
             </span>
             <span>
               {t('pluginPage.header.nodes', {
-                status: workbench.capabilities.nodes
-                  ? t('pluginPage.status.available')
-                  : t('pluginPage.status.notAvailable'),
+                status:
+                  workbench.capabilities.topology || workbench.capabilities.nodes
+                    ? t('pluginPage.status.available')
+                    : t('pluginPage.status.notAvailable'),
               })}
             </span>
           </>

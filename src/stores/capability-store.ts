@@ -10,6 +10,7 @@ import type {
 
 const emptyCapabilities: CapabilityMap = {
   nodes: false,
+  topology: false,
   usage: false,
   usageQueue: false,
   usageOverview: false,

@@ -43,6 +43,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       baseUrl,
       connectedAt,
       capabilityStatus,
+      capabilities.topology,
       capabilities.nodes,
       capabilities.usage,
       capabilities.usageOverview,

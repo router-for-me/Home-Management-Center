@@ -152,18 +152,23 @@ function toThrowablePluginStoreError(error: unknown): ThrowableManagementApiErro
 
 async function fetchPluginWorkbenchSnapshot({
   session,
+  topologyAvailable,
   nodesAvailable,
 }: {
   session: ReturnType<typeof useManagementSession>['session']
+  topologyAvailable: boolean
   nodesAvailable: boolean
 }): Promise<PluginWorkbenchSnapshot> {
   const store = await fetchPluginStore(session)
   let nodeReports: SystemNodePluginReportSnapshot | null = null
   let nodeReportError: ManagementApiError | null = null
 
-  if (nodesAvailable) {
+  if (topologyAvailable || nodesAvailable) {
     try {
-      nodeReports = await fetchSystemNodePluginReports(session)
+      nodeReports = await fetchSystemNodePluginReports(session, {
+        topology: topologyAvailable,
+        nodes: nodesAvailable,
+      })
     } catch (error) {
       nodeReportError = toSystemNodesApiError(error)
     }
@@ -184,12 +189,19 @@ export function usePluginWorkbench() {
   const [sourceFilter, setSourceFilter] = useState('all')
 
   const query = useQuery<PluginWorkbenchSnapshot, ManagementApiError>({
-    queryKey: ['management-plugin-workbench', session.baseUrl, connectedAt, capabilities.nodes],
+    queryKey: [
+      'management-plugin-workbench',
+      session.baseUrl,
+      connectedAt,
+      capabilities.topology,
+      capabilities.nodes,
+    ],
     enabled: connected && capabilityReady && Boolean(session.managementKey),
     queryFn: async () => {
       try {
         return await fetchPluginWorkbenchSnapshot({
           session,
+          topologyAvailable: capabilities.topology,
           nodesAvailable: capabilities.nodes,
         })
       } catch (error) {

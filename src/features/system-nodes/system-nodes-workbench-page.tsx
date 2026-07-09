@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   AlertTriangle,
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type SystemNodesOperationalLevel,
   type SystemNodesOperationalStatus,
@@ -45,7 +46,9 @@ import type {
   ApiCallResult,
   CertificateClientEnrollment,
   SystemConfigSummary,
+  SystemHomeTopologyResource,
   SystemIssue,
+  SystemNodeHealth,
   SystemNodeResource,
 } from '@/lib/api/management/system-nodes'
 import { cn } from '@/lib/utils'
@@ -60,6 +63,19 @@ const defaultApiCallInput: ApiCallInput = {
 }
 
 type StatusTone = 'success' | 'info' | 'warning' | 'danger' | 'neutral'
+
+type HomeTopologyGroup = {
+  id: string
+  label: string
+  home: SystemHomeTopologyResource | null
+  homeIp: string | null
+  homePort: number | null
+  nodes: SystemNodeResource[]
+  healthyCpaCount: number
+  totalClientCount: number
+  latestSeenAt: string | null
+  connectedSince: string | null
+}
 
 const statusToneStyles: Record<StatusTone, string> = {
   success: 'border-success/30 bg-success/10 text-success',
@@ -134,28 +150,257 @@ function formatDateTime(value: string | null) {
   }).format(date)
 }
 
-function formatServingHome(node: SystemNodeResource) {
-  if (!node.homeIp) return null
-  return node.homePort ? `${node.homeIp}:${node.homePort}` : node.homeIp
+function getHomeGroupId(node: SystemNodeResource) {
+  return node.homeId ?? (node.homeIp ? `${node.homeIp}:${node.homePort ?? 0}` : 'unknown-home')
+}
+
+function getHomeGroupLabel(homeIp: string | null, homePort: number | null) {
+  if (!homeIp) return null
+  return homePort ? `${homeIp}:${homePort}` : homeIp
+}
+
+function getHomeResourceLabel(home: SystemHomeTopologyResource) {
+  return home.id || getHomeGroupLabel(home.ip, home.port) || 'unknown-home'
+}
+
+function getLatestTimestamp(values: Array<string | null>) {
+  return values.reduce<string | null>((latest, value) => {
+    if (!value) return latest
+    const valueTime = new Date(value).getTime()
+    if (Number.isNaN(valueTime)) return latest
+    if (!latest) return value
+    const latestTime = new Date(latest).getTime()
+    return Number.isNaN(latestTime) || valueTime > latestTime ? value : latest
+  }, null)
+}
+
+function getEarliestTimestamp(values: Array<string | null>) {
+  return values.reduce<string | null>((earliest, value) => {
+    if (!value) return earliest
+    const valueTime = new Date(value).getTime()
+    if (Number.isNaN(valueTime)) return earliest
+    if (!earliest) return value
+    const earliestTime = new Date(earliest).getTime()
+    return Number.isNaN(earliestTime) || valueTime < earliestTime ? value : earliest
+  }, null)
+}
+
+function deriveHomeTopologyGroups(
+  homes: SystemHomeTopologyResource[],
+  nodes: SystemNodeResource[],
+): HomeTopologyGroup[] {
+  const groups = new Map<
+    string,
+    {
+      home: SystemHomeTopologyResource | null
+      homeIp: string | null
+      homePort: number | null
+      nodes: SystemNodeResource[]
+    }
+  >()
+
+  homes.forEach((home) => {
+    groups.set(home.id, {
+      home,
+      homeIp: home.ip,
+      homePort: home.port,
+      nodes: [],
+    })
+  })
+
+  nodes.forEach((node) => {
+    const id = getHomeGroupId(node)
+    const current = groups.get(id)
+
+    if (current) {
+      current.nodes.push(node)
+      return
+    }
+
+    groups.set(id, {
+      home: null,
+      homeIp: node.homeIp,
+      homePort: node.homePort,
+      nodes: [node],
+    })
+  })
+
+  return Array.from(groups.entries())
+    .map(([id, group]) => ({
+      id,
+      label: group.home
+        ? getHomeResourceLabel(group.home)
+        : (getHomeGroupLabel(group.homeIp, group.homePort) ?? 'unknown-home'),
+      home: group.home,
+      homeIp: group.homeIp,
+      homePort: group.homePort,
+      nodes: group.nodes,
+      healthyCpaCount: group.nodes.filter((node) => node.healthy === true).length,
+      totalClientCount: group.nodes.reduce((total, node) => total + (node.clientCount ?? 0), 0),
+      latestSeenAt: getLatestTimestamp(group.nodes.map((node) => node.lastSeenAt)),
+      connectedSince: getEarliestTimestamp(group.nodes.map((node) => node.connectedTime)),
+    }))
+    .sort((first, second) => {
+      if (first.homeIp && !second.homeIp) return -1
+      if (!first.homeIp && second.homeIp) return 1
+      return first.label.localeCompare(second.label)
+    })
 }
 
 function getServingHomeCount(nodes: SystemNodeResource[]) {
   return new Set(
     nodes.flatMap((node) => {
-      if (!node.homeIp) return []
-      return [`${node.homeIp}:${node.homePort ?? 0}`]
+      const homeId = getHomeGroupId(node)
+      return homeId === 'unknown-home' ? [] : [homeId]
     }),
   ).size
 }
 
-function NodeDetail({ label, value }: { label: string; value: string }) {
+function getHealthyCpaCount(nodes: SystemNodeResource[]) {
+  return nodes.filter((node) => node.healthy === true).length
+}
+
+function getPluginAttentionCount(nodes: SystemNodeResource[]) {
+  return nodes.filter(
+    (node) => node.pluginReportState !== 'reported_ok' && node.pluginReportState !== 'not_required',
+  ).length
+}
+
+function getUnknownTopologyCount(nodes: SystemNodeResource[]) {
+  return nodes.filter((node) => !node.homeId && !node.homeIp).length
+}
+
+function getTopologyAttentionCount(nodes: SystemNodeResource[], issueCount: number) {
+  const unhealthyCount = nodes.filter((node) => node.healthy === false).length
   return (
-    <div className="min-w-0 rounded-md border px-2.5 py-2">
+    issueCount + unhealthyCount + getPluginAttentionCount(nodes) + getUnknownTopologyCount(nodes)
+  )
+}
+
+function getNodeHealthTone(node: SystemNodeResource): StatusTone {
+  if (node.health === 'healthy' || node.healthy === true) return 'success'
+  if (node.health === 'stale' || node.healthy === false) return 'danger'
+  return 'warning'
+}
+
+function getHealthTone(health: SystemNodeHealth): StatusTone {
+  if (health === 'healthy') return 'success'
+  if (health === 'stale') return 'danger'
+  return 'warning'
+}
+
+function getHomeRoleTone(role: SystemHomeTopologyResource['role']): StatusTone {
+  if (role === 'master') return 'success'
+  if (role === 'follower') return 'info'
+  return 'warning'
+}
+
+function getPluginReportTone(node: SystemNodeResource): StatusTone {
+  if (node.pluginReportState === 'reported_ok' || node.pluginReportState === 'not_required') {
+    return 'success'
+  }
+  if (node.pluginReportState === 'reported_failed') return 'danger'
+  if (node.pluginReportState === 'unknown') return 'warning'
+  return 'warning'
+}
+
+function StatusBadge({
+  tone = 'neutral',
+  children,
+  className,
+}: {
+  tone?: StatusTone
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
+        statusToneStyles[tone],
+        className,
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function NodeDetail({
+  label,
+  value,
+  className,
+}: {
+  label: string
+  value: string
+  className?: string
+}) {
+  return (
+    <div className={cn('min-w-0', className)}>
       <p className="text-muted-foreground text-xs font-medium">{label}</p>
       <p className="mt-1 truncate font-mono text-xs" title={value}>
         {value}
       </p>
     </div>
+  )
+}
+
+function TruncatedTooltipText({
+  value,
+  className,
+  tooltipClassName,
+}: {
+  value: string
+  className?: string
+  tooltipClassName?: string
+}) {
+  const textRef = useRef<HTMLParagraphElement | null>(null)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+
+  const measureOverflow = useCallback(() => {
+    const element = textRef.current
+    if (!element) return
+
+    setIsOverflowing(element.scrollWidth > element.clientWidth)
+  }, [])
+
+  useEffect(() => {
+    measureOverflow()
+
+    const element = textRef.current
+    if (!element || typeof ResizeObserver === 'undefined') return
+
+    const resizeObserver = new ResizeObserver(measureOverflow)
+    resizeObserver.observe(element)
+
+    return () => resizeObserver.disconnect()
+  }, [measureOverflow, value])
+
+  const textNode = (
+    <p
+      ref={textRef}
+      tabIndex={isOverflowing ? 0 : undefined}
+      className={cn(
+        'truncate rounded-sm outline-none',
+        isOverflowing && 'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+        className,
+      )}
+    >
+      {value}
+    </p>
+  )
+
+  if (!isOverflowing) {
+    return textNode
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{textNode}</TooltipTrigger>
+      <TooltipContent side="top" className={cn('max-w-96 text-left break-all', tooltipClassName)}>
+        {value}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -194,15 +439,16 @@ function SystemNodesLoadingState() {
   return (
     <section className="grid gap-4">
       <Skeleton className="h-32 rounded-lg" />
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-28 rounded-lg" />
+        <Skeleton className="h-28 rounded-lg" />
         <Skeleton className="h-28 rounded-lg" />
         <Skeleton className="h-28 rounded-lg" />
         <Skeleton className="h-28 rounded-lg" />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
-        <Skeleton className="h-80 rounded-lg" />
-        <Skeleton className="h-80 rounded-lg" />
-      </div>
+      <Skeleton className="h-96 rounded-lg" />
+      <Skeleton className="h-40 rounded-lg" />
     </section>
   )
 }
@@ -257,22 +503,24 @@ function SummaryCard({
   const Icon = getStatusIcon(tone)
 
   return (
-    <div className="bg-card rounded-lg border p-4 shadow-sm">
+    <div className="bg-card rounded-lg border p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-muted-foreground text-xs font-medium">{label}</p>
-          <p className="mt-2 truncate text-xl font-semibold">{value}</p>
+          <TruncatedTooltipText value={value} className="mt-1.5 text-lg font-semibold" />
         </div>
         <div
           className={cn(
-            'flex size-8 shrink-0 items-center justify-center rounded-md border',
+            'flex size-7 shrink-0 items-center justify-center rounded-md border',
             statusToneStyles[tone],
           )}
         >
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-2 text-xs leading-5">{detail}</p>
+      <p className="text-muted-foreground mt-2 line-clamp-2 text-xs leading-5" title={detail}>
+        {detail}
+      </p>
     </div>
   )
 }
@@ -301,14 +549,6 @@ function OperationalVerdictPanel({
   const styles = operationalLevelStyles[status.level]
 
   const facts = [
-    {
-      label: t('systemNodesPage.verdict.facts.config', {
-        status: status.configAvailable
-          ? t('systemNodesPage.status.available')
-          : t('systemNodesPage.status.notAvailable'),
-      }),
-      tone: status.configAvailable ? 'success' : 'warning',
-    },
     {
       label: t('systemNodesPage.verdict.facts.version', {
         status: status.latestVersionAvailable
@@ -432,6 +672,36 @@ function OperationalVerdictPanel({
   )
 }
 
+function ConfigSignal({ label, value, tone }: { label: string; value: string; tone: StatusTone }) {
+  return (
+    <div className="bg-background/70 inline-flex max-w-full min-w-0 items-center gap-2 rounded-md px-2.5 py-2">
+      <span className="text-muted-foreground min-w-0 truncate text-xs font-medium">{label}</span>
+      <StatusBadge tone={tone} className="max-w-36 shrink-0 truncate border-0 px-1.5 py-0.5">
+        {value}
+      </StatusBadge>
+    </div>
+  )
+}
+
+function ConfigSignalGroup({
+  title,
+  items,
+}: {
+  title: string
+  items: Array<{ key: string; label: string; value: string; tone: StatusTone }>
+}) {
+  return (
+    <section className="bg-muted/25 rounded-md p-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {items.map((item) => (
+          <ConfigSignal key={item.key} label={item.label} value={item.value} tone={item.tone} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function ConfigSummaryPanel({ config }: { config: SystemConfigSummary | null }) {
   const { t } = useTranslation()
 
@@ -441,55 +711,190 @@ function ConfigSummaryPanel({ config }: { config: SystemConfigSummary | null }) 
     )
   }
 
-  const rows = [
-    ['debug', config.debug],
-    ['requestLog', config.requestLog],
-    ['usageStatistics', config.usageStatistics],
-    ['loggingToFile', config.loggingToFile],
-    ['proxyConfigured', config.proxyConfigured],
-  ] as const
+  const enabledLabel = t('systemNodesPage.status.enabled')
+  const disabledLabel = t('systemNodesPage.status.disabled')
+  const booleanSignal = (
+    key: 'debug' | 'requestLog' | 'usageStatistics' | 'loggingToFile' | 'proxyConfigured',
+    enabled: boolean,
+    enabledTone: StatusTone = 'info',
+  ) => ({
+    key,
+    label: t(`systemNodesPage.config.fields.${key}`),
+    value: enabled ? enabledLabel : disabledLabel,
+    tone: enabled ? enabledTone : 'neutral',
+  })
+
+  const diagnostics = [
+    booleanSignal('requestLog', config.requestLog),
+    booleanSignal('usageStatistics', config.usageStatistics),
+    booleanSignal('loggingToFile', config.loggingToFile),
+  ]
+
+  const runtime = [
+    booleanSignal('debug', config.debug, 'warning'),
+    booleanSignal('proxyConfigured', config.proxyConfigured),
+    {
+      key: 'routingStrategy',
+      label: t('systemNodesPage.config.fields.routingStrategy'),
+      value: t(`configPage.routingStrategies.${config.routingStrategy}`, {
+        defaultValue:
+          config.routingStrategy === 'unknown'
+            ? t('systemNodesPage.status.unknown')
+            : config.routingStrategy,
+      }),
+      tone: config.routingStrategy === 'unknown' ? 'warning' : 'neutral',
+    },
+  ] satisfies Array<{ key: string; label: string; value: string; tone: StatusTone }>
 
   return (
-    <div className="grid gap-2">
-      {rows.map(([key, enabled]) => (
-        <div
-          key={key}
-          className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-        >
-          <span className="text-sm">{t(`systemNodesPage.config.fields.${key}`)}</span>
-          <span
-            className={cn(
-              'rounded-md border px-2 py-1 text-xs font-medium',
-              enabled
-                ? 'border-primary/30 bg-primary/10 text-primary'
-                : 'bg-muted text-muted-foreground',
-            )}
-          >
-            {enabled ? t('systemNodesPage.status.enabled') : t('systemNodesPage.status.disabled')}
-          </span>
-        </div>
-      ))}
-      <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-        <span className="text-sm">{t('systemNodesPage.config.fields.routingStrategy')}</span>
-        <span className="bg-muted text-muted-foreground rounded-md border px-2 py-1 text-xs">
-          {t(`configPage.routingStrategies.${config.routingStrategy}`, {
-            defaultValue:
-              config.routingStrategy === 'unknown'
-                ? t('systemNodesPage.status.unknown')
-                : config.routingStrategy,
-          })}
-        </span>
-      </div>
+    <div className="grid gap-3 lg:grid-cols-2">
+      <ConfigSignalGroup
+        title={t('systemNodesPage.config.groups.diagnostics')}
+        items={diagnostics}
+      />
+      <ConfigSignalGroup title={t('systemNodesPage.config.groups.runtime')} items={runtime} />
     </div>
   )
 }
 
-function NodesPanel({
-  nodes,
+function CpaNodeRow({ node }: { node: SystemNodeResource }) {
+  const { t } = useTranslation()
+  const healthLabel = t(`systemNodesPage.healthStates.${node.health}`)
+
+  return (
+    <div className="grid gap-3 border-t px-3 py-3 lg:grid-cols-[minmax(120px,0.65fr)_minmax(0,2.6fr)_auto] lg:items-start">
+      <div className="min-w-0">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t('systemNodesPage.nodes.fields.cpaIp')}
+        </p>
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+          <p className="truncate font-mono text-sm">{node.ip}</p>
+          <StatusBadge tone={getNodeHealthTone(node)}>{healthLabel}</StatusBadge>
+        </div>
+      </div>
+      <div className="grid min-w-0 gap-x-4 gap-y-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1.6fr)_minmax(160px,1fr)_minmax(160px,1fr)_minmax(72px,0.45fr)]">
+        <NodeDetail
+          label={t('systemNodesPage.nodes.fields.nodeId')}
+          value={node.nodeId ?? t('systemNodesPage.status.notAvailable')}
+        />
+        <NodeDetail
+          label={t('systemNodesPage.nodes.fields.connectedTime')}
+          value={formatDateTime(node.connectedTime) ?? t('systemNodesPage.status.notAvailable')}
+        />
+        <NodeDetail
+          label={t('systemNodesPage.nodes.fields.lastSeen')}
+          value={formatDateTime(node.lastSeenAt) ?? t('systemNodesPage.status.notAvailable')}
+        />
+        <NodeDetail
+          label={t('systemNodesPage.nodes.fields.clientCount')}
+          value={String(node.clientCount ?? 0)}
+        />
+      </div>
+      <StatusBadge tone={getPluginReportTone(node)} className="lg:justify-self-end">
+        {t(`systemNodesPage.nodes.pluginStates.${node.pluginReportState}`)}
+      </StatusBadge>
+    </div>
+  )
+}
+
+function HomeTopologyGroupSection({ group }: { group: HomeTopologyGroup }) {
+  const { t } = useTranslation()
+  const isUnknownHome = !group.home && !group.homeIp
+  const role = group.home?.role ?? 'unknown'
+  const health = group.home?.health ?? 'unknown'
+  const cpaCount = group.home?.cpaCount ?? group.nodes.length
+  const healthyCpaCount = group.home?.healthyCpaCount ?? group.healthyCpaCount
+  const clientCount = group.home?.clientCount ?? group.totalClientCount
+  const lastSeenAt = group.home?.lastSeenAt ?? group.latestSeenAt
+  const connectedSince = group.home?.startedAt ?? group.connectedSince
+
+  return (
+    <section
+      className={cn(
+        'overflow-hidden rounded-md border',
+        isUnknownHome ? 'border-warning/35 bg-warning/5' : 'border-border/70 bg-background/45',
+      )}
+    >
+      <div className="px-3 py-3">
+        <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-xs font-medium">
+              {t('systemNodesPage.nodes.fields.homeEndpoint')}
+            </p>
+            <p className="mt-1 truncate font-mono text-sm">
+              {isUnknownHome ? t('systemNodesPage.nodes.unknownHome') : group.label}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            {isUnknownHome ? (
+              <StatusBadge tone="warning">{t('systemNodesPage.status.partial')}</StatusBadge>
+            ) : null}
+            <StatusBadge tone={getHomeRoleTone(role)}>
+              {t(`systemNodesPage.homeRoles.${role}`)}
+            </StatusBadge>
+            <StatusBadge tone={getHealthTone(health)}>
+              {t(`systemNodesPage.healthStates.${health}`)}
+            </StatusBadge>
+            <StatusBadge
+              tone={
+                cpaCount === 0 ? 'neutral' : healthyCpaCount === cpaCount ? 'success' : 'warning'
+              }
+            >
+              {t('systemNodesPage.nodes.healthyRatio', {
+                healthy: healthyCpaCount,
+                total: cpaCount,
+              })}
+            </StatusBadge>
+          </div>
+        </div>
+        <div className="mt-3 grid gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
+          <NodeDetail
+            label={t('systemNodesPage.nodes.fields.homeRole')}
+            value={t(`systemNodesPage.homeRoles.${role}`)}
+          />
+          <NodeDetail label={t('systemNodesPage.nodes.fields.cpaCount')} value={String(cpaCount)} />
+          <NodeDetail
+            label={t('systemNodesPage.nodes.fields.clientCount')}
+            value={String(clientCount ?? 0)}
+          />
+          <NodeDetail
+            label={t('systemNodesPage.nodes.fields.connectedSince')}
+            value={formatDateTime(connectedSince) ?? t('systemNodesPage.status.notAvailable')}
+          />
+          <NodeDetail
+            label={t('systemNodesPage.nodes.fields.lastSeen')}
+            value={formatDateTime(lastSeenAt) ?? t('systemNodesPage.status.notAvailable')}
+          />
+        </div>
+        {isUnknownHome ? (
+          <p className="text-muted-foreground mt-3 text-xs leading-5">
+            {t('systemNodesPage.nodes.unknownHomeDescription')}
+          </p>
+        ) : null}
+      </div>
+      <div className="bg-muted/20">
+        {group.nodes.length > 0 ? (
+          group.nodes.map((node) => <CpaNodeRow key={node.id} node={node} />)
+        ) : (
+          <div className="border-t px-3 py-3">
+            <TableEmptyState
+              kind="empty"
+              className="m-0"
+              title={t('systemNodesPage.nodes.noCpaInHome')}
+            />
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function HomeTopologyPanel({
+  groups,
   available,
   runtimeLabel,
 }: {
-  nodes: SystemNodeResource[]
+  groups: HomeTopologyGroup[]
   available: boolean
   runtimeLabel: string
 }) {
@@ -507,7 +912,7 @@ function NodesPanel({
     )
   }
 
-  if (nodes.length === 0) {
+  if (groups.length === 0) {
     return (
       <TableEmptyState
         kind="empty"
@@ -518,39 +923,19 @@ function NodesPanel({
   }
 
   return (
-    <div className="grid gap-2">
-      {nodes.map((node) => (
-        <div key={node.id} className="rounded-md border px-3 py-2.5">
-          <div className="flex min-w-0 items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-muted-foreground text-xs font-medium">
-                {t('systemNodesPage.nodes.fields.cpaIp')}
-              </p>
-              <p className="mt-1 truncate font-mono text-sm">{node.ip}</p>
-            </div>
-            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2 py-1 text-xs font-medium">
-              {t('systemNodesPage.status.connected')}
-            </span>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <NodeDetail
-              label={t('systemNodesPage.nodes.fields.nodeId')}
-              value={node.nodeId ?? t('systemNodesPage.status.notAvailable')}
-            />
-            <NodeDetail
-              label={t('systemNodesPage.nodes.fields.servingHome')}
-              value={formatServingHome(node) ?? t('systemNodesPage.status.notAvailable')}
-            />
-            <NodeDetail
-              label={t('systemNodesPage.nodes.fields.connectedTime')}
-              value={formatDateTime(node.connectedTime) ?? t('systemNodesPage.status.notAvailable')}
-            />
-            <NodeDetail
-              label={t('systemNodesPage.nodes.fields.lastSeen')}
-              value={formatDateTime(node.lastSeenAt) ?? t('systemNodesPage.status.notAvailable')}
-            />
-          </div>
-        </div>
+    <div className="grid gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <StatusBadge tone={groups.length > 0 ? 'info' : 'warning'}>
+          {t('systemNodesPage.nodes.homeRecordsStatus', { count: groups.length })}
+        </StatusBadge>
+        <StatusBadge tone="neutral">
+          {t('systemNodesPage.nodes.cpaRecordsStatus', {
+            count: groups.reduce((total, group) => total + group.nodes.length, 0),
+          })}
+        </StatusBadge>
+      </div>
+      {groups.map((group) => (
+        <HomeTopologyGroupSection key={group.id} group={group} />
       ))}
     </div>
   )
@@ -870,19 +1255,40 @@ export function SystemNodesWorkbenchPage() {
     workbench.serverInfo.cpaVersion ??
     t('systemNodesPage.status.unknown')
   const serverVersionAvailable = serverVersion !== t('systemNodesPage.status.unknown')
+  const topologyGroups = deriveHomeTopologyGroups(
+    workbench.snapshot.homes,
+    workbench.snapshot.nodes,
+  )
+  const topologySummary = workbench.snapshot.topology?.summary ?? null
   const servingHomeCount = getServingHomeCount(workbench.snapshot.nodes)
-  const nodesSummaryDetail = workbench.capabilities.nodes
-    ? workbench.snapshot.nodes.length > 0
-      ? servingHomeCount > 0
-        ? t('systemNodesPage.summary.nodesClusterConnected', {
-            cpaCount: workbench.snapshot.nodes.length,
-            homeCount: servingHomeCount,
-          })
-        : t('systemNodesPage.summary.nodesConnected', { count: workbench.snapshot.nodes.length })
-      : t('systemNodesPage.summary.nodesEmpty')
+  const homeCount = topologySummary?.homeCount ?? servingHomeCount
+  const healthyHomeCount = topologySummary?.healthyHomeCount ?? null
+  const cpaCount = topologySummary?.cpaCount ?? workbench.snapshot.nodes.length
+  const healthyCpaCount =
+    topologySummary?.healthyCpaCount ?? getHealthyCpaCount(workbench.snapshot.nodes)
+  const attentionCount = topologySummary
+    ? topologySummary.attentionCount + workbench.snapshot.issues.length
+    : getTopologyAttentionCount(workbench.snapshot.nodes, workbench.snapshot.issues.length)
+  const topologyAvailable = workbench.capabilities.topology || workbench.capabilities.nodes
+  const masterHome =
+    workbench.snapshot.topology?.master?.id ?? t('systemNodesPage.status.notAvailable')
+  const nodesSummaryDetail = topologyAvailable
+    ? workbench.snapshot.topologySource === 'topology'
+      ? t('systemNodesPage.summary.topologyConnected', {
+          cpaCount,
+          homeCount,
+        })
+      : workbench.snapshot.nodes.length > 0
+        ? servingHomeCount > 0
+          ? t('systemNodesPage.summary.nodesClusterConnected', {
+              cpaCount: workbench.snapshot.nodes.length,
+              homeCount: servingHomeCount,
+            })
+          : t('systemNodesPage.summary.nodesConnected', { count: workbench.snapshot.nodes.length })
+        : t('systemNodesPage.summary.nodesEmpty')
     : t('systemNodesPage.summary.nodesUnavailable')
-  const nodesSummaryTone: StatusTone = workbench.capabilities.nodes
-    ? workbench.snapshot.nodes.length > 0
+  const nodesSummaryTone: StatusTone = topologyAvailable
+    ? cpaCount > 0
       ? 'success'
       : 'neutral'
     : 'info'
@@ -916,7 +1322,7 @@ export function SystemNodesWorkbenchPage() {
         runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)}
         probedAt={formatDateTime(workbench.probedAt)}
         fetchedAt={formatDateTime(workbench.snapshot.fetchedAt)}
-        servingHomeCount={servingHomeCount}
+        servingHomeCount={homeCount}
         isFetching={workbench.isFetching}
         onRefresh={workbench.refetch}
         onOpenDiagnostics={() => setApiCallSheetOpen(true)}
@@ -924,7 +1330,7 @@ export function SystemNodesWorkbenchPage() {
 
       <IssueList issues={workbench.snapshot.issues} />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <SummaryCard
           label={t('systemNodesPage.summary.version')}
           value={serverVersion}
@@ -934,10 +1340,44 @@ export function SystemNodesWorkbenchPage() {
           tone={serverVersionAvailable ? 'success' : 'warning'}
         />
         <SummaryCard
-          label={t('systemNodesPage.summary.nodes')}
-          value={String(workbench.snapshot.nodes.length)}
-          detail={nodesSummaryDetail}
+          label={t('systemNodesPage.summary.endpoint')}
+          value={workbench.managementEndpoint || t('systemNodesPage.status.notAvailable')}
+          detail={t('systemNodesPage.summary.masterHome', { home: masterHome })}
+          tone={workbench.managementEndpoint ? 'info' : 'warning'}
+        />
+        <SummaryCard
+          label={t('systemNodesPage.summary.homes')}
+          value={topologyAvailable ? String(homeCount) : t('systemNodesPage.status.notAvailable')}
+          detail={
+            workbench.snapshot.topologySource === 'topology' && healthyHomeCount !== null
+              ? t('systemNodesPage.summary.homesHealthy', {
+                  healthy: healthyHomeCount,
+                  total: homeCount,
+                })
+              : homeCount > 0
+                ? t('systemNodesPage.summary.homesInferred', { count: homeCount })
+                : t('systemNodesPage.summary.homesUnavailable')
+          }
+          tone={homeCount > 0 ? 'info' : 'warning'}
+        />
+        <SummaryCard
+          label={t('systemNodesPage.summary.cpas')}
+          value={String(cpaCount)}
+          detail={t('systemNodesPage.summary.cpasHealthy', {
+            healthy: healthyCpaCount,
+            total: cpaCount,
+          })}
           tone={nodesSummaryTone}
+        />
+        <SummaryCard
+          label={t('systemNodesPage.summary.attention')}
+          value={String(attentionCount)}
+          detail={
+            attentionCount > 0
+              ? t('systemNodesPage.summary.attentionDetail')
+              : t('systemNodesPage.summary.attentionClear')
+          }
+          tone={attentionCount > 0 ? 'warning' : 'success'}
         />
         <SummaryCard
           label={t('systemNodesPage.summary.config')}
@@ -955,38 +1395,50 @@ export function SystemNodesWorkbenchPage() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
-        <div className="bg-card rounded-lg border p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold">{t('systemNodesPage.nodes.title')}</h2>
-            <Button
-              type="button"
-              size="sm"
-              disabled={workbench.createNodeClientPending}
-              onClick={() => void handleAddNode()}
-            >
-              {workbench.createNodeClientPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Plus className="size-4" aria-hidden="true" />
-              )}
-              {t('systemNodesPage.nodes.addNode')}
-            </Button>
+      <div className="bg-card rounded-lg border p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold">{t('systemNodesPage.nodes.title')}</h2>
+              <StatusBadge tone={topologyAvailable ? 'info' : 'warning'}>
+                {t(`systemNodesPage.topologySources.${workbench.snapshot.topologySource}`)}
+              </StatusBadge>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">{nodesSummaryDetail}</p>
           </div>
-          <div className="mt-3">
-            <NodesPanel
-              nodes={workbench.snapshot.nodes}
-              available={workbench.capabilities.nodes}
-              runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)}
-            />
-          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="lg:shrink-0"
+            disabled={workbench.createNodeClientPending}
+            onClick={() => void handleAddNode()}
+          >
+            {workbench.createNodeClientPending ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Plus className="size-4" aria-hidden="true" />
+            )}
+            {t('systemNodesPage.nodes.addNode')}
+          </Button>
         </div>
+        <div className="mt-4">
+          <HomeTopologyPanel
+            groups={topologyGroups}
+            available={topologyAvailable}
+            runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)}
+          />
+        </div>
+      </div>
 
-        <div className="bg-card rounded-lg border p-4 shadow-sm">
+      <div className="bg-card rounded-lg border p-4 shadow-sm">
+        <div className="min-w-0">
           <h2 className="text-base font-semibold">{t('systemNodesPage.config.title')}</h2>
-          <div className="mt-3">
-            <ConfigSummaryPanel config={workbench.snapshot.config} />
-          </div>
+          <p className="text-muted-foreground mt-1 text-xs leading-5">
+            {t('systemNodesPage.config.description')}
+          </p>
+        </div>
+        <div className="mt-3">
+          <ConfigSummaryPanel config={workbench.snapshot.config} />
         </div>
       </div>
 
