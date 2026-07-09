@@ -10,6 +10,7 @@ export default tseslint.config(
       'coverage',
       'node_modules',
       'src/routeTree.gen.ts',
+      'tests',
       '.workbench',
       '.tanstack',
       'eslint.config.js',

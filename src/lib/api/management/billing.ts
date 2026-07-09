@@ -296,6 +296,7 @@ function toModelPricePayload(input: ModelPriceInput) {
     request_price: input.requestPrice,
     enabled: input.enabled,
     note: input.note?.trim() || undefined,
+    source: input.source,
   }
 }
 

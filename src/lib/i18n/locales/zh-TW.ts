@@ -598,6 +598,7 @@ export const zhTW = {
         empty: '還沒有模型價格。',
         actions: {
           create: '新建價格',
+          import: '從 models.dev 匯入',
           createSelected: '建立 {{count}} 條',
           selectModels: '選擇模型',
           toggleState: '切換模型價格 {{model}} 的啟用狀態',
@@ -621,6 +622,7 @@ export const zhTW = {
         },
         sheet: {
           createTitle: '新建模型價格',
+          importTitle: '匯入模型價格',
           editTitle: '編輯模型價格',
         },
         form: {
@@ -655,6 +657,56 @@ export const zhTW = {
         modelScopes: {
           available: '執行時可用',
           static: '靜態目錄',
+        },
+
+        import: {
+          manualConfirmHint:
+            '匯入只會產生預覽。在你勾選列並點擊確認之前，不會寫入任何價格。',
+          catalogTitle: 'models.dev 目錄',
+          catalogPending: '目錄尚未載入。',
+          catalogReady: '已載入 {{count}} 個模型（{{time}}）。',
+          catalogFailed: '載入 models.dev 目錄失敗。',
+          reloadCatalog: '重新載入目錄',
+          policyTitle: '定價策略',
+          policyHint:
+            '倍率會把官方單價轉換成 Home 絕對價格。Home 仍按 provider + model 精確匹配。',
+          defaultMultiplier: '預設倍率',
+          familyMultiplier: '{{family}} 倍率',
+          overwriteMode: '既有規則處理',
+          overwriteMissing: '只建立缺失規則',
+          overwriteSync: '建立缺失 + 更新 source=sync',
+          overwriteAll: '建立缺失 + 更新全部既有規則',
+          includeCache: '包含快取價格',
+          includeZeroCost: '允許官方價為 0',
+          previewTitle: '預覽並確認',
+          previewHint: '已選 {{selected}} / 可選 {{selectable}} / 總計 {{total}}',
+          selectAll: '全選可套用項',
+          clearSelection: '清空選擇',
+          searchPlaceholder: '搜尋 Home provider、model 或 models.dev 匹配',
+          loadingPreview: '正在載入預覽…',
+          emptyPreview: '沒有可預覽的候選模型。',
+          selectRow: '選擇 {{model}}',
+          columns: {
+            status: '狀態',
+            sourceModel: 'models.dev 匹配',
+            official: '官方 in/out',
+            multiplier: '倍率',
+            final: '最終 in/out',
+            existing: '既有規則',
+          },
+          status: {
+            matched: '已匹配',
+            ambiguous: '有歧義',
+            unmatched: '未匹配',
+            zero_cost: '官方價為 0',
+          },
+          existingRule: '已存在（{{source}}）',
+          noExisting: '無',
+          validation: {
+            selectRows: '請至少選擇一列預覽結果再確認。',
+          },
+          confirmApply: '確認套用（{{count}}）',
+          applied: '已套用 {{count}} 條確認後的模型價格。',
         },
         validation: {
           providerRequired: '必須提供模型供應商。',

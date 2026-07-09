@@ -11,6 +11,7 @@ import {
   BarChart3,
   Check,
   Copy,
+  Download,
   Eye,
   Info,
   Loader2,
@@ -85,6 +86,7 @@ import {
   type BillingModelPriceCandidate,
   useBillingWorkbench,
 } from '@/features/billing/use-billing-workbench'
+import { ModelPriceImportSheet } from '@/features/billing/model-price-import-sheet'
 import type {
   BalanceRecord,
   BillingFilters,
@@ -102,6 +104,7 @@ type SheetMode =
   | { type: 'balance-detail'; record: BalanceRecord }
   | { type: 'model-price-create' }
   | { type: 'model-price-edit'; resource: ModelPrice }
+  | { type: 'model-price-import' }
 
 type PendingDelete = { type: 'model-price'; resource: ModelPrice }
 
@@ -865,12 +868,14 @@ function BalanceRecordsTab({
 function ModelPricesTab({
   workbench,
   onCreate,
+  onImport,
   onEdit,
   onToggle,
   onDelete,
 }: {
   workbench: ReturnType<typeof useBillingWorkbench>
   onCreate: () => void
+  onImport: () => void
   onEdit: (resource: ModelPrice) => void
   onToggle: (resource: ModelPrice) => void
   onDelete: (resource: ModelPrice) => void
@@ -896,10 +901,16 @@ function ModelPricesTab({
         title={t('billingPage.prices.title')}
         description={t('billingPage.prices.description')}
         actions={
-          <Button onClick={onCreate}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('billingPage.prices.actions.create')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={onImport}>
+              <Download className="size-4" aria-hidden="true" />
+              {t('billingPage.prices.actions.import')}
+            </Button>
+            <Button onClick={onCreate}>
+              <Plus className="size-4" aria-hidden="true" />
+              {t('billingPage.prices.actions.create')}
+            </Button>
+          </div>
         }
       />
       {workbench.modelPrices.length === 0 ? (
@@ -1854,6 +1865,7 @@ export function BillingWorkbenchPage() {
         <ModelPricesTab
           workbench={workbench}
           onCreate={() => setSheetMode({ type: 'model-price-create' })}
+          onImport={() => setSheetMode({ type: 'model-price-import' })}
           onEdit={(resource) => setSheetMode({ type: 'model-price-edit', resource })}
           onToggle={(resource) => {
             void workbench
@@ -1869,7 +1881,11 @@ export function BillingWorkbenchPage() {
       ) : null}
 
       <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
-        <DrawerScaffoldContent className="sm:max-w-2xl">
+        <DrawerScaffoldContent
+          className={
+            sheetMode?.type === 'model-price-import' ? 'sm:max-w-5xl' : 'sm:max-w-2xl'
+          }
+        >
           {sheetMode ? (
             <>
               <DrawerScaffoldHeader>
@@ -1880,10 +1896,13 @@ export function BillingWorkbenchPage() {
                       ? t('billingPage.balanceDetail.title')
                       : sheetMode.type === 'model-price-create'
                         ? t('billingPage.prices.sheet.createTitle')
-                        : t('billingPage.prices.sheet.editTitle')}
+                        : sheetMode.type === 'model-price-import'
+                          ? t('billingPage.prices.sheet.importTitle')
+                          : t('billingPage.prices.sheet.editTitle')}
                 </SheetTitle>
                 {sheetMode.type === 'model-price-create' ||
-                sheetMode.type === 'model-price-edit' ? null : (
+                sheetMode.type === 'model-price-edit' ||
+                sheetMode.type === 'model-price-import' ? null : (
                   <SheetDescription>
                     {sheetMode.type === 'charge-detail'
                       ? t('billingPage.chargeDetail.description')
@@ -1896,6 +1915,34 @@ export function BillingWorkbenchPage() {
               ) : null}
               {sheetMode.type === 'balance-detail' ? (
                 <BalanceDetailSheet record={sheetMode.record} users={workbench.users} />
+              ) : null}
+              {sheetMode.type === 'model-price-import' ? (
+                <ModelPriceImportSheet
+                  candidates={workbench.modelPriceCandidates}
+                  candidatesLoading={workbench.modelPriceCandidatesLoading}
+                  existingPrices={workbench.modelPrices}
+                  mutating={workbench.mutating}
+                  onCancel={closeSheet}
+                  onApply={async (items) => {
+                    const creates = items
+                      .filter((item) => item.mode === 'create')
+                      .map((item) => item.input)
+                    const updates = items.filter(
+                      (item): item is { mode: 'update'; resource: ModelPrice; input: ModelPriceInput } =>
+                        item.mode === 'update' && Boolean(item.resource),
+                    )
+
+                    if (creates.length > 0) {
+                      await workbench.createModelPrices(creates)
+                    }
+                    for (const item of updates) {
+                      await workbench.updateModelPrice({
+                        resource: item.resource,
+                        input: item.input,
+                      })
+                    }
+                  }}
+                />
               ) : null}
               {sheetMode.type === 'model-price-create' || sheetMode.type === 'model-price-edit' ? (
                 <ModelPriceSheet

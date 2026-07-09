@@ -140,4 +140,5 @@ export type ModelPriceInput = {
   requestPrice: number
   enabled: boolean
   note?: string
+  source?: ModelPriceSource
 }

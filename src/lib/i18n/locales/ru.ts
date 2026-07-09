@@ -615,6 +615,7 @@ export const ru = {
         empty: 'Цены моделей пока не настроены.',
         actions: {
           create: 'Новая цена',
+          import: 'Импорт из models.dev',
           createSelected: 'Создать {{count}}',
           selectModels: 'Выберите модели',
           toggleState: 'Переключить состояние цены модели {{model}}',
@@ -638,6 +639,7 @@ export const ru = {
         },
         sheet: {
           createTitle: 'Новая цена модели',
+          importTitle: 'Импорт цен моделей',
           editTitle: 'Изменить цену модели',
         },
         form: {
@@ -676,6 +678,56 @@ export const ru = {
         modelScopes: {
           available: 'Доступно в runtime',
           static: 'Статический каталог',
+        },
+
+        import: {
+          manualConfirmHint:
+            'Импорт только готовит предпросмотр. Запись не выполняется, пока вы не выберете строки и не подтвердите.',
+          catalogTitle: 'Каталог models.dev',
+          catalogPending: 'Каталог еще не загружен.',
+          catalogReady: 'Загружено моделей: {{count}} ({{time}}).',
+          catalogFailed: 'Не удалось загрузить каталог models.dev.',
+          reloadCatalog: 'Перезагрузить каталог',
+          policyTitle: 'Политика цен',
+          policyHint:
+            'Множители преобразуют официальные цены в абсолютные цены Home. Home по-прежнему сопоставляет provider + model.',
+          defaultMultiplier: 'Множитель по умолчанию',
+          familyMultiplier: 'Множитель {{family}}',
+          overwriteMode: 'Обработка существующих правил',
+          overwriteMissing: 'Только создать отсутствующие',
+          overwriteSync: 'Создать отсутствующие + обновить source=sync',
+          overwriteAll: 'Создать отсутствующие + обновить все',
+          includeCache: 'Включать cache prices',
+          includeZeroCost: 'Разрешить нулевые официальные цены',
+          previewTitle: 'Предпросмотр и подтверждение',
+          previewHint: 'Выбрано {{selected}} / доступно {{selectable}} / всего {{total}}',
+          selectAll: 'Выбрать все применимые',
+          clearSelection: 'Очистить выбор',
+          searchPlaceholder: 'Поиск Home provider, model или совпадения models.dev',
+          loadingPreview: 'Загрузка предпросмотра…',
+          emptyPreview: 'Нет моделей для предпросмотра.',
+          selectRow: 'Выбрать {{model}}',
+          columns: {
+            status: 'Статус',
+            sourceModel: 'Совпадение models.dev',
+            official: 'Official in/out',
+            multiplier: 'Множитель',
+            final: 'Final in/out',
+            existing: 'Существующее правило',
+          },
+          status: {
+            matched: 'Совпадение',
+            ambiguous: 'Неоднозначно',
+            unmatched: 'Нет совпадения',
+            zero_cost: 'Нулевая цена',
+          },
+          existingRule: 'Есть ({{source}})',
+          noExisting: 'Нет',
+          validation: {
+            selectRows: 'Выберите хотя бы одну строку предпросмотра.',
+          },
+          confirmApply: 'Подтвердить ({{count}})',
+          applied: 'Применено подтвержденных цен: {{count}}.',
         },
         validation: {
           providerRequired: 'Укажите провайдера модели.',

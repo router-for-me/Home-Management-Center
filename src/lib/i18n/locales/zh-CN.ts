@@ -598,6 +598,7 @@ export const zhCN = {
         empty: '还没有模型价格。',
         actions: {
           create: '新建价格',
+          import: '从 models.dev 导入',
           createSelected: '创建 {{count}} 条',
           selectModels: '选择模型',
           toggleState: '切换模型价格 {{model}} 的启用状态',
@@ -621,6 +622,7 @@ export const zhCN = {
         },
         sheet: {
           createTitle: '新建模型价格',
+          importTitle: '导入模型价格',
           editTitle: '编辑模型价格',
         },
         form: {
@@ -655,6 +657,56 @@ export const zhCN = {
         modelScopes: {
           available: '运行时可用',
           static: '静态目录',
+        },
+
+        import: {
+          manualConfirmHint:
+            '导入只会生成预览。在你勾选行并点击确认之前，不会写入任何价格。',
+          catalogTitle: 'models.dev 目录',
+          catalogPending: '目录尚未加载。',
+          catalogReady: '已加载 {{count}} 个模型（{{time}}）。',
+          catalogFailed: '加载 models.dev 目录失败。',
+          reloadCatalog: '重新加载目录',
+          policyTitle: '定价策略',
+          policyHint:
+            '倍率会把官方单价转换成 Home 绝对价格。Home 仍按 provider + model 精确匹配。',
+          defaultMultiplier: '默认倍率',
+          familyMultiplier: '{{family}} 倍率',
+          overwriteMode: '已有规则处理',
+          overwriteMissing: '只创建缺失规则',
+          overwriteSync: '创建缺失 + 更新 source=sync',
+          overwriteAll: '创建缺失 + 更新全部已有规则',
+          includeCache: '包含缓存价格',
+          includeZeroCost: '允许官方价为 0',
+          previewTitle: '预览并确认',
+          previewHint: '已选 {{selected}} / 可选 {{selectable}} / 总计 {{total}}',
+          selectAll: '全选可应用项',
+          clearSelection: '清空选择',
+          searchPlaceholder: '搜索 Home provider、model 或 models.dev 匹配',
+          loadingPreview: '正在加载预览…',
+          emptyPreview: '没有可预览的候选模型。',
+          selectRow: '选择 {{model}}',
+          columns: {
+            status: '状态',
+            sourceModel: 'models.dev 匹配',
+            official: '官方 in/out',
+            multiplier: '倍率',
+            final: '最终 in/out',
+            existing: '已有规则',
+          },
+          status: {
+            matched: '已匹配',
+            ambiguous: '有歧义',
+            unmatched: '未匹配',
+            zero_cost: '官方价为 0',
+          },
+          existingRule: '已存在（{{source}}）',
+          noExisting: '无',
+          validation: {
+            selectRows: '请至少选择一行预览结果再确认。',
+          },
+          confirmApply: '确认应用（{{count}}）',
+          applied: '已应用 {{count}} 条确认后的模型价格。',
         },
         validation: {
           providerRequired: '必须提供模型供应商。',

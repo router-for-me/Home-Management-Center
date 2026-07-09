@@ -614,6 +614,7 @@ export const en = {
         empty: 'No model prices yet.',
         actions: {
           create: 'New price',
+          import: 'Import from models.dev',
           createSelected: 'Create {{count}}',
           selectModels: 'Select models',
           toggleState: 'Toggle model price {{model}} enabled state',
@@ -637,6 +638,7 @@ export const en = {
         },
         sheet: {
           createTitle: 'New model price',
+          importTitle: 'Import model prices',
           editTitle: 'Edit model price',
         },
         form: {
@@ -675,6 +677,56 @@ export const en = {
         modelScopes: {
           available: 'Runtime available',
           static: 'Static catalog',
+        },
+
+        import: {
+          manualConfirmHint:
+            'This import only prepares a preview. Nothing is written until you select rows and click confirm.',
+          catalogTitle: 'models.dev catalog',
+          catalogPending: 'Catalog not loaded yet.',
+          catalogReady: 'Loaded {{count}} models at {{time}}.',
+          catalogFailed: 'Failed to load models.dev catalog.',
+          reloadCatalog: 'Reload catalog',
+          policyTitle: 'Pricing policy',
+          policyHint:
+            'Multipliers convert official unit prices into Home absolute prices. Home still matches by provider + model.',
+          defaultMultiplier: 'Default multiplier',
+          familyMultiplier: '{{family}} multiplier',
+          overwriteMode: 'Existing rule handling',
+          overwriteMissing: 'Create missing only',
+          overwriteSync: 'Create missing + update source=sync',
+          overwriteAll: 'Create missing + update all existing',
+          includeCache: 'Include cache prices',
+          includeZeroCost: 'Allow zero official prices',
+          previewTitle: 'Preview and confirm',
+          previewHint: 'Selected {{selected}} / selectable {{selectable}} / total {{total}}',
+          selectAll: 'Select all applicable',
+          clearSelection: 'Clear selection',
+          searchPlaceholder: 'Search Home provider, model, or models.dev match',
+          loadingPreview: 'Loading preview…',
+          emptyPreview: 'No candidate models to preview.',
+          selectRow: 'Select {{model}}',
+          columns: {
+            status: 'Status',
+            sourceModel: 'models.dev match',
+            official: 'Official in/out',
+            multiplier: 'Multiplier',
+            final: 'Final in/out',
+            existing: 'Existing rule',
+          },
+          status: {
+            matched: 'Matched',
+            ambiguous: 'Ambiguous',
+            unmatched: 'Unmatched',
+            zero_cost: 'Zero cost',
+          },
+          existingRule: 'Exists ({{source}})',
+          noExisting: 'None',
+          validation: {
+            selectRows: 'Select at least one preview row to confirm.',
+          },
+          confirmApply: 'Confirm apply ({{count}})',
+          applied: 'Applied {{count}} confirmed model prices.',
         },
         validation: {
           providerRequired: 'Provide a model provider.',
