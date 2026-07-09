@@ -145,6 +145,11 @@ export function formatDateTime(value: string | null, i18n: I18nInstance) {
   }).format(date)
 }
 
+function formatHomeEndpoint(homeIp: string | null, homePort?: number | null) {
+  if (!homeIp) return null
+  return homePort ? `${homeIp}:${homePort}` : homeIp
+}
+
 function formatShortDateTime(value: string, i18n: I18nInstance) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
@@ -315,7 +320,7 @@ function getUsageVerdict(
   return 'partial'
 }
 
-type ObservabilityCopyKey = 'usagePage' | 'callDiagnosticsPage' | 'logsPage'
+type ObservabilityCopyKey = 'usagePage' | 'requestEventsPage' | 'callDiagnosticsPage' | 'logsPage'
 
 // Shared verdict badge palette for the observability surfaces (usage, diagnostics, logs).
 // Color carries the at-a-glance status, so every verdict gets a distinct tone; unknown
@@ -3177,7 +3182,8 @@ export function RequestRecordsTable({
                           {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
                         </p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {record.runtime.homeIp ?? t('usageLogsPage.status.localHome')}
+                          {formatHomeEndpoint(record.runtime.homeIp, record.runtime.homePort) ??
+                            t('usageLogsPage.status.localHome')}
                         </p>
                       </TableCell>
                     ) : null}
@@ -3362,7 +3368,11 @@ export function RequestLogIndexTable({
   mutating: boolean
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
-  onDownloadRequestLog: (requestId: string, homeIp?: string | null) => void
+  onDownloadRequestLog: (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => void
 }) {
   const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
@@ -3379,9 +3389,15 @@ export function RequestLogIndexTable({
     if (!normalizedSearch) return indexItems
 
     return indexItems.filter((row) =>
-      [row.requestId, row.model, row.provider, row.homeIp, row.fileName, row.status, row.id].some(
-        (value) => value?.toLowerCase().includes(normalizedSearch),
-      ),
+      [
+        row.requestId,
+        row.model,
+        row.provider,
+        formatHomeEndpoint(row.homeIp, row.homePort),
+        row.fileName,
+        row.status,
+        row.id,
+      ].some((value) => value?.toLowerCase().includes(normalizedSearch)),
     )
   }, [indexItems, search])
 
@@ -3526,7 +3542,8 @@ export function RequestLogIndexTable({
                     </p>
                   </TableCell>
                   <TableCell className="text-muted-foreground truncate">
-                    {row.homeIp ?? t('usageLogsPage.status.localHome')}
+                    {formatHomeEndpoint(row.homeIp, row.homePort) ??
+                      t('usageLogsPage.status.localHome')}
                   </TableCell>
                   <TableCell className="min-w-0">
                     <p className="truncate font-mono text-xs">
@@ -3557,7 +3574,9 @@ export function RequestLogIndexTable({
                         variant="text"
                         size="sm"
                         disabled={!row.available || mutating}
-                        onClick={() => onDownloadRequestLog(row.requestId, row.homeIp)}
+                        onClick={() =>
+                          onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
+                        }
                       >
                         {downloading ? (
                           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -3777,7 +3796,11 @@ export function RequestDetailSheet({
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
   onOpenChange: (open: boolean) => void
-  onDownloadRequestLog?: (requestId: string, homeIp?: string | null) => void
+  onDownloadRequestLog?: (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => void
 }) {
   const { t, i18n } = useTranslation()
   const sheetContentRef = useRef<HTMLDivElement>(null)
@@ -3838,7 +3861,8 @@ export function RequestDetailSheet({
                   <StatusBadge record={record} />
                 </DetailField>
                 <DetailField label={t('usageLogsPage.detail.fields.homeIp')}>
-                  {record.runtime.homeIp ?? t('usageLogsPage.status.localHome')}
+                  {formatHomeEndpoint(record.runtime.homeIp, record.runtime.homePort) ??
+                    t('usageLogsPage.status.localHome')}
                 </DetailField>
                 <DetailField label={t('usageLogsPage.detail.fields.client')}>
                   {record.client?.username ?? t('usageLogsPage.status.notAvailable')}
@@ -3918,9 +3942,10 @@ export function RequestDetailSheet({
                         : t('usageLogsPage.status.notAvailable')}
                   </DetailField>
                   <DetailField label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}>
-                    {detail?.related?.requestLog?.homeIp ??
-                      record.runtime.homeIp ??
-                      t('usageLogsPage.status.localHome')}
+                    {formatHomeEndpoint(
+                      detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
+                      detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
+                    ) ?? t('usageLogsPage.status.localHome')}
                   </DetailField>
                   <DetailField label={t('usageLogsPage.detail.relatedFields.downloadUrl')}>
                     <span className="font-mono text-xs">
@@ -3981,7 +4006,12 @@ export function RequestDetailSheet({
               size="sm"
               disabled={!canDownloadRequestLog || mutating}
               onClick={() =>
-                record?.requestId && onDownloadRequestLog(record.requestId, record.runtime.homeIp)
+                record?.requestId &&
+                onDownloadRequestLog(
+                  record.requestId,
+                  detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
+                  detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
+                )
               }
             >
               {downloading ? (
@@ -5056,7 +5086,11 @@ export function RuntimeLogViewer({
   onClearFilters: () => void
   onPageSizeChange: (pageSize: number) => void
   onOffsetChange: (offset: number) => void
-  onDownloadRequestLog: (requestId: string, homeIp?: string | null) => void
+  onDownloadRequestLog: (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => void
 }) {
   const { t, i18n } = useTranslation()
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
@@ -5333,7 +5367,11 @@ function RuntimeLogDetailSheet({
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
   onOpenChange: (open: boolean) => void
-  onDownloadRequestLog: (requestId: string, homeIp?: string | null) => void
+  onDownloadRequestLog: (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => void
 }) {
   const { t, i18n } = useTranslation()
   const downloading =
@@ -5368,7 +5406,8 @@ function RuntimeLogDetailSheet({
                 {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
               </DetailField>
               <DetailField label={t('usageLogsPage.logs.columns.homeIp')}>
-                {record.homeIp ?? t('usageLogsPage.status.localHome')}
+                {formatHomeEndpoint(record.homeIp, record.homePort) ??
+                  t('usageLogsPage.status.localHome')}
               </DetailField>
               <DetailField label={t('usageLogsPage.logs.columns.clientIp')}>
                 {record.clientIp ?? t('usageLogsPage.status.notAvailable')}
@@ -5389,7 +5428,8 @@ function RuntimeLogDetailSheet({
             size="sm"
             disabled={!record?.requestLogAvailable || mutating}
             onClick={() =>
-              record?.requestId && onDownloadRequestLog(record.requestId, record.homeIp)
+              record?.requestId &&
+              onDownloadRequestLog(record.requestId, record.homeIp, record.homePort)
             }
           >
             {downloading ? (

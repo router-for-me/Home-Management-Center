@@ -129,9 +129,17 @@ export function useLogsWorkbench() {
   })
 
   const downloadRequestLogByIdMutation = useMutation({
-    mutationFn: async ({ requestId, homeIp }: { requestId: string; homeIp?: string | null }) => {
+    mutationFn: async ({
+      requestId,
+      homeIp,
+      homePort,
+    }: {
+      requestId: string
+      homeIp?: string | null
+      homePort?: number | null
+    }) => {
       try {
-        return await downloadRequestLogById(session, requestId, homeIp)
+        return await downloadRequestLogById(session, requestId, homeIp, homePort)
       } catch (error) {
         throw toLogsApiError(error)
       }
