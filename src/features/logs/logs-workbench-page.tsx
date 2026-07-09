@@ -191,9 +191,13 @@ export function LogsWorkbenchPage() {
     }
   }
 
-  const handleDownloadRequestLog = async (requestId: string, homeIp?: string | null) => {
+  const handleDownloadRequestLog = async (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => {
     try {
-      const result = await workbench.downloadRequestLogById({ requestId, homeIp })
+      const result = await workbench.downloadRequestLogById({ requestId, homeIp, homePort })
       downloadBlob(result.blob, result.fileName)
       toast.success(t('usageLogsPage.toast.logDownloaded'))
     } catch (error) {
@@ -233,8 +237,8 @@ export function LogsWorkbenchPage() {
         onClearFilters={workbench.clearRuntimeLogFilters}
         onPageSizeChange={workbench.setRuntimeLogLimit}
         onOffsetChange={workbench.setRuntimeLogOffset}
-        onDownloadRequestLog={(requestId, homeIp) =>
-          void handleDownloadRequestLog(requestId, homeIp)
+        onDownloadRequestLog={(requestId, homeIp, homePort) =>
+          void handleDownloadRequestLog(requestId, homeIp, homePort)
         }
       />
 

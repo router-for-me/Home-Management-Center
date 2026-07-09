@@ -16,6 +16,7 @@ export type UsageLogIssueScope =
   | 'usageProviderHealth'
   | 'usageCredentialHealth'
   | 'usageRealtime'
+  | 'requestEvents'
   | 'requestLogIndex'
   | 'logs'
   | 'requestErrorLogs'
@@ -184,6 +185,7 @@ export type RuntimeLogRecord = {
   clientIp: string | null
   requestId: string | null
   homeIp: string | null
+  homePort: number | null
   requestLogAvailable: boolean
   level: string | null
   line: string
@@ -237,6 +239,7 @@ export type RequestLogIndexItem = {
   requestId: string
   timestamp: string | null
   homeIp: string | null
+  homePort: number | null
   fileName: string | null
   sizeBytes: number | null
   available: boolean
@@ -305,6 +308,7 @@ export type UsageBilling = {
 
 export type UsageRuntime = {
   homeIp: string | null
+  homePort: number | null
   requestLogAvailable: boolean
   logHomeIpRequired: boolean
 }
@@ -360,6 +364,7 @@ export type UsagePayloadSummary = {
 export type UsageRecordRelatedRequestLog = {
   requestId: string | null
   homeIp: string | null
+  homePort: number | null
   downloadUrl: string | null
   available: boolean | null
   raw: Record<string, unknown>
@@ -850,7 +855,6 @@ async function readOptional<T>(
   }
 }
 
-
 function normalizeApiKeyUsage(responseData: unknown): ApiKeyUsageResource[] {
   const root = toRecord(responseData)
 
@@ -888,6 +892,7 @@ function normalizeRuntimeLogRecord(record: unknown, index: number): RuntimeLogRe
   const line = readString(recordValue, 'line') ?? ''
   const requestId = readString(recordValue, 'request_id') ?? readString(recordValue, 'request-id')
   const homeIp = readString(recordValue, 'home_ip') ?? readString(recordValue, 'home-ip')
+  const homePort = readNumberFromKeys(recordValue, ['home_port', 'homePort', 'home-port'])
 
   return {
     id: idValue !== null ? String(idValue) : `runtime-log-${index + 1}`,
@@ -895,6 +900,7 @@ function normalizeRuntimeLogRecord(record: unknown, index: number): RuntimeLogRe
     clientIp: readString(recordValue, 'client_ip') ?? readString(recordValue, 'client-ip'),
     requestId,
     homeIp,
+    homePort,
     requestLogAvailable: Boolean(requestId && homeIp),
     level: readString(recordValue, 'level'),
     line,
@@ -958,6 +964,7 @@ function normalizeRequestLogIndexItem(value: unknown, index: number): RequestLog
     timestamp:
       readString(record, 'timestamp') ?? readStringFromKeys(record, ['created_at', 'createdAt']),
     homeIp: readStringFromKeys(record, ['home_ip', 'homeIp']),
+    homePort: readNumberFromKeys(record, ['home_port', 'homePort']),
     fileName: readStringFromKeys(record, ['file_name', 'fileName', 'name']),
     sizeBytes: readNumberFromKeys(record, ['size_bytes', 'sizeBytes', 'size']),
     available: readBoolean(record, 'available') ?? true,
@@ -1130,6 +1137,7 @@ function normalizeUsageRuntime(value: unknown): UsageRuntime {
 
   return {
     homeIp: readStringFromKeys(record, ['home_ip', 'homeIp']),
+    homePort: readNumberFromKeys(record, ['home_port', 'homePort']),
     requestLogAvailable:
       readBooleanFromKeys(record, ['request_log_available', 'requestLogAvailable']) === true,
     logHomeIpRequired:
@@ -1225,6 +1233,7 @@ function normalizeUsageRecordRelated(value: unknown): UsageRecordRelated | null 
     ? {
         requestId: readStringFromKeys(rawRequestLog, ['request_id', 'requestId']),
         homeIp: readStringFromKeys(rawRequestLog, ['home_ip', 'homeIp']),
+        homePort: readNumberFromKeys(rawRequestLog, ['home_port', 'homePort']),
         downloadUrl: readStringFromKeys(rawRequestLog, ['download_url', 'downloadUrl']),
         available: readBoolean(rawRequestLog, 'available'),
         raw: rawRequestLog,
@@ -2288,14 +2297,26 @@ export async function downloadRequestLogById(
   session: ManagementSessionInput,
   requestId: string,
   homeIp?: string | null,
+  homePort?: number | null,
 ): Promise<LogDownloadResult> {
   const client = createManagementClient(session)
   const normalizedRequestId = requestId.trim()
   const normalizedHomeIp = homeIp?.trim()
+  const normalizedHomePort =
+    typeof homePort === 'number' && Number.isFinite(homePort) && homePort > 0
+      ? Math.trunc(homePort)
+      : null
+  const params =
+    normalizedHomeIp || normalizedHomePort
+      ? {
+          ...(normalizedHomeIp ? { home_ip: normalizedHomeIp } : {}),
+          ...(normalizedHomePort ? { home_port: normalizedHomePort } : {}),
+        }
+      : undefined
   const response = await client.get<Blob>(
     `/request-log-by-id/${encodeURIComponent(normalizedRequestId)}`,
     {
-      params: normalizedHomeIp ? { home_ip: normalizedHomeIp } : undefined,
+      params,
       responseType: 'blob',
     },
   )

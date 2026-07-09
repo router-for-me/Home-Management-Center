@@ -21,6 +21,8 @@ const capabilityRequests: Record<
     | 'usageProviderHealth'
     | 'usageCredentialHealth'
     | 'usageRealtime'
+    | 'requestEventDetails'
+    | 'requestEventExport'
     | 'requestLogIndex'
     | 'oauthUsage'
   >,
@@ -42,6 +44,12 @@ const capabilityRequests: Record<
   },
   usageRecords: {
     path: '/usage/records?limit=1',
+  },
+  requestEvents: {
+    path: '/request-events?limit=1',
+  },
+  requestEventFilters: {
+    path: '/request-events/filter-options?limit=1',
   },
   requestErrorLogs: {
     path: '/request-error-logs',
@@ -67,6 +75,10 @@ const emptyCapabilities: CapabilityMap = {
   usageProviderHealth: false,
   usageCredentialHealth: false,
   usageRealtime: false,
+  requestEvents: false,
+  requestEventDetails: false,
+  requestEventExport: false,
+  requestEventFilters: false,
   requestLogIndex: false,
   oauthUsage: false,
   logs: false,
@@ -196,6 +208,43 @@ function readDeclaredUsageRealtimeCapability(configData: unknown) {
     'usageRealtime',
     'usage_realtime_snapshot',
     'usageRealtimeSnapshot',
+  ])
+}
+
+function readDeclaredRequestEventsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_events',
+    'requestEvents',
+    'request-event-log',
+    'request_event_log',
+    'requestEventLog',
+  ])
+}
+
+function readDeclaredRequestEventDetailsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_event_details',
+    'requestEventDetails',
+    'request_events_details',
+    'requestEventsDetails',
+  ])
+}
+
+function readDeclaredRequestEventExportCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_event_export',
+    'requestEventExport',
+    'request_events_export',
+    'requestEventsExport',
+  ])
+}
+
+function readDeclaredRequestEventFiltersCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'request_event_filters',
+    'requestEventFilters',
+    'request_events_filters',
+    'requestEventsFilters',
   ])
 }
 
@@ -371,6 +420,18 @@ export async function probeManagementRuntime(
   const declaredUsageRealtime = capabilitiesPayload
     ? readDeclaredUsageRealtimeCapability(capabilitySource)
     : null
+  const declaredRequestEvents = capabilitiesPayload
+    ? readDeclaredRequestEventsCapability(capabilitySource)
+    : null
+  const declaredRequestEventDetails = capabilitiesPayload
+    ? readDeclaredRequestEventDetailsCapability(capabilitySource)
+    : null
+  const declaredRequestEventExport = capabilitiesPayload
+    ? readDeclaredRequestEventExportCapability(capabilitySource)
+    : null
+  const declaredRequestEventFilters = capabilitiesPayload
+    ? readDeclaredRequestEventFiltersCapability(capabilitySource)
+    : null
   const declaredRequestLogIndex = capabilitiesPayload
     ? readDeclaredRequestLogIndexCapability(capabilitySource)
     : null
@@ -390,6 +451,8 @@ export async function probeManagementRuntime(
     ? [
         ...(declaredTopology === null ? (['topology'] as const) : []),
         ...(declaredTopology !== true && declaredNodes === null ? (['nodes'] as const) : []),
+        ...(declaredRequestEvents === null ? (['requestEvents'] as const) : []),
+        ...(declaredRequestEventFilters === null ? (['requestEventFilters'] as const) : []),
         'users',
         'accessGroups',
       ]
@@ -426,6 +489,11 @@ export async function probeManagementRuntime(
     usageProviderHealth: declaredUsageProviderHealth ?? false,
     usageCredentialHealth: declaredUsageCredentialHealth ?? false,
     usageRealtime: declaredUsageRealtime ?? false,
+    requestEvents: declaredRequestEvents ?? probedCapabilities.requestEvents,
+    requestEventDetails:
+      declaredRequestEventDetails ?? declaredRequestEvents ?? probedCapabilities.requestEvents,
+    requestEventExport: declaredRequestEventExport ?? false,
+    requestEventFilters: declaredRequestEventFilters ?? probedCapabilities.requestEventFilters,
     requestLogIndex: declaredRequestLogIndex ?? false,
     oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
     users: declaredUsers ?? probedCapabilities.users,

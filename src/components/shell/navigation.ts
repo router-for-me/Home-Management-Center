@@ -4,6 +4,7 @@ import {
   FileText,
   Gauge,
   KeyRound,
+  ListChecks,
   type LucideIcon,
   Network,
   Plug,
@@ -26,6 +27,7 @@ type NavigationRoute =
   | '/admin/config'
   | '/admin/plugins'
   | '/admin/usage'
+  | '/admin/request-events'
   | '/admin/diagnostics'
   | '/admin/logs'
   | '/admin/system-nodes'
@@ -95,6 +97,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.usage',
         metaKey: 'navigationMeta.usage',
         icon: BarChart3,
+      },
+      {
+        to: '/admin/request-events',
+        labelKey: 'navigation.requestEvents',
+        metaKey: 'navigationMeta.requestEvents',
+        icon: ListChecks,
       },
       {
         to: '/admin/diagnostics',

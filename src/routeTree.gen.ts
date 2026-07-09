@@ -16,6 +16,7 @@ import { Route as UserLoginRouteImport } from './routes/user.login'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminSystemNodesRouteImport } from './routes/admin.system-nodes'
+import { Route as AdminRequestEventsRouteImport } from './routes/admin.request-events'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminPluginsRouteImport } from './routes/admin.plugins'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
@@ -60,6 +61,11 @@ const AdminUsageRoute = AdminUsageRouteImport.update({
 const AdminSystemNodesRoute = AdminSystemNodesRouteImport.update({
   id: '/admin/system-nodes',
   path: '/admin/system-nodes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRequestEventsRoute = AdminRequestEventsRouteImport.update({
+  id: '/admin/request-events',
+  path: '/admin/request-events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminProvidersRoute = AdminProvidersRouteImport.update({
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
+  '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
+  '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/admin/logs': typeof AdminLogsRoute
   '/admin/plugins': typeof AdminPluginsRoute
   '/admin/providers': typeof AdminProvidersRoute
+  '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/admin/logs'
     | '/admin/plugins'
     | '/admin/providers'
+    | '/admin/request-events'
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin/logs'
     | '/admin/plugins'
     | '/admin/providers'
+    | '/admin/request-events'
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/admin/logs'
     | '/admin/plugins'
     | '/admin/providers'
+    | '/admin/request-events'
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
@@ -243,6 +255,7 @@ export interface RootRouteChildren {
   AdminLogsRoute: typeof AdminLogsRoute
   AdminPluginsRoute: typeof AdminPluginsRoute
   AdminProvidersRoute: typeof AdminProvidersRoute
+  AdminRequestEventsRoute: typeof AdminRequestEventsRoute
   AdminSystemNodesRoute: typeof AdminSystemNodesRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/system-nodes'
       fullPath: '/admin/system-nodes'
       preLoaderRoute: typeof AdminSystemNodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/request-events': {
+      id: '/admin/request-events'
+      path: '/admin/request-events'
+      fullPath: '/admin/request-events'
+      preLoaderRoute: typeof AdminRequestEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/providers': {
@@ -387,6 +407,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLogsRoute: AdminLogsRoute,
   AdminPluginsRoute: AdminPluginsRoute,
   AdminProvidersRoute: AdminProvidersRoute,
+  AdminRequestEventsRoute: AdminRequestEventsRoute,
   AdminSystemNodesRoute: AdminSystemNodesRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,

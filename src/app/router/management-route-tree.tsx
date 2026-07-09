@@ -11,6 +11,7 @@ import { DashboardConsolePage } from '@/features/dashboard/dashboard-console-pag
 import { LogsWorkbenchPage } from '@/features/logs/logs-workbench-page'
 import { PluginsWorkbenchPage } from '@/features/plugins/plugins-workbench-page'
 import { ProvidersWorkbenchPage } from '@/features/providers/providers-workbench-page'
+import { RequestEventsPage } from '@/features/request-events/request-events-page'
 import { SystemNodesWorkbenchPage } from '@/features/system-nodes/system-nodes-workbench-page'
 import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
 import { UsersWorkbenchPage } from '@/features/users/users-workbench-page'
@@ -93,6 +94,12 @@ const usageRoute = createRoute({
   component: UsageObservabilityPage,
 })
 
+const requestEventsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/request-events',
+  component: RequestEventsPage,
+})
+
 const diagnosticsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/diagnostics',
@@ -123,6 +130,7 @@ export const managementRouteTree = rootRoute.addChildren([
   configRoute,
   pluginsRoute,
   usageRoute,
+  requestEventsRoute,
   diagnosticsRoute,
   logsRoute,
   systemNodesRoute,
