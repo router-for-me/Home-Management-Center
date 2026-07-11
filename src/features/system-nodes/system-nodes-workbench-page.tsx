@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { type FormEvent, type ReactNode, useState } from 'react'
 
 import {
   AlertTriangle,
@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -35,7 +36,6 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type SystemNodesOperationalLevel,
   type SystemNodesOperationalStatus,
@@ -345,65 +345,6 @@ function NodeDetail({
   )
 }
 
-function TruncatedTooltipText({
-  value,
-  className,
-  tooltipClassName,
-}: {
-  value: string
-  className?: string
-  tooltipClassName?: string
-}) {
-  const textRef = useRef<HTMLParagraphElement | null>(null)
-  const [isOverflowing, setIsOverflowing] = useState(false)
-
-  const measureOverflow = useCallback(() => {
-    const element = textRef.current
-    if (!element) return
-
-    setIsOverflowing(element.scrollWidth > element.clientWidth)
-  }, [])
-
-  useEffect(() => {
-    measureOverflow()
-
-    const element = textRef.current
-    if (!element || typeof ResizeObserver === 'undefined') return
-
-    const resizeObserver = new ResizeObserver(measureOverflow)
-    resizeObserver.observe(element)
-
-    return () => resizeObserver.disconnect()
-  }, [measureOverflow, value])
-
-  const textNode = (
-    <p
-      ref={textRef}
-      tabIndex={isOverflowing ? 0 : undefined}
-      className={cn(
-        'truncate rounded-sm outline-none',
-        isOverflowing && 'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
-        className,
-      )}
-    >
-      {value}
-    </p>
-  )
-
-  if (!isOverflowing) {
-    return textNode
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{textNode}</TooltipTrigger>
-      <TooltipContent side="top" className={cn('max-w-96 text-left break-all', tooltipClassName)}>
-        {value}
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 function SystemNodesDisconnectedState() {
   const { t } = useTranslation()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
@@ -507,7 +448,7 @@ function SummaryCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-muted-foreground text-xs font-medium">{label}</p>
-          <TruncatedTooltipText value={value} className="mt-1.5 text-lg font-semibold" />
+          <OverflowTooltipText value={value} className="mt-1.5 text-lg font-semibold" />
         </div>
         <div
           className={cn(

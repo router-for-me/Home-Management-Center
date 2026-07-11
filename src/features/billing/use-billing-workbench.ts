@@ -8,14 +8,22 @@ import {
   deleteModelPrice,
   fetchBalanceRecords,
   fetchBillingOverview,
+  fetchBillingSettings,
+  fetchBillingTierDiagnostics,
   fetchChargeRecords,
   fetchModelPrices,
   toBillingApiError,
+  updateBillingSettings,
   updateModelPrice,
 } from '@/lib/api/management/billing'
+import {
+  applyModelPriceImport,
+  previewModelPriceImport,
+} from '@/lib/api/management/billing-model-price-import'
 import type {
   BillingFilters,
   BillingPagination,
+  BillingServiceTierSource,
   ModelPrice,
   ModelPriceInput,
 } from '@/lib/api/management/billing-types'
@@ -26,6 +34,11 @@ import {
   toModelsApiError,
 } from '@/lib/api/management/models'
 import { fetchUsersSnapshot, toUserApiError } from '@/lib/api/management/users'
+import type {
+  ModelPriceImportApplyInput,
+  ModelPriceImportPreviewInput,
+  ModelPriceImportProgress,
+} from '@/lib/billing/model-price-import-types'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
@@ -170,14 +183,7 @@ export function useBillingWorkbench(
   const overviewQueryKey = ['billing', 'overview', ...queryScope]
   const chargesQueryKey = ['billing', 'charges', ...queryScope, chargePagination]
   const balanceRecordsQueryKey = ['billing', 'balanceRecords', ...queryScope, balancePagination]
-  const modelPricesQueryKey = [
-    'billing',
-    'modelPrices',
-    session.baseUrl,
-    connectedAt,
-    filters.provider,
-    filters.model,
-  ]
+  const modelPricesQueryKey = ['billing', 'modelPrices', session.baseUrl, connectedAt]
   const modelPriceCandidatesQueryKey = [
     'billing',
     'modelPriceCandidates',
@@ -231,7 +237,33 @@ export function useBillingWorkbench(
     retry: false,
     queryFn: async () => {
       try {
-        return await fetchModelPrices(session, filters)
+        return await fetchModelPrices(session, { provider: '', model: '' })
+      } catch (error) {
+        throw toBillingApiError(error)
+      }
+    },
+  })
+
+  const billingSettingsQuery = useQuery({
+    queryKey: ['billing', 'settings', session.baseUrl, connectedAt],
+    enabled: ready && activeTab === 'modelPrices',
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await fetchBillingSettings(session)
+      } catch (error) {
+        throw toBillingApiError(error)
+      }
+    },
+  })
+
+  const billingTierDiagnosticsQuery = useQuery({
+    queryKey: ['billing', 'settingsDiagnostics', session.baseUrl, connectedAt],
+    enabled: ready && activeTab === 'modelPrices',
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await fetchBillingTierDiagnostics(session)
       } catch (error) {
         throw toBillingApiError(error)
       }
@@ -291,6 +323,33 @@ export function useBillingWorkbench(
     onError: toError,
   })
 
+  const updateBillingSettingsMutation = useMutation({
+    mutationFn: (source: BillingServiceTierSource) => updateBillingSettings(session, source),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(['billing', 'settings', session.baseUrl, connectedAt], settings)
+    },
+    onError: toError,
+  })
+
+  const previewModelPriceImportMutation = useMutation({
+    mutationFn: (input: ModelPriceImportPreviewInput) => previewModelPriceImport(session, input),
+    onError: toError,
+  })
+
+  const applyModelPriceImportMutation = useMutation({
+    mutationFn: ({
+      input,
+      onProgress,
+    }: {
+      input: ModelPriceImportApplyInput
+      onProgress?: (progress: ModelPriceImportProgress) => void
+    }) => applyModelPriceImport(session, input, onProgress),
+    onSuccess: () => {
+      void invalidateModelPrices()
+    },
+    onError: toError,
+  })
+
   const createPricesMutation = useMutation({
     mutationFn: async (inputs: ModelPriceInput[]) => {
       for (const input of inputs) {
@@ -325,6 +384,7 @@ export function useBillingWorkbench(
     checking,
     ready,
     runtimeMode,
+    modelPriceImportPreferenceScope: session.baseUrl,
     overview: overviewQuery.data?.overview ?? null,
     overviewFetchedAt: overviewQuery.data?.fetchedAt ?? null,
     overviewLoading: overviewQuery.isLoading,
@@ -343,9 +403,22 @@ export function useBillingWorkbench(
       ? toError(balanceRecordsQuery.error).message
       : null,
     modelPrices: modelPricesQuery.data?.items ?? [],
+    modelPriceSchemaVersion: modelPricesQuery.data?.schemaVersion ?? null,
     modelPricesLoading: modelPricesQuery.isLoading,
     modelPricesFetching: modelPricesQuery.isFetching,
     modelPricesError: modelPricesQuery.error ? toError(modelPricesQuery.error).message : null,
+    billingSettings: billingSettingsQuery.data ?? null,
+    billingSettingsLoading: billingSettingsQuery.isLoading,
+    billingSettingsFetching: billingSettingsQuery.isFetching,
+    billingSettingsError: billingSettingsQuery.error
+      ? toError(billingSettingsQuery.error).message
+      : null,
+    billingTierDiagnostics: billingTierDiagnosticsQuery.data ?? null,
+    billingTierDiagnosticsFetching: billingTierDiagnosticsQuery.isFetching,
+    billingTierDiagnosticsError: billingTierDiagnosticsQuery.error
+      ? toError(billingTierDiagnosticsQuery.error).message
+      : null,
+    modelPriceImportServerEnabled: (modelPricesQuery.data?.schemaVersion ?? 0) >= 2,
     modelPriceCandidates: modelPriceCandidatesQuery.data?.candidates ?? [],
     modelPriceCandidatesLoading: modelPriceCandidatesQuery.isLoading,
     modelPriceCandidatesFetching: modelPriceCandidatesQuery.isFetching,
@@ -360,14 +433,25 @@ export function useBillingWorkbench(
     refreshCharges: chargesQuery.refetch,
     refreshBalanceRecords: balanceRecordsQuery.refetch,
     refreshModelPrices: modelPricesQuery.refetch,
+    refreshBillingSettings: billingSettingsQuery.refetch,
+    refreshBillingTierDiagnostics: billingTierDiagnosticsQuery.refetch,
     refreshModelPriceCandidates: modelPriceCandidatesQuery.refetch,
     createModelPrice: createPriceMutation.mutateAsync,
     createModelPrices: createPricesMutation.mutateAsync,
+    updateBillingSettings: updateBillingSettingsMutation.mutateAsync,
+    previewModelPriceImport: previewModelPriceImportMutation.mutateAsync,
+    applyModelPriceImport: (
+      input: ModelPriceImportApplyInput,
+      onProgress?: (progress: ModelPriceImportProgress) => void,
+    ) => applyModelPriceImportMutation.mutateAsync({ input, onProgress }),
     updateModelPrice: updatePriceMutation.mutateAsync,
     deleteModelPrice: deletePriceMutation.mutateAsync,
     mutating:
       createPriceMutation.isPending ||
       createPricesMutation.isPending ||
+      updateBillingSettingsMutation.isPending ||
+      previewModelPriceImportMutation.isPending ||
+      applyModelPriceImportMutation.isPending ||
       updatePriceMutation.isPending ||
       deletePriceMutation.isPending,
   }

@@ -1,3 +1,5 @@
+import axios from 'axios'
+
 import type {
   BalanceOperationInput,
   BalanceRecord,
@@ -7,15 +9,18 @@ import type {
   BillingPage,
   BillingPagination,
   BillingRankItem,
+  BillingServiceTierSource,
+  BillingSettings,
+  BillingTierDiagnostics,
   BillingTrendPoint,
   ChargeRecord,
   ModelPrice,
   ModelPriceInput,
   ModelPriceSnapshot,
   ModelPriceSource,
-} from '@/lib/api/management/billing-types'
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type { ManagementSessionInput } from '@/lib/api/management/types'
+} from './billing-types'
+import { createManagementClient, toManagementApiError } from './client'
+import type { ManagementSessionInput } from './types'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -148,21 +153,69 @@ function normalizeOverview(value: unknown, filters: BillingFilters): BillingOver
   }
 }
 
-function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
+export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
   const record = toRecord(value)
+  const source = readString(record, ['service_tier_source', 'serviceTierSource'])
+  const tokenBucketsRecord = toRecord(record.token_buckets ?? record.tokenBuckets)
+  const cacheWritePricePerMillion =
+    readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0
 
   return {
+    schemaVersion: readNumber(record, ['schema_version', 'schemaVersion']),
     provider: readString(record, ['provider']) ?? '',
     model: readString(record, ['model', 'model_id', 'modelId']) ?? '',
+    serviceTier: readString(record, ['service_tier', 'serviceTier']) ?? '',
+    minInputTokens: readNumber(record, ['min_input_tokens', 'minInputTokens']) ?? 0,
     inputPricePerMillion:
       readNumber(record, ['input_price_per_million', 'inputPricePerMillion']) ?? 0,
     outputPricePerMillion:
       readNumber(record, ['output_price_per_million', 'outputPricePerMillion']) ?? 0,
     cacheReadPricePerMillion:
       readNumber(record, ['cache_read_price_per_million', 'cacheReadPricePerMillion']) ?? 0,
-    cacheWritePricePerMillion:
-      readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0,
+    cacheWritePricePerMillion,
+    cacheWritePriceConfigured: readBoolean(
+      record,
+      ['cache_write_price_configured', 'cacheWritePriceConfigured'],
+      cacheWritePricePerMillion !== 0,
+    ),
     requestPrice: readNumber(record, ['request_price', 'requestPrice']) ?? 0,
+    requestedServiceTier: readString(record, ['requested_service_tier', 'requestedServiceTier']),
+    responseServiceTier: readString(record, ['response_service_tier', 'responseServiceTier']),
+    serviceTierSource: source === 'request' || source === 'response' ? source : null,
+    effectiveServiceTier: readString(record, ['effective_service_tier', 'effectiveServiceTier']),
+    responseServiceTierFallback:
+      typeof record.response_service_tier_fallback === 'boolean'
+        ? record.response_service_tier_fallback
+        : typeof record.responseServiceTierFallback === 'boolean'
+          ? record.responseServiceTierFallback
+          : null,
+    inputTokensForBand: readNumber(record, ['input_tokens_for_band', 'inputTokensForBand']) ?? 0,
+    uncachedInputTokens:
+      readNumber(record, ['uncached_input_tokens', 'uncachedInputTokens']) ??
+      readNumber(tokenBucketsRecord, ['uncached_input', 'uncachedInput']) ??
+      0,
+    cacheReadTokens:
+      readNumber(record, ['cache_read_tokens', 'cacheReadTokens']) ??
+      readNumber(tokenBucketsRecord, ['cache_read', 'cacheRead']) ??
+      0,
+    cacheWriteTokens:
+      readNumber(record, ['cache_write_tokens', 'cacheWriteTokens']) ??
+      readNumber(tokenBucketsRecord, ['cache_write', 'cacheWrite']) ??
+      0,
+    outputTokens:
+      readNumber(record, ['output_tokens', 'outputTokens']) ??
+      readNumber(tokenBucketsRecord, ['output']) ??
+      0,
+    tokenBuckets:
+      Object.keys(tokenBucketsRecord).length > 0
+        ? {
+            uncachedInput: readNumber(tokenBucketsRecord, ['uncached_input', 'uncachedInput']) ?? 0,
+            cacheRead: readNumber(tokenBucketsRecord, ['cache_read', 'cacheRead']) ?? 0,
+            cacheWrite: readNumber(tokenBucketsRecord, ['cache_write', 'cacheWrite']) ?? 0,
+            output: readNumber(tokenBucketsRecord, ['output']) ?? 0,
+          }
+        : null,
+    cacheWriteSource: readString(record, ['cache_write_source', 'cacheWriteSource']),
     raw: value,
   }
 }
@@ -233,16 +286,23 @@ function normalizeModelPriceSource(value: string | null): ModelPriceSource {
   return 'manual'
 }
 
-function normalizeModelPrice(value: unknown, index: number): ModelPrice {
+export function normalizeModelPrice(value: unknown, index: number): ModelPrice {
   const record = toRecord(value)
   const provider = readString(record, ['provider']) ?? ''
   const model = readString(record, ['model', 'model_id', 'modelId']) ?? ''
-  const naturalId = provider || model ? `${provider}:${model}` : `price-${index + 1}`
+  const serviceTier = readString(record, ['service_tier', 'serviceTier']) ?? '*'
+  const minInputTokens = readNumber(record, ['min_input_tokens', 'minInputTokens']) ?? 0
+  const naturalId =
+    provider || model
+      ? `${provider}:${model}:${serviceTier}:${minInputTokens}`
+      : `price-${index + 1}`
 
   return {
     id: readString(record, ['id']) ?? naturalId,
     provider,
     model,
+    serviceTier,
+    minInputTokens,
     inputPricePerMillion:
       readNumber(record, ['input_price_per_million', 'inputPricePerMillion']) ?? 0,
     outputPricePerMillion:
@@ -251,6 +311,12 @@ function normalizeModelPrice(value: unknown, index: number): ModelPrice {
       readNumber(record, ['cache_read_price_per_million', 'cacheReadPricePerMillion']) ?? 0,
     cacheWritePricePerMillion:
       readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0,
+    cacheWritePriceConfigured: readBoolean(
+      record,
+      ['cache_write_price_configured', 'cacheWritePriceConfigured'],
+      (readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0) !==
+        0,
+    ),
     requestPrice: readNumber(record, ['request_price', 'requestPrice']) ?? 0,
     source: normalizeModelPriceSource(readString(record, ['source'])),
     enabled: readBoolean(record, ['enabled'], true),
@@ -285,14 +351,19 @@ function toBalanceOperationPayload(input: BalanceOperationInput) {
   }
 }
 
-function toModelPricePayload(input: ModelPriceInput) {
+export function toModelPricePayload(input: ModelPriceInput) {
   return {
     provider: input.provider.trim(),
     model: input.model.trim(),
+    ...(input.serviceTier === undefined ? {} : { service_tier: input.serviceTier.trim() || '*' }),
+    ...(input.minInputTokens === undefined ? {} : { min_input_tokens: input.minInputTokens }),
     input_price_per_million: input.inputPricePerMillion,
     output_price_per_million: input.outputPricePerMillion,
     cache_read_price_per_million: input.cacheReadPricePerMillion,
     cache_write_price_per_million: input.cacheWritePricePerMillion,
+    ...(input.cacheWritePriceConfigured === undefined
+      ? {}
+      : { cache_write_price_configured: input.cacheWritePriceConfigured }),
     request_price: input.requestPrice,
     enabled: input.enabled,
     note: input.note?.trim() || undefined,
@@ -369,17 +440,99 @@ export async function fetchModelPrices(
     },
   })
 
+  return normalizeModelPriceListResponse(response.data)
+}
+
+export function normalizeModelPriceListResponse(value: unknown) {
+  const record = toRecord(value)
   return {
     fetchedAt: new Date().toISOString(),
-    items: readArrayRecords(response.data, ['items', 'records', 'data', 'prices']).map(
-      normalizeModelPrice,
-    ),
+    schemaVersion: readNumber(record, [
+      'price_rule_schema_version',
+      'priceRuleSchemaVersion',
+      'schema_version',
+    ]),
+    items: readArrayRecords(value, ['items', 'records', 'data', 'prices']).map(normalizeModelPrice),
+  }
+}
+
+export async function fetchBillingSettings(
+  session: ManagementSessionInput,
+): Promise<BillingSettings> {
+  const client = createManagementClient(session)
+  try {
+    const response = await client.get<unknown>('/billing/settings')
+    const record = toRecord(response.data)
+    const source = readString(record, ['service_tier_source', 'serviceTierSource'])
+    return {
+      serviceTierSource: source === 'response' ? 'response' : 'request',
+      supported: true,
+      raw: response.data,
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error) && [404, 405].includes(error.response?.status ?? 0)) {
+      return { serviceTierSource: 'request', supported: false, raw: error.response?.data ?? null }
+    }
+    throw error
+  }
+}
+
+export async function updateBillingSettings(
+  session: ManagementSessionInput,
+  source: BillingServiceTierSource,
+): Promise<BillingSettings> {
+  const client = createManagementClient(session)
+  const response = await client.patch<unknown>('/billing/settings', {
+    service_tier_source: source,
+  })
+  const record = toRecord(response.data)
+  const returned = readString(record, ['service_tier_source', 'serviceTierSource'])
+  return {
+    serviceTierSource: returned === 'response' ? 'response' : 'request',
+    supported: true,
+    raw: response.data,
+  }
+}
+
+export async function fetchBillingTierDiagnostics(
+  session: ManagementSessionInput,
+): Promise<BillingTierDiagnostics> {
+  const client = createManagementClient(session)
+  try {
+    const response = await client.get<unknown>('/billing/settings/diagnostics')
+    const record = toRecord(response.data)
+    return {
+      supported: readBoolean(record, ['supported'], true),
+      windowStart: readString(record, ['window_start', 'windowStart']),
+      windowEnd: readString(record, ['window_end', 'windowEnd']),
+      eligibleRequests: readNumber(record, ['eligible_requests', 'eligibleRequests']) ?? 0,
+      responseTierRequests:
+        readNumber(record, ['response_tier_requests', 'responseTierRequests']) ?? 0,
+      fallbackRequests: readNumber(record, ['fallback_requests', 'fallbackRequests']) ?? 0,
+      lastResponseTierAt: readString(record, ['last_response_tier_at', 'lastResponseTierAt']),
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error) && [404, 405].includes(error.response?.status ?? 0)) {
+      return {
+        supported: false,
+        windowStart: null,
+        windowEnd: null,
+        eligibleRequests: 0,
+        responseTierRequests: 0,
+        fallbackRequests: 0,
+        lastResponseTierAt: null,
+      }
+    }
+    throw error
   }
 }
 
 export async function createModelPrice(session: ManagementSessionInput, input: ModelPriceInput) {
   const client = createManagementClient(session)
-  await client.post('/billing/model-prices', toModelPricePayload(input))
+  const response = await client.post<unknown>('/billing/model-prices', toModelPricePayload(input))
+  const root = toRecord(response.data)
+  const resource = isRecord(root.model_price) ? root.model_price : root
+  return readString(resource, ['id'])
 }
 
 export async function updateModelPrice(
@@ -388,10 +541,13 @@ export async function updateModelPrice(
   input: ModelPriceInput,
 ) {
   const client = createManagementClient(session)
-  await client.patch(
+  const response = await client.patch<unknown>(
     `/billing/model-prices/${encodeURIComponent(resource.id)}`,
     toModelPricePayload(input),
   )
+  const root = toRecord(response.data)
+  const updated = isRecord(root.model_price) ? root.model_price : root
+  return readString(updated, ['id']) ?? resource.id
 }
 
 export async function deleteModelPrice(session: ManagementSessionInput, resource: ModelPrice) {

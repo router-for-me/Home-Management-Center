@@ -1,3 +1,13 @@
+import type {
+  ModelPriceImportAction,
+  ModelPriceImportAliasRule,
+  ModelPriceImportExistingRule,
+  ModelPriceImportMatchOverride,
+  ModelPriceImportMatchStatus,
+  ModelPriceImportMultiplierRule,
+  ModelPriceImportOverwriteMode,
+  ModelPriceImportPolicy,
+} from './model-price-import-types'
 import {
   type ModelsDevCatalog,
   type ModelsDevCost,
@@ -6,44 +16,18 @@ import {
   modelsDevProviderModelKey,
 } from './models-dev-catalog'
 
+export type {
+  ModelPriceImportAction,
+  ModelPriceImportExistingRule,
+  ModelPriceImportMatchStatus,
+  ModelPriceImportOverwriteMode,
+  ModelPriceImportPolicy,
+} from './model-price-import-types'
+
 export type ModelPriceImportCandidate = {
   provider: string
   model: string
   label?: string
-}
-
-export type ModelPriceImportMatchStatus =
-  | 'matched'
-  | 'ambiguous'
-  | 'unmatched'
-  | 'zero_cost'
-
-export type ModelPriceImportMultiplierRule = {
-  id: string
-  label: string
-  /** Case-insensitive prefix match against Home model id. */
-  modelPrefix: string
-  multiplier: number
-}
-
-export type ModelPriceImportPolicy = {
-  defaultMultiplier: number
-  rules: ModelPriceImportMultiplierRule[]
-  includeCachePrices: boolean
-  includeZeroCost: boolean
-}
-
-export type ModelPriceImportExistingRule = {
-  id: string
-  provider: string
-  model: string
-  source: string
-  enabled: boolean
-  inputPricePerMillion: number
-  outputPricePerMillion: number
-  cacheReadPricePerMillion: number
-  cacheWritePricePerMillion: number
-  requestPrice: number
 }
 
 export type ModelPriceImportRow = {
@@ -63,6 +47,7 @@ export type ModelPriceImportRow = {
 }
 
 const FIRST_PARTY_LABS = ['anthropic', 'google', 'xai', 'openai'] as const
+const MARKETPLACE_PROVIDERS = new Set(['openrouter', 'requesty'])
 
 /** Home runtime model aliases -> preferred models.dev bare model ids. */
 export const DEFAULT_MODEL_ALIASES: Record<string, string[]> = {
@@ -84,22 +69,31 @@ export function createDefaultImportPolicy(): ModelPriceImportPolicy {
       {
         id: 'claude',
         label: 'Claude',
-        modelPrefix: 'claude',
+        matchMode: 'prefix',
+        pattern: 'claude',
         multiplier: 1,
       },
       {
         id: 'gemini',
         label: 'Gemini',
-        modelPrefix: 'gemini',
+        matchMode: 'prefix',
+        pattern: 'gemini',
         multiplier: 1,
       },
       {
         id: 'grok',
         label: 'Grok',
-        modelPrefix: 'grok',
+        matchMode: 'prefix',
+        pattern: 'grok',
         multiplier: 1,
       },
     ],
+    aliases: Object.entries(DEFAULT_MODEL_ALIASES).map(([targetModel, sourceModels]) => ({
+      id: targetModel,
+      targetModel,
+      sourceModels,
+    })),
+    rowMultipliers: {},
     includeCachePrices: true,
     includeZeroCost: false,
   }
@@ -113,21 +107,35 @@ export function normalizeModelToken(value: string) {
     .replace(/[^a-z0-9]+/g, '')
 }
 
-function preferredLabsForHomeModel(homeModel: string): string[] {
+function preferredLabsForHomeModel(homeProvider: string, homeModel: string): string[] {
+  const provider = homeProvider.trim().toLowerCase()
   const model = homeModel.trim().toLowerCase()
-  if (model.startsWith('claude')) return ['anthropic', ...FIRST_PARTY_LABS]
-  if (model.startsWith('gemini') || model.startsWith('gemma')) return ['google', ...FIRST_PARTY_LABS]
-  if (model.startsWith('grok')) return ['xai', ...FIRST_PARTY_LABS]
-  if (model.startsWith('gpt') || model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4')) {
-    return ['openai', ...FIRST_PARTY_LABS]
+  const preferred = provider ? [provider] : []
+  if (model.startsWith('claude')) preferred.unshift('anthropic')
+  if (model.startsWith('gemini') || model.startsWith('gemma')) preferred.unshift('google')
+  if (model.startsWith('grok')) preferred.unshift('xai')
+  if (
+    model.startsWith('gpt') ||
+    model.startsWith('o1') ||
+    model.startsWith('o3') ||
+    model.startsWith('o4')
+  ) {
+    preferred.unshift('openai')
   }
-  if (model.startsWith('codex')) return ['openai', ...FIRST_PARTY_LABS]
-  return [...FIRST_PARTY_LABS]
+  if (model.startsWith('codex')) preferred.unshift('openai')
+  return [...new Set([...preferred, ...FIRST_PARTY_LABS])]
 }
 
-function aliasCandidates(homeModel: string): string[] {
+function aliasCandidates(homeModel: string, aliases: ModelPriceImportAliasRule[]): string[] {
   const bare = modelsDevBareModelId(homeModel)
-  const listed = DEFAULT_MODEL_ALIASES[bare] ?? DEFAULT_MODEL_ALIASES[homeModel] ?? []
+  const configured = aliases.find(
+    (rule) => rule.targetModel.trim().toLowerCase() === bare.toLowerCase(),
+  )
+  const listed =
+    configured?.sourceModels ??
+    DEFAULT_MODEL_ALIASES[bare] ??
+    DEFAULT_MODEL_ALIASES[homeModel] ??
+    []
   const values = [bare, homeModel, ...listed]
   // mild suffix peeling
   for (const suffix of ['-thinking', '-preview', '-latest']) {
@@ -159,20 +167,29 @@ function lookupExact(
   )
 }
 
-function collectMatches(catalog: ModelsDevCatalog, homeModel: string): ModelsDevModelEntry[] {
-  const preferredLabs = preferredLabsForHomeModel(homeModel)
-  const aliases = aliasCandidates(homeModel)
+function collectMatches(
+  catalog: ModelsDevCatalog,
+  homeProvider: string,
+  homeModel: string,
+  aliases: ModelPriceImportAliasRule[],
+): ModelsDevModelEntry[] {
+  const preferredLabs = preferredLabsForHomeModel(homeProvider, homeModel)
+  const candidates = aliasCandidates(homeModel, aliases)
   const found = new Map<string, ModelsDevModelEntry>()
   const aliasRank = new Map<string, number>()
 
   // Prefer the first alias that resolves under preferred labs. Stop there so
   // agent aliases like gemini-3-flash-agent map deterministically to one official model.
-  for (const [aliasIndex, alias] of aliases.entries()) {
+  for (const [aliasIndex, alias] of candidates.entries()) {
     const aliasHits: ModelsDevModelEntry[] = []
     for (const lab of preferredLabs) {
       const exact = lookupExact(catalog, lab, alias)
       if (!exact) continue
-      if (!aliasHits.some((item) => item.providerId === exact.providerId && item.modelId === exact.modelId)) {
+      if (
+        !aliasHits.some(
+          (item) => item.providerId === exact.providerId && item.modelId === exact.modelId,
+        )
+      ) {
         aliasHits.push(exact)
       }
     }
@@ -187,9 +204,15 @@ function collectMatches(catalog: ModelsDevCatalog, homeModel: string): ModelsDev
 
   // bare model id index as fallback only when nothing matched preferred exact lookup
   if (found.size === 0) {
-    for (const [aliasIndex, alias] of aliases.entries()) {
+    for (const [aliasIndex, alias] of candidates.entries()) {
       const bare = modelsDevBareModelId(alias).toLowerCase()
-      for (const entry of catalog.byModelId.get(bare) ?? []) {
+      const allEntries = catalog.byModelId.get(bare) ?? []
+      const directEntries = allEntries.filter(
+        (entry) => !MARKETPLACE_PROVIDERS.has(entry.providerId.toLowerCase()),
+      )
+      const eligibleEntries =
+        directEntries.length > 0 ? directEntries : allEntries.length > 1 ? allEntries : []
+      for (const entry of eligibleEntries) {
         const key = `${entry.providerId}::${entry.modelId}`
         if (!found.has(key)) {
           found.set(key, entry)
@@ -201,7 +224,7 @@ function collectMatches(catalog: ModelsDevCatalog, homeModel: string): ModelsDev
 
   // normalized fuzzy over first-party only as last resort
   if (found.size === 0) {
-    const wanted = new Set(aliases.map((item) => normalizeModelToken(item)))
+    const wanted = new Set(candidates.map((item) => normalizeModelToken(item)))
     for (const entry of catalog.models) {
       if (
         !FIRST_PARTY_LABS.includes(
@@ -230,11 +253,32 @@ function collectMatches(catalog: ModelsDevCatalog, homeModel: string): ModelsDev
   })
 }
 
-export function resolveImportMultiplier(homeModel: string, policy: ModelPriceImportPolicy) {
+export function resolveImportMultiplier(
+  homeModel: string,
+  policy: ModelPriceImportPolicy,
+  rowKey?: string,
+) {
+  if (rowKey && Number.isFinite(policy.rowMultipliers[rowKey])) {
+    return Math.max(0, policy.rowMultipliers[rowKey])
+  }
   const model = homeModel.trim().toLowerCase()
   for (const rule of policy.rules) {
-    const prefix = rule.modelPrefix.trim().toLowerCase()
-    if (prefix && model.startsWith(prefix)) return rule.multiplier
+    const pattern =
+      rule.pattern?.trim() ??
+      (rule as ModelPriceImportMultiplierRule & { modelPrefix?: string }).modelPrefix?.trim() ??
+      ''
+    if (!pattern) continue
+    const matches =
+      rule.matchMode === 'regex'
+        ? (() => {
+            try {
+              return new RegExp(pattern, 'i').test(homeModel)
+            } catch {
+              return false
+            }
+          })()
+        : model.startsWith(pattern.toLowerCase())
+    if (matches) return Math.max(0, rule.multiplier)
   }
   return policy.defaultMultiplier
 }
@@ -250,6 +294,7 @@ export function applyMultiplierToCost(
     output: cost.output * factor,
     cacheRead: includeCachePrices ? cost.cacheRead * factor : 0,
     cacheWrite: includeCachePrices ? cost.cacheWrite * factor : 0,
+    cacheWriteConfigured: includeCachePrices && cost.cacheWriteConfigured,
     request: cost.request * factor,
   }
 }
@@ -268,23 +313,49 @@ function existingKey(provider: string, model: string) {
   return `${provider.trim().toLowerCase()}::${model.trim().toLowerCase()}`
 }
 
+function existingRuleKey(
+  provider: string,
+  model: string,
+  serviceTier: string,
+  minInputTokens: number,
+) {
+  return `${existingKey(provider, model)}::${serviceTier.trim().toLowerCase()}::${minInputTokens}`
+}
+
 export function buildModelPriceImportRows(input: {
   candidates: ModelPriceImportCandidate[]
   catalog: ModelsDevCatalog
   policy: ModelPriceImportPolicy
   existingRules?: ModelPriceImportExistingRule[]
+  matchOverrides?: ModelPriceImportMatchOverride[]
 }): ModelPriceImportRow[] {
   const existingByKey = new Map(
-    (input.existingRules ?? []).map((rule) => [existingKey(rule.provider, rule.model), rule] as const),
+    (input.existingRules ?? []).map(
+      (rule) =>
+        [
+          existingRuleKey(rule.provider, rule.model, rule.serviceTier, rule.minInputTokens),
+          rule,
+        ] as const,
+    ),
   )
 
   return input.candidates.map((candidate) => {
     const homeProvider = candidate.provider.trim()
     const homeModel = candidate.model.trim()
     const key = existingKey(homeProvider, homeModel)
-    const existing = existingByKey.get(key) ?? null
-    const matches = collectMatches(input.catalog, homeModel)
-    const multiplier = resolveImportMultiplier(homeModel, input.policy)
+    const existing = existingByKey.get(existingRuleKey(homeProvider, homeModel, '*', 0)) ?? null
+    const override = input.matchOverrides?.find(
+      (item) =>
+        item.targetProvider.trim().toLowerCase() === homeProvider.toLowerCase() &&
+        item.targetModel.trim().toLowerCase() === homeModel.toLowerCase(),
+    )
+    const overrideMatch = override
+      ? lookupExact(input.catalog, override.sourceProvider, override.sourceModel)
+      : null
+    const matches = overrideMatch
+      ? [overrideMatch]
+      : collectMatches(input.catalog, homeProvider, homeModel, input.policy.aliases)
+    const multiplier = resolveImportMultiplier(homeModel, input.policy, key)
     const base = {
       key,
       homeProvider,
@@ -310,7 +381,7 @@ export function buildModelPriceImportRows(input: {
     if (matches.length > 1) {
       const top = matches[0]
       const second = matches[1]
-      const preferredLabs = preferredLabsForHomeModel(homeModel)
+      const preferredLabs = preferredLabsForHomeModel(homeProvider, homeModel)
       const topPreferred = rankEntry(top, preferredLabs) < preferredLabs.length
       const secondPreferred = rankEntry(second, preferredLabs) < preferredLabs.length
       // Accept the first alias-priority match when it is uniquely preferred over the rest,
@@ -320,9 +391,34 @@ export function buildModelPriceImportRows(input: {
         (topPreferred && !secondPreferred)
 
       if (clearlyPreferred && top.cost) {
+        if (top.invalidPriceFields.length > 0) {
+          return {
+            ...base,
+            status: 'invalid' as const,
+            matchedProviderId: top.providerId,
+            matchedModelId: top.modelId,
+            matchedName: top.name,
+            official: null,
+            final: null,
+            reasons: ['invalid_price_values'],
+          }
+        }
+        if (top.unsupportedPriceDimensions.length > 0) {
+          return {
+            ...base,
+            status: 'unsupported' as const,
+            matchedProviderId: top.providerId,
+            matchedModelId: top.modelId,
+            matchedName: top.name,
+            official: top.cost,
+            final: null,
+            reasons: ['unsupported_price_dimensions'],
+          }
+        }
         const final = applyMultiplierToCost(top.cost, multiplier, input.policy.includeCachePrices)
         const zero = isZeroCost(top.cost)
-        if (zero && !input.policy.includeZeroCost) {
+        const finalZero = isZeroCost(final)
+        if (finalZero && !input.policy.includeZeroCost) {
           return {
             ...base,
             status: 'zero_cost' as const,
@@ -331,18 +427,22 @@ export function buildModelPriceImportRows(input: {
             matchedName: top.name,
             official: top.cost,
             final: null,
-            reasons: ['zero_official_cost'],
+            reasons: [zero ? 'zero_official_cost' : 'zero_final_cost'],
           }
         }
         return {
           ...base,
-          status: zero ? ('zero_cost' as const) : ('matched' as const),
+          status: finalZero ? ('zero_cost' as const) : ('matched' as const),
           matchedProviderId: top.providerId,
           matchedModelId: top.modelId,
           matchedName: top.name,
           official: top.cost,
           final,
-          reasons: zero ? ['zero_official_cost'] : ['matched_preferred_alias'],
+          reasons: zero
+            ? ['zero_official_cost']
+            : finalZero
+              ? ['zero_final_cost']
+              : ['matched_preferred_alias'],
         }
       }
 
@@ -362,6 +462,30 @@ export function buildModelPriceImportRows(input: {
     }
 
     const only = matches[0]
+    if (only.invalidPriceFields.length > 0) {
+      return {
+        ...base,
+        status: 'invalid' as const,
+        matchedProviderId: only.providerId,
+        matchedModelId: only.modelId,
+        matchedName: only.name,
+        official: null,
+        final: null,
+        reasons: ['invalid_price_values'],
+      }
+    }
+    if (only.unsupportedPriceDimensions.length > 0) {
+      return {
+        ...base,
+        status: 'unsupported' as const,
+        matchedProviderId: only.providerId,
+        matchedModelId: only.modelId,
+        matchedName: only.name,
+        official: only.cost,
+        final: null,
+        reasons: ['unsupported_price_dimensions'],
+      }
+    }
     if (!only.cost) {
       return {
         ...base,
@@ -375,9 +499,10 @@ export function buildModelPriceImportRows(input: {
       }
     }
 
-    const zero = isZeroCost(only.cost)
     const final = applyMultiplierToCost(only.cost, multiplier, input.policy.includeCachePrices)
-    if (zero && !input.policy.includeZeroCost) {
+    const zero = isZeroCost(only.cost)
+    const finalZero = isZeroCost(final)
+    if (finalZero && !input.policy.includeZeroCost) {
       return {
         ...base,
         status: 'zero_cost' as const,
@@ -386,25 +511,52 @@ export function buildModelPriceImportRows(input: {
         matchedName: only.name,
         official: only.cost,
         final: null,
-        reasons: ['zero_official_cost'],
+        reasons: [zero ? 'zero_official_cost' : 'zero_final_cost'],
       }
     }
 
     return {
       ...base,
-      status: zero ? ('zero_cost' as const) : ('matched' as const),
+      status: finalZero ? ('zero_cost' as const) : ('matched' as const),
       matchedProviderId: only.providerId,
       matchedModelId: only.modelId,
       matchedName: only.name,
       official: only.cost,
       final,
-      reasons: zero ? ['zero_official_cost'] : ['matched'],
+      reasons: zero ? ['zero_official_cost'] : finalZero ? ['zero_final_cost'] : ['matched'],
     }
   })
 }
 
 export function isImportRowSelectable(row: ModelPriceImportRow) {
   return Boolean(row.final) && (row.status === 'matched' || row.status === 'zero_cost')
+}
+
+export function isModelPriceImportRowApplicable(
+  row: ModelPriceImportRow,
+  overwriteMode: ModelPriceImportOverwriteMode,
+) {
+  if (!isImportRowSelectable(row) || !row.final) return false
+  if (!row.existing) return true
+  if (overwriteMode === 'missing') return false
+  if (overwriteMode === 'sync') return row.existing.source === 'sync'
+  return true
+}
+
+export function getModelPriceImportRowAction(
+  row: ModelPriceImportRow,
+  overwriteMode: ModelPriceImportOverwriteMode,
+): ModelPriceImportAction {
+  if (!isModelPriceImportRowApplicable(row, overwriteMode)) {
+    return row.status === 'ambiguous' ||
+      row.status === 'unmatched' ||
+      row.status === 'invalid' ||
+      row.status === 'unsupported'
+      ? 'review'
+      : 'skip'
+  }
+  if (!row.existing) return 'create'
+  return row.existing.source === 'sync' ? 'update_sync' : 'overwrite'
 }
 
 export function buildImportNote(row: ModelPriceImportRow, fetchedAt: string) {

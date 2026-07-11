@@ -5,6 +5,7 @@ export type ModelsDevCost = {
   output: number
   cacheRead: number
   cacheWrite: number
+  cacheWriteConfigured: boolean
   request: number
 }
 
@@ -13,6 +14,8 @@ export type ModelsDevModelEntry = {
   modelId: string
   name: string
   cost: ModelsDevCost | null
+  invalidPriceFields: string[]
+  unsupportedPriceDimensions: string[]
   raw: unknown
 }
 
@@ -60,15 +63,68 @@ function normalizeCost(value: unknown): ModelsDevCost | null {
 
   const input = readNumber(value, ['input', 'input_price', 'inputPrice'])
   const output = readNumber(value, ['output', 'output_price', 'outputPrice'])
-  if (input === null && output === null) return null
+  const cacheRead = readNumber(value, ['cache_read', 'cacheRead', 'cache_read_price'])
+  const cacheWrite = readNumber(value, ['cache_write', 'cacheWrite', 'cache_write_price'])
+  const request = readNumber(value, ['request', 'request_price', 'requestPrice'])
+  if ([input, output, cacheRead, cacheWrite, request].every((item) => item === null)) return null
 
   return {
     input: input ?? 0,
     output: output ?? 0,
-    cacheRead: readNumber(value, ['cache_read', 'cacheRead', 'cache_read_price']) ?? 0,
-    cacheWrite: readNumber(value, ['cache_write', 'cacheWrite', 'cache_write_price']) ?? 0,
-    request: readNumber(value, ['request', 'request_price', 'requestPrice']) ?? 0,
+    cacheRead: cacheRead ?? 0,
+    cacheWrite: cacheWrite ?? 0,
+    cacheWriteConfigured: cacheWrite !== null,
+    request: request ?? 0,
   }
+}
+
+function findUnsupportedPriceDimensions(value: unknown) {
+  if (!isRecord(value)) return []
+
+  const scalarDimensions = [
+    'image',
+    'input_image',
+    'output_image',
+    'audio',
+    'input_audio',
+    'output_audio',
+    'video',
+    'reasoning',
+  ]
+  const unsupported = scalarDimensions.filter((dimension) => {
+    const price = readNumber(value, [dimension])
+    return price !== null && price !== 0
+  })
+
+  for (const dimension of ['tiers', 'context_over_200k']) {
+    const nested = value[dimension]
+    if (
+      (Array.isArray(nested) && nested.length > 0) ||
+      (isRecord(nested) && Object.keys(nested).length > 0)
+    ) {
+      unsupported.push(dimension)
+    }
+  }
+
+  return unsupported
+}
+
+function findInvalidPriceFields(value: unknown) {
+  if (!isRecord(value)) return []
+
+  const fields = [
+    ['input', ['input', 'input_price', 'inputPrice']],
+    ['output', ['output', 'output_price', 'outputPrice']],
+    ['cache_read', ['cache_read', 'cacheRead', 'cache_read_price']],
+    ['cache_write', ['cache_write', 'cacheWrite', 'cache_write_price']],
+    ['request', ['request', 'request_price', 'requestPrice']],
+  ] as const
+  return fields
+    .filter(([, aliases]) => {
+      const price = readNumber(value, [...aliases])
+      return price !== null && price < 0
+    })
+    .map(([field]) => field)
 }
 
 function providerModelKey(providerId: string, modelId: string) {
@@ -81,7 +137,10 @@ function bareModelId(modelId: string) {
   return (slash >= 0 ? trimmed.slice(slash + 1) : trimmed).trim()
 }
 
-export function parseModelsDevCatalog(payload: unknown, sourceUrl = MODELS_DEV_API_URL): ModelsDevCatalog {
+export function parseModelsDevCatalog(
+  payload: unknown,
+  sourceUrl = MODELS_DEV_API_URL,
+): ModelsDevCatalog {
   const root = toRecord(payload)
   const models: ModelsDevModelEntry[] = []
   const byProviderModel = new Map<string, ModelsDevModelEntry>()
@@ -99,6 +158,10 @@ export function parseModelsDevCatalog(payload: unknown, sourceUrl = MODELS_DEV_A
         modelId: readString(modelValue, ['id']) || modelId,
         name: readString(modelValue, ['name']) || modelId,
         cost: normalizeCost(modelValue.cost ?? modelValue.pricing),
+        invalidPriceFields: findInvalidPriceFields(modelValue.cost ?? modelValue.pricing),
+        unsupportedPriceDimensions: findUnsupportedPriceDimensions(
+          modelValue.cost ?? modelValue.pricing,
+        ),
         raw: modelValue,
       }
       models.push(entry)

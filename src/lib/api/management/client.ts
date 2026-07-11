@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 
-import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
+import type { ManagementApiError, ManagementSessionInput } from './types'
 
 const MANAGEMENT_PATH = '/v0/management'
 const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
