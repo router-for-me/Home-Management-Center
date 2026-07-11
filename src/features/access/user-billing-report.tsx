@@ -23,26 +23,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { UserBillingFilters, UserBillingPagination } from '@/lib/api/user/billing'
+import { createLocalDateRange } from '@/lib/billing/date-range'
 
 import { useUserBillingReport } from './use-user-billing-report'
 
-const dayInMs = 24 * 60 * 60 * 1000
 const pageSizes = [20, 50, 100] as const
 
 type DateRangePreset = 'today' | '7d' | '30d' | 'custom'
 
-function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10)
-}
-
 function createDateRange(days: number): UserBillingFilters {
-  const now = new Date()
-  const from = new Date(now.getTime() - days * dayInMs)
-
-  return {
-    from: toDateInputValue(from),
-    to: toDateInputValue(now),
-  }
+  return createLocalDateRange(days)
 }
 
 function formatDateTime(value: string | null | undefined, fallback: string) {

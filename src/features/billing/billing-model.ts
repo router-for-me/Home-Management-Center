@@ -1,22 +1,15 @@
 import type { BillingFilters, BillingPagination } from '@/lib/api/management/billing-types'
+import { createLocalDateRange } from '@/lib/billing/date-range'
 
 export type BillingTab = 'overview' | 'charges' | 'balanceRecords' | 'modelPrices'
 
 export type DateRangePreset = 'today' | '7d' | '30d' | 'custom'
 
-const dayInMs = 24 * 60 * 60 * 1000
-
-function toDateInputValue(date: Date) {
-  return date.toISOString().slice(0, 10)
-}
-
 export function createDefaultBillingFilters(): BillingFilters {
-  const now = new Date()
-  const from = new Date(now.getTime() - 6 * dayInMs)
+  const range = createLocalDateRange(6)
 
   return {
-    from: toDateInputValue(from),
-    to: toDateInputValue(now),
+    ...range,
     user: '',
     provider: '',
     model: '',
@@ -24,14 +17,8 @@ export function createDefaultBillingFilters(): BillingFilters {
 }
 
 export function createDatePresetRange(preset: Exclude<DateRangePreset, 'custom'>) {
-  const now = new Date()
   const days = preset === 'today' ? 0 : preset === '7d' ? 6 : 29
-  const from = new Date(now.getTime() - days * dayInMs)
-
-  return {
-    from: toDateInputValue(from),
-    to: toDateInputValue(now),
-  }
+  return createLocalDateRange(days)
 }
 
 export const defaultBillingPagination: BillingPagination = {

@@ -8,6 +8,7 @@ import {
   fetchUserBillingCharges,
   fetchUserBillingOverview,
 } from '@/lib/api/user/billing'
+import { createLocalDateRange, createLocalMonthToDateRange } from '@/lib/billing/date-range'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 function toError(error: unknown) {
@@ -24,30 +25,12 @@ function toError(error: unknown) {
   return new Error(String(error))
 }
 
-function toDateInputValue(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
-}
-
 function createTodayRange(): UserBillingFilters {
-  const today = toDateInputValue(new Date())
-
-  return {
-    from: today,
-    to: today,
-  }
+  return createLocalDateRange(0)
 }
 
 function createCurrentMonthRange(): UserBillingFilters {
-  const now = new Date()
-
-  return {
-    from: toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
-    to: toDateInputValue(now),
-  }
+  return createLocalMonthToDateRange()
 }
 
 export function useUserBillingReport(

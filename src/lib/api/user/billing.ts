@@ -1,5 +1,7 @@
 import { type UserSessionInput, createUserClient, toUserApiError } from '@/lib/api/user/client'
 
+import { toBillingDateRangeParams } from '../../billing/date-range'
+
 type UnknownRecord = Record<string, unknown>
 
 type UserBillingRankItem = {
@@ -88,8 +90,7 @@ function readArrayRecords(value: unknown, keys: string[]) {
 
 function compactParams(filters: UserBillingFilters, pagination?: UserBillingPagination) {
   return {
-    from: filters.from || undefined,
-    to: filters.to || undefined,
+    ...toBillingDateRangeParams(filters),
     limit: pagination?.limit,
     offset: pagination?.offset,
   }
