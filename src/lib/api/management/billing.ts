@@ -1,5 +1,6 @@
 import axios from 'axios'
 
+import { toBillingDateRangeParams } from '../../billing/date-range'
 import type {
   BalanceOperationInput,
   BalanceRecord,
@@ -82,10 +83,10 @@ function isPositiveIntegerText(value: string) {
 
 function compactParams(filters: BillingFilters, pagination?: BillingPagination) {
   const user = filters.user.trim()
+  const range = toBillingDateRangeParams(filters)
 
   return {
-    from: filters.from || undefined,
-    to: filters.to || undefined,
+    ...range,
     user: user || undefined,
     user_id: isPositiveIntegerText(user) ? user : undefined,
     provider: filters.provider.trim() || undefined,
