@@ -277,6 +277,7 @@ export function UsageObservabilityPage() {
         filters={workbench.filters}
         filterOptions={snapshot.filterOptions}
         pageSizeOptions={workbench.recordPageSizeOptions}
+        fetching={workbench.isFetching}
         mutating={workbench.mutating}
         canExport={capabilities.usageExport}
         isExporting={workbench.isExportingUsage}

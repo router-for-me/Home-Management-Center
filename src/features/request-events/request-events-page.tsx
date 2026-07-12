@@ -22,6 +22,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
 import {
+  TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
   containedTableContainerClassName,
@@ -1025,6 +1026,7 @@ function RequestEventsTable({
   filterOptions,
   filtersValid,
   isExporting,
+  fetching,
   mutating,
   liveRefresh,
   liveRefreshIntervalMs,
@@ -1048,6 +1050,7 @@ function RequestEventsTable({
   filterOptions: RequestEventFilterOptions | null
   filtersValid: boolean
   isExporting: boolean
+  fetching: boolean
   mutating: boolean
   liveRefresh: {
     enabled: boolean
@@ -1135,14 +1138,9 @@ function RequestEventsTable({
         />
       </div>
 
-      {events ? (
+      {events && rows.length > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-2 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-sm">
-              {t('requestEventsPage.table.resultCount', {
-                total: formatNumber(total),
-              })}
-            </span>
             {activeFilters ? (
               <Button
                 type="button"
@@ -1423,13 +1421,15 @@ function RequestEventsTable({
 
       {events && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('requestEventsPage.table.range', {
+          <TablePaginationStatus
+            text={t('requestEventsPage.table.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={JSON.stringify(filters)}
+            busy={fetching || mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -1440,7 +1440,11 @@ function RequestEventsTable({
                 disabled={mutating}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(touchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(touchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('requestEventsPage.table.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1565,6 +1569,7 @@ export function RequestEventsPage() {
         filterOptions={workbench.filterOptions}
         filtersValid={workbench.filtersValid}
         isExporting={workbench.isExporting}
+        fetching={workbench.isFetching}
         mutating={workbench.mutating}
         liveRefresh={workbench.liveRefresh}
         liveRefreshIntervalMs={workbench.liveRefreshIntervalMs}

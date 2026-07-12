@@ -339,6 +339,7 @@ export const en = {
         pagination: {
           range: '{{start}}-{{end}} / {{total}} total',
           rows: '{{count}} rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },
@@ -565,6 +566,7 @@ export const en = {
       pagination: {
         range: '{{start}}-{{end}} / {{total}} total',
         rows: '{{count}} rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
       },
@@ -3192,9 +3194,8 @@ export const en = {
         unsupportedTitle: 'Request events API unavailable',
         unsupportedDescription:
           'This runtime does not expose /request-events. The page becomes available after the backend adds it.',
-        resultCount: '{{total}} events',
         range: '{{start}}-{{end}} of {{total}}',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columns: {
@@ -3666,7 +3667,7 @@ export const en = {
         unavailable: 'Request-level usage records are not exposed.',
         errorTitle: 'Request records failed to load',
         clearFilters: 'Clear filters',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         ttft: 'TTFT {{value}}',
@@ -3762,7 +3763,7 @@ export const en = {
         unavailableTitle: 'Execution credential usage is unavailable',
         unavailable: 'Execution credential usage aggregates are not exposed.',
         errorTitle: 'Execution credential usage failed to load',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columnsButton: 'Customize columns',
@@ -3898,11 +3899,8 @@ export const en = {
         filteredEmpty: 'No runtime logs match the current filters.',
         emptyPageTitle: 'No logs on this page',
         emptyPage: 'Go back one page or sync again.',
-        lineCount: '{{count}} lines',
-        latest: 'Latest timestamp: {{time}}',
-        latestUnavailable: 'Latest timestamp unavailable',
-        total: '{{count}} total',
-        range: 'Showing {{start}}-{{end}} of {{total}}',
+        latest: 'Latest log: {{time}}',
+        latestUnavailable: 'Log timestamp unavailable',
         columns: {
           time: 'Time',
           level: 'Level',
@@ -3946,7 +3944,7 @@ export const en = {
         },
         pagination: {
           range: '{{start}}-{{end}} of {{total}}',
-          pageSize: 'Rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },

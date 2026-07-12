@@ -37,6 +37,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
+  TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
   containedTableContainerClassName,
@@ -419,15 +420,21 @@ function PaginationBar({
 
   return (
     <div className="flex flex-col gap-3 border-t px-4 py-3 md:flex-row md:items-center md:justify-between">
-      <span className="text-muted-foreground text-sm">
-        {t('billingPage.pagination.range', { start, end, total })}
-      </span>
+      <TablePaginationStatus
+        text={t('billingPage.pagination.range', { start, end, total })}
+        announcementKey={`${pagination.offset}:${pagination.limit}`}
+        busy={disabled}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={String(pagination.limit)}
           onValueChange={(value) => onChange({ limit: Number(value), offset: 0 })}
         >
-          <SelectTrigger className="w-28" size="sm">
+          <SelectTrigger
+            className="w-28"
+            size="sm"
+            aria-label={t('billingPage.pagination.pageSize')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

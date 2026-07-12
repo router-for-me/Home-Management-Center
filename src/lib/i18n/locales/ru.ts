@@ -341,6 +341,7 @@ export const ru = {
         pagination: {
           range: '{{start}}-{{end}} / всего {{total}}',
           rows: '{{count}} строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Далее',
         },
@@ -565,6 +566,7 @@ export const ru = {
       pagination: {
         range: '{{start}}-{{end}} / всего {{total}}',
         rows: '{{count}} строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
       },
@@ -3208,9 +3210,8 @@ export const ru = {
         unsupportedTitle: 'API request events недоступен',
         unsupportedDescription:
           'Этот runtime не предоставляет /request-events. Страница станет доступна после добавления backend API.',
-        resultCount: 'Событий: {{total}}',
         range: '{{start}}-{{end}} из {{total}}',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         columns: {
@@ -3682,7 +3683,7 @@ export const ru = {
         unavailable: 'Записи использования на уровне запроса не открыты.',
         errorTitle: 'Не удалось загрузить записи запросов',
         clearFilters: 'Сбросить фильтры',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         ttft: 'TTFT {{value}}',
@@ -3778,7 +3779,7 @@ export const ru = {
         unavailableTitle: 'Использование учетных данных недоступно',
         unavailable: 'Агрегаты использования учетных данных не открыты.',
         errorTitle: 'Не удалось загрузить использование учетных данных',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
         columnsButton: 'Настроить столбцы',
@@ -3915,11 +3916,8 @@ export const ru = {
         filteredEmpty: 'Нет журналов runtime для текущих фильтров.',
         emptyPageTitle: 'На странице нет журналов',
         emptyPage: 'Вернитесь назад или синхронизируйте данные.',
-        lineCount: '{{count}} строк',
-        latest: 'Последнее время: {{time}}',
-        latestUnavailable: 'Последнее время недоступно',
-        total: 'Всего: {{count}}',
-        range: 'Показано {{start}}-{{end}} из {{total}}',
+        latest: 'Последняя запись: {{time}}',
+        latestUnavailable: 'Время записи недоступно',
         columns: {
           time: 'Время',
           level: 'Уровень',
@@ -3963,7 +3961,7 @@ export const ru = {
         },
         pagination: {
           range: '{{start}}-{{end}} из {{total}}',
-          pageSize: 'Строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Вперед',
         },
