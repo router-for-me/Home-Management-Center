@@ -3016,6 +3016,49 @@ export const en = {
         description: '{{mode}} did not expose request usage routes.',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: 'Live',
+        auto: 'Auto refresh',
+      },
+      status: {
+        running: {
+          live: 'Live refresh active',
+          auto: 'Auto refresh active',
+        },
+        paused: {
+          live: 'Live refresh paused',
+          auto: 'Auto refresh paused',
+        },
+        off: {
+          live: 'Live refresh off',
+          auto: 'Auto refresh off',
+        },
+        unavailable: {
+          live: 'Live refresh unavailable',
+          auto: 'Auto refresh unavailable',
+        },
+        retrying: 'Refresh failed, retrying automatically',
+        cadence: 'Checks every {{seconds}}s',
+        delayed: 'No successful update for {{seconds}}s',
+        lastSuccess: 'Last update: {{time}}',
+        withReason: '{{status}}: {{reason}}',
+        reason: {
+          hidden: 'Resumes when you return',
+          offline: 'Resumes when the network returns',
+          detail: 'Resumes when details are closed',
+          nonFirstPage: 'Return to page 1 to resume',
+          historicalRange: 'Historical ranges do not refresh automatically',
+          nonLatestSort: 'Sort newest first to resume',
+          invalidFilters: 'Fix invalid filters to resume',
+          unavailable: 'This data source does not support refresh',
+          ineligible: 'Refresh is unavailable for the current conditions',
+        },
+      },
+      newItems: '{{count}} new records',
+      newItemsAtLeast: 'At least {{count}} new records',
+      showNew: 'Show new',
+    },
     requestEventsPage: {
       disconnected: {
         title: 'Connect a management runtime',
@@ -3404,6 +3447,7 @@ export const en = {
         title: 'Some data could not be loaded',
       },
       issueScopes: {
+        runtimeSettings: 'Runtime settings',
         apiKeyUsage: 'Usage stats',
         usageOverview: 'Usage overview',
         usageRecords: 'Usage records',

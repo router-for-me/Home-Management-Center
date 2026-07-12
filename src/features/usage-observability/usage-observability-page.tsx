@@ -5,6 +5,10 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+} from '@/features/observability/live-refresh-control'
+import {
   CapabilityStrip,
   type CapabilityStripItem,
   CostBreakdownPanel,
@@ -20,7 +24,6 @@ import {
   UsageKpiStrip,
   UsageTrendPanel,
   downloadBlob,
-  formatDateTime,
   getObservabilityVerdictBadgeClassName,
 } from '@/features/observability/observability-components'
 import { useUsageObservabilityWorkbench } from '@/features/usage-observability/use-usage-observability-workbench'
@@ -37,7 +40,10 @@ function isUnsupportedIssue(issue: UsageIssue) {
 }
 
 function isFailedUsageIssue(issue: UsageIssue) {
-  return issue.scope.startsWith('usage') && !isUnsupportedIssue(issue)
+  return (
+    (issue.scope === 'runtimeSettings' || issue.scope.startsWith('usage')) &&
+    !isUnsupportedIssue(issue)
+  )
 }
 
 function hasUsageActivity(snapshot: UsageSnapshot) {
@@ -90,16 +96,18 @@ function UsageObservabilityHeader({
   snapshot,
   capabilities,
   runtimeMode,
-  isFetching,
+  manualRefreshing,
+  autoRefresh,
   onRefresh,
 }: {
   snapshot: UsageSnapshot
   capabilities: CapabilityMap
   runtimeMode: RuntimeMode
-  isFetching: boolean
+  manualRefreshing: boolean
+  autoRefresh: ReturnType<typeof useUsageObservabilityWorkbench>['autoRefresh']
   onRefresh: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const verdict = getUsagePageVerdict(snapshot)
 
   return (
@@ -119,27 +127,29 @@ function UsageObservabilityHeader({
         mode: t(`runtimeMode.${runtimeMode}`),
       })}
       meta={
-        <>
-          <span>
-            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-          </span>
-          <span>
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-            })}
-          </span>
-        </>
+        <span>{t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}</span>
       }
       tags={<UsageCapabilityStrip capabilities={capabilities} />}
       actions={
-        <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
-          {isFetching ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <RefreshCw className="size-4" aria-hidden="true" />
-          )}
-          {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
-        </Button>
+        <>
+          <LiveRefreshControl
+            mode="auto"
+            enabled={autoRefresh.enabled}
+            disabled={!autoRefresh.available}
+            describedBy={!autoRefresh.available ? 'usage-auto-refresh-status' : undefined}
+            onEnabledChange={autoRefresh.setEnabled}
+          />
+          <Button variant="outline" disabled={manualRefreshing} onClick={onRefresh}>
+            {manualRefreshing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="size-4" aria-hidden="true" />
+            )}
+            {manualRefreshing
+              ? t('usageLogsPage.actions.syncing')
+              : t('usageLogsPage.actions.refresh')}
+          </Button>
+        </>
       }
     />
   )
@@ -147,7 +157,7 @@ function UsageObservabilityHeader({
 
 export function UsageObservabilityPage() {
   const { t } = useTranslation()
-  const workbench = useUsageObservabilityWorkbench({ scope: 'usage' })
+  const workbench = useUsageObservabilityWorkbench()
   const capabilities = workbench.capabilities
   const noUsageCapabilities =
     !capabilities.usageOverview &&
@@ -188,8 +198,20 @@ export function UsageObservabilityPage() {
         snapshot={snapshot}
         capabilities={capabilities}
         runtimeMode={workbench.runtimeMode}
-        isFetching={workbench.isFetching}
+        manualRefreshing={workbench.manualRefreshing}
+        autoRefresh={workbench.autoRefresh}
         onRefresh={workbench.refetch}
+      />
+
+      <LiveRefreshStatusNotice
+        id="usage-auto-refresh-status"
+        mode="auto"
+        enabled={workbench.autoRefresh.enabled}
+        active={workbench.autoRefresh.active}
+        pauseReason={workbench.autoRefresh.pauseReason}
+        intervalMs={workbench.autoRefreshIntervalMs}
+        hasError={workbench.autoRefreshError}
+        lastSuccessAt={workbench.autoRefreshLastSuccessAt}
       />
 
       {noUsageCapabilities ? (

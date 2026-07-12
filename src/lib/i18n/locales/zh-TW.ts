@@ -2891,6 +2891,49 @@ export const zhTW = {
         description: '{{mode}} 未暴露請求用量路由。',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: '即時',
+        auto: '自動重新整理',
+      },
+      status: {
+        running: {
+          live: '即時重新整理中',
+          auto: '自動重新整理中',
+        },
+        paused: {
+          live: '即時重新整理已暫停',
+          auto: '自動重新整理已暫停',
+        },
+        off: {
+          live: '即時重新整理已關閉',
+          auto: '自動重新整理已關閉',
+        },
+        unavailable: {
+          live: '即時重新整理不可用',
+          auto: '自動重新整理不可用',
+        },
+        retrying: '重新整理失敗，正在自動重試',
+        cadence: '每 {{seconds}} 秒檢查更新',
+        delayed: '已 {{seconds}} 秒未成功更新',
+        lastSuccess: '上次更新：{{time}}',
+        withReason: '{{status}}：{{reason}}',
+        reason: {
+          hidden: '返回頁面後自動繼續',
+          offline: '網路恢復後自動繼續',
+          detail: '關閉詳情後自動繼續',
+          nonFirstPage: '返回第 1 頁後自動繼續',
+          historicalRange: '歷史時間範圍不會自動重新整理',
+          nonLatestSort: '切換為時間倒序後自動繼續',
+          invalidFilters: '修正無效的篩選條件後自動繼續',
+          unavailable: '目前資料來源不支援重新整理',
+          ineligible: '目前條件下不會自動重新整理',
+        },
+      },
+      newItems: '新增 {{count}} 筆記錄',
+      newItemsAtLeast: '至少新增 {{count}} 筆記錄',
+      showNew: '顯示新記錄',
+    },
     requestEventsPage: {
       disconnected: {
         title: '連線管理端執行環境',
@@ -3256,6 +3299,7 @@ export const zhTW = {
         title: '部分資料載入失敗',
       },
       issueScopes: {
+        runtimeSettings: '執行環境設定',
         apiKeyUsage: '用量統計',
         usageOverview: '用量總覽',
         usageRecords: '請求明細',

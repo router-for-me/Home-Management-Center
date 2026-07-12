@@ -2892,6 +2892,49 @@ export const zhCN = {
         description: '{{mode}} 未暴露请求用量路由。',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: '实时',
+        auto: '自动刷新',
+      },
+      status: {
+        running: {
+          live: '实时刷新中',
+          auto: '自动刷新中',
+        },
+        paused: {
+          live: '实时已暂停',
+          auto: '自动刷新已暂停',
+        },
+        off: {
+          live: '实时已关闭',
+          auto: '自动刷新已关闭',
+        },
+        unavailable: {
+          live: '实时刷新不可用',
+          auto: '自动刷新不可用',
+        },
+        retrying: '刷新失败，自动重试中',
+        cadence: '每 {{seconds}} 秒检查更新',
+        delayed: '已 {{seconds}} 秒未成功更新',
+        lastSuccess: '上次更新：{{time}}',
+        withReason: '{{status}}：{{reason}}',
+        reason: {
+          hidden: '返回页面后自动继续',
+          offline: '网络恢复后自动继续',
+          detail: '关闭详情后自动继续',
+          nonFirstPage: '返回第 1 页后自动继续',
+          historicalRange: '历史时间范围不自动刷新',
+          nonLatestSort: '切换为时间倒序后自动继续',
+          invalidFilters: '修正无效筛选条件后自动继续',
+          unavailable: '当前数据源不支持刷新',
+          ineligible: '当前条件下不自动刷新',
+        },
+      },
+      newItems: '新增 {{count}} 条记录',
+      newItemsAtLeast: '至少新增 {{count}} 条记录',
+      showNew: '显示新记录',
+    },
     requestEventsPage: {
       disconnected: {
         title: '连接管理端运行时',
@@ -3257,6 +3300,7 @@ export const zhCN = {
         title: '部分数据加载失败',
       },
       issueScopes: {
+        runtimeSettings: '运行时设置',
         apiKeyUsage: '用量统计',
         usageOverview: '用量总览',
         usageRecords: '请求明细',

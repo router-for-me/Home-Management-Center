@@ -3,8 +3,9 @@ export {
   defaultRuntimeLogFilters,
   downloadRequestErrorLog,
   downloadRequestLogById,
-  fetchRuntimeLogContext,
+  fetchRequestErrorLogs,
   fetchRuntimeLogs,
+  fetchUsageRuntimeSettings,
   toUsageLogsApiError as toLogsApiError,
 } from '@/lib/api/management/usage-logs'
 export type {

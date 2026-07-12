@@ -60,6 +60,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
+import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+  NewItemsNotice,
+} from '@/features/observability/live-refresh-control'
 import {
   CapabilityStrip,
   type CapabilityStripItem,
@@ -311,6 +317,7 @@ function RequestEventsHeader({
   capabilities,
   errorMessage,
   isFetching,
+  updatedAt,
   onRefresh,
   page,
   runtimeMode,
@@ -319,11 +326,12 @@ function RequestEventsHeader({
   capabilities: CapabilityMap
   errorMessage: string | null
   isFetching: boolean
+  updatedAt: string | null
   onRefresh: () => void
   page: RequestEventsPageData | null
   runtimeMode: RuntimeMode
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const verdict = getRequestEventsVerdict({ capabilities, page, errorMessage })
 
   return (
@@ -343,6 +351,20 @@ function RequestEventsHeader({
         mode: t(`runtimeMode.${runtimeMode}`),
         count: formatNumber(page?.total ?? 0),
       })}
+      meta={
+        <>
+          <span>
+            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
+          </span>
+          {updatedAt ? (
+            <span>
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </span>
+          ) : null}
+        </>
+      }
       tags={<RequestEventsCapabilityStrip capabilities={capabilities} />}
       actions={
         <Button variant="outline" disabled={!canRefresh || isFetching} onClick={onRefresh}>
@@ -1005,6 +1027,13 @@ function RequestEventsTable({
   filtersValid,
   isExporting,
   mutating,
+  liveRefresh,
+  liveRefreshIntervalMs,
+  liveRefreshError,
+  liveRefreshLastSuccessAt,
+  pendingItemCount,
+  pendingItemsTruncated,
+  onAcceptPendingItems,
   onClearFilters,
   onExport,
   onFilterChange,
@@ -1021,6 +1050,19 @@ function RequestEventsTable({
   filtersValid: boolean
   isExporting: boolean
   mutating: boolean
+  liveRefresh: {
+    enabled: boolean
+    active: boolean
+    pauseReason: LiveRefreshPauseReason | null
+    available: boolean
+    setEnabled: (enabled: boolean) => void
+  }
+  liveRefreshIntervalMs: number
+  liveRefreshError: boolean
+  liveRefreshLastSuccessAt: number | null
+  pendingItemCount: number
+  pendingItemsTruncated: boolean
+  onAcceptPendingItems: () => void
   onClearFilters: () => void
   onExport: () => void
   onFilterChange: (nextFilters: Partial<RequestEventFilters>) => void
@@ -1029,6 +1071,7 @@ function RequestEventsTable({
   onOffsetChange: (offset: number) => void
   pageSizeOptions: number[]
 }) {
+  const liveRefreshStatusId = 'request-events-live-refresh-status'
   const { t, i18n } = useTranslation()
   const [visibleColumns, setVisibleColumns] =
     useState<RequestEventColumnKey[]>(defaultVisibleColumns)
@@ -1064,6 +1107,25 @@ function RequestEventsTable({
       <TableSurfaceHeader
         title={t('requestEventsPage.table.title')}
         description={t('requestEventsPage.table.description')}
+        actions={
+          <LiveRefreshControl
+            enabled={liveRefresh.enabled}
+            disabled={!liveRefresh.available}
+            describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+            onEnabledChange={liveRefresh.setEnabled}
+          />
+        }
+      />
+
+      <LiveRefreshStatusNotice
+        id={liveRefreshStatusId}
+        enabled={liveRefresh.enabled}
+        active={liveRefresh.active}
+        pauseReason={liveRefresh.pauseReason}
+        intervalMs={liveRefreshIntervalMs}
+        hasError={liveRefreshError}
+        lastSuccessAt={liveRefreshLastSuccessAt}
+        className="mx-3 mt-3"
       />
 
       <div className="border-b px-3 py-3">
@@ -1141,6 +1203,13 @@ function RequestEventsTable({
           </div>
         </div>
       ) : null}
+
+      <NewItemsNotice
+        count={pendingItemCount}
+        truncated={pendingItemsTruncated}
+        className="mx-3 mt-3"
+        onAccept={onAcceptPendingItems}
+      />
 
       {events ? (
         rows.length > 0 ? (
@@ -1468,6 +1537,7 @@ export function RequestEventsPage() {
         capabilities={workbench.capabilities}
         errorMessage={workbench.errorMessage}
         isFetching={workbench.isFetching}
+        updatedAt={workbench.eventsUpdatedAt}
         onRefresh={workbench.refetch}
         page={workbench.events}
         runtimeMode={workbench.runtimeMode}
@@ -1498,6 +1568,13 @@ export function RequestEventsPage() {
         filtersValid={workbench.filtersValid}
         isExporting={workbench.isExporting}
         mutating={workbench.mutating}
+        liveRefresh={workbench.liveRefresh}
+        liveRefreshIntervalMs={workbench.liveRefreshIntervalMs}
+        liveRefreshError={workbench.liveRefreshError}
+        liveRefreshLastSuccessAt={workbench.liveRefreshLastSuccessAt}
+        pendingItemCount={workbench.pendingEventCount}
+        pendingItemsTruncated={workbench.pendingEventsTruncated}
+        onAcceptPendingItems={workbench.acceptPendingEvents}
         pageSizeOptions={workbench.pageSizeOptions}
         onClearFilters={workbench.clearFilters}
         onExport={() => void handleExport()}
