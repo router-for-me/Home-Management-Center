@@ -3701,7 +3701,7 @@ export const en = {
           output: 'Output',
           reasoning: 'Reasoning',
           cacheRead: 'Cache read',
-          cacheCreate: 'Cache create',
+          cacheCreate: 'Cache write',
           total: 'Total',
         },
         payloadFields: {
