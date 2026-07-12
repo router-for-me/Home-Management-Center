@@ -14,6 +14,7 @@ export const zhCN = {
     actions: {
       connect: '连接',
       manageConnection: '连接管理',
+      copyFailed: '复制失败',
     },
     language: {
       switch: '语言',
@@ -3577,6 +3578,19 @@ export const zhCN = {
         related: '关联信息',
         noLogExcerpt: '后端没有返回该请求的日志片段。',
         requestLogUnavailable: '当前记录没有可下载的请求日志。',
+        downloadingRequestLog: '正在下载',
+        technicalMetadata: '技术元数据',
+        requestLogStatuses: {
+          local: '本地可下载',
+          remote: '可从远程 Home 获取',
+          unavailable: '不可用',
+        },
+        downloadErrors: {
+          notFound: '请求日志不存在或已被清理。',
+          remoteUnavailable: '目标 Home 当前不可达，请稍后重试。',
+          unauthorized: '当前 Management Key 没有下载该日志的权限。',
+          generic: '请求日志下载失败，请稍后重试。',
+        },
         actions: {
           copy: '复制内容',
           copied: '已复制',
@@ -3616,7 +3630,7 @@ export const zhCN = {
         relatedFields: {
           requestLog: '请求日志',
           requestLogHomeIp: '日志 Home 节点',
-          downloadUrl: '下载路径',
+          downloadUrl: 'API 下载路径',
         },
       },
       credentials: {
@@ -3848,6 +3862,7 @@ export const zhCN = {
         logsCleared: '日志已清空。',
         fileLoggingDisabled: '文件日志未启用，无法清空运行日志。',
         logDownloaded: '日志已下载。',
+        requestLogDownloaded: '请求日志已下载：{{fileName}}',
         exportDownloaded: '用量导出已下载。',
       },
     },

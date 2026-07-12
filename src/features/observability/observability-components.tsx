@@ -3844,16 +3844,25 @@ export function RequestDetailSheet({
   const { t, i18n } = useTranslation()
   const sheetContentRef = useRef<HTMLDivElement>(null)
   const record = detail?.record
+  const relatedRequestLog = detail?.related?.requestLog
+  const requestLogId = relatedRequestLog?.requestId ?? record?.requestId
+  const requestLogHomeIp = relatedRequestLog?.homeIp ?? record?.runtime.homeIp
+  const requestLogHomePort = relatedRequestLog?.homePort ?? record?.runtime.homePort
+  const requestLogAvailable =
+    relatedRequestLog?.available ?? record?.runtime.requestLogAvailable ?? false
+  const requestLogHomeIpRequired = record?.runtime.logHomeIpRequired ?? false
+  const requestLogRoutable =
+    Boolean(requestLogId) &&
+    requestLogAvailable &&
+    (!requestLogHomeIpRequired || Boolean(requestLogHomeIp))
   const downloading =
-    isDownloadingRequestLog &&
-    Boolean(record?.requestId) &&
-    downloadingRequestLogId === record?.requestId
-  const canDownloadRequestLog =
-    onDownloadRequestLog !== undefined &&
-    record !== undefined &&
-    Boolean(record.requestId) &&
-    record.runtime.requestLogAvailable &&
-    (!record.runtime.logHomeIpRequired || Boolean(record.runtime.homeIp))
+    isDownloadingRequestLog && Boolean(requestLogId) && downloadingRequestLogId === requestLogId
+  const canDownloadRequestLog = onDownloadRequestLog !== undefined && requestLogRoutable
+  const requestLogStatus = !requestLogRoutable
+    ? 'unavailable'
+    : requestLogHomeIpRequired
+      ? 'remote'
+      : 'local'
   const copyLabel = t('usageLogsPage.detail.actions.copy')
   const copiedLabel = t('usageLogsPage.detail.actions.copied')
   const wrapLinesLabel = t('usageLogsPage.detail.actions.wrapLines')
@@ -4006,34 +4015,39 @@ export function RequestDetailSheet({
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.related')}</h3>
-                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
                   <DiagnosticDetailField label={t('usageLogsPage.detail.relatedFields.requestLog')}>
-                    {detail?.related?.requestLog?.available === false
-                      ? t('usageLogsPage.requestLogs.unavailableFile')
-                      : detail?.related?.requestLog
-                        ? t('common.enabled')
-                        : t('usageLogsPage.status.notAvailable')}
+                    {t(`usageLogsPage.detail.requestLogStatuses.${requestLogStatus}`)}
                   </DiagnosticDetailField>
                   <DiagnosticDetailField
                     label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}
                   >
-                    {formatHomeEndpoint(
-                      detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
-                      detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
-                    ) ?? t('usageLogsPage.status.localHome')}
-                  </DiagnosticDetailField>
-                  <DiagnosticDetailField
-                    className="sm:col-span-3"
-                    label={t('usageLogsPage.detail.relatedFields.downloadUrl')}
-                    copyValue={detail?.related?.requestLog?.downloadUrl}
-                    copyLabel={copyLabel}
-                    copiedLabel={copiedLabel}
-                    mono
-                  >
-                    {detail?.related?.requestLog?.downloadUrl ??
-                      t('usageLogsPage.status.notAvailable')}
+                    {formatHomeEndpoint(requestLogHomeIp ?? null, requestLogHomePort ?? null) ??
+                      t('usageLogsPage.status.localHome')}
                   </DiagnosticDetailField>
                 </div>
+                {relatedRequestLog?.downloadUrl ? (
+                  <Collapsible className="mt-3">
+                    <CollapsibleTrigger className="group text-muted-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-sm text-xs font-medium outline-none focus-visible:ring-[3px]">
+                      {t('usageLogsPage.detail.technicalMetadata')}
+                      <ChevronDown
+                        className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+                        aria-hidden="true"
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <DiagnosticDetailField
+                        label={t('usageLogsPage.detail.relatedFields.downloadUrl')}
+                        copyValue={relatedRequestLog.downloadUrl}
+                        copyLabel={copyLabel}
+                        copiedLabel={copiedLabel}
+                        mono
+                      >
+                        {relatedRequestLog.downloadUrl}
+                      </DiagnosticDetailField>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : null}
               </div>
 
               {record.error ? (
@@ -4094,20 +4108,17 @@ export function RequestDetailSheet({
             </div>
           ) : null}
         </div>
-        {onDownloadRequestLog ? (
-          <div className="bg-popover border-t p-4">
+        {onDownloadRequestLog && record ? (
+          <div className="bg-popover flex flex-col border-t p-4 sm:items-end">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!canDownloadRequestLog || mutating}
               onClick={() =>
-                record?.requestId &&
-                onDownloadRequestLog(
-                  record.requestId,
-                  detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
-                  detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
-                )
+                requestLogId &&
+                onDownloadRequestLog(requestLogId, requestLogHomeIp, requestLogHomePort)
               }
             >
               {downloading ? (
@@ -4115,10 +4126,12 @@ export function RequestDetailSheet({
               ) : (
                 <Download className="size-4" aria-hidden="true" />
               )}
-              {t('usageLogsPage.actions.downloadRequestLog')}
+              {downloading
+                ? t('usageLogsPage.detail.downloadingRequestLog')
+                : t('usageLogsPage.actions.downloadRequestLog')}
             </Button>
             {!canDownloadRequestLog ? (
-              <p className="text-muted-foreground mt-2 text-xs">
+              <p className="text-muted-foreground mt-2 text-xs sm:text-right">
                 {t('usageLogsPage.detail.requestLogUnavailable')}
               </p>
             ) : null}
