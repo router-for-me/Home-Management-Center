@@ -32,6 +32,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
+import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
@@ -3722,6 +3723,12 @@ export function RequestLogIndexTable({
   )
 }
 
+function formatMetadataValue(value: unknown, fallback: string) {
+  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return fallback
+}
+
 function DetailField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0 rounded-md border px-3 py-2">
@@ -3729,12 +3736,6 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
       <div className="mt-1 min-w-0 truncate text-sm">{children}</div>
     </div>
   )
-}
-
-function formatMetadataValue(value: unknown, fallback: string) {
-  if (typeof value === 'string' && value.trim()) return value
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  return fallback
 }
 
 function getQuotaStatusClassName(window: UsageQuotaWindow) {
@@ -3853,6 +3854,10 @@ export function RequestDetailSheet({
     Boolean(record.requestId) &&
     record.runtime.requestLogAvailable &&
     (!record.runtime.logHomeIpRequired || Boolean(record.runtime.homeIp))
+  const copyLabel = t('usageLogsPage.detail.actions.copy')
+  const copiedLabel = t('usageLogsPage.detail.actions.copied')
+  const wrapLinesLabel = t('usageLogsPage.detail.actions.wrapLines')
+  const preserveLinesLabel = t('usageLogsPage.detail.actions.preserveLines')
 
   return (
     <Sheet open={pending || Boolean(record) || Boolean(error)} onOpenChange={onOpenChange}>
@@ -3867,15 +3872,15 @@ export function RequestDetailSheet({
           })
         }}
       >
-        <SheetHeader className="border-b p-4">
+        <SheetHeader className="min-w-0 border-b p-4">
           <SheetTitle>{t('usageLogsPage.detail.title')}</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="[overflow-wrap:anywhere] break-words">
             {record
               ? (formatDateTime(record.timestamp, i18n) ?? record.timestamp)
               : t('usageLogsPage.detail.loading')}
           </SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
           {pending ? (
             <div className="grid gap-3">
               <Skeleton className="h-24" />
@@ -3883,56 +3888,79 @@ export function RequestDetailSheet({
               <Skeleton className="h-40" />
             </div>
           ) : error ? (
-            <p className="text-destructive text-sm">{error}</p>
+            <p className="text-destructive text-sm [overflow-wrap:anywhere] break-words">{error}</p>
           ) : record ? (
-            <div className="grid gap-5">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailField label={t('usageLogsPage.detail.fields.requestId')}>
-                  <span className="font-mono text-xs">
-                    {record.requestId ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.usageId')}>
-                  <span className="font-mono text-xs">{record.usageId}</span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.status')}>
+            <div className="grid min-w-0 grid-cols-1 gap-5">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.requestId')}
+                  copyValue={record.requestId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.requestId ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.usageId')}
+                  copyValue={String(record.usageId)}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.usageId}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.status')}>
                   <StatusBadge record={record} />
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.homeIp')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.homeIp')}>
                   {formatHomeEndpoint(record.runtime.homeIp, record.runtime.homePort) ??
                     t('usageLogsPage.status.localHome')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.client')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.client')}>
                   {record.client?.username ?? t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.clientKey')}>
-                  <span className="font-mono text-xs">
-                    {record.client?.apiKeyLabel ??
-                      record.client?.apiKeyMasked ??
-                      t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.credential')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.clientKey')}
+                  copyValue={record.client?.apiKeyLabel ?? record.client?.apiKeyMasked}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.client?.apiKeyLabel ??
+                    record.client?.apiKeyMasked ??
+                    t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.credential')}>
                   {record.credential?.label ?? t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.authIndex')}>
-                  <span className="font-mono text-xs">
-                    {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.model')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.authIndex')}
+                  copyValue={record.credential?.authIndex}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.model')}>
                   {record.provider} / {record.model}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.endpoint')}>
-                  <span className="font-mono text-xs">
-                    {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  className="sm:col-span-2"
+                  label={t('usageLogsPage.detail.fields.endpoint')}
+                  copyValue={record.endpoint}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.tokens')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
                   {[
                     ['input', record.tokens.inputTokens],
                     ['output', record.tokens.outputTokens],
@@ -3941,97 +3969,127 @@ export function RequestDetailSheet({
                     ['cacheCreate', record.tokens.cacheCreationTokens],
                     ['total', record.tokens.totalTokens],
                   ].map(([key, value]) => (
-                    <DetailField key={key} label={t(`usageLogsPage.detail.tokenFields.${key}`)}>
+                    <DiagnosticDetailField
+                      key={key}
+                      label={t(`usageLogsPage.detail.tokenFields.${key}`)}
+                    >
                       {formatNumber(Number(value))}
-                    </DetailField>
+                    </DiagnosticDetailField>
                   ))}
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailField label={t('usageLogsPage.detail.fields.latency')}>
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.latency')}>
                   {formatDuration(record.performance.latencyMs)}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.ttft')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.ttft')}>
                   {formatDuration(record.performance.ttftMs) ??
                     t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.billing')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.billing')}>
                   {formatAmountUnit(t, record.billing?.amount ?? null, record.billing?.currency) ??
                     t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.chargeId')}>
-                  <span className="font-mono text-xs">
-                    {record.billing?.chargeId ??
-                      detail?.related?.chargeId ??
-                      t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.chargeId')}
+                  copyValue={record.billing?.chargeId ?? detail?.related?.chargeId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.billing?.chargeId ??
+                    detail?.related?.chargeId ??
+                    t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.related')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.requestLog')}>
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.relatedFields.requestLog')}>
                     {detail?.related?.requestLog?.available === false
                       ? t('usageLogsPage.requestLogs.unavailableFile')
                       : detail?.related?.requestLog
                         ? t('common.enabled')
                         : t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField
+                    label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}
+                  >
                     {formatHomeEndpoint(
                       detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
                       detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
                     ) ?? t('usageLogsPage.status.localHome')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.downloadUrl')}>
-                    <span className="font-mono text-xs">
-                      {detail?.related?.requestLog?.downloadUrl ??
-                        t('usageLogsPage.status.notAvailable')}
-                    </span>
-                  </DetailField>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField
+                    className="sm:col-span-3"
+                    label={t('usageLogsPage.detail.relatedFields.downloadUrl')}
+                    copyValue={detail?.related?.requestLog?.downloadUrl}
+                    copyLabel={copyLabel}
+                    copiedLabel={copiedLabel}
+                    mono
+                  >
+                    {detail?.related?.requestLog?.downloadUrl ??
+                      t('usageLogsPage.status.notAvailable')}
+                  </DiagnosticDetailField>
                 </div>
               </div>
 
               {record.error ? (
                 <div>
                   <h3 className="text-sm font-medium">{t('usageLogsPage.detail.error')}</h3>
-                  <pre className="bg-muted/45 text-foreground mt-2 max-h-44 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                    {record.error.bodyPreview ?? record.error.message}
-                  </pre>
+                  <TechnicalTextViewer
+                    content={
+                      record.error.bodyPreview ??
+                      record.error.message ??
+                      t('usageLogsPage.status.notAvailable')
+                    }
+                    copyLabel={copyLabel}
+                    copiedLabel={copiedLabel}
+                    wrapLinesLabel={wrapLinesLabel}
+                    preserveLinesLabel={preserveLinesLabel}
+                    maxHeightClassName="max-h-44"
+                  />
                 </div>
               ) : null}
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.payload')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.method')}>
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-4">
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.method')}>
                     {detail?.payloadSummary?.method ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.stream')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.stream')}>
                     {detail?.payloadSummary?.stream === null
                       ? t('usageLogsPage.status.notAvailable')
                       : detail?.payloadSummary?.stream
                         ? t('common.enabled')
                         : t('common.disabled')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.messages')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.messages')}>
                     {detail?.payloadSummary?.messageCount ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.tools')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.tools')}>
                     {detail?.payloadSummary?.toolCount ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
+                  </DiagnosticDetailField>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.logs')}</h3>
-                <pre className="bg-muted/45 text-foreground mt-2 max-h-52 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                  {detail?.logExcerpt.length
-                    ? detail.logExcerpt.join('\n')
-                    : t('usageLogsPage.detail.noLogExcerpt')}
-                </pre>
+                <TechnicalTextViewer
+                  content={
+                    detail?.logExcerpt.length
+                      ? detail.logExcerpt.join('\n')
+                      : t('usageLogsPage.detail.noLogExcerpt')
+                  }
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  wrapLinesLabel={wrapLinesLabel}
+                  preserveLinesLabel={preserveLinesLabel}
+                  maxHeightClassName="max-h-52"
+                />
               </div>
             </div>
           ) : null}

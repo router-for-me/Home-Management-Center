@@ -71,7 +71,9 @@ export function EmptyState({
       </div>
       <p className="mt-3 text-sm font-semibold">{title}</p>
       {description ? (
-        <p className="text-muted-foreground mt-1 max-w-md text-sm leading-6">{description}</p>
+        <p className="text-muted-foreground mt-1 w-full max-w-md text-sm leading-6 [overflow-wrap:anywhere] break-words">
+          {description}
+        </p>
       ) : null}
       {action ? <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>

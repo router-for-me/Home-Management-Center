@@ -3090,6 +3090,12 @@ export const zhTW = {
         error: '錯誤摘要',
         payload: 'Payload 摘要',
         logExcerpt: '日誌片段',
+        actions: {
+          copy: '複製內容',
+          copied: '已複製',
+          wrapLines: '自動換行',
+          preserveLines: '保留原始行',
+        },
         fields: {
           eventType: '事件類型',
           status: '狀態',
@@ -3570,6 +3576,12 @@ export const zhTW = {
         related: '關聯資訊',
         noLogExcerpt: '後端沒有回傳該請求的日誌片段。',
         requestLogUnavailable: '目前記錄沒有可下載的請求日誌。',
+        actions: {
+          copy: '複製內容',
+          copied: '已複製',
+          wrapLines: '自動換行',
+          preserveLines: '保留原始行',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',

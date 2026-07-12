@@ -3239,6 +3239,12 @@ export const ru = {
         error: 'Сводка ошибки',
         payload: 'Сводка payload',
         logExcerpt: 'Фрагмент журнала',
+        actions: {
+          copy: 'Копировать содержимое',
+          copied: 'Скопировано',
+          wrapLines: 'Переносить строки',
+          preserveLines: 'Сохранять исходные строки',
+        },
         fields: {
           eventType: 'Тип события',
           status: 'Статус',
@@ -3735,6 +3741,12 @@ export const ru = {
         related: 'Связанные данные',
         noLogExcerpt: 'Фрагмент журнала для этого запроса не был возвращен.',
         requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
+        actions: {
+          copy: 'Копировать содержимое',
+          copied: 'Скопировано',
+          wrapLines: 'Переносить строки',
+          preserveLines: 'Сохранять исходные строки',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',
