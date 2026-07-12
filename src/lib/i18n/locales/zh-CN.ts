@@ -3091,6 +3091,12 @@ export const zhCN = {
         error: '错误摘要',
         payload: 'Payload 摘要',
         logExcerpt: '日志片段',
+        actions: {
+          copy: '复制内容',
+          copied: '已复制',
+          wrapLines: '自动换行',
+          preserveLines: '保留原始行',
+        },
         fields: {
           eventType: '事件类型',
           status: '状态',
@@ -3571,6 +3577,12 @@ export const zhCN = {
         related: '关联信息',
         noLogExcerpt: '后端没有返回该请求的日志片段。',
         requestLogUnavailable: '当前记录没有可下载的请求日志。',
+        actions: {
+          copy: '复制内容',
+          copied: '已复制',
+          wrapLines: '自动换行',
+          preserveLines: '保留原始行',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',

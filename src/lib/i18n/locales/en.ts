@@ -3223,6 +3223,12 @@ export const en = {
         error: 'Error summary',
         payload: 'Payload summary',
         logExcerpt: 'Log excerpt',
+        actions: {
+          copy: 'Copy content',
+          copied: 'Copied',
+          wrapLines: 'Wrap lines',
+          preserveLines: 'Preserve lines',
+        },
         fields: {
           eventType: 'Event type',
           status: 'Status',
@@ -3719,6 +3725,12 @@ export const en = {
         related: 'Related data',
         noLogExcerpt: 'No log excerpt was returned for this request.',
         requestLogUnavailable: 'No downloadable request log is available for this record.',
+        actions: {
+          copy: 'Copy content',
+          copied: 'Copied',
+          wrapLines: 'Wrap lines',
+          preserveLines: 'Preserve lines',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',
