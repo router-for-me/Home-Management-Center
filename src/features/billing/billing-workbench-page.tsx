@@ -745,10 +745,7 @@ function ChargeRecordsTab({
         ) : null
       }
     >
-      <TableSurfaceHeader
-        title={t('billingPage.charges.title')}
-        description={t('billingPage.charges.description')}
-      />
+      <TableSurfaceHeader title={t('billingPage.charges.title')} />
       {workbench.charges.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
@@ -848,10 +845,7 @@ function BalanceRecordsTab({
         ) : null
       }
     >
-      <TableSurfaceHeader
-        title={t('billingPage.balance.title')}
-        description={t('billingPage.balance.description')}
-      />
+      <TableSurfaceHeader title={t('billingPage.balance.title')} />
       {workbench.balanceRecords.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (

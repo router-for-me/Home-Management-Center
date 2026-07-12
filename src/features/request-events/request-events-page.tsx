@@ -349,7 +349,6 @@ function RequestEventsHeader({
       }
       description={t(`requestEventsPage.verdict.${verdict}.description`, {
         mode: t(`runtimeMode.${runtimeMode}`),
-        count: formatNumber(page?.total ?? 0),
       })}
       meta={
         <>
@@ -1106,7 +1105,6 @@ function RequestEventsTable({
     <TableSurface className="min-w-0">
       <TableSurfaceHeader
         title={t('requestEventsPage.table.title')}
-        description={t('requestEventsPage.table.description')}
         actions={
           <LiveRefreshControl
             enabled={liveRefresh.enabled}

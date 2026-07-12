@@ -5186,10 +5186,7 @@ export function RuntimeLogViewer({
   return (
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <SectionHeader
-          title={t('usageLogsPage.logs.title')}
-          description={t('usageLogsPage.logs.description')}
-        />
+        <SectionHeader title={t('usageLogsPage.logs.title')} />
         <div className="flex shrink-0 items-center gap-2">
           <LiveRefreshControl
             enabled={liveRefresh.enabled}
