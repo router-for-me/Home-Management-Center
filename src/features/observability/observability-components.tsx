@@ -76,6 +76,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
+import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+  NewItemsNotice,
+} from '@/features/observability/live-refresh-control'
 import type { RuntimeMode } from '@/lib/api/management/types'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
@@ -3359,12 +3365,15 @@ function RequestLogSortButton({
 
 export function RequestLogIndexTable({
   index,
+  updatedAt,
   mutating,
   downloadingRequestLogId,
   isDownloadingRequestLog,
   onDownloadRequestLog,
+  onAutoRefreshEligibilityChange,
 }: {
   index: RequestLogIndex | null
+  updatedAt?: string | null
   mutating: boolean
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
@@ -3373,6 +3382,7 @@ export function RequestLogIndexTable({
     homeIp?: string | null,
     homePort?: number | null,
   ) => void
+  onAutoRefreshEligibilityChange?: (eligible: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
@@ -3383,6 +3393,10 @@ export function RequestLogIndexTable({
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(0)
   const indexItems = index?.items ?? []
+
+  useEffect(() => {
+    onAutoRefreshEligibilityChange?.(page === 0 && sort.key === 'time' && sort.direction === 'desc')
+  }, [onAutoRefreshEligibilityChange, page, sort.direction, sort.key])
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -3435,22 +3449,31 @@ export function RequestLogIndexTable({
     <TableSurface className="min-w-0">
       <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-start lg:justify-between">
         <SectionHeader title={t('usageLogsPage.requestLogs.title')} />
-        <div className="relative min-w-0 lg:w-80">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            className="pl-9"
-            type="search"
-            value={search}
-            placeholder={t('usageLogsPage.requestLogs.searchPlaceholder')}
-            disabled={mutating || index.items.length === 0}
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setPage(0)
-            }}
-          />
+        <div className="flex min-w-0 flex-col gap-2 lg:w-80">
+          {updatedAt ? (
+            <p className="text-muted-foreground text-right text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
+          <div className="relative min-w-0">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              type="search"
+              value={search}
+              placeholder={t('usageLogsPage.requestLogs.searchPlaceholder')}
+              disabled={mutating || index.items.length === 0}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(0)
+              }}
+            />
+          </div>
         </div>
       </div>
       {totalRows > 0 ? (
@@ -4506,7 +4529,13 @@ export function CredentialUsageTable({
   )
 }
 
-export function ActivityHeatmap({ overview }: { overview: UsageOverview | null }) {
+export function ActivityHeatmap({
+  overview,
+  updatedAt,
+}: {
+  overview: UsageOverview | null
+  updatedAt?: string | null
+}) {
   const { t, i18n } = useTranslation()
   const buckets = overview?.activity ?? []
   const activeBuckets = buckets.filter((bucket) => bucket.requestCount > 0).length
@@ -4518,12 +4547,21 @@ export function ActivityHeatmap({ overview }: { overview: UsageOverview | null }
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <SectionHeader title={t('usageLogsPage.activity.title')} />
-        <div className="text-muted-foreground text-sm">
-          {t('usageLogsPage.activity.summary', {
-            buckets: formatNumber(activeBuckets),
-            requests: formatNumber(requestCount),
-            successRate: formatPercent(successRate),
-          })}
+        <div className="text-muted-foreground text-right text-sm">
+          <p>
+            {t('usageLogsPage.activity.summary', {
+              buckets: formatNumber(activeBuckets),
+              requests: formatNumber(requestCount),
+              successRate: formatPercent(successRate),
+            })}
+          </p>
+          {updatedAt ? (
+            <p className="mt-1 text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
         </div>
       </div>
       {buckets.length > 0 ? (
@@ -4612,9 +4650,11 @@ function UsageHealthStatusBadge({ status }: { status: UsageHealthStatus }) {
 function UsageHealthMiniTable({
   response,
   title,
+  updatedAt,
 }: {
   response: UsageHealthResponse | null
   title: string
+  updatedAt?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const rows = response?.items ?? []
@@ -4627,12 +4667,22 @@ function UsageHealthMiniTable({
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader title={title} />
         {response ? (
-          <div className="text-muted-foreground text-sm">
-            {t('usageLogsPage.health.summary', {
-              count: formatNumber(rows.length),
-              issues: formatNumber(degradedCount),
-              window: formatDuration(response.windowSeconds * 1000) ?? `${response.windowSeconds}s`,
-            })}
+          <div className="text-muted-foreground text-right text-sm">
+            <p>
+              {t('usageLogsPage.health.summary', {
+                count: formatNumber(rows.length),
+                issues: formatNumber(degradedCount),
+                window:
+                  formatDuration(response.windowSeconds * 1000) ?? `${response.windowSeconds}s`,
+              })}
+            </p>
+            {updatedAt ? (
+              <p className="mt-1 text-xs">
+                {t('usageLogsPage.header.updatedAt', {
+                  time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+                })}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -4756,9 +4806,13 @@ function UsageHealthMiniTable({
 export function UsageHealthPanel({
   providerHealth,
   credentialHealth,
+  providerUpdatedAt,
+  credentialUpdatedAt,
 }: {
   providerHealth: UsageHealthResponse | null
   credentialHealth: UsageHealthResponse | null
+  providerUpdatedAt?: string | null
+  credentialUpdatedAt?: string | null
 }) {
   const { t } = useTranslation()
 
@@ -4773,10 +4827,12 @@ export function UsageHealthPanel({
         <UsageHealthMiniTable
           response={providerHealth}
           title={t('usageLogsPage.health.providers.title')}
+          updatedAt={providerUpdatedAt}
         />
         <UsageHealthMiniTable
           response={credentialHealth}
           title={t('usageLogsPage.health.credentials.title')}
+          updatedAt={credentialUpdatedAt}
         />
       </div>
     </TableSurface>
@@ -5068,6 +5124,14 @@ export function RuntimeLogViewer({
   onPageSizeChange,
   onOffsetChange,
   onDownloadRequestLog,
+  liveRefresh,
+  liveRefreshIntervalMs,
+  liveRefreshError,
+  liveRefreshLastSuccessAt,
+  pendingItemCount,
+  pendingItemsTruncated,
+  onAcceptPendingItems,
+  onDetailOpenChange,
 }: {
   runtimeLogs: RuntimeLogSnapshot | null
   canRead: boolean
@@ -5091,7 +5155,22 @@ export function RuntimeLogViewer({
     homeIp?: string | null,
     homePort?: number | null,
   ) => void
+  liveRefresh: {
+    enabled: boolean
+    active: boolean
+    pauseReason: LiveRefreshPauseReason | null
+    available: boolean
+    setEnabled: (enabled: boolean) => void
+  }
+  liveRefreshIntervalMs: number
+  liveRefreshError: boolean
+  liveRefreshLastSuccessAt: number | null
+  pendingItemCount: number
+  pendingItemsTruncated: boolean
+  onAcceptPendingItems: () => void
+  onDetailOpenChange: (open: boolean) => void
 }) {
+  const liveRefreshStatusId = 'runtime-log-live-refresh-status'
   const { t, i18n } = useTranslation()
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
   const records = runtimeLogs?.records ?? []
@@ -5111,20 +5190,28 @@ export function RuntimeLogViewer({
           title={t('usageLogsPage.logs.title')}
           description={t('usageLogsPage.logs.description')}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          className="lg:shrink-0"
-          disabled={!canClear || mutating}
-          onClick={onClear}
-        >
-          {clearing ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Trash2 className="size-4" aria-hidden="true" />
-          )}
-          {t('usageLogsPage.actions.clearLogs')}
-        </Button>
+        <div className="flex shrink-0 items-center gap-2">
+          <LiveRefreshControl
+            enabled={liveRefresh.enabled}
+            disabled={!liveRefresh.available}
+            describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+            onEnabledChange={liveRefresh.setEnabled}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="lg:shrink-0"
+            disabled={!canClear || mutating}
+            onClick={onClear}
+          >
+            {clearing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Trash2 className="size-4" aria-hidden="true" />
+            )}
+            {t('usageLogsPage.actions.clearLogs')}
+          </Button>
+        </div>
       </div>
       <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span>
@@ -5146,7 +5233,36 @@ export function RuntimeLogViewer({
             total: formatNumber(total),
           })}
         </span>
+        {liveRefresh.active ? (
+          <span>
+            {t('observabilityRefresh.status.cadence', {
+              seconds: Math.round(liveRefreshIntervalMs / 1000),
+            })}
+          </span>
+        ) : null}
+        {liveRefresh.enabled && liveRefreshLastSuccessAt ? (
+          <span>
+            {t('observabilityRefresh.status.lastSuccess', {
+              time: new Intl.DateTimeFormat(i18n.language, {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }).format(new Date(liveRefreshLastSuccessAt)),
+            })}
+          </span>
+        ) : null}
       </div>
+      <LiveRefreshStatusNotice
+        id={liveRefreshStatusId}
+        enabled={liveRefresh.enabled}
+        active={liveRefresh.active}
+        pauseReason={liveRefresh.pauseReason}
+        intervalMs={liveRefreshIntervalMs}
+        hasError={liveRefreshError}
+        lastSuccessAt={liveRefreshLastSuccessAt}
+        showLastSuccess={false}
+        className="mt-3"
+      />
       {canRead ? (
         <div className="mt-3 border-t pt-3">
           <RuntimeLogFiltersToolbar
@@ -5157,6 +5273,12 @@ export function RuntimeLogViewer({
           />
         </div>
       ) : null}
+      <NewItemsNotice
+        count={pendingItemCount}
+        truncated={pendingItemsTruncated}
+        className="mt-3"
+        onAccept={onAcceptPendingItems}
+      />
       <div className="mt-3 overflow-hidden rounded-md border">
         {!canRead ? (
           <TableEmptyState
@@ -5195,7 +5317,14 @@ export function RuntimeLogViewer({
               </TableHeader>
               <TableBody>
                 {records.map((record) => (
-                  <RuntimeLogRow key={record.id} record={record} onInspectLog={setSelectedLog} />
+                  <RuntimeLogRow
+                    key={record.id}
+                    record={record}
+                    onInspectLog={(nextRecord) => {
+                      setSelectedLog(nextRecord)
+                      onDetailOpenChange(true)
+                    }}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -5261,6 +5390,7 @@ export function RuntimeLogViewer({
         downloadingRequestLogId={downloadingRequestLogId}
         isDownloadingRequestLog={isDownloadingRequestLog}
         onOpenChange={(open) => {
+          onDetailOpenChange(open)
           if (!open) setSelectedLog(null)
         }}
         onDownloadRequestLog={onDownloadRequestLog}
@@ -5492,6 +5622,8 @@ function RuntimeLogRow({
 export function ErrorLogFilesPanel({
   requestErrorLogs,
   canRead,
+  loading,
+  updatedAt,
   mutating,
   downloadingErrorLogName,
   isDownloadingErrorLog,
@@ -5499,6 +5631,8 @@ export function ErrorLogFilesPanel({
 }: {
   requestErrorLogs: RequestErrorLogFile[]
   canRead: boolean
+  loading: boolean
+  updatedAt: string | null
   mutating: boolean
   downloadingErrorLogName: string | null
   isDownloadingErrorLog: boolean
@@ -5519,22 +5653,37 @@ export function ErrorLogFilesPanel({
           title={t('usageLogsPage.errorLogs.title')}
           description={t('usageLogsPage.errorLogs.description')}
         />
-        <div className="relative min-w-0 lg:w-80">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            className="pl-9"
-            value={search}
-            placeholder={t('usageLogsPage.errorLogs.searchPlaceholder')}
-            disabled={!canRead || mutating}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+        <div className="flex min-w-0 flex-col gap-2 lg:w-80">
+          {updatedAt ? (
+            <p className="text-muted-foreground text-right text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
+          <div className="relative min-w-0">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              value={search}
+              placeholder={t('usageLogsPage.errorLogs.searchPlaceholder')}
+              disabled={!canRead || mutating}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
         </div>
       </div>
       <div className="mt-3 overflow-hidden rounded-md border">
-        {!canRead ? (
+        {loading ? (
+          <div className="grid gap-2 p-3" aria-busy="true">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : !canRead ? (
           <TableEmptyState
             kind="unsupported"
             className="m-0 border-0"

@@ -83,6 +83,23 @@ export function createManagementClient({
   })
 }
 
+function readResponseErrorMessage(data: unknown) {
+  if (!data || typeof data !== 'object') return null
+
+  const response = data as Record<string, unknown>
+  const directMessage = response.message
+  if (typeof directMessage === 'string' && directMessage.trim()) return directMessage
+
+  const error = response.error
+  if (typeof error === 'string' && error.trim()) return error
+  if (error && typeof error === 'object') {
+    const nestedMessage = (error as Record<string, unknown>).message
+    if (typeof nestedMessage === 'string' && nestedMessage.trim()) return nestedMessage
+  }
+
+  return null
+}
+
 export function toManagementApiError(error: unknown): ManagementApiError {
   if (error instanceof TypeError || error instanceof DOMException) {
     return {
@@ -92,9 +109,9 @@ export function toManagementApiError(error: unknown): ManagementApiError {
   }
 
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<{ error?: string; message?: string }>
+    const axiosError = error as AxiosError<unknown>
     const status = axiosError.response?.status
-    const responseMessage = axiosError.response?.data?.error ?? axiosError.response?.data?.message
+    const responseMessage = readResponseErrorMessage(axiosError.response?.data)
     const message = responseMessage ?? axiosError.message
 
     if (status === 401 || status === 403) {

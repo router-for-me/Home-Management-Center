@@ -3033,6 +3033,49 @@ export const ru = {
         description: '{{mode}} не предоставил request usage routes.',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: 'Live',
+        auto: 'Автообновление',
+      },
+      status: {
+        running: {
+          live: 'Live-обновление активно',
+          auto: 'Автообновление активно',
+        },
+        paused: {
+          live: 'Live-обновление приостановлено',
+          auto: 'Автообновление приостановлено',
+        },
+        off: {
+          live: 'Live-обновление выключено',
+          auto: 'Автообновление выключено',
+        },
+        unavailable: {
+          live: 'Live-обновление недоступно',
+          auto: 'Автообновление недоступно',
+        },
+        retrying: 'Ошибка обновления, автоматическая повторная попытка',
+        cadence: 'Проверка каждые {{seconds}} с',
+        delayed: 'Нет успешных обновлений {{seconds}} с',
+        lastSuccess: 'Последнее обновление: {{time}}',
+        withReason: '{{status}}: {{reason}}',
+        reason: {
+          hidden: 'Продолжится после возврата на страницу',
+          offline: 'Продолжится после восстановления сети',
+          detail: 'Продолжится после закрытия подробностей',
+          nonFirstPage: 'Вернитесь на страницу 1 для продолжения',
+          historicalRange: 'Исторический диапазон не обновляется автоматически',
+          nonLatestSort: 'Сортируйте от новых к старым для продолжения',
+          invalidFilters: 'Исправьте условия фильтрации для продолжения',
+          unavailable: 'Источник данных не поддерживает обновление',
+          ineligible: 'Обновление недоступно при текущих условиях',
+        },
+      },
+      newItems: 'Новых записей: {{count}}',
+      newItemsAtLeast: 'Новых записей не менее {{count}}',
+      showNew: 'Показать новые',
+    },
     requestEventsPage: {
       disconnected: {
         title: 'Подключите management runtime',
@@ -3421,6 +3464,7 @@ export const ru = {
         title: 'Часть данных не загрузилась',
       },
       issueScopes: {
+        runtimeSettings: 'Настройки среды выполнения',
         apiKeyUsage: 'Статистика использования',
         usageOverview: 'Сводка использования',
         usageRecords: 'Записи использования',

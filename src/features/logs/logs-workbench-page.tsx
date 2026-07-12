@@ -80,6 +80,7 @@ function LogsHeader({
   capabilities,
   runtimeMode,
   isFetching,
+  updatedAt,
   hasIssues,
   onRefresh,
 }: {
@@ -88,6 +89,7 @@ function LogsHeader({
   capabilities: CapabilityMap
   runtimeMode: RuntimeMode
   isFetching: boolean
+  updatedAt: string
   hasIssues: boolean
   onRefresh: () => void
 }) {
@@ -117,7 +119,7 @@ function LogsHeader({
           </span>
           <span>
             {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(context.fetchedAt, i18n) ?? context.fetchedAt,
+              time: formatDateTime(updatedAt, i18n) ?? updatedAt,
             })}
           </span>
         </>
@@ -213,6 +215,7 @@ export function LogsWorkbenchPage() {
         capabilities={workbench.capabilities}
         runtimeMode={workbench.runtimeMode}
         isFetching={workbench.isFetching}
+        updatedAt={workbench.runtimeLogsUpdatedAt ?? context.fetchedAt}
         hasIssues={workbench.issues.length > 0}
         onRefresh={workbench.refetch}
       />
@@ -240,11 +243,21 @@ export function LogsWorkbenchPage() {
         onDownloadRequestLog={(requestId, homeIp, homePort) =>
           void handleDownloadRequestLog(requestId, homeIp, homePort)
         }
+        liveRefresh={workbench.liveRefresh}
+        liveRefreshIntervalMs={workbench.liveRefreshIntervalMs}
+        liveRefreshError={workbench.liveRefreshError}
+        liveRefreshLastSuccessAt={workbench.liveRefreshLastSuccessAt}
+        pendingItemCount={workbench.pendingRuntimeLogCount}
+        pendingItemsTruncated={workbench.pendingRuntimeLogsTruncated}
+        onAcceptPendingItems={workbench.acceptPendingRuntimeLogs}
+        onDetailOpenChange={workbench.setRuntimeLogDetailOpen}
       />
 
       <ErrorLogFilesPanel
         requestErrorLogs={context.requestErrorLogs}
         canRead={workbench.capabilities.requestErrorLogs}
+        loading={workbench.isErrorLogsPending}
+        updatedAt={workbench.errorLogsUpdatedAt}
         mutating={workbench.mutating}
         downloadingErrorLogName={workbench.downloadingErrorLogName}
         isDownloadingErrorLog={workbench.isDownloadingErrorLog}

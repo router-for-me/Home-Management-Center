@@ -1,21 +1,35 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import {
+  getAdaptiveRefreshInterval,
+  getStagedItemCount,
+} from '@/features/observability/live-refresh'
+import type { StagedRefresh } from '@/features/observability/live-refresh'
+import { useBrowserActivity, useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
 import {
   clearRuntimeLogs,
   defaultRuntimeLogFilters,
   downloadRequestErrorLog,
   downloadRequestLogById,
-  fetchRuntimeLogContext,
+  fetchRequestErrorLogs,
   fetchRuntimeLogs,
+  fetchUsageRuntimeSettings,
   toLogsApiError,
 } from '@/lib/api/management/logs'
-import type { RuntimeLogFilters } from '@/lib/api/management/logs'
+import type {
+  RuntimeLogContext,
+  RuntimeLogFilters,
+  RuntimeLogSnapshot,
+} from '@/lib/api/management/logs'
 
 const runtimeLogPageSizeOptions = [50, 100, 200]
 const defaultRuntimeLogPageSize = 50
+const liveRefreshIntervalMs = 5_000
+const errorLogsRefreshIntervalMs = 60_000
+const settingsRefreshIntervalMs = 5 * 60_000
 
 export function useLogsWorkbench() {
   const queryClient = useQueryClient()
@@ -25,44 +39,107 @@ export function useLogsWorkbench() {
     useState<RuntimeLogFilters>(defaultRuntimeLogFilters)
   const [runtimeLogLimit, setRuntimeLogLimitState] = useState(defaultRuntimeLogPageSize)
   const [runtimeLogOffset, setRuntimeLogOffset] = useState(0)
+  const [runtimeLogDetailOpen, setRuntimeLogDetailOpen] = useState(false)
+  const [pendingRuntimeLogs, setPendingRuntimeLogs] =
+    useState<StagedRefresh<RuntimeLogSnapshot> | null>(null)
+  const browserActivity = useBrowserActivity()
 
-  const contextQuery = useQuery({
-    queryKey: [
-      'management-log-context',
-      session.baseUrl,
-      connectedAt,
-      capabilities.logs,
-      capabilities.requestErrorLogs,
-    ],
-    enabled: connected && capabilityReady && Boolean(session.managementKey),
+  const canQueryContext = connected && capabilityReady && Boolean(session.managementKey)
+  const settingsQuery = useQuery({
+    queryKey: ['management-log-settings', session.baseUrl, connectedAt],
+    enabled: canQueryContext,
     placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval:
+      browserActivity.visible && browserActivity.online
+        ? getAdaptiveRefreshInterval(settingsRefreshIntervalMs)
+        : false,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchRuntimeLogContext(session, capabilities)
+        return await fetchUsageRuntimeSettings(session)
       } catch (error) {
         throw toLogsApiError(error)
       }
     },
   })
 
+  const errorLogsQuery = useQuery({
+    queryKey: ['management-request-error-logs', session.baseUrl, connectedAt],
+    enabled: canQueryContext && capabilities.requestErrorLogs,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval:
+      browserActivity.visible && browserActivity.online && capabilities.requestErrorLogs
+        ? getAdaptiveRefreshInterval(errorLogsRefreshIntervalMs)
+        : false,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      try {
+        return await fetchRequestErrorLogs(session)
+      } catch (error) {
+        throw toLogsApiError(error)
+      }
+    },
+  })
+  const browserRefreshActive = browserActivity.visible && browserActivity.online
+  const wasBrowserRefreshActive = useRef(browserRefreshActive)
+
+  useEffect(() => {
+    if (browserRefreshActive && !wasBrowserRefreshActive.current && canQueryContext) {
+      void settingsQuery.refetch()
+      if (capabilities.requestErrorLogs) void errorLogsQuery.refetch()
+    }
+    wasBrowserRefreshActive.current = browserRefreshActive
+  }, [
+    browserRefreshActive,
+    canQueryContext,
+    capabilities.requestErrorLogs,
+    errorLogsQuery,
+    settingsQuery,
+  ])
+
   const canQueryRuntimeLogs =
     connected &&
     capabilityReady &&
     Boolean(session.managementKey) &&
     capabilities.logs &&
-    contextQuery.data?.settings.fileLoggingEnabled === true
+    settingsQuery.data?.fileLoggingEnabled === true
+
+  const liveEligible =
+    canQueryRuntimeLogs && runtimeLogOffset === 0 && runtimeLogFilters.before.trim() === ''
+  const liveIneligibleReason = !canQueryRuntimeLogs
+    ? 'unavailable'
+    : runtimeLogOffset > 0
+      ? 'nonFirstPage'
+      : runtimeLogFilters.before.trim()
+        ? 'historicalRange'
+        : 'ineligible'
+  const liveRefresh = useLiveRefresh({
+    storageKey: 'hmc:runtime-logs:live',
+    defaultEnabled: false,
+    eligible: liveEligible,
+    detailOpen: runtimeLogDetailOpen,
+    ineligibleReason: liveIneligibleReason,
+  })
+  const runtimeLogsQueryKey = [
+    'management-runtime-logs',
+    session.baseUrl,
+    connectedAt,
+    runtimeLogFilters,
+    runtimeLogLimit,
+    runtimeLogOffset,
+  ] as const
 
   const runtimeLogsQuery = useQuery({
-    queryKey: [
-      'management-runtime-logs',
-      session.baseUrl,
-      connectedAt,
-      runtimeLogFilters,
-      runtimeLogLimit,
-      runtimeLogOffset,
-    ],
+    queryKey: runtimeLogsQueryKey,
     enabled: canQueryRuntimeLogs,
     placeholderData: keepPreviousData,
+    refetchOnReconnect: false,
     queryFn: async () => {
       try {
         return await fetchRuntimeLogs(session, {
@@ -76,13 +153,94 @@ export function useLogsWorkbench() {
     },
   })
 
+  const liveRuntimeLogsQuery = useQuery({
+    queryKey: [
+      'management-runtime-logs-live',
+      session.baseUrl,
+      connectedAt,
+      runtimeLogFilters,
+      runtimeLogLimit,
+    ],
+    enabled:
+      liveRefresh.active &&
+      Boolean(runtimeLogsQuery.data) &&
+      !runtimeLogsQuery.isPlaceholderData &&
+      !runtimeLogsQuery.isFetching,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval: liveRefresh.active ? getAdaptiveRefreshInterval(liveRefreshIntervalMs) : false,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      try {
+        return await fetchRuntimeLogs(session, {
+          ...runtimeLogFilters,
+          limit: runtimeLogLimit,
+          offset: 0,
+        })
+      } catch (error) {
+        throw toLogsApiError(error)
+      }
+    },
+  })
+  const wasLiveActive = useRef(liveRefresh.active)
+
+  useEffect(() => {
+    if (liveRefresh.active && !wasLiveActive.current && !liveRuntimeLogsQuery.isFetching) {
+      void liveRuntimeLogsQuery.refetch()
+    }
+    wasLiveActive.current = liveRefresh.active
+  }, [liveRefresh.active, liveRuntimeLogsQuery])
+
+  useEffect(() => {
+    if (!liveRefresh.active) {
+      setPendingRuntimeLogs(null)
+      return
+    }
+    const accepted = runtimeLogsQuery.data
+    const incoming = liveRuntimeLogsQuery.data
+    if (!accepted || !incoming || runtimeLogsQuery.isPlaceholderData) return
+
+    const staged = getStagedItemCount(
+      accepted.records,
+      incoming.records,
+      (record) => record.id,
+      runtimeLogLimit,
+    )
+    if (staged.count === 0) {
+      setPendingRuntimeLogs(null)
+      return
+    }
+    setPendingRuntimeLogs({ data: incoming, ...staged })
+  }, [
+    liveRuntimeLogsQuery.data,
+    liveRuntimeLogsQuery.dataUpdatedAt,
+    liveRefresh.active,
+    runtimeLogLimit,
+    runtimeLogsQuery.data,
+    runtimeLogsQuery.isPlaceholderData,
+  ])
+
+  useEffect(() => {
+    setPendingRuntimeLogs(null)
+  }, [runtimeLogFilters, runtimeLogLimit, runtimeLogOffset])
+
+  useEffect(() => {
+    if (!liveRefresh.enabled) setPendingRuntimeLogs(null)
+  }, [liveRefresh.enabled])
+
   const invalidateRuntimeLogs = async () => {
     await queryClient.invalidateQueries({
       queryKey: ['management-runtime-logs', session.baseUrl, connectedAt],
     })
-    await queryClient.invalidateQueries({
-      queryKey: ['management-log-context', session.baseUrl, connectedAt],
-    })
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ['management-log-settings', session.baseUrl, connectedAt],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['management-request-error-logs', session.baseUrl, connectedAt],
+      }),
+    ])
   }
 
   const setRuntimeLogLimit = (nextLimit: number) => {
@@ -112,8 +270,21 @@ export function useLogsWorkbench() {
         throw toLogsApiError(error)
       }
     },
+    onMutate: async () => {
+      liveRefresh.setEnabled(false)
+      setPendingRuntimeLogs(null)
+      await queryClient.cancelQueries({
+        queryKey: ['management-runtime-logs-live', session.baseUrl, connectedAt],
+      })
+      queryClient.removeQueries({
+        queryKey: ['management-runtime-logs-live', session.baseUrl, connectedAt],
+      })
+    },
     onSuccess: async () => {
       setRuntimeLogOffset(0)
+      queryClient.removeQueries({
+        queryKey: ['management-runtime-logs-live', session.baseUrl, connectedAt],
+      })
       await invalidateRuntimeLogs()
     },
   })
@@ -146,8 +317,30 @@ export function useLogsWorkbench() {
     },
   })
 
+  const context = useMemo<RuntimeLogContext | undefined>(() => {
+    if (!settingsQuery.data) return undefined
+    const fetchedAt = new Date(
+      Math.max(settingsQuery.dataUpdatedAt, errorLogsQuery.dataUpdatedAt) || Date.now(),
+    ).toISOString()
+    return {
+      fetchedAt,
+      settings: settingsQuery.data,
+      requestErrorLogs: errorLogsQuery.data ?? [],
+      issues: [],
+    }
+  }, [
+    errorLogsQuery.data,
+    errorLogsQuery.dataUpdatedAt,
+    settingsQuery.data,
+    settingsQuery.dataUpdatedAt,
+  ])
   const issues = [
-    ...(contextQuery.data?.issues ?? []),
+    ...(settingsQuery.error
+      ? [{ scope: 'runtimeSettings' as const, message: settingsQuery.error.message }]
+      : []),
+    ...(errorLogsQuery.error
+      ? [{ scope: 'requestErrorLogs' as const, message: errorLogsQuery.error.message }]
+      : []),
     ...(runtimeLogsQuery.error
       ? [
           {
@@ -169,20 +362,50 @@ export function useLogsWorkbench() {
     capabilityReady,
     capabilities,
     runtimeMode,
-    context: contextQuery.data,
+    context,
     runtimeLogs: runtimeLogsQuery.data ?? null,
+    runtimeLogsUpdatedAt:
+      runtimeLogsQuery.dataUpdatedAt > 0
+        ? new Date(runtimeLogsQuery.dataUpdatedAt).toISOString()
+        : context?.fetchedAt,
+    errorLogsUpdatedAt:
+      errorLogsQuery.dataUpdatedAt > 0
+        ? new Date(errorLogsQuery.dataUpdatedAt).toISOString()
+        : null,
     issues,
-    isPending: contextQuery.isPending || (canQueryRuntimeLogs && runtimeLogsQuery.isPending),
-    isFetching: contextQuery.isFetching || runtimeLogsQuery.isFetching,
-    isError: contextQuery.isError,
-    errorMessage: contextQuery.error?.message ?? null,
+    isPending: settingsQuery.isPending || (canQueryRuntimeLogs && runtimeLogsQuery.isPending),
+    isFetching:
+      settingsQuery.isFetching || errorLogsQuery.isFetching || runtimeLogsQuery.isFetching,
+    isErrorLogsPending:
+      capabilities.requestErrorLogs && errorLogsQuery.isPending && !errorLogsQuery.data,
+    isError: settingsQuery.isError && !settingsQuery.data,
+    errorMessage: settingsQuery.error?.message ?? null,
     refetch: () => {
-      void Promise.all(
-        canQueryRuntimeLogs
-          ? [contextQuery.refetch(), runtimeLogsQuery.refetch()]
-          : [contextQuery.refetch()],
-      )
+      const queries: Array<Promise<unknown>> = [settingsQuery.refetch()]
+      if (capabilities.requestErrorLogs) queries.push(errorLogsQuery.refetch())
+      const runtimeLogsRefresh = canQueryRuntimeLogs ? runtimeLogsQuery.refetch() : null
+      if (runtimeLogsRefresh) queries.push(runtimeLogsRefresh)
+      void Promise.allSettled(queries)
+      if (runtimeLogsRefresh) {
+        void runtimeLogsRefresh.then((result) => {
+          if (result.isSuccess) setPendingRuntimeLogs(null)
+        })
+      }
     },
+    liveRefresh,
+    liveRefreshIntervalMs,
+    liveRefreshError: liveRuntimeLogsQuery.isError,
+    liveRefreshFetching: liveRuntimeLogsQuery.isFetching,
+    liveRefreshLastSuccessAt:
+      liveRuntimeLogsQuery.dataUpdatedAt || runtimeLogsQuery.dataUpdatedAt || null,
+    pendingRuntimeLogCount: pendingRuntimeLogs?.count ?? 0,
+    pendingRuntimeLogsTruncated: pendingRuntimeLogs?.truncated ?? false,
+    acceptPendingRuntimeLogs: () => {
+      if (!pendingRuntimeLogs) return
+      queryClient.setQueryData(runtimeLogsQueryKey, pendingRuntimeLogs.data)
+      setPendingRuntimeLogs(null)
+    },
+    setRuntimeLogDetailOpen,
     clearLogs: clearLogsMutation.mutateAsync,
     downloadRequestErrorLog: downloadRequestErrorLogMutation.mutateAsync,
     downloadRequestLogById: downloadRequestLogByIdMutation.mutateAsync,
@@ -198,7 +421,9 @@ export function useLogsWorkbench() {
     setRuntimeLogLimit,
     setRuntimeLogFilters,
     clearRuntimeLogFilters,
-    setRuntimeLogOffset,
+    setRuntimeLogOffset: (nextOffset: number) => {
+      setRuntimeLogOffset(Math.max(0, nextOffset))
+    },
     mutating,
   }
 }
