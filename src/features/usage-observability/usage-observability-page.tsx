@@ -5,6 +5,10 @@ import { toast } from 'sonner'
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
 import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+} from '@/features/observability/live-refresh-control'
+import {
   CapabilityStrip,
   type CapabilityStripItem,
   CostBreakdownPanel,
@@ -20,7 +24,6 @@ import {
   UsageKpiStrip,
   UsageTrendPanel,
   downloadBlob,
-  formatDateTime,
   getObservabilityVerdictBadgeClassName,
 } from '@/features/observability/observability-components'
 import { useUsageObservabilityWorkbench } from '@/features/usage-observability/use-usage-observability-workbench'
@@ -37,7 +40,10 @@ function isUnsupportedIssue(issue: UsageIssue) {
 }
 
 function isFailedUsageIssue(issue: UsageIssue) {
-  return issue.scope.startsWith('usage') && !isUnsupportedIssue(issue)
+  return (
+    (issue.scope === 'runtimeSettings' || issue.scope.startsWith('usage')) &&
+    !isUnsupportedIssue(issue)
+  )
 }
 
 function hasUsageActivity(snapshot: UsageSnapshot) {
@@ -52,6 +58,18 @@ function hasUsageActivity(snapshot: UsageSnapshot) {
     recordCount > 0 ||
     credentialUsageCount > 0
   )
+}
+
+function getRequestLogDownloadErrorKey(error: unknown) {
+  if (!error || typeof error !== 'object') return 'generic'
+
+  const status = 'status' in error && typeof error.status === 'number' ? error.status : null
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : null
+
+  if (status === 404 || code === 'not-found') return 'notFound'
+  if (status === 502) return 'remoteUnavailable'
+  if (status === 401 || status === 403 || code === 'auth') return 'unauthorized'
+  return 'generic'
 }
 
 function getUsagePageVerdict(snapshot: UsageSnapshot): UsagePageVerdict {
@@ -90,16 +108,18 @@ function UsageObservabilityHeader({
   snapshot,
   capabilities,
   runtimeMode,
-  isFetching,
+  manualRefreshing,
+  autoRefresh,
   onRefresh,
 }: {
   snapshot: UsageSnapshot
   capabilities: CapabilityMap
   runtimeMode: RuntimeMode
-  isFetching: boolean
+  manualRefreshing: boolean
+  autoRefresh: ReturnType<typeof useUsageObservabilityWorkbench>['autoRefresh']
   onRefresh: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const verdict = getUsagePageVerdict(snapshot)
 
   return (
@@ -119,27 +139,29 @@ function UsageObservabilityHeader({
         mode: t(`runtimeMode.${runtimeMode}`),
       })}
       meta={
-        <>
-          <span>
-            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-          </span>
-          <span>
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-            })}
-          </span>
-        </>
+        <span>{t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}</span>
       }
       tags={<UsageCapabilityStrip capabilities={capabilities} />}
       actions={
-        <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
-          {isFetching ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <RefreshCw className="size-4" aria-hidden="true" />
-          )}
-          {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
-        </Button>
+        <>
+          <LiveRefreshControl
+            mode="auto"
+            enabled={autoRefresh.enabled}
+            disabled={!autoRefresh.available}
+            describedBy={!autoRefresh.available ? 'usage-auto-refresh-status' : undefined}
+            onEnabledChange={autoRefresh.setEnabled}
+          />
+          <Button variant="outline" disabled={manualRefreshing} onClick={onRefresh}>
+            {manualRefreshing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="size-4" aria-hidden="true" />
+            )}
+            {manualRefreshing
+              ? t('usageLogsPage.actions.syncing')
+              : t('usageLogsPage.actions.refresh')}
+          </Button>
+        </>
       }
     />
   )
@@ -147,7 +169,7 @@ function UsageObservabilityHeader({
 
 export function UsageObservabilityPage() {
   const { t } = useTranslation()
-  const workbench = useUsageObservabilityWorkbench({ scope: 'usage' })
+  const workbench = useUsageObservabilityWorkbench()
   const capabilities = workbench.capabilities
   const noUsageCapabilities =
     !capabilities.usageOverview &&
@@ -182,14 +204,46 @@ export function UsageObservabilityPage() {
     }
   }
 
+  const handleDownloadRequestLog = async (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => {
+    try {
+      const result = await workbench.downloadRequestLogById({ requestId, homeIp, homePort })
+      downloadBlob(result.blob, result.fileName)
+      toast.success(
+        t('usageLogsPage.toast.requestLogDownloaded', {
+          fileName: result.fileName,
+        }),
+      )
+    } catch (error) {
+      toast.error(
+        t(`usageLogsPage.detail.downloadErrors.${getRequestLogDownloadErrorKey(error)}` as const),
+      )
+    }
+  }
+
   return (
     <section className="grid w-full gap-4">
       <UsageObservabilityHeader
         snapshot={snapshot}
         capabilities={capabilities}
         runtimeMode={workbench.runtimeMode}
-        isFetching={workbench.isFetching}
+        manualRefreshing={workbench.manualRefreshing}
+        autoRefresh={workbench.autoRefresh}
         onRefresh={workbench.refetch}
+      />
+
+      <LiveRefreshStatusNotice
+        id="usage-auto-refresh-status"
+        mode="auto"
+        enabled={workbench.autoRefresh.enabled}
+        active={workbench.autoRefresh.active}
+        pauseReason={workbench.autoRefresh.pauseReason}
+        intervalMs={workbench.autoRefreshIntervalMs}
+        hasError={workbench.autoRefreshError}
+        lastSuccessAt={workbench.autoRefreshLastSuccessAt}
       />
 
       {noUsageCapabilities ? (
@@ -255,6 +309,7 @@ export function UsageObservabilityPage() {
         filters={workbench.filters}
         filterOptions={snapshot.filterOptions}
         pageSizeOptions={workbench.recordPageSizeOptions}
+        fetching={workbench.isFetching}
         mutating={workbench.mutating}
         canExport={capabilities.usageExport}
         isExporting={workbench.isExportingUsage}
@@ -290,6 +345,9 @@ export function UsageObservabilityPage() {
         onOpenChange={(open) => {
           if (!open) workbench.clearSelectedRecord()
         }}
+        onDownloadRequestLog={(requestId, homeIp, homePort) =>
+          void handleDownloadRequestLog(requestId, homeIp, homePort)
+        }
       />
     </section>
   )

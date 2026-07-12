@@ -11,6 +11,7 @@ import {
   BarChart3,
   Check,
   Copy,
+  Download,
   Eye,
   Info,
   Loader2,
@@ -18,6 +19,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Route,
   Search,
   Trash2,
   WalletCards,
@@ -35,6 +37,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
+  TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
   containedTableContainerClassName,
@@ -51,7 +54,16 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -71,6 +83,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type BillingTab,
   type DateRangePreset,
@@ -81,6 +94,7 @@ import {
   getNextOffset,
   getPreviousOffset,
 } from '@/features/billing/billing-model'
+import { ModelPriceImportSheet } from '@/features/billing/model-price-import-sheet'
 import {
   type BillingModelPriceCandidate,
   useBillingWorkbench,
@@ -89,11 +103,20 @@ import type {
   BalanceRecord,
   BillingFilters,
   BillingPagination,
+  BillingServiceTierSource,
   ChargeRecord,
   ModelPrice,
   ModelPriceInput,
+  ModelPriceSource,
 } from '@/lib/api/management/billing-types'
 import type { UserResource } from '@/lib/api/management/users'
+import type {
+  ModelPriceImportApplyItem,
+  ModelPriceImportApplyResult,
+  ModelPriceImportOverwriteMode,
+  ModelPriceImportProgress,
+  ModelPriceImportTargetFilter,
+} from '@/lib/billing/model-price-import-types'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -102,11 +125,18 @@ type SheetMode =
   | { type: 'balance-detail'; record: BalanceRecord }
   | { type: 'model-price-create' }
   | { type: 'model-price-edit'; resource: ModelPrice }
+  | {
+      type: 'model-price-import'
+      intent: 'import' | 'refresh-synced'
+      initialOverwriteMode?: ModelPriceImportOverwriteMode
+      initialTargetFilter?: ModelPriceImportTargetFilter
+    }
 
 type PendingDelete = { type: 'model-price'; resource: ModelPrice }
 
 const tabs: BillingTab[] = ['overview', 'charges', 'balanceRecords', 'modelPrices']
 const modelPriceNumberFields = [
+  'minInputTokens',
   'inputPricePerMillion',
   'outputPricePerMillion',
   'cacheReadPricePerMillion',
@@ -115,8 +145,14 @@ const modelPriceNumberFields = [
 ] as const
 
 type ModelPriceNumberField = (typeof modelPriceNumberFields)[number]
-type ModelPriceDraft = Omit<ModelPriceInput, ModelPriceNumberField> & {
+type ModelPriceDraft = Omit<
+  ModelPriceInput,
+  ModelPriceNumberField | 'serviceTier' | 'cacheWritePriceConfigured'
+> & {
   [key in ModelPriceNumberField]: string
+} & {
+  serviceTier: string
+  cacheWritePriceConfigured: boolean
 }
 
 function toProviderLogoId(provider: string) {
@@ -129,10 +165,21 @@ function toProviderLogoId(provider: string) {
   return provider
 }
 
-function toModelPriceInput(resource: ModelPrice, enabled = resource.enabled): ModelPriceInput {
+function toModelPriceInput(
+  resource: ModelPrice,
+  enabled = resource.enabled,
+  includeRuleScope = true,
+): ModelPriceInput {
   return {
     provider: resource.provider,
     model: resource.model,
+    ...(includeRuleScope
+      ? {
+          serviceTier: resource.serviceTier,
+          minInputTokens: resource.minInputTokens,
+          cacheWritePriceConfigured: resource.cacheWritePriceConfigured,
+        }
+      : {}),
     inputPricePerMillion: resource.inputPricePerMillion,
     outputPricePerMillion: resource.outputPricePerMillion,
     cacheReadPricePerMillion: resource.cacheReadPricePerMillion,
@@ -147,10 +194,14 @@ function createModelPriceDraft(resource: ModelPrice | null): ModelPriceDraft {
   return {
     provider: resource?.provider ?? '',
     model: resource?.model ?? '',
+    serviceTier: resource?.serviceTier ?? '*',
+    minInputTokens: String(resource?.minInputTokens ?? 0),
     inputPricePerMillion: String(resource?.inputPricePerMillion ?? 0),
     outputPricePerMillion: String(resource?.outputPricePerMillion ?? 0),
     cacheReadPricePerMillion: String(resource?.cacheReadPricePerMillion ?? 0),
     cacheWritePricePerMillion: String(resource?.cacheWritePricePerMillion ?? 0),
+    cacheWritePriceConfigured:
+      resource?.cacheWritePriceConfigured ?? (resource?.cacheWritePricePerMillion ?? 0) !== 0,
     requestPrice: String(resource?.requestPrice ?? 0),
     enabled: resource?.enabled ?? true,
     note: resource?.note ?? '',
@@ -163,6 +214,24 @@ function parsePriceValue(value: string) {
 
   const parsed = Number(trimmed)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+}
+
+function formatContextBand(value: number, t: ReturnType<typeof useTranslation>['t']) {
+  if (value === 0) return t('billingPage.prices.scope.baseContext')
+  if (value === 272001) return t('billingPage.prices.scope.over272K')
+  return t('billingPage.prices.scope.fromTokens', { count: formatNumber(value) })
+}
+
+function formatServiceTier(value: string, t: ReturnType<typeof useTranslation>['t']) {
+  if (value === '*') return t('billingPage.prices.tiers.wildcard')
+  if (value === 'standard' || value === 'flex' || value === 'priority') {
+    return t(`billingPage.prices.tiers.${value}`)
+  }
+  return value
+}
+
+function formatModelPriceIdentity(resource: ModelPrice, t: ReturnType<typeof useTranslation>['t']) {
+  return `${resource.model} · ${formatServiceTier(resource.serviceTier, t)} · ${formatContextBand(resource.minInputTokens, t)}`
 }
 
 function formatDateTime(value: string | null | undefined, fallback: string) {
@@ -351,15 +420,21 @@ function PaginationBar({
 
   return (
     <div className="flex flex-col gap-3 border-t px-4 py-3 md:flex-row md:items-center md:justify-between">
-      <span className="text-muted-foreground text-sm">
-        {t('billingPage.pagination.range', { start, end, total })}
-      </span>
+      <TablePaginationStatus
+        text={t('billingPage.pagination.range', { start, end, total })}
+        announcementKey={`${pagination.offset}:${pagination.limit}`}
+        busy={disabled}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={String(pagination.limit)}
           onValueChange={(value) => onChange({ limit: Number(value), offset: 0 })}
         >
-          <SelectTrigger className="w-28" size="sm">
+          <SelectTrigger
+            className="w-28"
+            size="sm"
+            aria-label={t('billingPage.pagination.pageSize')}
+          >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -677,10 +752,7 @@ function ChargeRecordsTab({
         ) : null
       }
     >
-      <TableSurfaceHeader
-        title={t('billingPage.charges.title')}
-        description={t('billingPage.charges.description')}
-      />
+      <TableSurfaceHeader title={t('billingPage.charges.title')} />
       {workbench.charges.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
@@ -780,10 +852,7 @@ function BalanceRecordsTab({
         ) : null
       }
     >
-      <TableSurfaceHeader
-        title={t('billingPage.balance.title')}
-        description={t('billingPage.balance.description')}
-      />
+      <TableSurfaceHeader title={t('billingPage.balance.title')} />
       {workbench.balanceRecords.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (
@@ -865,17 +934,112 @@ function BalanceRecordsTab({
 function ModelPricesTab({
   workbench,
   onCreate,
+  onImport,
+  onRefreshSynced,
   onEdit,
   onToggle,
   onDelete,
 }: {
   workbench: ReturnType<typeof useBillingWorkbench>
   onCreate: () => void
+  onImport: () => void
+  onRefreshSynced: () => void
   onEdit: (resource: ModelPrice) => void
   onToggle: (resource: ModelPrice) => void
   onDelete: (resource: ModelPrice) => void
 }) {
   const { t } = useTranslation()
+  const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
+  const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
+  const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
+  const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+  const [priceSearch, setPriceSearch] = useState('')
+  const [tierFilter, setTierFilter] = useState<'all' | '*' | 'standard' | 'flex' | 'priority'>(
+    'all',
+  )
+  const [sourceFilter, setSourceFilter] = useState<'all' | ModelPriceSource>('all')
+  const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
+  const savedTierSource = workbench.billingSettings?.serviceTierSource ?? 'request'
+  const tierSourceDirty = tierSourceDraft !== savedTierSource
+  const responseTierDiagnosticsUnavailable =
+    Boolean(workbench.billingTierDiagnosticsError) ||
+    workbench.billingTierDiagnostics?.supported === false ||
+    (!workbench.billingTierDiagnosticsFetching && !workbench.billingTierDiagnostics)
+  const hasPriceFilters =
+    Boolean(priceSearch.trim()) ||
+    tierFilter !== 'all' ||
+    sourceFilter !== 'all' ||
+    stateFilter !== 'all'
+  const visibleModelPrices = useMemo(
+    () =>
+      workbench.modelPrices
+        .filter((resource) => {
+          const search = priceSearch.trim().toLowerCase()
+          if (search && !`${resource.provider} ${resource.model}`.toLowerCase().includes(search)) {
+            return false
+          }
+          if (tierFilter !== 'all' && resource.serviceTier !== tierFilter) return false
+          if (sourceFilter !== 'all' && resource.source !== sourceFilter) return false
+          if (stateFilter === 'enabled' && !resource.enabled) return false
+          if (stateFilter === 'disabled' && resource.enabled) return false
+          return true
+        })
+        .sort(
+          (left, right) =>
+            left.provider.localeCompare(right.provider) ||
+            left.model.localeCompare(right.model) ||
+            left.serviceTier.localeCompare(right.serviceTier) ||
+            left.minInputTokens - right.minInputTokens,
+        ),
+    [priceSearch, sourceFilter, stateFilter, tierFilter, workbench.modelPrices],
+  )
+
+  useEffect(() => {
+    setTierSourceDraft(savedTierSource)
+    setSettingsError(null)
+  }, [savedTierSource])
+
+  const saveTierSource = async () => {
+    setSettingsError(null)
+    try {
+      await workbench.updateBillingSettings(tierSourceDraft)
+      toast.success(t('billingPage.settings.saved'))
+      setTierPolicyDialogOpen(false)
+      setConfirmTierSourceChange(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('billingPage.toast.actionFailed')
+      setSettingsError(message)
+      toast.error(message)
+    }
+  }
+
+  const requestTierSourceSave = () => {
+    if (
+      tierSourceDraft === 'response' &&
+      (responseTierDiagnosticsUnavailable ||
+        (workbench.billingTierDiagnostics?.supported &&
+          workbench.billingTierDiagnostics.fallbackRequests > 0))
+    ) {
+      setConfirmTierSourceChange(true)
+      return
+    }
+    void saveTierSource()
+  }
+
+  const cancelTierSourceEdit = () => {
+    setTierSourceDraft(savedTierSource)
+    setSettingsError(null)
+    setTierPolicyDialogOpen(false)
+  }
+
+  const clearPriceFilters = () => {
+    setPriceSearch('')
+    setTierFilter('all')
+    setSourceFilter('all')
+    setStateFilter('all')
+  }
+
   const copy = (value: string) => {
     void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
   }
@@ -891,113 +1055,501 @@ function ModelPricesTab({
   }
 
   return (
-    <TableSurface>
-      <TableSurfaceHeader
-        title={t('billingPage.prices.title')}
-        description={t('billingPage.prices.description')}
-        actions={
-          <Button onClick={onCreate}>
-            <Plus className="size-4" aria-hidden="true" />
-            {t('billingPage.prices.actions.create')}
-          </Button>
-        }
-      />
-      {workbench.modelPrices.length === 0 ? (
-        <TableEmptyState kind="empty" title={t('billingPage.prices.empty')} />
-      ) : (
-        <Table className="min-w-[1180px]" containerClassName={containedTableContainerClassName}>
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead>{t('billingPage.prices.columns.provider')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.model')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.input')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.output')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.cacheRead')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.cacheWrite')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.request')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.state')}</TableHead>
-              <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[184px] text-right">
-                {t('billingPage.common.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workbench.modelPrices.map((resource) => (
-              <TableRow key={resource.id} variant="resource">
-                <TableCell>{resource.provider}</TableCell>
-                <TableCell className="max-w-[220px]">
-                  <div className="flex min-w-0 items-center gap-1.5">
-                    <span className="min-w-0 truncate font-mono text-xs">{resource.model}</span>
-                    {resource.model ? (
-                      <Button
+    <>
+      <section
+        className="border-info/30 bg-info/5 overflow-hidden border-y sm:rounded-md sm:border"
+        aria-labelledby="tier-policy-title"
+      >
+        <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="border-info/30 bg-info/10 text-info flex size-9 shrink-0 items-center justify-center rounded-md border">
+              <Route className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 id="tier-policy-title" className="text-sm font-semibold">
+                  {t('billingPage.settings.runtimeContextTitle')}
+                </h2>
+                <span className="bg-info/10 text-info rounded-md px-2 py-0.5 text-[11px] font-medium">
+                  {t('billingPage.settings.globalBadge')}
+                </span>
+                {supportsRuleScopes ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
                         type="button"
-                        variant="text"
-                        size="icon-xs"
-                        onClick={() => copy(resource.model)}
+                        className="border-info/25 bg-background text-info hover:bg-info/10 focus-visible:ring-ring/50 inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition-colors focus-visible:ring-[3px] focus-visible:outline-none"
+                        aria-label={t('billingPage.settings.capabilityDetails')}
                       >
-                        <Copy className="size-3" aria-hidden="true" />
-                        <span className="sr-only">{t('billingPage.common.copy')}</span>
-                      </Button>
+                        {t('billingPage.settings.scopedPricingSupported')}
+                        <Info className="size-3" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-72">
+                      {t('billingPage.settings.schemaVersionTechnical', {
+                        version:
+                          workbench.modelPriceSchemaVersion ?? t('billingPage.common.legacy'),
+                      })}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : null}
+              </div>
+              <p className="text-foreground mt-1 text-sm font-medium">
+                {t('billingPage.settings.currentRuntimeSource', {
+                  source: t(`billingPage.settings.${savedTierSource}`),
+                })}
+              </p>
+              <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
+                {supportsRuleScopes
+                  ? t('billingPage.settings.runtimeContextDescription')
+                  : t('billingPage.settings.legacyModeHint')}
+              </p>
+            </div>
+          </div>
+          {supportsRuleScopes && workbench.billingSettings?.supported ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0"
+              disabled={workbench.billingSettingsLoading || Boolean(workbench.billingSettingsError)}
+              onClick={() => {
+                setTierSourceDraft(savedTierSource)
+                setSettingsError(null)
+                setTierPolicyDialogOpen(true)
+              }}
+            >
+              <Pencil className="size-4" aria-hidden="true" />
+              {t('billingPage.settings.configure')}
+            </Button>
+          ) : workbench.billingSettingsLoading ? (
+            <Skeleton className="h-9 w-28 shrink-0 rounded-md" />
+          ) : null}
+        </div>
+        {supportsRuleScopes && workbench.billingSettings?.supported === false ? (
+          <p className="border-warning/30 bg-warning/10 text-warning mx-4 mb-4 rounded-md border px-3 py-2 text-xs sm:mx-5">
+            {t('billingPage.settings.unsupported')}
+          </p>
+        ) : null}
+        {supportsRuleScopes && workbench.billingSettingsError ? (
+          <p className="text-destructive mx-4 mb-4 text-xs sm:mx-5" role="alert">
+            {workbench.billingSettingsError}
+          </p>
+        ) : null}
+      </section>
+
+      <TableSurface>
+        <TableSurfaceHeader
+          title={t('billingPage.prices.title')}
+          description={t('billingPage.prices.description')}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              {supportsRuleScopes ? (
+                <>
+                  <Button variant="outline" onClick={onRefreshSynced}>
+                    <RefreshCw className="size-4" aria-hidden="true" />
+                    {t('billingPage.prices.actions.refreshSynced')}
+                  </Button>
+                  <Button variant="outline" onClick={onImport}>
+                    <Download className="size-4" aria-hidden="true" />
+                    {t('billingPage.prices.actions.import')}
+                  </Button>
+                </>
+              ) : null}
+              <Button onClick={onCreate}>
+                <Plus className="size-4" aria-hidden="true" />
+                {t('billingPage.prices.actions.create')}
+              </Button>
+            </div>
+          }
+        />
+        <div className="p-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="relative w-full sm:w-72 sm:shrink-0">
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <Input
+                className="min-h-10 pl-9 sm:h-8 sm:min-h-8"
+                type="search"
+                value={priceSearch}
+                placeholder={t('billingPage.prices.filters.search')}
+                onChange={(event) => setPriceSearch(event.target.value)}
+              />
+            </div>
+            <Select
+              value={tierFilter}
+              onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
+            >
+              <SelectTrigger
+                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                size="sm"
+                aria-label={t('billingPage.prices.filters.tier')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('billingPage.prices.filters.allTiers')}</SelectItem>
+                <SelectItem value="*">{t('billingPage.prices.tiers.wildcard')}</SelectItem>
+                <SelectItem value="standard">{t('billingPage.prices.tiers.standard')}</SelectItem>
+                <SelectItem value="flex">{t('billingPage.prices.tiers.flex')}</SelectItem>
+                <SelectItem value="priority">{t('billingPage.prices.tiers.priority')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={sourceFilter}
+              onValueChange={(value) => setSourceFilter(value as typeof sourceFilter)}
+            >
+              <SelectTrigger
+                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                size="sm"
+                aria-label={t('billingPage.prices.filters.source')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('billingPage.prices.filters.allSources')}</SelectItem>
+                <SelectItem value="manual">{t('billingPage.prices.sources.manual')}</SelectItem>
+                <SelectItem value="sync">{t('billingPage.prices.sources.sync')}</SelectItem>
+                <SelectItem value="default">{t('billingPage.prices.sources.default')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={stateFilter}
+              onValueChange={(value) => setStateFilter(value as typeof stateFilter)}
+            >
+              <SelectTrigger
+                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                size="sm"
+                aria-label={t('billingPage.prices.filters.state')}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('billingPage.prices.filters.allStates')}</SelectItem>
+                <SelectItem value="enabled">{t('billingPage.common.enabled')}</SelectItem>
+                <SelectItem value="disabled">{t('billingPage.common.disabled')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="min-h-10 justify-center sm:ml-auto sm:min-h-8"
+              disabled={!hasPriceFilters}
+              onClick={clearPriceFilters}
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              {t('billingPage.prices.filters.clear')}
+            </Button>
+          </div>
+          {workbench.modelPrices.length === 0 ? (
+            <TableEmptyState className="m-0" kind="empty" title={t('billingPage.prices.empty')} />
+          ) : visibleModelPrices.length === 0 ? (
+            <TableEmptyState
+              className="m-0"
+              kind="filtered-empty"
+              title={t('billingPage.prices.filters.empty')}
+              action={
+                <Button type="button" variant="outline" size="sm" onClick={clearPriceFilters}>
+                  <RefreshCw className="size-4" aria-hidden="true" />
+                  {t('billingPage.prices.filters.clear')}
+                </Button>
+              }
+            />
+          ) : (
+            <Table
+              className="min-w-[1260px]"
+              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            >
+              <TableHeader className={stickyTableHeaderClassName}>
+                <TableRow variant="static">
+                  <TableHead className="min-w-[190px]">
+                    {t('billingPage.prices.columns.provider')}
+                  </TableHead>
+                  <TableHead className="min-w-[220px]">
+                    {t('billingPage.prices.columns.model')}
+                  </TableHead>
+                  <TableHead>{t('billingPage.prices.columns.scope')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.input')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.output')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.cacheRead')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.cacheWrite')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.request')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.state')}</TableHead>
+                  <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
+                  <TableHead className="table-sticky-action-head w-[88px] text-right sm:w-[184px]">
+                    {t('billingPage.common.actions')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleModelPrices.map((resource) => (
+                  <TableRow key={resource.id} variant="resource">
+                    <TableCell className="min-w-[190px]">{resource.provider}</TableCell>
+                    <TableCell className="max-w-[220px] min-w-[220px]">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate font-mono text-xs">{resource.model}</span>
+                        {resource.model ? (
+                          <Button
+                            type="button"
+                            variant="text"
+                            size="icon-xs"
+                            onClick={() => copy(resource.model)}
+                          >
+                            <Copy className="size-3" aria-hidden="true" />
+                            <span className="sr-only">{t('billingPage.common.copy')}</span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="min-w-[170px]">
+                      {supportsRuleScopes ? (
+                        <div className="grid gap-1 text-xs">
+                          <span className="bg-muted w-fit rounded-md px-2 py-1 font-medium">
+                            {formatServiceTier(resource.serviceTier, t)}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {formatContextBand(resource.minInputTokens, t)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">
+                          {t('billingPage.prices.scope.flatPrice')}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatMoney(resource.inputPricePerMillion)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatMoney(resource.outputPricePerMillion)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatMoney(resource.cacheReadPricePerMillion)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatMoney(resource.cacheWritePricePerMillion)}
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatMoney(resource.requestPrice)}
+                    </TableCell>
+                    <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
+                    <TableCell>
+                      <StateToggle
+                        enabled={resource.enabled}
+                        disabled={workbench.mutating}
+                        label={t('billingPage.prices.actions.toggleState', {
+                          model: formatModelPriceIdentity(resource, t),
+                        })}
+                        onToggle={() => onToggle(resource)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {formatDateTime(resource.updatedAt, t('billingPage.common.na'))}
+                    </TableCell>
+                    <TableCell className="table-sticky-action-cell w-[88px] text-right transition-colors sm:w-[184px]">
+                      <div className="table-action-cell-content">
+                        <Button
+                          variant="text"
+                          size="sm"
+                          className="px-2"
+                          aria-label={t('billingPage.prices.actions.editExact', {
+                            rule: formatModelPriceIdentity(resource, t),
+                          })}
+                          onClick={() => onEdit(resource)}
+                        >
+                          <Pencil className="size-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">{t('billingPage.common.edit')}</span>
+                        </Button>
+                        <Button
+                          variant="destructiveText"
+                          size="sm"
+                          className="px-2"
+                          aria-label={t('billingPage.prices.actions.deleteExact', {
+                            rule: formatModelPriceIdentity(resource, t),
+                          })}
+                          onClick={() => onDelete(resource)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                          <span className="hidden sm:inline">{t('billingPage.common.delete')}</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </TableSurface>
+
+      <Dialog
+        open={tierPolicyDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setTierPolicyDialogOpen(true)
+            return
+          }
+          if (!workbench.mutating) cancelTierSourceEdit()
+        }}
+      >
+        <DialogContent
+          className="max-w-xl"
+          closeLabel={t('close')}
+          showCloseButton={!workbench.mutating}
+        >
+          <DialogHeader>
+            <DialogTitle>{t('billingPage.settings.dialogTitle')}</DialogTitle>
+            <DialogDescription>{t('billingPage.settings.dialogDescription')}</DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup
+            value={tierSourceDraft}
+            disabled={workbench.mutating || workbench.billingSettingsLoading}
+            aria-label={t('billingPage.settings.serviceTierSource')}
+            onValueChange={(value) => {
+              if (value === 'request' || value === 'response') setTierSourceDraft(value)
+            }}
+          >
+            {(['request', 'response'] as const).map((source) => (
+              <label
+                key={source}
+                className={cn(
+                  'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
+                  tierSourceDraft === source
+                    ? 'border-primary/40 bg-primary/5'
+                    : 'border-border hover:bg-muted/40',
+                  workbench.mutating && 'cursor-not-allowed opacity-60',
+                )}
+              >
+                <RadioGroupItem value={source} className="mt-0.5" />
+                <span className="grid min-w-0 gap-1">
+                  <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                    {t(`billingPage.settings.${source}`)}
+                    {source === 'request' ? (
+                      <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                        {t('billingPage.settings.defaultBadge')}
+                      </span>
                     ) : null}
-                  </div>
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatMoney(resource.inputPricePerMillion)}
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatMoney(resource.outputPricePerMillion)}
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatMoney(resource.cacheReadPricePerMillion)}
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatMoney(resource.cacheWritePricePerMillion)}
-                </TableCell>
-                <TableCell className="tabular-nums">{formatMoney(resource.requestPrice)}</TableCell>
-                <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
-                <TableCell>
-                  <StateToggle
-                    enabled={resource.enabled}
-                    disabled={workbench.mutating}
-                    label={t('billingPage.prices.actions.toggleState', {
-                      model: resource.model || resource.provider,
-                    })}
-                    onToggle={() => onToggle(resource)}
-                  />
-                </TableCell>
-                <TableCell>
-                  {formatDateTime(resource.updatedAt, t('billingPage.common.na'))}
-                </TableCell>
-                <TableCell className="table-sticky-action-cell w-[184px] text-right transition-colors">
-                  <div className="table-action-cell-content">
-                    <Button
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onEdit(resource)}
-                    >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.edit')}
-                    </Button>
-                    <Button
-                      variant="destructiveText"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onDelete(resource)}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.delete')}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+                  </span>
+                  <span className="text-muted-foreground text-xs leading-5">
+                    {source === 'request'
+                      ? t('billingPage.settings.requestOptionDescription')
+                      : t('billingPage.settings.responseOptionDescription')}
+                  </span>
+                </span>
+              </label>
             ))}
-          </TableBody>
-        </Table>
-      )}
-    </TableSurface>
+          </RadioGroup>
+
+          {tierSourceDirty ? (
+            <p className="bg-muted/40 rounded-md px-3 py-2 text-xs leading-5">
+              <span className="text-muted-foreground">
+                {t('billingPage.settings.proposedValue')}{' '}
+              </span>
+              <span className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</span>
+            </p>
+          ) : null}
+
+          {tierSourceDirty &&
+          tierSourceDraft === 'response' &&
+          workbench.billingTierDiagnosticsFetching ? (
+            <p className="text-muted-foreground text-xs leading-5" role="status">
+              {t('billingPage.settings.diagnosticsLoading')}
+            </p>
+          ) : null}
+          {tierSourceDirty &&
+          tierSourceDraft === 'response' &&
+          !workbench.billingTierDiagnosticsFetching &&
+          !workbench.billingTierDiagnosticsError &&
+          workbench.billingTierDiagnostics?.supported ? (
+            <div
+              role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
+              className={cn(
+                'rounded-md border px-3 py-2 text-xs leading-5',
+                workbench.billingTierDiagnostics.fallbackRequests > 0
+                  ? 'border-warning/30 bg-warning/10 text-warning'
+                  : 'border-border bg-muted/30 text-muted-foreground',
+              )}
+            >
+              {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
+              workbench.billingTierDiagnostics.eligibleRequests > 0
+                ? t('billingPage.settings.noResponseTierWarningProposed', {
+                    count: workbench.billingTierDiagnostics.eligibleRequests,
+                  })
+                : t('billingPage.settings.fallbackSummaryProposed', {
+                    fallback: workbench.billingTierDiagnostics.fallbackRequests,
+                    total: workbench.billingTierDiagnostics.eligibleRequests,
+                  })}
+            </div>
+          ) : null}
+          {tierSourceDirty &&
+          tierSourceDraft === 'response' &&
+          !workbench.billingTierDiagnosticsFetching &&
+          responseTierDiagnosticsUnavailable ? (
+            <p className="text-warning text-xs leading-5">
+              {t('billingPage.settings.diagnosticsUnavailable')}
+            </p>
+          ) : null}
+          {settingsError || workbench.billingSettingsError ? (
+            <p className="text-destructive text-xs" role="alert">
+              {settingsError || workbench.billingSettingsError}
+            </p>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={workbench.mutating}
+              onClick={cancelTierSourceEdit}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                workbench.mutating ||
+                !tierSourceDirty ||
+                (tierSourceDraft === 'response' && workbench.billingTierDiagnosticsFetching)
+              }
+              onClick={requestTierSourceSave}
+            >
+              {workbench.mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="size-4" aria-hidden="true" />
+              )}
+              {t('billingPage.common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={confirmTierSourceChange} onOpenChange={setConfirmTierSourceChange}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('billingPage.settings.confirmResponseTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {responseTierDiagnosticsUnavailable
+                ? t('billingPage.settings.confirmResponseUnknownDescription')
+                : t('billingPage.settings.confirmResponseDescription', {
+                    fallback: workbench.billingTierDiagnostics?.fallbackRequests ?? 0,
+                    total: workbench.billingTierDiagnostics?.eligibleRequests ?? 0,
+                  })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void saveTierSource()}>
+              {t('billingPage.settings.confirmResponseAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
 
@@ -1019,6 +1571,27 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
     [t('billingPage.chargeDetail.outputTokens'), formatNumber(record.outputTokens), false],
     [t('billingPage.chargeDetail.cacheTokens'), formatNumber(record.cacheTokens), false],
     [t('billingPage.chargeDetail.matchedPriceRule'), record.matchedPriceRule, true],
+    [t('billingPage.chargeDetail.selectedTier'), record.priceSnapshot.serviceTier, false],
+    [
+      t('billingPage.chargeDetail.selectedBand'),
+      record.priceSnapshot.schemaVersion == null
+        ? null
+        : formatContextBand(record.priceSnapshot.minInputTokens, t),
+      false,
+    ],
+    [t('billingPage.chargeDetail.requestedTier'), record.priceSnapshot.requestedServiceTier, false],
+    [t('billingPage.chargeDetail.responseTier'), record.priceSnapshot.responseServiceTier, false],
+    [t('billingPage.chargeDetail.tierSource'), record.priceSnapshot.serviceTierSource, false],
+    [t('billingPage.chargeDetail.effectiveTier'), record.priceSnapshot.effectiveServiceTier, false],
+    [
+      t('billingPage.chargeDetail.responseTierFallback'),
+      record.priceSnapshot.responseServiceTierFallback == null
+        ? null
+        : record.priceSnapshot.responseServiceTierFallback
+          ? t('billingPage.common.yes')
+          : t('billingPage.common.no'),
+      false,
+    ],
     [t('billingPage.chargeDetail.amount'), formatSignedAmount(-Math.abs(record.amount)), false],
     [t('billingPage.chargeDetail.balanceBefore'), formatMoney(record.balanceBefore), false],
     [t('billingPage.chargeDetail.balanceAfter'), formatMoney(record.balanceAfter), false],
@@ -1086,6 +1659,30 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
           </div>
         </div>
       </div>
+      {record.priceSnapshot.tokenBuckets ? (
+        <div className="rounded-md border p-3">
+          <h3 className="text-sm font-semibold">{t('billingPage.chargeDetail.tokenBuckets')}</h3>
+          <div className="mt-3 grid gap-2 text-sm">
+            {(
+              [
+                ['uncachedInput', 'uncachedInput'],
+                ['cacheRead', 'cacheRead'],
+                ['cacheWrite', 'cacheWrite'],
+                ['output', 'output'],
+              ] as const
+            ).map(([key, label]) => (
+              <div key={key} className="flex justify-between gap-3">
+                <span className="text-muted-foreground">
+                  {t(`billingPage.chargeDetail.buckets.${label}`)}
+                </span>
+                <span className="tabular-nums">
+                  {formatNumber(record.priceSnapshot.tokenBuckets?.[key] ?? 0)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {record.requestSummary ? (
         <div className="rounded-md border p-3">
           <h3 className="text-sm font-semibold">{t('billingPage.chargeDetail.requestSummary')}</h3>
@@ -1163,6 +1760,8 @@ function ModelPriceSheet({
   candidatesFetching,
   candidatesError,
   candidatesIssue,
+  schemaVersion,
+  tierSource,
   mutating,
   onCancel,
   onRetryCandidates,
@@ -1175,6 +1774,8 @@ function ModelPriceSheet({
   candidatesFetching: boolean
   candidatesError: string | null
   candidatesIssue: string | null
+  schemaVersion: number | null
+  tierSource: BillingServiceTierSource | null
   mutating: boolean
   onCancel: () => void
   onRetryCandidates: () => void
@@ -1183,7 +1784,15 @@ function ModelPriceSheet({
 }) {
   const { t } = useTranslation()
   const resource = mode.type === 'edit' ? mode.resource : null
+  const supportsRuleScopes = (schemaVersion ?? 0) >= 2
   const [input, setInput] = useState<ModelPriceDraft>(() => createModelPriceDraft(resource))
+  const [contextPreset, setContextPreset] = useState<'base' | 'over272K' | 'custom'>(() =>
+    resource?.minInputTokens === 272001
+      ? 'over272K'
+      : (resource?.minInputTokens ?? 0) === 0
+        ? 'base'
+        : 'custom',
+  )
   const [selectedCandidateKeys, setSelectedCandidateKeys] = useState<Set<string>>(
     () =>
       new Set(resource ? [createModelPriceCandidateValue(resource.provider, resource.model)] : []),
@@ -1248,6 +1857,13 @@ function ModelPriceSheet({
 
   useEffect(() => {
     setInput(createModelPriceDraft(resource))
+    setContextPreset(
+      resource?.minInputTokens === 272001
+        ? 'over272K'
+        : (resource?.minInputTokens ?? 0) === 0
+          ? 'base'
+          : 'custom',
+    )
     setSelectedCandidateKeys(
       new Set(resource ? [createModelPriceCandidateValue(resource.provider, resource.model)] : []),
     )
@@ -1275,8 +1891,11 @@ function ModelPriceSheet({
     const parsedPrices = {} as Record<ModelPriceNumberField, number>
     modelPriceNumberFields.forEach((key) => {
       const value = parsePriceValue(input[key])
-      if (value === null) {
-        nextFieldErrors[key] = t('billingPage.prices.validation.priceInvalid')
+      if (value === null || (key === 'minInputTokens' && !Number.isSafeInteger(value))) {
+        nextFieldErrors[key] =
+          key === 'minInputTokens'
+            ? t('billingPage.prices.validation.minInputTokensInvalid')
+            : t('billingPage.prices.validation.priceInvalid')
       } else {
         parsedPrices[key] = value
       }
@@ -1291,8 +1910,16 @@ function ModelPriceSheet({
     setFieldErrors({})
     setError(null)
     try {
+      const { minInputTokens, ...priceValues } = parsedPrices
       const baseInput = {
-        ...parsedPrices,
+        ...priceValues,
+        ...(supportsRuleScopes
+          ? {
+              serviceTier: input.serviceTier.trim() || '*',
+              minInputTokens,
+              cacheWritePriceConfigured: input.cacheWritePriceConfigured,
+            }
+          : {}),
         enabled: input.enabled,
         note: input.note?.trim() || undefined,
       }
@@ -1562,6 +2189,115 @@ function ModelPriceSheet({
             </div>
           </div>
         </section>
+        {supportsRuleScopes ? (
+          <section className="grid gap-3 rounded-md border px-3 py-3">
+            <div>
+              <h3 className="text-sm font-semibold">{t('billingPage.prices.form.ruleScope')}</h3>
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {t('billingPage.prices.form.ruleScopeHint')}
+              </p>
+            </div>
+            <div className="bg-muted/30 grid gap-1 rounded-md px-3 py-2 text-xs leading-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-muted-foreground">
+                  {t('billingPage.prices.form.globalTierPolicy')}
+                </span>
+                <span className="font-medium">
+                  {t(`billingPage.settings.${tierSource ?? 'request'}`)}
+                </span>
+              </div>
+              <p className="text-muted-foreground">
+                {t('billingPage.prices.form.matchingChain', {
+                  source: t(`billingPage.settings.${tierSource ?? 'request'}`),
+                })}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <CompactField
+                label={t('billingPage.prices.form.serviceTier')}
+                error={fieldErrors.serviceTier}
+              >
+                <Select
+                  value={input.serviceTier || '*'}
+                  onValueChange={(value) =>
+                    setInput((current) => ({ ...current, serviceTier: value }))
+                  }
+                  disabled={mutating}
+                >
+                  <SelectTrigger aria-label={t('billingPage.prices.form.serviceTier')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="*">{t('billingPage.prices.tiers.wildcard')}</SelectItem>
+                    <SelectItem value="standard">
+                      {t('billingPage.prices.tiers.standard')}
+                    </SelectItem>
+                    <SelectItem value="flex">{t('billingPage.prices.tiers.flex')}</SelectItem>
+                    <SelectItem value="priority">
+                      {t('billingPage.prices.tiers.priority')}
+                    </SelectItem>
+                    {!['*', 'standard', 'flex', 'priority'].includes(input.serviceTier) ? (
+                      <SelectItem value={input.serviceTier}>{input.serviceTier}</SelectItem>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+              </CompactField>
+              <CompactField label={t('billingPage.prices.form.contextPreset')}>
+                <Select
+                  value={contextPreset}
+                  disabled={mutating}
+                  onValueChange={(value) => {
+                    const preset = value as 'base' | 'over272K' | 'custom'
+                    setContextPreset(preset)
+                    if (preset === 'base') setNumber('minInputTokens', '0')
+                    if (preset === 'over272K') setNumber('minInputTokens', '272001')
+                  }}
+                >
+                  <SelectTrigger aria-label={t('billingPage.prices.form.contextPreset')}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="base">
+                      {t('billingPage.prices.scope.baseContext')}
+                    </SelectItem>
+                    <SelectItem value="over272K">
+                      {t('billingPage.prices.scope.over272K')}
+                    </SelectItem>
+                    <SelectItem value="custom">{t('billingPage.prices.scope.custom')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </CompactField>
+            </div>
+            {contextPreset === 'custom' ? (
+              <CompactField
+                label={t('billingPage.prices.form.minInputTokens')}
+                error={fieldErrors.minInputTokens}
+              >
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  step="1"
+                  value={input.minInputTokens}
+                  aria-label={t('billingPage.prices.form.minInputTokens')}
+                  aria-invalid={Boolean(fieldErrors.minInputTokens)}
+                  disabled={mutating}
+                  onChange={(event) => setNumber('minInputTokens', event.target.value)}
+                />
+              </CompactField>
+            ) : null}
+            <p className="text-muted-foreground text-xs leading-5">
+              {t('billingPage.prices.form.scopeSummary', {
+                tier: formatServiceTier(input.serviceTier, t),
+                band: formatContextBand(Number(input.minInputTokens) || 0, t),
+              })}
+            </p>
+          </section>
+        ) : (
+          <div className="border-warning/30 bg-warning/10 text-warning rounded-md border px-3 py-2 text-xs leading-5">
+            {t('billingPage.prices.form.legacyScopeHint')}
+          </div>
+        )}
         <section className="grid gap-3">
           <div>
             <h3 className="text-sm font-semibold">{t('billingPage.prices.form.pricing')}</h3>
@@ -1590,6 +2326,29 @@ function ModelPriceSheet({
               </CompactField>
             ))}
           </div>
+          {supportsRuleScopes ? (
+            <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+              <div className="grid gap-0.5">
+                <span className="text-sm font-medium">
+                  {t('billingPage.prices.form.cacheWriteConfigured')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('billingPage.prices.form.cacheWriteConfiguredHint')}
+                </span>
+              </div>
+              <Switch
+                checked={input.cacheWritePriceConfigured}
+                disabled={mutating}
+                aria-label={t('billingPage.prices.form.cacheWriteConfigured')}
+                onCheckedChange={(checked) =>
+                  setInput((current) => ({
+                    ...current,
+                    cacheWritePriceConfigured: checked === true,
+                  }))
+                }
+              />
+            </div>
+          ) : null}
         </section>
         <section className="grid gap-3 rounded-md border px-3 py-3">
           <div>
@@ -1662,6 +2421,7 @@ export function BillingWorkbenchPage() {
   const [balancePagination, setBalancePagination] =
     useState<BillingPagination>(defaultBillingPagination)
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
+  const [modelPriceImportApplying, setModelPriceImportApplying] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
   const activeFetching =
@@ -1671,7 +2431,10 @@ export function BillingWorkbenchPage() {
         ? workbench.chargesFetching
         : activeTab === 'balanceRecords'
           ? workbench.balanceRecordsFetching
-          : workbench.modelPricesFetching
+          : workbench.modelPricesFetching ||
+            workbench.billingSettingsFetching ||
+            workbench.modelPriceCandidatesFetching ||
+            workbench.billingTierDiagnosticsFetching
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -1722,7 +2485,10 @@ export function BillingWorkbenchPage() {
     }
   }
 
-  const closeSheet = () => setSheetMode(null)
+  const closeSheet = () => {
+    if (sheetMode?.type === 'model-price-import' && modelPriceImportApplying) return
+    setSheetMode(null)
+  }
   const showMutationError = (error: unknown) => {
     toast.error(error instanceof Error ? error.message : t('billingPage.toast.actionFailed'))
   }
@@ -1741,7 +2507,14 @@ export function BillingWorkbenchPage() {
               if (activeTab === 'overview') void workbench.refreshOverview()
               if (activeTab === 'charges') void workbench.refreshCharges()
               if (activeTab === 'balanceRecords') void workbench.refreshBalanceRecords()
-              if (activeTab === 'modelPrices') void workbench.refreshModelPrices()
+              if (activeTab === 'modelPrices') {
+                void Promise.all([
+                  workbench.refreshModelPrices(),
+                  workbench.refreshBillingSettings(),
+                  workbench.refreshModelPriceCandidates(),
+                  workbench.refreshBillingTierDiagnostics(),
+                ])
+              }
             }}
           >
             <RefreshCw
@@ -1753,65 +2526,67 @@ export function BillingWorkbenchPage() {
         }
       />
 
-      <div className="bg-card rounded-lg border p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
-          <Select
-            value={datePreset}
-            onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
-              <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
-              <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
-              <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            value={filters.from}
-            onChange={(event) => {
-              setDatePreset('custom')
-              updateFilters({ from: event.target.value })
-            }}
-          />
-          <Input
-            type="date"
-            value={filters.to}
-            onChange={(event) => {
-              setDatePreset('custom')
-              updateFilters({ to: event.target.value })
-            }}
-          />
-          <Input
-            value={textFilters.user}
-            placeholder={t('billingPage.filters.user')}
-            onChange={(event) =>
-              setTextFilters((current) => ({ ...current, user: event.target.value }))
-            }
-          />
-          <Input
-            value={textFilters.model}
-            placeholder={t('billingPage.filters.model')}
-            onChange={(event) =>
-              setTextFilters((current) => ({ ...current, model: event.target.value }))
-            }
-          />
-          <div className="relative">
-            <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
+      {activeTab !== 'modelPrices' ? (
+        <div className="bg-card rounded-lg border p-4 shadow-sm">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
+            <Select
+              value={datePreset}
+              onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
+                <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
+                <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
+                <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
-              className="pl-9"
-              value={textFilters.provider}
-              placeholder={t('billingPage.filters.provider')}
+              type="date"
+              value={filters.from}
+              onChange={(event) => {
+                setDatePreset('custom')
+                updateFilters({ from: event.target.value })
+              }}
+            />
+            <Input
+              type="date"
+              value={filters.to}
+              onChange={(event) => {
+                setDatePreset('custom')
+                updateFilters({ to: event.target.value })
+              }}
+            />
+            <Input
+              value={textFilters.user}
+              placeholder={t('billingPage.filters.user')}
               onChange={(event) =>
-                setTextFilters((current) => ({ ...current, provider: event.target.value }))
+                setTextFilters((current) => ({ ...current, user: event.target.value }))
               }
             />
+            <Input
+              value={textFilters.model}
+              placeholder={t('billingPage.filters.model')}
+              onChange={(event) =>
+                setTextFilters((current) => ({ ...current, model: event.target.value }))
+              }
+            />
+            <div className="relative">
+              <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
+              <Input
+                className="pl-9"
+                value={textFilters.provider}
+                placeholder={t('billingPage.filters.provider')}
+                onChange={(event) =>
+                  setTextFilters((current) => ({ ...current, provider: event.target.value }))
+                }
+              />
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
 
       <div
         className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"
@@ -1854,12 +2629,25 @@ export function BillingWorkbenchPage() {
         <ModelPricesTab
           workbench={workbench}
           onCreate={() => setSheetMode({ type: 'model-price-create' })}
+          onImport={() => setSheetMode({ type: 'model-price-import', intent: 'import' })}
+          onRefreshSynced={() =>
+            setSheetMode({
+              type: 'model-price-import',
+              intent: 'refresh-synced',
+              initialOverwriteMode: 'sync',
+              initialTargetFilter: 'synced',
+            })
+          }
           onEdit={(resource) => setSheetMode({ type: 'model-price-edit', resource })}
           onToggle={(resource) => {
             void workbench
               .updateModelPrice({
                 resource,
-                input: toModelPriceInput(resource, !resource.enabled),
+                input: toModelPriceInput(
+                  resource,
+                  !resource.enabled,
+                  (workbench.modelPriceSchemaVersion ?? 0) >= 2,
+                ),
               })
               .then(() => toast.success(t('billingPage.toast.priceUpdated')))
               .catch(showMutationError)
@@ -1868,8 +2656,23 @@ export function BillingWorkbenchPage() {
         />
       ) : null}
 
-      <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>
-        <DrawerScaffoldContent className="sm:max-w-2xl">
+      <Sheet
+        open={Boolean(sheetMode)}
+        onOpenChange={(open) => {
+          if (!open) closeSheet()
+        }}
+      >
+        <DrawerScaffoldContent
+          className={sheetMode?.type === 'model-price-import' ? 'sm:max-w-5xl' : 'sm:max-w-2xl'}
+          showCloseButton={!modelPriceImportApplying}
+          aria-busy={sheetMode?.type === 'model-price-import' && modelPriceImportApplying}
+          onEscapeKeyDown={(event) => {
+            if (modelPriceImportApplying) event.preventDefault()
+          }}
+          onPointerDownOutside={(event) => {
+            if (modelPriceImportApplying) event.preventDefault()
+          }}
+        >
           {sheetMode ? (
             <>
               <DrawerScaffoldHeader>
@@ -1880,10 +2683,29 @@ export function BillingWorkbenchPage() {
                       ? t('billingPage.balanceDetail.title')
                       : sheetMode.type === 'model-price-create'
                         ? t('billingPage.prices.sheet.createTitle')
-                        : t('billingPage.prices.sheet.editTitle')}
+                        : sheetMode.type === 'model-price-import'
+                          ? t(
+                              sheetMode.intent === 'refresh-synced'
+                                ? 'billingPage.prices.sheet.refreshSyncedTitle'
+                                : 'billingPage.prices.sheet.importTitle',
+                            )
+                          : t('billingPage.prices.sheet.editTitle')}
                 </SheetTitle>
                 {sheetMode.type === 'model-price-create' ||
-                sheetMode.type === 'model-price-edit' ? null : (
+                sheetMode.type === 'model-price-edit' ||
+                sheetMode.type === 'model-price-import' ? (
+                  <SheetDescription>
+                    {sheetMode.type === 'model-price-create'
+                      ? t('billingPage.prices.sheet.createDescription')
+                      : sheetMode.type === 'model-price-import'
+                        ? t(
+                            sheetMode.intent === 'refresh-synced'
+                              ? 'billingPage.prices.sheet.refreshSyncedDescription'
+                              : 'billingPage.prices.sheet.importDescription',
+                          )
+                        : t('billingPage.prices.sheet.editDescription')}
+                  </SheetDescription>
+                ) : (
                   <SheetDescription>
                     {sheetMode.type === 'charge-detail'
                       ? t('billingPage.chargeDetail.description')
@@ -1897,6 +2719,120 @@ export function BillingWorkbenchPage() {
               {sheetMode.type === 'balance-detail' ? (
                 <BalanceDetailSheet record={sheetMode.record} users={workbench.users} />
               ) : null}
+              {sheetMode.type === 'model-price-import' ? (
+                <ModelPriceImportSheet
+                  candidates={workbench.modelPriceCandidates}
+                  candidatesLoading={workbench.modelPriceCandidatesLoading}
+                  candidatesFetching={workbench.modelPriceCandidatesFetching}
+                  candidatesError={workbench.modelPriceCandidatesError}
+                  candidatesIssue={workbench.modelPriceCandidatesIssue}
+                  existingPrices={workbench.modelPrices}
+                  schemaVersion={workbench.modelPriceSchemaVersion}
+                  tierSource={workbench.billingSettings?.serviceTierSource ?? null}
+                  entryIntent={sheetMode.intent}
+                  serverEnabled={workbench.modelPriceImportServerEnabled}
+                  preferenceScope={workbench.modelPriceImportPreferenceScope}
+                  initialOverwriteMode={sheetMode.initialOverwriteMode}
+                  initialTargetFilter={sheetMode.initialTargetFilter}
+                  mutating={workbench.mutating}
+                  onCancel={closeSheet}
+                  onApplyingChange={setModelPriceImportApplying}
+                  onRetryCandidates={() => {
+                    void workbench.refreshModelPriceCandidates()
+                  }}
+                  onPreview={workbench.previewModelPriceImport}
+                  onApplyServer={workbench.applyModelPriceImport}
+                  onApplyCompatibility={async (
+                    items: ModelPriceImportApplyItem[],
+                    onProgress: (progress: ModelPriceImportProgress) => void,
+                  ) => {
+                    const operationId = `compatibility:${Date.now()}`
+                    const rows: ModelPriceImportApplyResult['rows'] = []
+
+                    for (const [index, item] of items.entries()) {
+                      onProgress({
+                        completed: index,
+                        total: items.length,
+                        currentModel: item.input.model,
+                      })
+                      try {
+                        let resourceId: string | null = item.resource?.id ?? null
+                        if (item.mode === 'create') {
+                          resourceId = await workbench.createModelPrice(item.input)
+                        } else if (item.resource) {
+                          resourceId = await workbench.updateModelPrice({
+                            resource: item.resource,
+                            input: item.input,
+                          })
+                        } else {
+                          throw new Error(
+                            t('billingPage.prices.import.validation.existingRuleMissing'),
+                          )
+                        }
+
+                        rows.push({
+                          key: item.key,
+                          provider: item.input.provider,
+                          model: item.input.model,
+                          action: item.action,
+                          status:
+                            item.action === 'create'
+                              ? 'created'
+                              : item.action === 'overwrite'
+                                ? 'overwritten'
+                                : 'updated',
+                          resourceId,
+                          errorCode: null,
+                          errorMessage: null,
+                        })
+                      } catch (legacyError) {
+                        rows.push({
+                          key: item.key,
+                          provider: item.input.provider,
+                          model: item.input.model,
+                          action: item.action,
+                          status: 'failed',
+                          resourceId: item.resource?.id ?? null,
+                          errorCode: null,
+                          errorMessage:
+                            legacyError instanceof Error
+                              ? legacyError.message
+                              : t('billingPage.toast.actionFailed'),
+                        })
+                      }
+                      onProgress({
+                        completed: index + 1,
+                        total: items.length,
+                        currentModel: item.input.model,
+                      })
+                    }
+
+                    await workbench.refreshModelPrices().catch(() => undefined)
+                    const successful = rows.filter((row) => row.status !== 'failed')
+                    const failed = rows.length - successful.length
+                    return {
+                      operationId,
+                      previewId: 'compatibility',
+                      status:
+                        failed === 0 ? 'applied' : successful.length > 0 ? 'partial' : 'failed',
+                      atomic: false,
+                      appliedAt: new Date().toISOString(),
+                      summary: {
+                        total: rows.length,
+                        creates: rows.filter((row) => row.status === 'created').length,
+                        updatesSync: rows.filter((row) => row.status === 'updated').length,
+                        overwrites: rows.filter((row) => row.status === 'overwritten').length,
+                        skips: 0,
+                        reviews: 0,
+                        conflicts: 0,
+                        failed,
+                      },
+                      rows,
+                      raw: { mode: 'compatibility' },
+                    }
+                  }}
+                />
+              ) : null}
               {sheetMode.type === 'model-price-create' || sheetMode.type === 'model-price-edit' ? (
                 <ModelPriceSheet
                   mode={
@@ -1909,6 +2845,8 @@ export function BillingWorkbenchPage() {
                   candidatesFetching={workbench.modelPriceCandidatesFetching}
                   candidatesError={workbench.modelPriceCandidatesError}
                   candidatesIssue={workbench.modelPriceCandidatesIssue}
+                  schemaVersion={workbench.modelPriceSchemaVersion}
+                  tierSource={workbench.billingSettings?.serviceTierSource ?? null}
                   mutating={workbench.mutating}
                   onCancel={closeSheet}
                   onRetryCandidates={() => {
@@ -1943,7 +2881,7 @@ export function BillingWorkbenchPage() {
             <AlertDialogTitle>{t('billingPage.prices.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription>
               {t('billingPage.prices.delete.description', {
-                model: pendingDelete?.resource.model ?? '',
+                model: pendingDelete ? formatModelPriceIdentity(pendingDelete.resource, t) : '',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>

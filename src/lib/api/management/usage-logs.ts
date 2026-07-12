@@ -7,6 +7,7 @@ import type {
 
 type UnknownRecord = Record<string, unknown>
 export type UsageLogIssueScope =
+  | 'runtimeSettings'
   | 'apiKeyUsage'
   | 'usageOverview'
   | 'usageRecords'
@@ -1806,6 +1807,14 @@ function deriveFilterOptions({
   }
 }
 
+export function deriveUsageFilterOptions(input: {
+  overview: UsageOverview | null
+  records: UsageRecordsPage | null
+  credentialUsage: UsageAggregateResponse | null
+}) {
+  return deriveFilterOptions(input)
+}
+
 function readContentDispositionFileName(value: unknown): string | null {
   if (typeof value !== 'string') return null
 
@@ -2019,6 +2028,87 @@ export async function fetchUsageOverview(
   return normalizeUsageOverview(response.data)
 }
 
+export async function fetchUsageRecords(
+  session: ManagementSessionInput,
+  filters: UsageFilters = defaultUsageFilters,
+): Promise<UsageRecordsPage> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/usage/records', {
+    params: getUsageRecordQueryParams(filters),
+  })
+  return normalizeUsageRecordsPage(response.data)
+}
+
+export async function fetchUsageRuntimeSettings(
+  session: ManagementSessionInput,
+): Promise<UsageRuntimeSettings> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/config')
+  const config = toRecord(response.data)
+
+  return {
+    usageStatisticsEnabled: readConfigBoolean(config, 'usage-statistics-enabled'),
+    fileLoggingEnabled: readConfigBoolean(config, 'logging-to-file'),
+  }
+}
+
+export async function fetchUsageProviderHealth(
+  session: ManagementSessionInput,
+  filters: UsageFilters = defaultUsageFilters,
+): Promise<UsageHealthResponse> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/usage/health/providers', {
+    params: getUsageScopeQueryParams(filters),
+  })
+  return normalizeUsageHealthResponse(response.data, 'provider')
+}
+
+export async function fetchUsageCredentialHealth(
+  session: ManagementSessionInput,
+  filters: UsageFilters = defaultUsageFilters,
+): Promise<UsageHealthResponse> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/usage/health/credentials', {
+    params: getUsageScopeQueryParams(filters),
+  })
+  return normalizeUsageHealthResponse(response.data, 'credential')
+}
+
+export async function fetchUsageRealtime(
+  session: ManagementSessionInput,
+  filters: UsageFilters = defaultUsageFilters,
+): Promise<UsageRealtimeSnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/usage/realtime', {
+    params: {
+      ...getUsageScopeQueryParams(filters),
+      window_seconds: 900,
+      bucket_seconds: 60,
+      group_by: 'model',
+    },
+  })
+  return normalizeUsageRealtimeSnapshot(response.data)
+}
+
+export async function fetchRequestLogIndex(
+  session: ManagementSessionInput,
+  filters: UsageFilters = defaultUsageFilters,
+): Promise<RequestLogIndex> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/request-logs', {
+    params: getUsageRecordQueryParams(filters),
+  })
+  return normalizeRequestLogIndex(response.data)
+}
+
+export async function fetchRequestErrorLogs(
+  session: ManagementSessionInput,
+): Promise<RequestErrorLogFile[]> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/request-error-logs')
+  return normalizeRequestErrorLogs(response.data)
+}
+
 export async function fetchUsageAggregates(
   session: ManagementSessionInput,
   filters: UsageFilters = defaultUsageFilters,
@@ -2039,155 +2129,6 @@ export async function fetchUsageAggregates(
   return normalizeAggregateResponse(response.data)
 }
 
-export async function fetchUsageSnapshot(
-  session: ManagementSessionInput,
-  capabilities: CapabilityMap,
-  filters: UsageFilters,
-): Promise<UsageLogsSnapshot> {
-  const client = createManagementClient(session)
-  const issues: UsageLogIssue[] = []
-  const configResponse = await client.get<unknown>('/config')
-  const config = toRecord(configResponse.data)
-  const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
-  const usageStatisticsEnabled = readConfigBoolean(config, 'usage-statistics-enabled')
-  const queryParams = getUsageRecordQueryParams(filters)
-  const aggregateQueryParams = getUsageScopeQueryParams(filters)
-
-  const [
-    overview,
-    records,
-    credentialUsage,
-    providerHealth,
-    credentialHealth,
-    realtime,
-    requestLogs,
-  ] = await Promise.all([
-    capabilities.usageOverview
-      ? readOptional(
-          issues,
-          'usageOverview',
-          async () => {
-            const response = await client.get<unknown>('/usage/overview', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageOverview(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageRecords
-      ? readOptional(
-          issues,
-          'usageRecords',
-          async () => {
-            const response = await client.get<unknown>('/usage/records', {
-              params: queryParams,
-            })
-            return normalizeUsageRecordsPage(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageAggregates
-      ? readOptional(
-          issues,
-          'usageAggregates',
-          async () => {
-            const response = await client.get<unknown>('/usage/aggregates', {
-              params: {
-                ...aggregateQueryParams,
-                group_by: 'credential',
-                metric: 'request_count',
-                direction: 'desc',
-                limit: 20,
-                offset: 0,
-              },
-            })
-            return normalizeAggregateResponse(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageProviderHealth
-      ? readOptional(
-          issues,
-          'usageProviderHealth',
-          async () => {
-            const response = await client.get<unknown>('/usage/health/providers', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageHealthResponse(response.data, 'provider')
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageCredentialHealth
-      ? readOptional(
-          issues,
-          'usageCredentialHealth',
-          async () => {
-            const response = await client.get<unknown>('/usage/health/credentials', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageHealthResponse(response.data, 'credential')
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageRealtime
-      ? readOptional(
-          issues,
-          'usageRealtime',
-          async () => {
-            const response = await client.get<unknown>('/usage/realtime', {
-              params: {
-                ...aggregateQueryParams,
-                window_seconds: 900,
-                bucket_seconds: 60,
-                group_by: 'model',
-              },
-            })
-            return normalizeUsageRealtimeSnapshot(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.requestLogIndex
-      ? readOptional(
-          issues,
-          'requestLogIndex',
-          async () => {
-            const response = await client.get<unknown>('/request-logs', {
-              params: queryParams,
-            })
-            return normalizeRequestLogIndex(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-  ])
-
-  return {
-    fetchedAt: new Date().toISOString(),
-    settings: {
-      usageStatisticsEnabled,
-      fileLoggingEnabled,
-    },
-    overview,
-    records,
-    credentialUsage,
-    providerHealth,
-    credentialHealth,
-    realtime,
-    requestLogs,
-    apiKeyUsage: [],
-    runtimeLogs: null,
-    requestErrorLogs: [],
-    filterOptions: deriveFilterOptions({ overview, records, credentialUsage }),
-    issues,
-  }
-}
-
 export async function fetchUsageRecordDetail(
   session: ManagementSessionInput,
   recordId: string,
@@ -2200,39 +2141,6 @@ export async function fetchUsageRecordDetail(
     },
   })
   return normalizeUsageRecordDetail(response.data)
-}
-
-export async function fetchRuntimeLogContext(
-  session: ManagementSessionInput,
-  capabilities: CapabilityMap,
-): Promise<RuntimeLogContext> {
-  const client = createManagementClient(session)
-  const issues: UsageLogIssue[] = []
-  const configResponse = await client.get<unknown>('/config')
-  const config = toRecord(configResponse.data)
-  const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
-  const usageStatisticsEnabled = readConfigBoolean(config, 'usage-statistics-enabled')
-  const requestErrorLogs = capabilities.requestErrorLogs
-    ? await readOptional(
-        issues,
-        'requestErrorLogs',
-        async () => {
-          const response = await client.get<unknown>('/request-error-logs')
-          return normalizeRequestErrorLogs(response.data)
-        },
-        [],
-      )
-    : []
-
-  return {
-    fetchedAt: new Date().toISOString(),
-    settings: {
-      usageStatisticsEnabled,
-      fileLoggingEnabled,
-    },
-    requestErrorLogs,
-    issues,
-  }
 }
 
 export async function exportUsageRecords(

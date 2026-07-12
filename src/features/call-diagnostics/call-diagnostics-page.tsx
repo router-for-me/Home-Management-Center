@@ -4,6 +4,11 @@ import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
+import { useCallDiagnosticsWorkbench } from '@/features/call-diagnostics/use-call-diagnostics-workbench'
+import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+} from '@/features/observability/live-refresh-control'
 import {
   ActivityHeatmap,
   CapabilityStrip,
@@ -16,10 +21,8 @@ import {
   RequestLogIndexTable,
   UsageHealthPanel,
   downloadBlob,
-  formatDateTime,
   getObservabilityVerdictBadgeClassName,
 } from '@/features/observability/observability-components'
-import { useUsageObservabilityWorkbench } from '@/features/usage-observability/use-usage-observability-workbench'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 import type { UsageSnapshot } from '@/lib/api/management/usage'
 import { cn } from '@/lib/utils'
@@ -27,6 +30,7 @@ import { cn } from '@/lib/utils'
 type CallDiagnosticsVerdict = 'ready' | 'partial' | 'disabled' | 'unsupported'
 
 const diagnosticIssueScopes = new Set([
+  'runtimeSettings',
   'usageOverview',
   'usageProviderHealth',
   'usageCredentialHealth',
@@ -101,16 +105,18 @@ function CallDiagnosticsHeader({
   snapshot,
   capabilities,
   runtimeMode,
-  isFetching,
+  manualRefreshing,
+  autoRefresh,
   onRefresh,
 }: {
   snapshot: UsageSnapshot
   capabilities: CapabilityMap
   runtimeMode: RuntimeMode
-  isFetching: boolean
+  manualRefreshing: boolean
+  autoRefresh: ReturnType<typeof useCallDiagnosticsWorkbench>['autoRefresh']
   onRefresh: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const verdict = getCallDiagnosticsVerdict(snapshot)
   const attentionCount = getAttentionCount(snapshot)
 
@@ -132,27 +138,31 @@ function CallDiagnosticsHeader({
         count: attentionCount,
       })}
       meta={
-        <>
-          <span>
-            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-          </span>
-          <span>
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-            })}
-          </span>
-        </>
+        <span>{t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}</span>
       }
       tags={<CallDiagnosticsCapabilityStrip capabilities={capabilities} />}
       actions={
-        <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
-          {isFetching ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <RefreshCw className="size-4" aria-hidden="true" />
-          )}
-          {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
-        </Button>
+        <>
+          <LiveRefreshControl
+            mode="auto"
+            enabled={autoRefresh.enabled}
+            disabled={!autoRefresh.available}
+            describedBy={
+              !autoRefresh.available ? 'call-diagnostics-auto-refresh-status' : undefined
+            }
+            onEnabledChange={autoRefresh.setEnabled}
+          />
+          <Button variant="outline" disabled={manualRefreshing} onClick={onRefresh}>
+            {manualRefreshing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw className="size-4" aria-hidden="true" />
+            )}
+            {manualRefreshing
+              ? t('usageLogsPage.actions.syncing')
+              : t('usageLogsPage.actions.refresh')}
+          </Button>
+        </>
       }
     />
   )
@@ -160,7 +170,7 @@ function CallDiagnosticsHeader({
 
 export function CallDiagnosticsPage() {
   const { t } = useTranslation()
-  const workbench = useUsageObservabilityWorkbench({ scope: 'diagnostics' })
+  const workbench = useCallDiagnosticsWorkbench()
   const capabilities = workbench.capabilities
   const noDiagnosticsCapabilities =
     !capabilities.usageOverview &&
@@ -206,8 +216,20 @@ export function CallDiagnosticsPage() {
         snapshot={snapshot}
         capabilities={capabilities}
         runtimeMode={workbench.runtimeMode}
-        isFetching={workbench.isFetching}
+        manualRefreshing={workbench.manualRefreshing}
+        autoRefresh={workbench.autoRefresh}
         onRefresh={workbench.refetch}
+      />
+
+      <LiveRefreshStatusNotice
+        id="call-diagnostics-auto-refresh-status"
+        mode="auto"
+        enabled={workbench.autoRefresh.enabled}
+        active={workbench.autoRefresh.active}
+        pauseReason={workbench.autoRefresh.pauseReason}
+        intervalMs={workbench.autoRefreshIntervalMs}
+        hasError={workbench.autoRefreshError}
+        lastSuccessAt={workbench.autoRefreshLastSuccessAt}
       />
 
       {noDiagnosticsCapabilities ? (
@@ -239,23 +261,29 @@ export function CallDiagnosticsPage() {
         </div>
       ) : null}
 
-      {snapshot.overview ? <ActivityHeatmap overview={snapshot.overview} /> : null}
+      {snapshot.overview ? (
+        <ActivityHeatmap overview={snapshot.overview} updatedAt={workbench.updatedAt.overview} />
+      ) : null}
 
       <RealtimeUsagePanel realtime={snapshot.realtime} />
 
       <UsageHealthPanel
         providerHealth={snapshot.providerHealth}
         credentialHealth={snapshot.credentialHealth}
+        providerUpdatedAt={workbench.updatedAt.providerHealth}
+        credentialUpdatedAt={workbench.updatedAt.credentialHealth}
       />
 
       <RequestLogIndexTable
         index={snapshot.requestLogs}
+        updatedAt={workbench.updatedAt.requestLogs}
         mutating={workbench.mutating}
         downloadingRequestLogId={workbench.downloadingRequestLogId}
         isDownloadingRequestLog={workbench.isDownloadingRequestLog}
         onDownloadRequestLog={(requestId, homeIp, homePort) =>
           void handleDownloadRequestLog(requestId, homeIp, homePort)
         }
+        onAutoRefreshEligibilityChange={workbench.setRequestLogsAutoRefreshEligible}
       />
     </section>
   )

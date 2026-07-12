@@ -2336,7 +2336,6 @@ export function UsersWorkbenchPage() {
       <TableSurface className="min-w-0">
         <TableSurfaceHeader
           title={t('usersPage.workspace.title')}
-          description={t('usersPage.workspace.description')}
           actions={
             <div className="relative min-w-0 lg:w-80">
               <Search

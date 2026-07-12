@@ -1,7 +1,13 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import {
+  getAdaptiveRefreshInterval,
+  getStagedItemCount,
+} from '@/features/observability/live-refresh'
+import type { StagedRefresh } from '@/features/observability/live-refresh'
+import { useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
 import { downloadRequestLogById, toLogsApiError } from '@/lib/api/management/logs'
 import {
@@ -17,9 +23,12 @@ import type {
   RequestEvent,
   RequestEventFilters,
   RequestEventStatusFilter,
+  RequestEventsPage,
 } from '@/lib/api/management/request-events'
 
 const requestEventPageSizeOptions = [25, 50, 100, 200]
+const liveRefreshIntervalMs = 5_000
+const liveEligibleRanges = new Set<RequestEventFilters['range']>(['4h', '12h', '24h', 'today'])
 
 const requestEventOptionFilterKeys = new Set<keyof RequestEventFilters>([
   'range',
@@ -52,10 +61,12 @@ function getClearedFilters(): RequestEventFilters {
 }
 
 export function useRequestEventsWorkbench() {
+  const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
   const [filters, setFilters] = useState<RequestEventFilters>(defaultRequestEventFilters)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const [pendingEvents, setPendingEvents] = useState<StagedRefresh<RequestEventsPage> | null>(null)
 
   const optionFilters = useMemo<RequestEventFilters>(
     () => ({
@@ -104,24 +115,46 @@ export function useRequestEventsWorkbench() {
   )
 
   const filtersValid = isRequestEventLatencyRangeValid(filters)
-  const canQueryEvents =
-    connected &&
-    capabilityReady &&
-    Boolean(session.managementKey) &&
-    capabilities.requestEvents &&
-    filtersValid
+  const requestEventsAvailable =
+    connected && capabilityReady && Boolean(session.managementKey) && capabilities.requestEvents
+  const canQueryEvents = requestEventsAvailable && filtersValid
+  const liveEligible =
+    canQueryEvents &&
+    filters.offset === 0 &&
+    filters.sort === 'timestamp_desc' &&
+    liveEligibleRanges.has(filters.range)
+  const liveIneligibleReason = !requestEventsAvailable
+    ? 'unavailable'
+    : !filtersValid
+      ? 'invalidFilters'
+      : filters.offset > 0
+        ? 'nonFirstPage'
+        : filters.sort !== 'timestamp_desc'
+          ? 'nonLatestSort'
+          : !liveEligibleRanges.has(filters.range)
+            ? 'historicalRange'
+            : 'ineligible'
+  const liveRefresh = useLiveRefresh({
+    storageKey: 'hmc:request-events:live',
+    defaultEnabled: false,
+    eligible: liveEligible,
+    detailOpen: selectedEventId !== null,
+    ineligibleReason: liveIneligibleReason,
+  })
+  const eventsQueryKey = [
+    'management-request-events',
+    session.baseUrl,
+    connectedAt,
+    capabilities.requestEvents,
+    filters,
+  ] as const
 
   const eventsQuery = useQuery({
-    queryKey: [
-      'management-request-events',
-      session.baseUrl,
-      connectedAt,
-      capabilities.requestEvents,
-      filters,
-    ],
+    queryKey: eventsQueryKey,
     enabled: canQueryEvents,
     placeholderData: keepPreviousData,
     retry: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       try {
         return await fetchRequestEvents(session, filters)
@@ -130,6 +163,78 @@ export function useRequestEventsWorkbench() {
       }
     },
   })
+
+  const liveEventsQuery = useQuery({
+    queryKey: [
+      'management-request-events-live',
+      session.baseUrl,
+      connectedAt,
+      capabilities.requestEvents,
+      filters,
+    ],
+    enabled:
+      liveRefresh.active &&
+      Boolean(eventsQuery.data) &&
+      !eventsQuery.isPlaceholderData &&
+      !eventsQuery.isFetching,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval: liveRefresh.active ? getAdaptiveRefreshInterval(liveRefreshIntervalMs) : false,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      try {
+        return await fetchRequestEvents(session, { ...filters, offset: 0 })
+      } catch (error) {
+        throw toRequestEventsApiError(error)
+      }
+    },
+  })
+  const wasLiveActive = useRef(liveRefresh.active)
+
+  useEffect(() => {
+    if (liveRefresh.active && !wasLiveActive.current && !liveEventsQuery.isFetching) {
+      void liveEventsQuery.refetch()
+    }
+    wasLiveActive.current = liveRefresh.active
+  }, [liveEventsQuery, liveRefresh.active])
+
+  useEffect(() => {
+    if (!liveRefresh.active) {
+      setPendingEvents(null)
+      return
+    }
+    const accepted = eventsQuery.data
+    const incoming = liveEventsQuery.data
+    if (!accepted || !incoming || eventsQuery.isPlaceholderData) return
+
+    const staged = getStagedItemCount(
+      accepted.items,
+      incoming.items,
+      (event) => event.id,
+      filters.limit,
+    )
+    if (staged.count === 0) {
+      setPendingEvents(null)
+      return
+    }
+    setPendingEvents({ data: incoming, ...staged })
+  }, [
+    eventsQuery.data,
+    eventsQuery.isPlaceholderData,
+    filters.limit,
+    liveEventsQuery.data,
+    liveEventsQuery.dataUpdatedAt,
+    liveRefresh.active,
+  ])
+
+  useEffect(() => {
+    setPendingEvents(null)
+  }, [filters])
+
+  useEffect(() => {
+    if (!liveRefresh.enabled) setPendingEvents(null)
+  }, [liveRefresh.enabled])
 
   const filterOptionsQuery = useQuery({
     queryKey: [
@@ -143,6 +248,7 @@ export function useRequestEventsWorkbench() {
     enabled: canQueryEvents,
     placeholderData: keepPreviousData,
     retry: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       try {
         return await fetchRequestEventFilterOptions(session, optionFilters, {
@@ -169,6 +275,7 @@ export function useRequestEventsWorkbench() {
       capabilities.requestEventDetails &&
       Boolean(selectedEventId),
     retry: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       if (!selectedEventId) throw new Error('Request event is not selected')
 
@@ -219,6 +326,7 @@ export function useRequestEventsWorkbench() {
       ...nextFilters,
       offset: nextFilters.offset ?? (shouldResetOffset ? 0 : currentFilters.offset),
     }))
+    setPendingEvents(null)
   }
 
   const setLimit = (nextLimit: number) => {
@@ -259,6 +367,8 @@ export function useRequestEventsWorkbench() {
     selectedEventId,
     isPending: eventsQuery.isPending,
     isFetching: eventsQuery.isFetching || filterOptionsQuery.isFetching,
+    eventsUpdatedAt:
+      eventsQuery.dataUpdatedAt > 0 ? new Date(eventsQuery.dataUpdatedAt).toISOString() : null,
     isError: eventsQuery.isError,
     errorMessage: eventsQuery.error?.message ?? null,
     filterOptionsErrorMessage: filterOptionsQuery.error?.message ?? null,
@@ -271,13 +381,32 @@ export function useRequestEventsWorkbench() {
     mutating,
     refetch: () => {
       if (!canQueryEvents) return
-      void Promise.all([eventsQuery.refetch(), filterOptionsQuery.refetch()])
+      const eventsRefresh = eventsQuery.refetch()
+      void Promise.allSettled([eventsRefresh, filterOptionsQuery.refetch()])
+      void eventsRefresh.then((result) => {
+        if (result.isSuccess) setPendingEvents(null)
+      })
+    },
+    liveRefresh,
+    liveRefreshIntervalMs,
+    liveRefreshError: liveEventsQuery.isError,
+    liveRefreshFetching: liveEventsQuery.isFetching,
+    liveRefreshLastSuccessAt: liveEventsQuery.dataUpdatedAt || eventsQuery.dataUpdatedAt || null,
+    pendingEventCount: pendingEvents?.count ?? 0,
+    pendingEventsTruncated: pendingEvents?.truncated ?? false,
+    acceptPendingEvents: () => {
+      if (!pendingEvents) return
+      queryClient.setQueryData(eventsQueryKey, pendingEvents.data)
+      setPendingEvents(null)
     },
     updateFilters,
     setLimit,
     setOffset,
     setStatus,
-    clearFilters: () => setFilters(getClearedFilters()),
+    clearFilters: () => {
+      setPendingEvents(null)
+      setFilters(getClearedFilters())
+    },
     selectEvent,
     clearSelectedEvent,
     exportRequestEvents: exportMutation.mutateAsync,

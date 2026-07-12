@@ -5,6 +5,7 @@ export const en = {
     productSubtitle: 'Commercial console',
     phaseBaseline: 'Phase 0 application baseline',
     cancel: 'Cancel',
+    close: 'Close',
     common: {
       cancel: 'Cancel',
       enabled: 'Enabled',
@@ -13,6 +14,7 @@ export const en = {
     actions: {
       connect: 'Connect',
       manageConnection: 'Connection',
+      copyFailed: 'Copy failed',
     },
     language: {
       switch: 'Language',
@@ -338,6 +340,7 @@ export const en = {
         pagination: {
           range: '{{start}}-{{end}} / {{total}} total',
           rows: '{{count}} rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },
@@ -498,6 +501,64 @@ export const en = {
         enabled: 'Enabled',
         disabled: 'Disabled',
         na: 'Unavailable',
+        yes: 'Yes',
+        no: 'No',
+        legacy: 'legacy',
+      },
+      settings: {
+        serviceTierSource: 'Billing tier source',
+        runtimeContextTitle: 'Runtime billing context',
+        globalBadge: 'Global',
+        scopedPricingSupported: 'Tier and context pricing supported',
+        capabilityDetails: 'View price-rule capability details',
+        schemaVersionTechnical: 'Backend price-rule capability: Rule schema v{{version}}.',
+        currentRuntimeSource: 'Price rules currently use the {{source}}',
+        runtimeContextDescription:
+          'Determines whether future charges match price rules using the request Tier or response Tier.',
+        configure: 'Configure matching',
+        dialogTitle: 'Configure global Tier matching',
+        dialogDescription:
+          'Choose whether billing obtains the Tier from the request or the final response. This applies to every future charge.',
+        defaultBadge: 'Default',
+        requestOptionDescription:
+          'Use the Tier sent by the client. This is stable and works with providers that do not return a response Tier.',
+        responseOptionDescription:
+          'Use the final response Tier. Missing response Tiers fall back to the request Tier and are recorded in the price snapshot.',
+        policyTitle: 'Global Tier matching policy',
+        policyDescription:
+          'Determines whether future charges match price rules using the request Tier or response Tier.',
+        currentValue: 'Current policy',
+        proposedValue: 'After saving:',
+        change: 'Change',
+        serviceTierSourceHint:
+          'Choose whether future charges match the request tier or the final response tier. Changes are saved explicitly.',
+        request: 'Request tier',
+        response: 'Response tier',
+        requestHint: 'Uses the tier requested by the client for price-rule matching.',
+        responseHint:
+          'Uses the final response tier and falls back to the request tier when the response has no tier.',
+        schemaVersion: 'Rule schema v{{version}}',
+        legacyModeHint:
+          'This backend exposes flat-price rules only. Tier, context-band, and tier-source controls are hidden.',
+        unsupported: 'This backend does not expose the Billing tier-source setting.',
+        saved: 'Billing tier source saved.',
+        noResponseTierWarning:
+          'The latest {{count}} eligible requests contain no response-tier data. Response mode would fall back to the request tier for all of them.',
+        fallbackSummary:
+          '{{fallback}} of {{total}} recent eligible requests fell back to the request tier.',
+        noResponseTierWarningProposed:
+          'If saved: none of the latest {{count}} eligible requests contain a response tier, so all would fall back to the request tier.',
+        fallbackSummaryProposed:
+          'If saved: {{fallback}} of {{total}} recent eligible requests would fall back to the request tier.',
+        diagnosticsUnavailable:
+          'Recent tier diagnostics are unavailable. Confirm that responses reliably include a tier before saving.',
+        diagnosticsLoading: 'Loading recent tier diagnostics…',
+        confirmResponseTitle: 'Confirm response Tier matching',
+        confirmResponseDescription:
+          '{{fallback}} of {{total}} recent eligible requests have no response tier and would fall back to the request tier. Save this global policy anyway?',
+        confirmResponseUnknownDescription:
+          'Recent response-tier coverage cannot be verified. After saving, requests without a response tier will fall back to the request tier. Save this global policy anyway?',
+        confirmResponseAction: 'Confirm and save',
       },
       error: {
         description:
@@ -506,6 +567,7 @@ export const en = {
       pagination: {
         range: '{{start}}-{{end}} / {{total}} total',
         rows: '{{count}} rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
       },
@@ -540,7 +602,6 @@ export const en = {
       },
       charges: {
         title: 'Charge records',
-        description: 'Review charge results, token usage, and balance changes for each request.',
         empty: 'No charge records in the selected range.',
         tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
         columns: {
@@ -570,6 +631,20 @@ export const en = {
         outputTokens: 'Output tokens',
         cacheTokens: 'Cache tokens',
         matchedPriceRule: 'Matched price rule',
+        selectedTier: 'Selected rule tier',
+        selectedBand: 'Selected band lower bound',
+        requestedTier: 'Requested tier',
+        responseTier: 'Response tier',
+        tierSource: 'Tier source',
+        effectiveTier: 'Effective tier',
+        responseTierFallback: 'Response-tier fallback',
+        tokenBuckets: 'Token buckets',
+        buckets: {
+          uncachedInput: 'Uncached input',
+          cacheRead: 'Cache read',
+          cacheWrite: 'Cache write',
+          output: 'Output',
+        },
         amount: 'Charge amount',
         balanceBefore: 'Balance before',
         balanceAfter: 'Balance after',
@@ -579,7 +654,6 @@ export const en = {
       },
       balance: {
         title: 'Balance records',
-        description: 'Review user balance recharges, deductions, and balance changes.',
         empty: 'No balance records in the selected range.',
         types: {
           recharge: 'Recharge',
@@ -614,13 +688,20 @@ export const en = {
         empty: 'No model prices yet.',
         actions: {
           create: 'New price',
+          import: 'Import from models.dev',
+          refreshSynced: 'Check synced price updates',
           createSelected: 'Create {{count}}',
           selectModels: 'Select models',
           toggleState: 'Toggle model price {{model}} enabled state',
+          editExact: 'Edit price rule {{rule}}',
+          deleteExact: 'Delete price rule {{rule}}',
         },
         columns: {
           provider: 'Model provider',
           model: 'Model ID',
+          scope: 'Rule scope',
+          serviceTier: 'Tier',
+          minInputTokens: 'Context lower bound',
           input: 'Input price',
           output: 'Output price',
           cacheRead: 'Cache read',
@@ -635,9 +716,28 @@ export const en = {
           default: 'Default',
           sync: 'Synced',
         },
+        filters: {
+          search: 'Search model ID or provider',
+          tier: 'Filter Tier',
+          source: 'Filter source',
+          state: 'Filter state',
+          allTiers: 'All Tiers',
+          allSources: 'All sources',
+          allStates: 'All states',
+          clear: 'Clear filters',
+          empty: 'No price rules match the current filters.',
+        },
         sheet: {
           createTitle: 'New model price',
+          createDescription: 'Create a price rule for future charge calculation.',
+          importTitle: 'Import model prices',
+          importDescription:
+            'Preview models.dev matches, review write fields, and manually confirm the rules to apply.',
+          refreshSyncedTitle: 'Update synced prices',
+          refreshSyncedDescription:
+            'Fetch current models.dev prices and preview changes to existing source=sync rules.',
           editTitle: 'Edit model price',
+          editDescription: 'Update a model price rule used by future charges.',
         },
         form: {
           identity: 'Model identity',
@@ -656,10 +756,24 @@ export const en = {
           reloadModels: 'Reload models',
           provider: 'Model provider',
           model: 'Model ID',
+          serviceTier: 'Service tier',
+          minInputTokens: 'Minimum input tokens',
+          ruleScope: 'Rule matching scope',
+          ruleScopeHint:
+            'A request matches the exact tier first, then the greatest input-token lower bound. The selected price applies to the whole request.',
+          globalTierPolicy: 'Current global Tier source',
+          matchingChain: '{{source}} → exact Tier → wildcard Tier → largest eligible Context Band',
+          contextPreset: 'Context band',
+          scopeSummary: 'Matches {{tier}} at {{band}}; the price applies to the full request.',
+          legacyScopeHint:
+            'The connected backend has no tier or context-band rule identity. This form will send only flat-price fields.',
           input: 'Input price per million tokens',
           output: 'Output price per million tokens',
           cacheRead: 'Cache read price per million tokens',
           cacheWrite: 'Cache write price per million tokens',
+          cacheWriteConfigured: 'Separate cache-write pricing',
+          cacheWriteConfiguredHint:
+            'When enabled, explicit cache-write tokens use this bucket, including a zero price.',
           request: 'Per-request price',
           pricing: 'Price rules',
           pricingHint:
@@ -672,14 +786,329 @@ export const en = {
           enabled: 'Enabled state',
           note: 'Note',
         },
-        modelScopes: {
-          available: 'Runtime available',
-          static: 'Static catalog',
+        tiers: {
+          wildcard: 'All tiers (*)',
+          standard: 'Standard',
+          flex: 'Flex',
+          priority: 'Priority',
+        },
+        scope: {
+          baseContext: 'Base context',
+          over272K: '>272K input',
+          fromTokens: 'From {{count}} input tokens',
+          flatPrice: 'Flat price compatibility rule',
+          custom: 'Custom lower bound',
         },
         validation: {
           providerRequired: 'Provide a model provider.',
           modelRequired: 'Select a model provider and model ID.',
           priceInvalid: 'Prices must be numbers greater than or equal to 0.',
+          minInputTokensInvalid: 'Enter a non-negative safe whole number.',
+        },
+        modelScopes: {
+          available: 'Runtime available',
+          static: 'Static catalog',
+        },
+
+        import: {
+          manualConfirmHint:
+            'This import only prepares a preview. Nothing is written until you select rows and click confirm.',
+          refreshPresetTitle: 'Synced-price update preset enabled',
+          refreshPresetHint:
+            'Only existing source=sync base rules are included. Applying updates the selected rules to the latest models.dev prices.',
+          candidateErrorTitle: 'Candidate model API failed',
+          candidateIssueTitle: 'Candidate model data is partial',
+          reloadCandidates: 'Reload candidates',
+          candidateFailedEmpty:
+            'Candidate models could not be loaded. Reload candidates or check the Management API response.',
+          candidateIssueEmpty:
+            'Candidate model data is partial and no preview rows are available. Reload candidates before applying.',
+          catalogTitle: 'models.dev catalog',
+          catalogPending: 'Catalog not loaded yet.',
+          catalogReady: 'Loaded {{count}} models at {{time}}.',
+          catalogFailed: 'Failed to load models.dev catalog.',
+          reloadCatalog: 'Reload catalog',
+          serverPreviewBadge: 'Server preview',
+          legacyPreviewBadge: 'Compatibility preview',
+          serverPreviewLoading: 'Requesting a server-validated preview…',
+          serverPreviewReady: 'Server validated {{count}} rows at {{time}}.',
+          serverPreviewFailed: 'The server preview could not be generated.',
+          refreshServerPreview: 'Refresh preview',
+          retryServerPreview: 'Retry preview',
+          previewMetadata: 'Preview {{id}} · expires {{expires}} · atomic {{atomic}}',
+          sourceMetadata:
+            'models.dev snapshot {{version}} · {{url}} · fetched {{time}} · {{count}} models',
+          previewNoExpiry: 'not declared',
+          atomicYes: 'yes',
+          atomicNo: 'no',
+          legacyPreviewWarning:
+            'This backend does not provide server preview or transactional apply. Matching and writes use the compatibility path and cannot protect against concurrent price changes.',
+          nonAtomicWarning:
+            'The server reports that this apply is not atomic. A failure can leave part of the selected rows applied; review the operation result before retrying.',
+          serverIssuesTitle: 'Server validation notes',
+          previewInvalid: {
+            expired: 'This server preview has expired. Refresh it before applying.',
+            stale:
+              'The pricing policy changed after this preview was generated. Refresh the preview before applying.',
+            conflict:
+              'Price rules changed after this preview was generated. Refresh to review the latest conflicts.',
+          },
+          policyTitle: 'Price generation policy',
+          policyHint:
+            'Multipliers convert official unit prices into Home absolute prices. This import writes only the service tier=* and min input tokens=0 base rule. Models with additional pricing dimensions are blocked to prevent incomplete prices.',
+          defaultMultiplier: 'Default multiplier',
+          familyMultiplier: '{{family}} multiplier',
+          overwriteMode: 'Existing rule handling',
+          overwriteMissing: 'Create missing only',
+          overwriteSync: 'Create missing + update source=sync',
+          overwriteAll: 'Create missing + update all existing',
+          refreshApplyMode: 'Update selected source=sync rules',
+          overwriteWarning:
+            'This mode can overwrite {{count}} existing manual or default rules. Selected rows will require a second confirmation.',
+          advancedPolicy: 'Advanced pricing policy',
+          resetPreferences: 'Reset saved preferences',
+          showAdvancedPolicy: 'Expand advanced price generation',
+          hideAdvancedPolicy: 'Collapse advanced price generation',
+          modifiedBadge: 'Modified',
+          advancedPolicySummary:
+            '{{rules}} multiplier rules · {{aliases}} aliases · {{rowOverrides}} row overrides · {{cache}} · {{zero}}',
+          advancedPolicyHint:
+            'Advanced settings affect preview prices and are saved locally for the current Management API address.',
+          cachePricesIncluded: 'cache prices included',
+          cachePricesExcluded: 'cache prices excluded',
+          zeroCostIncluded: 'zero-cost models included',
+          zeroCostExcluded: 'zero-cost models skipped',
+          restoreDefaults: 'Restore import defaults',
+          resetPreferencesTitle: 'Restore import defaults?',
+          resetPreferencesDescription:
+            'This resets the target set, existing-rule handling, default multiplier, advanced multiplier rules, aliases, cache pricing, and zero-cost model settings.',
+          resetPreferencesSuccess: 'Import defaults restored.',
+          runtimeContextTitle: 'Runtime matching context',
+          runtimeContextChain:
+            '{{source}} → exact Tier → wildcard Tier → largest eligible context band',
+          previewPolicySummaryTitle: 'Policy used by this preview',
+          targetsTitle: 'Import targets',
+          targetsHint:
+            'Limit which Home models enter the preview before matching and pricing rules are evaluated.',
+          providerFilter: 'Provider',
+          allProviders: 'All providers',
+          targetFilter: 'Target set',
+          targetFilters: {
+            all: 'All candidates',
+            missing: 'Missing base rules only',
+            synced: 'Existing source=sync rules',
+            selected: 'Manually selected models',
+          },
+          targetsCount: '{{count}} models will enter the next preview.',
+          multiplierRulesTitle: 'Ordered multiplier rules',
+          addRule: 'Add rule',
+          ruleLabel: 'Label',
+          ruleMode: 'Match',
+          rulePattern: 'Pattern',
+          ruleMultiplier: 'Multiplier',
+          ruleModes: {
+            prefix: 'Prefix',
+            regex: 'Regex',
+          },
+          moveRuleUp: 'Move rule up',
+          moveRuleDown: 'Move rule down',
+          removeRule: 'Remove rule',
+          aliasRulesTitle: 'Model aliases',
+          addAlias: 'Add alias',
+          aliasTarget: 'Home model ID',
+          aliasSources: 'Preferred models.dev IDs, comma separated',
+          removeAlias: 'Remove alias',
+          includeCache: 'Include cache prices',
+          includeZeroCost: 'Allow zero official prices',
+          previewTitle: 'Preview and confirm',
+          previewHint: 'Selected {{selected}} / selectable {{selectable}} / total {{total}}',
+          summaryTitle: 'Apply summary',
+          summarySelected: '{{count}} selected',
+          summaryCreates: 'Create',
+          summaryUpdatesSync: 'Update sync',
+          summaryOverwrites: 'Overwrite',
+          summaryNotSelectable: 'Not selectable',
+          summaryNotApplied: 'Not applied',
+          selectedOverwriteWarning:
+            'Selected rows include {{manual}} manual and {{default}} default rules that will be overwritten.',
+          selectAll: 'Select all applicable',
+          clearSelection: 'Clear selection',
+          exportPreview: 'Export preview',
+          searchPlaceholder: 'Search Home provider, model, or models.dev match',
+          resolveMatchPlaceholder: 'Choose models.dev match',
+          resolveMatchAria: 'Choose the models.dev match for {{model}}',
+          applyMatchOverride: 'Rebuild preview',
+          loadingPreview: 'Loading preview…',
+          emptyPreview: 'No candidate models to preview.',
+          selectRow: 'Select {{model}} ({{tier}}, {{band}})',
+          rowMultiplier: 'Multiplier for {{model}} ({{tier}}, {{band}})',
+          progressTitle: 'Applying model price rules',
+          columns: {
+            status: 'Status',
+            action: 'Planned action',
+            sourceModel: 'models.dev match',
+            official: 'Official in/out',
+            multiplier: 'Multiplier',
+            writeFields: 'Fields to write',
+            writeRule: 'Rule metadata',
+            existing: 'Existing rule',
+          },
+          fields: {
+            serviceTier: 'Service tier',
+            minInputTokens: 'Starting tokens',
+            cacheWriteConfigured: 'Separate cache write',
+            input: 'Input',
+            output: 'Output',
+            cacheRead: 'Cache R',
+            cacheWrite: 'Cache W',
+            request: 'Request',
+            source: 'Source',
+            enabled: 'State',
+            note: 'Note',
+          },
+          status: {
+            matched: 'Matched',
+            ambiguous: 'Ambiguous',
+            unmatched: 'Unmatched',
+            zero_cost: 'Zero cost',
+            conflict: 'Conflict',
+            invalid: 'Invalid preview',
+            unsupported: 'Unsupported pricing',
+          },
+          actions: {
+            create: 'Create',
+            update_sync: 'Update sync',
+            overwrite: 'Overwrite',
+            skip: 'Skip',
+            review: 'Review',
+          },
+          statusFilter: {
+            label: 'Filter preview rows by status',
+            all: 'All rows',
+            applicable: 'Applicable',
+            review: 'Needs review',
+            skipped: 'Skipped',
+          },
+          reasons: {
+            no_models_dev_match: 'No models.dev match found',
+            zero_official_cost: 'Official price is zero; disabled by policy',
+            zero_final_cost: 'The multiplier makes the final price zero; disabled by policy',
+            matched_preferred_alias: 'Matched by preferred alias',
+            multiple_matches: 'Multiple matches found',
+            multiple_matches_with_candidates: 'Multiple matches: {{matches}}',
+            missing_cost: 'models.dev entry has no cost fields',
+            invalid_price_values: 'models.dev contains a negative or otherwise invalid price',
+            unsupported_price_dimensions:
+              'models.dev includes pricing dimensions this import path cannot represent completely',
+            invalid_preview_status: 'The server returned an unsupported preview status',
+            missing_preview_action: 'The server did not declare a planned action',
+            invalid_preview_action: 'The server returned an unsupported planned action',
+            missing_final_prices: 'The server did not return all fields to write',
+            missing_write_rule: 'The server did not return complete final rule metadata',
+            missing_write_note: 'The server did not return an auditable sync note',
+            invalid_write_note:
+              'The sync note does not identify the matched models.dev provider and model',
+            missing_official_prices: 'The server did not return official source prices',
+            missing_source_match: 'The server did not identify the matched models.dev entry',
+            invalid_multiplier: 'The server returned an invalid multiplier',
+            missing_preview_identity: 'The server did not return a provider and model ID',
+            invalid_preview_scope:
+              'The server did not return a valid service tier and input-token band',
+            missing_row_key: 'The server did not return a stable row key',
+            missing_applicability: 'The server did not explicitly declare row applicability',
+            invalid_existing_rule: 'The existing rule snapshot is incomplete or invalid',
+            missing_existing_rule: 'The planned update has no existing rule snapshot',
+            missing_existing_revision: 'The existing rule snapshot has no revision',
+            inconsistent_preview_action: 'The planned action conflicts with the existing rule',
+            inconsistent_existing_identity:
+              'The existing rule snapshot belongs to a different provider or model',
+            inconsistent_rule_scope:
+              'The existing or final rule tier and token band do not match the target',
+            source_stale:
+              'The models.dev snapshot is older than the recommended freshness window; verify its source time before applying',
+            matched: 'Exact match',
+            matchCandidate: 'Candidate {{match}}',
+          },
+          existingRule: 'Exists ({{source}})',
+          noExisting: 'None',
+          validation: {
+            selectRows: 'Select at least one preview row to confirm.',
+            refreshPreview: 'Refresh the server preview before applying selected rows.',
+            existingRuleMissing:
+              'The existing price rule changed or disappeared before compatibility apply.',
+          },
+          result: {
+            applied: {
+              title: 'Import applied',
+              description:
+                'Created {{created}}, updated {{updated}}, overwritten {{overwritten}}, failed {{failed}}.',
+            },
+            partial: {
+              title: 'Import partially applied',
+              description:
+                'Created {{created}}, updated {{updated}}, overwritten {{overwritten}}, failed {{failed}}. Review failed rows before retrying.',
+            },
+            failed: {
+              title: 'Import failed',
+              description:
+                'No complete result was applied. Failed rows: {{failed}}. Refresh the preview before retrying.',
+            },
+            conflict: {
+              title: 'Import blocked by conflicts',
+              description:
+                'Price rules changed after preview. Conflicted or failed rows: {{failed}}.',
+            },
+            expired: {
+              title: 'Preview expired',
+              description:
+                'The server rejected the expired preview. Refresh it before applying again.',
+            },
+            operationId: 'Operation {{id}}',
+            idempotencyKey: 'Idempotency key {{id}}',
+            status: 'Result',
+            message: 'Message',
+            rowStatus: {
+              failed: 'Failed',
+              conflict: 'Conflict',
+              created: 'Created',
+              updated: 'Updated',
+              overwritten: 'Overwritten',
+              skipped: 'Skipped',
+            },
+            retryFailed: 'Preview failed rows again',
+            export: 'Export result',
+          },
+          confirmOverwriteTitle: 'Confirm price rule overwrite',
+          confirmOverwriteDescription:
+            'This will create {{create}}, update source=sync {{sync}}, overwrite manual/default {{overwrite}}, and leave {{skipped}} not applied.',
+          confirmOverwriteRisk:
+            'Compatibility apply sends one CRUD request per rule. A failure can leave earlier rows applied; existing enabled state is preserved.',
+          confirmServerAtomicRisk:
+            'The server declares an atomic apply. The frontend will submit one preview revision and one idempotency key.',
+          confirmOverwriteAcknowledgement:
+            'I understand that selected manual/default rules will become source=sync and their previewed prices and note will replace the current values.',
+          confirmOverwriteAction: 'Apply selected rules',
+          confirmApply: 'Confirm apply ({{count}})',
+          complete: 'Done',
+          applied: 'Applied {{count}} confirmed model prices.',
+          recovery: {
+            title: 'The previous apply result is unconfirmed',
+            description:
+              'The request for {{count}} rules may already have been processed. Do not create a new preview; retry the exact request with the same idempotency key to retrieve its single result.',
+            preview: 'Preview',
+            startedAt: 'First submitted',
+            idempotencyKey: 'Idempotency key',
+            retry: 'Safely retry original request',
+            discard: 'Discard recovery record',
+            lastError: 'Most recent request failed: {{error}}',
+            unknownError: 'The frontend cannot confirm whether the backend completed this apply.',
+            storageFailed:
+              'The browser could not save a recovery record, so the apply was not sent. Check session storage permissions.',
+            discardTitle: 'Discard the unconfirmed apply record?',
+            discardDescription:
+              'This only removes the browser recovery credential. It does not undo writes the backend may already have completed, and the original result can no longer be recovered with this idempotency key.',
+            discardAction: 'Discard record anyway',
+          },
         },
         delete: {
           title: 'Delete model price?',
@@ -1346,7 +1775,6 @@ export const en = {
       },
       list: {
         title: 'Credential resources',
-        description: 'Manage account credentials created by OAuth login or file import.',
         filterPlaceholder: 'Filter credentials',
         empty: 'No credentials match the current filters.',
         credential: 'Credential / account',
@@ -1497,7 +1925,8 @@ export const en = {
       },
       list: {
         title: 'Access keys',
-        description: 'Keys returned by GET /api-keys. Server-side metadata is not assumed.',
+        description:
+          'These keys grant clients access to the Home Center server; they are not model provider keys.',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
@@ -1869,8 +2298,6 @@ export const en = {
       },
       workspace: {
         title: 'Access workspace',
-        description:
-          'Maintain users, key ownership, credential scopes, and model scopes in one workspace.',
         filterPlaceholder: 'Filter users, keys, or scopes',
       },
       tabs: {
@@ -2588,6 +3015,49 @@ export const en = {
         description: '{{mode}} did not expose request usage routes.',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: 'Live',
+        auto: 'Auto refresh',
+      },
+      status: {
+        running: {
+          live: 'Live refresh active',
+          auto: 'Auto refresh active',
+        },
+        paused: {
+          live: 'Live refresh paused',
+          auto: 'Auto refresh paused',
+        },
+        off: {
+          live: 'Live refresh off',
+          auto: 'Auto refresh off',
+        },
+        unavailable: {
+          live: 'Live refresh unavailable',
+          auto: 'Auto refresh unavailable',
+        },
+        retrying: 'Refresh failed, retrying automatically',
+        cadence: 'Checks every {{seconds}}s',
+        delayed: 'No successful update for {{seconds}}s',
+        lastSuccess: 'Last update: {{time}}',
+        withReason: '{{status}}: {{reason}}',
+        reason: {
+          hidden: 'Resumes when you return',
+          offline: 'Resumes when the network returns',
+          detail: 'Resumes when details are closed',
+          nonFirstPage: 'Return to page 1 to resume',
+          historicalRange: 'Historical ranges do not refresh automatically',
+          nonLatestSort: 'Sort newest first to resume',
+          invalidFilters: 'Fix invalid filters to resume',
+          unavailable: 'This data source does not support refresh',
+          ineligible: 'Refresh is unavailable for the current conditions',
+        },
+      },
+      newItems: '{{count}} new records',
+      newItemsAtLeast: 'At least {{count}} new records',
+      showNew: 'Show new',
+    },
     requestEventsPage: {
       disconnected: {
         title: 'Connect a management runtime',
@@ -2611,7 +3081,7 @@ export const en = {
           title: 'Request events are ready',
           badge: 'Investigable',
           description:
-            '{{count}} request events are loaded for filtering by request, model, node, credential, status, and latency.',
+            'Filter request events by request, model, node, credential, status, and latency.',
         },
         empty: {
           title: 'No request events yet',
@@ -2714,8 +3184,6 @@ export const en = {
       },
       table: {
         title: 'Request Events',
-        description:
-          'Inspect request-level events with model, node, credential, client, token, latency, and error context.',
         columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         ttft: 'TTFT {{value}}',
@@ -2727,9 +3195,8 @@ export const en = {
         unsupportedTitle: 'Request events API unavailable',
         unsupportedDescription:
           'This runtime does not expose /request-events. The page becomes available after the backend adds it.',
-        resultCount: '{{total}} events',
         range: '{{start}}-{{end}} of {{total}}',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columns: {
@@ -2757,6 +3224,12 @@ export const en = {
         error: 'Error summary',
         payload: 'Payload summary',
         logExcerpt: 'Log excerpt',
+        actions: {
+          copy: 'Copy content',
+          copied: 'Copied',
+          wrapLines: 'Wrap lines',
+          preserveLines: 'Preserve lines',
+        },
         fields: {
           eventType: 'Event type',
           status: 'Status',
@@ -2976,6 +3449,7 @@ export const en = {
         title: 'Some data could not be loaded',
       },
       issueScopes: {
+        runtimeSettings: 'Runtime settings',
         apiKeyUsage: 'Usage stats',
         usageOverview: 'Usage overview',
         usageRecords: 'Usage records',
@@ -3200,7 +3674,7 @@ export const en = {
         unavailable: 'Request-level usage records are not exposed.',
         errorTitle: 'Request records failed to load',
         clearFilters: 'Clear filters',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         ttft: 'TTFT {{value}}',
@@ -3252,6 +3726,25 @@ export const en = {
         related: 'Related data',
         noLogExcerpt: 'No log excerpt was returned for this request.',
         requestLogUnavailable: 'No downloadable request log is available for this record.',
+        downloadingRequestLog: 'Downloading',
+        technicalMetadata: 'Technical metadata',
+        requestLogStatuses: {
+          local: 'Available locally',
+          remote: 'Available from remote Home',
+          unavailable: 'Unavailable',
+        },
+        downloadErrors: {
+          notFound: 'The request log does not exist or has been cleared.',
+          remoteUnavailable: 'The target Home is currently unavailable. Try again later.',
+          unauthorized: 'The current Management Key cannot download this log.',
+          generic: 'The request log could not be downloaded. Try again later.',
+        },
+        actions: {
+          copy: 'Copy content',
+          copied: 'Copied',
+          wrapLines: 'Wrap lines',
+          preserveLines: 'Preserve lines',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',
@@ -3273,7 +3766,7 @@ export const en = {
           output: 'Output',
           reasoning: 'Reasoning',
           cacheRead: 'Cache read',
-          cacheCreate: 'Cache create',
+          cacheCreate: 'Cache write',
           total: 'Total',
         },
         payloadFields: {
@@ -3285,7 +3778,7 @@ export const en = {
         relatedFields: {
           requestLog: 'Request log',
           requestLogHomeIp: 'Log Home node',
-          downloadUrl: 'Download path',
+          downloadUrl: 'API download path',
         },
       },
       credentials: {
@@ -3296,7 +3789,7 @@ export const en = {
         unavailableTitle: 'Execution credential usage is unavailable',
         unavailable: 'Execution credential usage aggregates are not exposed.',
         errorTitle: 'Execution credential usage failed to load',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columnsButton: 'Customize columns',
@@ -3422,8 +3915,6 @@ export const en = {
       },
       logs: {
         title: 'Runtime logs',
-        description:
-          'Read runtime logs with pagination. The table shows summaries; open details for full content and request metadata.',
         unavailableTitle: 'Runtime logs are unavailable',
         unavailable: 'The runtime logs route is not exposed.',
         fileLoggingDisabledTitle: 'File logging is disabled',
@@ -3434,11 +3925,8 @@ export const en = {
         filteredEmpty: 'No runtime logs match the current filters.',
         emptyPageTitle: 'No logs on this page',
         emptyPage: 'Go back one page or sync again.',
-        lineCount: '{{count}} lines',
-        latest: 'Latest timestamp: {{time}}',
-        latestUnavailable: 'Latest timestamp unavailable',
-        total: '{{count}} total',
-        range: 'Showing {{start}}-{{end}} of {{total}}',
+        latest: 'Latest log: {{time}}',
+        latestUnavailable: 'Log timestamp unavailable',
         columns: {
           time: 'Time',
           level: 'Level',
@@ -3482,7 +3970,7 @@ export const en = {
         },
         pagination: {
           range: '{{start}}-{{end}} of {{total}}',
-          pageSize: 'Rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },
@@ -3495,8 +3983,7 @@ export const en = {
       },
       errorLogs: {
         title: 'Error log files',
-        description:
-          'Lists error-*.log files generated when request logging is disabled, with file download support.',
+        description: 'Shows only error-*.log files generated when request logging is disabled.',
         unavailableTitle: 'Error log files are unavailable',
         unavailable: 'The error log file route is not exposed.',
         emptyTitle: 'No error log files',
@@ -3525,6 +4012,7 @@ export const en = {
         logsCleared: 'Logs cleared.',
         fileLoggingDisabled: 'File logging is disabled, so runtime logs cannot be cleared.',
         logDownloaded: 'Log downloaded.',
+        requestLogDownloaded: 'Request log downloaded: {{fileName}}',
         exportDownloaded: 'Usage export downloaded.',
       },
     },
@@ -3845,8 +4333,7 @@ export const en = {
       },
       table: {
         title: 'Plugin store',
-        description:
-          'Install, update, uninstall, and inspect store-installed plugins. Cluster readiness is based on node reports when available.',
+        description: 'Cluster readiness uses node reports when available.',
       },
       filters: {
         search: 'Search plugins',

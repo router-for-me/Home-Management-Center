@@ -32,11 +32,13 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
+import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import {
+  TablePaginationStatus,
   TableSurface,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -76,6 +78,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
+import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+  NewItemsNotice,
+} from '@/features/observability/live-refresh-control'
 import type { RuntimeMode } from '@/lib/api/management/types'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
@@ -2944,6 +2952,7 @@ export function RequestRecordsTable({
   filters,
   filterOptions,
   pageSizeOptions,
+  fetching,
   mutating,
   canExport,
   isExporting,
@@ -2959,6 +2968,7 @@ export function RequestRecordsTable({
   filters: UsageFilters
   filterOptions: UsageFilterOptions
   pageSizeOptions: number[]
+  fetching: boolean
   mutating: boolean
   canExport: boolean
   isExporting: boolean
@@ -3252,13 +3262,15 @@ export function RequestRecordsTable({
       )}
       {records && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.records.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.records.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={JSON.stringify(filters)}
+            busy={fetching || mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -3269,7 +3281,11 @@ export function RequestRecordsTable({
                 disabled={mutating}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(usageTouchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(usageTouchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('usageLogsPage.records.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3359,12 +3375,15 @@ function RequestLogSortButton({
 
 export function RequestLogIndexTable({
   index,
+  updatedAt,
   mutating,
   downloadingRequestLogId,
   isDownloadingRequestLog,
   onDownloadRequestLog,
+  onAutoRefreshEligibilityChange,
 }: {
   index: RequestLogIndex | null
+  updatedAt?: string | null
   mutating: boolean
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
@@ -3373,6 +3392,7 @@ export function RequestLogIndexTable({
     homeIp?: string | null,
     homePort?: number | null,
   ) => void
+  onAutoRefreshEligibilityChange?: (eligible: boolean) => void
 }) {
   const { t, i18n } = useTranslation()
   const [search, setSearch] = useState('')
@@ -3383,6 +3403,10 @@ export function RequestLogIndexTable({
   const [pageSize, setPageSize] = useState(20)
   const [page, setPage] = useState(0)
   const indexItems = index?.items ?? []
+
+  useEffect(() => {
+    onAutoRefreshEligibilityChange?.(page === 0 && sort.key === 'time' && sort.direction === 'desc')
+  }, [onAutoRefreshEligibilityChange, page, sort.direction, sort.key])
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -3435,22 +3459,31 @@ export function RequestLogIndexTable({
     <TableSurface className="min-w-0">
       <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-start lg:justify-between">
         <SectionHeader title={t('usageLogsPage.requestLogs.title')} />
-        <div className="relative min-w-0 lg:w-80">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            className="pl-9"
-            type="search"
-            value={search}
-            placeholder={t('usageLogsPage.requestLogs.searchPlaceholder')}
-            disabled={mutating || index.items.length === 0}
-            onChange={(event) => {
-              setSearch(event.target.value)
-              setPage(0)
-            }}
-          />
+        <div className="flex min-w-0 flex-col gap-2 lg:w-80">
+          {updatedAt ? (
+            <p className="text-muted-foreground text-right text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
+          <div className="relative min-w-0">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              type="search"
+              value={search}
+              placeholder={t('usageLogsPage.requestLogs.searchPlaceholder')}
+              disabled={mutating || index.items.length === 0}
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setPage(0)
+              }}
+            />
+          </div>
         </div>
       </div>
       {totalRows > 0 ? (
@@ -3623,13 +3656,15 @@ export function RequestLogIndexTable({
       )}
       {totalRows > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.records.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.records.range', {
               start: formatNumber(pageStart + 1),
               end: formatNumber(Math.min(pageStart + pageSize, totalRows)),
               total: formatNumber(totalRows),
             })}
-          </p>
+            announcementKey={`${currentPage}:${pageSize}:${search}:${sort.key}:${sort.direction}`}
+            busy={mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -3643,7 +3678,11 @@ export function RequestLogIndexTable({
                   setPage(0)
                 }}
               >
-                <SelectTrigger className="w-24" size="sm">
+                <SelectTrigger
+                  className="w-24"
+                  size="sm"
+                  aria-label={t('usageLogsPage.records.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3684,6 +3723,12 @@ export function RequestLogIndexTable({
   )
 }
 
+function formatMetadataValue(value: unknown, fallback: string) {
+  if (typeof value === 'string' && value.trim()) return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  return fallback
+}
+
 function DetailField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0 rounded-md border px-3 py-2">
@@ -3691,12 +3736,6 @@ function DetailField({ label, children }: { label: string; children: ReactNode }
       <div className="mt-1 min-w-0 truncate text-sm">{children}</div>
     </div>
   )
-}
-
-function formatMetadataValue(value: unknown, fallback: string) {
-  if (typeof value === 'string' && value.trim()) return value
-  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
-  return fallback
 }
 
 function getQuotaStatusClassName(window: UsageQuotaWindow) {
@@ -3805,16 +3844,29 @@ export function RequestDetailSheet({
   const { t, i18n } = useTranslation()
   const sheetContentRef = useRef<HTMLDivElement>(null)
   const record = detail?.record
+  const relatedRequestLog = detail?.related?.requestLog
+  const requestLogId = relatedRequestLog?.requestId ?? record?.requestId
+  const requestLogHomeIp = relatedRequestLog?.homeIp ?? record?.runtime.homeIp
+  const requestLogHomePort = relatedRequestLog?.homePort ?? record?.runtime.homePort
+  const requestLogAvailable =
+    relatedRequestLog?.available ?? record?.runtime.requestLogAvailable ?? false
+  const requestLogHomeIpRequired = record?.runtime.logHomeIpRequired ?? false
+  const requestLogRoutable =
+    Boolean(requestLogId) &&
+    requestLogAvailable &&
+    (!requestLogHomeIpRequired || Boolean(requestLogHomeIp))
   const downloading =
-    isDownloadingRequestLog &&
-    Boolean(record?.requestId) &&
-    downloadingRequestLogId === record?.requestId
-  const canDownloadRequestLog =
-    onDownloadRequestLog !== undefined &&
-    record !== undefined &&
-    Boolean(record.requestId) &&
-    record.runtime.requestLogAvailable &&
-    (!record.runtime.logHomeIpRequired || Boolean(record.runtime.homeIp))
+    isDownloadingRequestLog && Boolean(requestLogId) && downloadingRequestLogId === requestLogId
+  const canDownloadRequestLog = onDownloadRequestLog !== undefined && requestLogRoutable
+  const requestLogStatus = !requestLogRoutable
+    ? 'unavailable'
+    : requestLogHomeIpRequired
+      ? 'remote'
+      : 'local'
+  const copyLabel = t('usageLogsPage.detail.actions.copy')
+  const copiedLabel = t('usageLogsPage.detail.actions.copied')
+  const wrapLinesLabel = t('usageLogsPage.detail.actions.wrapLines')
+  const preserveLinesLabel = t('usageLogsPage.detail.actions.preserveLines')
 
   return (
     <Sheet open={pending || Boolean(record) || Boolean(error)} onOpenChange={onOpenChange}>
@@ -3829,15 +3881,15 @@ export function RequestDetailSheet({
           })
         }}
       >
-        <SheetHeader className="border-b p-4">
+        <SheetHeader className="min-w-0 border-b p-4">
           <SheetTitle>{t('usageLogsPage.detail.title')}</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="[overflow-wrap:anywhere] break-words">
             {record
               ? (formatDateTime(record.timestamp, i18n) ?? record.timestamp)
               : t('usageLogsPage.detail.loading')}
           </SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
           {pending ? (
             <div className="grid gap-3">
               <Skeleton className="h-24" />
@@ -3845,56 +3897,79 @@ export function RequestDetailSheet({
               <Skeleton className="h-40" />
             </div>
           ) : error ? (
-            <p className="text-destructive text-sm">{error}</p>
+            <p className="text-destructive text-sm [overflow-wrap:anywhere] break-words">{error}</p>
           ) : record ? (
-            <div className="grid gap-5">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailField label={t('usageLogsPage.detail.fields.requestId')}>
-                  <span className="font-mono text-xs">
-                    {record.requestId ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.usageId')}>
-                  <span className="font-mono text-xs">{record.usageId}</span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.status')}>
+            <div className="grid min-w-0 grid-cols-1 gap-5">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.requestId')}
+                  copyValue={record.requestId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.requestId ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.usageId')}
+                  copyValue={String(record.usageId)}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.usageId}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.status')}>
                   <StatusBadge record={record} />
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.homeIp')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.homeIp')}>
                   {formatHomeEndpoint(record.runtime.homeIp, record.runtime.homePort) ??
                     t('usageLogsPage.status.localHome')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.client')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.client')}>
                   {record.client?.username ?? t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.clientKey')}>
-                  <span className="font-mono text-xs">
-                    {record.client?.apiKeyLabel ??
-                      record.client?.apiKeyMasked ??
-                      t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.credential')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.clientKey')}
+                  copyValue={record.client?.apiKeyLabel ?? record.client?.apiKeyMasked}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.client?.apiKeyLabel ??
+                    record.client?.apiKeyMasked ??
+                    t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.credential')}>
                   {record.credential?.label ?? t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.authIndex')}>
-                  <span className="font-mono text-xs">
-                    {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.model')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.authIndex')}
+                  copyValue={record.credential?.authIndex}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.model')}>
                   {record.provider} / {record.model}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.endpoint')}>
-                  <span className="font-mono text-xs">
-                    {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  className="sm:col-span-2"
+                  label={t('usageLogsPage.detail.fields.endpoint')}
+                  copyValue={record.endpoint}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.tokens')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
                   {[
                     ['input', record.tokens.inputTokens],
                     ['output', record.tokens.outputTokens],
@@ -3903,115 +3978,147 @@ export function RequestDetailSheet({
                     ['cacheCreate', record.tokens.cacheCreationTokens],
                     ['total', record.tokens.totalTokens],
                   ].map(([key, value]) => (
-                    <DetailField key={key} label={t(`usageLogsPage.detail.tokenFields.${key}`)}>
+                    <DiagnosticDetailField
+                      key={key}
+                      label={t(`usageLogsPage.detail.tokenFields.${key}`)}
+                    >
                       {formatNumber(Number(value))}
-                    </DetailField>
+                    </DiagnosticDetailField>
                   ))}
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DetailField label={t('usageLogsPage.detail.fields.latency')}>
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.latency')}>
                   {formatDuration(record.performance.latencyMs)}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.ttft')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.ttft')}>
                   {formatDuration(record.performance.ttftMs) ??
                     t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.billing')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.billing')}>
                   {formatAmountUnit(t, record.billing?.amount ?? null, record.billing?.currency) ??
                     t('usageLogsPage.status.notAvailable')}
-                </DetailField>
-                <DetailField label={t('usageLogsPage.detail.fields.chargeId')}>
-                  <span className="font-mono text-xs">
-                    {record.billing?.chargeId ??
-                      detail?.related?.chargeId ??
-                      t('usageLogsPage.status.notAvailable')}
-                  </span>
-                </DetailField>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('usageLogsPage.detail.fields.chargeId')}
+                  copyValue={record.billing?.chargeId ?? detail?.related?.chargeId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {record.billing?.chargeId ??
+                    detail?.related?.chargeId ??
+                    t('usageLogsPage.status.notAvailable')}
+                </DiagnosticDetailField>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.related')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.requestLog')}>
-                    {detail?.related?.requestLog?.available === false
-                      ? t('usageLogsPage.requestLogs.unavailableFile')
-                      : detail?.related?.requestLog
-                        ? t('common.enabled')
-                        : t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}>
-                    {formatHomeEndpoint(
-                      detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
-                      detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
-                    ) ?? t('usageLogsPage.status.localHome')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.relatedFields.downloadUrl')}>
-                    <span className="font-mono text-xs">
-                      {detail?.related?.requestLog?.downloadUrl ??
-                        t('usageLogsPage.status.notAvailable')}
-                    </span>
-                  </DetailField>
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.relatedFields.requestLog')}>
+                    {t(`usageLogsPage.detail.requestLogStatuses.${requestLogStatus}`)}
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField
+                    label={t('usageLogsPage.detail.relatedFields.requestLogHomeIp')}
+                  >
+                    {formatHomeEndpoint(requestLogHomeIp ?? null, requestLogHomePort ?? null) ??
+                      t('usageLogsPage.status.localHome')}
+                  </DiagnosticDetailField>
                 </div>
+                {relatedRequestLog?.downloadUrl ? (
+                  <Collapsible className="mt-3">
+                    <CollapsibleTrigger className="group text-muted-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-sm text-xs font-medium outline-none focus-visible:ring-[3px]">
+                      {t('usageLogsPage.detail.technicalMetadata')}
+                      <ChevronDown
+                        className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+                        aria-hidden="true"
+                      />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <DiagnosticDetailField
+                        label={t('usageLogsPage.detail.relatedFields.downloadUrl')}
+                        copyValue={relatedRequestLog.downloadUrl}
+                        copyLabel={copyLabel}
+                        copiedLabel={copiedLabel}
+                        mono
+                      >
+                        {relatedRequestLog.downloadUrl}
+                      </DiagnosticDetailField>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : null}
               </div>
 
               {record.error ? (
                 <div>
                   <h3 className="text-sm font-medium">{t('usageLogsPage.detail.error')}</h3>
-                  <pre className="bg-muted/45 text-foreground mt-2 max-h-44 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                    {record.error.bodyPreview ?? record.error.message}
-                  </pre>
+                  <TechnicalTextViewer
+                    content={
+                      record.error.bodyPreview ??
+                      record.error.message ??
+                      t('usageLogsPage.status.notAvailable')
+                    }
+                    copyLabel={copyLabel}
+                    copiedLabel={copiedLabel}
+                    wrapLinesLabel={wrapLinesLabel}
+                    preserveLinesLabel={preserveLinesLabel}
+                    maxHeightClassName="max-h-44"
+                  />
                 </div>
               ) : null}
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.payload')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.method')}>
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-4">
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.method')}>
                     {detail?.payloadSummary?.method ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.stream')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.stream')}>
                     {detail?.payloadSummary?.stream === null
                       ? t('usageLogsPage.status.notAvailable')
                       : detail?.payloadSummary?.stream
                         ? t('common.enabled')
                         : t('common.disabled')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.messages')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.messages')}>
                     {detail?.payloadSummary?.messageCount ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
-                  <DetailField label={t('usageLogsPage.detail.payloadFields.tools')}>
+                  </DiagnosticDetailField>
+                  <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.tools')}>
                     {detail?.payloadSummary?.toolCount ?? t('usageLogsPage.status.notAvailable')}
-                  </DetailField>
+                  </DiagnosticDetailField>
                 </div>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.logs')}</h3>
-                <pre className="bg-muted/45 text-foreground mt-2 max-h-52 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                  {detail?.logExcerpt.length
-                    ? detail.logExcerpt.join('\n')
-                    : t('usageLogsPage.detail.noLogExcerpt')}
-                </pre>
+                <TechnicalTextViewer
+                  content={
+                    detail?.logExcerpt.length
+                      ? detail.logExcerpt.join('\n')
+                      : t('usageLogsPage.detail.noLogExcerpt')
+                  }
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  wrapLinesLabel={wrapLinesLabel}
+                  preserveLinesLabel={preserveLinesLabel}
+                  maxHeightClassName="max-h-52"
+                />
               </div>
             </div>
           ) : null}
         </div>
-        {onDownloadRequestLog ? (
-          <div className="bg-popover border-t p-4">
+        {onDownloadRequestLog && record ? (
+          <div className="bg-popover flex flex-col border-t p-4 sm:items-end">
             <Button
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!canDownloadRequestLog || mutating}
               onClick={() =>
-                record?.requestId &&
-                onDownloadRequestLog(
-                  record.requestId,
-                  detail?.related?.requestLog?.homeIp ?? record.runtime.homeIp,
-                  detail?.related?.requestLog?.homePort ?? record.runtime.homePort,
-                )
+                requestLogId &&
+                onDownloadRequestLog(requestLogId, requestLogHomeIp, requestLogHomePort)
               }
             >
               {downloading ? (
@@ -4019,10 +4126,12 @@ export function RequestDetailSheet({
               ) : (
                 <Download className="size-4" aria-hidden="true" />
               )}
-              {t('usageLogsPage.actions.downloadRequestLog')}
+              {downloading
+                ? t('usageLogsPage.detail.downloadingRequestLog')
+                : t('usageLogsPage.actions.downloadRequestLog')}
             </Button>
             {!canDownloadRequestLog ? (
-              <p className="text-muted-foreground mt-2 text-xs">
+              <p className="text-muted-foreground mt-2 text-xs sm:text-right">
                 {t('usageLogsPage.detail.requestLogUnavailable')}
               </p>
             ) : null}
@@ -4446,13 +4555,15 @@ export function CredentialUsageTable({
       )}
       {response && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.credentials.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.credentials.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={`${offset}:${limit}:${JSON.stringify(sort)}`}
+            busy={controlsDisabled}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -4463,7 +4574,11 @@ export function CredentialUsageTable({
                 disabled={controlsDisabled}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(usageTouchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(usageTouchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('usageLogsPage.credentials.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -4506,7 +4621,13 @@ export function CredentialUsageTable({
   )
 }
 
-export function ActivityHeatmap({ overview }: { overview: UsageOverview | null }) {
+export function ActivityHeatmap({
+  overview,
+  updatedAt,
+}: {
+  overview: UsageOverview | null
+  updatedAt?: string | null
+}) {
   const { t, i18n } = useTranslation()
   const buckets = overview?.activity ?? []
   const activeBuckets = buckets.filter((bucket) => bucket.requestCount > 0).length
@@ -4518,12 +4639,21 @@ export function ActivityHeatmap({ overview }: { overview: UsageOverview | null }
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <SectionHeader title={t('usageLogsPage.activity.title')} />
-        <div className="text-muted-foreground text-sm">
-          {t('usageLogsPage.activity.summary', {
-            buckets: formatNumber(activeBuckets),
-            requests: formatNumber(requestCount),
-            successRate: formatPercent(successRate),
-          })}
+        <div className="text-muted-foreground text-right text-sm">
+          <p>
+            {t('usageLogsPage.activity.summary', {
+              buckets: formatNumber(activeBuckets),
+              requests: formatNumber(requestCount),
+              successRate: formatPercent(successRate),
+            })}
+          </p>
+          {updatedAt ? (
+            <p className="mt-1 text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
         </div>
       </div>
       {buckets.length > 0 ? (
@@ -4612,9 +4742,11 @@ function UsageHealthStatusBadge({ status }: { status: UsageHealthStatus }) {
 function UsageHealthMiniTable({
   response,
   title,
+  updatedAt,
 }: {
   response: UsageHealthResponse | null
   title: string
+  updatedAt?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const rows = response?.items ?? []
@@ -4627,12 +4759,22 @@ function UsageHealthMiniTable({
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader title={title} />
         {response ? (
-          <div className="text-muted-foreground text-sm">
-            {t('usageLogsPage.health.summary', {
-              count: formatNumber(rows.length),
-              issues: formatNumber(degradedCount),
-              window: formatDuration(response.windowSeconds * 1000) ?? `${response.windowSeconds}s`,
-            })}
+          <div className="text-muted-foreground text-right text-sm">
+            <p>
+              {t('usageLogsPage.health.summary', {
+                count: formatNumber(rows.length),
+                issues: formatNumber(degradedCount),
+                window:
+                  formatDuration(response.windowSeconds * 1000) ?? `${response.windowSeconds}s`,
+              })}
+            </p>
+            {updatedAt ? (
+              <p className="mt-1 text-xs">
+                {t('usageLogsPage.header.updatedAt', {
+                  time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+                })}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -4756,9 +4898,13 @@ function UsageHealthMiniTable({
 export function UsageHealthPanel({
   providerHealth,
   credentialHealth,
+  providerUpdatedAt,
+  credentialUpdatedAt,
 }: {
   providerHealth: UsageHealthResponse | null
   credentialHealth: UsageHealthResponse | null
+  providerUpdatedAt?: string | null
+  credentialUpdatedAt?: string | null
 }) {
   const { t } = useTranslation()
 
@@ -4773,10 +4919,12 @@ export function UsageHealthPanel({
         <UsageHealthMiniTable
           response={providerHealth}
           title={t('usageLogsPage.health.providers.title')}
+          updatedAt={providerUpdatedAt}
         />
         <UsageHealthMiniTable
           response={credentialHealth}
           title={t('usageLogsPage.health.credentials.title')}
+          updatedAt={credentialUpdatedAt}
         />
       </div>
     </TableSurface>
@@ -5061,6 +5209,7 @@ export function RuntimeLogViewer({
   downloadingRequestLogId,
   isDownloadingRequestLog,
   clearing,
+  fetching,
   mutating,
   onClear,
   onFilterChange,
@@ -5068,6 +5217,14 @@ export function RuntimeLogViewer({
   onPageSizeChange,
   onOffsetChange,
   onDownloadRequestLog,
+  liveRefresh,
+  liveRefreshIntervalMs,
+  liveRefreshError,
+  liveRefreshLastSuccessAt,
+  pendingItemCount,
+  pendingItemsTruncated,
+  onAcceptPendingItems,
+  onDetailOpenChange,
 }: {
   runtimeLogs: RuntimeLogSnapshot | null
   canRead: boolean
@@ -5080,6 +5237,7 @@ export function RuntimeLogViewer({
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
   clearing: boolean
+  fetching: boolean
   mutating: boolean
   onClear: () => void
   onFilterChange: (nextFilters: Partial<RuntimeLogFilters>) => void
@@ -5091,7 +5249,22 @@ export function RuntimeLogViewer({
     homeIp?: string | null,
     homePort?: number | null,
   ) => void
+  liveRefresh: {
+    enabled: boolean
+    active: boolean
+    pauseReason: LiveRefreshPauseReason | null
+    available: boolean
+    setEnabled: (enabled: boolean) => void
+  }
+  liveRefreshIntervalMs: number
+  liveRefreshError: boolean
+  liveRefreshLastSuccessAt: number | null
+  pendingItemCount: number
+  pendingItemsTruncated: boolean
+  onAcceptPendingItems: () => void
+  onDetailOpenChange: (open: boolean) => void
 }) {
+  const liveRefreshStatusId = 'runtime-log-live-refresh-status'
   const { t, i18n } = useTranslation()
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
   const records = runtimeLogs?.records ?? []
@@ -5107,46 +5280,75 @@ export function RuntimeLogViewer({
   return (
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <SectionHeader
-          title={t('usageLogsPage.logs.title')}
-          description={t('usageLogsPage.logs.description')}
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          className="lg:shrink-0"
-          disabled={!canClear || mutating}
-          onClick={onClear}
-        >
-          {clearing ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <Trash2 className="size-4" aria-hidden="true" />
-          )}
-          {t('usageLogsPage.actions.clearLogs')}
-        </Button>
+        <SectionHeader title={t('usageLogsPage.logs.title')} />
+        <div className="flex shrink-0 items-center gap-2">
+          <LiveRefreshControl
+            enabled={liveRefresh.enabled}
+            disabled={!liveRefresh.available}
+            describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+            onEnabledChange={liveRefresh.setEnabled}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="lg:shrink-0"
+            disabled={!canClear || mutating}
+            onClick={onClear}
+          >
+            {clearing ? (
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Trash2 className="size-4" aria-hidden="true" />
+            )}
+            {t('usageLogsPage.actions.clearLogs')}
+          </Button>
+        </div>
       </div>
-      <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <span>
-          {t('usageLogsPage.logs.lineCount', {
-            count: formatNumber(runtimeLogs?.lineCount ?? 0),
-          })}
-        </span>
-        <span>
-          {runtimeLogs?.latestTimestamp
-            ? t('usageLogsPage.logs.latest', {
+      {runtimeLogs?.latestTimestamp ||
+      records.length > 0 ||
+      liveRefresh.active ||
+      (liveRefresh.enabled && liveRefreshLastSuccessAt) ? (
+        <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {runtimeLogs?.latestTimestamp ? (
+            <span>
+              {t('usageLogsPage.logs.latest', {
                 time: formatTimestamp(runtimeLogs.latestTimestamp, i18n),
-              })
-            : t('usageLogsPage.logs.latestUnavailable')}
-        </span>
-        <span>
-          {t('usageLogsPage.logs.range', {
-            start: formatNumber(start),
-            end: formatNumber(end),
-            total: formatNumber(total),
-          })}
-        </span>
-      </div>
+              })}
+            </span>
+          ) : records.length > 0 ? (
+            <span>{t('usageLogsPage.logs.latestUnavailable')}</span>
+          ) : null}
+          {liveRefresh.active ? (
+            <span>
+              {t('observabilityRefresh.status.cadence', {
+                seconds: Math.round(liveRefreshIntervalMs / 1000),
+              })}
+            </span>
+          ) : null}
+          {liveRefresh.enabled && liveRefreshLastSuccessAt ? (
+            <span>
+              {t('observabilityRefresh.status.lastSuccess', {
+                time: new Intl.DateTimeFormat(i18n.language, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                }).format(new Date(liveRefreshLastSuccessAt)),
+              })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <LiveRefreshStatusNotice
+        id={liveRefreshStatusId}
+        enabled={liveRefresh.enabled}
+        active={liveRefresh.active}
+        pauseReason={liveRefresh.pauseReason}
+        intervalMs={liveRefreshIntervalMs}
+        hasError={liveRefreshError}
+        lastSuccessAt={liveRefreshLastSuccessAt}
+        showLastSuccess={false}
+        className="mt-3"
+      />
       {canRead ? (
         <div className="mt-3 border-t pt-3">
           <RuntimeLogFiltersToolbar
@@ -5157,6 +5359,12 @@ export function RuntimeLogViewer({
           />
         </div>
       ) : null}
+      <NewItemsNotice
+        count={pendingItemCount}
+        truncated={pendingItemsTruncated}
+        className="mt-3"
+        onAccept={onAcceptPendingItems}
+      />
       <div className="mt-3 overflow-hidden rounded-md border">
         {!canRead ? (
           <TableEmptyState
@@ -5195,7 +5403,14 @@ export function RuntimeLogViewer({
               </TableHeader>
               <TableBody>
                 {records.map((record) => (
-                  <RuntimeLogRow key={record.id} record={record} onInspectLog={setSelectedLog} />
+                  <RuntimeLogRow
+                    key={record.id}
+                    record={record}
+                    onInspectLog={(nextRecord) => {
+                      setSelectedLog(nextRecord)
+                      onDetailOpenChange(true)
+                    }}
+                  />
                 ))}
               </TableBody>
             </Table>
@@ -5207,7 +5422,7 @@ export function RuntimeLogViewer({
               total={total}
               canGoPrevious={canGoPrevious}
               canGoNext={canGoNext}
-              mutating={mutating}
+              mutating={fetching || mutating}
               onPageSizeChange={onPageSizeChange}
               onPrevious={() => onOffsetChange(Math.max(0, effectiveOffset - effectiveLimit))}
               onNext={() => onOffsetChange(effectiveOffset + effectiveLimit)}
@@ -5261,6 +5476,7 @@ export function RuntimeLogViewer({
         downloadingRequestLogId={downloadingRequestLogId}
         isDownloadingRequestLog={isDownloadingRequestLog}
         onOpenChange={(open) => {
+          onDetailOpenChange(open)
           if (!open) setSelectedLog(null)
         }}
         onDownloadRequestLog={onDownloadRequestLog}
@@ -5298,13 +5514,15 @@ function RuntimeLogPagination({
 
   return (
     <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-muted-foreground text-sm">
-        {t('usageLogsPage.logs.pagination.range', {
+      <TablePaginationStatus
+        text={t('usageLogsPage.logs.pagination.range', {
           start: formatNumber(start),
           end: formatNumber(end),
           total: formatNumber(total),
         })}
-      </p>
+        announcementKey={`${start}:${end}:${pageSize}`}
+        busy={mutating}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-sm">
@@ -5315,7 +5533,11 @@ function RuntimeLogPagination({
             disabled={mutating}
             onValueChange={(nextValue) => onPageSizeChange(Number(nextValue))}
           >
-            <SelectTrigger className="w-24" size="sm">
+            <SelectTrigger
+              className="w-24"
+              size="sm"
+              aria-label={t('usageLogsPage.logs.pagination.pageSize')}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -5492,6 +5714,8 @@ function RuntimeLogRow({
 export function ErrorLogFilesPanel({
   requestErrorLogs,
   canRead,
+  loading,
+  updatedAt,
   mutating,
   downloadingErrorLogName,
   isDownloadingErrorLog,
@@ -5499,6 +5723,8 @@ export function ErrorLogFilesPanel({
 }: {
   requestErrorLogs: RequestErrorLogFile[]
   canRead: boolean
+  loading: boolean
+  updatedAt: string | null
   mutating: boolean
   downloadingErrorLogName: string | null
   isDownloadingErrorLog: boolean
@@ -5519,22 +5745,37 @@ export function ErrorLogFilesPanel({
           title={t('usageLogsPage.errorLogs.title')}
           description={t('usageLogsPage.errorLogs.description')}
         />
-        <div className="relative min-w-0 lg:w-80">
-          <Search
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-            aria-hidden="true"
-          />
-          <Input
-            className="pl-9"
-            value={search}
-            placeholder={t('usageLogsPage.errorLogs.searchPlaceholder')}
-            disabled={!canRead || mutating}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+        <div className="flex min-w-0 flex-col gap-2 lg:w-80">
+          {updatedAt ? (
+            <p className="text-muted-foreground text-right text-xs">
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </p>
+          ) : null}
+          <div className="relative min-w-0">
+            <Search
+              className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              className="pl-9"
+              value={search}
+              placeholder={t('usageLogsPage.errorLogs.searchPlaceholder')}
+              disabled={!canRead || mutating}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
         </div>
       </div>
       <div className="mt-3 overflow-hidden rounded-md border">
-        {!canRead ? (
+        {loading ? (
+          <div className="grid gap-2 p-3" aria-busy="true">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ) : !canRead ? (
           <TableEmptyState
             kind="unsupported"
             className="m-0 border-0"

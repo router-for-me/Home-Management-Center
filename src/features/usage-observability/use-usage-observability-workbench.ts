@@ -1,27 +1,35 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 
+import { getAdaptiveRefreshInterval } from '@/features/observability/live-refresh'
+import { useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
 import { downloadRequestLogById, toLogsApiError } from '@/lib/api/management/logs'
-import type { CapabilityMap } from '@/lib/api/management/types'
 import {
   type UsageAggregateGroupBy,
   type UsageAggregateMetric,
   type UsageAggregateSortState,
   type UsageFilters,
   type UsageLogIssue,
+  type UsageSnapshot,
   defaultUsageAggregatesQuery,
   defaultUsageFilters,
+  deriveUsageFilterOptions,
   exportUsageRecords,
   fetchUsageAggregates,
+  fetchUsageOverview,
   fetchUsageRecordDetail,
-  fetchUsageSnapshot,
+  fetchUsageRecords,
+  fetchUsageRuntimeSettings,
   toUsageApiError,
 } from '@/lib/api/management/usage'
 
 const recordPageSizeOptions = [25, 50, 100, 200]
 const credentialUsagePageSizeOptions = [10, 20, 50, 100]
+const usageRecordsRefreshMs = 30_000
+const usageSummaryRefreshMs = 60_000
+const usageSettingsRefreshMs = 5 * 60_000
 const usageScopeFilterKeys = new Set<keyof UsageFilters>([
   'range',
   'provider',
@@ -32,33 +40,6 @@ const usageScopeFilterKeys = new Set<keyof UsageFilters>([
   'customFrom',
   'customTo',
 ])
-type UsageWorkbenchScope = 'usage' | 'diagnostics'
-
-function getScopedUsageCapabilities(capabilities: CapabilityMap, scope: UsageWorkbenchScope) {
-  if (scope === 'diagnostics') {
-    return {
-      ...capabilities,
-      usageRecords: false,
-      usageRecordDetails: false,
-      usageAggregates: false,
-      usageExport: false,
-      oauthUsage: false,
-    }
-  }
-
-  return {
-    ...capabilities,
-    usageProviderHealth: false,
-    usageCredentialHealth: false,
-    usageRealtime: false,
-    requestLogIndex: false,
-  }
-}
-
-function findUsageIssue(issues: UsageLogIssue[] | undefined, scope: UsageLogIssue['scope']) {
-  return issues?.find((issue) => issue.scope === scope) ?? null
-}
-
 function isUnsupportedStatus(status: number | null | undefined) {
   return status === 404 || status === 405
 }
@@ -73,13 +54,28 @@ function getApiErrorStatus(error: unknown) {
   return typeof status === 'number' ? status : null
 }
 
-export function useUsageObservabilityWorkbench({
-  scope = 'usage',
-}: { scope?: UsageWorkbenchScope } = {}) {
+function toUsageIssue(scope: UsageLogIssue['scope'], error: Error | null): UsageLogIssue | null {
+  if (!error) return null
+  const status = getApiErrorStatus(error)
+  return {
+    scope,
+    message: error.message,
+    ...(status === null ? {} : { status }),
+  }
+}
+
+export function useUsageObservabilityWorkbench() {
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
-  const scopedCapabilities = getScopedUsageCapabilities(capabilities, scope)
+  const scopedCapabilities = {
+    ...capabilities,
+    usageProviderHealth: false,
+    usageCredentialHealth: false,
+    usageRealtime: false,
+    requestLogIndex: false,
+  }
   const [filters, setFilters] = useState<UsageFilters>(defaultUsageFilters)
+  const [manualRefreshing, setManualRefreshing] = useState(false)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [rankingGroup, setRankingGroup] = useState<UsageAggregateGroupBy>(
     defaultUsageAggregatesQuery.groupBy,
@@ -120,27 +116,87 @@ export function useUsageObservabilityWorkbench({
     ],
   )
 
-  const usageQuery = useQuery({
+  const canQuery = connected && capabilityReady && Boolean(session.managementKey)
+  const autoRefreshEligible =
+    canQuery && filters.range !== 'yesterday' && filters.range !== 'custom'
+  const recordsAutoRefreshEligible =
+    autoRefreshEligible &&
+    filters.offset === 0 &&
+    (filters.sort === null || filters.sort === 'timestamp_desc') &&
+    selectedRecordId === null
+  const autoRefresh = useLiveRefresh({
+    storageKey: 'hmc:usage-observability:auto-refresh',
+    defaultEnabled: false,
+    eligible: autoRefreshEligible,
+    detailOpen: selectedRecordId !== null,
+    ineligibleReason: canQuery ? 'historicalRange' : 'unavailable',
+  })
+
+  const settingsQuery = useQuery({
+    queryKey: ['management-usage-settings', session.baseUrl, connectedAt],
+    enabled: canQuery,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval: autoRefresh.active
+      ? getAdaptiveRefreshInterval(usageSettingsRefreshMs)
+      : false,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      try {
+        return await fetchUsageRuntimeSettings(session)
+      } catch (error) {
+        throw toUsageApiError(error)
+      }
+    },
+  })
+
+  const overviewQuery = useQuery({
     queryKey: [
-      'management-usage-observability',
-      scope,
+      'management-usage-overview',
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageOverview,
-      scopedCapabilities.usageRecords,
-      scopedCapabilities.usageAggregates,
-      scopedCapabilities.usageProviderHealth,
-      scopedCapabilities.usageCredentialHealth,
-      scopedCapabilities.usageRealtime,
-      scopedCapabilities.requestLogIndex,
-      filters,
+      aggregateFilters,
     ],
-    enabled: connected && capabilityReady && Boolean(session.managementKey),
+    enabled: canQuery && scopedCapabilities.usageOverview,
     placeholderData: keepPreviousData,
     retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval: autoRefresh.active ? getAdaptiveRefreshInterval(usageSummaryRefreshMs) : false,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageSnapshot(session, scopedCapabilities, filters)
+        return await fetchUsageOverview(session, aggregateFilters)
+      } catch (error) {
+        throw toUsageApiError(error)
+      }
+    },
+  })
+
+  const recordsQuery = useQuery({
+    queryKey: [
+      'management-usage-records',
+      session.baseUrl,
+      connectedAt,
+      scopedCapabilities.usageRecords,
+      filters,
+    ],
+    enabled: canQuery && scopedCapabilities.usageRecords,
+    placeholderData: keepPreviousData,
+    retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval:
+      autoRefresh.active && recordsAutoRefreshEligible
+        ? getAdaptiveRefreshInterval(usageRecordsRefreshMs)
+        : false,
+    refetchIntervalInBackground: false,
+    queryFn: async () => {
+      try {
+        return await fetchUsageRecords(session, filters)
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -150,7 +206,6 @@ export function useUsageObservabilityWorkbench({
   const rankingQuery = useQuery({
     queryKey: [
       'management-usage-aggregate-drilldown',
-      scope,
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageAggregates,
@@ -164,10 +219,13 @@ export function useUsageObservabilityWorkbench({
       capabilityReady &&
       Boolean(session.managementKey) &&
       rankingDetailOpen &&
-      scope === 'usage' &&
       scopedCapabilities.usageAggregates,
     placeholderData: keepPreviousData,
     retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval: autoRefresh.active ? getAdaptiveRefreshInterval(usageSummaryRefreshMs) : false,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
         return await fetchUsageAggregates(session, aggregateFilters, {
@@ -186,7 +244,6 @@ export function useUsageObservabilityWorkbench({
   const credentialUsageQuery = useQuery({
     queryKey: [
       'management-usage-credential-aggregate',
-      scope,
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageAggregates,
@@ -199,10 +256,16 @@ export function useUsageObservabilityWorkbench({
       connected &&
       capabilityReady &&
       Boolean(session.managementKey) &&
-      scope === 'usage' &&
       scopedCapabilities.usageAggregates,
     placeholderData: keepPreviousData,
     retry: false,
+    staleTime: 0,
+    refetchOnReconnect: false,
+    refetchInterval:
+      autoRefresh.active && credentialUsageOffset === 0
+        ? getAdaptiveRefreshInterval(usageSummaryRefreshMs)
+        : false,
+    refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
         return await fetchUsageAggregates(session, aggregateFilters, {
@@ -225,10 +288,10 @@ export function useUsageObservabilityWorkbench({
       connected &&
       capabilityReady &&
       Boolean(session.managementKey) &&
-      scope === 'usage' &&
       scopedCapabilities.usageRecordDetails &&
       Boolean(selectedRecordId),
     retry: false,
+    refetchOnReconnect: false,
     queryFn: async () => {
       if (!selectedRecordId) throw new Error('Usage record is not selected')
 
@@ -239,6 +302,39 @@ export function useUsageObservabilityWorkbench({
       }
     },
   })
+  const wasAutoRefreshActive = useRef(autoRefresh.active)
+
+  useEffect(() => {
+    if (autoRefresh.active && !wasAutoRefreshActive.current && canQuery) {
+      const refreshes: Array<Promise<unknown>> = [settingsQuery.refetch()]
+      if (scopedCapabilities.usageOverview) refreshes.push(overviewQuery.refetch())
+      if (scopedCapabilities.usageRecords && recordsAutoRefreshEligible) {
+        refreshes.push(recordsQuery.refetch())
+      }
+      if (scopedCapabilities.usageAggregates && credentialUsageOffset === 0) {
+        refreshes.push(credentialUsageQuery.refetch())
+      }
+      if (scopedCapabilities.usageAggregates && rankingDetailOpen) {
+        refreshes.push(rankingQuery.refetch())
+      }
+      void Promise.allSettled(refreshes)
+    }
+    wasAutoRefreshActive.current = autoRefresh.active
+  }, [
+    autoRefresh.active,
+    canQuery,
+    credentialUsageOffset,
+    credentialUsageQuery,
+    overviewQuery,
+    rankingDetailOpen,
+    rankingQuery,
+    recordsAutoRefreshEligible,
+    recordsQuery,
+    scopedCapabilities.usageAggregates,
+    scopedCapabilities.usageOverview,
+    scopedCapabilities.usageRecords,
+    settingsQuery,
+  ])
 
   const exportUsageMutation = useMutation({
     mutationFn: async (format: 'csv' | 'jsonl') => {
@@ -317,15 +413,21 @@ export function useUsageObservabilityWorkbench({
     setCredentialUsageOffsetValue(0)
   }
 
-  const usageRecordsIssue = findUsageIssue(usageQuery.data?.issues, 'usageRecords')
-  const usageAggregatesIssue = findUsageIssue(usageQuery.data?.issues, 'usageAggregates')
+  const settingsIssue = toUsageIssue('runtimeSettings', settingsQuery.error)
+  const usageOverviewIssue = toUsageIssue('usageOverview', overviewQuery.error)
+  const usageRecordsIssue = toUsageIssue('usageRecords', recordsQuery.error)
+  const usageAggregatesIssue = toUsageIssue('usageAggregates', credentialUsageQuery.error)
+  const issues = [
+    settingsIssue,
+    usageOverviewIssue,
+    usageRecordsIssue,
+    usageAggregatesIssue,
+  ].filter((issue): issue is UsageLogIssue => issue !== null)
   const usageRecordsUnavailable =
     !scopedCapabilities.usageRecords || isUnsupportedIssue(usageRecordsIssue)
   const usageRecordsErrorMessage =
-    usageQuery.data?.records || usageRecordsUnavailable
-      ? null
-      : (usageRecordsIssue?.message ?? null)
-  const credentialUsage = credentialUsageQuery.data ?? usageQuery.data?.credentialUsage ?? null
+    recordsQuery.data || usageRecordsUnavailable ? null : (usageRecordsIssue?.message ?? null)
+  const credentialUsage = credentialUsageQuery.data ?? null
   const credentialUsageQueryUnsupported = isUnsupportedStatus(
     getApiErrorStatus(credentialUsageQuery.error),
   )
@@ -351,6 +453,53 @@ export function useUsageObservabilityWorkbench({
     usageExport: scopedCapabilities.usageExport && !usageRecordsUnavailable,
     oauthUsage: scopedCapabilities.oauthUsage && !credentialUsageUnavailable,
   }
+  const dataUpdatedAt = Math.max(
+    settingsQuery.dataUpdatedAt,
+    overviewQuery.dataUpdatedAt,
+    recordsQuery.dataUpdatedAt,
+    credentialUsageQuery.dataUpdatedAt,
+  )
+  const hasData =
+    settingsQuery.data !== undefined ||
+    overviewQuery.data !== undefined ||
+    recordsQuery.data !== undefined ||
+    credentialUsageQuery.data !== undefined
+  const snapshot: UsageSnapshot | undefined = hasData
+    ? {
+        fetchedAt: new Date(dataUpdatedAt || Date.now()).toISOString(),
+        settings: settingsQuery.data ?? {
+          usageStatisticsEnabled:
+            overviewQuery.data !== undefined ||
+            recordsQuery.data !== undefined ||
+            credentialUsageQuery.data !== undefined,
+          fileLoggingEnabled: false,
+        },
+        overview: overviewQuery.data ?? null,
+        records: recordsQuery.data ?? null,
+        credentialUsage,
+        providerHealth: null,
+        credentialHealth: null,
+        realtime: null,
+        requestLogs: null,
+        apiKeyUsage: [],
+        runtimeLogs: null,
+        requestErrorLogs: [],
+        filterOptions: deriveUsageFilterOptions({
+          overview: overviewQuery.data ?? null,
+          records: recordsQuery.data ?? null,
+          credentialUsage,
+        }),
+        issues,
+      }
+    : undefined
+  const primaryRefresh =
+    scopedCapabilities.usageRecords && recordsAutoRefreshEligible
+      ? { intervalMs: usageRecordsRefreshMs, updatedAt: recordsQuery.dataUpdatedAt }
+      : scopedCapabilities.usageOverview
+        ? { intervalMs: usageSummaryRefreshMs, updatedAt: overviewQuery.dataUpdatedAt }
+        : scopedCapabilities.usageAggregates
+          ? { intervalMs: usageSummaryRefreshMs, updatedAt: credentialUsageQuery.dataUpdatedAt }
+          : { intervalMs: usageSettingsRefreshMs, updatedAt: settingsQuery.dataUpdatedAt }
 
   return {
     connected,
@@ -359,7 +508,12 @@ export function useUsageObservabilityWorkbench({
     capabilities: effectiveCapabilities,
     runtimeMode,
     filters,
-    snapshot: usageQuery.data,
+    snapshot,
+    autoRefresh,
+    autoRefreshIntervalMs: primaryRefresh.intervalMs,
+    autoRefreshLastSuccessAt: primaryRefresh.updatedAt || null,
+    autoRefreshError: issues.length > 0,
+    manualRefreshing,
     credentialUsage,
     isCredentialUsagePending,
     isUsageRecordsUnavailable: usageRecordsUnavailable,
@@ -380,12 +534,34 @@ export function useUsageObservabilityWorkbench({
     selectedRecordDetail: selectedRecordId ? detailQuery.data : undefined,
     isRecordDetailPending: detailQuery.isPending && Boolean(selectedRecordId),
     recordDetailError: selectedRecordId ? (detailQuery.error?.message ?? null) : null,
-    isPending: usageQuery.isPending,
-    isFetching: usageQuery.isFetching,
-    isError: usageQuery.isError,
-    errorMessage: usageQuery.error?.message ?? null,
+    isPending:
+      settingsQuery.isPending ||
+      (scopedCapabilities.usageOverview && overviewQuery.isPending) ||
+      (scopedCapabilities.usageRecords && recordsQuery.isPending) ||
+      (scopedCapabilities.usageAggregates && credentialUsageQuery.isPending),
+    isFetching:
+      settingsQuery.isFetching ||
+      overviewQuery.isFetching ||
+      recordsQuery.isFetching ||
+      credentialUsageQuery.isFetching ||
+      (rankingDetailOpen && rankingQuery.isFetching),
+    isError: !snapshot && (settingsQuery.isError || overviewQuery.isError || recordsQuery.isError),
+    errorMessage:
+      settingsQuery.error?.message ??
+      overviewQuery.error?.message ??
+      recordsQuery.error?.message ??
+      null,
     refetch: () => {
-      void usageQuery.refetch()
+      if (!canQuery) return
+      setManualRefreshing(true)
+      const queries: Array<Promise<unknown>> = [settingsQuery.refetch()]
+      if (scopedCapabilities.usageOverview) queries.push(overviewQuery.refetch())
+      if (scopedCapabilities.usageRecords) queries.push(recordsQuery.refetch())
+      if (scopedCapabilities.usageAggregates) queries.push(credentialUsageQuery.refetch())
+      if (rankingDetailOpen && scopedCapabilities.usageAggregates) {
+        queries.push(rankingQuery.refetch())
+      }
+      void Promise.allSettled(queries).finally(() => setManualRefreshing(false))
     },
     updateFilters,
     setRankingGroup: (group: UsageAggregateGroupBy) => {

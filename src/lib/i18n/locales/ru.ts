@@ -5,6 +5,7 @@ export const ru = {
     productSubtitle: 'Коммерческая консоль',
     phaseBaseline: 'Базовая версия Phase 0',
     cancel: 'Отмена',
+    close: 'Закрыть',
     common: {
       cancel: 'Отмена',
       enabled: 'Включено',
@@ -13,6 +14,7 @@ export const ru = {
     actions: {
       connect: 'Подключить',
       manageConnection: 'Подключение',
+      copyFailed: 'Не удалось скопировать',
     },
     language: {
       switch: 'Язык',
@@ -331,8 +333,8 @@ export const ru = {
             time: 'Время',
             provider: 'Provider',
             model: 'Модель',
-            input: 'Input tokens',
-            output: 'Output tokens',
+            input: 'Входные токены',
+            output: 'Выходные токены',
             amount: 'Сумма списания',
             balanceAfter: 'Баланс после',
           },
@@ -340,6 +342,7 @@ export const ru = {
         pagination: {
           range: '{{start}}-{{end}} / всего {{total}}',
           rows: '{{count}} строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Далее',
         },
@@ -498,6 +501,64 @@ export const ru = {
         enabled: 'Включено',
         disabled: 'Отключено',
         na: 'Недоступно',
+        yes: 'Да',
+        no: 'Нет',
+        legacy: 'legacy',
+      },
+      settings: {
+        serviceTierSource: 'Источник tier для биллинга',
+        runtimeContextTitle: 'Контекст биллинга во время выполнения',
+        globalBadge: 'Глобально',
+        scopedPricingSupported: 'Поддерживаются Tier и диапазоны контекста',
+        capabilityDetails: 'Показать возможности правил цены',
+        schemaVersionTechnical: 'Возможность backend для правил цены: Rule schema v{{version}}.',
+        currentRuntimeSource: 'Правила цены сейчас используют {{source}}',
+        runtimeContextDescription:
+          'Определяет, использовать Tier запроса или ответа для сопоставления правил цены при последующих списаниях.',
+        configure: 'Настроить сопоставление',
+        dialogTitle: 'Настроить глобальное сопоставление Tier',
+        dialogDescription:
+          'Выберите, получать Tier для биллинга из запроса или итогового ответа. Настройка применяется ко всем будущим списаниям.',
+        defaultBadge: 'По умолчанию',
+        requestOptionDescription:
+          'Использовать Tier клиентского запроса. Стабильно работает с провайдерами, которые не возвращают Tier ответа.',
+        responseOptionDescription:
+          'Использовать Tier итогового ответа. При его отсутствии применяется Tier запроса, а fallback записывается в снимок цены.',
+        policyTitle: 'Глобальная политика сопоставления Tier',
+        policyDescription:
+          'Определяет, использовать Tier запроса или ответа для сопоставления правил цены при последующих списаниях.',
+        currentValue: 'Текущая политика',
+        proposedValue: 'После сохранения:',
+        change: 'Изменить',
+        serviceTierSourceHint:
+          'Выберите, сопоставлять будущие списания по tier запроса или итогового ответа. Изменения сохраняются отдельно.',
+        request: 'Tier запроса',
+        response: 'Tier ответа',
+        requestHint: 'Для сопоставления правил используется tier из клиентского запроса.',
+        responseHint:
+          'Используется итоговый tier ответа; если он отсутствует, применяется tier запроса.',
+        schemaVersion: 'Схема правил v{{version}}',
+        legacyModeHint:
+          'Backend поддерживает только плоские цены. Настройки tier, диапазона контекста и источника tier скрыты.',
+        unsupported: 'Backend не предоставляет настройку источника tier для биллинга.',
+        saved: 'Источник tier для биллинга сохранен.',
+        noResponseTierWarning:
+          'В последних {{count}} подходящих запросах нет данных tier ответа. Режим ответа будет всегда откатываться к tier запроса.',
+        fallbackSummary:
+          '{{fallback}} из {{total}} последних подходящих запросов использовали tier запроса.',
+        noResponseTierWarningProposed:
+          'Если сохранить: ни один из последних {{count}} подходящих запросов не содержит tier ответа, поэтому все они используют tier запроса.',
+        fallbackSummaryProposed:
+          'Если сохранить: {{fallback}} из {{total}} последних подходящих запросов будут использовать tier запроса.',
+        diagnosticsUnavailable:
+          'Последняя диагностика tier недоступна. Перед сохранением убедитесь, что ответы стабильно содержат tier.',
+        diagnosticsLoading: 'Загрузка последней диагностики tier…',
+        confirmResponseTitle: 'Подтвердите сопоставление по Tier ответа',
+        confirmResponseDescription:
+          'В {{fallback}} из {{total}} последних подходящих запросов нет tier ответа, поэтому будет использован tier запроса. Все равно сохранить эту глобальную политику?',
+        confirmResponseUnknownDescription:
+          'Невозможно проверить покрытие tier ответа. После сохранения запросы без tier ответа будут использовать tier запроса. Все равно сохранить эту глобальную политику?',
+        confirmResponseAction: 'Подтвердить и сохранить',
       },
       error: {
         description:
@@ -506,6 +567,7 @@ export const ru = {
       pagination: {
         range: '{{start}}-{{end}} / всего {{total}}',
         rows: '{{count}} строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
       },
@@ -522,9 +584,9 @@ export const ru = {
           currentSnapshot: 'Текущий снимок',
           usageSummary: 'Обзор использования',
           requests: 'Запросы',
-          inputTokens: 'Input tokens',
-          outputTokens: 'Output tokens',
-          cacheTokens: 'Cache tokens',
+          inputTokens: 'Входные токены',
+          outputTokens: 'Выходные токены',
+          cacheTokens: 'Токены кэша',
         },
         trend: {
           title: 'Тренд списаний',
@@ -540,10 +602,8 @@ export const ru = {
       },
       charges: {
         title: 'Записи списаний',
-        description:
-          'Просматривайте результаты списаний, расход tokens и изменения баланса по каждому запросу.',
         empty: 'В выбранном периоде нет записей списаний.',
-        tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
+        tokenSummary: 'Вход {{input}} / Выход {{output}} / Кэш {{cache}}',
         columns: {
           time: 'Время',
           user: 'Пользователь',
@@ -551,14 +611,14 @@ export const ru = {
           provider: 'Провайдер',
           model: 'Модель',
           request: 'Request ID',
-          tokens: 'Tokens',
+          tokens: 'Токены',
           amount: 'Сумма списания',
           balanceAfter: 'Баланс после',
         },
       },
       chargeDetail: {
         title: 'Детали списания',
-        description: 'Просмотр факта списания, tokens, снимка цены и изменения баланса.',
+        description: 'Просмотр факта списания, токенов, снимка цены и изменения баланса.',
         requestId: 'Request ID',
         user: 'Пользователь',
         key: 'Клиентский ключ',
@@ -567,10 +627,24 @@ export const ru = {
         originalModel: 'Исходная модель',
         actualModel: 'Фактическая модель',
         endpoint: 'Endpoint',
-        inputTokens: 'Input tokens',
-        outputTokens: 'Output tokens',
-        cacheTokens: 'Cache tokens',
+        inputTokens: 'Входные токены',
+        outputTokens: 'Выходные токены',
+        cacheTokens: 'Токены кэша',
         matchedPriceRule: 'Сработавшее правило цены',
+        selectedTier: 'Tier выбранного правила',
+        selectedBand: 'Нижняя граница контекста',
+        requestedTier: 'Запрошенный tier',
+        responseTier: 'Tier ответа',
+        tierSource: 'Источник tier',
+        effectiveTier: 'Фактический tier',
+        responseTierFallback: 'Откат с tier ответа',
+        tokenBuckets: 'Группы токенов',
+        buckets: {
+          uncachedInput: 'Некэшированный вход',
+          cacheRead: 'Чтение кэша',
+          cacheWrite: 'Запись кэша',
+          output: 'Выход',
+        },
         amount: 'Сумма списания',
         balanceBefore: 'Баланс до',
         balanceAfter: 'Баланс после',
@@ -580,7 +654,6 @@ export const ru = {
       },
       balance: {
         title: 'Записи баланса',
-        description: 'Просматривайте пополнения, списания и изменения баланса пользователей.',
         empty: 'В выбранном периоде нет записей баланса.',
         types: {
           recharge: 'Пополнение',
@@ -615,18 +688,25 @@ export const ru = {
         empty: 'Цены моделей пока не настроены.',
         actions: {
           create: 'Новая цена',
+          import: 'Импорт из models.dev',
+          refreshSynced: 'Проверить синхронизированные цены',
           createSelected: 'Создать {{count}}',
           selectModels: 'Выберите модели',
           toggleState: 'Переключить состояние цены модели {{model}}',
+          editExact: 'Изменить правило цены {{rule}}',
+          deleteExact: 'Удалить правило цены {{rule}}',
         },
         columns: {
           provider: 'Провайдер модели',
           model: 'ID модели',
-          input: 'Input price',
-          output: 'Output price',
-          cacheRead: 'Cache read',
-          cacheWrite: 'Cache write',
-          request: 'Per request',
+          scope: 'Область правила',
+          serviceTier: 'Tier',
+          minInputTokens: 'Нижняя граница контекста',
+          input: 'Цена входных токенов',
+          output: 'Цена выходных токенов',
+          cacheRead: 'Чтение кэша',
+          cacheWrite: 'Запись кэша',
+          request: 'За запрос',
           source: 'Источник',
           state: 'Состояние',
           updatedAt: 'Обновлено',
@@ -636,9 +716,28 @@ export const ru = {
           default: 'По умолчанию',
           sync: 'Синхронизация',
         },
+        filters: {
+          search: 'Поиск по ID модели или провайдеру',
+          tier: 'Фильтр Tier',
+          source: 'Фильтр источника',
+          state: 'Фильтр состояния',
+          allTiers: 'Все Tier',
+          allSources: 'Все источники',
+          allStates: 'Все состояния',
+          clear: 'Сбросить фильтры',
+          empty: 'Нет правил цен, соответствующих текущим фильтрам.',
+        },
         sheet: {
           createTitle: 'Новая цена модели',
+          createDescription: 'Создайте правило цены для будущих списаний.',
+          importTitle: 'Импорт цен моделей',
+          importDescription:
+            'Проверьте совпадения models.dev, поля записи и вручную подтвердите выбранные правила.',
+          refreshSyncedTitle: 'Обновить синхронизированные цены',
+          refreshSyncedDescription:
+            'Загрузите актуальные цены models.dev и проверьте изменения существующих правил source=sync.',
           editTitle: 'Изменить цену модели',
+          editDescription: 'Обновите правило цены для будущих списаний.',
         },
         form: {
           identity: 'Идентификатор модели',
@@ -657,11 +756,26 @@ export const ru = {
           reloadModels: 'Перезагрузить модели',
           provider: 'Провайдер модели',
           model: 'ID модели',
-          input: 'Input price per million tokens',
-          output: 'Output price per million tokens',
-          cacheRead: 'Cache read price per million tokens',
-          cacheWrite: 'Cache write price per million tokens',
-          request: 'Per-request price',
+          serviceTier: 'Service tier',
+          minInputTokens: 'Минимум входных токенов',
+          ruleScope: 'Область сопоставления правила',
+          ruleScopeHint:
+            'Сначала выбирается точный tier, затем наибольшая нижняя граница входных токенов. Цена применяется ко всему запросу.',
+          globalTierPolicy: 'Текущий глобальный источник Tier',
+          matchingChain:
+            '{{source}} → точный Tier → универсальный Tier → наибольший подходящий диапазон контекста',
+          contextPreset: 'Диапазон контекста',
+          scopeSummary: 'Совпадение: {{tier}}, {{band}}; цена применяется ко всему запросу.',
+          legacyScopeHint:
+            'Backend не поддерживает tier и диапазон контекста в идентификаторе правила. Форма отправит только плоские поля цены.',
+          input: 'Цена входа за миллион токенов',
+          output: 'Цена выхода за миллион токенов',
+          cacheRead: 'Цена чтения кэша за миллион токенов',
+          cacheWrite: 'Цена записи кэша за миллион токенов',
+          cacheWriteConfigured: 'Отдельная тарификация записи кэша',
+          cacheWriteConfiguredHint:
+            'При включении явно переданные токены записи кэша используют эту группу, включая нулевую цену.',
+          request: 'Цена за запрос',
           pricing: 'Правила цены',
           pricingHint:
             'Эти цены применяются к будущим списаниям; исторические списания сохраняют исходный снимок цены.',
@@ -673,14 +787,326 @@ export const ru = {
           enabled: 'Состояние включения',
           note: 'Примечание',
         },
-        modelScopes: {
-          available: 'Доступно в runtime',
-          static: 'Статический каталог',
+        tiers: {
+          wildcard: 'Все tier (*)',
+          standard: 'Standard',
+          flex: 'Flex',
+          priority: 'Priority',
+        },
+        scope: {
+          baseContext: 'Базовый контекст',
+          over272K: '>272K входных токенов',
+          fromTokens: 'От {{count}} входных токенов',
+          flatPrice: 'Плоское правило совместимости',
+          custom: 'Своя нижняя граница',
         },
         validation: {
           providerRequired: 'Укажите провайдера модели.',
           modelRequired: 'Выберите провайдера модели и ID модели.',
           priceInvalid: 'Цены должны быть числами больше или равными 0.',
+          minInputTokensInvalid: 'Введите безопасное неотрицательное целое число.',
+        },
+        modelScopes: {
+          available: 'Доступно в runtime',
+          static: 'Статический каталог',
+        },
+
+        import: {
+          manualConfirmHint:
+            'Импорт только готовит предпросмотр. Запись не выполняется, пока вы не выберете строки и не подтвердите.',
+          refreshPresetTitle: 'Включен режим обновления синхронизированных цен',
+          refreshPresetHint:
+            'Включены только существующие базовые правила source=sync. При применении выбранные правила обновятся по актуальным ценам models.dev.',
+          candidateErrorTitle: 'API моделей-кандидатов недоступен',
+          candidateIssueTitle: 'Данные моделей-кандидатов неполные',
+          reloadCandidates: 'Перезагрузить кандидатов',
+          candidateFailedEmpty:
+            'Модели-кандидаты не загружены. Перезагрузите кандидатов или проверьте ответ Management API.',
+          candidateIssueEmpty:
+            'Данные моделей-кандидатов неполные, строк предпросмотра нет. Перезагрузите кандидатов перед применением.',
+          catalogTitle: 'Каталог models.dev',
+          catalogPending: 'Каталог еще не загружен.',
+          catalogReady: 'Загружено моделей: {{count}} ({{time}}).',
+          catalogFailed: 'Не удалось загрузить каталог models.dev.',
+          reloadCatalog: 'Перезагрузить каталог',
+          serverPreviewBadge: 'Предпросмотр сервера',
+          legacyPreviewBadge: 'Режим совместимости',
+          serverPreviewLoading: 'Сервер проверяет предпросмотр…',
+          serverPreviewReady: 'Сервер проверил строк: {{count}} ({{time}}).',
+          serverPreviewFailed: 'Не удалось создать серверный предпросмотр.',
+          refreshServerPreview: 'Обновить предпросмотр',
+          retryServerPreview: 'Повторить предпросмотр',
+          previewMetadata: 'Предпросмотр {{id}} · истекает {{expires}} · атомарно {{atomic}}',
+          sourceMetadata:
+            'Снимок models.dev {{version}} · {{url}} · получен {{time}} · моделей: {{count}}',
+          previewNoExpiry: 'не указано',
+          atomicYes: 'да',
+          atomicNo: 'нет',
+          legacyPreviewWarning:
+            'Backend не предоставляет серверный предпросмотр и транзакционное применение. Режим совместимости не защищает от одновременного изменения цен.',
+          nonAtomicWarning:
+            'Сервер сообщает, что применение не атомарно. При ошибке часть строк может сохраниться; проверьте результат перед повтором.',
+          serverIssuesTitle: 'Замечания проверки сервера',
+          previewInvalid: {
+            expired: 'Серверный предпросмотр истек. Обновите его перед применением.',
+            stale: 'Политика цен изменилась после создания предпросмотра. Обновите его.',
+            conflict:
+              'Правила цен изменились после создания предпросмотра. Обновите данные и проверьте конфликты.',
+          },
+          policyTitle: 'Политика формирования цен',
+          policyHint:
+            'Множители преобразуют официальные цены в абсолютные цены Home. Импорт записывает только базовое правило service tier=* и min input tokens=0. Модели с дополнительными измерениями цены блокируются, чтобы не записывать неполную цену.',
+          defaultMultiplier: 'Множитель по умолчанию',
+          familyMultiplier: 'Множитель {{family}}',
+          overwriteMode: 'Обработка существующих правил',
+          overwriteMissing: 'Только создать отсутствующие',
+          overwriteSync: 'Создать отсутствующие + обновить source=sync',
+          overwriteAll: 'Создать отсутствующие + обновить все',
+          refreshApplyMode: 'Обновить выбранные правила source=sync',
+          overwriteWarning:
+            'Этот режим может перезаписать ручные или default-правила: {{count}}. Для выбранных строк потребуется повторное подтверждение.',
+          advancedPolicy: 'Расширенная политика цен',
+          resetPreferences: 'Сбросить сохраненные настройки',
+          showAdvancedPolicy: 'Развернуть расширенное формирование цен',
+          hideAdvancedPolicy: 'Свернуть расширенное формирование цен',
+          modifiedBadge: 'Изменено',
+          advancedPolicySummary:
+            'Правил множителя: {{rules}} · псевдонимов: {{aliases}} · построчных множителей: {{rowOverrides}} · {{cache}} · {{zero}}',
+          advancedPolicyHint:
+            'Расширенные настройки влияют на цены предпросмотра и сохраняются локально для текущего адреса Management API.',
+          cachePricesIncluded: 'цены кэша включены',
+          cachePricesExcluded: 'цены кэша исключены',
+          zeroCostIncluded: 'нулевые модели включены',
+          zeroCostExcluded: 'нулевые модели пропускаются',
+          restoreDefaults: 'Восстановить настройки импорта',
+          resetPreferencesTitle: 'Восстановить настройки импорта?',
+          resetPreferencesDescription:
+            'Будут сброшены набор целей, обработка существующих правил, базовый множитель, расширенные правила, псевдонимы, цены кэша и настройки нулевых моделей.',
+          resetPreferencesSuccess: 'Настройки импорта восстановлены.',
+          runtimeContextTitle: 'Контекст сопоставления во время выполнения',
+          runtimeContextChain:
+            '{{source}} → точный Tier → универсальный Tier → наибольший подходящий диапазон контекста',
+          previewPolicySummaryTitle: 'Политика этого предпросмотра',
+          targetsTitle: 'Цели импорта',
+          targetsHint:
+            'Ограничьте модели Home, которые попадут в предпросмотр до сопоставления и расчета цен.',
+          providerFilter: 'Провайдер',
+          allProviders: 'Все провайдеры',
+          targetFilter: 'Набор целей',
+          targetFilters: {
+            all: 'Все кандидаты',
+            missing: 'Только без базового правила',
+            synced: 'Правила source=sync',
+            selected: 'Выбранные вручную модели',
+          },
+          targetsCount: 'В следующий предпросмотр войдет моделей: {{count}}.',
+          multiplierRulesTitle: 'Упорядоченные правила множителей',
+          addRule: 'Добавить правило',
+          ruleLabel: 'Название',
+          ruleMode: 'Сопоставление',
+          rulePattern: 'Шаблон',
+          ruleMultiplier: 'Множитель',
+          ruleModes: {
+            prefix: 'Префикс',
+            regex: 'Regex',
+          },
+          moveRuleUp: 'Переместить правило выше',
+          moveRuleDown: 'Переместить правило ниже',
+          removeRule: 'Удалить правило',
+          aliasRulesTitle: 'Псевдонимы моделей',
+          addAlias: 'Добавить псевдоним',
+          aliasTarget: 'ID модели Home',
+          aliasSources: 'Предпочтительные ID models.dev через запятую',
+          removeAlias: 'Удалить псевдоним',
+          includeCache: 'Включать цены кэша',
+          includeZeroCost: 'Разрешить нулевые официальные цены',
+          previewTitle: 'Предпросмотр и подтверждение',
+          previewHint: 'Выбрано {{selected}} / доступно {{selectable}} / всего {{total}}',
+          summaryTitle: 'Итог применения',
+          summarySelected: 'Выбрано: {{count}}',
+          summaryCreates: 'Создать',
+          summaryUpdatesSync: 'Обновить sync',
+          summaryOverwrites: 'Перезаписать',
+          summaryNotSelectable: 'Недоступно',
+          summaryNotApplied: 'Не применено',
+          selectedOverwriteWarning:
+            'Выбранные строки перезапишут manual: {{manual}} и default: {{default}}.',
+          selectAll: 'Выбрать все применимые',
+          clearSelection: 'Очистить выбор',
+          exportPreview: 'Экспорт предпросмотра',
+          searchPlaceholder: 'Провайдер, модель или models.dev',
+          resolveMatchPlaceholder: 'Выберите совпадение models.dev',
+          resolveMatchAria: 'Выберите совпадение models.dev для {{model}}',
+          applyMatchOverride: 'Пересоздать предпросмотр',
+          loadingPreview: 'Загрузка предпросмотра…',
+          emptyPreview: 'Нет моделей для предпросмотра.',
+          selectRow: 'Выбрать {{model}} ({{tier}}, {{band}})',
+          rowMultiplier: 'Множитель для {{model}} ({{tier}}, {{band}})',
+          progressTitle: 'Применение правил цен моделей',
+          columns: {
+            status: 'Статус',
+            action: 'План операции',
+            sourceModel: 'Совпадение models.dev',
+            official: 'Официальные цены входа/выхода',
+            multiplier: 'Множитель',
+            writeFields: 'Поля записи',
+            writeRule: 'Метаданные правила',
+            existing: 'Существующее правило',
+          },
+          fields: {
+            serviceTier: 'Уровень сервиса',
+            minInputTokens: 'Начальные токены',
+            cacheWriteConfigured: 'Отдельная запись кэша',
+            input: 'Вход',
+            output: 'Выход',
+            cacheRead: 'Чтение кэша',
+            cacheWrite: 'Запись кэша',
+            request: 'Запрос',
+            source: 'Источник',
+            enabled: 'Состояние',
+            note: 'Примечание',
+          },
+          status: {
+            matched: 'Совпадение',
+            ambiguous: 'Неоднозначно',
+            unmatched: 'Нет совпадения',
+            zero_cost: 'Нулевая цена',
+            conflict: 'Конфликт',
+            invalid: 'Некорректный предпросмотр',
+            unsupported: 'Неподдерживаемая тарификация',
+          },
+          actions: {
+            create: 'Создать',
+            update_sync: 'Обновить sync',
+            overwrite: 'Перезаписать',
+            skip: 'Пропустить',
+            review: 'Проверить',
+          },
+          statusFilter: {
+            label: 'Фильтр строк предпросмотра по статусу',
+            all: 'Все строки',
+            applicable: 'Применимые',
+            review: 'Проверить',
+            skipped: 'Пропущено',
+          },
+          reasons: {
+            no_models_dev_match: 'Совпадение models.dev не найдено',
+            zero_official_cost: 'Официальная цена нулевая; исключено политикой',
+            zero_final_cost: 'Множитель обнуляет итоговую цену; исключено политикой',
+            matched_preferred_alias: 'Совпадение по предпочтительному alias',
+            multiple_matches: 'Найдено несколько совпадений',
+            multiple_matches_with_candidates: 'Несколько совпадений: {{matches}}',
+            missing_cost: 'В записи models.dev нет полей цены',
+            invalid_price_values: 'models.dev содержит отрицательную или некорректную цену',
+            unsupported_price_dimensions:
+              'models.dev содержит измерения цены, которые этот импорт не может представить полностью',
+            invalid_preview_status: 'Сервер вернул неподдерживаемый статус предпросмотра',
+            missing_preview_action: 'Сервер не указал запланированное действие',
+            invalid_preview_action: 'Сервер вернул неподдерживаемое запланированное действие',
+            missing_final_prices: 'Сервер вернул не все поля для записи',
+            missing_write_rule: 'Сервер не вернул полные метаданные итогового правила',
+            missing_write_note: 'Сервер не вернул примечание для аудита синхронизации',
+            invalid_write_note: 'В примечании не указаны совпавшие поставщик и модель models.dev',
+            missing_official_prices: 'Сервер не вернул официальные исходные цены',
+            missing_source_match: 'Сервер не указал совпавшую запись models.dev',
+            invalid_multiplier: 'Сервер вернул некорректный множитель',
+            missing_preview_identity: 'Сервер не вернул поставщика и ID модели',
+            invalid_preview_scope:
+              'Сервер не вернул корректные service tier и диапазон входных токенов',
+            missing_row_key: 'Сервер не вернул стабильный ключ строки',
+            missing_applicability: 'Сервер явно не указал применимость строки',
+            invalid_existing_rule: 'Снимок текущего правила неполный или некорректный',
+            missing_existing_rule: 'Для запланированного обновления нет снимка текущего правила',
+            missing_existing_revision: 'В снимке текущего правила нет ревизии',
+            inconsistent_preview_action:
+              'Запланированное действие не соответствует текущему правилу',
+            inconsistent_existing_identity:
+              'Снимок текущего правила относится к другому поставщику или модели',
+            inconsistent_rule_scope:
+              'Tier или диапазон токенов текущего/итогового правила не совпадает с целью',
+            source_stale:
+              'Снимок models.dev старше рекомендуемого срока; проверьте время источника перед применением',
+            matched: 'Точное совпадение',
+            matchCandidate: 'Кандидат {{match}}',
+          },
+          existingRule: 'Есть ({{source}})',
+          noExisting: 'Нет',
+          validation: {
+            selectRows: 'Выберите хотя бы одну строку предпросмотра.',
+            refreshPreview: 'Обновите серверный предпросмотр перед применением.',
+            existingRuleMissing:
+              'Существующее правило цены изменилось или исчезло до применения в режиме совместимости.',
+          },
+          result: {
+            applied: {
+              title: 'Импорт применен',
+              description:
+                'Создано: {{created}}, обновлено: {{updated}}, перезаписано: {{overwritten}}, ошибок: {{failed}}.',
+            },
+            partial: {
+              title: 'Импорт применен частично',
+              description:
+                'Создано: {{created}}, обновлено: {{updated}}, перезаписано: {{overwritten}}, ошибок: {{failed}}. Проверьте строки с ошибками.',
+            },
+            failed: {
+              title: 'Импорт не выполнен',
+              description: 'Операция не завершена. Ошибок: {{failed}}. Обновите предпросмотр.',
+            },
+            conflict: {
+              title: 'Импорт заблокирован конфликтами',
+              description:
+                'Правила цен изменились после предпросмотра. Конфликтов или ошибок: {{failed}}.',
+            },
+            expired: {
+              title: 'Предпросмотр истек',
+              description: 'Сервер отклонил истекший предпросмотр. Обновите его.',
+            },
+            operationId: 'Операция {{id}}',
+            idempotencyKey: 'Ключ идемпотентности {{id}}',
+            status: 'Результат',
+            message: 'Сообщение',
+            rowStatus: {
+              failed: 'Ошибка',
+              conflict: 'Конфликт',
+              created: 'Создано',
+              updated: 'Обновлено',
+              overwritten: 'Перезаписано',
+              skipped: 'Пропущено',
+            },
+            retryFailed: 'Повторить предпросмотр ошибок',
+            export: 'Экспорт результата',
+          },
+          confirmOverwriteTitle: 'Подтвердите перезапись цен',
+          confirmOverwriteDescription:
+            'Будет создано: {{create}}, обновлено source=sync: {{sync}}, перезаписано manual/default: {{overwrite}}, не применено: {{skipped}}.',
+          confirmOverwriteRisk:
+            'Режим совместимости отправляет отдельный CRUD-запрос для каждого правила. При ошибке предыдущие строки могут уже сохраниться; состояние enabled сохраняется.',
+          confirmServerAtomicRisk:
+            'Сервер объявляет атомарное применение. Frontend отправит одну revision предпросмотра и один ключ идемпотентности.',
+          confirmOverwriteAcknowledgement:
+            'Я понимаю, что выбранные manual/default правила станут source=sync, а их цены и примечание будут заменены значениями из предпросмотра.',
+          confirmOverwriteAction: 'Применить выбранное',
+          confirmApply: 'Подтвердить ({{count}})',
+          complete: 'Готово',
+          applied: 'Применено подтвержденных цен: {{count}}.',
+          recovery: {
+            title: 'Результат предыдущего применения не подтвержден',
+            description:
+              'Запрос для {{count}} правил мог быть уже обработан. Не создавайте новый предпросмотр; безопасно повторите исходный запрос с тем же ключом идемпотентности.',
+            preview: 'Предпросмотр',
+            startedAt: 'Первая отправка',
+            idempotencyKey: 'Ключ идемпотентности',
+            retry: 'Безопасно повторить исходный запрос',
+            discard: 'Удалить запись восстановления',
+            lastError: 'Последний запрос завершился ошибкой: {{error}}',
+            unknownError: 'Невозможно подтвердить, завершил ли сервер это применение.',
+            storageFailed:
+              'Браузер не смог сохранить запись восстановления, поэтому запрос не был отправлен. Проверьте доступ к session storage.',
+            discardTitle: 'Удалить запись неподтвержденного применения?',
+            discardDescription:
+              'Будут удалены только данные восстановления в браузере. Это не отменит записи, которые сервер мог уже выполнить, и исходный результат больше нельзя будет получить по этому ключу.',
+            discardAction: 'Все равно удалить запись',
+          },
         },
         delete: {
           title: 'Удалить цену модели?',
@@ -1350,7 +1776,6 @@ export const ru = {
       },
       list: {
         title: 'Credential resources',
-        description: 'Управление account credentials из OAuth входа или file import.',
         filterPlaceholder: 'Фильтр credentials',
         empty: 'Нет credentials для текущих фильтров.',
         credential: 'Credential / аккаунт',
@@ -1501,7 +1926,8 @@ export const ru = {
       },
       list: {
         title: 'Access keys',
-        description: 'Keys из GET /api-keys. Server-side metadata не предполагается.',
+        description:
+          'Эти ключи дают клиентам доступ к серверу Home Center; это не ключи провайдеров моделей.',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
@@ -1876,8 +2302,6 @@ export const ru = {
       },
       workspace: {
         title: 'Рабочая область доступа',
-        description:
-          'Управляйте пользователями, владельцами ключей, областями учетных данных и областями моделей в одном месте.',
         filterPlaceholder: 'Фильтр по пользователям, ключам или областям',
       },
       tabs: {
@@ -2607,6 +3031,49 @@ export const ru = {
         description: '{{mode}} не предоставил request usage routes.',
       },
     },
+    observabilityRefresh: {
+      mode: {
+        live: 'Live',
+        auto: 'Автообновление',
+      },
+      status: {
+        running: {
+          live: 'Live-обновление активно',
+          auto: 'Автообновление активно',
+        },
+        paused: {
+          live: 'Live-обновление приостановлено',
+          auto: 'Автообновление приостановлено',
+        },
+        off: {
+          live: 'Live-обновление выключено',
+          auto: 'Автообновление выключено',
+        },
+        unavailable: {
+          live: 'Live-обновление недоступно',
+          auto: 'Автообновление недоступно',
+        },
+        retrying: 'Ошибка обновления, автоматическая повторная попытка',
+        cadence: 'Проверка каждые {{seconds}} с',
+        delayed: 'Нет успешных обновлений {{seconds}} с',
+        lastSuccess: 'Последнее обновление: {{time}}',
+        withReason: '{{status}}: {{reason}}',
+        reason: {
+          hidden: 'Продолжится после возврата на страницу',
+          offline: 'Продолжится после восстановления сети',
+          detail: 'Продолжится после закрытия подробностей',
+          nonFirstPage: 'Вернитесь на страницу 1 для продолжения',
+          historicalRange: 'Исторический диапазон не обновляется автоматически',
+          nonLatestSort: 'Сортируйте от новых к старым для продолжения',
+          invalidFilters: 'Исправьте условия фильтрации для продолжения',
+          unavailable: 'Источник данных не поддерживает обновление',
+          ineligible: 'Обновление недоступно при текущих условиях',
+        },
+      },
+      newItems: 'Новых записей: {{count}}',
+      newItemsAtLeast: 'Новых записей не менее {{count}}',
+      showNew: 'Показать новые',
+    },
     requestEventsPage: {
       disconnected: {
         title: 'Подключите management runtime',
@@ -2630,7 +3097,7 @@ export const ru = {
           title: 'Журнал событий запросов готов',
           badge: 'Для диагностики',
           description:
-            'Загружено событий: {{count}}. Можно фильтровать по запросу, модели, узлу, учетным данным, статусу и задержке.',
+            'События можно фильтровать по запросу, модели, узлу, учетным данным, статусу и задержке.',
         },
         empty: {
           title: 'Событий запросов пока нет',
@@ -2733,8 +3200,6 @@ export const ru = {
       },
       table: {
         title: 'События запросов',
-        description:
-          'Просматривайте события запросов с контекстом модели, узла, учетных данных, клиента, токенов, задержки и ошибок.',
         columnsButton: 'Колонки',
         columnsMenu: 'Видимые колонки',
         ttft: 'TTFT {{value}}',
@@ -2746,9 +3211,8 @@ export const ru = {
         unsupportedTitle: 'API request events недоступен',
         unsupportedDescription:
           'Этот runtime не предоставляет /request-events. Страница станет доступна после добавления backend API.',
-        resultCount: 'Событий: {{total}}',
         range: '{{start}}-{{end}} из {{total}}',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         columns: {
@@ -2776,6 +3240,12 @@ export const ru = {
         error: 'Сводка ошибки',
         payload: 'Сводка payload',
         logExcerpt: 'Фрагмент журнала',
+        actions: {
+          copy: 'Копировать содержимое',
+          copied: 'Скопировано',
+          wrapLines: 'Переносить строки',
+          preserveLines: 'Сохранять исходные строки',
+        },
         fields: {
           eventType: 'Тип события',
           status: 'Статус',
@@ -2793,7 +3263,7 @@ export const ru = {
         tokenFields: {
           inputTokens: 'Вход',
           outputTokens: 'Выход',
-          reasoningTokens: 'Reasoning',
+          reasoningTokens: 'Рассуждение',
           cachedTokens: 'Кэш',
           cacheReadTokens: 'Чтение кэша',
           cacheCreationTokens: 'Запись кэша',
@@ -2801,7 +3271,7 @@ export const ru = {
         },
         payloadFields: {
           method: 'Метод',
-          stream: 'Stream',
+          stream: 'Поток',
           messages: 'Сообщения',
           tools: 'Инструменты',
         },
@@ -2921,7 +3391,7 @@ export const ru = {
         title: 'Данные наблюдаемости',
         description:
           'Просмотр использования запросов, диагностики вызовов, журналов runtime и скачиваемых файлов журналов.',
-        runtime: 'Runtime: {{mode}}',
+        runtime: 'Среда выполнения: {{mode}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
@@ -2995,6 +3465,7 @@ export const ru = {
         title: 'Часть данных не загрузилась',
       },
       issueScopes: {
+        runtimeSettings: 'Настройки среды выполнения',
         apiKeyUsage: 'Статистика использования',
         usageOverview: 'Сводка использования',
         usageRecords: 'Записи использования',
@@ -3092,7 +3563,7 @@ export const ru = {
         requests: 'Запросы',
         cost: 'Расход',
         tokens: 'Всего токенов',
-        amountValue: '{{value}} credits',
+        amountValue: '{{value}} кредитов',
         emptyTitle: 'Пока нет использования',
         emptyDescription: 'В текущем диапазоне нет запросов для сводки.',
         healthMetrics: {
@@ -3219,7 +3690,7 @@ export const ru = {
         unavailable: 'Записи использования на уровне запроса не открыты.',
         errorTitle: 'Не удалось загрузить записи запросов',
         clearFilters: 'Сбросить фильтры',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         ttft: 'TTFT {{value}}',
@@ -3250,7 +3721,7 @@ export const ru = {
         clearSearch: 'Сбросить поиск',
         inlineLog: 'Встроенный журнал runtime',
         unavailableFile: 'Для этого запроса нет скачиваемого файла',
-        sizeBytes: '{{size}} bytes',
+        sizeBytes: '{{size}} байт',
         columns: {
           time: 'Время',
           request: 'Request ID',
@@ -3271,6 +3742,25 @@ export const ru = {
         related: 'Связанные данные',
         noLogExcerpt: 'Фрагмент журнала для этого запроса не был возвращен.',
         requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
+        downloadingRequestLog: 'Скачивание',
+        technicalMetadata: 'Технические метаданные',
+        requestLogStatuses: {
+          local: 'Доступен локально',
+          remote: 'Доступен с удаленного Home',
+          unavailable: 'Недоступен',
+        },
+        downloadErrors: {
+          notFound: 'Журнал запроса не существует или уже очищен.',
+          remoteUnavailable: 'Целевой Home сейчас недоступен. Повторите попытку позже.',
+          unauthorized: 'Текущий Management Key не позволяет скачать этот журнал.',
+          generic: 'Не удалось скачать журнал запроса. Повторите попытку позже.',
+        },
+        actions: {
+          copy: 'Копировать содержимое',
+          copied: 'Скопировано',
+          wrapLines: 'Переносить строки',
+          preserveLines: 'Сохранять исходные строки',
+        },
         fields: {
           requestId: 'Request ID',
           usageId: 'Usage ID',
@@ -3304,7 +3794,7 @@ export const ru = {
         relatedFields: {
           requestLog: 'Журнал запроса',
           requestLogHomeIp: 'Home-узел журнала',
-          downloadUrl: 'Путь скачивания',
+          downloadUrl: 'Путь API для скачивания',
         },
       },
       credentials: {
@@ -3315,7 +3805,7 @@ export const ru = {
         unavailableTitle: 'Использование учетных данных недоступно',
         unavailable: 'Агрегаты использования учетных данных не открыты.',
         errorTitle: 'Не удалось загрузить использование учетных данных',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
         columnsButton: 'Настроить столбцы',
@@ -3442,8 +3932,6 @@ export const ru = {
       },
       logs: {
         title: 'Журналы runtime',
-        description:
-          'Показывает журналы runtime постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
         unavailableTitle: 'Журналы runtime недоступны',
         unavailable: 'Маршрут журналов runtime не открыт.',
         fileLoggingDisabledTitle: 'Файловое логирование отключено',
@@ -3454,11 +3942,8 @@ export const ru = {
         filteredEmpty: 'Нет журналов runtime для текущих фильтров.',
         emptyPageTitle: 'На странице нет журналов',
         emptyPage: 'Вернитесь назад или синхронизируйте данные.',
-        lineCount: '{{count}} строк',
-        latest: 'Последнее время: {{time}}',
-        latestUnavailable: 'Последнее время недоступно',
-        total: 'Всего: {{count}}',
-        range: 'Показано {{start}}-{{end}} из {{total}}',
+        latest: 'Последняя запись: {{time}}',
+        latestUnavailable: 'Время записи недоступно',
         columns: {
           time: 'Время',
           level: 'Уровень',
@@ -3502,7 +3987,7 @@ export const ru = {
         },
         pagination: {
           range: '{{start}}-{{end}} из {{total}}',
-          pageSize: 'Строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Вперед',
         },
@@ -3516,12 +4001,12 @@ export const ru = {
       errorLogs: {
         title: 'Файлы журналов ошибок',
         description:
-          'Показывает файлы error-*.log, созданные при выключенном request logging, и позволяет скачать файл.',
+          'Показывает только файлы error-*.log, созданные при выключенном request logging.',
         unavailableTitle: 'Файлы журналов ошибок недоступны',
         unavailable: 'Маршрут файлов журналов ошибок не открыт.',
         emptyTitle: 'Нет файлов журналов ошибок',
         empty: 'В текущем диапазоне нет файлов журналов ошибок.',
-        meta: '{{size}} bytes · {{time}}',
+        meta: '{{size}} байт · {{time}}',
         searchPlaceholder: 'Искать имя файла журнала, нажмите Enter',
         columns: {
           name: 'Журнал',
@@ -3547,6 +4032,7 @@ export const ru = {
         fileLoggingDisabled:
           'Файловое логирование отключено, поэтому журналы runtime нельзя очистить.',
         logDownloaded: 'Журнал скачан.',
+        requestLogDownloaded: 'Журнал запроса скачан: {{fileName}}',
         exportDownloaded: 'Экспорт использования скачан.',
       },
     },
@@ -3871,8 +4357,7 @@ export const ru = {
       },
       table: {
         title: 'Магазин плагинов',
-        description:
-          'Установка, обновление, удаление и просмотр store-installed плагинов. Готовность кластера учитывает отчеты узлов, когда они доступны.',
+        description: 'Готовность кластера учитывает доступные отчеты узлов.',
       },
       filters: {
         search: 'Поиск плагинов',

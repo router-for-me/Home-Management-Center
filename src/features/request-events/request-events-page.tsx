@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 
 import {
   CheckCircle2,
@@ -17,11 +17,13 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
 import {
+  TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
   containedTableContainerClassName,
@@ -60,6 +62,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
+import {
+  LiveRefreshControl,
+  LiveRefreshStatusNotice,
+  NewItemsNotice,
+} from '@/features/observability/live-refresh-control'
 import {
   CapabilityStrip,
   type CapabilityStripItem,
@@ -311,6 +319,7 @@ function RequestEventsHeader({
   capabilities,
   errorMessage,
   isFetching,
+  updatedAt,
   onRefresh,
   page,
   runtimeMode,
@@ -319,11 +328,12 @@ function RequestEventsHeader({
   capabilities: CapabilityMap
   errorMessage: string | null
   isFetching: boolean
+  updatedAt: string | null
   onRefresh: () => void
   page: RequestEventsPageData | null
   runtimeMode: RuntimeMode
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const verdict = getRequestEventsVerdict({ capabilities, page, errorMessage })
 
   return (
@@ -341,8 +351,21 @@ function RequestEventsHeader({
       }
       description={t(`requestEventsPage.verdict.${verdict}.description`, {
         mode: t(`runtimeMode.${runtimeMode}`),
-        count: formatNumber(page?.total ?? 0),
       })}
+      meta={
+        <>
+          <span>
+            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
+          </span>
+          {updatedAt ? (
+            <span>
+              {t('usageLogsPage.header.updatedAt', {
+                time: formatDateTime(updatedAt, i18n) ?? updatedAt,
+              })}
+            </span>
+          ) : null}
+        </>
+      }
       tags={<RequestEventsCapabilityStrip capabilities={capabilities} />}
       actions={
         <Button variant="outline" disabled={!canRefresh || isFetching} onClick={onRefresh}>
@@ -767,15 +790,6 @@ function NumberRangeInputGroup({
   )
 }
 
-function RequestEventDetailField({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <div className="min-w-0 rounded-md border px-3 py-2">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <div className="mt-1 min-w-0 truncate text-sm">{children}</div>
-    </div>
-  )
-}
-
 function RequestEventDetailSheet({
   detail,
   downloadingRequestLogId,
@@ -805,6 +819,10 @@ function RequestEventDetailSheet({
   const logExcerpt = detail?.logExcerpt ?? []
   const requestLog = event?.related?.requestLog ?? null
   const requestLogAvailable = requestLog?.available === true
+  const copyLabel = t('requestEventsPage.detail.actions.copy')
+  const copiedLabel = t('requestEventsPage.detail.actions.copied')
+  const wrapLinesLabel = t('requestEventsPage.detail.actions.wrapLines')
+  const preserveLinesLabel = t('requestEventsPage.detail.actions.preserveLines')
   const downloading =
     Boolean(requestLog?.requestId) &&
     isDownloadingRequestLog &&
@@ -813,15 +831,15 @@ function RequestEventDetailSheet({
   return (
     <Sheet open={Boolean(event) || pending || Boolean(error)} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-hidden p-0 focus:outline-hidden sm:max-w-3xl">
-        <SheetHeader className="border-b p-4">
+        <SheetHeader className="min-w-0 border-b p-4">
           <SheetTitle>{t('requestEventsPage.detail.title')}</SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="[overflow-wrap:anywhere] break-words">
             {event?.timestamp
               ? (formatDateTime(event.timestamp, i18n) ?? event.timestamp)
               : t('requestEventsPage.status.notAvailable')}
           </SheetDescription>
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
           {pending ? (
             <div className="text-muted-foreground flex items-center gap-2 text-sm">
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -834,59 +852,76 @@ function RequestEventDetailSheet({
               description={error.message}
             />
           ) : event ? (
-            <div className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.eventType')}>
+            <div className="grid min-w-0 grid-cols-1 gap-4">
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.eventType')}>
                   {event.eventType ?? t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.status')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.status')}>
                   <RequestEventStatusBadge event={event} />
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.requestId')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  label={t('requestEventsPage.detail.fields.requestId')}
+                  copyValue={event.requestId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
                   {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
-                </RequestEventDetailField>
-                <RequestEventDetailField
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
                   label={t('requestEventsPage.detail.fields.upstreamRequestId')}
+                  copyValue={event.upstreamRequestId}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
                 >
                   {event.upstreamRequestId ?? t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.model')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.model')}>
                   {event.provider ?? t('requestEventsPage.status.notAvailable')} /{' '}
                   {event.model ?? t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.endpoint')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  className="sm:col-span-2"
+                  label={t('requestEventsPage.detail.fields.endpoint')}
+                  copyValue={event.endpoint}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
                   {event.endpoint ?? t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.home')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.home')}>
                   {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.cpa')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.cpa')}>
                   {getRuntimeNodeLabel(event) ?? t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.client')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.client')}>
                   {event.client?.username ??
                     event.client?.clientKeyLabel ??
                     event.client?.clientKeyMasked ??
                     t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.credential')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.credential')}>
                   {event.credential?.label ??
                     event.credential?.authIndex ??
                     t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.latency')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.latency')}>
                   {formatDuration(event.performance.latencyMs) ??
                     t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
-                <RequestEventDetailField label={t('requestEventsPage.detail.fields.cost')}>
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.cost')}>
                   {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ??
                     t('requestEventsPage.status.notAvailable')}
-                </RequestEventDetailField>
+                </DiagnosticDetailField>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium">{t('requestEventsPage.detail.tokens')}</h3>
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
                   {(
                     [
                       'inputTokens',
@@ -898,12 +933,12 @@ function RequestEventDetailSheet({
                       'totalTokens',
                     ] as const
                   ).map((key) => (
-                    <RequestEventDetailField
+                    <DiagnosticDetailField
                       key={key}
                       label={t(`requestEventsPage.detail.tokenFields.${key}`)}
                     >
                       {formatNumber(event.tokens[key])}
-                    </RequestEventDetailField>
+                    </DiagnosticDetailField>
                   ))}
                 </div>
               </div>
@@ -911,25 +946,33 @@ function RequestEventDetailSheet({
               {event.error ? (
                 <div>
                   <h3 className="text-sm font-medium">{t('requestEventsPage.detail.error')}</h3>
-                  <pre className="bg-muted/45 text-foreground mt-2 max-h-52 min-h-24 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                    {event.error.bodyPreview ??
+                  <TechnicalTextViewer
+                    content={
+                      event.error.bodyPreview ??
                       event.error.message ??
                       event.error.reason ??
-                      t('requestEventsPage.status.notAvailable')}
-                  </pre>
+                      t('requestEventsPage.status.notAvailable')
+                    }
+                    copyLabel={copyLabel}
+                    copiedLabel={copiedLabel}
+                    wrapLinesLabel={wrapLinesLabel}
+                    preserveLinesLabel={preserveLinesLabel}
+                    maxHeightClassName="max-h-52"
+                    minHeightClassName="min-h-24"
+                  />
                 </div>
               ) : null}
 
               {payloadSummary ? (
                 <div>
                   <h3 className="text-sm font-medium">{t('requestEventsPage.detail.payload')}</h3>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <RequestEventDetailField
+                  <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                    <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.method')}
                     >
                       {payloadSummary.method ?? t('requestEventsPage.status.notAvailable')}
-                    </RequestEventDetailField>
-                    <RequestEventDetailField
+                    </DiagnosticDetailField>
+                    <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.stream')}
                     >
                       {payloadSummary.stream === null
@@ -937,17 +980,17 @@ function RequestEventDetailSheet({
                         : payloadSummary.stream
                           ? t('requestEventsPage.status.yes')
                           : t('requestEventsPage.status.no')}
-                    </RequestEventDetailField>
-                    <RequestEventDetailField
+                    </DiagnosticDetailField>
+                    <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.messages')}
                     >
                       {payloadSummary.messageCount ?? t('requestEventsPage.status.notAvailable')}
-                    </RequestEventDetailField>
-                    <RequestEventDetailField
+                    </DiagnosticDetailField>
+                    <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.tools')}
                     >
                       {payloadSummary.toolCount ?? t('requestEventsPage.status.notAvailable')}
-                    </RequestEventDetailField>
+                    </DiagnosticDetailField>
                   </div>
                 </div>
               ) : null}
@@ -957,9 +1000,15 @@ function RequestEventDetailSheet({
                   <h3 className="text-sm font-medium">
                     {t('requestEventsPage.detail.logExcerpt')}
                   </h3>
-                  <pre className="bg-muted/45 text-foreground mt-2 max-h-64 min-h-28 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                    {logExcerpt.join('\n')}
-                  </pre>
+                  <TechnicalTextViewer
+                    content={logExcerpt.join('\n')}
+                    copyLabel={copyLabel}
+                    copiedLabel={copiedLabel}
+                    wrapLinesLabel={wrapLinesLabel}
+                    preserveLinesLabel={preserveLinesLabel}
+                    maxHeightClassName="max-h-64"
+                    minHeightClassName="min-h-28"
+                  />
                 </div>
               ) : null}
             </div>
@@ -1004,7 +1053,15 @@ function RequestEventsTable({
   filterOptions,
   filtersValid,
   isExporting,
+  fetching,
   mutating,
+  liveRefresh,
+  liveRefreshIntervalMs,
+  liveRefreshError,
+  liveRefreshLastSuccessAt,
+  pendingItemCount,
+  pendingItemsTruncated,
+  onAcceptPendingItems,
   onClearFilters,
   onExport,
   onFilterChange,
@@ -1020,7 +1077,21 @@ function RequestEventsTable({
   filterOptions: RequestEventFilterOptions | null
   filtersValid: boolean
   isExporting: boolean
+  fetching: boolean
   mutating: boolean
+  liveRefresh: {
+    enabled: boolean
+    active: boolean
+    pauseReason: LiveRefreshPauseReason | null
+    available: boolean
+    setEnabled: (enabled: boolean) => void
+  }
+  liveRefreshIntervalMs: number
+  liveRefreshError: boolean
+  liveRefreshLastSuccessAt: number | null
+  pendingItemCount: number
+  pendingItemsTruncated: boolean
+  onAcceptPendingItems: () => void
   onClearFilters: () => void
   onExport: () => void
   onFilterChange: (nextFilters: Partial<RequestEventFilters>) => void
@@ -1029,6 +1100,7 @@ function RequestEventsTable({
   onOffsetChange: (offset: number) => void
   pageSizeOptions: number[]
 }) {
+  const liveRefreshStatusId = 'request-events-live-refresh-status'
   const { t, i18n } = useTranslation()
   const [visibleColumns, setVisibleColumns] =
     useState<RequestEventColumnKey[]>(defaultVisibleColumns)
@@ -1063,7 +1135,25 @@ function RequestEventsTable({
     <TableSurface className="min-w-0">
       <TableSurfaceHeader
         title={t('requestEventsPage.table.title')}
-        description={t('requestEventsPage.table.description')}
+        actions={
+          <LiveRefreshControl
+            enabled={liveRefresh.enabled}
+            disabled={!liveRefresh.available}
+            describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+            onEnabledChange={liveRefresh.setEnabled}
+          />
+        }
+      />
+
+      <LiveRefreshStatusNotice
+        id={liveRefreshStatusId}
+        enabled={liveRefresh.enabled}
+        active={liveRefresh.active}
+        pauseReason={liveRefresh.pauseReason}
+        intervalMs={liveRefreshIntervalMs}
+        hasError={liveRefreshError}
+        lastSuccessAt={liveRefreshLastSuccessAt}
+        className="mx-3 mt-3"
       />
 
       <div className="border-b px-3 py-3">
@@ -1075,14 +1165,9 @@ function RequestEventsTable({
         />
       </div>
 
-      {events ? (
+      {events && rows.length > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-2 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="text-muted-foreground text-sm">
-              {t('requestEventsPage.table.resultCount', {
-                total: formatNumber(total),
-              })}
-            </span>
             {activeFilters ? (
               <Button
                 type="button"
@@ -1141,6 +1226,13 @@ function RequestEventsTable({
           </div>
         </div>
       ) : null}
+
+      <NewItemsNotice
+        count={pendingItemCount}
+        truncated={pendingItemsTruncated}
+        className="mx-3 mt-3"
+        onAccept={onAcceptPendingItems}
+      />
 
       {events ? (
         rows.length > 0 ? (
@@ -1356,13 +1448,15 @@ function RequestEventsTable({
 
       {events && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('requestEventsPage.table.range', {
+          <TablePaginationStatus
+            text={t('requestEventsPage.table.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={JSON.stringify(filters)}
+            busy={fetching || mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -1373,7 +1467,11 @@ function RequestEventsTable({
                 disabled={mutating}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(touchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(touchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('requestEventsPage.table.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1468,6 +1566,7 @@ export function RequestEventsPage() {
         capabilities={workbench.capabilities}
         errorMessage={workbench.errorMessage}
         isFetching={workbench.isFetching}
+        updatedAt={workbench.eventsUpdatedAt}
         onRefresh={workbench.refetch}
         page={workbench.events}
         runtimeMode={workbench.runtimeMode}
@@ -1497,7 +1596,15 @@ export function RequestEventsPage() {
         filterOptions={workbench.filterOptions}
         filtersValid={workbench.filtersValid}
         isExporting={workbench.isExporting}
+        fetching={workbench.isFetching}
         mutating={workbench.mutating}
+        liveRefresh={workbench.liveRefresh}
+        liveRefreshIntervalMs={workbench.liveRefreshIntervalMs}
+        liveRefreshError={workbench.liveRefreshError}
+        liveRefreshLastSuccessAt={workbench.liveRefreshLastSuccessAt}
+        pendingItemCount={workbench.pendingEventCount}
+        pendingItemsTruncated={workbench.pendingEventsTruncated}
+        onAcceptPendingItems={workbench.acceptPendingEvents}
         pageSizeOptions={workbench.pageSizeOptions}
         onClearFilters={workbench.clearFilters}
         onExport={() => void handleExport()}

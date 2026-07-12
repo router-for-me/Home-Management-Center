@@ -52,6 +52,9 @@ export function EmptyState({
 
   return (
     <div
+      role={kind === 'filtered-empty' ? 'status' : undefined}
+      aria-live={kind === 'filtered-empty' ? 'polite' : undefined}
+      aria-atomic={kind === 'filtered-empty' ? 'true' : undefined}
       className={cn(
         'flex min-w-0 flex-col items-center justify-center text-center',
         compact ? 'px-4 py-6' : 'px-6 py-10',
@@ -68,7 +71,9 @@ export function EmptyState({
       </div>
       <p className="mt-3 text-sm font-semibold">{title}</p>
       {description ? (
-        <p className="text-muted-foreground mt-1 max-w-md text-sm leading-6">{description}</p>
+        <p className="text-muted-foreground mt-1 w-full max-w-md text-sm leading-6 [overflow-wrap:anywhere] break-words">
+          {description}
+        </p>
       ) : null}
       {action ? <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>
