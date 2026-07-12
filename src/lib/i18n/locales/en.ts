@@ -14,6 +14,7 @@ export const en = {
     actions: {
       connect: 'Connect',
       manageConnection: 'Connection',
+      copyFailed: 'Copy failed',
     },
     language: {
       switch: 'Language',
@@ -3725,6 +3726,19 @@ export const en = {
         related: 'Related data',
         noLogExcerpt: 'No log excerpt was returned for this request.',
         requestLogUnavailable: 'No downloadable request log is available for this record.',
+        downloadingRequestLog: 'Downloading',
+        technicalMetadata: 'Technical metadata',
+        requestLogStatuses: {
+          local: 'Available locally',
+          remote: 'Available from remote Home',
+          unavailable: 'Unavailable',
+        },
+        downloadErrors: {
+          notFound: 'The request log does not exist or has been cleared.',
+          remoteUnavailable: 'The target Home is currently unavailable. Try again later.',
+          unauthorized: 'The current Management Key cannot download this log.',
+          generic: 'The request log could not be downloaded. Try again later.',
+        },
         actions: {
           copy: 'Copy content',
           copied: 'Copied',
@@ -3764,7 +3778,7 @@ export const en = {
         relatedFields: {
           requestLog: 'Request log',
           requestLogHomeIp: 'Log Home node',
-          downloadUrl: 'Download path',
+          downloadUrl: 'API download path',
         },
       },
       credentials: {
@@ -3998,6 +4012,7 @@ export const en = {
         logsCleared: 'Logs cleared.',
         fileLoggingDisabled: 'File logging is disabled, so runtime logs cannot be cleared.',
         logDownloaded: 'Log downloaded.',
+        requestLogDownloaded: 'Request log downloaded: {{fileName}}',
         exportDownloaded: 'Usage export downloaded.',
       },
     },

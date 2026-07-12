@@ -14,6 +14,7 @@ export const ru = {
     actions: {
       connect: 'Подключить',
       manageConnection: 'Подключение',
+      copyFailed: 'Не удалось скопировать',
     },
     language: {
       switch: 'Язык',
@@ -3741,6 +3742,19 @@ export const ru = {
         related: 'Связанные данные',
         noLogExcerpt: 'Фрагмент журнала для этого запроса не был возвращен.',
         requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
+        downloadingRequestLog: 'Скачивание',
+        technicalMetadata: 'Технические метаданные',
+        requestLogStatuses: {
+          local: 'Доступен локально',
+          remote: 'Доступен с удаленного Home',
+          unavailable: 'Недоступен',
+        },
+        downloadErrors: {
+          notFound: 'Журнал запроса не существует или уже очищен.',
+          remoteUnavailable: 'Целевой Home сейчас недоступен. Повторите попытку позже.',
+          unauthorized: 'Текущий Management Key не позволяет скачать этот журнал.',
+          generic: 'Не удалось скачать журнал запроса. Повторите попытку позже.',
+        },
         actions: {
           copy: 'Копировать содержимое',
           copied: 'Скопировано',
@@ -3780,7 +3794,7 @@ export const ru = {
         relatedFields: {
           requestLog: 'Журнал запроса',
           requestLogHomeIp: 'Home-узел журнала',
-          downloadUrl: 'Путь скачивания',
+          downloadUrl: 'Путь API для скачивания',
         },
       },
       credentials: {
@@ -4018,6 +4032,7 @@ export const ru = {
         fileLoggingDisabled:
           'Файловое логирование отключено, поэтому журналы runtime нельзя очистить.',
         logDownloaded: 'Журнал скачан.',
+        requestLogDownloaded: 'Журнал запроса скачан: {{fileName}}',
         exportDownloaded: 'Экспорт использования скачан.',
       },
     },

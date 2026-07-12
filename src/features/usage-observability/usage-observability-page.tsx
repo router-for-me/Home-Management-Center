@@ -60,6 +60,18 @@ function hasUsageActivity(snapshot: UsageSnapshot) {
   )
 }
 
+function getRequestLogDownloadErrorKey(error: unknown) {
+  if (!error || typeof error !== 'object') return 'generic'
+
+  const status = 'status' in error && typeof error.status === 'number' ? error.status : null
+  const code = 'code' in error && typeof error.code === 'string' ? error.code : null
+
+  if (status === 404 || code === 'not-found') return 'notFound'
+  if (status === 502) return 'remoteUnavailable'
+  if (status === 401 || status === 403 || code === 'auth') return 'unauthorized'
+  return 'generic'
+}
+
 function getUsagePageVerdict(snapshot: UsageSnapshot): UsagePageVerdict {
   if (!snapshot.settings.usageStatisticsEnabled) return 'disabled'
   if (snapshot.issues.some(isFailedUsageIssue)) return 'partial'
@@ -192,6 +204,26 @@ export function UsageObservabilityPage() {
     }
   }
 
+  const handleDownloadRequestLog = async (
+    requestId: string,
+    homeIp?: string | null,
+    homePort?: number | null,
+  ) => {
+    try {
+      const result = await workbench.downloadRequestLogById({ requestId, homeIp, homePort })
+      downloadBlob(result.blob, result.fileName)
+      toast.success(
+        t('usageLogsPage.toast.requestLogDownloaded', {
+          fileName: result.fileName,
+        }),
+      )
+    } catch (error) {
+      toast.error(
+        t(`usageLogsPage.detail.downloadErrors.${getRequestLogDownloadErrorKey(error)}` as const),
+      )
+    }
+  }
+
   return (
     <section className="grid w-full gap-4">
       <UsageObservabilityHeader
@@ -313,6 +345,9 @@ export function UsageObservabilityPage() {
         onOpenChange={(open) => {
           if (!open) workbench.clearSelectedRecord()
         }}
+        onDownloadRequestLog={(requestId, homeIp, homePort) =>
+          void handleDownloadRequestLog(requestId, homeIp, homePort)
+        }
       />
     </section>
   )

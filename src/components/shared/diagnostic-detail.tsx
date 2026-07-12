@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
-import { ClipboardCheck, Copy, WrapText } from 'lucide-react'
+import { ClipboardCheck, ClipboardX, Copy, WrapText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -36,7 +37,8 @@ function CopyValueButton({
   copyLabel: string
   copiedLabel: string
 }) {
-  const [copied, setCopied] = useState(false)
+  const { t } = useTranslation()
+  const [status, setStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
   const resetTimerRef = useRef<number | null>(null)
 
   useEffect(
@@ -50,14 +52,18 @@ function CopyValueButton({
     try {
       await copyText(value)
     } catch {
+      setStatus('failed')
+      if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current)
+      resetTimerRef.current = window.setTimeout(() => setStatus('idle'), 1600)
       return
     }
-    setCopied(true)
+    setStatus('copied')
     if (resetTimerRef.current !== null) window.clearTimeout(resetTimerRef.current)
-    resetTimerRef.current = window.setTimeout(() => setCopied(false), 1600)
+    resetTimerRef.current = window.setTimeout(() => setStatus('idle'), 1600)
   }
 
-  const label = copied ? copiedLabel : copyLabel
+  const label =
+    status === 'copied' ? copiedLabel : status === 'failed' ? t('actions.copyFailed') : copyLabel
 
   return (
     <Tooltip>
@@ -70,14 +76,19 @@ function CopyValueButton({
           aria-label={label}
           onClick={() => void handleCopy()}
         >
-          {copied ? (
+          {status === 'copied' ? (
             <ClipboardCheck className="size-3.5" aria-hidden="true" />
+          ) : status === 'failed' ? (
+            <ClipboardX className="text-destructive size-3.5" aria-hidden="true" />
           ) : (
             <Copy className="size-3.5" aria-hidden="true" />
           )}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top">{label}</TooltipContent>
+      <span className="sr-only" aria-live="polite">
+        {status === 'idle' ? '' : label}
+      </span>
     </Tooltip>
   )
 }

@@ -14,6 +14,7 @@ export const zhTW = {
     actions: {
       connect: '連線',
       manageConnection: '連線管理',
+      copyFailed: '複製失敗',
     },
     language: {
       switch: '語言',
@@ -3576,6 +3577,19 @@ export const zhTW = {
         related: '關聯資訊',
         noLogExcerpt: '後端沒有回傳該請求的日誌片段。',
         requestLogUnavailable: '目前記錄沒有可下載的請求日誌。',
+        downloadingRequestLog: '正在下載',
+        technicalMetadata: '技術中繼資料',
+        requestLogStatuses: {
+          local: '可在本機下載',
+          remote: '可從遠端 Home 取得',
+          unavailable: '無法使用',
+        },
+        downloadErrors: {
+          notFound: '請求日誌不存在或已被清理。',
+          remoteUnavailable: '目標 Home 目前無法連線，請稍後再試。',
+          unauthorized: '目前的 Management Key 沒有下載此日誌的權限。',
+          generic: '請求日誌下載失敗，請稍後再試。',
+        },
         actions: {
           copy: '複製內容',
           copied: '已複製',
@@ -3615,7 +3629,7 @@ export const zhTW = {
         relatedFields: {
           requestLog: '請求日誌',
           requestLogHomeIp: '日誌 Home 節點',
-          downloadUrl: '下載路徑',
+          downloadUrl: 'API 下載路徑',
         },
       },
       credentials: {
@@ -3847,6 +3861,7 @@ export const zhTW = {
         logsCleared: '日誌已清空。',
         fileLoggingDisabled: '檔案日誌未啟用，無法清空執行日誌。',
         logDownloaded: '日誌已下載。',
+        requestLogDownloaded: '請求日誌已下載：{{fileName}}',
         exportDownloaded: '用量匯出已下載。',
       },
     },
