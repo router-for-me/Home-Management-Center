@@ -329,6 +329,7 @@ export const zhTW = {
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 條',
           rows: '{{count}} 條',
+          pageSize: '每頁筆數',
           previous: '上一頁',
           next: '下一頁',
         },
@@ -542,6 +543,7 @@ export const zhTW = {
       pagination: {
         range: '{{start}}-{{end}} / 共 {{total}} 條',
         rows: '{{count}} 條',
+        pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
       },
@@ -576,7 +578,6 @@ export const zhTW = {
       },
       charges: {
         title: '扣款明細',
-        description: '查看每次請求的扣款結果、Token 用量和餘額變化。',
         empty: '目前時間範圍內沒有扣款明細。',
         tokenSummary: '入 {{input}} / 出 {{output}} / 快取 {{cache}}',
         columns: {
@@ -629,7 +630,6 @@ export const zhTW = {
       },
       balance: {
         title: '餘額記錄',
-        description: '查看使用者餘額的充值、扣減和變動記錄。',
         empty: '目前時間範圍內沒有餘額記錄。',
         types: {
           recharge: '充值',
@@ -1710,7 +1710,6 @@ export const zhTW = {
       },
       list: {
         title: '憑證資源',
-        description: '管理透過 OAuth 登入或檔案匯入產生的帳號憑證。',
         filterPlaceholder: '篩選憑證',
         empty: '目前篩選條件下沒有憑證。',
         credential: '憑證 / 帳號',
@@ -1855,7 +1854,7 @@ export const zhTW = {
       },
       list: {
         title: '存取金鑰',
-        description: 'GET /api-keys 回傳的金鑰。頁面不假設服務端存在額外 metadata。',
+        description: '這些金鑰供用戶端存取 Home Center 服務端使用，不是模型供應商金鑰。',
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
@@ -2216,7 +2215,6 @@ export const zhTW = {
       },
       workspace: {
         title: '存取工作台',
-        description: '在同一個工作台中維護使用者、金鑰歸屬、憑證範圍和模型範圍。',
         filterPlaceholder: '篩選使用者、金鑰或範圍',
       },
       tabs: {
@@ -2955,8 +2953,7 @@ export const zhTW = {
         ready: {
           title: '請求事件日誌已就緒',
           badge: '可排障',
-          description:
-            '已載入 {{count}} 條請求事件，可按請求、模型、節點、憑證、狀態和延遲進行排查。',
+          description: '可按請求、模型、節點、憑證、狀態和延遲排查請求事件。',
         },
         empty: {
           title: '暫無請求事件',
@@ -3055,7 +3052,6 @@ export const zhTW = {
       },
       table: {
         title: '請求事件',
-        description: '按請求級事件查看模型、節點、憑證、用戶端、Token、延遲和錯誤摘要。',
         columnsButton: '欄位',
         columnsMenu: '顯示欄位',
         ttft: 'TTFT {{value}}',
@@ -3065,9 +3061,8 @@ export const zhTW = {
         errorTitle: '請求事件載入失敗',
         unsupportedTitle: '請求事件介面不可用',
         unsupportedDescription: '目前執行環境未提供 /request-events，等待後端補齊後可使用此頁面。',
-        resultCount: '共 {{total}} 條事件',
         range: '第 {{start}}-{{end}} 條，共 {{total}} 條',
-        pageSize: '每頁',
+        pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
         columns: {
@@ -3523,7 +3518,7 @@ export const zhTW = {
         unavailable: '請求級用量明細未開放。',
         errorTitle: '請求明細載入失敗',
         clearFilters: '清除篩選',
-        pageSize: '每頁',
+        pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
         ttft: 'TTFT {{value}}',
@@ -3619,7 +3614,7 @@ export const zhTW = {
         unavailableTitle: '此執行環境不提供執行憑證用量',
         unavailable: '執行憑證用量聚合未開放。',
         errorTitle: '執行憑證用量載入失敗',
-        pageSize: '每頁',
+        pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
         columnsButton: '自訂欄位',
@@ -3743,7 +3738,6 @@ export const zhTW = {
       },
       logs: {
         title: '執行日誌',
-        description: '分頁讀取執行日誌。列表展示摘要，完整內容和請求中繼資料可在詳情中查看。',
         unavailableTitle: '此執行環境不提供執行日誌',
         unavailable: '執行日誌介面未開放。',
         fileLoggingDisabledTitle: '檔案日誌未啟用',
@@ -3754,11 +3748,8 @@ export const zhTW = {
         filteredEmpty: '目前篩選條件下沒有符合的執行日誌。',
         emptyPageTitle: '目前頁面無日誌',
         emptyPage: '請返回上一頁或重新同步。',
-        lineCount: '{{count}} 筆',
-        latest: '最新時間：{{time}}',
-        latestUnavailable: '最新時間不可用',
-        total: '共 {{count}} 筆',
-        range: '目前 {{start}}-{{end}} / 共 {{total}} 筆',
+        latest: '最新日誌：{{time}}',
+        latestUnavailable: '日誌時間不可用',
         columns: {
           time: '時間',
           level: '級別',
@@ -3802,7 +3793,7 @@ export const zhTW = {
         },
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 筆',
-          pageSize: '每頁',
+          pageSize: '每頁筆數',
           previous: '上一頁',
           next: '下一頁',
         },
@@ -3815,7 +3806,7 @@ export const zhTW = {
       },
       errorLogs: {
         title: '錯誤日誌檔案',
-        description: '列出 request logging 關閉時生成的 error-*.log 檔案，並支援按檔案下載。',
+        description: '僅顯示 request logging 關閉時生成的 error-*.log 檔案。',
         unavailableTitle: '此執行環境不提供錯誤日誌檔案',
         unavailable: '錯誤日誌檔案介面未開放。',
         emptyTitle: '暫無錯誤日誌檔案',
@@ -4153,8 +4144,7 @@ export const zhTW = {
       },
       table: {
         title: '外掛商店',
-        description:
-          '安裝、更新、卸載和查看 store 安裝的外掛。可用時，叢集就緒狀態會參考節點回報。',
+        description: '叢集就緒狀態會參考可用的節點回報。',
       },
       filters: {
         search: '搜尋外掛',

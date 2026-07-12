@@ -2317,14 +2317,14 @@ export function ProvidersWorkbenchPage() {
         <TableSurface className="min-w-0">
           <TableSurfaceHeader
             title={
-              <span className="flex items-center gap-2">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <ProviderLogo providerId={activeGroup.id} size="sm" />
                 {t(`providersPage.providerNames.${activeGroup.id}`)}
+                <span className="text-muted-foreground font-mono text-xs font-normal">
+                  {activeGroup.path}
+                </span>
               </span>
             }
-            description={t('providersPage.table.description', {
-              route: activeGroup.path,
-            })}
             actions={
               <div className="relative min-w-0 md:w-72">
                 <Search

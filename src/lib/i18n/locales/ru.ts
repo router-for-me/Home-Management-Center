@@ -341,6 +341,7 @@ export const ru = {
         pagination: {
           range: '{{start}}-{{end}} / всего {{total}}',
           rows: '{{count}} строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Далее',
         },
@@ -565,6 +566,7 @@ export const ru = {
       pagination: {
         range: '{{start}}-{{end}} / всего {{total}}',
         rows: '{{count}} строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
       },
@@ -599,8 +601,6 @@ export const ru = {
       },
       charges: {
         title: 'Записи списаний',
-        description:
-          'Просматривайте результаты списаний, расход токенов и изменения баланса по каждому запросу.',
         empty: 'В выбранном периоде нет записей списаний.',
         tokenSummary: 'Вход {{input}} / Выход {{output}} / Кэш {{cache}}',
         columns: {
@@ -653,7 +653,6 @@ export const ru = {
       },
       balance: {
         title: 'Записи баланса',
-        description: 'Просматривайте пополнения, списания и изменения баланса пользователей.',
         empty: 'В выбранном периоде нет записей баланса.',
         types: {
           recharge: 'Пополнение',
@@ -1776,7 +1775,6 @@ export const ru = {
       },
       list: {
         title: 'Credential resources',
-        description: 'Управление account credentials из OAuth входа или file import.',
         filterPlaceholder: 'Фильтр credentials',
         empty: 'Нет credentials для текущих фильтров.',
         credential: 'Credential / аккаунт',
@@ -1927,7 +1925,8 @@ export const ru = {
       },
       list: {
         title: 'Access keys',
-        description: 'Keys из GET /api-keys. Server-side metadata не предполагается.',
+        description:
+          'Эти ключи дают клиентам доступ к серверу Home Center; это не ключи провайдеров моделей.',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
@@ -2302,8 +2301,6 @@ export const ru = {
       },
       workspace: {
         title: 'Рабочая область доступа',
-        description:
-          'Управляйте пользователями, владельцами ключей, областями учетных данных и областями моделей в одном месте.',
         filterPlaceholder: 'Фильтр по пользователям, ключам или областям',
       },
       tabs: {
@@ -3099,7 +3096,7 @@ export const ru = {
           title: 'Журнал событий запросов готов',
           badge: 'Для диагностики',
           description:
-            'Загружено событий: {{count}}. Можно фильтровать по запросу, модели, узлу, учетным данным, статусу и задержке.',
+            'События можно фильтровать по запросу, модели, узлу, учетным данным, статусу и задержке.',
         },
         empty: {
           title: 'Событий запросов пока нет',
@@ -3202,8 +3199,6 @@ export const ru = {
       },
       table: {
         title: 'События запросов',
-        description:
-          'Просматривайте события запросов с контекстом модели, узла, учетных данных, клиента, токенов, задержки и ошибок.',
         columnsButton: 'Колонки',
         columnsMenu: 'Видимые колонки',
         ttft: 'TTFT {{value}}',
@@ -3215,9 +3210,8 @@ export const ru = {
         unsupportedTitle: 'API request events недоступен',
         unsupportedDescription:
           'Этот runtime не предоставляет /request-events. Страница станет доступна после добавления backend API.',
-        resultCount: 'Событий: {{total}}',
         range: '{{start}}-{{end}} из {{total}}',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         columns: {
@@ -3689,7 +3683,7 @@ export const ru = {
         unavailable: 'Записи использования на уровне запроса не открыты.',
         errorTitle: 'Не удалось загрузить записи запросов',
         clearFilters: 'Сбросить фильтры',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Вперед',
         ttft: 'TTFT {{value}}',
@@ -3785,7 +3779,7 @@ export const ru = {
         unavailableTitle: 'Использование учетных данных недоступно',
         unavailable: 'Агрегаты использования учетных данных не открыты.',
         errorTitle: 'Не удалось загрузить использование учетных данных',
-        pageSize: 'Строк',
+        pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
         columnsButton: 'Настроить столбцы',
@@ -3912,8 +3906,6 @@ export const ru = {
       },
       logs: {
         title: 'Журналы runtime',
-        description:
-          'Показывает журналы runtime постранично. В таблице видна сводка; полное содержимое и метаданные запроса доступны в деталях.',
         unavailableTitle: 'Журналы runtime недоступны',
         unavailable: 'Маршрут журналов runtime не открыт.',
         fileLoggingDisabledTitle: 'Файловое логирование отключено',
@@ -3924,11 +3916,8 @@ export const ru = {
         filteredEmpty: 'Нет журналов runtime для текущих фильтров.',
         emptyPageTitle: 'На странице нет журналов',
         emptyPage: 'Вернитесь назад или синхронизируйте данные.',
-        lineCount: '{{count}} строк',
-        latest: 'Последнее время: {{time}}',
-        latestUnavailable: 'Последнее время недоступно',
-        total: 'Всего: {{count}}',
-        range: 'Показано {{start}}-{{end}} из {{total}}',
+        latest: 'Последняя запись: {{time}}',
+        latestUnavailable: 'Время записи недоступно',
         columns: {
           time: 'Время',
           level: 'Уровень',
@@ -3972,7 +3961,7 @@ export const ru = {
         },
         pagination: {
           range: '{{start}}-{{end}} из {{total}}',
-          pageSize: 'Строк',
+          pageSize: 'Строк на странице',
           previous: 'Назад',
           next: 'Вперед',
         },
@@ -3986,7 +3975,7 @@ export const ru = {
       errorLogs: {
         title: 'Файлы журналов ошибок',
         description:
-          'Показывает файлы error-*.log, созданные при выключенном request logging, и позволяет скачать файл.',
+          'Показывает только файлы error-*.log, созданные при выключенном request logging.',
         unavailableTitle: 'Файлы журналов ошибок недоступны',
         unavailable: 'Маршрут файлов журналов ошибок не открыт.',
         emptyTitle: 'Нет файлов журналов ошибок',
@@ -4341,8 +4330,7 @@ export const ru = {
       },
       table: {
         title: 'Магазин плагинов',
-        description:
-          'Установка, обновление, удаление и просмотр store-installed плагинов. Готовность кластера учитывает отчеты узлов, когда они доступны.',
+        description: 'Готовность кластера учитывает доступные отчеты узлов.',
       },
       filters: {
         search: 'Поиск плагинов',

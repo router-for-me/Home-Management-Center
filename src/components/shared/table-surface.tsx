@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -56,7 +56,43 @@ function TableSurfaceHeader({
   )
 }
 
+function TablePaginationStatus({
+  text,
+  announcementKey,
+  busy = false,
+  className,
+}: {
+  text: string
+  announcementKey: string | number
+  busy?: boolean
+  className?: string
+}) {
+  const previousKeyRef = useRef(announcementKey)
+  const pendingAnnouncementRef = useRef(false)
+  const [announcement, setAnnouncement] = useState('')
+
+  useEffect(() => {
+    if (!Object.is(previousKeyRef.current, announcementKey)) {
+      previousKeyRef.current = announcementKey
+      pendingAnnouncementRef.current = true
+    }
+    if (busy || !pendingAnnouncementRef.current) return
+    pendingAnnouncementRef.current = false
+    setAnnouncement(text)
+  }, [announcementKey, busy, text])
+
+  return (
+    <>
+      <p className={cn('text-muted-foreground text-sm', className)}>{text}</p>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </span>
+    </>
+  )
+}
+
 export {
+  TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
   containedTableContainerClassName,

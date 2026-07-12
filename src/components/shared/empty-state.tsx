@@ -52,6 +52,9 @@ export function EmptyState({
 
   return (
     <div
+      role={kind === 'filtered-empty' ? 'status' : undefined}
+      aria-live={kind === 'filtered-empty' ? 'polite' : undefined}
+      aria-atomic={kind === 'filtered-empty' ? 'true' : undefined}
       className={cn(
         'flex min-w-0 flex-col items-center justify-center text-center',
         compact ? 'px-4 py-6' : 'px-6 py-10',

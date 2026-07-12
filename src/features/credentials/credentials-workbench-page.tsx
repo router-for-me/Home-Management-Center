@@ -2026,7 +2026,6 @@ export function CredentialsWorkbenchPage() {
         <TableSurface className="min-w-0">
           <TableSurfaceHeader
             title={t('credentialsPage.list.title')}
-            description={t('credentialsPage.list.description')}
             actions={
               <div className="relative min-w-0 md:w-72">
                 <Search

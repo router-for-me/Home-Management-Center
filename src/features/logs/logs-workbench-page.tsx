@@ -234,6 +234,7 @@ export function LogsWorkbenchPage() {
         downloadingRequestLogId={workbench.downloadingRequestLogId}
         isDownloadingRequestLog={workbench.isDownloadingRequestLog}
         clearing={workbench.isClearingLogs}
+        fetching={workbench.isFetching || workbench.liveRefreshFetching}
         mutating={workbench.mutating}
         onClear={() => setClearLogsDialogOpen(true)}
         onFilterChange={workbench.setRuntimeLogFilters}

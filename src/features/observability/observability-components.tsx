@@ -37,6 +37,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import {
+  TablePaginationStatus,
   TableSurface,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -2950,6 +2951,7 @@ export function RequestRecordsTable({
   filters,
   filterOptions,
   pageSizeOptions,
+  fetching,
   mutating,
   canExport,
   isExporting,
@@ -2965,6 +2967,7 @@ export function RequestRecordsTable({
   filters: UsageFilters
   filterOptions: UsageFilterOptions
   pageSizeOptions: number[]
+  fetching: boolean
   mutating: boolean
   canExport: boolean
   isExporting: boolean
@@ -3258,13 +3261,15 @@ export function RequestRecordsTable({
       )}
       {records && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.records.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.records.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={JSON.stringify(filters)}
+            busy={fetching || mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -3275,7 +3280,11 @@ export function RequestRecordsTable({
                 disabled={mutating}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(usageTouchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(usageTouchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('usageLogsPage.records.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -3646,13 +3655,15 @@ export function RequestLogIndexTable({
       )}
       {totalRows > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.records.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.records.range', {
               start: formatNumber(pageStart + 1),
               end: formatNumber(Math.min(pageStart + pageSize, totalRows)),
               total: formatNumber(totalRows),
             })}
-          </p>
+            announcementKey={`${currentPage}:${pageSize}:${search}:${sort.key}:${sort.direction}`}
+            busy={mutating}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -3666,7 +3677,11 @@ export function RequestLogIndexTable({
                   setPage(0)
                 }}
               >
-                <SelectTrigger className="w-24" size="sm">
+                <SelectTrigger
+                  className="w-24"
+                  size="sm"
+                  aria-label={t('usageLogsPage.records.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -4469,13 +4484,15 @@ export function CredentialUsageTable({
       )}
       {response && total > 0 ? (
         <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-muted-foreground text-sm" aria-live="polite">
-            {t('usageLogsPage.credentials.range', {
+          <TablePaginationStatus
+            text={t('usageLogsPage.credentials.range', {
               start: formatNumber(start),
               end: formatNumber(end),
               total: formatNumber(total),
             })}
-          </p>
+            announcementKey={`${offset}:${limit}:${JSON.stringify(sort)}`}
+            busy={controlsDisabled}
+          />
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground text-sm">
@@ -4486,7 +4503,11 @@ export function CredentialUsageTable({
                 disabled={controlsDisabled}
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
-                <SelectTrigger className={cn(usageTouchControlClassName, 'w-24')} size="sm">
+                <SelectTrigger
+                  className={cn(usageTouchControlClassName, 'w-24')}
+                  size="sm"
+                  aria-label={t('usageLogsPage.credentials.pageSize')}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -5117,6 +5138,7 @@ export function RuntimeLogViewer({
   downloadingRequestLogId,
   isDownloadingRequestLog,
   clearing,
+  fetching,
   mutating,
   onClear,
   onFilterChange,
@@ -5144,6 +5166,7 @@ export function RuntimeLogViewer({
   downloadingRequestLogId: string | null
   isDownloadingRequestLog: boolean
   clearing: boolean
+  fetching: boolean
   mutating: boolean
   onClear: () => void
   onFilterChange: (nextFilters: Partial<RuntimeLogFilters>) => void
@@ -5186,10 +5209,7 @@ export function RuntimeLogViewer({
   return (
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <SectionHeader
-          title={t('usageLogsPage.logs.title')}
-          description={t('usageLogsPage.logs.description')}
-        />
+        <SectionHeader title={t('usageLogsPage.logs.title')} />
         <div className="flex shrink-0 items-center gap-2">
           <LiveRefreshControl
             enabled={liveRefresh.enabled}
@@ -5213,45 +5233,40 @@ export function RuntimeLogViewer({
           </Button>
         </div>
       </div>
-      <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <span>
-          {t('usageLogsPage.logs.lineCount', {
-            count: formatNumber(runtimeLogs?.lineCount ?? 0),
-          })}
-        </span>
-        <span>
-          {runtimeLogs?.latestTimestamp
-            ? t('usageLogsPage.logs.latest', {
+      {runtimeLogs?.latestTimestamp ||
+      records.length > 0 ||
+      liveRefresh.active ||
+      (liveRefresh.enabled && liveRefreshLastSuccessAt) ? (
+        <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+          {runtimeLogs?.latestTimestamp ? (
+            <span>
+              {t('usageLogsPage.logs.latest', {
                 time: formatTimestamp(runtimeLogs.latestTimestamp, i18n),
-              })
-            : t('usageLogsPage.logs.latestUnavailable')}
-        </span>
-        <span>
-          {t('usageLogsPage.logs.range', {
-            start: formatNumber(start),
-            end: formatNumber(end),
-            total: formatNumber(total),
-          })}
-        </span>
-        {liveRefresh.active ? (
-          <span>
-            {t('observabilityRefresh.status.cadence', {
-              seconds: Math.round(liveRefreshIntervalMs / 1000),
-            })}
-          </span>
-        ) : null}
-        {liveRefresh.enabled && liveRefreshLastSuccessAt ? (
-          <span>
-            {t('observabilityRefresh.status.lastSuccess', {
-              time: new Intl.DateTimeFormat(i18n.language, {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              }).format(new Date(liveRefreshLastSuccessAt)),
-            })}
-          </span>
-        ) : null}
-      </div>
+              })}
+            </span>
+          ) : records.length > 0 ? (
+            <span>{t('usageLogsPage.logs.latestUnavailable')}</span>
+          ) : null}
+          {liveRefresh.active ? (
+            <span>
+              {t('observabilityRefresh.status.cadence', {
+                seconds: Math.round(liveRefreshIntervalMs / 1000),
+              })}
+            </span>
+          ) : null}
+          {liveRefresh.enabled && liveRefreshLastSuccessAt ? (
+            <span>
+              {t('observabilityRefresh.status.lastSuccess', {
+                time: new Intl.DateTimeFormat(i18n.language, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                }).format(new Date(liveRefreshLastSuccessAt)),
+              })}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <LiveRefreshStatusNotice
         id={liveRefreshStatusId}
         enabled={liveRefresh.enabled}
@@ -5336,7 +5351,7 @@ export function RuntimeLogViewer({
               total={total}
               canGoPrevious={canGoPrevious}
               canGoNext={canGoNext}
-              mutating={mutating}
+              mutating={fetching || mutating}
               onPageSizeChange={onPageSizeChange}
               onPrevious={() => onOffsetChange(Math.max(0, effectiveOffset - effectiveLimit))}
               onNext={() => onOffsetChange(effectiveOffset + effectiveLimit)}
@@ -5428,13 +5443,15 @@ function RuntimeLogPagination({
 
   return (
     <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-muted-foreground text-sm">
-        {t('usageLogsPage.logs.pagination.range', {
+      <TablePaginationStatus
+        text={t('usageLogsPage.logs.pagination.range', {
           start: formatNumber(start),
           end: formatNumber(end),
           total: formatNumber(total),
         })}
-      </p>
+        announcementKey={`${start}:${end}:${pageSize}`}
+        busy={mutating}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2">
           <span className="text-muted-foreground text-sm">
@@ -5445,7 +5462,11 @@ function RuntimeLogPagination({
             disabled={mutating}
             onValueChange={(nextValue) => onPageSizeChange(Number(nextValue))}
           >
-            <SelectTrigger className="w-24" size="sm">
+            <SelectTrigger
+              className="w-24"
+              size="sm"
+              aria-label={t('usageLogsPage.logs.pagination.pageSize')}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

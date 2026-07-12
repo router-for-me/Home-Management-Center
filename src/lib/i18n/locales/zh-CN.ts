@@ -329,6 +329,7 @@ export const zhCN = {
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 条',
           rows: '{{count}} 条',
+          pageSize: '每页条数',
           previous: '上一页',
           next: '下一页',
         },
@@ -543,6 +544,7 @@ export const zhCN = {
       pagination: {
         range: '{{start}}-{{end}} / 共 {{total}} 条',
         rows: '{{count}} 条',
+        pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
       },
@@ -577,7 +579,6 @@ export const zhCN = {
       },
       charges: {
         title: '扣款明细',
-        description: '查看每次请求的扣款结果、Token 用量和余额变化。',
         empty: '当前时间范围内没有扣款明细。',
         tokenSummary: '入 {{input}} / 出 {{output}} / 缓 {{cache}}',
         columns: {
@@ -630,7 +631,6 @@ export const zhCN = {
       },
       balance: {
         title: '余额记录',
-        description: '查看用户余额的充值、扣减和变动记录。',
         empty: '当前时间范围内没有余额记录。',
         types: {
           recharge: '充值',
@@ -1711,7 +1711,6 @@ export const zhCN = {
       },
       list: {
         title: '凭证资源',
-        description: '管理通过 OAuth 登录或文件导入生成的账号凭证。',
         filterPlaceholder: '筛选凭证',
         empty: '当前筛选条件下没有凭证。',
         credential: '凭证 / 账号',
@@ -2218,7 +2217,6 @@ export const zhCN = {
       },
       workspace: {
         title: '访问工作台',
-        description: '在同一个工作台里维护用户、密钥归属、凭证范围和模型范围。',
         filterPlaceholder: '筛选用户、密钥或范围',
       },
       tabs: {
@@ -2956,8 +2954,7 @@ export const zhCN = {
         ready: {
           title: '请求事件日志已就绪',
           badge: '可排障',
-          description:
-            '已加载 {{count}} 条请求事件，可按请求、模型、节点、凭证、状态和延迟进行排查。',
+          description: '可按请求、模型、节点、凭证、状态和延迟排查请求事件。',
         },
         empty: {
           title: '暂无请求事件',
@@ -3056,7 +3053,6 @@ export const zhCN = {
       },
       table: {
         title: '请求事件',
-        description: '按请求级事件查看模型、节点、凭证、客户端、Token、延迟和错误摘要。',
         columnsButton: '列',
         columnsMenu: '显示列',
         ttft: 'TTFT {{value}}',
@@ -3066,9 +3062,8 @@ export const zhCN = {
         errorTitle: '请求事件加载失败',
         unsupportedTitle: '请求事件接口不可用',
         unsupportedDescription: '当前运行时未提供 /request-events，等待后端补齐后可使用此页面。',
-        resultCount: '共 {{total}} 条事件',
         range: '第 {{start}}-{{end}} 条，共 {{total}} 条',
-        pageSize: '每页',
+        pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
         columns: {
@@ -3524,7 +3519,7 @@ export const zhCN = {
         unavailable: '请求级用量明细未开放。',
         errorTitle: '请求明细加载失败',
         clearFilters: '清除筛选',
-        pageSize: '每页',
+        pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
         ttft: 'TTFT {{value}}',
@@ -3620,7 +3615,7 @@ export const zhCN = {
         unavailableTitle: '此运行时不提供执行凭证用量',
         unavailable: '执行凭证用量聚合未开放。',
         errorTitle: '执行凭证用量加载失败',
-        pageSize: '每页',
+        pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
         columnsButton: '自定义列',
@@ -3744,7 +3739,6 @@ export const zhCN = {
       },
       logs: {
         title: '运行日志',
-        description: '分页读取运行日志。列表展示摘要，完整内容和请求元数据可在详情中查看。',
         unavailableTitle: '此运行时不提供运行日志',
         unavailable: '运行日志接口未开放。',
         fileLoggingDisabledTitle: '文件日志未启用',
@@ -3755,11 +3749,8 @@ export const zhCN = {
         filteredEmpty: '当前筛选条件下没有匹配的运行日志。',
         emptyPageTitle: '当前页无日志',
         emptyPage: '请返回上一页或重新同步。',
-        lineCount: '{{count}} 条',
-        latest: '最新时间：{{time}}',
-        latestUnavailable: '最新时间不可用',
-        total: '共 {{count}} 条',
-        range: '当前 {{start}}-{{end}} / 共 {{total}} 条',
+        latest: '最新日志：{{time}}',
+        latestUnavailable: '日志时间不可用',
         columns: {
           time: '时间',
           level: '级别',
@@ -3803,7 +3794,7 @@ export const zhCN = {
         },
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 条',
-          pageSize: '每页',
+          pageSize: '每页条数',
           previous: '上一页',
           next: '下一页',
         },
@@ -3816,7 +3807,7 @@ export const zhCN = {
       },
       errorLogs: {
         title: '错误日志文件',
-        description: '列出 request logging 关闭时生成的 error-*.log 文件，并支持按文件下载。',
+        description: '仅显示 request logging 关闭时生成的 error-*.log 文件。',
         unavailableTitle: '此运行时不提供错误日志文件',
         unavailable: '错误日志文件接口未开放。',
         emptyTitle: '暂无错误日志文件',
@@ -4154,8 +4145,7 @@ export const zhCN = {
       },
       table: {
         title: '插件商店',
-        description:
-          '安装、更新、卸载和查看 store 安装的插件。可用时，集群就绪状态会参考节点回报。',
+        description: '集群就绪状态会参考可用的节点回报。',
       },
       filters: {
         search: '搜索插件',

@@ -339,6 +339,7 @@ export const en = {
         pagination: {
           range: '{{start}}-{{end}} / {{total}} total',
           rows: '{{count}} rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },
@@ -565,6 +566,7 @@ export const en = {
       pagination: {
         range: '{{start}}-{{end}} / {{total}} total',
         rows: '{{count}} rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
       },
@@ -599,7 +601,6 @@ export const en = {
       },
       charges: {
         title: 'Charge records',
-        description: 'Review charge results, token usage, and balance changes for each request.',
         empty: 'No charge records in the selected range.',
         tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
         columns: {
@@ -652,7 +653,6 @@ export const en = {
       },
       balance: {
         title: 'Balance records',
-        description: 'Review user balance recharges, deductions, and balance changes.',
         empty: 'No balance records in the selected range.',
         types: {
           recharge: 'Recharge',
@@ -1774,7 +1774,6 @@ export const en = {
       },
       list: {
         title: 'Credential resources',
-        description: 'Manage account credentials created by OAuth login or file import.',
         filterPlaceholder: 'Filter credentials',
         empty: 'No credentials match the current filters.',
         credential: 'Credential / account',
@@ -1925,7 +1924,8 @@ export const en = {
       },
       list: {
         title: 'Access keys',
-        description: 'Keys returned by GET /api-keys. Server-side metadata is not assumed.',
+        description:
+          'These keys grant clients access to the Home Center server; they are not model provider keys.',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
@@ -2297,8 +2297,6 @@ export const en = {
       },
       workspace: {
         title: 'Access workspace',
-        description:
-          'Maintain users, key ownership, credential scopes, and model scopes in one workspace.',
         filterPlaceholder: 'Filter users, keys, or scopes',
       },
       tabs: {
@@ -3082,7 +3080,7 @@ export const en = {
           title: 'Request events are ready',
           badge: 'Investigable',
           description:
-            '{{count}} request events are loaded for filtering by request, model, node, credential, status, and latency.',
+            'Filter request events by request, model, node, credential, status, and latency.',
         },
         empty: {
           title: 'No request events yet',
@@ -3185,8 +3183,6 @@ export const en = {
       },
       table: {
         title: 'Request Events',
-        description:
-          'Inspect request-level events with model, node, credential, client, token, latency, and error context.',
         columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         ttft: 'TTFT {{value}}',
@@ -3198,9 +3194,8 @@ export const en = {
         unsupportedTitle: 'Request events API unavailable',
         unsupportedDescription:
           'This runtime does not expose /request-events. The page becomes available after the backend adds it.',
-        resultCount: '{{total}} events',
         range: '{{start}}-{{end}} of {{total}}',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columns: {
@@ -3672,7 +3667,7 @@ export const en = {
         unavailable: 'Request-level usage records are not exposed.',
         errorTitle: 'Request records failed to load',
         clearFilters: 'Clear filters',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         ttft: 'TTFT {{value}}',
@@ -3768,7 +3763,7 @@ export const en = {
         unavailableTitle: 'Execution credential usage is unavailable',
         unavailable: 'Execution credential usage aggregates are not exposed.',
         errorTitle: 'Execution credential usage failed to load',
-        pageSize: 'Rows',
+        pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
         columnsButton: 'Customize columns',
@@ -3894,8 +3889,6 @@ export const en = {
       },
       logs: {
         title: 'Runtime logs',
-        description:
-          'Read runtime logs with pagination. The table shows summaries; open details for full content and request metadata.',
         unavailableTitle: 'Runtime logs are unavailable',
         unavailable: 'The runtime logs route is not exposed.',
         fileLoggingDisabledTitle: 'File logging is disabled',
@@ -3906,11 +3899,8 @@ export const en = {
         filteredEmpty: 'No runtime logs match the current filters.',
         emptyPageTitle: 'No logs on this page',
         emptyPage: 'Go back one page or sync again.',
-        lineCount: '{{count}} lines',
-        latest: 'Latest timestamp: {{time}}',
-        latestUnavailable: 'Latest timestamp unavailable',
-        total: '{{count}} total',
-        range: 'Showing {{start}}-{{end}} of {{total}}',
+        latest: 'Latest log: {{time}}',
+        latestUnavailable: 'Log timestamp unavailable',
         columns: {
           time: 'Time',
           level: 'Level',
@@ -3954,7 +3944,7 @@ export const en = {
         },
         pagination: {
           range: '{{start}}-{{end}} of {{total}}',
-          pageSize: 'Rows',
+          pageSize: 'Rows per page',
           previous: 'Previous',
           next: 'Next',
         },
@@ -3967,8 +3957,7 @@ export const en = {
       },
       errorLogs: {
         title: 'Error log files',
-        description:
-          'Lists error-*.log files generated when request logging is disabled, with file download support.',
+        description: 'Shows only error-*.log files generated when request logging is disabled.',
         unavailableTitle: 'Error log files are unavailable',
         unavailable: 'The error log file route is not exposed.',
         emptyTitle: 'No error log files',
@@ -4317,8 +4306,7 @@ export const en = {
       },
       table: {
         title: 'Plugin store',
-        description:
-          'Install, update, uninstall, and inspect store-installed plugins. Cluster readiness is based on node reports when available.',
+        description: 'Cluster readiness uses node reports when available.',
       },
       filters: {
         search: 'Search plugins',
