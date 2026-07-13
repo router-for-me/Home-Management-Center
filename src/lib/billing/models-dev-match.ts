@@ -294,7 +294,6 @@ export function applyMultiplierToCost(
     output: cost.output * factor,
     cacheRead: includeCachePrices ? cost.cacheRead * factor : 0,
     cacheWrite: includeCachePrices ? cost.cacheWrite * factor : 0,
-    cacheWriteConfigured: includeCachePrices && cost.cacheWriteConfigured,
     request: cost.request * factor,
   }
 }

@@ -61,7 +61,6 @@ export type ModelPriceImportCost = {
   output: number
   cacheRead: number
   cacheWrite: number
-  cacheWriteConfigured: boolean
   request: number
 }
 
@@ -99,7 +98,6 @@ export type ModelPriceImportExistingRule = {
   outputPricePerMillion: number
   cacheReadPricePerMillion: number
   cacheWritePricePerMillion: number
-  cacheWritePriceConfigured: boolean
   requestPrice: number
   note: string | null
   updatedAt: string | null
@@ -109,7 +107,6 @@ export type ModelPriceImportExistingRule = {
 export type ModelPriceImportWriteRule = {
   serviceTier: string
   minInputTokens: number
-  cacheWritePriceConfigured: boolean
   source: ModelPriceSource
   enabled: boolean
   note: string | null

@@ -304,14 +304,6 @@ function RuleMetadata({
       </span>
       <span>
         <span className="text-muted-foreground">
-          {t('billingPage.prices.import.fields.cacheWriteConfigured')}{' '}
-        </span>
-        {row.writeRule.cacheWritePriceConfigured
-          ? t('billingPage.common.enabled')
-          : t('billingPage.common.disabled')}
-      </span>
-      <span>
-        <span className="text-muted-foreground">
           {t('billingPage.prices.import.fields.source')}{' '}
         </span>
         {row.writeRule.source}
@@ -759,7 +751,6 @@ export function ModelPriceImportSheet({
         'output',
         'cache_read',
         'cache_write',
-        'cache_write_configured',
         'request',
         'existing_source',
         'reason',
@@ -778,7 +769,6 @@ export function ModelPriceImportSheet({
         row.final?.output,
         row.final?.cacheRead,
         row.final?.cacheWrite,
-        row.final?.cacheWriteConfigured,
         row.final?.request,
         row.existing?.source,
         row.reasons[0]?.message || row.reasons[0]?.code,
@@ -915,7 +905,6 @@ export function ModelPriceImportSheet({
           ? {
               serviceTier: row.writeRule.serviceTier,
               minInputTokens: row.writeRule.minInputTokens,
-              cacheWritePriceConfigured: row.writeRule.cacheWritePriceConfigured,
             }
           : {}),
         inputPricePerMillion: row.final.input,

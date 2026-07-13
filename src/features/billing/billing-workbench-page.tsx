@@ -110,6 +110,7 @@ import type {
   ModelPriceSource,
 } from '@/lib/api/management/billing-types'
 import type { UserResource } from '@/lib/api/management/users'
+import { hasSeparateCacheWriteRate } from '@/lib/billing/cache-write-pricing'
 import type {
   ModelPriceImportApplyItem,
   ModelPriceImportApplyResult,
@@ -145,14 +146,10 @@ const modelPriceNumberFields = [
 ] as const
 
 type ModelPriceNumberField = (typeof modelPriceNumberFields)[number]
-type ModelPriceDraft = Omit<
-  ModelPriceInput,
-  ModelPriceNumberField | 'serviceTier' | 'cacheWritePriceConfigured'
-> & {
+type ModelPriceDraft = Omit<ModelPriceInput, ModelPriceNumberField | 'serviceTier'> & {
   [key in ModelPriceNumberField]: string
 } & {
   serviceTier: string
-  cacheWritePriceConfigured: boolean
 }
 
 function toProviderLogoId(provider: string) {
@@ -177,7 +174,6 @@ function toModelPriceInput(
       ? {
           serviceTier: resource.serviceTier,
           minInputTokens: resource.minInputTokens,
-          cacheWritePriceConfigured: resource.cacheWritePriceConfigured,
         }
       : {}),
     inputPricePerMillion: resource.inputPricePerMillion,
@@ -200,8 +196,6 @@ function createModelPriceDraft(resource: ModelPrice | null): ModelPriceDraft {
     outputPricePerMillion: String(resource?.outputPricePerMillion ?? 0),
     cacheReadPricePerMillion: String(resource?.cacheReadPricePerMillion ?? 0),
     cacheWritePricePerMillion: String(resource?.cacheWritePricePerMillion ?? 0),
-    cacheWritePriceConfigured:
-      resource?.cacheWritePriceConfigured ?? (resource?.cacheWritePricePerMillion ?? 0) !== 0,
     requestPrice: String(resource?.requestPrice ?? 0),
     enabled: resource?.enabled ?? true,
     note: resource?.note ?? '',
@@ -259,6 +253,39 @@ function formatMoney(value: number) {
 function formatSignedAmount(value: number) {
   const absolute = formatMoney(Math.abs(value))
   return value >= 0 ? `+${absolute}` : `-${absolute}`
+}
+
+function CacheWritePriceValue({
+  value,
+  t,
+  className,
+}: {
+  value: number
+  t: ReturnType<typeof useTranslation>['t']
+  className?: string
+}) {
+  if (hasSeparateCacheWriteRate(value)) {
+    return <span className={cn('tabular-nums', className)}>{formatMoney(value)}</span>
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            'text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex text-left text-xs leading-4 underline decoration-dotted underline-offset-2 transition-colors focus-visible:rounded-sm focus-visible:ring-2 focus-visible:outline-none',
+            className,
+          )}
+        >
+          {t('billingPage.prices.cacheWritePricing.noSeparateRate')}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-80">
+        {t('billingPage.prices.cacheWritePricing.noSeparateRateHint')}
+      </TooltipContent>
+    </Tooltip>
+  )
 }
 
 function formatUserIdentity(user: UserResource) {
@@ -1329,8 +1356,12 @@ function ModelPricesTab({
                     <TableCell className="tabular-nums">
                       {formatMoney(resource.cacheReadPricePerMillion)}
                     </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatMoney(resource.cacheWritePricePerMillion)}
+                    <TableCell>
+                      <CacheWritePriceValue
+                        value={resource.cacheWritePricePerMillion}
+                        t={t}
+                        className="whitespace-nowrap"
+                      />
                     </TableCell>
                     <TableCell className="tabular-nums">
                       {formatMoney(resource.requestPrice)}
@@ -1649,9 +1680,11 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
             <span className="text-muted-foreground">
               {t('billingPage.prices.columns.cacheWrite')}
             </span>
-            <span className="tabular-nums">
-              {formatMoney(record.priceSnapshot.cacheWritePricePerMillion)}
-            </span>
+            <CacheWritePriceValue
+              value={record.priceSnapshot.cacheWritePricePerMillion}
+              t={t}
+              className="max-w-[60%] justify-end text-right"
+            />
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground">{t('billingPage.prices.columns.request')}</span>
@@ -1917,7 +1950,6 @@ function ModelPriceSheet({
           ? {
               serviceTier: input.serviceTier.trim() || '*',
               minInputTokens,
-              cacheWritePriceConfigured: input.cacheWritePriceConfigured,
             }
           : {}),
         enabled: input.enabled,
@@ -2326,29 +2358,6 @@ function ModelPriceSheet({
               </CompactField>
             ))}
           </div>
-          {supportsRuleScopes ? (
-            <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
-              <div className="grid gap-0.5">
-                <span className="text-sm font-medium">
-                  {t('billingPage.prices.form.cacheWriteConfigured')}
-                </span>
-                <span className="text-muted-foreground text-xs leading-5">
-                  {t('billingPage.prices.form.cacheWriteConfiguredHint')}
-                </span>
-              </div>
-              <Switch
-                checked={input.cacheWritePriceConfigured}
-                disabled={mutating}
-                aria-label={t('billingPage.prices.form.cacheWriteConfigured')}
-                onCheckedChange={(checked) =>
-                  setInput((current) => ({
-                    ...current,
-                    cacheWritePriceConfigured: checked === true,
-                  }))
-                }
-              />
-            </div>
-          ) : null}
         </section>
         <section className="grid gap-3 rounded-md border px-3 py-3">
           <div>

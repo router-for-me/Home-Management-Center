@@ -44,7 +44,6 @@ const costSchema = z.object({
   output: z.number().nonnegative(),
   cache_read: z.number().nonnegative(),
   cache_write: z.number().nonnegative(),
-  cache_write_configured: z.boolean().optional(),
   request: z.number().nonnegative(),
 })
 
@@ -66,7 +65,6 @@ const existingRuleSchema = z.object({
   output_price_per_million: z.number().nonnegative(),
   cache_read_price_per_million: z.number().nonnegative(),
   cache_write_price_per_million: z.number().nonnegative(),
-  cache_write_price_configured: z.boolean(),
   request_price: z.number().nonnegative(),
   note: z.string().nullable().optional(),
   updated_at: z.string().nullable().optional(),
@@ -76,7 +74,6 @@ const existingRuleSchema = z.object({
 const writeRuleSchema = z.object({
   service_tier: z.string().min(1),
   min_input_tokens: z.number().int().nonnegative(),
-  cache_write_price_configured: z.boolean(),
   source: z.enum(['manual', 'default', 'sync']),
   enabled: z.boolean(),
   note: z.string().nullable().optional(),
@@ -179,7 +176,6 @@ function normalizeCost(value: z.infer<typeof costSchema>) {
     output: value.output,
     cacheRead: value.cache_read,
     cacheWrite: value.cache_write,
-    cacheWriteConfigured: value.cache_write_configured ?? value.cache_write !== 0,
     request: value.request,
   }
 }
@@ -219,7 +215,6 @@ function normalizePreviewRow(value: z.infer<typeof previewRowSchema>): ModelPric
       ? {
           serviceTier: value.write_rule.service_tier,
           minInputTokens: value.write_rule.min_input_tokens,
-          cacheWritePriceConfigured: value.write_rule.cache_write_price_configured,
           source: value.write_rule.source,
           enabled: value.write_rule.enabled,
           note: value.write_rule.note ?? null,
@@ -238,7 +233,6 @@ function normalizePreviewRow(value: z.infer<typeof previewRowSchema>): ModelPric
           outputPricePerMillion: value.existing_rule.output_price_per_million,
           cacheReadPricePerMillion: value.existing_rule.cache_read_price_per_million,
           cacheWritePricePerMillion: value.existing_rule.cache_write_price_per_million,
-          cacheWritePriceConfigured: value.existing_rule.cache_write_price_configured,
           requestPrice: value.existing_rule.request_price,
           note: value.existing_rule.note ?? null,
           updatedAt: value.existing_rule.updated_at ?? null,
@@ -338,14 +332,6 @@ function assertPreviewPriceEvidence(
     if (!numbersEqual(row.final[field], expectedFinal[field])) {
       invalidResponse(`row ${row.key} final ${field} does not match official price and multiplier`)
     }
-  }
-
-  const cacheWriteConfigured = includeCache && row.official.cacheWriteConfigured
-  if (
-    row.final.cacheWriteConfigured !== cacheWriteConfigured ||
-    row.writeRule.cacheWritePriceConfigured !== cacheWriteConfigured
-  ) {
-    invalidResponse(`row ${row.key} cache-write configured evidence is inconsistent`)
   }
 }
 

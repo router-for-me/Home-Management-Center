@@ -38,13 +38,18 @@ function createPreviewInput(
   }
 }
 
-function createPreviewRow(key: string, minInputTokens: number, input: number, output: number) {
+function createPreviewRow(
+  key: string,
+  minInputTokens: number,
+  input: number,
+  output: number,
+  cacheWrite: number,
+) {
   const cost = {
     input,
     output,
     cache_read: input / 10,
-    cache_write: 0,
-    cache_write_configured: false,
+    cache_write: cacheWrite,
     request: 0,
   }
   return {
@@ -67,7 +72,6 @@ function createPreviewRow(key: string, minInputTokens: number, input: number, ou
     write_rule: {
       service_tier: '*',
       min_input_tokens: minInputTokens,
-      cache_write_price_configured: false,
       source: 'sync',
       enabled: true,
       note: 'Synced from models.dev (openai/gpt-5.5).',
@@ -90,8 +94,8 @@ function createPreviewResponse() {
       source_version: 'catalog-version-1',
       source_model_count: 1,
       rows: [
-        createPreviewRow(BASE_KEY, 0, 2, 8),
-        createPreviewRow(LARGE_CONTEXT_KEY, 272001, 4, 16),
+        createPreviewRow(BASE_KEY, 0, 2, 8, 2.5),
+        createPreviewRow(LARGE_CONTEXT_KEY, 272001, 4, 16, 5),
       ],
       summary: {
         total: 2,
@@ -121,7 +125,6 @@ function createExistingRule() {
     output_price_per_million: 4,
     cache_read_price_per_million: 0.1,
     cache_write_price_per_million: 0,
-    cache_write_price_configured: false,
     request_price: 0,
     note: 'Operator-maintained rule',
     updated_at: '2026-07-09T00:00:00Z',
@@ -205,10 +208,36 @@ describe('model price import Management API contract', () => {
     expect(preview.summary).toMatchObject({ total: 2, creates: 2 })
     expect(preview.rows.map((row) => row.key)).toEqual(SELECTED_KEYS)
     expect(preview.rows.map((row) => row.minInputTokens)).toEqual([0, 272001])
+    expect(preview.rows.map((row) => row.final?.cacheWrite)).toEqual([2.5, 5])
     expect(preview.rows[1].writeRule).toMatchObject({
       serviceTier: '*',
       minInputTokens: 272001,
     })
+  })
+
+  test('accepts legacy cache-write flags as ignored response metadata', () => {
+    const response = createPreviewResponse()
+    for (const row of response.preview.rows) {
+      ;(row.official as Record<string, unknown>).cache_write_configured = true
+      ;(row.final as Record<string, unknown>).cache_write_configured = true
+      ;(row.write_rule as Record<string, unknown>).cache_write_price_configured = true
+    }
+    response.preview.rows[0].action = 'overwrite'
+    response.preview.rows[0].existing_rule = {
+      ...createExistingRule(),
+      cache_write_price_configured: false,
+    }
+    response.preview.summary.creates = 1
+    response.preview.summary.overwrites = 1
+
+    const preview = normalizeModelPriceImportPreview(
+      response,
+      createPreviewInput({ overwriteMode: 'all' }),
+    )
+
+    expect(preview.rows.map((row) => row.final?.cacheWrite)).toEqual([2.5, 5])
+    expect(preview.rows[0].writeRule).not.toHaveProperty('cacheWritePriceConfigured')
+    expect(preview.rows[0].existing).not.toHaveProperty('cacheWritePriceConfigured')
   })
 
   test('rejects duplicate scopes and duplicate row keys', () => {

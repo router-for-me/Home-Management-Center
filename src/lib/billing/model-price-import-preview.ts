@@ -41,7 +41,6 @@ function toExistingRule(price: ModelPrice) {
     outputPricePerMillion: price.outputPricePerMillion,
     cacheReadPricePerMillion: price.cacheReadPricePerMillion,
     cacheWritePricePerMillion: price.cacheWritePricePerMillion,
-    cacheWritePriceConfigured: price.cacheWritePriceConfigured,
     requestPrice: price.requestPrice,
     note: price.note,
     updatedAt: price.updatedAt || null,
@@ -89,7 +88,6 @@ export function createCompatibilityModelPriceImportPreview(input: {
         ? {
             serviceTier: '*',
             minInputTokens: 0,
-            cacheWritePriceConfigured: row.final.cacheWriteConfigured,
             source: 'sync',
             enabled: row.existing?.enabled ?? true,
             note: buildImportNote(row, input.catalog.fetchedAt),
