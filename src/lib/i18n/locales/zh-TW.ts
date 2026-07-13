@@ -688,6 +688,11 @@ export const zhTW = {
           state: '狀態',
           updatedAt: '更新時間',
         },
+        cacheWritePricing: {
+          noSeparateRate: '無獨立費率',
+          noSeparateRateHint:
+            '快取寫入價格為 0 時不使用獨立費率。OpenAI 風格請求中的快取寫入 Token 仍按輸入價格計費；其他協定按各自的 Token bucket 計費。',
+        },
         sources: {
           manual: '手動',
           default: '預設',
@@ -745,11 +750,10 @@ export const zhTW = {
           output: '輸出價格，每百萬 Token',
           cacheRead: '快取讀取價格，每百萬 Token',
           cacheWrite: '快取寫入價格，每百萬 Token',
-          cacheWriteConfigured: '獨立快取寫入計價',
-          cacheWriteConfiguredHint: '啟用後，明確回報的快取寫入 Token 使用此 bucket，包括零價格。',
           request: '單次請求價格',
           pricing: '價格規則',
-          pricingHint: '這些價格用於後續扣款計算；歷史扣款記錄仍保留建立時的價格快照。',
+          pricingHint:
+            '這些價格用於後續扣款計算；快取寫入價格大於 0 時使用獨立費率。設為 0 表示不使用獨立費率，OpenAI 風格請求中的快取寫入 Token 仍按輸入價格計費。歷史扣款記錄仍保留建立時的價格快照。',
           batchHint: '可一次選擇多個模型；價格僅用於後續扣款，歷史請求不自動補算。',
           state: '記錄狀態',
           stateHint: '啟用狀態只影響這條價格規則是否參與後續扣款計算。',
@@ -919,7 +923,6 @@ export const zhTW = {
           fields: {
             serviceTier: '服務層級',
             minInputTokens: '起始 Token',
-            cacheWriteConfigured: '獨立快取寫入',
             input: '輸入',
             output: '輸出',
             cacheRead: '快取讀',

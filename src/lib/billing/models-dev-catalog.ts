@@ -5,7 +5,6 @@ export type ModelsDevCost = {
   output: number
   cacheRead: number
   cacheWrite: number
-  cacheWriteConfigured: boolean
   request: number
 }
 
@@ -73,7 +72,6 @@ function normalizeCost(value: unknown): ModelsDevCost | null {
     output: output ?? 0,
     cacheRead: cacheRead ?? 0,
     cacheWrite: cacheWrite ?? 0,
-    cacheWriteConfigured: cacheWrite !== null,
     request: request ?? 0,
   }
 }

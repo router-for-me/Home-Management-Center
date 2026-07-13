@@ -43,7 +43,6 @@ export type ModelPriceSnapshot = {
   outputPricePerMillion: number
   cacheReadPricePerMillion: number
   cacheWritePricePerMillion: number
-  cacheWritePriceConfigured: boolean
   requestPrice: number
   requestedServiceTier: string | null
   responseServiceTier: string | null
@@ -120,7 +119,6 @@ export type ModelPrice = {
   outputPricePerMillion: number
   cacheReadPricePerMillion: number
   cacheWritePricePerMillion: number
-  cacheWritePriceConfigured: boolean
   requestPrice: number
   source: ModelPriceSource
   enabled: boolean
@@ -189,7 +187,6 @@ export type ModelPriceInput = {
   outputPricePerMillion: number
   cacheReadPricePerMillion: number
   cacheWritePricePerMillion: number
-  cacheWritePriceConfigured?: boolean
   requestPrice: number
   enabled: boolean
   note?: string
