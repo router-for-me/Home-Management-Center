@@ -711,6 +711,11 @@ export const en = {
           state: 'State',
           updatedAt: 'Updated',
         },
+        cacheWritePricing: {
+          noSeparateRate: 'No separate rate',
+          noSeparateRateHint:
+            'A zero cache-write price disables the separate rate. OpenAI-style cache-write tokens remain billed at the input price; other protocols use their own token-bucket rules.',
+        },
         sources: {
           manual: 'Manual',
           default: 'Default',
@@ -771,13 +776,10 @@ export const en = {
           output: 'Output price per million tokens',
           cacheRead: 'Cache read price per million tokens',
           cacheWrite: 'Cache write price per million tokens',
-          cacheWriteConfigured: 'Separate cache-write pricing',
-          cacheWriteConfiguredHint:
-            'When enabled, explicit cache-write tokens use this bucket, including a zero price.',
           request: 'Per-request price',
           pricing: 'Price rules',
           pricingHint:
-            'These prices apply to future charge calculations; historical charges keep their original price snapshot.',
+            'These prices apply to future charges. A cache-write price above zero uses a separate rate. At zero, OpenAI-style cache-write tokens remain billed at the input price. Historical charges keep their original price snapshot.',
           batchHint:
             'Select one or more models. Prices apply only to future charges; history is not recalculated.',
           state: 'Record state',
@@ -956,7 +958,6 @@ export const en = {
           fields: {
             serviceTier: 'Service tier',
             minInputTokens: 'Starting tokens',
-            cacheWriteConfigured: 'Separate cache write',
             input: 'Input',
             output: 'Output',
             cacheRead: 'Cache R',

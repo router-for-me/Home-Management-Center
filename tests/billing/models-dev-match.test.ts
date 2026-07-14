@@ -139,14 +139,12 @@ const edgeCatalog = parseModelsDevCatalog({
 })
 
 describe('models-dev match', () => {
-  test('preserves whether models.dev explicitly configured a cache-write price', () => {
+  test('normalizes omitted models.dev cache-write prices to zero', () => {
     const configured = sampleCatalog.models.find((entry) => entry.modelId === 'claude-sonnet-4-6')
     const omitted = sampleCatalog.models.find((entry) => entry.modelId === 'gemini-3.5-flash')
 
     expect(configured?.cost?.cacheWrite).toBe(3.75)
-    expect(configured?.cost?.cacheWriteConfigured).toBe(true)
     expect(omitted?.cost?.cacheWrite).toBe(0)
-    expect(omitted?.cost?.cacheWriteConfigured).toBe(false)
   })
 
   test('resolves antigravity aliases and applies family multipliers only after match', () => {
@@ -195,7 +193,6 @@ describe('models-dev match', () => {
         output: 4,
         cacheRead: 1,
         cacheWrite: 3,
-        cacheWriteConfigured: true,
         request: 0,
       },
       2,
@@ -206,7 +203,6 @@ describe('models-dev match', () => {
       output: 8,
       cacheRead: 0,
       cacheWrite: 0,
-      cacheWriteConfigured: false,
       request: 0,
     })
   })
@@ -417,7 +413,6 @@ describe('models-dev match', () => {
       output: 0,
       cacheRead: 0,
       cacheWrite: 0,
-      cacheWriteConfigured: true,
       request: 0,
     })
     expect(isModelPriceImportRowApplicable(rows[0], 'missing')).toBe(true)
@@ -447,7 +442,6 @@ describe('models-dev match', () => {
           outputPricePerMillion: 2,
           cacheReadPricePerMillion: 0,
           cacheWritePricePerMillion: 0,
-          cacheWritePriceConfigured: false,
           requestPrice: 0,
         },
         {
@@ -462,7 +456,6 @@ describe('models-dev match', () => {
           outputPricePerMillion: 18,
           cacheReadPricePerMillion: 0,
           cacheWritePricePerMillion: 0,
-          cacheWritePriceConfigured: false,
           requestPrice: 0,
         },
       ],
@@ -497,7 +490,6 @@ describe('models-dev match', () => {
           outputPricePerMillion: 150,
           cacheReadPricePerMillion: 3,
           cacheWritePricePerMillion: 37.5,
-          cacheWritePriceConfigured: true,
           requestPrice: 0,
           note: 'Priority tier override',
         },

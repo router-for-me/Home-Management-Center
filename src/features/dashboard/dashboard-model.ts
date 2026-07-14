@@ -1,4 +1,5 @@
 import type { DashboardSnapshot } from '@/lib/api/management/dashboard'
+import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 import type { UsageActivityStatus, UsageAggregateItem } from '@/lib/api/management/usage-logs'
 
@@ -156,22 +157,6 @@ export type DashboardOverviewViewModel = {
 
 function readBoolean(config: Record<string, unknown>, key: string): boolean {
   return config[key] === true
-}
-
-function readRoutingStrategy(config: Record<string, unknown>): string {
-  const routing = config.routing
-
-  if (typeof routing !== 'object' || routing === null || Array.isArray(routing)) {
-    return 'unknown'
-  }
-
-  const strategy = (routing as Record<string, unknown>).strategy
-  if (typeof strategy !== 'string') return 'unknown'
-
-  const normalizedStrategy = strategy.trim()
-  return normalizedStrategy && normalizedStrategy.toLowerCase() !== 'unknown'
-    ? normalizedStrategy
-    : 'unknown'
 }
 
 function getDashboardCapabilityTone(id: DashboardCapabilityId): DashboardTone {
@@ -427,7 +412,7 @@ export function createDashboardOverviewViewModel(
   const activeCredentials = snapshot.authFiles.filter(
     (authFile) => !authFile.disabled && !authFile.unavailable,
   ).length
-  const routingStrategy = readRoutingStrategy(snapshot.config)
+  const routingStrategy = readManagementRoutingStrategy(snapshot.config)
   const debugEnabled = readBoolean(snapshot.config, 'debug')
   const nodeTopologySupported = capabilities.topology || capabilities.nodes
   const nodeCount = snapshot.nodeTopology?.cpaCount ?? snapshot.nodes.length

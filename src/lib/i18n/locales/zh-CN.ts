@@ -689,6 +689,11 @@ export const zhCN = {
           state: '状态',
           updatedAt: '更新时间',
         },
+        cacheWritePricing: {
+          noSeparateRate: '无独立费率',
+          noSeparateRateHint:
+            '缓存写入价格为 0 时不使用独立费率。OpenAI 风格请求中的缓存写入 Token 仍按输入价格计费；其他协议按各自的 Token bucket 计费。',
+        },
         sources: {
           manual: '手动',
           default: '默认',
@@ -746,11 +751,10 @@ export const zhCN = {
           output: '输出价格，每百万 Token',
           cacheRead: '缓存读取价格，每百万 Token',
           cacheWrite: '缓存写入价格，每百万 Token',
-          cacheWriteConfigured: '独立缓存写入计价',
-          cacheWriteConfiguredHint: '启用后，明确上报的缓存写入 Token 使用此 bucket，包括零价格。',
           request: '单次请求价格',
           pricing: '价格规则',
-          pricingHint: '这些价格用于后续扣款计算；历史扣款记录仍保留创建时的价格快照。',
+          pricingHint:
+            '这些价格用于后续扣款计算；缓存写入价格大于 0 时使用独立费率。设为 0 表示不使用独立费率，OpenAI 风格请求中的缓存写入 Token 仍按输入价格计费。历史扣款记录仍保留创建时的价格快照。',
           batchHint: '可一次选择多个模型；价格仅用于后续扣款，历史请求不自动补算。',
           state: '记录状态',
           stateHint: '启用状态只影响这条价格规则是否参与后续扣款计算。',
@@ -920,7 +924,6 @@ export const zhCN = {
           fields: {
             serviceTier: '服务层级',
             minInputTokens: '起始 Token',
-            cacheWriteConfigured: '独立缓存写',
             input: '输入',
             output: '输出',
             cacheRead: '缓存读',

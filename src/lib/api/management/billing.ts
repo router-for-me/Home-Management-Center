@@ -158,9 +158,6 @@ export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
   const record = toRecord(value)
   const source = readString(record, ['service_tier_source', 'serviceTierSource'])
   const tokenBucketsRecord = toRecord(record.token_buckets ?? record.tokenBuckets)
-  const cacheWritePricePerMillion =
-    readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0
-
   return {
     schemaVersion: readNumber(record, ['schema_version', 'schemaVersion']),
     provider: readString(record, ['provider']) ?? '',
@@ -173,12 +170,8 @@ export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
       readNumber(record, ['output_price_per_million', 'outputPricePerMillion']) ?? 0,
     cacheReadPricePerMillion:
       readNumber(record, ['cache_read_price_per_million', 'cacheReadPricePerMillion']) ?? 0,
-    cacheWritePricePerMillion,
-    cacheWritePriceConfigured: readBoolean(
-      record,
-      ['cache_write_price_configured', 'cacheWritePriceConfigured'],
-      cacheWritePricePerMillion !== 0,
-    ),
+    cacheWritePricePerMillion:
+      readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0,
     requestPrice: readNumber(record, ['request_price', 'requestPrice']) ?? 0,
     requestedServiceTier: readString(record, ['requested_service_tier', 'requestedServiceTier']),
     responseServiceTier: readString(record, ['response_service_tier', 'responseServiceTier']),
@@ -312,12 +305,6 @@ export function normalizeModelPrice(value: unknown, index: number): ModelPrice {
       readNumber(record, ['cache_read_price_per_million', 'cacheReadPricePerMillion']) ?? 0,
     cacheWritePricePerMillion:
       readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0,
-    cacheWritePriceConfigured: readBoolean(
-      record,
-      ['cache_write_price_configured', 'cacheWritePriceConfigured'],
-      (readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0) !==
-        0,
-    ),
     requestPrice: readNumber(record, ['request_price', 'requestPrice']) ?? 0,
     source: normalizeModelPriceSource(readString(record, ['source'])),
     enabled: readBoolean(record, ['enabled'], true),
@@ -362,9 +349,6 @@ export function toModelPricePayload(input: ModelPriceInput) {
     output_price_per_million: input.outputPricePerMillion,
     cache_read_price_per_million: input.cacheReadPricePerMillion,
     cache_write_price_per_million: input.cacheWritePricePerMillion,
-    ...(input.cacheWritePriceConfigured === undefined
-      ? {}
-      : { cache_write_price_configured: input.cacheWritePriceConfigured }),
     request_price: input.requestPrice,
     enabled: input.enabled,
     note: input.note?.trim() || undefined,

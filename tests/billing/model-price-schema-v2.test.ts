@@ -5,6 +5,7 @@ import {
   normalizePriceSnapshot,
   toModelPricePayload,
 } from '../../src/lib/api/management/billing'
+import { hasSeparateCacheWriteRate } from '../../src/lib/billing/cache-write-pricing'
 
 describe('billing model price schema v2 adapter', () => {
   test('keeps collection schema version even when the list is empty', () => {
@@ -38,7 +39,7 @@ describe('billing model price schema v2 adapter', () => {
     ])
   })
 
-  test('includes schema-v2 fields when provided and omits them for legacy writes', () => {
+  test('includes schema-v2 scope fields without the removed cache-write flag', () => {
     const v2 = toModelPricePayload({
       provider: 'openai',
       model: 'gpt-5.5',
@@ -48,7 +49,6 @@ describe('billing model price schema v2 adapter', () => {
       outputPricePerMillion: 8,
       cacheReadPricePerMillion: 0.2,
       cacheWritePricePerMillion: 0,
-      cacheWritePriceConfigured: true,
       requestPrice: 0,
       enabled: true,
     })
@@ -66,11 +66,52 @@ describe('billing model price schema v2 adapter', () => {
     expect(v2).toMatchObject({
       service_tier: 'priority',
       min_input_tokens: 272001,
-      cache_write_price_configured: true,
+      cache_write_price_per_million: 0,
     })
+    expect(v2).not.toHaveProperty('cache_write_price_configured')
     expect(legacy).not.toHaveProperty('service_tier')
     expect(legacy).not.toHaveProperty('min_input_tokens')
     expect(legacy).not.toHaveProperty('cache_write_price_configured')
+  })
+
+  test('keeps positive cache-write prices and ignores legacy configured flags', () => {
+    const payload = toModelPricePayload({
+      provider: 'openai',
+      model: 'gpt-5.6',
+      serviceTier: '*',
+      minInputTokens: 0,
+      inputPricePerMillion: 2,
+      outputPricePerMillion: 8,
+      cacheReadPricePerMillion: 0.2,
+      cacheWritePricePerMillion: 2.5,
+      requestPrice: 0,
+      enabled: true,
+    })
+    const response = normalizeModelPriceListResponse({
+      price_rule_schema_version: 2,
+      items: [
+        {
+          id: 'price-1',
+          provider: 'openai',
+          model: 'gpt-5.6',
+          cache_write_price_per_million: 2.5,
+          cache_write_price_configured: true,
+        },
+      ],
+    })
+
+    expect(payload.cache_write_price_per_million).toBe(2.5)
+    expect(payload).not.toHaveProperty('cache_write_price_configured')
+    expect(response.items[0].cacheWritePricePerMillion).toBe(2.5)
+    expect(response.items[0]).not.toHaveProperty('cacheWritePriceConfigured')
+  })
+
+  test('uses the backend positive-price boundary for separate cache-write rates', () => {
+    expect(hasSeparateCacheWriteRate(0)).toBe(false)
+    expect(hasSeparateCacheWriteRate(-1)).toBe(false)
+    expect(hasSeparateCacheWriteRate(Number.NaN)).toBe(false)
+    expect(hasSeparateCacheWriteRate(Number.POSITIVE_INFINITY)).toBe(false)
+    expect(hasSeparateCacheWriteRate(0.000001)).toBe(true)
   })
 
   test('normalizes immutable tier, band, fallback, and token-bucket evidence', () => {
@@ -84,7 +125,6 @@ describe('billing model price schema v2 adapter', () => {
       output_price_per_million: 8,
       cache_read_price_per_million: 0.2,
       cache_write_price_per_million: 0,
-      cache_write_price_configured: true,
       request_price: 0,
       requested_service_tier: 'priority',
       response_service_tier: null,
@@ -111,7 +151,7 @@ describe('billing model price schema v2 adapter', () => {
       effectiveServiceTier: 'priority',
       responseServiceTierFallback: true,
       inputTokensForBand: 300000,
-      cacheWritePriceConfigured: true,
+      cacheWritePricePerMillion: 0,
       tokenBuckets: {
         uncachedInput: 299700,
         cacheRead: 200,

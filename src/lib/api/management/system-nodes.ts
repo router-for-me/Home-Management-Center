@@ -1,6 +1,7 @@
 import type { AxiosResponse } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { CapabilityMap, ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
@@ -199,12 +200,6 @@ function readResponseHeader(response: AxiosResponse, name: string): string | nul
   return null
 }
 
-function readRoutingStrategy(record: UnknownRecord): string {
-  const strategy = readString(record, 'strategy')
-
-  return strategy && strategy.toLowerCase() !== 'unknown' ? strategy : 'unknown'
-}
-
 function readBoolean(record: UnknownRecord, key: string): boolean {
   return record[key] === true
 }
@@ -246,14 +241,13 @@ async function readOptional<T>(
 
 function normalizeConfigSummary(responseData: unknown): SystemConfigSummary {
   const config = toRecord(responseData)
-  const routing = toRecord(config.routing)
 
   return {
     debug: readBoolean(config, 'debug'),
     requestLog: readBoolean(config, 'request-log'),
     usageStatistics: readBoolean(config, 'usage-statistics-enabled'),
     loggingToFile: readBoolean(config, 'logging-to-file'),
-    routingStrategy: readRoutingStrategy(routing),
+    routingStrategy: readManagementRoutingStrategy(config),
     proxyConfigured: Boolean(readString(config, 'proxy-url')),
   }
 }
