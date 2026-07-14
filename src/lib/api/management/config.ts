@@ -2,6 +2,7 @@ import { Document, isMap, isScalar, parseDocument, parse as parseYaml } from 'ya
 import type { Scalar } from 'yaml'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
@@ -542,7 +543,6 @@ function createYamlBackedChangeTextPatch(
 }
 
 function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
-  const routing = toRecord(rawConfig.routing)
   const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
   const tls = toRecord(rawConfig.tls)
   const remoteManagement = toRecord(rawConfig['remote-management'])
@@ -576,7 +576,7 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     requestRetry: readNumber(rawConfig, 'request-retry'),
     maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
     forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
-    routingStrategy: readString(routing, 'strategy', 'round-robin'),
+    routingStrategy: readManagementRoutingStrategy(rawConfig),
     quotaSwitchProject: readBoolean(quotaExceeded, 'switch-project'),
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
     oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),

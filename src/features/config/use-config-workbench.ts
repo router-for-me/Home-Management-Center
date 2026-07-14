@@ -78,7 +78,10 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
   })
 
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: ['management-dashboard-overview'] }),
+    ])
   }
 
   const structuredMutation = useMutation({
