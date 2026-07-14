@@ -1214,7 +1214,11 @@ export function DashboardConsolePage() {
                 </Link>
               </Button>
               <p className="text-muted-foreground mt-3 max-w-md text-xs leading-5">
-                {t('dashboard.providers.emptySupportedProviders')}
+                {t(
+                  viewModel.runtimeMode === 'cpa'
+                    ? 'dashboard.providers.emptySupportedProvidersCpa'
+                    : 'dashboard.providers.emptySupportedProviders',
+                )}
               </p>
             </div>
           ) : (

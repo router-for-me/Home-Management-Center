@@ -1323,6 +1323,8 @@ export const ru = {
         emptyDescription:
           'Модельные ключи пока не настроены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
         emptySupportedProviders:
+          'Поддерживаются Gemini, Claude, Codex, xAI, Vertex и OpenAI-compatible сервисы.',
+        emptySupportedProvidersCpa:
           'Поддерживаются Gemini, Claude, Codex, Vertex и OpenAI-compatible сервисы.',
         configureAction: 'Настроить модельный сервис',
         total: 'Всего',
@@ -1333,6 +1335,7 @@ export const ru = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1389,6 +1392,7 @@ export const ru = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1429,6 +1433,8 @@ export const ru = {
         cancel: 'Отмена',
         view: 'Открыть',
         edit: 'Изменить',
+        enable: 'Включить',
+        disable: 'Отключить',
         delete: 'Удалить',
       },
       categories: {
@@ -1440,6 +1446,7 @@ export const ru = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1448,6 +1455,10 @@ export const ru = {
         filterPlaceholder: 'Фильтр модельных ключей',
         empty: 'Нет модельных ключей для текущего поставщика моделей и фильтра.',
         providerIssue: 'Этот маршрут поставщика моделей вернул проблему',
+        providerUnsupported: 'Этот runtime не поддерживает маршрут поставщика моделей',
+        unsupportedTitle: 'Поставщик моделей не поддерживается этим runtime',
+        unsupportedDescription:
+          'Подключитесь к Home backend с необходимым маршрутом Management API.',
         key: 'Key / identity',
         baseUrl: 'Base URL',
         prefix: 'Prefix',
@@ -1491,6 +1502,7 @@ export const ru = {
       },
       status: {
         active: 'Активно',
+        enabled: 'Включено',
         disabled: 'Отключено',
         none: 'Нет',
         notSet: 'Не задано',
@@ -1500,6 +1512,10 @@ export const ru = {
         title: 'Детали модельного ключа',
         empty: 'Выберите модельный ключ или создайте новую запись.',
         metadataTitle: 'Дополнительные метаданные',
+        statusActionTitle: 'Статус модельного ключа',
+        enableDescription: 'Включите модельный ключ, чтобы вернуть его в upstream scheduling.',
+        disableDescription:
+          'Отключите модельный ключ, чтобы убрать его из upstream request scheduling.',
         fields: {
           identifier: 'Идентификатор',
           authIndex: 'Auth index',
@@ -1510,6 +1526,8 @@ export const ru = {
           headers: 'Headers',
           excludedModels: 'Исключенные модели',
           apiKeyEntries: 'API key entries',
+          disableCooling: 'Отключить cooling',
+          websockets: 'WebSocket',
         },
       },
       form: {
@@ -1521,12 +1539,17 @@ export const ru = {
         apiKeyEditPlaceholder: 'Оставьте пустым, чтобы сохранить текущий ключ',
         baseUrl: 'Base URL',
         baseUrlRequiredHint:
-          'Для Codex и OpenAI-compatible providers требуется Base URL. Backend игнорирует записи с пустым Base URL.',
+          'Для Codex, xAI и OpenAI-compatible providers требуется Base URL. Backend игнорирует записи с пустым Base URL.',
         proxyUrl: 'Proxy URL',
         prefix: 'Model prefix',
         priority: 'Приоритет',
         disabled: 'Отключено',
         disabledHint: 'Отключенная запись не используется для upstream requests.',
+        disableCooling: 'Отключить cooling',
+        disableCoolingHint: 'Исключает модельный ключ из quota cooldown scheduling.',
+        websockets: 'Поддержка WebSocket',
+        websocketsHint:
+          'Только для Codex и xAI. Использует upstream WebSocket transport для downstream WebSocket requests.',
         cloakSection: 'Cloak configuration',
         cloakHint: 'Только Claude. Настройка request cloaking и обработки sensitive words.',
         cloakMode: 'Cloak mode',
@@ -1540,6 +1563,10 @@ export const ru = {
           'Свяжите upstream model ID с клиентскими alias. Результаты из endpoint можно добавить здесь.',
         modelName: 'Model ID',
         modelAlias: 'Alias',
+        modelDisplayName: 'Отображаемое имя',
+        modelDisplayNamePlaceholder: 'Читаемое имя в каталоге моделей',
+        modelForceMapping: 'Принудительное отображение response model',
+        modelForceMappingHint: 'Переписывает поле модели в upstream response в клиентский alias.',
         addModel: 'Добавить модель',
         removeModel: 'Удалить модель',
         excludedModels: 'Исключенные модели',
@@ -1554,8 +1581,9 @@ export const ru = {
           nameRequired: 'Введите имя поставщика моделей перед сохранением.',
           apiKeyRequired: 'Введите ключ модельного сервиса перед сохранением.',
           baseUrlRequired:
-            'Введите Base URL перед сохранением. Codex и OpenAI-compatible providers не могут использовать пустой Base URL.',
-          modelNameRequired: 'Введите model ID, если задан alias.',
+            'Введите Base URL перед сохранением. Codex, xAI и OpenAI-compatible providers не могут использовать пустой Base URL.',
+          modelNameRequired:
+            'Введите model ID, если заданы alias, отображаемое имя или принудительное отображение.',
           headerNameRequired: 'Введите имя Header, если задано значение Header.',
         },
       },
@@ -1627,6 +1655,7 @@ export const ru = {
         created: 'Ключ модели создан.',
         updated: 'Ключ модели обновлен.',
         deleted: 'Ключ модели удален.',
+        statusUpdated: 'Статус ключа модели обновлен.',
       },
     },
     credentialsPage: {
