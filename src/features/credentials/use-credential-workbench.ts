@@ -11,6 +11,7 @@ import {
   fetchCredentialModels,
   fetchCredentialOAuthStatus,
   fetchCredentialSnapshot,
+  getCredentialOAuthProviders,
   importVertexCredential,
   startCredentialOAuth,
   submitCredentialOAuthCallback,
@@ -19,6 +20,7 @@ import {
   updateCredentialStatus,
   uploadCredentialFiles,
 } from '@/lib/api/management/credentials'
+import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
 function useManagementSession() {
@@ -41,6 +43,7 @@ function useManagementSession() {
 export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
+  const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
   const queryKey = ['management-credentials', session.baseUrl, connectedAt]
 
   const query = useQuery({
@@ -210,6 +213,7 @@ export function useCredentialWorkbench() {
   return {
     connected,
     checking,
+    oauthProviders: getCredentialOAuthProviders(runtimeMode),
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,

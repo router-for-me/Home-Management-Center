@@ -1,11 +1,11 @@
 import type { AxiosInstance } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type { ManagementSessionInput } from '@/lib/api/management/types'
+import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
 
-export type ProviderId = 'gemini' | 'claude' | 'codex' | 'vertex' | 'openaiCompatibility'
+export type ProviderId = 'gemini' | 'claude' | 'codex' | 'xai' | 'vertex' | 'openaiCompatibility'
 export type ProviderModelChannel =
   | 'claude'
   | 'gemini'
@@ -22,9 +22,15 @@ export type ProviderDescriptor = {
   responseKey: string
   supportsName: boolean
   supportsApiKey: boolean
-  supportsDisabled: boolean
-  supportsTestModel: boolean
+  disabledMode: 'auth-status' | 'provider-payload'
+  requiresBaseUrl: boolean
+  defaultBaseUrl: string
+  modelDefinitionChannel: ProviderModelChannel | null
+  supportsModelDiscovery: boolean
+  supportsConnectivityTest: boolean
   supportsCloak: boolean
+  supportsWebsockets: boolean
+  supportsRichModelAliases: boolean
 }
 
 export type ProviderEntryFormInput = {
@@ -34,6 +40,8 @@ export type ProviderEntryFormInput = {
   proxyUrl: string
   prefix: string
   disabled: boolean
+  disableCooling: boolean
+  websockets: boolean
   priority?: number
   models: ProviderModelEntryInput[]
   headers: ProviderHeaderEntryInput[]
@@ -52,6 +60,8 @@ export type ProviderCloakInput = {
 export type ProviderModelEntryInput = {
   name: string
   alias: string
+  displayName: string
+  forceMapping: boolean
 }
 
 export type ProviderHeaderEntryInput = {
@@ -80,6 +90,7 @@ export type ProviderConnectivityTestInput = ProviderModelDiscoveryInput & {
 
 export type ProviderRequestIssue = {
   providerId: ProviderId
+  kind: 'unsupported' | 'error'
   message: string
   status?: number
   code?: string
@@ -97,6 +108,8 @@ export type ProviderResource = {
   proxyUrl: string | null
   prefix: string | null
   disabled: boolean
+  disableCooling: boolean
+  websockets: boolean
   priority: number | null
   modelCount: number
   headerCount: number
@@ -142,6 +155,23 @@ type ProviderModelDefinitionsSnapshot = {
   models: ProviderModelDefinition[]
 }
 
+const providerModelDefinitionChannels: ProviderModelChannel[] = [
+  'gemini',
+  'claude',
+  'codex',
+  'vertex',
+  'aistudio',
+  'kimi',
+  'antigravity',
+  'xai',
+]
+
+export function getProviderModelDefinitionChannels(runtimeMode: RuntimeMode) {
+  return runtimeMode === 'cpa'
+    ? providerModelDefinitionChannels.filter((channel) => channel !== 'xai')
+    : providerModelDefinitionChannels
+}
+
 const providerDescriptors: ProviderDescriptor[] = [
   {
     id: 'gemini',
@@ -149,9 +179,15 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'gemini-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: true,
-    supportsTestModel: false,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: false,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: 'gemini',
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: false,
     supportsCloak: false,
+    supportsWebsockets: false,
+    supportsRichModelAliases: false,
   },
   {
     id: 'claude',
@@ -159,9 +195,15 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'claude-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: true,
-    supportsTestModel: true,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: false,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: 'claude',
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: true,
     supportsCloak: true,
+    supportsWebsockets: false,
+    supportsRichModelAliases: false,
   },
   {
     id: 'codex',
@@ -169,9 +211,31 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'codex-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: true,
-    supportsTestModel: false,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: true,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: 'codex',
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: false,
     supportsCloak: false,
+    supportsWebsockets: true,
+    supportsRichModelAliases: true,
+  },
+  {
+    id: 'xai',
+    path: '/xai-api-key',
+    responseKey: 'xai-api-key',
+    supportsName: false,
+    supportsApiKey: true,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: true,
+    defaultBaseUrl: 'https://api.x.ai/v1',
+    modelDefinitionChannel: 'xai',
+    supportsModelDiscovery: false,
+    supportsConnectivityTest: false,
+    supportsCloak: false,
+    supportsWebsockets: true,
+    supportsRichModelAliases: true,
   },
   {
     id: 'vertex',
@@ -179,9 +243,15 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'vertex-api-key',
     supportsName: false,
     supportsApiKey: true,
-    supportsDisabled: true,
-    supportsTestModel: false,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: false,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: 'vertex',
+    supportsModelDiscovery: false,
+    supportsConnectivityTest: false,
     supportsCloak: false,
+    supportsWebsockets: false,
+    supportsRichModelAliases: false,
   },
   {
     id: 'openaiCompatibility',
@@ -189,9 +259,15 @@ const providerDescriptors: ProviderDescriptor[] = [
     responseKey: 'openai-compatibility',
     supportsName: true,
     supportsApiKey: true,
-    supportsDisabled: true,
-    supportsTestModel: true,
+    disabledMode: 'provider-payload',
+    requiresBaseUrl: true,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: null,
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: true,
     supportsCloak: false,
+    supportsWebsockets: false,
+    supportsRichModelAliases: false,
   },
 ]
 
@@ -276,6 +352,7 @@ function normalizeIssue(providerId: ProviderId, error: unknown): ProviderRequest
 
   return {
     providerId,
+    kind: apiError.status === 404 || apiError.code === 'not-found' ? 'unsupported' : 'error',
     message: apiError.message,
     status: apiError.status,
     code: apiError.code,
@@ -335,6 +412,8 @@ function normalizeProviderResource(
     proxyUrl: readString(record, 'proxy-url'),
     prefix,
     disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
+    disableCooling: readBoolean(record, 'disable-cooling'),
+    websockets: readBoolean(record, 'websockets'),
     priority: readNumber(record, 'priority'),
     modelCount: countArray(record, 'models'),
     headerCount: countRecordKeys(record, 'headers'),
@@ -587,7 +666,7 @@ async function runProviderApiCall(
   return body
 }
 
-function createModelPayload(entries: ProviderModelEntryInput[]) {
+function createModelPayload(entries: ProviderModelEntryInput[], supportsRichModelAliases: boolean) {
   return entries
     .map((entry) => {
       const name = entry.name.trim()
@@ -597,6 +676,11 @@ function createModelPayload(entries: ProviderModelEntryInput[]) {
       const alias = entry.alias.trim()
 
       if (alias && alias !== name) payload.alias = alias
+      if (supportsRichModelAliases) {
+        const displayName = entry.displayName.trim()
+        if (displayName) payload['display-name'] = displayName
+        if (entry.forceMapping) payload['force-mapping'] = true
+      }
 
       return payload
     })
@@ -634,18 +718,27 @@ function createCloakPayload(input?: ProviderCloakInput) {
   return payload
 }
 
-function appendProviderOptions(payload: UnknownRecord, input: ProviderEntryFormInput) {
+function appendProviderOptions(
+  payload: UnknownRecord,
+  descriptor: ProviderDescriptor,
+  input: ProviderEntryFormInput,
+) {
   payload.priority =
     typeof input.priority === 'number' && Number.isFinite(input.priority) ? input.priority : 0
 
   const headers = createHeaderPayload(input.headers)
   payload.headers = headers
 
-  const models = createModelPayload(input.models)
+  const models = createModelPayload(input.models, descriptor.supportsRichModelAliases)
   payload.models = models
 
   const excludedModels = parseTextList(input.excludedModelsText)
   payload['excluded-models'] = excludedModels
+  payload['disable-cooling'] = input.disableCooling
+
+  if (descriptor.supportsWebsockets) {
+    payload.websockets = input.websockets
+  }
 }
 
 function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
@@ -667,7 +760,7 @@ function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntry
     payload.prefix = input.prefix.trim()
   }
 
-  if (descriptor.supportsDisabled) {
+  if (descriptor.disabledMode === 'provider-payload') {
     payload.disabled = input.disabled
   }
 
@@ -676,7 +769,7 @@ function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntry
     if (cloak) payload.cloak = cloak
   }
 
-  appendProviderOptions(payload, input)
+  appendProviderOptions(payload, descriptor, input)
 
   if (descriptor.id === 'openaiCompatibility') {
     if (input.testModel?.trim()) {
@@ -725,10 +818,15 @@ async function fetchProviderGroup(
 
 export async function fetchProviderSnapshot(
   session: ManagementSessionInput,
+  runtimeMode: RuntimeMode = 'unknown',
 ): Promise<ProvidersSnapshot> {
   const client = createManagementClient(session)
+  const descriptors =
+    runtimeMode === 'cpa'
+      ? providerDescriptors.filter((descriptor) => descriptor.id !== 'xai')
+      : providerDescriptors
   const groups = await Promise.all(
-    providerDescriptors.map(async (descriptor) => {
+    descriptors.map(async (descriptor) => {
       try {
         return await fetchProviderGroup(client, descriptor)
       } catch (error) {
@@ -1020,5 +1118,26 @@ export async function deleteProviderResource(
   const client = createManagementClient(session)
   await client.delete(descriptor.path, {
     params: resource.selector,
+  })
+}
+
+export async function updateProviderStatus(
+  session: ManagementSessionInput,
+  resource: ProviderResource,
+  disabled: boolean,
+) {
+  const descriptor = providerDescriptors.find((item) => item.id === resource.providerId)
+  if (!descriptor) throw new Error(`Unknown provider: ${resource.providerId}`)
+  if (descriptor.disabledMode !== 'auth-status') {
+    throw new Error(`Provider status is managed through ${descriptor.path}`)
+  }
+
+  const authId = getProviderBindingAuthId(resource)
+  if (!authId) throw new Error('Missing provider auth identifier')
+
+  const client = createManagementClient(session)
+  await client.patch('/auth-files/status', {
+    name: authId,
+    disabled,
   })
 }

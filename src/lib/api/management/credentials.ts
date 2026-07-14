@@ -1,5 +1,5 @@
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type { ManagementSessionInput } from '@/lib/api/management/types'
+import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -134,6 +134,14 @@ const oauthRoutes: Record<CredentialOAuthProvider, string> = {
   antigravity: '/antigravity-auth-url',
   kimi: '/kimi-auth-url',
   xai: '/xai-auth-url',
+}
+
+const credentialOAuthProviders = Object.keys(oauthRoutes) as CredentialOAuthProvider[]
+
+export function getCredentialOAuthProviders(runtimeMode: RuntimeMode) {
+  return runtimeMode === 'cpa'
+    ? credentialOAuthProviders.filter((provider) => provider !== 'xai')
+    : credentialOAuthProviders
 }
 
 const xaiCallbackUrl = 'http://127.0.0.1:56121/callback'

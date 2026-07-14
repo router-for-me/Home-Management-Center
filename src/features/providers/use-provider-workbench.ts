@@ -14,9 +14,12 @@ import {
   fetchProviderDiscoveredModels,
   fetchProviderModelDefinitions,
   fetchProviderSnapshot,
+  getProviderModelDefinitionChannels,
   testProviderConnectivity,
   updateProviderResource,
+  updateProviderStatus,
 } from '@/lib/api/management/providers'
+import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
 function useManagementSession() {
@@ -44,7 +47,8 @@ function toError(error: unknown) {
 export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
-  const queryKey = ['management-providers', session.baseUrl, connectedAt]
+  const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
+  const queryKey = ['management-providers', session.baseUrl, connectedAt, runtimeMode]
   const modelDefinitionsQueryKey = [
     'management-provider-model-definitions',
     session.baseUrl,
@@ -56,7 +60,7 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     enabled: connected && Boolean(session.managementKey),
     queryFn: async () => {
       try {
-        return await fetchProviderSnapshot(session)
+        return await fetchProviderSnapshot(session, runtimeMode)
       } catch (error) {
         throw toError(error)
       }
@@ -128,6 +132,23 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     onSuccess: invalidate,
   })
 
+  const statusMutation = useMutation({
+    mutationFn: async ({
+      resource,
+      disabled,
+    }: {
+      resource: ProviderResource
+      disabled: boolean
+    }) => {
+      try {
+        return await updateProviderStatus(session, resource, disabled)
+      } catch (error) {
+        throw toError(error)
+      }
+    },
+    onSuccess: invalidate,
+  })
+
   const discoverModelsMutation = useMutation({
     mutationFn: async (input: ProviderModelDiscoveryInput): Promise<ProviderDiscoveredModel[]> => {
       try {
@@ -151,6 +172,7 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
   return {
     connected,
     checking,
+    modelDefinitionChannels: getProviderModelDefinitionChannels(runtimeMode),
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,
@@ -161,6 +183,7 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     },
     createProvider: createMutation.mutateAsync,
     updateProvider: updateMutation.mutateAsync,
+    updateProviderStatus: statusMutation.mutateAsync,
     deleteProvider: deleteMutation.mutateAsync,
     discoverProviderModels: discoverModelsMutation.mutateAsync,
     testProviderModel: testProviderModelMutation.mutateAsync,
@@ -172,6 +195,10 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
     isFetchingModelDefinitions: modelDefinitionsQuery.isFetching,
     isDiscoveringProviderModels: discoverModelsMutation.isPending,
     isTestingProviderModel: testProviderModelMutation.isPending,
-    mutating: createMutation.isPending || updateMutation.isPending || deleteMutation.isPending,
+    mutating:
+      createMutation.isPending ||
+      updateMutation.isPending ||
+      deleteMutation.isPending ||
+      statusMutation.isPending,
   }
 }

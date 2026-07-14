@@ -92,24 +92,6 @@ type TestModelOption = {
   isAuto?: boolean
 }
 
-const modelDefinitionChannels: ProviderModelChannel[] = [
-  'gemini',
-  'claude',
-  'codex',
-  'vertex',
-  'aistudio',
-  'kimi',
-  'antigravity',
-  'xai',
-]
-
-const defaultModelDefinitionChannelByProvider: Partial<Record<ProviderId, ProviderModelChannel>> = {
-  gemini: 'gemini',
-  claude: 'claude',
-  codex: 'codex',
-  vertex: 'vertex',
-}
-
 const emptyForm: ProviderEntryFormInput = {
   apiKey: '',
   name: '',
@@ -117,6 +99,8 @@ const emptyForm: ProviderEntryFormInput = {
   proxyUrl: '',
   prefix: '',
   disabled: false,
+  disableCooling: false,
+  websockets: false,
   priority: undefined,
   models: [],
   headers: [],
@@ -131,6 +115,8 @@ function emptyModelEntry(): ProviderModelEntryInput {
   return {
     name: '',
     alias: '',
+    displayName: '',
+    forceMapping: false,
   }
 }
 
@@ -166,6 +152,8 @@ function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[] {
   return models.filter(isRecord).map((model) => ({
     name: readStringField(model, 'name'),
     alias: readStringField(model, 'alias'),
+    displayName: readStringField(model, 'display-name'),
+    forceMapping: model['force-mapping'] === true,
   }))
 }
 
@@ -222,13 +210,14 @@ function createFormState(
 ): ProviderEntryFormInput {
   const providerId = descriptor?.id ?? resource?.providerId
   const supportsTestModel =
-    descriptor?.supportsTestModel ??
+    descriptor?.supportsConnectivityTest ??
     (providerId === 'claude' || providerId === 'openaiCompatibility')
   const supportsCloak = descriptor?.supportsCloak ?? providerId === 'claude'
 
   if (!resource) {
     return {
       ...emptyForm,
+      baseUrl: descriptor?.defaultBaseUrl ?? '',
       models: [],
       headers: [],
       testModel: supportsTestModel ? '' : undefined,
@@ -245,6 +234,8 @@ function createFormState(
     proxyUrl: resource.proxyUrl ?? '',
     prefix: resource.prefix ?? '',
     disabled: resource.disabled,
+    disableCooling: resource.disableCooling,
+    websockets: resource.websockets,
     priority: resource.priority ?? undefined,
     models: readProviderModels(raw),
     headers: readProviderHeaders(raw),
@@ -252,27 +243,6 @@ function createFormState(
     testModel: supportsTestModel ? readStringField(raw, 'test-model') : undefined,
     cloak: supportsCloak ? readProviderCloak(raw) : undefined,
   }
-}
-
-function requiresBaseUrl(descriptor: ProviderDescriptor) {
-  return descriptor.id === 'codex' || descriptor.id === 'openaiCompatibility'
-}
-
-function getDefaultModelDefinitionChannel(providerId: ProviderId) {
-  return defaultModelDefinitionChannelByProvider[providerId] ?? null
-}
-
-function supportsProviderModelDiscovery(providerId: ProviderId) {
-  return (
-    providerId === 'gemini' ||
-    providerId === 'claude' ||
-    providerId === 'codex' ||
-    providerId === 'openaiCompatibility'
-  )
-}
-
-function supportsProviderConnectivityTest(providerId: ProviderId) {
-  return providerId === 'claude' || providerId === 'openaiCompatibility'
 }
 
 function hasHeaderEntry(headers: ProviderHeaderEntryInput[], names: string[]) {
@@ -298,15 +268,15 @@ function hasProviderDiscoveryHeaderAuth(
 }
 
 function getProviderDiscoveryValidationError(
-  providerId: ProviderId,
+  descriptor: ProviderDescriptor,
   form: ProviderEntryFormInput,
   resource: ProviderResource | null,
 ) {
   const hasApiKey = Boolean(form.apiKey.trim())
   const hasAuthIndex = Boolean(resource?.authIndex?.trim())
-  const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(providerId, form.headers)
+  const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(descriptor.id, form.headers)
   const hasAuth = hasApiKey || hasAuthIndex || hasHeaderAuth
-  const needsBaseUrl = providerId === 'codex' || providerId === 'openaiCompatibility'
+  const needsBaseUrl = descriptor.requiresBaseUrl
   const hasBaseUrl = Boolean(form.baseUrl.trim())
 
   if (needsBaseUrl && !hasBaseUrl && !hasAuth) {
@@ -337,15 +307,15 @@ function pickProviderTestModel(form: ProviderEntryFormInput) {
 }
 
 function getProviderConnectivityValidationError(
-  providerId: ProviderId,
+  descriptor: ProviderDescriptor,
   form: ProviderEntryFormInput,
   resource: ProviderResource | null,
 ) {
   const hasApiKey = Boolean(form.apiKey.trim())
   const hasAuthIndex = Boolean(resource?.authIndex?.trim())
-  const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(providerId, form.headers)
+  const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(descriptor.id, form.headers)
   const hasAuth = hasApiKey || hasAuthIndex || hasHeaderAuth
-  const needsBaseUrl = providerId === 'openaiCompatibility'
+  const needsBaseUrl = descriptor.id === 'openaiCompatibility'
   const hasBaseUrl = Boolean(form.baseUrl.trim())
   const hasModel = Boolean(pickProviderTestModel(form))
 
@@ -381,11 +351,17 @@ function validateProviderInput(
     return 'apiKeyRequired'
   }
 
-  if (requiresBaseUrl(descriptor) && !form.baseUrl.trim()) {
+  if (descriptor.requiresBaseUrl && !form.baseUrl.trim()) {
     return 'baseUrlRequired'
   }
 
-  if (form.models.some((model) => !model.name.trim() && model.alias.trim())) {
+  if (
+    form.models.some(
+      (model) =>
+        !model.name.trim() &&
+        (model.alias.trim() || model.displayName.trim() || model.forceMapping),
+    )
+  ) {
     return 'modelNameRequired'
   }
 
@@ -549,6 +525,7 @@ function ProviderCategoryList({
 
 function ProviderResourceTable({
   resources,
+  unsupported,
   selectedResourceId,
   onCreateResource,
   onDeleteResource,
@@ -556,6 +533,7 @@ function ProviderResourceTable({
   onViewResource,
 }: {
   resources: ProviderResource[]
+  unsupported: boolean
   selectedResourceId: string | null
   onCreateResource: () => void
   onDeleteResource: (resource: ProviderResource) => void
@@ -565,6 +543,17 @@ function ProviderResourceTable({
   const { t } = useTranslation()
 
   if (resources.length === 0) {
+    if (unsupported) {
+      return (
+        <TableEmptyState
+          kind="unsupported"
+          className="m-0"
+          title={t('providersPage.table.unsupportedTitle')}
+          description={t('providersPage.table.unsupportedDescription')}
+        />
+      )
+    }
+
     return (
       <TableEmptyState
         kind="empty"
@@ -716,6 +705,7 @@ function formatNumber(value: number | null) {
 }
 
 function ProviderModelCatalog({
+  channels,
   channel,
   models,
   fetchedAt,
@@ -726,6 +716,7 @@ function ProviderModelCatalog({
   onFilterChange,
   onRetry,
 }: {
+  channels: ProviderModelChannel[]
   channel: ProviderModelChannel
   models: ProviderModelDefinition[]
   fetchedAt: string | null
@@ -797,7 +788,7 @@ function ProviderModelCatalog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {modelDefinitionChannels.map((item) => (
+                  {channels.map((item) => (
                     <SelectItem key={item} value={item}>
                       {t(`providersPage.modelCatalog.channels.${item}`)}
                     </SelectItem>
@@ -980,6 +971,7 @@ function ProviderFormPanel({
   onCancel,
   onCreate,
   onUpdate,
+  onToggleStatus,
   onDiscoverModels,
   onTestModel,
 }: {
@@ -991,6 +983,7 @@ function ProviderFormPanel({
   onCancel: () => void
   onCreate: (input: ProviderEntryFormInput) => Promise<void>
   onUpdate: (input: ProviderEntryFormInput) => Promise<void>
+  onToggleStatus: (resource: ProviderResource, disabled: boolean) => Promise<void>
   onDiscoverModels: (input: ProviderModelDiscoveryInput) => Promise<ProviderDiscoveredModel[]>
   onTestModel: (input: ProviderConnectivityTestInput) => Promise<void>
 }) {
@@ -1090,8 +1083,8 @@ function ProviderFormPanel({
 
   const modelsList = form.models.length ? form.models : [emptyModelEntry()]
   const headersList = form.headers.length ? form.headers : [emptyHeaderEntry()]
-  const modelDiscoveryAvailable = supportsProviderModelDiscovery(descriptor.id)
-  const connectivityTestAvailable = supportsProviderConnectivityTest(descriptor.id)
+  const modelDiscoveryAvailable = descriptor.supportsModelDiscovery
+  const connectivityTestAvailable = descriptor.supportsConnectivityTest
   const testModelQuery = (form.testModel ?? '').trim().toLowerCase()
   const testModelOptions = useMemo<TestModelOption[]>(() => {
     const seen = new Set<string>()
@@ -1138,7 +1131,12 @@ function ProviderFormPanel({
         form.testModel ?? '',
         resource?.authIndex ?? '',
         form.headers.map((header) => `${header.key}:${header.value}`).join('|'),
-        form.models.map((model) => `${model.name}:${model.alias}`).join('|'),
+        form.models
+          .map(
+            (model) =>
+              `${model.name}:${model.alias}:${model.displayName}:${String(model.forceMapping)}`,
+          )
+          .join('|'),
       ].join('||'),
     [descriptor.id, form.apiKey, form.baseUrl, form.headers, form.models, form.testModel, resource],
   )
@@ -1182,18 +1180,14 @@ function ProviderFormPanel({
         ? 'header'
         : 'missing'
   const discoveryAuthReady = discoveryAuthStatus !== 'missing'
-  const discoveryNeedsBaseUrl = descriptor.id === 'codex' || descriptor.id === 'openaiCompatibility'
+  const discoveryNeedsBaseUrl = descriptor.requiresBaseUrl
   const discoveryBaseUrlStatus = form.baseUrl.trim()
     ? 'ready'
     : discoveryNeedsBaseUrl
       ? 'missing'
       : 'default'
   const discoveryBaseUrlReady = discoveryBaseUrlStatus !== 'missing'
-  const discoveryValidationError = getProviderDiscoveryValidationError(
-    descriptor.id,
-    form,
-    resource,
-  )
+  const discoveryValidationError = getProviderDiscoveryValidationError(descriptor, form, resource)
   const canDiscoverModels = !discoveryValidationError
   const discoveryDisabledReason = discoveryValidationError
     ? t(`providersPage.discovery.disabledReason.${discoveryValidationError}`)
@@ -1239,7 +1233,7 @@ function ProviderFormPanel({
 
   const handleFetchModels = async () => {
     setModelDiscoveryOpen(true)
-    const validationError = getProviderDiscoveryValidationError(descriptor.id, form, resource)
+    const validationError = getProviderDiscoveryValidationError(descriptor, form, resource)
     if (validationError) {
       if (validationError === 'baseUrlRequired') {
         baseUrlInputRef.current?.focus()
@@ -1281,7 +1275,7 @@ function ProviderFormPanel({
   }
 
   const handleTestModel = async () => {
-    const validationError = getProviderConnectivityValidationError(descriptor.id, form, resource)
+    const validationError = getProviderConnectivityValidationError(descriptor, form, resource)
     if (validationError) {
       if (validationError === 'baseUrlRequired') {
         baseUrlInputRef.current?.focus()
@@ -1353,6 +1347,8 @@ function ProviderFormPanel({
       ...selectedModels.map((model) => ({
         name: model.name,
         alias: model.alias ?? '',
+        displayName: '',
+        forceMapping: false,
       })),
     ])
     setModelDiscoverySelected(new Set())
@@ -1373,6 +1369,22 @@ function ProviderFormPanel({
         ['authIndex', resource.authIndex ?? t('providersPage.status.notAvailable')],
         ['excludedModels', String(resource.excludedModelCount)],
         ['apiKeyEntries', String(resource.apiKeyEntryCount)],
+        [
+          'disableCooling',
+          resource.disableCooling
+            ? t('providersPage.status.enabled')
+            : t('providersPage.status.disabled'),
+        ],
+        ...(descriptor.supportsWebsockets
+          ? ([
+              [
+                'websockets',
+                resource.websockets
+                  ? t('providersPage.status.enabled')
+                  : t('providersPage.status.disabled'),
+              ],
+            ] as const)
+          : []),
       ]
     : []
 
@@ -1422,6 +1434,34 @@ function ProviderFormPanel({
             </dl>
           </CollapsibleContent>
         </Collapsible>
+
+        {descriptor.disabledMode === 'auth-status' ? (
+          <div className="border-warning/25 bg-warning/8 mt-5 rounded-md border px-3 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium">
+                  {t('providersPage.detail.statusActionTitle')}
+                </h3>
+                <p className="text-muted-foreground mt-1 text-xs leading-5">
+                  {resource.disabled
+                    ? t('providersPage.detail.enableDescription')
+                    : t('providersPage.detail.disableDescription')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant={resource.disabled ? 'secondary' : 'warning'}
+                size="sm"
+                disabled={mutating}
+                onClick={() => void onToggleStatus(resource, !resource.disabled)}
+              >
+                {resource.disabled
+                  ? t('providersPage.actions.enable')
+                  : t('providersPage.actions.disable')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -1436,7 +1476,7 @@ function ProviderFormPanel({
     )
   }
 
-  const baseUrlRequired = requiresBaseUrl(descriptor)
+  const baseUrlRequired = descriptor.requiresBaseUrl
 
   return (
     <div className={cn('min-w-0', className)}>
@@ -1643,7 +1683,39 @@ function ProviderFormPanel({
           </div>
         ) : null}
 
-        {descriptor.supportsDisabled ? (
+        <label className="flex items-start gap-3 text-sm">
+          <Checkbox
+            className="mt-0.5"
+            checked={form.disableCooling}
+            disabled={mutating}
+            onCheckedChange={(checked) => updateField('disableCooling', checked === true)}
+          />
+          <span className="grid gap-1">
+            <span className="font-medium">{t('providersPage.form.disableCooling')}</span>
+            <span className="text-muted-foreground text-xs leading-5">
+              {t('providersPage.form.disableCoolingHint')}
+            </span>
+          </span>
+        </label>
+
+        {descriptor.supportsWebsockets ? (
+          <label className="flex items-start gap-3 text-sm">
+            <Checkbox
+              className="mt-0.5"
+              checked={form.websockets}
+              disabled={mutating}
+              onCheckedChange={(checked) => updateField('websockets', checked === true)}
+            />
+            <span className="grid gap-1">
+              <span className="font-medium">{t('providersPage.form.websockets')}</span>
+              <span className="text-muted-foreground text-xs leading-5">
+                {t('providersPage.form.websocketsHint')}
+              </span>
+            </span>
+          </label>
+        ) : null}
+
+        {descriptor.disabledMode === 'provider-payload' ? (
           <label className="flex items-start gap-3 text-sm">
             <Checkbox
               className="mt-0.5"
@@ -1912,6 +1984,39 @@ function ProviderFormPanel({
                 >
                   <X className="size-4" aria-hidden="true" />
                 </Button>
+                {descriptor.supportsRichModelAliases ? (
+                  <>
+                    <label className="grid gap-1.5 text-xs font-medium sm:col-span-2">
+                      <span>{t('providersPage.form.modelDisplayName')}</span>
+                      <Input
+                        value={model.displayName}
+                        onChange={(event) =>
+                          updateModelField(index, 'displayName', event.target.value)
+                        }
+                        placeholder={t('providersPage.form.modelDisplayNamePlaceholder')}
+                        disabled={mutating}
+                      />
+                    </label>
+                    <label className="flex items-start gap-3 text-xs sm:col-span-3">
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={model.forceMapping}
+                        disabled={mutating}
+                        onCheckedChange={(checked) =>
+                          updateModelField(index, 'forceMapping', checked === true)
+                        }
+                      />
+                      <span className="grid gap-1">
+                        <span className="font-medium">
+                          {t('providersPage.form.modelForceMapping')}
+                        </span>
+                        <span className="text-muted-foreground leading-5">
+                          {t('providersPage.form.modelForceMappingHint')}
+                        </span>
+                      </span>
+                    </label>
+                  </>
+                ) : null}
               </div>
             ))}
             <Button
@@ -2176,7 +2281,7 @@ export function ProvidersWorkbenchPage() {
     setPanelMode('detail')
     setResourcePanelOpen(false)
 
-    const defaultChannel = getDefaultModelDefinitionChannel(providerId)
+    const defaultChannel = groups.find((group) => group.id === providerId)?.modelDefinitionChannel
     if (defaultChannel) {
       setModelCatalogChannel(defaultChannel)
       setModelCatalogFilter('')
@@ -2241,8 +2346,20 @@ export function ProvidersWorkbenchPage() {
     setDeleteDialogOpen(false)
   }
 
+  const handleToggleStatus = async (resource: ProviderResource, disabled: boolean) => {
+    try {
+      await workbench.updateProviderStatus({
+        resource,
+        disabled,
+      })
+      toast.success(t('providersPage.toast.statusUpdated'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
   const openModelCatalog = () => {
-    const defaultChannel = getDefaultModelDefinitionChannel(activeGroup.id)
+    const defaultChannel = activeGroup.modelDefinitionChannel
     if (defaultChannel) {
       setModelCatalogChannel(defaultChannel)
       setModelCatalogFilter('')
@@ -2282,7 +2399,11 @@ export function ProvidersWorkbenchPage() {
                 ? t('providersPage.actions.syncing')
                 : t('providersPage.actions.refresh')}
             </Button>
-            <Button size="sm" onClick={openCreatePanel}>
+            <Button
+              size="sm"
+              disabled={activeGroup.issue?.kind === 'unsupported'}
+              onClick={openCreatePanel}
+            >
               <Plus className="size-4" aria-hidden="true" />
               {t('providersPage.actions.new')}
             </Button>
@@ -2345,7 +2466,11 @@ export function ProvidersWorkbenchPage() {
           {activeGroup.issue ? (
             <div className="border-warning/35 bg-warning/12 mx-4 mt-4 rounded-md border px-3 py-2.5 text-sm">
               <p className="text-warning-foreground dark:text-warning font-medium">
-                {t('providersPage.table.providerIssue')}
+                {t(
+                  activeGroup.issue.kind === 'unsupported'
+                    ? 'providersPage.table.providerUnsupported'
+                    : 'providersPage.table.providerIssue',
+                )}
                 {activeGroup.issue.status ? ` · ${activeGroup.issue.status}` : ''}
               </p>
               <p className="text-muted-foreground mt-1 text-xs leading-5 break-words">
@@ -2357,6 +2482,7 @@ export function ProvidersWorkbenchPage() {
           <div className="p-4">
             <ProviderResourceTable
               resources={activeResources}
+              unsupported={activeGroup.issue?.kind === 'unsupported'}
               selectedResourceId={selectedResourceId}
               onCreateResource={openCreatePanel}
               onDeleteResource={openDeleteDialog}
@@ -2416,6 +2542,7 @@ export function ProvidersWorkbenchPage() {
             }}
             onCreate={handleCreate}
             onUpdate={handleUpdate}
+            onToggleStatus={handleToggleStatus}
             onDiscoverModels={workbench.discoverProviderModels}
             onTestModel={workbench.testProviderModel}
           />
@@ -2428,7 +2555,7 @@ export function ProvidersWorkbenchPage() {
             <SheetTitle>{t('providersPage.modelCatalog.title')}</SheetTitle>
             <SheetDescription>
               {t(
-                getDefaultModelDefinitionChannel(activeGroup.id) === modelCatalogChannel
+                activeGroup.modelDefinitionChannel === modelCatalogChannel
                   ? 'providersPage.modelCatalog.description'
                   : 'providersPage.modelCatalog.standaloneDescription',
                 {
@@ -2439,6 +2566,7 @@ export function ProvidersWorkbenchPage() {
             </SheetDescription>
           </SheetHeader>
           <ProviderModelCatalog
+            channels={workbench.modelDefinitionChannels}
             channel={modelCatalogChannel}
             models={currentModelCatalog?.models ?? []}
             fetchedAt={currentModelCatalog?.fetchedAt ?? null}
