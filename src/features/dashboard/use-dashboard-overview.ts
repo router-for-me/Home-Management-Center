@@ -51,6 +51,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       capabilities.requestErrorLogs,
       capabilities.users,
       capabilities.accessGroups,
+      runtimeMode,
     ],
     enabled: connected && capabilityReady && Boolean(managementKey),
     queryFn: async () => {
@@ -61,6 +62,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
             managementKey,
           },
           capabilities,
+          runtimeMode,
         )
       } catch (error) {
         const apiError = toManagementApiError(error)

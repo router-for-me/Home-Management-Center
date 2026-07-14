@@ -1,12 +1,12 @@
 import type { AxiosInstance } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type { CapabilityMap, ManagementSessionInput } from '@/lib/api/management/types'
+import type { CapabilityMap, ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 import { type UsageOverview, fetchUsageOverview } from '@/lib/api/management/usage-logs'
 
 type UnknownRecord = Record<string, unknown>
 
-type DashboardProviderId = 'gemini' | 'claude' | 'codex' | 'vertex' | 'openaiCompatibility'
+type DashboardProviderId = 'gemini' | 'claude' | 'codex' | 'xai' | 'vertex' | 'openaiCompatibility'
 
 type DashboardRequestIssueScope =
   | 'latestVersion'
@@ -88,6 +88,11 @@ const dashboardProviderDescriptors: DashboardProviderDescriptor[] = [
     id: 'codex',
     path: '/codex-api-key',
     responseKey: 'codex-api-key',
+  },
+  {
+    id: 'xai',
+    path: '/xai-api-key',
+    responseKey: 'xai-api-key',
   },
   {
     id: 'vertex',
@@ -247,12 +252,17 @@ async function fetchProviderSummary(
 export async function fetchManagementDashboardSnapshot(
   session: ManagementSessionInput,
   capabilities: CapabilityMap,
+  runtimeMode: RuntimeMode = 'unknown',
 ): Promise<DashboardSnapshot> {
   const client = createManagementClient(session)
   const configResponse = await client.get<unknown>('/config')
   const config = toRecord(configResponse.data)
   const issues: DashboardRequestIssue[] = []
   const fallbackClientKeys = readStringArray(config, 'api-keys')
+  const providerDescriptors =
+    runtimeMode === 'cpa'
+      ? dashboardProviderDescriptors.filter((descriptor) => descriptor.id !== 'xai')
+      : dashboardProviderDescriptors
 
   const [latestVersion, clientKeys, authFiles, providers, topology, nodes, usageOverview] =
     await Promise.all([
@@ -284,7 +294,7 @@ export async function fetchManagementDashboardSnapshot(
         [],
       ),
       Promise.all(
-        dashboardProviderDescriptors.map((descriptor) =>
+        providerDescriptors.map((descriptor) =>
           readOptional(
             issues,
             descriptor.id,

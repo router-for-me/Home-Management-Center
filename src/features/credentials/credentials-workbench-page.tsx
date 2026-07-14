@@ -95,7 +95,6 @@ type PendingCredentialConfirmation =
   | { type: 'delete'; resource: CredentialResource }
   | { type: 'bulkDelete'; resources: CredentialResource[] }
 
-const oauthProviders: CredentialOAuthProvider[] = ['claude', 'codex', 'antigravity', 'kimi', 'xai']
 const oauthStatusToneClassNames: Record<string, string> = {
   ok: 'border-primary/30 bg-primary/10 text-primary',
   wait: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
@@ -821,6 +820,7 @@ function VertexImportPanel({
 }
 
 function OAuthStartPanel({
+  providers,
   sessions,
   statuses,
   mutating,
@@ -828,6 +828,7 @@ function OAuthStartPanel({
   onCheckStatus,
   onSubmitCallback,
 }: {
+  providers: CredentialOAuthProvider[]
   sessions: OAuthSessionMap
   statuses: OAuthStatusMap
   mutating: boolean
@@ -840,7 +841,7 @@ function OAuthStartPanel({
   return (
     <div className="grid gap-4">
       <div className="grid gap-2">
-        {oauthProviders.map((provider) => {
+        {providers.map((provider) => {
           const session = sessions[provider]
           const status = statuses[provider] ?? null
 
@@ -976,6 +977,7 @@ function CreateCredentialSheet({
   open,
   mode,
   fileInputRef,
+  oauthProviders,
   oauthSessions,
   oauthStatuses,
   vertexImportResult,
@@ -991,6 +993,7 @@ function CreateCredentialSheet({
   open: boolean
   mode: CreateCredentialMode
   fileInputRef: React.RefObject<HTMLInputElement | null>
+  oauthProviders: CredentialOAuthProvider[]
   oauthSessions: OAuthSessionMap
   oauthStatuses: OAuthStatusMap
   vertexImportResult: VertexImportResult | null
@@ -1035,6 +1038,7 @@ function CreateCredentialSheet({
         <div className="grid min-h-0 min-w-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto px-5 py-5">
           {mode === 'oauth' ? (
             <OAuthStartPanel
+              providers={oauthProviders}
               sessions={oauthSessions}
               statuses={oauthStatuses}
               mutating={mutating}
@@ -2156,6 +2160,7 @@ export function CredentialsWorkbenchPage() {
         open={createSheetOpen}
         mode={createMode}
         fileInputRef={fileInputRef}
+        oauthProviders={workbench.oauthProviders}
         oauthSessions={oauthSessions}
         oauthStatuses={oauthStatuses}
         vertexImportResult={workbench.vertexImportResult}

@@ -254,6 +254,7 @@ export function useUserWorkbench(
     'management-credential-binding-candidates',
     session.baseUrl,
     connectedAt,
+    runtimeMode,
   ]
   const modelCandidatesQueryKey = [
     'management-model-binding-candidates',
@@ -304,7 +305,7 @@ export function useUserWorkbench(
     queryFn: async (): Promise<CredentialBindingCandidateSnapshot> => {
       const [credentialsResult, providersResult] = await Promise.allSettled([
         fetchCredentialSnapshot(session),
-        fetchProviderSnapshot(session),
+        fetchProviderSnapshot(session, runtimeMode),
       ])
       const credentialResources =
         credentialsResult.status === 'fulfilled' ? credentialsResult.value.resources : []

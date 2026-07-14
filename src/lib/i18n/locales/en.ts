@@ -1322,6 +1322,8 @@ export const en = {
         emptyDescription:
           'No model service keys are configured yet. Add a model service before the gateway can forward requests upstream.',
         emptySupportedProviders:
+          'Supports Gemini, Claude, Codex, xAI, Vertex, and OpenAI-compatible services.',
+        emptySupportedProvidersCpa:
           'Supports Gemini, Claude, Codex, Vertex, and OpenAI-compatible services.',
         configureAction: 'Configure model service',
         total: 'Total',
@@ -1332,6 +1334,7 @@ export const en = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1388,6 +1391,7 @@ export const en = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1428,6 +1432,8 @@ export const en = {
         cancel: 'Cancel',
         view: 'View',
         edit: 'Edit',
+        enable: 'Enable',
+        disable: 'Disable',
         delete: 'Delete',
       },
       categories: {
@@ -1439,6 +1445,7 @@ export const en = {
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
+        xai: 'xAI',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1447,6 +1454,10 @@ export const en = {
         filterPlaceholder: 'Filter model keys',
         empty: 'No model keys match the current model provider and filter.',
         providerIssue: 'This model provider route returned an issue',
+        providerUnsupported: 'This runtime does not support the model provider route',
+        unsupportedTitle: 'Model provider unsupported by this runtime',
+        unsupportedDescription:
+          'Connect to a Home backend that exposes the required Management API route.',
         key: 'Key / identity',
         baseUrl: 'Base URL',
         prefix: 'Prefix',
@@ -1490,6 +1501,7 @@ export const en = {
       },
       status: {
         active: 'Active',
+        enabled: 'Enabled',
         disabled: 'Disabled',
         none: 'None',
         notSet: 'Not set',
@@ -1499,6 +1511,9 @@ export const en = {
         title: 'Model key detail',
         empty: 'Select a model key or create a new entry.',
         metadataTitle: 'More metadata',
+        statusActionTitle: 'Model key status',
+        enableDescription: 'Enable this model key so it can participate in upstream scheduling.',
+        disableDescription: 'Disable this model key to remove it from upstream request scheduling.',
         fields: {
           identifier: 'Identifier',
           authIndex: 'Auth index',
@@ -1509,6 +1524,8 @@ export const en = {
           headers: 'Headers',
           excludedModels: 'Excluded models',
           apiKeyEntries: 'API key entries',
+          disableCooling: 'Disable cooling',
+          websockets: 'WebSocket',
         },
       },
       form: {
@@ -1520,12 +1537,17 @@ export const en = {
         apiKeyEditPlaceholder: 'Leave blank to keep the current key',
         baseUrl: 'Base URL',
         baseUrlRequiredHint:
-          'Codex and OpenAI-compatible providers require a Base URL. The backend ignores entries with an empty Base URL.',
+          'Codex, xAI, and OpenAI-compatible providers require a Base URL. The backend ignores entries with an empty Base URL.',
         proxyUrl: 'Proxy URL',
         prefix: 'Model prefix',
         priority: 'Priority',
         disabled: 'Disabled',
         disabledHint: 'When disabled, this entry will not be used for upstream requests.',
+        disableCooling: 'Disable cooling',
+        disableCoolingHint: 'Exclude this model key from quota cooldown scheduling.',
+        websockets: 'WebSocket support',
+        websocketsHint:
+          'Codex and xAI only. Use the upstream WebSocket transport for downstream WebSocket requests.',
         cloakSection: 'Cloak configuration',
         cloakHint: 'Claude only. Configure request cloaking and sensitive-word handling.',
         cloakMode: 'Cloak mode',
@@ -1540,6 +1562,10 @@ export const en = {
           'Map upstream model IDs to client-facing aliases. Fetched endpoint results can be added here.',
         modelName: 'Model ID',
         modelAlias: 'Alias',
+        modelDisplayName: 'Display name',
+        modelDisplayNamePlaceholder: 'Readable name shown in model catalogs',
+        modelForceMapping: 'Force response model mapping',
+        modelForceMappingHint: 'Rewrite upstream response model fields to the client-facing alias.',
         addModel: 'Add model',
         removeModel: 'Remove model',
         excludedModels: 'Excluded models',
@@ -1554,8 +1580,9 @@ export const en = {
           nameRequired: 'Enter a model provider name before saving.',
           apiKeyRequired: 'Enter a model service key before saving.',
           baseUrlRequired:
-            'Enter a Base URL before saving. Codex and OpenAI-compatible providers cannot use an empty Base URL.',
-          modelNameRequired: 'Enter a model ID when an alias is set.',
+            'Enter a Base URL before saving. Codex, xAI, and OpenAI-compatible providers cannot use an empty Base URL.',
+          modelNameRequired:
+            'Enter a model ID when an alias, display name, or force mapping is set.',
           headerNameRequired: 'Enter a header name when a header value is set.',
         },
       },
@@ -1627,6 +1654,7 @@ export const en = {
         created: 'Model key created.',
         updated: 'Model key updated.',
         deleted: 'Model key deleted.',
+        statusUpdated: 'Model key status updated.',
       },
     },
     credentialsPage: {
