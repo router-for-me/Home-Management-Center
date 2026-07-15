@@ -1,3 +1,5 @@
+import type { AxiosProgressEvent } from 'axios'
+
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
@@ -108,6 +110,19 @@ type VertexImportResponse = {
 
 type CredentialModelResponse = {
   models?: unknown[]
+}
+
+type CredentialUploadResponse = {
+  status?: string
+  uploaded?: number
+  files?: unknown[]
+  name?: string
+}
+
+export type CredentialUploadResult = {
+  status: string
+  uploaded: number
+  files: string[]
 }
 
 type CredentialModel = {
@@ -456,12 +471,39 @@ export async function deleteCredentialResource(
   })
 }
 
-export async function uploadCredentialFiles(session: ManagementSessionInput, files: File[]) {
+export async function uploadCredentialFile(
+  session: ManagementSessionInput,
+  file: File,
+  onProgress?: (progress: number) => void,
+): Promise<CredentialUploadResult> {
   const client = createManagementClient(session)
   const formData = new FormData()
+  formData.append('file', file)
 
-  files.forEach((file) => formData.append('file', file))
-  await client.post('/auth-files', formData)
+  const response = await client.post<CredentialUploadResponse>('/auth-files', formData, {
+    onUploadProgress: (event: AxiosProgressEvent) => {
+      const ratio =
+        event.progress ??
+        (typeof event.total === 'number' && event.total > 0 ? event.loaded / event.total : 0)
+      onProgress?.(Math.min(99, Math.max(0, Math.round(ratio * 100))))
+    },
+  })
+  const files = Array.isArray(response.data.files)
+    ? response.data.files.filter((item): item is string => typeof item === 'string')
+    : typeof response.data.name === 'string'
+      ? [response.data.name]
+      : [file.name]
+
+  onProgress?.(100)
+
+  return {
+    status: response.data.status ?? 'ok',
+    uploaded:
+      typeof response.data.uploaded === 'number' && Number.isFinite(response.data.uploaded)
+        ? response.data.uploaded
+        : 1,
+    files,
+  }
 }
 
 export async function downloadCredentialResource(
@@ -574,5 +616,8 @@ export async function importVertexCredential(
 
 export function toCredentialApiError(error: unknown) {
   const apiError = toManagementApiError(error)
-  return new Error(apiError.message, { cause: error })
+  return Object.assign(new Error(apiError.message, { cause: error }), {
+    status: apiError.status,
+    code: apiError.code,
+  })
 }
