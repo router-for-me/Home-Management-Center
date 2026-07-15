@@ -1782,11 +1782,19 @@ export const en = {
       },
       vertex: {
         title: 'Vertex credential import',
-        description:
-          'Upload a Vertex service account JSON file and create a Gemini/Vertex credential.',
-        file: 'Service account JSON',
-        location: 'Vertex location',
+        description: 'Upload a service account key to import a Vertex credential.',
+        file: 'Google Cloud service account key',
+        location: 'Vertex region',
+        locationHint: 'Google Cloud region used by this credential.',
         import: 'Import Vertex credential',
+        dropzone: {
+          title: 'Choose JSON key file',
+          description: 'Click to choose a file, or drop it here.',
+          selected: '{{size}} · Click or drop a file to replace',
+          selectedStatus: '{{name}} selected',
+          importing: 'Importing Vertex credential',
+          remove: 'Remove selected file',
+        },
         fields: {
           status: 'Status',
           projectId: 'Project ID',
@@ -1795,12 +1803,34 @@ export const en = {
           authFile: 'Auth file',
         },
         validation: {
-          fileRequired: 'Choose a service account JSON file to import.',
+          fileRequired: 'Choose a service account key file to import.',
         },
       },
       upload: {
         title: 'Upload credential JSON',
         description: 'Choose files or drop JSON here. Multiple files are supported.',
+        resultsTitle: 'Upload results',
+        summaryUploading: 'Processing {{completed}} of {{total}} files',
+        summaryComplete: '{{success}} succeeded, {{failed}} failed',
+        retry: 'Retry',
+        retryFailed: 'Retry failed',
+        clearResults: 'Clear results',
+        removeResult: 'Remove the upload result for {{name}}',
+        progressLabel: '{{name}} upload progress: {{progress}}%',
+        states: {
+          queued: 'Waiting to upload',
+          uploading: 'Uploading, {{progress}}%',
+          success: 'Credential created: {{name}}',
+        },
+        errors: {
+          notJson: 'The file must use the .json extension.',
+          emptyFile: 'The JSON file is empty.',
+          invalidJson: 'The JSON syntax is invalid.',
+          unsupported: 'The credential format is not recognized.',
+          unauthorized: 'The Management Key cannot upload credentials.',
+          network: 'The Management API could not be reached.',
+          server: 'The server could not store the credential.',
+        },
       },
       list: {
         title: 'Credential resources',
@@ -1896,7 +1926,6 @@ export const en = {
         confirm: 'Delete credential "{{name}}"?',
       },
       toast: {
-        uploaded: 'Credential file uploaded.',
         downloaded: 'Credential downloaded.',
         updated: 'Credential metadata updated.',
         deleted: 'Credential deleted.',
