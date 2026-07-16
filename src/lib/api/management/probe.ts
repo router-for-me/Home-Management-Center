@@ -25,6 +25,8 @@ const capabilityRequests: Record<
     | 'requestEventExport'
     | 'requestLogIndex'
     | 'oauthUsage'
+    | 'quotaSnapshots'
+    | 'quotaSnapshotDetails'
   >,
   {
     path: string
@@ -81,6 +83,8 @@ const emptyCapabilities: CapabilityMap = {
   requestEventFilters: false,
   requestLogIndex: false,
   oauthUsage: false,
+  quotaSnapshots: false,
+  quotaSnapshotDetails: false,
   logs: false,
   requestErrorLogs: false,
   users: false,
@@ -261,6 +265,14 @@ function readDeclaredOauthUsageCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['oauth_usage', 'oauthUsage'])
 }
 
+function readDeclaredQuotaSnapshotsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['quota_snapshots', 'quotaSnapshots'])
+}
+
+function readDeclaredQuotaSnapshotDetailsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['quota_snapshot_details', 'quotaSnapshotDetails'])
+}
+
 function readDeclaredLogsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['logs', 'runtime_logs', 'runtimeLogs'])
 }
@@ -438,6 +450,12 @@ export async function probeManagementRuntime(
   const declaredOauthUsage = capabilitiesPayload
     ? readDeclaredOauthUsageCapability(capabilitySource)
     : null
+  const declaredQuotaSnapshots = capabilitiesPayload
+    ? readDeclaredQuotaSnapshotsCapability(capabilitySource)
+    : null
+  const declaredQuotaSnapshotDetails = capabilitiesPayload
+    ? readDeclaredQuotaSnapshotDetailsCapability(capabilitySource)
+    : null
   const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
@@ -496,6 +514,8 @@ export async function probeManagementRuntime(
     requestEventFilters: declaredRequestEventFilters ?? probedCapabilities.requestEventFilters,
     requestLogIndex: declaredRequestLogIndex ?? false,
     oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
+    quotaSnapshots: declaredQuotaSnapshots ?? false,
+    quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? false,
     users: declaredUsers ?? probedCapabilities.users,
     usageQueue: false,
     // GET /logs returns 400 when file logging is disabled, so probing it would create

@@ -27,6 +27,8 @@ const emptyCapabilities: CapabilityMap = {
   requestEventFilters: false,
   requestLogIndex: false,
   oauthUsage: false,
+  quotaSnapshots: false,
+  quotaSnapshotDetails: false,
   logs: false,
   requestErrorLogs: false,
   users: false,

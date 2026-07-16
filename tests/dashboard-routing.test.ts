@@ -27,6 +27,8 @@ const capabilities: CapabilityMap = {
   requestEventFilters: true,
   requestLogIndex: true,
   oauthUsage: true,
+  quotaSnapshots: true,
+  quotaSnapshotDetails: true,
   logs: true,
   requestErrorLogs: true,
   users: true,

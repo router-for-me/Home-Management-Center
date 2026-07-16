@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { Link } from '@tanstack/react-router'
+
 import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
   CircleCheck,
+  CircleGauge,
   CircleX,
   ClipboardCheck,
   CloudUpload,
@@ -68,6 +71,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
 import {
   type CredentialMetadataInput,
@@ -1802,16 +1806,27 @@ function CredentialDetailContent({
             {resourceIdentifier}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={mutating}
-          onClick={() => onModeChange('edit')}
-        >
-          <Pencil className="size-4" aria-hidden="true" />
-          {t('credentialsPage.actions.edit')}
-        </Button>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/admin/quota"
+              search={{ q: resource.authIndex ?? resource.name ?? resource.identifier }}
+            >
+              <CircleGauge className="size-4" aria-hidden="true" />
+              {t('credentialsPage.actions.viewQuota')}
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={mutating}
+            onClick={() => onModeChange('edit')}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            {t('credentialsPage.actions.edit')}
+          </Button>
+        </div>
       </div>
 
       <dl className="mt-5 grid gap-3 text-sm">
@@ -1954,14 +1969,22 @@ function CredentialDetailContent({
   )
 }
 
-export function CredentialsWorkbenchPage() {
+export function CredentialsWorkbenchPage({
+  initialCredentialId,
+  initialSearch = '',
+  onSearchChange,
+}: {
+  initialCredentialId?: string
+  initialSearch?: string
+  onSearchChange?: (search: string) => void
+}) {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
   const [sourceFilter, setSourceFilter] = useState('all')
   const [providerFilter, setProviderFilter] = useState('all')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(() => new Set())
   const [panelMode, setPanelMode] = useState<MetadataPanelMode>('detail')
@@ -1972,6 +1995,7 @@ export function CredentialsWorkbenchPage() {
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
+  const autoOpenedCredentialRef = useRef<string | null>(null)
 
   const resources = workbench.snapshot?.resources ?? []
   const filteredResources = useMemo(() => {
@@ -2013,6 +2037,28 @@ export function CredentialsWorkbenchPage() {
   const uploadInProgress = uploadItems.some(
     (item) => item.status === 'queued' || item.status === 'uploading',
   )
+
+  useEffect(() => {
+    setSearch((current) => (current === initialSearch ? current : initialSearch))
+  }, [initialSearch])
+
+  useEffect(() => {
+    if (
+      !initialCredentialId ||
+      resources.length === 0 ||
+      autoOpenedCredentialRef.current === initialCredentialId
+    ) {
+      return
+    }
+
+    autoOpenedCredentialRef.current = initialCredentialId
+    const resource = findCredentialRouteResource(resources, initialCredentialId, initialSearch)
+    if (!resource) return
+
+    setSelectedResourceId(resource.id)
+    setPanelMode('detail')
+    setDetailSheetOpen(true)
+  }, [initialCredentialId, initialSearch, resources])
 
   useEffect(() => {
     if (selectedResourceId && !resources.some((resource) => resource.id === selectedResourceId)) {
@@ -2444,7 +2490,10 @@ export function CredentialsWorkbenchPage() {
                 <Input
                   className="pl-9"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    onSearchChange?.(event.target.value)
+                  }}
                   placeholder={t('credentialsPage.list.filterPlaceholder')}
                 />
               </div>
