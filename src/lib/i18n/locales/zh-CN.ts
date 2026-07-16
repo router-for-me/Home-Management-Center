@@ -15,6 +15,7 @@ export const zhCN = {
       connect: '连接',
       manageConnection: '连接管理',
       copyFailed: '复制失败',
+      customizeColumns: '自定义列',
     },
     language: {
       switch: '语言',
@@ -3328,7 +3329,6 @@ export const zhCN = {
       },
       table: {
         title: '请求事件',
-        columnsButton: '列',
         columnsMenu: '显示列',
         ttft: 'TTFT {{value}}',
         emptyTitle: '没有匹配的请求事件',
@@ -3755,7 +3755,6 @@ export const zhCN = {
         metric: '排序指标',
         showTop50: '查看前 50 名',
         showTop10: '收起到前 10 名',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         columns: {
           rank: '排名',
@@ -3804,7 +3803,6 @@ export const zhCN = {
         previous: '上一页',
         next: '下一页',
         ttft: 'TTFT {{value}}',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         sortColumn: '将 {{column}} 按 {{sort}} 排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3918,7 +3916,6 @@ export const zhCN = {
         pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         sortColumn: '将 {{column}} 按{{direction}}排序',
         clearSortColumn: '取消 {{column}} 排序',

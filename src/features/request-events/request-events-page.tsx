@@ -1204,7 +1204,7 @@ function RequestEventsTable({
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="outline" size="sm" className={touchButtonClassName}>
                   <Columns3 className="size-4" aria-hidden="true" />
-                  {t('requestEventsPage.table.columnsButton')}
+                  {t('actions.customizeColumns')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

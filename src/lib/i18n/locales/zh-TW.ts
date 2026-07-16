@@ -15,6 +15,7 @@ export const zhTW = {
       connect: '連線',
       manageConnection: '連線管理',
       copyFailed: '複製失敗',
+      customizeColumns: '自訂欄位',
     },
     language: {
       switch: '語言',
@@ -3327,7 +3328,6 @@ export const zhTW = {
       },
       table: {
         title: '請求事件',
-        columnsButton: '欄位',
         columnsMenu: '顯示欄位',
         ttft: 'TTFT {{value}}',
         emptyTitle: '沒有匹配的請求事件',
@@ -3754,7 +3754,6 @@ export const zhTW = {
         metric: '排序指標',
         showTop50: '查看前 50 名',
         showTop10: '收合到前 10 名',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         columns: {
           rank: '排名',
@@ -3803,7 +3802,6 @@ export const zhTW = {
         previous: '上一頁',
         next: '下一頁',
         ttft: 'TTFT {{value}}',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         sortColumn: '將 {{column}} 依 {{sort}} 排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3917,7 +3915,6 @@ export const zhTW = {
         pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         sortColumn: '將 {{column}} 依{{direction}}排序',
         clearSortColumn: '取消 {{column}} 排序',

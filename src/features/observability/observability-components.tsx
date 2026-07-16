@@ -2416,7 +2416,7 @@ export function RankingGrid({
                 <DropdownMenuTrigger asChild>
                   <Button type="button" variant="outline" size="sm">
                     <Columns3 className="size-4" aria-hidden="true" />
-                    {t('usageLogsPage.rankings.columnsButton')}
+                    {t('actions.customizeColumns')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
@@ -3045,7 +3045,7 @@ export function RequestRecordsTable({
                   className={usageTouchButtonClassName}
                 >
                   <Columns3 className="size-4" aria-hidden="true" />
-                  {t('usageLogsPage.records.columnsButton')}
+                  {t('actions.customizeColumns')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
@@ -4373,7 +4373,7 @@ export function CredentialUsageTable({
                   className={usageTouchButtonClassName}
                 >
                   <Columns3 className="size-4" aria-hidden="true" />
-                  {t('usageLogsPage.credentials.columnsButton')}
+                  {t('actions.customizeColumns')}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
