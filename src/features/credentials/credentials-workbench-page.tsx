@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { Link } from '@tanstack/react-router'
+
 import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  CircleCheck,
+  CircleGauge,
+  CircleX,
   ClipboardCheck,
   CloudUpload,
   Copy,
@@ -15,10 +20,12 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Trash2,
   Upload,
+  X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -64,6 +71,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
 import {
   type CredentialMetadataInput,
@@ -78,6 +86,14 @@ import {
 } from '@/lib/api/management/credentials'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
+
+import {
+  type CredentialUploadErrorCode,
+  type CredentialUploadItem,
+  classifyCredentialUploadError,
+  createCredentialUploadItem,
+  validateCredentialUploadFile,
+} from './credential-upload'
 
 type MetadataPanelMode = 'detail' | 'edit'
 type CreateCredentialMode = 'oauth' | 'upload' | 'vertex'
@@ -94,6 +110,8 @@ type OAuthStatusMap = Partial<Record<CredentialOAuthProvider, CredentialOAuthSta
 type PendingCredentialConfirmation =
   | { type: 'delete'; resource: CredentialResource }
   | { type: 'bulkDelete'; resources: CredentialResource[] }
+
+const MAX_CONCURRENT_CREDENTIAL_UPLOADS = 3
 
 const oauthStatusToneClassNames: Record<string, string> = {
   ok: 'border-primary/30 bg-primary/10 text-primary',
@@ -713,6 +731,122 @@ function OAuthAuthorizationLinkPanel({ session }: { session: OAuthSessionSummary
   )
 }
 
+function CredentialFileDropzone({
+  fileInputRef,
+  title,
+  description,
+  disabled,
+  multiple = false,
+  selectedFile = null,
+  selectedDescription,
+  clearSelectionLabel,
+  className,
+  onFiles,
+  onClearSelection,
+}: {
+  fileInputRef: React.RefObject<HTMLInputElement | null>
+  title: string
+  description: string
+  disabled: boolean
+  multiple?: boolean
+  selectedFile?: File | null
+  selectedDescription?: string
+  clearSelectionLabel?: string
+  className?: string
+  onFiles: (fileList: FileList | null) => void | Promise<void>
+  onClearSelection?: () => void
+}) {
+  const [dragActive, setDragActive] = useState(false)
+
+  const openFilePicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setDragActive(false)
+
+    if (disabled) return
+    void onFiles(event.dataTransfer.files)
+  }
+
+  return (
+    <div className="grid min-w-0 gap-2">
+      <Button
+        type="button"
+        variant="ghost"
+        className={cn(
+          'min-w-0 cursor-pointer justify-center overflow-hidden rounded-lg border p-5 text-center whitespace-normal',
+          selectedFile ? 'bg-muted/20 hover:bg-muted/30 border-solid' : 'border-dashed',
+          dragActive
+            ? 'border-primary/60 bg-primary/5'
+            : 'hover:border-primary/40 hover:bg-primary/5',
+          className,
+        )}
+        disabled={disabled}
+        onClick={openFilePicker}
+        onDragEnter={(event) => {
+          event.preventDefault()
+          if (!disabled) setDragActive(true)
+        }}
+        onDragOver={(event) => {
+          event.preventDefault()
+          if (!disabled) setDragActive(true)
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault()
+          setDragActive(false)
+        }}
+        onDrop={handleDrop}
+      >
+        <span className="flex min-w-0 flex-col items-center justify-center gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md">
+            {selectedFile ? (
+              <FileJson className="size-4" aria-hidden="true" />
+            ) : (
+              <Upload className="size-4" aria-hidden="true" />
+            )}
+          </span>
+          <span className="grid min-w-0 gap-1.5">
+            <span className="block max-w-full truncate text-sm font-semibold">
+              {selectedFile?.name ?? title}
+            </span>
+            <span className="text-muted-foreground block max-w-sm text-xs leading-5">
+              {selectedFile && selectedDescription ? selectedDescription : description}
+            </span>
+          </span>
+        </span>
+      </Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json,.json"
+        multiple={multiple}
+        className="hidden"
+        aria-label={title}
+        onChange={(event) => {
+          void onFiles(event.target.files)
+          event.currentTarget.value = ''
+        }}
+      />
+      {selectedFile && onClearSelection && clearSelectionLabel ? (
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          className="justify-self-end"
+          disabled={disabled}
+          onClick={onClearSelection}
+        >
+          <X className="size-4" aria-hidden="true" />
+          {clearSelectionLabel}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function VertexImportPanel({
   result,
   mutating,
@@ -766,17 +900,48 @@ function VertexImportPanel({
         </div>
       </div>
 
-      <form className="mt-4 grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
-        <label className="grid gap-2 text-sm font-medium">
-          <span>{t('credentialsPage.vertex.file')}</span>
-          <Input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json,.json"
-            disabled={mutating}
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          />
-        </label>
+      <form
+        aria-busy={mutating}
+        className="mt-4 grid gap-3"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
+        <fieldset className="min-w-0">
+          <legend className="text-sm font-medium">{t('credentialsPage.vertex.file')}</legend>
+          <div className="mt-2">
+            <CredentialFileDropzone
+              fileInputRef={fileInputRef}
+              title={t('credentialsPage.vertex.dropzone.title')}
+              description={t('credentialsPage.vertex.dropzone.description')}
+              disabled={mutating}
+              selectedFile={file}
+              selectedDescription={
+                file
+                  ? mutating
+                    ? t('credentialsPage.vertex.dropzone.importing')
+                    : t('credentialsPage.vertex.dropzone.selected', {
+                        size: formatBytes(file.size),
+                      })
+                  : undefined
+              }
+              clearSelectionLabel={t('credentialsPage.vertex.dropzone.remove')}
+              className="min-h-32"
+              onFiles={(fileList) => {
+                setFile(fileList?.[0] ?? null)
+                setLocalError(null)
+              }}
+              onClearSelection={() => {
+                setFile(null)
+                setLocalError(null)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }}
+            />
+          </div>
+          {file ? (
+            <p role="status" aria-live="polite" className="sr-only">
+              {t('credentialsPage.vertex.dropzone.selectedStatus', { name: file.name })}
+            </p>
+          ) : null}
+        </fieldset>
         <label className="grid gap-2 text-sm font-medium">
           <span>{t('credentialsPage.vertex.location')}</span>
           <Input
@@ -785,6 +950,9 @@ function VertexImportPanel({
             disabled={mutating}
             onChange={(event) => setLocation(event.target.value)}
           />
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('credentialsPage.vertex.locationHint')}
+          </span>
         </label>
 
         {localError ? (
@@ -899,78 +1067,195 @@ function OAuthStartPanel({
 
 function JsonUploadPanel({
   fileInputRef,
-  mutating,
+  items,
+  disabled,
+  uploading,
   onUpload,
+  onRetry,
+  onRetryFailed,
+  onRemove,
+  onClear,
 }: {
   fileInputRef: React.RefObject<HTMLInputElement | null>
-  mutating: boolean
+  items: CredentialUploadItem[]
+  disabled: boolean
+  uploading: boolean
   onUpload: (fileList: FileList | null) => Promise<void>
+  onRetry: (item: CredentialUploadItem) => Promise<void>
+  onRetryFailed: () => Promise<void>
+  onRemove: (itemId: string) => void
+  onClear: () => void
 }) {
   const { t } = useTranslation()
-  const [dragActive, setDragActive] = useState(false)
-
-  const openFilePicker = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleDrop = (event: React.DragEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-    setDragActive(false)
-
-    if (mutating) return
-    void onUpload(event.dataTransfer.files)
-  }
+  const completedCount = items.filter(
+    (item) => item.status === 'success' || item.status === 'error',
+  ).length
+  const successCount = items.filter((item) => item.status === 'success').length
+  const failedItems = items.filter((item) => item.status === 'error')
+  const retryableItems = failedItems.filter((item) => isCredentialUploadRetryable(item.errorCode))
 
   return (
-    <div className="grid min-w-0 gap-3">
-      <Button
-        type="button"
-        variant="ghost"
-        className={cn(
-          'min-h-36 min-w-0 justify-center overflow-hidden rounded-lg border border-dashed p-5 text-center whitespace-normal',
-          dragActive
-            ? 'border-primary/60 bg-primary/5'
-            : 'hover:border-primary/40 hover:bg-primary/5',
-        )}
-        disabled={mutating}
-        onClick={openFilePicker}
-        onDragEnter={(event) => {
-          event.preventDefault()
-          if (!mutating) setDragActive(true)
-        }}
-        onDragOver={(event) => {
-          event.preventDefault()
-          if (!mutating) setDragActive(true)
-        }}
-        onDragLeave={(event) => {
-          event.preventDefault()
-          setDragActive(false)
-        }}
-        onDrop={handleDrop}
-      >
-        <div className="flex min-w-0 flex-col items-center justify-center gap-3">
-          <span className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-md">
-            <Upload className="size-4" aria-hidden="true" />
-          </span>
-          <span className="grid min-w-0 gap-1.5">
-            <span className="block text-sm font-semibold">{t('credentialsPage.upload.title')}</span>
-            <span className="text-muted-foreground block max-w-sm text-xs leading-5">
-              {t('credentialsPage.upload.description')}
-            </span>
-          </span>
-        </div>
-      </Button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json,.json"
+    <div className="grid min-w-0 content-start gap-3">
+      <CredentialFileDropzone
+        fileInputRef={fileInputRef}
+        title={t('credentialsPage.upload.title')}
+        description={t('credentialsPage.upload.description')}
+        disabled={disabled}
         multiple
-        className="hidden"
-        onChange={(event) => void onUpload(event.target.files)}
+        className="min-h-36"
+        onFiles={onUpload}
       />
+      {items.length > 0 ? (
+        <section aria-busy={uploading} className="grid gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">{t('credentialsPage.upload.resultsTitle')}</p>
+              <p role="status" aria-live="polite" className="text-muted-foreground mt-0.5 text-xs">
+                {uploading
+                  ? t('credentialsPage.upload.summaryUploading', {
+                      completed: completedCount,
+                      total: items.length,
+                    })
+                  : t('credentialsPage.upload.summaryComplete', {
+                      success: successCount,
+                      failed: failedItems.length,
+                    })}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {retryableItems.length > 1 && !uploading ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => void onRetryFailed()}
+                >
+                  <RotateCcw className="size-3" aria-hidden="true" />
+                  {t('credentialsPage.upload.retryFailed')}
+                </Button>
+              ) : null}
+              {!uploading ? (
+                <Button type="button" variant="text" size="xs" onClick={onClear}>
+                  {t('credentialsPage.upload.clearResults')}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          <ul className="grid gap-2">
+            {items.map((item) => {
+              const retryable = isCredentialUploadRetryable(item.errorCode)
+              const statusKey = getCredentialUploadStatusKey(item)
+
+              return (
+                <li key={item.id} className="bg-muted/35 grid min-w-0 gap-2 rounded-md border p-3">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <CredentialUploadStatusIcon item={item} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium" title={item.file.name}>
+                        {item.file.name}
+                      </p>
+                      <p
+                        className={cn(
+                          'mt-0.5 text-xs leading-5',
+                          item.status === 'error'
+                            ? 'text-destructive'
+                            : item.status === 'success'
+                              ? 'text-success'
+                              : 'text-muted-foreground',
+                        )}
+                      >
+                        {t(statusKey, {
+                          progress: item.progress,
+                          name: item.resultName ?? item.file.name,
+                        })}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        {formatBytes(item.file.size)}
+                      </p>
+                    </div>
+                    {item.status === 'error' && retryable ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={uploading}
+                        onClick={() => void onRetry(item)}
+                      >
+                        <RotateCcw className="size-3" aria-hidden="true" />
+                        {t('credentialsPage.upload.retry')}
+                      </Button>
+                    ) : null}
+                    {item.status !== 'uploading' ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled={uploading}
+                        aria-label={t('credentialsPage.upload.removeResult', {
+                          name: item.file.name,
+                        })}
+                        title={t('credentialsPage.upload.removeResult', {
+                          name: item.file.name,
+                        })}
+                        onClick={() => onRemove(item.id)}
+                      >
+                        <X className="size-3" aria-hidden="true" />
+                      </Button>
+                    ) : null}
+                  </div>
+                  {item.status === 'uploading' ? (
+                    <div
+                      role="progressbar"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={item.progress}
+                      className="bg-muted h-1.5 overflow-hidden rounded-full"
+                      aria-label={t('credentialsPage.upload.progressLabel', {
+                        name: item.file.name,
+                        progress: item.progress,
+                      })}
+                    >
+                      <div
+                        className="bg-primary h-full transition-[width] duration-200"
+                        style={{ width: `${item.progress}%` }}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
+}
+
+function isCredentialUploadRetryable(errorCode: CredentialUploadErrorCode | null) {
+  return errorCode === 'network' || errorCode === 'server'
+}
+
+function getCredentialUploadStatusKey(item: CredentialUploadItem) {
+  if (item.status === 'success') return 'credentialsPage.upload.states.success'
+  if (item.status === 'error' && item.errorCode) {
+    return `credentialsPage.upload.errors.${item.errorCode}`
+  }
+  if (item.status === 'uploading') return 'credentialsPage.upload.states.uploading'
+  return 'credentialsPage.upload.states.queued'
+}
+
+function CredentialUploadStatusIcon({ item }: { item: CredentialUploadItem }) {
+  if (item.status === 'success') {
+    return <CircleCheck className="text-success mt-0.5 size-4" aria-hidden="true" />
+  }
+  if (item.status === 'error') {
+    return <CircleX className="text-destructive mt-0.5 size-4" aria-hidden="true" />
+  }
+  if (item.status === 'uploading') {
+    return <Loader2 className="text-primary mt-0.5 size-4 animate-spin" aria-hidden="true" />
+  }
+  return <FileJson className="text-muted-foreground mt-0.5 size-4" aria-hidden="true" />
 }
 
 function CreateCredentialSheet({
@@ -982,9 +1267,15 @@ function CreateCredentialSheet({
   oauthStatuses,
   vertexImportResult,
   mutating,
+  uploadItems,
+  uploadInProgress,
   onOpenChange,
   onModeChange,
   onUpload,
+  onRetryUpload,
+  onRetryFailedUploads,
+  onRemoveUploadResult,
+  onClearUploadResults,
   onStartOAuth,
   onCheckOAuthStatus,
   onSubmitOAuthCallback,
@@ -998,9 +1289,15 @@ function CreateCredentialSheet({
   oauthStatuses: OAuthStatusMap
   vertexImportResult: VertexImportResult | null
   mutating: boolean
+  uploadItems: CredentialUploadItem[]
+  uploadInProgress: boolean
   onOpenChange: (open: boolean) => void
   onModeChange: (mode: CreateCredentialMode) => void
   onUpload: (fileList: FileList | null) => Promise<void>
+  onRetryUpload: (item: CredentialUploadItem) => Promise<void>
+  onRetryFailedUploads: () => Promise<void>
+  onRemoveUploadResult: (itemId: string) => void
+  onClearUploadResults: () => void
   onStartOAuth: (provider: CredentialOAuthProvider) => Promise<void>
   onCheckOAuthStatus: (provider: CredentialOAuthProvider, state: string) => Promise<void>
   onSubmitOAuthCallback: (input: CredentialOAuthCallbackInput) => Promise<void>
@@ -1011,29 +1308,43 @@ function CreateCredentialSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-hidden sm:max-w-xl">
-        <SheetHeader className="border-b p-5 shadow-[0_1px_0_var(--border)]">
-          <SheetTitle>{t('credentialsPage.create.title')}</SheetTitle>
-          <SheetDescription>{t('credentialsPage.create.description')}</SheetDescription>
-          <ToggleGroup
-            type="single"
-            value={mode}
-            className="mt-3 grid grid-cols-3"
-            onValueChange={(value) => {
-              if (value) onModeChange(value as CreateCredentialMode)
-            }}
-          >
-            {modes.map((item) => (
-              <ToggleGroupItem
-                key={item}
-                value={item}
-                className="data-[state=on]:bg-background data-[state=on]:text-foreground"
-              >
-                {t(`credentialsPage.create.modes.${item}`)}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </SheetHeader>
+      <SheetContent
+        className="w-full gap-0 overflow-hidden sm:max-w-xl"
+        showCloseButton={!uploadInProgress}
+        onEscapeKeyDown={(event) => {
+          if (uploadInProgress) event.preventDefault()
+        }}
+        onPointerDownOutside={(event) => {
+          if (uploadInProgress) event.preventDefault()
+        }}
+      >
+        <div className="border-b shadow-[0_1px_0_var(--border)]">
+          <SheetHeader className="p-5 pb-3">
+            <SheetTitle>{t('credentialsPage.create.title')}</SheetTitle>
+            <SheetDescription>{t('credentialsPage.create.description')}</SheetDescription>
+          </SheetHeader>
+          <div className="px-5 pb-5">
+            <ToggleGroup
+              type="single"
+              value={mode}
+              className="grid w-full grid-cols-3"
+              onValueChange={(value) => {
+                if (value) onModeChange(value as CreateCredentialMode)
+              }}
+            >
+              {modes.map((item) => (
+                <ToggleGroupItem
+                  key={item}
+                  value={item}
+                  disabled={uploadInProgress}
+                  className="data-[state=on]:bg-background data-[state=on]:text-foreground h-auto min-h-9 px-2 text-center whitespace-normal"
+                >
+                  {t(`credentialsPage.create.modes.${item}`)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </div>
+        </div>
 
         <div className="grid min-h-0 min-w-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto px-5 py-5">
           {mode === 'oauth' ? (
@@ -1049,7 +1360,17 @@ function CreateCredentialSheet({
           ) : null}
 
           {mode === 'upload' ? (
-            <JsonUploadPanel fileInputRef={fileInputRef} mutating={mutating} onUpload={onUpload} />
+            <JsonUploadPanel
+              fileInputRef={fileInputRef}
+              items={uploadItems}
+              disabled={mutating || uploadInProgress}
+              uploading={uploadInProgress}
+              onUpload={onUpload}
+              onRetry={onRetryUpload}
+              onRetryFailed={onRetryFailedUploads}
+              onRemove={onRemoveUploadResult}
+              onClear={onClearUploadResults}
+            />
           ) : null}
 
           {mode === 'vertex' ? (
@@ -1485,16 +1806,27 @@ function CredentialDetailContent({
             {resourceIdentifier}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={mutating}
-          onClick={() => onModeChange('edit')}
-        >
-          <Pencil className="size-4" aria-hidden="true" />
-          {t('credentialsPage.actions.edit')}
-        </Button>
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/admin/quota"
+              search={{ q: resource.authIndex ?? resource.name ?? resource.identifier }}
+            >
+              <CircleGauge className="size-4" aria-hidden="true" />
+              {t('credentialsPage.actions.viewQuota')}
+            </Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={mutating}
+            onClick={() => onModeChange('edit')}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            {t('credentialsPage.actions.edit')}
+          </Button>
+        </div>
       </div>
 
       <dl className="mt-5 grid gap-3 text-sm">
@@ -1637,14 +1969,22 @@ function CredentialDetailContent({
   )
 }
 
-export function CredentialsWorkbenchPage() {
+export function CredentialsWorkbenchPage({
+  initialCredentialId,
+  initialSearch = '',
+  onSearchChange,
+}: {
+  initialCredentialId?: string
+  initialSearch?: string
+  onSearchChange?: (search: string) => void
+}) {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
   const [sourceFilter, setSourceFilter] = useState('all')
   const [providerFilter, setProviderFilter] = useState('all')
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(initialSearch)
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(() => new Set())
   const [panelMode, setPanelMode] = useState<MetadataPanelMode>('detail')
@@ -1653,7 +1993,9 @@ export function CredentialsWorkbenchPage() {
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
+  const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
+  const autoOpenedCredentialRef = useRef<string | null>(null)
 
   const resources = workbench.snapshot?.resources ?? []
   const filteredResources = useMemo(() => {
@@ -1692,6 +2034,31 @@ export function CredentialsWorkbenchPage() {
     (resource) => !resource.disabled && !resource.unavailable,
   ).length
   const unavailableCount = resources.filter((resource) => resource.unavailable).length
+  const uploadInProgress = uploadItems.some(
+    (item) => item.status === 'queued' || item.status === 'uploading',
+  )
+
+  useEffect(() => {
+    setSearch((current) => (current === initialSearch ? current : initialSearch))
+  }, [initialSearch])
+
+  useEffect(() => {
+    if (
+      !initialCredentialId ||
+      resources.length === 0 ||
+      autoOpenedCredentialRef.current === initialCredentialId
+    ) {
+      return
+    }
+
+    autoOpenedCredentialRef.current = initialCredentialId
+    const resource = findCredentialRouteResource(resources, initialCredentialId, initialSearch)
+    if (!resource) return
+
+    setSelectedResourceId(resource.id)
+    setPanelMode('detail')
+    setDetailSheetOpen(true)
+  }, [initialCredentialId, initialSearch, resources])
 
   useEffect(() => {
     if (selectedResourceId && !resources.some((resource) => resource.id === selectedResourceId)) {
@@ -1730,18 +2097,102 @@ export function CredentialsWorkbenchPage() {
     )
   }
 
+  const updateUploadItem = (itemId: string, patch: Partial<CredentialUploadItem>) => {
+    setUploadItems((current) =>
+      current.map((item) => (item.id === itemId ? { ...item, ...patch } : item)),
+    )
+  }
+
+  const runCredentialUploads = async (items: CredentialUploadItem[]) => {
+    if (items.length === 0) return
+
+    let nextIndex = 0
+    let successfulUploads = 0
+    const worker = async () => {
+      while (nextIndex < items.length) {
+        const item = items[nextIndex]
+        nextIndex += 1
+        updateUploadItem(item.id, {
+          status: 'uploading',
+          progress: 0,
+          resultName: null,
+          errorCode: null,
+        })
+
+        try {
+          const result = await workbench.uploadCredential(item.file, (progress) => {
+            updateUploadItem(item.id, { progress })
+          })
+          successfulUploads += 1
+          updateUploadItem(item.id, {
+            status: 'success',
+            progress: 100,
+            resultName: result.files[0] ?? item.file.name,
+            errorCode: null,
+          })
+        } catch (error) {
+          updateUploadItem(item.id, {
+            status: 'error',
+            progress: 0,
+            resultName: null,
+            errorCode: classifyCredentialUploadError(error),
+          })
+        }
+      }
+    }
+    const workerCount = Math.min(MAX_CONCURRENT_CREDENTIAL_UPLOADS, items.length)
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()))
+    if (successfulUploads > 0) {
+      await workbench.refreshCredentials()
+    }
+  }
+
   const handleUpload = async (fileList: FileList | null) => {
     const files = Array.from(fileList ?? [])
+    if (fileInputRef.current) fileInputRef.current.value = ''
     if (files.length === 0) return
 
-    try {
-      await workbench.uploadCredentials(files)
-      toast.success(t('credentialsPage.toast.uploaded'))
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+    const items = files.map(createCredentialUploadItem)
+    setUploadItems((current) => [...current, ...items])
+    const validationResults = await Promise.all(
+      items.map(async (item) => ({
+        item,
+        errorCode: await validateCredentialUploadFile(item.file),
+      })),
+    )
+    const uploadableItems: CredentialUploadItem[] = []
+
+    validationResults.forEach(({ item, errorCode }) => {
+      if (errorCode) {
+        updateUploadItem(item.id, { status: 'error', errorCode })
+      } else {
+        uploadableItems.push(item)
       }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
+    })
+
+    await runCredentialUploads(uploadableItems)
+  }
+
+  const handleRetryUpload = async (item: CredentialUploadItem) => {
+    await runCredentialUploads([item])
+  }
+
+  const handleRetryFailedUploads = async () => {
+    await runCredentialUploads(
+      uploadItems.filter(
+        (item) => item.status === 'error' && isCredentialUploadRetryable(item.errorCode),
+      ),
+    )
+  }
+
+  const handleCreateSheetOpenChange = (open: boolean) => {
+    if (!open && uploadInProgress) return
+
+    setCreateSheetOpen(open)
+    if (!open) {
+      setUploadItems([])
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -2039,7 +2490,10 @@ export function CredentialsWorkbenchPage() {
                 <Input
                   className="pl-9"
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    onSearchChange?.(event.target.value)
+                  }}
                   placeholder={t('credentialsPage.list.filterPlaceholder')}
                 />
               </div>
@@ -2165,9 +2619,17 @@ export function CredentialsWorkbenchPage() {
         oauthStatuses={oauthStatuses}
         vertexImportResult={workbench.vertexImportResult}
         mutating={workbench.mutating}
-        onOpenChange={setCreateSheetOpen}
+        uploadItems={uploadItems}
+        uploadInProgress={uploadInProgress}
+        onOpenChange={handleCreateSheetOpenChange}
         onModeChange={setCreateMode}
         onUpload={handleUpload}
+        onRetryUpload={handleRetryUpload}
+        onRetryFailedUploads={handleRetryFailedUploads}
+        onRemoveUploadResult={(itemId) => {
+          setUploadItems((current) => current.filter((item) => item.id !== itemId))
+        }}
+        onClearUploadResults={() => setUploadItems([])}
         onStartOAuth={handleStartOAuth}
         onCheckOAuthStatus={handleCheckOAuthStatus}
         onSubmitOAuthCallback={handleSubmitOAuthCallback}

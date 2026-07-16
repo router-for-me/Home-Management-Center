@@ -18,7 +18,7 @@ import {
   toCredentialApiError,
   updateCredentialMetadata,
   updateCredentialStatus,
-  uploadCredentialFiles,
+  uploadCredentialFile,
 } from '@/lib/api/management/credentials'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -137,17 +137,6 @@ export function useCredentialWorkbench() {
     onSuccess: invalidate,
   })
 
-  const uploadMutation = useMutation({
-    mutationFn: async (files: File[]) => {
-      try {
-        return await uploadCredentialFiles(session, files)
-      } catch (error) {
-        throw toCredentialApiError(error)
-      }
-    },
-    onSuccess: invalidate,
-  })
-
   const downloadMutation = useMutation({
     mutationFn: async (resource: CredentialResource) => {
       try {
@@ -227,7 +216,14 @@ export function useCredentialWorkbench() {
     deleteCredential: deleteMutation.mutateAsync,
     bulkUpdateStatus: bulkStatusMutation.mutateAsync,
     bulkDeleteCredentials: bulkDeleteMutation.mutateAsync,
-    uploadCredentials: uploadMutation.mutateAsync,
+    uploadCredential: async (file: File, onProgress?: (progress: number) => void) => {
+      try {
+        return await uploadCredentialFile(session, file, onProgress)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refreshCredentials: invalidate,
     downloadCredential: downloadMutation.mutateAsync,
     fetchModels: modelsMutation.mutateAsync,
     startOAuth: oauthMutation.mutateAsync,
@@ -244,7 +240,6 @@ export function useCredentialWorkbench() {
       deleteMutation.isPending ||
       bulkStatusMutation.isPending ||
       bulkDeleteMutation.isPending ||
-      uploadMutation.isPending ||
       downloadMutation.isPending ||
       modelsMutation.isPending ||
       oauthMutation.isPending ||

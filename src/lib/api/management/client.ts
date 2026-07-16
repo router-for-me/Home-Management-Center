@@ -83,21 +83,45 @@ export function createManagementClient({
   })
 }
 
-function readResponseErrorMessage(data: unknown) {
-  if (!data || typeof data !== 'object') return null
+type ResponseErrorDetails = {
+  message: string | null
+  backendCode?: string
+  requestId?: string
+  retryable?: boolean
+}
+
+function readResponseErrorDetails(data: unknown): ResponseErrorDetails {
+  if (!data || typeof data !== 'object') return { message: null }
 
   const response = data as Record<string, unknown>
   const directMessage = response.message
-  if (typeof directMessage === 'string' && directMessage.trim()) return directMessage
-
-  const error = response.error
-  if (typeof error === 'string' && error.trim()) return error
-  if (error && typeof error === 'object') {
-    const nestedMessage = (error as Record<string, unknown>).message
-    if (typeof nestedMessage === 'string' && nestedMessage.trim()) return nestedMessage
+  const details: ResponseErrorDetails = {
+    message:
+      typeof directMessage === 'string' && directMessage.trim() ? directMessage.trim() : null,
   }
 
-  return null
+  const error = response.error
+  if (typeof error === 'string' && error.trim()) return { message: error.trim() }
+  if (error && typeof error === 'object') {
+    const nested = error as Record<string, unknown>
+    const nestedMessage = nested.message
+    const backendCode = nested.code
+    const requestId = nested.request_id ?? nested.requestId
+    const retryable = nested.retryable
+
+    if (typeof nestedMessage === 'string' && nestedMessage.trim()) {
+      details.message = nestedMessage.trim()
+    }
+    if (typeof backendCode === 'string' && backendCode.trim()) {
+      details.backendCode = backendCode.trim()
+    }
+    if (typeof requestId === 'string' && requestId.trim()) {
+      details.requestId = requestId.trim()
+    }
+    if (typeof retryable === 'boolean') details.retryable = retryable
+  }
+
+  return details
 }
 
 export function toManagementApiError(error: unknown): ManagementApiError {
@@ -111,14 +135,22 @@ export function toManagementApiError(error: unknown): ManagementApiError {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<unknown>
     const status = axiosError.response?.status
-    const responseMessage = readResponseErrorMessage(axiosError.response?.data)
-    const message = responseMessage ?? axiosError.message
+    const responseError = readResponseErrorDetails(axiosError.response?.data)
+    const message = responseError.message ?? axiosError.message
+    const backendDetails = {
+      ...(responseError.backendCode ? { backendCode: responseError.backendCode } : {}),
+      ...(responseError.requestId ? { requestId: responseError.requestId } : {}),
+      ...(typeof responseError.retryable === 'boolean'
+        ? { retryable: responseError.retryable }
+        : {}),
+    }
 
     if (status === 401 || status === 403) {
       return {
         message,
         status,
         code: 'auth',
+        ...backendDetails,
       }
     }
 
@@ -127,6 +159,7 @@ export function toManagementApiError(error: unknown): ManagementApiError {
         message,
         status,
         code: 'not-found',
+        ...backendDetails,
       }
     }
 
@@ -135,6 +168,7 @@ export function toManagementApiError(error: unknown): ManagementApiError {
         message,
         status,
         code: 'server',
+        ...backendDetails,
       }
     }
 
@@ -142,6 +176,7 @@ export function toManagementApiError(error: unknown): ManagementApiError {
       message,
       status,
       code: status ? 'unknown' : 'network',
+      ...backendDetails,
     }
   }
 
