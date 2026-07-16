@@ -6,11 +6,14 @@ import { AdminConnectPage } from '@/features/access/admin-connect-page'
 import { BillingWorkbenchPage } from '@/features/billing/billing-workbench-page'
 import { CallDiagnosticsPage } from '@/features/call-diagnostics/call-diagnostics-page'
 import { ConfigWorkbenchPage } from '@/features/config/config-workbench-page'
+import { normalizeCredentialRouteSearch } from '@/features/credentials/credential-route'
 import { CredentialsWorkbenchPage } from '@/features/credentials/credentials-workbench-page'
 import { DashboardConsolePage } from '@/features/dashboard/dashboard-console-page'
 import { LogsWorkbenchPage } from '@/features/logs/logs-workbench-page'
 import { PluginsWorkbenchPage } from '@/features/plugins/plugins-workbench-page'
 import { ProvidersWorkbenchPage } from '@/features/providers/providers-workbench-page'
+import { normalizeQuotaRouteSearch } from '@/features/quota/quota-model'
+import { QuotaWorkbenchPage } from '@/features/quota/quota-workbench-page'
 import { RequestEventsPage } from '@/features/request-events/request-events-page'
 import { SystemNodesWorkbenchPage } from '@/features/system-nodes/system-nodes-workbench-page'
 import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
@@ -55,8 +58,44 @@ const providersRoute = createRoute({
 const credentialsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/credentials',
-  component: CredentialsWorkbenchPage,
+  validateSearch: normalizeCredentialRouteSearch,
+  component: ManagementCredentialsPage,
 })
+
+function ManagementCredentialsPage() {
+  const search = credentialsRoute.useSearch()
+  const navigate = credentialsRoute.useNavigate()
+  return (
+    <CredentialsWorkbenchPage
+      initialCredentialId={search.credential}
+      initialSearch={search.q}
+      onSearchChange={(q) =>
+        void navigate({
+          search: { credential: undefined, q: q.trim() || undefined },
+          replace: true,
+        })
+      }
+    />
+  )
+}
+
+const quotaRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/quota',
+  validateSearch: normalizeQuotaRouteSearch,
+  component: ManagementQuotaPage,
+})
+
+function ManagementQuotaPage() {
+  const search = quotaRoute.useSearch()
+  const navigate = quotaRoute.useNavigate()
+  return (
+    <QuotaWorkbenchPage
+      initialSearch={search.q}
+      onSearchChange={(q) => void navigate({ search: { q: q.trim() || undefined }, replace: true })}
+    />
+  )
+}
 
 const accessKeysRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -124,6 +163,7 @@ export const managementRouteTree = rootRoute.addChildren([
   dashboardRoute,
   providersRoute,
   credentialsRoute,
+  quotaRoute,
   accessKeysRoute,
   usersRoute,
   billingRoute,

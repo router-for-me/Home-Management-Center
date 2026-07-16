@@ -17,6 +17,8 @@ export type CapabilityKey =
   | 'requestEventFilters'
   | 'requestLogIndex'
   | 'oauthUsage'
+  | 'quotaSnapshots'
+  | 'quotaSnapshotDetails'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'
@@ -51,4 +53,7 @@ export type ManagementApiError = {
   message: string
   status?: number
   code?: 'network' | 'auth' | 'not-found' | 'server' | 'unknown'
+  backendCode?: string
+  requestId?: string
+  retryable?: boolean
 }

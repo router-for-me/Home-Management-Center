@@ -1,6 +1,7 @@
 import {
   Activity,
   BarChart3,
+  CircleGauge,
   FileText,
   Gauge,
   KeyRound,
@@ -21,6 +22,7 @@ type NavigationRoute =
   | '/admin/dashboard'
   | '/admin/providers'
   | '/admin/credentials'
+  | '/admin/quota'
   | '/admin/access-keys'
   | '/admin/users'
   | '/admin/billing'
@@ -73,6 +75,12 @@ export const navigationGroups: NavigationGroup[] = [
         labelKey: 'navigation.credentials',
         metaKey: 'navigationMeta.credentials',
         icon: ShieldCheck,
+      },
+      {
+        to: '/admin/quota',
+        labelKey: 'navigation.quota',
+        metaKey: 'navigationMeta.quota',
+        icon: CircleGauge,
       },
       {
         to: '/admin/access-keys',

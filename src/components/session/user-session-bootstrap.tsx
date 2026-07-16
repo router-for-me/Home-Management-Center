@@ -9,6 +9,7 @@ const managementOnlyRoutes = new Set([
   '/admin/credentials',
   '/admin/logs',
   '/admin/providers',
+  '/admin/quota',
   '/admin/system-nodes',
   '/admin/usage',
   '/admin/users',
