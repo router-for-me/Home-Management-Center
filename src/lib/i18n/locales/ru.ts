@@ -15,6 +15,7 @@ export const ru = {
       connect: 'Подключить',
       manageConnection: 'Подключение',
       copyFailed: 'Не удалось скопировать',
+      customizeColumns: 'Настроить столбцы',
     },
     language: {
       switch: 'Язык',
@@ -3481,7 +3482,6 @@ export const ru = {
       },
       table: {
         title: 'События запросов',
-        columnsButton: 'Колонки',
         columnsMenu: 'Видимые колонки',
         ttft: 'TTFT {{value}}',
         emptyTitle: 'Подходящих событий нет',
@@ -3926,7 +3926,6 @@ export const ru = {
         metric: 'Метрика',
         showTop50: 'Показать топ-50',
         showTop10: 'Вернуться к топ-10',
-        columnsButton: 'Столбцы',
         columnsMenu: 'Видимые столбцы',
         columns: {
           rank: 'Ранг',
@@ -3975,7 +3974,6 @@ export const ru = {
         previous: 'Назад',
         next: 'Вперед',
         ttft: 'TTFT {{value}}',
-        columnsButton: 'Настроить столбцы',
         columnsMenu: 'Видимые столбцы',
         sortColumn: 'Сортировать {{column}}: {{sort}}',
         clearSortColumn: 'Сбросить сортировку {{column}}',
@@ -4089,7 +4087,6 @@ export const ru = {
         pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
-        columnsButton: 'Настроить столбцы',
         columnsMenu: 'Видимые столбцы',
         sortColumn: 'Сортировать {{column}}: {{direction}}',
         clearSortColumn: 'Сбросить сортировку {{column}}',

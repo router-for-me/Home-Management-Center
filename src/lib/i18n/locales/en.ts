@@ -15,6 +15,7 @@ export const en = {
       connect: 'Connect',
       manageConnection: 'Connection',
       copyFailed: 'Copy failed',
+      customizeColumns: 'Customize columns',
     },
     language: {
       switch: 'Language',
@@ -3464,7 +3465,6 @@ export const en = {
       },
       table: {
         title: 'Request Events',
-        columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         ttft: 'TTFT {{value}}',
         emptyTitle: 'No matching request events',
@@ -3909,7 +3909,6 @@ export const en = {
         metric: 'Metric',
         showTop50: 'Show Top 50',
         showTop10: 'Back to Top 10',
-        columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         columns: {
           rank: 'Rank',
@@ -3958,7 +3957,6 @@ export const en = {
         previous: 'Previous',
         next: 'Next',
         ttft: 'TTFT {{value}}',
-        columnsButton: 'Customize columns',
         columnsMenu: 'Visible columns',
         sortColumn: 'Sort {{column}} by {{sort}}',
         clearSortColumn: 'Clear {{column}} sort',
@@ -4072,7 +4070,6 @@ export const en = {
         pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
-        columnsButton: 'Customize columns',
         columnsMenu: 'Visible columns',
         sortColumn: 'Sort {{column}} {{direction}}',
         clearSortColumn: 'Clear {{column}} sort',
