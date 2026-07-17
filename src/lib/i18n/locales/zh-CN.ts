@@ -1241,16 +1241,25 @@ export const zhCN = {
       },
       usageActivity: {
         title: '请求健康度',
-        description: '按最近用量时段展示请求活跃度、成功率和失败分布。',
-        summary: '{{buckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
+        description: '按完整时间范围展示请求活跃度、成功率和失败分布。',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
         action: '查看调用诊断',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '请求健康度时间点阵',
         bucketTitle: '{{label}}：{{requests}} 次请求 · {{successRate}} 成功率',
+        interval: {
+          minute: '按分钟',
+          hour: '按小时',
+          day: '按日',
+          week: '按周',
+        },
         status: {
           healthy: '健康',
-          warning: '有失败',
           degraded: '降级',
-          failed: '失败',
+          unavailable: '不可用',
           empty: '无流量',
+          unknown: '未知',
         },
       },
       quickActions: {
@@ -3972,15 +3981,24 @@ export const zhCN = {
       },
       activity: {
         title: '请求健康时间线',
-        summary: '{{buckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
         emptyTitle: '暂无健康时间线',
         unavailable: '当前没有健康时段。',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '请求健康时间点阵',
+        interval: {
+          minute: '按分钟',
+          hour: '按小时',
+          day: '按日',
+          week: '按周',
+        },
         status: {
           healthy: '健康',
-          warning: '有失败',
           degraded: '降级',
-          failed: '失败',
+          unavailable: '不可用',
           empty: '无流量',
+          unknown: '未知',
         },
       },
       health: {

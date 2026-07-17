@@ -1286,18 +1286,25 @@ export const ru = {
       },
       usageActivity: {
         title: 'Состояние запросов',
-        description:
-          'Последние интервалы использования: активность запросов, доля успеха и распределение отказов.',
+        description: 'Активность, доля успеха и отказы за весь выбранный временной диапазон.',
         summary:
-          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+          '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
         action: 'Смотреть диагностику',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Матрица состояния запросов',
         bucketTitle: '{{label}}: запросов {{requests}} · успех {{successRate}}',
+        interval: {
+          minute: 'По минутам',
+          hour: 'По часам',
+          day: 'По дням',
+          week: 'По неделям',
+        },
         status: {
-          healthy: 'Healthy',
-          warning: 'Has failures',
-          degraded: 'Degraded',
-          failed: 'Failed',
-          empty: 'No traffic',
+          healthy: 'Норма',
+          degraded: 'Снижение',
+          unavailable: 'Недоступно',
+          empty: 'Нет трафика',
+          unknown: 'Неизвестно',
         },
       },
       quickActions: {
@@ -4144,15 +4151,23 @@ export const ru = {
       activity: {
         title: 'Временная шкала состояния запросов',
         summary:
-          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+          '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
         emptyTitle: 'Нет временной шкалы состояния',
         unavailable: 'Интервалы активности недоступны.',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Матрица состояния запросов',
+        interval: {
+          minute: 'По минутам',
+          hour: 'По часам',
+          day: 'По дням',
+          week: 'По неделям',
+        },
         status: {
           healthy: 'Норма',
-          warning: 'Предупреждение',
           degraded: 'Снижение',
-          failed: 'Ошибка',
+          unavailable: 'Недоступно',
           empty: 'Нет трафика',
+          unknown: 'Неизвестно',
         },
       },
       health: {

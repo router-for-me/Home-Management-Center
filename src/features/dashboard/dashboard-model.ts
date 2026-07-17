@@ -96,6 +96,11 @@ export type DashboardUsageActivitySummary = {
   successRate: number
   errorRate: number
   activeBucketCount: number
+  bucketCount: number
+  rangeFrom: string
+  rangeTo: string
+  timezone: string
+  interval: string
   buckets: Array<{
     id: string
     label: string
@@ -422,7 +427,12 @@ function createUsageActivitySummary(
     successRate: requestCount > 0 ? successCount / requestCount : 0,
     errorRate: requestCount > 0 ? failedCount / requestCount : 0,
     activeBucketCount: buckets.filter((bucket) => bucket.requestCount > 0).length,
-    buckets: buckets.slice(-48).map((bucket) => ({
+    bucketCount: buckets.length,
+    rangeFrom: usageOverview.range.from ?? buckets[0]?.bucketStart ?? '',
+    rangeTo: usageOverview.range.to ?? buckets.at(-1)?.bucketEnd ?? '',
+    timezone: usageOverview.range.timezone,
+    interval: usageOverview.range.interval,
+    buckets: buckets.map((bucket) => ({
       id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
       label: `${bucket.bucketStart} - ${bucket.bucketEnd}`,
       requestCount: bucket.requestCount,
