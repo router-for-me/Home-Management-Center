@@ -1,6 +1,7 @@
 import type { AxiosInstance } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import { fetchModelsSnapshot } from '@/lib/api/management/models'
 import type { CapabilityMap, ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 import { type UsageOverview, fetchUsageOverview } from '@/lib/api/management/usage-logs'
 
@@ -12,6 +13,7 @@ type DashboardRequestIssueScope =
   | 'latestVersion'
   | 'clientKeys'
   | 'authFiles'
+  | 'models'
   | 'topology'
   | 'nodes'
   | 'usageOverview'
@@ -45,6 +47,11 @@ type DashboardAuthFileSummary = {
   unavailable: boolean
 }
 
+export type DashboardAvailableModelsSummary = {
+  status: 'loaded' | 'error'
+  count: number
+}
+
 type DashboardNodeSummary = {
   ip: string
   homeIp: string | null
@@ -66,6 +73,7 @@ export type DashboardSnapshot = {
   latestVersion: string | null
   clientKeys: string[]
   authFiles: DashboardAuthFileSummary[]
+  availableModels: DashboardAvailableModelsSummary
   providers: DashboardProviderSummary[]
   nodes: DashboardNodeSummary[]
   nodeTopology: DashboardNodeTopologySummary | null
@@ -264,76 +272,88 @@ export async function fetchManagementDashboardSnapshot(
       ? dashboardProviderDescriptors.filter((descriptor) => descriptor.id !== 'xai')
       : dashboardProviderDescriptors
 
-  const [latestVersion, clientKeys, authFiles, providers, topology, nodes, usageOverview] =
-    await Promise.all([
-      readOptional(
-        issues,
-        'latestVersion',
-        async () => {
-          const response = await client.get<unknown>('/latest-version')
-          return readString(toRecord(response.data)['latest-version'])
-        },
-        null,
+  const [
+    latestVersion,
+    clientKeys,
+    authFiles,
+    availableModels,
+    providers,
+    topology,
+    nodes,
+    usageOverview,
+  ] = await Promise.all([
+    readOptional(
+      issues,
+      'latestVersion',
+      async () => {
+        const response = await client.get<unknown>('/latest-version')
+        return readString(toRecord(response.data)['latest-version'])
+      },
+      null,
+    ),
+    readOptional(
+      issues,
+      'clientKeys',
+      async () => {
+        const response = await client.get<unknown>('/api-keys')
+        return readStringArray(response.data, 'api-keys')
+      },
+      fallbackClientKeys,
+    ),
+    readOptional(
+      issues,
+      'authFiles',
+      async () => {
+        const response = await client.get<unknown>('/auth-files')
+        return normalizeAuthFiles(response.data)
+      },
+      [],
+    ),
+    readOptional<DashboardAvailableModelsSummary>(
+      issues,
+      'models',
+      async () => {
+        const snapshot = await fetchModelsSnapshot(session, { scope: 'available' })
+        return { status: 'loaded' as const, count: snapshot.resources.length }
+      },
+      { status: 'error' as const, count: 0 },
+    ),
+    Promise.all(
+      providerDescriptors.map((descriptor) =>
+        readOptional(issues, descriptor.id, async () => fetchProviderSummary(client, descriptor), {
+          ...descriptor,
+          total: 0,
+          active: 0,
+          disabled: 0,
+        }),
       ),
-      readOptional(
-        issues,
-        'clientKeys',
-        async () => {
-          const response = await client.get<unknown>('/api-keys')
-          return readStringArray(response.data, 'api-keys')
-        },
-        fallbackClientKeys,
-      ),
-      readOptional(
-        issues,
-        'authFiles',
-        async () => {
-          const response = await client.get<unknown>('/auth-files')
-          return normalizeAuthFiles(response.data)
-        },
-        [],
-      ),
-      Promise.all(
-        providerDescriptors.map((descriptor) =>
-          readOptional(
-            issues,
-            descriptor.id,
-            async () => fetchProviderSummary(client, descriptor),
-            {
-              ...descriptor,
-              total: 0,
-              active: 0,
-              disabled: 0,
-            },
-          ),
-        ),
-      ),
-      capabilities.topology
-        ? readOptional(
-            issues,
-            'topology',
-            async () => {
-              const response = await client.get<unknown>('/topology')
-              return normalizeTopologySummary(response.data)
-            },
-            null,
-          )
-        : Promise.resolve(null),
-      !capabilities.topology && capabilities.nodes
-        ? readOptional(
-            issues,
-            'nodes',
-            async () => {
-              const response = await client.get<unknown>('/nodes')
-              return normalizeNodes(response.data)
-            },
-            [],
-          )
-        : Promise.resolve([]),
-      capabilities.usageOverview
-        ? readOptional(issues, 'usageOverview', async () => fetchUsageOverview(session), null)
-        : Promise.resolve(null),
-    ])
+    ),
+    capabilities.topology
+      ? readOptional(
+          issues,
+          'topology',
+          async () => {
+            const response = await client.get<unknown>('/topology')
+            return normalizeTopologySummary(response.data)
+          },
+          null,
+        )
+      : Promise.resolve(null),
+    !capabilities.topology && capabilities.nodes
+      ? readOptional(
+          issues,
+          'nodes',
+          async () => {
+            const response = await client.get<unknown>('/nodes')
+            return normalizeNodes(response.data)
+          },
+          [],
+        )
+      : Promise.resolve([]),
+    capabilities.usageOverview
+      ? readOptional(issues, 'usageOverview', async () => fetchUsageOverview(session), null)
+      : Promise.resolve(null),
+  ])
   const fallbackNodes =
     !topology && capabilities.topology && capabilities.nodes
       ? await readOptional(
@@ -355,6 +375,7 @@ export async function fetchManagementDashboardSnapshot(
     latestVersion,
     clientKeys,
     authFiles,
+    availableModels,
     providers,
     nodes: fallbackNodes,
     nodeTopology,

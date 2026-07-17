@@ -1099,23 +1099,28 @@ export const zhTW = {
       },
       health: {
         ready: {
-          title: '服務可用於模型請求',
+          title: '模型呼叫已可用',
           description:
-            '模型服務、帳號憑證和用戶端存取金鑰均已就緒，可以繼續查看用量、日誌和設定狀態。',
+            '已偵測到可用模型和用戶端存取金鑰。模型存取可由模型服務金鑰或 OAuth、檔案憑證提供。',
         },
-        needsModelService: {
-          title: '需要先設定模型服務',
+        modelStatusUnknown: {
+          title: '暫時無法確認模型呼叫狀態',
           description:
-            '目前沒有可用模型金鑰，閘道可能無法處理模型請求。請先新增至少一個模型服務金鑰。',
+            '可用模型資料載入失敗。請先同步資料或查看資料狀態，不要依目前資源計數判斷設定是否缺失。',
         },
-        needsCredential: {
-          title: '需要補充帳號憑證',
+        needsUpstreamAccess: {
+          title: '需要新增上游模型存取',
           description:
-            '模型服務已接入，但沒有可用帳號憑證。需要使用 OAuth 或檔案憑證的通道可能無法運作。',
+            '執行環境目前沒有可用模型，也沒有偵測到模型服務金鑰或帳號憑證。請至少設定一種上游存取方式。',
+        },
+        reviewUpstreamAccess: {
+          title: '目前沒有可用模型',
+          description:
+            '已偵測到上游設定，但執行環境沒有註冊可用模型。請檢查模型服務或帳號憑證的狀態與模型對應。',
         },
         needsClientKey: {
           title: '需要建立用戶端存取金鑰',
-          description: '服務端已有模型接入資訊，但還沒有用戶端可用於呼叫服務端介面的存取金鑰。',
+          description: '執行環境已有可用模型，但還沒有用戶端可用於呼叫閘道介面的存取金鑰。',
         },
         limited: {
           title: '服務已連線，部分能力受限',
@@ -1132,7 +1137,7 @@ export const zhTW = {
         eyebrow: '首頁總覽',
         title: '服務端執行概覽',
         description:
-          '查看目前連線的 Home Center 服務端是否正常，模型服務是否已接入，用戶端金鑰與帳號憑證是否可用。',
+          '查看目前連線的閘道是否可處理模型請求，以及用戶端金鑰、模型服務和帳號憑證的執行狀態。',
         refresh: '同步資料',
         syncing: '同步中',
         runtime: '已連線服務端：{{mode}}',
@@ -1143,6 +1148,8 @@ export const zhTW = {
         title: '建議操作',
         configureProviders: '設定模型服務',
         addCredential: '新增帳號憑證',
+        reviewModelServices: '檢查模型服務',
+        reviewCredentials: '檢查帳號憑證',
         createClientKey: '建立用戶端金鑰',
         checkRouting: '檢查路由設定',
         reviewDebug: '檢查 Debug 模式',
@@ -1162,11 +1169,11 @@ export const zhTW = {
       },
       metrics: {
         providers: {
-          title: '可用模型金鑰',
+          title: '已啟用模型服務金鑰',
           detail: '已接入 {{count}} 類模型服務',
         },
         credentials: {
-          title: '可用帳號憑證',
+          title: '已啟用帳號憑證',
           detail: '共發現 {{count}} 筆憑證記錄',
         },
         clientKeys: {
@@ -1336,6 +1343,7 @@ export const zhTW = {
         latestVersion: '最新版本',
         clientKeys: '用戶端金鑰',
         authFiles: '帳號憑證',
+        models: '可用模型',
         topology: '集群拓撲',
         nodes: '節點',
         usageOverview: '用量總覽',

@@ -16,7 +16,14 @@ type DashboardCapabilityId =
 export type DashboardTone = 'neutral' | 'positive' | 'info' | 'warning'
 
 export type DashboardHealthSummary = {
-  id: 'ready' | 'needsModelService' | 'needsCredential' | 'needsClientKey' | 'limited' | 'degraded'
+  id:
+    | 'ready'
+    | 'modelStatusUnknown'
+    | 'needsUpstreamAccess'
+    | 'reviewUpstreamAccess'
+    | 'needsClientKey'
+    | 'limited'
+    | 'degraded'
   tone: DashboardTone
 }
 
@@ -24,6 +31,8 @@ export type DashboardRecommendedAction = {
   id:
     | 'configureProviders'
     | 'addCredential'
+    | 'reviewModelServices'
+    | 'reviewCredentials'
     | 'createClientKey'
     | 'checkRouting'
     | 'reviewDebug'
@@ -165,6 +174,7 @@ function getDashboardCapabilityTone(id: DashboardCapabilityId): DashboardTone {
 }
 
 function createHealthSummary({
+  availableModels,
   activeProviders,
   activeCredentials,
   clientKeys,
@@ -174,6 +184,7 @@ function createHealthSummary({
   debugEnabled,
   routingStrategy,
 }: {
+  availableModels: DashboardSnapshot['availableModels']
   activeProviders: number
   activeCredentials: number
   clientKeys: number
@@ -183,12 +194,16 @@ function createHealthSummary({
   debugEnabled: boolean
   routingStrategy: string
 }): DashboardHealthSummary {
-  if (activeProviders === 0) {
-    return { id: 'needsModelService', tone: 'warning' }
+  if (availableModels.status === 'error') {
+    return { id: 'modelStatusUnknown', tone: 'warning' }
   }
 
-  if (activeCredentials === 0) {
-    return { id: 'needsCredential', tone: 'warning' }
+  if (availableModels.count === 0) {
+    if (activeProviders === 0 && activeCredentials === 0) {
+      return { id: 'needsUpstreamAccess', tone: 'warning' }
+    }
+
+    return { id: 'reviewUpstreamAccess', tone: 'warning' }
   }
 
   if (clientKeys === 0) {
@@ -211,6 +226,7 @@ function createHealthSummary({
 }
 
 function createRecommendedActions({
+  availableModels,
   activeProviders,
   activeCredentials,
   clientKeys,
@@ -218,6 +234,7 @@ function createRecommendedActions({
   debugEnabled,
   dataStatusCount,
 }: {
+  availableModels: DashboardSnapshot['availableModels']
   activeProviders: number
   activeCredentials: number
   clientKeys: number
@@ -227,28 +244,41 @@ function createRecommendedActions({
 }): DashboardRecommendedAction[] {
   const actions: DashboardRecommendedAction[] = []
 
-  if (activeProviders === 0) {
-    actions.push({ id: 'configureProviders', to: '/admin/providers', tone: 'warning' })
+  const addAction = (action: DashboardRecommendedAction) => {
+    if (actions.some((item) => item.id === action.id)) return
+    actions.push(action)
   }
 
-  if (activeCredentials === 0) {
-    actions.push({ id: 'addCredential', to: '/admin/credentials', tone: 'warning' })
+  if (availableModels.status === 'error') {
+    addAction({ id: 'reviewDataStatus', to: '/admin/system-nodes', tone: 'neutral' })
+  } else if (availableModels.count === 0) {
+    if (activeProviders === 0 && activeCredentials === 0) {
+      addAction({ id: 'addCredential', to: '/admin/credentials', tone: 'warning' })
+      addAction({ id: 'configureProviders', to: '/admin/providers', tone: 'warning' })
+    } else {
+      if (activeCredentials > 0) {
+        addAction({ id: 'reviewCredentials', to: '/admin/credentials', tone: 'warning' })
+      }
+      if (activeProviders > 0) {
+        addAction({ id: 'reviewModelServices', to: '/admin/providers', tone: 'warning' })
+      }
+    }
   }
 
   if (clientKeys === 0) {
-    actions.push({ id: 'createClientKey', to: '/admin/access-keys', tone: 'warning' })
+    addAction({ id: 'createClientKey', to: '/admin/access-keys', tone: 'warning' })
   }
 
   if (routingStrategy === 'unknown') {
-    actions.push({ id: 'checkRouting', to: '/admin/config', tone: 'warning' })
+    addAction({ id: 'checkRouting', to: '/admin/config', tone: 'warning' })
   }
 
   if (debugEnabled) {
-    actions.push({ id: 'reviewDebug', to: '/admin/config', tone: 'warning' })
+    addAction({ id: 'reviewDebug', to: '/admin/config', tone: 'warning' })
   }
 
   if (dataStatusCount > 0) {
-    actions.push({ id: 'reviewDataStatus', to: '/admin/system-nodes', tone: 'neutral' })
+    addAction({ id: 'reviewDataStatus', to: '/admin/system-nodes', tone: 'neutral' })
   }
 
   return actions.slice(0, 3)
@@ -412,6 +442,16 @@ export function createDashboardOverviewViewModel(
   const activeCredentials = snapshot.authFiles.filter(
     (authFile) => !authFile.disabled && !authFile.unavailable,
   ).length
+  const hasAvailableModels =
+    snapshot.availableModels.status === 'loaded' && snapshot.availableModels.count > 0
+  const missingAvailableModels =
+    snapshot.availableModels.status === 'loaded' && snapshot.availableModels.count === 0
+  const inventoryTone = (count: number): DashboardTone => {
+    if (count > 0) return 'positive'
+    if (hasAvailableModels) return 'neutral'
+    if (missingAvailableModels) return 'warning'
+    return 'neutral'
+  }
   const routingStrategy = readManagementRoutingStrategy(snapshot.config)
   const debugEnabled = readBoolean(snapshot.config, 'debug')
   const nodeTopologySupported = capabilities.topology || capabilities.nodes
@@ -422,13 +462,13 @@ export function createDashboardOverviewViewModel(
       id: 'providers',
       value: activeProviders,
       detailValue: providerFamilies,
-      tone: activeProviders > 0 ? 'positive' : 'warning',
+      tone: inventoryTone(activeProviders),
     },
     {
       id: 'credentials',
       value: activeCredentials,
       detailValue: snapshot.authFiles.length,
-      tone: activeCredentials > 0 ? 'positive' : 'warning',
+      tone: inventoryTone(activeCredentials),
     },
     {
       id: 'clientKeys',
@@ -493,6 +533,7 @@ export function createDashboardOverviewViewModel(
   )
   const modelUsageSummary = createModelUsageSummary(snapshot.usageOverview)
   const healthSummary = createHealthSummary({
+    availableModels: snapshot.availableModels,
     activeProviders,
     activeCredentials,
     clientKeys: snapshot.clientKeys.length,
@@ -503,6 +544,7 @@ export function createDashboardOverviewViewModel(
     routingStrategy,
   })
   const recommendedActions = createRecommendedActions({
+    availableModels: snapshot.availableModels,
     activeProviders,
     activeCredentials,
     clientKeys: snapshot.clientKeys.length,

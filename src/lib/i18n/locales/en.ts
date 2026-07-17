@@ -1146,24 +1146,29 @@ export const en = {
       },
       health: {
         ready: {
-          title: 'Service is ready for model requests',
+          title: 'Model requests are available',
           description:
-            'Model services, account credentials, and client access keys are available. Continue with usage, logs, or configuration checks.',
+            'Available models and a client access key were detected. Model access can come from model service keys or OAuth and file-backed credentials.',
         },
-        needsModelService: {
-          title: 'Configure a model service first',
+        modelStatusUnknown: {
+          title: 'Model request status cannot be confirmed',
           description:
-            'No available model keys were returned, so the gateway may not be able to serve model requests. Add at least one model service key.',
+            'Available model data could not be loaded. Sync again or review data status instead of treating the current inventory counts as missing configuration.',
         },
-        needsCredential: {
-          title: 'Account credentials need attention',
+        needsUpstreamAccess: {
+          title: 'Add upstream model access',
           description:
-            'Model services are connected, but no available account credentials were returned. OAuth or file-backed channels may not work.',
+            'The runtime has no available models and no model service keys or account credentials were detected. Configure at least one upstream access method.',
+        },
+        reviewUpstreamAccess: {
+          title: 'No models are currently available',
+          description:
+            'Upstream configuration was detected, but the runtime has not registered any available models. Review model services or account credential status and model mappings.',
         },
         needsClientKey: {
           title: 'Create a client access key',
           description:
-            'The server has model access information, but no client key is available for callers to use the server API.',
+            'The runtime has available models, but callers do not yet have a client key for the gateway API.',
         },
         limited: {
           title: 'Service is connected with limited capabilities',
@@ -1180,7 +1185,7 @@ export const en = {
         eyebrow: 'Home overview',
         title: 'Server runtime overview',
         description:
-          'Check whether the connected gateway server is running, which model services are configured, and whether client keys and account credentials are available.',
+          'Check whether the connected gateway can serve model requests and review the runtime state of client keys, model services, and account credentials.',
         refresh: 'Sync data',
         syncing: 'Syncing',
         runtime: 'Connected server: {{mode}}',
@@ -1191,6 +1196,8 @@ export const en = {
         title: 'Suggested actions',
         configureProviders: 'Configure model service',
         addCredential: 'Add account credential',
+        reviewModelServices: 'Review model services',
+        reviewCredentials: 'Review account credentials',
         createClientKey: 'Create client key',
         checkRouting: 'Check routing config',
         reviewDebug: 'Review Debug mode',
@@ -1210,11 +1217,11 @@ export const en = {
       },
       metrics: {
         providers: {
-          title: 'Available model keys',
+          title: 'Enabled model service keys',
           detail: '{{count}} model service types connected',
         },
         credentials: {
-          title: 'Available account credentials',
+          title: 'Enabled account credentials',
           detail: '{{count}} credential records found',
         },
         clientKeys: {
@@ -1388,6 +1395,7 @@ export const en = {
         latestVersion: 'Latest version',
         clientKeys: 'Client keys',
         authFiles: 'Auth files',
+        models: 'Available models',
         topology: 'Cluster topology',
         nodes: 'Nodes',
         usageOverview: 'Usage overview',

@@ -1100,23 +1100,28 @@ export const zhCN = {
       },
       health: {
         ready: {
-          title: '服务可用于模型请求',
+          title: '模型调用已可用',
           description:
-            '模型服务、账号凭证和客户端访问密钥均已就绪，可以继续查看用量、日志和配置状态。',
+            '已检测到可用模型和客户端访问密钥。模型访问可由模型服务密钥或 OAuth、文件凭证提供。',
         },
-        needsModelService: {
-          title: '需要先配置模型服务',
+        modelStatusUnknown: {
+          title: '暂时无法确认模型调用状态',
           description:
-            '当前没有可用模型密钥，网关可能无法处理模型请求。请先添加至少一个模型服务密钥。',
+            '可用模型数据加载失败。请先同步数据或查看数据状态，不要根据当前资源计数判断配置是否缺失。',
         },
-        needsCredential: {
-          title: '需要补充账号凭证',
+        needsUpstreamAccess: {
+          title: '需要添加上游模型访问',
           description:
-            '模型服务已接入，但没有可用账号凭证。需要使用 OAuth 或文件凭证的通道可能无法工作。',
+            '运行时当前没有可用模型，也没有检测到模型服务密钥或账号凭证。请至少配置一种上游访问方式。',
+        },
+        reviewUpstreamAccess: {
+          title: '当前没有可用模型',
+          description:
+            '已检测到上游配置，但运行时没有注册可用模型。请检查模型服务或账号凭证的状态与模型映射。',
         },
         needsClientKey: {
           title: '需要创建客户端访问密钥',
-          description: '服务端已有模型接入信息，但还没有客户端可用于调用服务端接口的访问密钥。',
+          description: '运行时已有可用模型，但还没有客户端可用于调用网关接口的访问密钥。',
         },
         limited: {
           title: '服务已连接，部分能力受限',
@@ -1133,7 +1138,7 @@ export const zhCN = {
         eyebrow: '首页总览',
         title: '服务运行概览',
         description:
-          '查看当前连接的 网关服务端是否正常，模型服务是否已接入，客户端密钥与账号凭证是否可用。',
+          '查看当前连接的网关是否可处理模型请求，以及客户端密钥、模型服务和账号凭证的运行状态。',
         refresh: '同步数据',
         syncing: '同步中',
         runtime: '已连接服务端：{{mode}}',
@@ -1144,6 +1149,8 @@ export const zhCN = {
         title: '建议操作',
         configureProviders: '配置模型服务',
         addCredential: '添加账号凭证',
+        reviewModelServices: '检查模型服务',
+        reviewCredentials: '检查账号凭证',
         createClientKey: '新建客户端密钥',
         checkRouting: '检查路由配置',
         reviewDebug: '检查 Debug 模式',
@@ -1163,11 +1170,11 @@ export const zhCN = {
       },
       metrics: {
         providers: {
-          title: '可用模型密钥',
+          title: '已启用模型服务密钥',
           detail: '已接入 {{count}} 类模型服务',
         },
         credentials: {
-          title: '可用账号凭证',
+          title: '已启用账号凭证',
           detail: '共发现 {{count}} 条凭证记录',
         },
         clientKeys: {
@@ -1337,6 +1344,7 @@ export const zhCN = {
         latestVersion: '最新版本',
         clientKeys: '客户端密钥',
         authFiles: '账号凭证',
+        models: '可用模型',
         topology: '集群拓扑',
         nodes: '节点',
         usageOverview: '用量总览',
