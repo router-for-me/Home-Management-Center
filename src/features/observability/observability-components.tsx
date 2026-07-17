@@ -43,6 +43,10 @@ import {
   containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
+import {
+  UsageActivityMatrix,
+  type UsageActivityMatrixBucket,
+} from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -4634,6 +4638,35 @@ export function ActivityHeatmap({
   const requestCount = buckets.reduce((sum, bucket) => sum + bucket.requestCount, 0)
   const successCount = buckets.reduce((sum, bucket) => sum + bucket.successCount, 0)
   const successRate = requestCount > 0 ? successCount / requestCount : 0
+  const rangeLabel =
+    overview?.range.from && overview.range.to
+      ? t('usageLogsPage.activity.range', {
+          from: formatShortDateTime(overview.range.from, i18n),
+          to: formatShortDateTime(overview.range.to, i18n),
+          interval: t(`usageLogsPage.activity.interval.${overview.range.interval}`, {
+            defaultValue: overview.range.interval,
+          }),
+        })
+      : null
+  const legendStatuses = [
+    'healthy',
+    'degraded',
+    'unavailable',
+    'empty',
+    ...(buckets.some((bucket) => bucket.status === 'unknown') ? (['unknown'] as const) : []),
+  ] as const
+  const matrixBuckets: UsageActivityMatrixBucket[] = buckets.map((bucket) => ({
+    id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
+    label: `${bucket.bucketStart} - ${bucket.bucketEnd}`,
+    requestCount: bucket.requestCount,
+    successRate: bucket.successRate,
+    status: bucket.status,
+  }))
+  const getBucketLabel = (bucket: UsageActivityMatrixBucket) =>
+    `${bucket.label
+      .split(' - ')
+      .map((value) => formatShortDateTime(value, i18n))
+      .join(' – ')}: ${formatNumber(bucket.requestCount)} · ${formatPercent(bucket.successRate)}`
 
   return (
     <TableSurface className="min-w-0 p-4">
@@ -4642,7 +4675,8 @@ export function ActivityHeatmap({
         <div className="text-muted-foreground text-right text-sm">
           <p>
             {t('usageLogsPage.activity.summary', {
-              buckets: formatNumber(activeBuckets),
+              activeBuckets: formatNumber(activeBuckets),
+              totalBuckets: formatNumber(buckets.length),
               requests: formatNumber(requestCount),
               successRate: formatPercent(successRate),
             })}
@@ -4658,31 +4692,21 @@ export function ActivityHeatmap({
       </div>
       {buckets.length > 0 ? (
         <>
-          <div
-            className="mt-4 grid gap-0.5 sm:gap-1"
-            style={{
-              gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))`,
-            }}
-          >
-            {buckets.map((bucket) => {
-              const title = `${formatShortDateTime(bucket.bucketStart, i18n)} - ${formatShortDateTime(
-                bucket.bucketEnd,
-                i18n,
-              )}: ${formatNumber(bucket.requestCount)} · ${formatPercent(bucket.successRate)}`
-
-              return (
-                <div
-                  key={`${bucket.bucketStart}:${bucket.bucketEnd}`}
-                  role="img"
-                  aria-label={`${t(`usageLogsPage.activity.status.${bucket.status}`)} · ${title}`}
-                  title={title}
-                  className={cn('h-2.5 rounded-[2px]', getActivityBucketClassName(bucket.status))}
-                />
-              )
-            })}
+          <div className="mt-4">
+            {rangeLabel ? (
+              <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
+            ) : null}
+            <UsageActivityMatrix
+              ariaLabel={t('usageLogsPage.activity.matrixLabel')}
+              buckets={matrixBuckets}
+              className={rangeLabel ? 'mt-2' : undefined}
+              getBucketLabel={getBucketLabel}
+              getStatusClassName={getActivityBucketClassName}
+              getStatusLabel={(status) => t(`usageLogsPage.activity.status.${status}`)}
+            />
           </div>
           <div className="text-muted-foreground mt-3 flex flex-wrap gap-3 text-xs">
-            {(['healthy', 'warning', 'degraded', 'failed', 'empty'] as const).map((status) => (
+            {legendStatuses.map((status) => (
               <span key={status} className="inline-flex items-center gap-1.5">
                 <span className={cn('size-2 rounded-[2px]', getActivityBucketClassName(status))} />
                 {t(`usageLogsPage.activity.status.${status}`)}
@@ -4704,11 +4728,9 @@ export function ActivityHeatmap({
 
 function getActivityBucketClassName(status: UsageOverview['activity'][number]['status']) {
   if (status === 'healthy') return 'bg-success/85'
-  if (status === 'warning') return 'bg-warning/85'
-  // degraded uses a light destructive hue so it is distinguishable from amber `warning`
-  // for color-vision-deficient users, not just a lower-opacity warning.
-  if (status === 'degraded') return 'bg-destructive/45'
-  if (status === 'failed') return 'bg-destructive/85'
+  if (status === 'degraded') return 'bg-warning/85'
+  if (status === 'unavailable') return 'bg-destructive/85'
+  if (status === 'unknown') return 'bg-info/65'
   return 'bg-muted'
 }
 

@@ -1288,16 +1288,25 @@ export const en = {
       },
       usageActivity: {
         title: 'Request health',
-        description: 'Recent usage intervals showing request activity, success rate, and failures.',
-        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        description: 'Request activity, success rate, and failures across the complete time range.',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
         action: 'View diagnostics',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Request health activity matrix',
         bucketTitle: '{{label}}: {{requests}} requests · {{successRate}} success',
+        interval: {
+          minute: 'Per minute',
+          hour: 'Hourly',
+          day: 'Daily',
+          week: 'Weekly',
+        },
         status: {
           healthy: 'Healthy',
-          warning: 'Has failures',
           degraded: 'Degraded',
-          failed: 'Failed',
+          unavailable: 'Unavailable',
           empty: 'No traffic',
+          unknown: 'Unknown',
         },
       },
       quickActions: {
@@ -4126,15 +4135,24 @@ export const en = {
       },
       activity: {
         title: 'Request health timeline',
-        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
         emptyTitle: 'No health timeline',
         unavailable: 'Activity intervals are not available.',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Request health activity matrix',
+        interval: {
+          minute: 'Per minute',
+          hour: 'Hourly',
+          day: 'Daily',
+          week: 'Weekly',
+        },
         status: {
           healthy: 'Healthy',
-          warning: 'Warning',
           degraded: 'Degraded',
-          failed: 'Failed',
+          unavailable: 'Unavailable',
           empty: 'No traffic',
+          unknown: 'Unknown',
         },
       },
       health: {

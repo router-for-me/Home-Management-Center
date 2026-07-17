@@ -1240,16 +1240,25 @@ export const zhTW = {
       },
       usageActivity: {
         title: '請求健康度',
-        description: '按最近用量時段展示請求活躍度、成功率和失敗分布。',
-        summary: '{{buckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
+        description: '按完整時間範圍展示請求活躍度、成功率和失敗分布。',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
         action: '查看呼叫診斷',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '請求健康度時間點陣',
         bucketTitle: '{{label}}：{{requests}} 次請求 · {{successRate}} 成功率',
+        interval: {
+          minute: '按分鐘',
+          hour: '按小時',
+          day: '按日',
+          week: '按週',
+        },
         status: {
           healthy: '健康',
-          warning: '有失敗',
           degraded: '降級',
-          failed: '失敗',
+          unavailable: '不可用',
           empty: '無流量',
+          unknown: '未知',
         },
       },
       quickActions: {
@@ -3971,15 +3980,24 @@ export const zhTW = {
       },
       activity: {
         title: '請求健康時間線',
-        summary: '{{buckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
         emptyTitle: '暫無健康時間線',
         unavailable: '目前沒有健康時段。',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '請求健康時間點陣',
+        interval: {
+          minute: '按分鐘',
+          hour: '按小時',
+          day: '按日',
+          week: '按週',
+        },
         status: {
           healthy: '健康',
-          warning: '有失敗',
           degraded: '降級',
-          failed: '失敗',
+          unavailable: '不可用',
           empty: '無流量',
+          unknown: '未知',
         },
       },
       health: {
