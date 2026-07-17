@@ -157,11 +157,13 @@ describe('xAI provider Management API integration', () => {
       noCapabilities,
       'home-standalone',
     )
+    expect(homeSnapshot.availableModels).toEqual({ status: 'loaded', count: 0 })
     expect(homeSnapshot.providers.find((provider) => provider.id === 'xai')).toMatchObject({
       total: 1,
       active: 1,
       disabled: 0,
     })
+    expect(requests.some((request) => request.pathname.endsWith('/models'))).toBe(true)
     expect(requests.some((request) => request.pathname.endsWith('/xai-api-key'))).toBe(true)
   })
 

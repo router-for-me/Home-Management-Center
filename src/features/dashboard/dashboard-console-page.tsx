@@ -99,6 +99,8 @@ const credentialSourceNameKeys = {
 const recommendedActionIcons: Record<DashboardRecommendedAction['id'], LucideIcon> = {
   configureProviders: Network,
   addCredential: ShieldCheck,
+  reviewModelServices: Network,
+  reviewCredentials: ShieldCheck,
   createClientKey: KeyRound,
   checkRouting: Route,
   reviewDebug: AlertTriangle,
