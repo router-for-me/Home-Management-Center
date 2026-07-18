@@ -2142,6 +2142,7 @@ export const zhCN = {
         edit: '编辑',
         delete: '删除',
         copy: '复制',
+        copyIdentifier: '复制标识 {{identifier}}',
         reveal: '显示',
         hide: '隐藏',
         generate: '生成密钥',
@@ -2153,6 +2154,9 @@ export const zhCN = {
         filterPlaceholder: '筛选密钥',
         empty: '当前筛选条件下没有访问密钥。',
         index: '序号',
+        identity: '标识 / 密钥',
+        identifierTooltip: '稳定标识用于关联用量、计费和请求事件中的同一个访问密钥。',
+        identifierUnavailable: '无稳定标识',
         key: '密钥',
         owner: '所属用户',
         credentialScope: '凭证范围',
@@ -2214,6 +2218,7 @@ export const zhCN = {
       },
       toast: {
         copied: '访问密钥已复制。',
+        identifierCopied: '标识已复制。',
         created: '访问密钥已创建。',
         updated: '访问密钥已更新。',
         replaced: '访问密钥列表已替换。',
@@ -3344,6 +3349,12 @@ export const zhCN = {
         yes: '是',
         no: '否',
       },
+      caller: {
+        notRecorded: '未记录调用方',
+        userNotRecorded: '未记录用户',
+        keyNotRecorded: '未记录客户端 Key',
+        ipNotRecorded: '未记录客户端 IP',
+      },
       table: {
         title: '请求事件',
         columnsMenu: '显示列',
@@ -3893,6 +3904,7 @@ export const zhCN = {
           homeIp: 'Home 节点',
           client: '调用用户',
           clientKey: 'Client Key',
+          clientIp: '客户端 IP',
           credential: '执行凭证',
           authIndex: 'Auth Index',
           model: '模型',
@@ -4624,7 +4636,7 @@ export const zhCN = {
         title: '访问密钥',
         description:
           '下游客户端 API key 将独立于上游 Provider key 管理，支持掩码展示和聚焦的新建、编辑、删除流程。',
-        itemOne: '使用 GET、PUT、PATCH 和 DELETE /api-keys。',
+        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
         itemTwo: '不要假设服务端会返回文档之外的 key metadata。',
       },
       config: {

@@ -2618,6 +2618,30 @@ function RequestModelCell({ record }: { record: UsageRecord }) {
   )
 }
 
+function UsageCallerCell({ client }: { client: UsageRecord['client'] }) {
+  const { t } = useTranslation()
+  const clientKey = client?.apiKeyLabel ?? client?.apiKeyMasked
+  const primary =
+    client?.username ?? clientKey ?? client?.clientIp ?? t('usageLogsPage.caller.notRecorded')
+  const secondary = client?.username
+    ? (clientKey ?? client?.clientIp)
+    : clientKey
+      ? client?.clientIp
+      : null
+  const primaryIsTechnical = !client?.username && Boolean(clientKey ?? client?.clientIp)
+
+  return (
+    <div className="min-w-0">
+      <p className={cn('truncate font-medium', primaryIsTechnical ? 'font-mono text-sm' : null)}>
+        {primary}
+      </p>
+      {secondary ? (
+        <p className="text-muted-foreground truncate font-mono text-xs">{secondary}</p>
+      ) : null}
+    </div>
+  )
+}
+
 function ProviderValueCell({ provider, fallback }: { provider: string | null; fallback: string }) {
   const label = provider ?? fallback
 
@@ -3132,14 +3156,7 @@ export function RequestRecordsTable({
                     ) : null}
                     {isColumnVisible('client') ? (
                       <TableCell className="min-w-0">
-                        <p className="truncate font-medium">
-                          {record.client?.username ?? t('usageLogsPage.status.notAvailable')}
-                        </p>
-                        <p className="text-muted-foreground truncate font-mono text-xs">
-                          {record.client?.apiKeyLabel ??
-                            record.client?.apiKeyMasked ??
-                            t('usageLogsPage.status.notAvailable')}
-                        </p>
+                        <UsageCallerCell client={record.client} />
                       </TableCell>
                     ) : null}
                     {isColumnVisible('credential') ? (
@@ -3931,7 +3948,7 @@ export function RequestDetailSheet({
                     t('usageLogsPage.status.localHome')}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.client')}>
-                  {record.client?.username ?? t('usageLogsPage.status.notAvailable')}
+                  {record.client?.username ?? t('usageLogsPage.caller.userNotRecorded')}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField
                   label={t('usageLogsPage.detail.fields.clientKey')}
@@ -3942,7 +3959,10 @@ export function RequestDetailSheet({
                 >
                   {record.client?.apiKeyLabel ??
                     record.client?.apiKeyMasked ??
-                    t('usageLogsPage.status.notAvailable')}
+                    t('usageLogsPage.caller.keyNotRecorded')}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('usageLogsPage.detail.fields.clientIp')} mono>
+                  {record.client?.clientIp ?? t('usageLogsPage.caller.ipNotRecorded')}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.credential')}>
                   {record.credential?.label ?? t('usageLogsPage.status.notAvailable')}

@@ -6,6 +6,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Info,
   KeyRound,
   Loader2,
   Pencil,
@@ -52,6 +53,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAccessKeyWorkbench } from '@/features/access-keys/use-access-key-workbench'
 import type { AccessGroupResource } from '@/lib/api/management/access-groups'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
@@ -75,6 +77,12 @@ function generateAccessKey() {
 
 function formatAccessKeySequence(resource: AccessKeyResource) {
   return `#${resource.index + 1}`
+}
+
+function formatAccessKeyIdentity(resource: AccessKeyResource) {
+  return resource.identifier
+    ? `${resource.identifier} · ${resource.maskedValue}`
+    : resource.maskedValue
 }
 
 function groupLabel(groups: AccessGroupResource[], id: number) {
@@ -209,6 +217,7 @@ function AccessKeyList({
   onToggleSelection,
   onToggleAll,
   onCopy,
+  onCopyIdentifier,
 }: {
   resources: AccessKeyResource[]
   users: UserResource[]
@@ -222,6 +231,7 @@ function AccessKeyList({
   onToggleSelection: (resource: AccessKeyResource) => void
   onToggleAll: () => void
   onCopy: (resource: AccessKeyResource) => void
+  onCopyIdentifier: (resource: AccessKeyResource) => void
 }) {
   const { t } = useTranslation()
   const allSelected =
@@ -234,153 +244,191 @@ function AccessKeyList({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <div className="overflow-x-auto">
-        <Table className="min-w-[1120px]">
-          <TableHeader className="bg-muted/70 text-muted-foreground">
-            <TableRow variant="static">
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={partiallySelected ? 'indeterminate' : allSelected}
-                  aria-label={t('accessKeysPage.bulk.selectAll')}
-                  onCheckedChange={onToggleAll}
-                />
-              </TableHead>
-              <TableHead>{t('accessKeysPage.list.index')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.key')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.length')}</TableHead>
-              <TableHead>{t('accessKeysPage.list.status')}</TableHead>
-              <TableHead className="table-sticky-action-head w-[168px] text-right sm:w-[336px]">
-                {t('accessKeysPage.list.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {resources.map((resource) => (
-              <TableRow
-                key={resource.id}
-                className={cn('group', selectedKeyId === resource.id ? 'bg-primary/8' : null)}
-                variant="resource"
-              >
-                <TableCell>
-                  <Checkbox
-                    checked={selectedKeyIds.has(resource.id)}
-                    aria-label={t('accessKeysPage.bulk.selectOne', {
-                      key: resource.maskedValue,
-                    })}
-                    onCheckedChange={() => onToggleSelection(resource)}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {formatAccessKeySequence(resource)}
-                </TableCell>
-                <TableCell>
-                  <p className="font-mono text-xs">{resource.maskedValue}</p>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    {t('accessKeysPage.list.prefixSuffix', {
-                      prefix: resource.prefix,
-                      suffix: resource.suffix,
-                    })}
-                  </p>
-                </TableCell>
-                <TableCell>
-                  {userLabel(users, resource.userId) ?? (
-                    <span className="text-muted-foreground">
-                      {t('accessKeysPage.list.unassigned')}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-[220px] truncate">
-                  {groupListLabel(
-                    channelGroups,
-                    resource.channelGroupIds,
-                    t('accessKeysPage.list.unrestricted'),
-                  )}
-                </TableCell>
-                <TableCell className="max-w-[220px] truncate">
-                  {groupListLabel(
-                    modelGroups,
-                    resource.modelGroupIds,
-                    t('accessKeysPage.list.unrestricted'),
-                  )}
-                </TableCell>
-                <TableCell>{resource.length}</TableCell>
-                <TableCell>
-                  <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
-                    <CheckCircle2 className="size-3" aria-hidden="true" />
-                    {t('accessKeysPage.status.accepted')}
+    <Table containerClassName="rounded-md border" className="min-w-[1040px]">
+      <TableHeader className="bg-muted/70 text-muted-foreground">
+        <TableRow variant="static">
+          <TableHead className="w-10">
+            <Checkbox
+              checked={partiallySelected ? 'indeterminate' : allSelected}
+              aria-label={t('accessKeysPage.bulk.selectAll')}
+              onCheckedChange={onToggleAll}
+            />
+          </TableHead>
+          <TableHead className="w-16">{t('accessKeysPage.list.index')}</TableHead>
+          <TableHead className="w-[220px]">
+            <div className="flex items-center gap-1.5">
+              <span>{t('accessKeysPage.list.identity')}</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="icon-sm"
+                    className="text-muted-foreground hover:text-foreground -my-1 [@media(pointer:coarse)]:size-10"
+                    aria-label={t('accessKeysPage.list.identifierTooltip')}
+                  >
+                    <Info className="size-3.5" aria-hidden="true" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-72">
+                  {t('accessKeysPage.list.identifierTooltip')}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          </TableHead>
+          <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
+          <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
+          <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
+          <TableHead>{t('accessKeysPage.list.length')}</TableHead>
+          <TableHead>{t('accessKeysPage.list.status')}</TableHead>
+          <TableHead className="table-sticky-action-head w-[168px] text-right sm:w-[336px]">
+            {t('accessKeysPage.list.actions')}
+          </TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {resources.map((resource) => (
+          <TableRow
+            key={resource.id}
+            className={cn('group', selectedKeyId === resource.id ? 'bg-primary/8' : null)}
+            variant="resource"
+          >
+            <TableCell>
+              <Checkbox
+                checked={selectedKeyIds.has(resource.id)}
+                aria-label={t('accessKeysPage.bulk.selectOne', {
+                  key: formatAccessKeyIdentity(resource),
+                })}
+                onCheckedChange={() => onToggleSelection(resource)}
+                onClick={(event) => event.stopPropagation()}
+              />
+            </TableCell>
+            <TableCell className="text-muted-foreground font-mono text-xs">
+              {formatAccessKeySequence(resource)}
+            </TableCell>
+            <TableCell className="w-[220px] max-w-[220px]">
+              <div className="flex min-w-0 items-center gap-1.5">
+                {resource.identifier ? (
+                  <span className="min-w-0 truncate font-mono text-xs font-medium">
+                    {resource.identifier}
                   </span>
-                </TableCell>
-                <TableCell className="table-sticky-action-cell w-[168px] text-right transition-colors sm:w-[336px]">
-                  <div className="table-action-cell-content">
-                    <Button
-                      type="button"
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      aria-label={t('accessKeysPage.actions.view')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onSelectKey(resource)
-                      }}
-                    >
-                      <Eye className="size-4" aria-hidden="true" />
-                      <span className="hidden sm:inline">{t('accessKeysPage.actions.view')}</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      aria-label={t('accessKeysPage.actions.edit')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onEditKey(resource)
-                      }}
-                    >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      <span className="hidden sm:inline">{t('accessKeysPage.actions.edit')}</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      aria-label={t('accessKeysPage.actions.copy')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onCopy(resource)
-                      }}
-                    >
-                      <Copy className="size-4" aria-hidden="true" />
-                      <span className="hidden sm:inline">{t('accessKeysPage.actions.copy')}</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructiveText"
-                      size="sm"
-                      className="px-2"
-                      aria-label={t('accessKeysPage.actions.delete')}
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        onDeleteKey(resource)
-                      }}
-                    >
-                      <Trash2 className="size-4" aria-hidden="true" />
-                      <span className="hidden sm:inline">{t('accessKeysPage.actions.delete')}</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                ) : (
+                  <span className="text-muted-foreground min-w-0 truncate text-xs">
+                    {t('accessKeysPage.list.identifierUnavailable')}
+                  </span>
+                )}
+                {resource.identifier ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="-my-1 [@media(pointer:coarse)]:size-10"
+                    aria-label={t('accessKeysPage.actions.copyIdentifier', {
+                      identifier: resource.identifier,
+                    })}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onCopyIdentifier(resource)
+                    }}
+                  >
+                    <Copy className="size-3.5" aria-hidden="true" />
+                  </Button>
+                ) : null}
+              </div>
+              <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+                {resource.maskedValue}
+              </p>
+            </TableCell>
+            <TableCell>
+              {userLabel(users, resource.userId) ?? (
+                <span className="text-muted-foreground">{t('accessKeysPage.list.unassigned')}</span>
+              )}
+            </TableCell>
+            <TableCell className="max-w-[220px] truncate">
+              {groupListLabel(
+                channelGroups,
+                resource.channelGroupIds,
+                t('accessKeysPage.list.unrestricted'),
+              )}
+            </TableCell>
+            <TableCell className="max-w-[220px] truncate">
+              {groupListLabel(
+                modelGroups,
+                resource.modelGroupIds,
+                t('accessKeysPage.list.unrestricted'),
+              )}
+            </TableCell>
+            <TableCell>{resource.length}</TableCell>
+            <TableCell>
+              <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
+                <CheckCircle2 className="size-3" aria-hidden="true" />
+                {t('accessKeysPage.status.accepted')}
+              </span>
+            </TableCell>
+            <TableCell className="table-sticky-action-cell w-[168px] text-right transition-colors sm:w-[336px]">
+              <div className="table-action-cell-content">
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  className="px-2"
+                  aria-label={t('accessKeysPage.actions.view')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onSelectKey(resource)
+                  }}
+                >
+                  <Eye className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t('accessKeysPage.actions.view')}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  className="px-2"
+                  aria-label={t('accessKeysPage.actions.edit')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onEditKey(resource)
+                  }}
+                >
+                  <Pencil className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t('accessKeysPage.actions.edit')}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  className="px-2"
+                  aria-label={t('accessKeysPage.actions.copy')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCopy(resource)
+                  }}
+                >
+                  <Copy className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t('accessKeysPage.actions.copy')}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructiveText"
+                  size="sm"
+                  className="px-2"
+                  aria-label={t('accessKeysPage.actions.delete')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onDeleteKey(resource)
+                  }}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t('accessKeysPage.actions.delete')}</span>
+                </Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   )
 }
 
@@ -695,6 +743,7 @@ export function AccessKeysWorkbenchPage() {
       [
         resource.value,
         resource.maskedValue,
+        resource.identifier ?? '',
         resource.prefix,
         resource.suffix,
         String(resource.index),
@@ -750,6 +799,16 @@ export function AccessKeysWorkbenchPage() {
     try {
       await copyToClipboard(resource.value)
       toast.success(t('accessKeysPage.toast.copied'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleCopyIdentifier = async (resource: AccessKeyResource) => {
+    if (!resource.identifier) return
+    try {
+      await copyToClipboard(resource.identifier)
+      toast.success(t('accessKeysPage.toast.identifierCopied'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -871,7 +930,7 @@ export function AccessKeysWorkbenchPage() {
     detailMode === 'create'
       ? t('accessKeysPage.form.createEyebrow')
       : selectedResource
-        ? selectedResource.maskedValue
+        ? formatAccessKeyIdentity(selectedResource)
         : t('accessKeysPage.detail.empty')
 
   const confirmationCopy =
@@ -885,7 +944,7 @@ export function AccessKeysWorkbenchPage() {
         ? {
             title: t('accessKeysPage.delete.title'),
             description: t('accessKeysPage.delete.confirm', {
-              key: confirmation.resource.maskedValue,
+              key: formatAccessKeyIdentity(confirmation.resource),
             }),
             action: t('accessKeysPage.actions.delete'),
           }
@@ -1033,6 +1092,9 @@ export function AccessKeysWorkbenchPage() {
             onToggleAll={handleToggleAll}
             onCopy={(resource) => {
               void handleCopy(resource)
+            }}
+            onCopyIdentifier={(resource) => {
+              void handleCopyIdentifier(resource)
             }}
           />
         </div>

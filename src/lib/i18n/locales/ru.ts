@@ -2216,6 +2216,7 @@ export const ru = {
         edit: 'Изменить',
         delete: 'Удалить',
         copy: 'Копировать',
+        copyIdentifier: 'Копировать идентификатор {{identifier}}',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',
@@ -2228,6 +2229,10 @@ export const ru = {
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
+        identity: 'Идентификатор / ключ',
+        identifierTooltip:
+          'Стабильный идентификатор связывает один access key в usage, billing и request events.',
+        identifierUnavailable: 'Нет стабильного идентификатора',
         key: 'Key',
         owner: 'Владелец',
         credentialScope: 'Credential scope',
@@ -2291,6 +2296,7 @@ export const ru = {
       },
       toast: {
         copied: 'Access key скопирован.',
+        identifierCopied: 'Идентификатор скопирован.',
         created: 'Access key создан.',
         updated: 'Access key обновлен.',
         replaced: 'Список access keys заменен.',
@@ -3495,6 +3501,12 @@ export const ru = {
         yes: 'Да',
         no: 'Нет',
       },
+      caller: {
+        notRecorded: 'Источник вызова не записан',
+        userNotRecorded: 'Пользователь не записан',
+        keyNotRecorded: 'Клиентский ключ не записан',
+        ipNotRecorded: 'IP клиента не записан',
+      },
       table: {
         title: 'События запросов',
         columnsMenu: 'Видимые колонки',
@@ -4062,6 +4074,7 @@ export const ru = {
           homeIp: 'Home-узел',
           client: 'Клиентский пользователь',
           clientKey: 'Клиентский ключ',
+          clientIp: 'IP клиента',
           credential: 'Исполнительные учетные данные',
           authIndex: 'Auth Index',
           model: 'Модель',
@@ -4825,7 +4838,7 @@ export const ru = {
         title: 'Ключи доступа',
         description:
           'Клиентские API keys будут управляться отдельно от ключей upstream providers, с маскированным отображением и отдельными сценариями создания, редактирования и удаления.',
-        itemOne: 'Использовать GET, PUT, PATCH и DELETE /api-keys.',
+        itemOne: 'Использовать GET, POST, PUT, PATCH и DELETE /api-keys.',
         itemTwo:
           'Не предполагать server-side metadata за пределами документированного массива ключей.',
       },
