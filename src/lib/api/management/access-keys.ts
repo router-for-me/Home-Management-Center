@@ -11,6 +11,8 @@ type AccessKeysResponse = {
 export type AccessKeyResource = {
   id: string
   index: number
+  numericId: number | null
+  identifier: string | null
   value: string
   maskedValue: string
   prefix: string
@@ -100,10 +102,14 @@ function normalizeAccessKey(value: unknown, index: number): AccessKeyResource {
       ? value
       : ''
   const trimmed = keyValue.trim()
+  const numericId = record ? readNumber(record, ['id', 'api_key_id', 'api-key-id']) : null
+  const identifier = numericId != null ? `api-key-${numericId}` : null
 
   return {
-    id: `${index}:${trimmed}`,
+    id: numericId != null ? String(numericId) : `${index}:${trimmed}`,
     index,
+    numericId,
+    identifier,
     value: trimmed,
     maskedValue: maskAccessKey(trimmed),
     prefix: trimmed.slice(0, 6),
@@ -148,14 +154,26 @@ export async function createAccessKey(
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/api-keys')
   const nextInput = normalizeInput(input)
-  const currentEntries = readEntries(response.data)
+  const currentResources = readEntries(response.data)
     .map((item, index) => normalizeAccessKey(item, index))
     .filter((item) => item.value)
-    .map((item) => toAccessKeyEntry(item))
   const nextValue = nextInput.value.trim()
+  const nextEntry = toAccessKeyEntry({ ...nextInput, value: nextValue })
+  const supportsStableIds =
+    currentResources.length === 0 || currentResources.every((item) => item.numericId != null)
+
+  if (supportsStableIds) {
+    try {
+      await client.post('/api-keys', nextEntry)
+      return
+    } catch (error) {
+      const apiError = toManagementApiError(error)
+      if (apiError.status !== 404 && apiError.status !== 405) throw error
+    }
+  }
 
   await client.put('/api-keys', {
-    api_key_entries: [...currentEntries, toAccessKeyEntry({ ...nextInput, value: nextValue })],
+    api_key_entries: [...currentResources.map((item) => toAccessKeyEntry(item)), nextEntry],
   })
 }
 
@@ -167,7 +185,7 @@ export async function updateAccessKey(
   const client = createManagementClient(session)
 
   await client.patch('/api-keys', {
-    index: resource.index,
+    ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
     value: {
       api_key: value.trim(),
       user_id: resource.userId ?? 0,
@@ -185,7 +203,7 @@ export async function updateAccessKeyBindings(
   const client = createManagementClient(session)
 
   await client.patch('/api-keys', {
-    api_key: resource.value,
+    ...(resource.numericId != null ? { id: resource.numericId } : { api_key: resource.value }),
     user_id: input.userId ?? 0,
     channels: input.channelGroupIds ?? [],
     model_groups: input.modelGroupIds ?? [],
@@ -224,7 +242,7 @@ export async function deleteAccessKey(
 
   await client.delete('/api-keys', {
     params: {
-      index: resource.index,
+      ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
     },
   })
 }

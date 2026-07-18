@@ -2140,6 +2140,7 @@ export const zhTW = {
         edit: '編輯',
         delete: '刪除',
         copy: '複製',
+        copyIdentifier: '複製識別碼 {{identifier}}',
         reveal: '顯示',
         hide: '隱藏',
         generate: '產生金鑰',
@@ -2151,6 +2152,9 @@ export const zhTW = {
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
+        identity: '識別碼 / 金鑰',
+        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求事件中的同一個存取金鑰。',
+        identifierUnavailable: '無穩定識別碼',
         key: '金鑰',
         owner: '所屬使用者',
         credentialScope: '憑證範圍',
@@ -2212,6 +2216,7 @@ export const zhTW = {
       },
       toast: {
         copied: '存取金鑰已複製。',
+        identifierCopied: '識別碼已複製。',
         created: '存取金鑰已建立。',
         updated: '存取金鑰已更新。',
         replaced: '存取金鑰列表已替換。',
@@ -3343,6 +3348,12 @@ export const zhTW = {
         yes: '是',
         no: '否',
       },
+      caller: {
+        notRecorded: '未記錄呼叫方',
+        userNotRecorded: '未記錄使用者',
+        keyNotRecorded: '未記錄用戶端 Key',
+        ipNotRecorded: '未記錄用戶端 IP',
+      },
       table: {
         title: '請求事件',
         columnsMenu: '顯示欄位',
@@ -3892,6 +3903,7 @@ export const zhTW = {
           homeIp: 'Home 節點',
           client: '呼叫使用者',
           clientKey: 'Client Key',
+          clientIp: '用戶端 IP',
           credential: '執行憑證',
           authIndex: 'Auth Index',
           model: '模型',
@@ -4623,7 +4635,7 @@ export const zhTW = {
         title: '存取金鑰',
         description:
           '下游用戶端 API key 將獨立於上游 Provider key 管理，支援遮罩顯示和聚焦的新建、編輯、刪除流程。',
-        itemOne: '使用 GET、PUT、PATCH 和 DELETE /api-keys。',
+        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
         itemTwo: '不要假設服務端會回傳文件之外的 key metadata。',
       },
       config: {

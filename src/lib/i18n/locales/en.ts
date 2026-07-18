@@ -2216,6 +2216,7 @@ export const en = {
         edit: 'Edit',
         delete: 'Delete',
         copy: 'Copy',
+        copyIdentifier: 'Copy identifier {{identifier}}',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
@@ -2228,6 +2229,10 @@ export const en = {
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
+        identity: 'Identifier / key',
+        identifierTooltip:
+          'The stable identifier links the same access key across usage, billing, and request events.',
+        identifierUnavailable: 'No stable identifier',
         key: 'Key',
         owner: 'Owner',
         credentialScope: 'Credential scope',
@@ -2291,6 +2296,7 @@ export const en = {
       },
       toast: {
         copied: 'Access key copied.',
+        identifierCopied: 'Identifier copied.',
         created: 'Access key created.',
         updated: 'Access key updated.',
         replaced: 'Access key list replaced.',
@@ -3480,6 +3486,12 @@ export const en = {
         yes: 'Yes',
         no: 'No',
       },
+      caller: {
+        notRecorded: 'Caller not recorded',
+        userNotRecorded: 'User not recorded',
+        keyNotRecorded: 'Client key not recorded',
+        ipNotRecorded: 'Client IP not recorded',
+      },
       table: {
         title: 'Request Events',
         columnsMenu: 'Visible columns',
@@ -4047,6 +4059,7 @@ export const en = {
           homeIp: 'Home node',
           client: 'Client user',
           clientKey: 'Client key',
+          clientIp: 'Client IP',
           credential: 'Execution credential',
           authIndex: 'Auth index',
           model: 'Model',
@@ -4802,7 +4815,7 @@ export const en = {
         title: 'Access Keys',
         description:
           'Client-facing API keys will be managed separately from upstream provider keys, with masked display and focused create, edit, delete flows.',
-        itemOne: 'Use GET, PUT, PATCH, and DELETE /api-keys.',
+        itemOne: 'Use GET, POST, PUT, PATCH, and DELETE /api-keys.',
         itemTwo: 'Do not assume server-side metadata beyond the documented key array.',
       },
       config: {
