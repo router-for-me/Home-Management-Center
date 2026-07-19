@@ -475,6 +475,9 @@ export const zhTW = {
         user: '篩選使用者',
         provider: '篩選模型供應商',
         model: '篩選模型 ID',
+        reportTimezone: '報表時區',
+        reportTimezoneDescription: '日期預設、純日期邊界和每日趨勢依此後端設定計算。',
+        configureReportTimezone: '設定報表時區',
       },
       common: {
         actions: '操作',
@@ -495,6 +498,12 @@ export const zhTW = {
       },
       settings: {
         serviceTierSource: '計費 tier 來源',
+        reportTimezoneDialogTitle: '設定報表時區',
+        reportTimezoneDialogDescription: '選擇財務報表計算自然日邊界和每日分組時使用的 IANA 時區。',
+        reportTimezoneLabel: 'IANA 時區',
+        reportTimezoneHint:
+          '例如 UTC、Asia/Shanghai、America/Los_Angeles。此設定只影響報表邊界和分組，不會修改歷史扣款或餘額。',
+        reportTimezoneSaved: '報表時區已儲存。',
         runtimeContextTitle: '執行時計費上下文',
         globalBadge: '全域',
         scopedPricingSupported: '支援 Tier 與上下文分段',

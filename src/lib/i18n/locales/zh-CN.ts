@@ -475,6 +475,9 @@ export const zhCN = {
         user: '筛选用户',
         provider: '筛选模型供应商',
         model: '筛选模型 ID',
+        reportTimezone: '报表时区',
+        reportTimezoneDescription: '日期预设、纯日期边界和每日趋势按此后端设置计算。',
+        configureReportTimezone: '配置报表时区',
       },
       common: {
         actions: '操作',
@@ -495,6 +498,12 @@ export const zhCN = {
       },
       settings: {
         serviceTierSource: '计费 tier 来源',
+        reportTimezoneDialogTitle: '配置报表时区',
+        reportTimezoneDialogDescription: '选择财务报表计算自然日边界和每日分组时使用的 IANA 时区。',
+        reportTimezoneLabel: 'IANA 时区',
+        reportTimezoneHint:
+          '例如 UTC、Asia/Shanghai、America/Los_Angeles。此设置只影响报表边界和分组，不会修改历史扣款或余额。',
+        reportTimezoneSaved: '报表时区已保存。',
         runtimeContextTitle: '运行时计费上下文',
         globalBadge: '全局',
         scopedPricingSupported: '支持 Tier 与上下文分段',

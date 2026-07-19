@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import {
   normalizeBillingOverview,
+  normalizeBillingSettingsResponse,
   toBillingQueryParams,
 } from '../../src/lib/api/management/billing'
 import type { BillingFilters } from '../../src/lib/api/management/billing-types'
@@ -10,6 +11,7 @@ function createFilters(overrides: Partial<BillingFilters> = {}): BillingFilters 
   return {
     from: '2026-07-19',
     to: '2026-07-19',
+    timezone: 'Asia/Shanghai',
     user: '',
     provider: '',
     model: '',
@@ -23,6 +25,8 @@ function createOverviewResponse() {
       range: {
         from: '2026-07-19',
         to: '2026-07-19',
+        from_at: '2026-07-18T16:00:00Z',
+        to_at_exclusive: '2026-07-19T16:00:00Z',
         timezone: 'Asia/Shanghai',
       },
       total_charge_amount: 3,
@@ -43,12 +47,11 @@ function createOverviewResponse() {
 }
 
 describe('Management Billing API contract', () => {
-  test('sends calendar dates with the browser timezone instead of UTC timestamp boundaries', () => {
+  test('sends calendar dates with the configured report timezone', () => {
     expect(
       toBillingQueryParams(
         createFilters({ user: ' 42 ', provider: ' openai ', model: ' gpt-4.1-mini ' }),
         { limit: 25, offset: 50 },
-        'Asia/Shanghai',
       ),
     ).toEqual({
       from: '2026-07-19',
@@ -67,6 +70,8 @@ describe('Management Billing API contract', () => {
     expect(normalizeBillingOverview(createOverviewResponse()).range).toEqual({
       from: '2026-07-19',
       to: '2026-07-19',
+      fromAt: '2026-07-18T16:00:00Z',
+      toAtExclusive: '2026-07-19T16:00:00Z',
       timezone: 'Asia/Shanghai',
     })
 
@@ -84,5 +89,22 @@ describe('Management Billing API contract', () => {
         timezone: 'Asia/Shanghai',
       }),
     ).toThrow('billing_overview_contract_invalid')
+  })
+
+  test('requires report_timezone in Billing settings responses', () => {
+    expect(
+      normalizeBillingSettingsResponse({
+        service_tier_source: 'response',
+        report_timezone: 'America/Los_Angeles',
+      }),
+    ).toMatchObject({
+      serviceTierSource: 'response',
+      reportTimezone: 'America/Los_Angeles',
+      supported: true,
+    })
+
+    expect(() => normalizeBillingSettingsResponse({ service_tier_source: 'request' })).toThrow(
+      'billing_settings_contract_invalid',
+    )
   })
 })

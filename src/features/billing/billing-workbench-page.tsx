@@ -13,6 +13,7 @@ import {
   Copy,
   Download,
   Eye,
+  Globe2,
   Info,
   Loader2,
   PackageCheck,
@@ -531,11 +532,10 @@ function MetricStrip({
 }
 
 function createDefaultBillingTextFilters() {
-  const filters = createDefaultBillingFilters()
   return {
-    user: filters.user,
-    model: filters.model,
-    provider: filters.provider,
+    user: '',
+    model: '',
+    provider: '',
   }
 }
 
@@ -1030,7 +1030,7 @@ function ModelPricesTab({
   const saveTierSource = async () => {
     setSettingsError(null)
     try {
-      await workbench.updateBillingSettings(tierSourceDraft)
+      await workbench.updateBillingSettings({ serviceTierSource: tierSourceDraft })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
       setConfirmTierSourceChange(false)
@@ -2432,18 +2432,35 @@ export function BillingWorkbenchPage() {
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [modelPriceImportApplying, setModelPriceImportApplying] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const [reportTimezoneDialogOpen, setReportTimezoneDialogOpen] = useState(false)
+  const [reportTimezoneDraft, setReportTimezoneDraft] = useState('UTC')
+  const [reportTimezoneError, setReportTimezoneError] = useState<string | null>(null)
   const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
   const activeFetching =
-    activeTab === 'overview'
+    workbench.billingSettingsFetching ||
+    (activeTab === 'overview'
       ? workbench.overviewFetching
       : activeTab === 'charges'
         ? workbench.chargesFetching
         : activeTab === 'balanceRecords'
           ? workbench.balanceRecordsFetching
           : workbench.modelPricesFetching ||
-            workbench.billingSettingsFetching ||
             workbench.modelPriceCandidatesFetching ||
-            workbench.billingTierDiagnosticsFetching
+            workbench.billingTierDiagnosticsFetching)
+
+  useEffect(() => {
+    const timezone = workbench.reportTimezone
+    if (!timezone) return
+
+    setReportTimezoneDraft(timezone)
+    setFilters((current) => {
+      if (current.timezone === timezone) return current
+      const range = datePreset === 'custom' ? {} : createDatePresetRange(datePreset, timezone)
+      return { ...current, ...range, timezone }
+    })
+    setChargePagination(defaultBillingPagination)
+    setBalancePagination(defaultBillingPagination)
+  }, [datePreset, workbench.reportTimezone])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -2490,7 +2507,22 @@ export function BillingWorkbenchPage() {
   const handlePresetChange = (preset: DateRangePreset) => {
     setDatePreset(preset)
     if (preset !== 'custom') {
-      updateFilters(createDatePresetRange(preset))
+      updateFilters(createDatePresetRange(preset, filters.timezone))
+    }
+  }
+
+  const saveReportTimezone = async () => {
+    const reportTimezone = reportTimezoneDraft.trim()
+    if (!reportTimezone) return
+    setReportTimezoneError(null)
+    try {
+      await workbench.updateBillingSettings({ reportTimezone })
+      toast.success(t('billingPage.settings.reportTimezoneSaved'))
+      setReportTimezoneDialogOpen(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('billingPage.toast.actionFailed')
+      setReportTimezoneError(message)
+      toast.error(message)
     }
   }
 
@@ -2537,6 +2569,33 @@ export function BillingWorkbenchPage() {
 
       {activeTab !== 'modelPrices' ? (
         <div className="bg-card rounded-lg border p-4 shadow-sm">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
+              <Globe2 className="size-4 shrink-0" aria-hidden="true" />
+              <span>{t('billingPage.filters.reportTimezone')}</span>
+              <code className="bg-muted text-foreground rounded px-1.5 py-0.5 text-[11px]">
+                {workbench.reportTimezone ?? '—'}
+              </code>
+              <span className="hidden sm:inline">
+                {t('billingPage.filters.reportTimezoneDescription')}
+              </span>
+            </div>
+            {workbench.billingSettings?.supported ? (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                onClick={() => {
+                  setReportTimezoneDraft(workbench.reportTimezone ?? '')
+                  setReportTimezoneError(null)
+                  setReportTimezoneDialogOpen(true)
+                }}
+              >
+                {t('billingPage.filters.configureReportTimezone')}
+              </Button>
+            ) : null}
+          </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
             <Select
               value={datePreset}
@@ -2596,6 +2655,68 @@ export function BillingWorkbenchPage() {
           </div>
         </div>
       ) : null}
+
+      <Dialog
+        open={reportTimezoneDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setReportTimezoneDialogOpen(true)
+            return
+          }
+          if (!workbench.mutating) {
+            setReportTimezoneError(null)
+            setReportTimezoneDialogOpen(false)
+          }
+        }}
+      >
+        <DialogContent closeLabel={t('close')} showCloseButton={!workbench.mutating}>
+          <DialogHeader>
+            <DialogTitle>{t('billingPage.settings.reportTimezoneDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('billingPage.settings.reportTimezoneDialogDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <label className="grid gap-1.5 text-sm font-medium">
+            <span>{t('billingPage.settings.reportTimezoneLabel')}</span>
+            <Input
+              value={reportTimezoneDraft}
+              disabled={workbench.mutating}
+              placeholder="Asia/Shanghai"
+              onChange={(event) => setReportTimezoneDraft(event.target.value)}
+            />
+            <span className="text-muted-foreground text-xs leading-5 font-normal">
+              {t('billingPage.settings.reportTimezoneHint')}
+            </span>
+          </label>
+          {reportTimezoneError ? (
+            <p className="text-destructive text-xs" role="alert">
+              {reportTimezoneError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={workbench.mutating}
+              onClick={() => setReportTimezoneDialogOpen(false)}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              disabled={workbench.mutating || !reportTimezoneDraft.trim()}
+              onClick={() => void saveReportTimezone()}
+            >
+              {workbench.mutating ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Check className="size-4" aria-hidden="true" />
+              )}
+              {t('billingPage.common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div
         className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"

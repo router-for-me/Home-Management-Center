@@ -33,6 +33,7 @@ This is not a marketing surface. Design serves people who need to understand whe
 - The frontend must preserve the backend API contract.
 - The UI must not imply routes, fields, metrics, bulk operations, or automation that the Management API does not provide.
 - Backend API differences belong in adapters and normalized state, not scattered across JSX.
+- Billing reports use the reporting timezone configured by the backend; browser timezone is not an implicit billing-report default.
 - Sensitive operations need clear intent, confirmation, and recoverable feedback.
 - Backend data should be shown as operational facts, not decorative analytics.
 

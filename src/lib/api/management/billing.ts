@@ -1,6 +1,5 @@
 import axios from 'axios'
 
-import { getBillingTimeZone } from '../../billing/date-range'
 import type {
   BalanceOperationInput,
   BalanceRecord,
@@ -10,8 +9,8 @@ import type {
   BillingPage,
   BillingPagination,
   BillingRankItem,
-  BillingServiceTierSource,
   BillingSettings,
+  BillingSettingsUpdate,
   BillingTierDiagnostics,
   BillingTrendPoint,
   ChargeRecord,
@@ -83,11 +82,7 @@ function isPositiveIntegerText(value: string) {
   return /^[1-9]\d*$/.test(value.trim())
 }
 
-export function toBillingQueryParams(
-  filters: BillingFilters,
-  pagination?: BillingPagination,
-  timezone = getBillingTimeZone(),
-) {
+export function toBillingQueryParams(filters: BillingFilters, pagination?: BillingPagination) {
   const user = filters.user.trim()
   const from = filters.from.trim()
   const to = filters.to.trim()
@@ -95,7 +90,7 @@ export function toBillingQueryParams(
   return {
     from: from || undefined,
     to: to || undefined,
-    timezone,
+    timezone: filters.timezone,
     user: user || undefined,
     user_id: isPositiveIntegerText(user) ? user : undefined,
     provider: filters.provider.trim() || undefined,
@@ -135,10 +130,18 @@ function normalizeBillingRange(value: unknown) {
 
   const from = value.from
   const to = value.to
+  const hasFromAt = 'from_at' in value || 'fromAt' in value
+  const hasToAtExclusive = 'to_at_exclusive' in value || 'toAtExclusive' in value
+  const fromAt = 'from_at' in value ? value.from_at : value.fromAt
+  const toAtExclusive = 'to_at_exclusive' in value ? value.to_at_exclusive : value.toAtExclusive
   const timezone = value.timezone
   if (
     typeof from !== 'string' ||
     typeof to !== 'string' ||
+    !hasFromAt ||
+    !hasToAtExclusive ||
+    (fromAt !== null && (typeof fromAt !== 'string' || !fromAt.trim())) ||
+    (toAtExclusive !== null && (typeof toAtExclusive !== 'string' || !toAtExclusive.trim())) ||
     typeof timezone !== 'string' ||
     !timezone.trim()
   ) {
@@ -148,6 +151,8 @@ function normalizeBillingRange(value: unknown) {
   return {
     from: from.trim(),
     to: to.trim(),
+    fromAt: typeof fromAt === 'string' ? fromAt.trim() : null,
+    toAtExclusive: typeof toAtExclusive === 'string' ? toAtExclusive.trim() : null,
     timezone: timezone.trim(),
   }
 }
@@ -478,38 +483,37 @@ export async function fetchBillingSettings(
   session: ManagementSessionInput,
 ): Promise<BillingSettings> {
   const client = createManagementClient(session)
-  try {
-    const response = await client.get<unknown>('/billing/settings')
-    const record = toRecord(response.data)
-    const source = readString(record, ['service_tier_source', 'serviceTierSource'])
-    return {
-      serviceTierSource: source === 'response' ? 'response' : 'request',
-      supported: true,
-      raw: response.data,
-    }
-  } catch (error) {
-    if (axios.isAxiosError(error) && [404, 405].includes(error.response?.status ?? 0)) {
-      return { serviceTierSource: 'request', supported: false, raw: error.response?.data ?? null }
-    }
-    throw error
+  const response = await client.get<unknown>('/billing/settings')
+  const record = toRecord(response.data)
+  return normalizeBillingSettingsResponse(record, response.data)
+}
+
+export function normalizeBillingSettingsResponse(
+  record: UnknownRecord,
+  raw: unknown = record,
+): BillingSettings {
+  const source = readString(record, ['service_tier_source', 'serviceTierSource'])
+  const reportTimezone = readString(record, ['report_timezone', 'reportTimezone'])
+  if (!reportTimezone) throw new Error('billing_settings_contract_invalid')
+  return {
+    serviceTierSource: source === 'response' ? 'response' : 'request',
+    reportTimezone,
+    supported: true,
+    raw,
   }
 }
 
 export async function updateBillingSettings(
   session: ManagementSessionInput,
-  source: BillingServiceTierSource,
+  input: BillingSettingsUpdate,
 ): Promise<BillingSettings> {
   const client = createManagementClient(session)
   const response = await client.patch<unknown>('/billing/settings', {
-    service_tier_source: source,
+    ...(input.serviceTierSource ? { service_tier_source: input.serviceTierSource } : {}),
+    ...(input.reportTimezone ? { report_timezone: input.reportTimezone.trim() } : {}),
   })
   const record = toRecord(response.data)
-  const returned = readString(record, ['service_tier_source', 'serviceTierSource'])
-  return {
-    serviceTierSource: returned === 'response' ? 'response' : 'request',
-    supported: true,
-    raw: response.data,
-  }
+  return normalizeBillingSettingsResponse(record, response.data)
 }
 
 export async function fetchBillingTierDiagnostics(

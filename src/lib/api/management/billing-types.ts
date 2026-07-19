@@ -1,6 +1,8 @@
 export type BillingDateRange = {
   from: string
   to: string
+  fromAt: string | null
+  toAtExclusive: string | null
   timezone: string
 }
 
@@ -131,6 +133,7 @@ export type ModelPrice = {
 export type BillingFilters = {
   from: string
   to: string
+  timezone: string
   user: string
   provider: string
   model: string
@@ -140,8 +143,14 @@ export type BillingServiceTierSource = 'request' | 'response'
 
 export type BillingSettings = {
   serviceTierSource: BillingServiceTierSource
+  reportTimezone: string
   supported: boolean
   raw: unknown
+}
+
+export type BillingSettingsUpdate = {
+  serviceTierSource?: BillingServiceTierSource
+  reportTimezone?: string
 }
 
 export type BillingTierDiagnostics = {

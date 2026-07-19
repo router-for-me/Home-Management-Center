@@ -490,6 +490,10 @@ export const en = {
         user: 'Filter user',
         provider: 'Filter provider',
         model: 'Filter model ID',
+        reportTimezone: 'Report timezone',
+        reportTimezoneDescription:
+          'Calendar presets, date-only boundaries, and daily buckets use this backend setting.',
+        configureReportTimezone: 'Configure report timezone',
       },
       common: {
         actions: 'Actions',
@@ -510,6 +514,13 @@ export const en = {
       },
       settings: {
         serviceTierSource: 'Billing tier source',
+        reportTimezoneDialogTitle: 'Configure report timezone',
+        reportTimezoneDialogDescription:
+          'Choose the IANA timezone used for Billing report calendar boundaries and daily grouping.',
+        reportTimezoneLabel: 'IANA timezone',
+        reportTimezoneHint:
+          'Examples: UTC, Asia/Shanghai, America/Los_Angeles. This changes report boundaries and grouping, not historical charges or balances.',
+        reportTimezoneSaved: 'Report timezone saved.',
         runtimeContextTitle: 'Runtime billing context',
         globalBadge: 'Global',
         scopedPricingSupported: 'Tier and context pricing supported',
