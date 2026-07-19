@@ -15,6 +15,7 @@ export const zhCN = {
       connect: '连接',
       manageConnection: '连接管理',
       copyFailed: '复制失败',
+      customizeColumns: '自定义列',
     },
     language: {
       switch: '语言',
@@ -474,6 +475,10 @@ export const zhCN = {
         user: '筛选用户',
         provider: '筛选模型供应商',
         model: '筛选模型 ID',
+        reportTimezoneMenuNote: '日期边界按 {{timezone}} 计算',
+        reportTimezoneLoadError: '无法读取报表统计时区，当前报表未加载。',
+        reportTimezoneRetry: '重试',
+        reportTimezoneChanged: '报表统计时区已更新为 {{timezone}}，报表已刷新。',
       },
       common: {
         actions: '操作',
@@ -1099,23 +1104,28 @@ export const zhCN = {
       },
       health: {
         ready: {
-          title: '服务可用于模型请求',
+          title: '模型调用已可用',
           description:
-            '模型服务、账号凭证和客户端访问密钥均已就绪，可以继续查看用量、日志和配置状态。',
+            '已检测到可用模型和客户端访问密钥。模型访问可由模型服务密钥或 OAuth、文件凭证提供。',
         },
-        needsModelService: {
-          title: '需要先配置模型服务',
+        modelStatusUnknown: {
+          title: '暂时无法确认模型调用状态',
           description:
-            '当前没有可用模型密钥，网关可能无法处理模型请求。请先添加至少一个模型服务密钥。',
+            '可用模型数据加载失败。请先同步数据或查看数据状态，不要根据当前资源计数判断配置是否缺失。',
         },
-        needsCredential: {
-          title: '需要补充账号凭证',
+        needsUpstreamAccess: {
+          title: '需要添加上游模型访问',
           description:
-            '模型服务已接入，但没有可用账号凭证。需要使用 OAuth 或文件凭证的通道可能无法工作。',
+            '运行时当前没有可用模型，也没有检测到模型服务密钥或账号凭证。请至少配置一种上游访问方式。',
+        },
+        reviewUpstreamAccess: {
+          title: '当前没有可用模型',
+          description:
+            '已检测到上游配置，但运行时没有注册可用模型。请检查模型服务或账号凭证的状态与模型映射。',
         },
         needsClientKey: {
           title: '需要创建客户端访问密钥',
-          description: '服务端已有模型接入信息，但还没有客户端可用于调用服务端接口的访问密钥。',
+          description: '运行时已有可用模型，但还没有客户端可用于调用网关接口的访问密钥。',
         },
         limited: {
           title: '服务已连接，部分能力受限',
@@ -1132,7 +1142,7 @@ export const zhCN = {
         eyebrow: '首页总览',
         title: '服务运行概览',
         description:
-          '查看当前连接的 网关服务端是否正常，模型服务是否已接入，客户端密钥与账号凭证是否可用。',
+          '查看当前连接的网关是否可处理模型请求，以及客户端密钥、模型服务和账号凭证的运行状态。',
         refresh: '同步数据',
         syncing: '同步中',
         runtime: '已连接服务端：{{mode}}',
@@ -1143,6 +1153,8 @@ export const zhCN = {
         title: '建议操作',
         configureProviders: '配置模型服务',
         addCredential: '添加账号凭证',
+        reviewModelServices: '检查模型服务',
+        reviewCredentials: '检查账号凭证',
         createClientKey: '新建客户端密钥',
         checkRouting: '检查路由配置',
         reviewDebug: '检查 Debug 模式',
@@ -1162,11 +1174,11 @@ export const zhCN = {
       },
       metrics: {
         providers: {
-          title: '可用模型密钥',
+          title: '已启用模型服务密钥',
           detail: '已接入 {{count}} 类模型服务',
         },
         credentials: {
-          title: '可用账号凭证',
+          title: '已启用账号凭证',
           detail: '共发现 {{count}} 条凭证记录',
         },
         clientKeys: {
@@ -1233,16 +1245,25 @@ export const zhCN = {
       },
       usageActivity: {
         title: '请求健康度',
-        description: '按最近用量时段展示请求活跃度、成功率和失败分布。',
-        summary: '{{buckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
+        description: '按完整时间范围展示请求活跃度、成功率和失败分布。',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
         action: '查看调用诊断',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '请求健康度时间点阵',
         bucketTitle: '{{label}}：{{requests}} 次请求 · {{successRate}} 成功率',
+        interval: {
+          minute: '按分钟',
+          hour: '按小时',
+          day: '按日',
+          week: '按周',
+        },
         status: {
           healthy: '健康',
-          warning: '有失败',
           degraded: '降级',
-          failed: '失败',
+          unavailable: '不可用',
           empty: '无流量',
+          unknown: '未知',
         },
       },
       quickActions: {
@@ -1336,6 +1357,7 @@ export const zhCN = {
         latestVersion: '最新版本',
         clientKeys: '客户端密钥',
         authFiles: '账号凭证',
+        models: '可用模型',
         topology: '集群拓扑',
         nodes: '节点',
         usageOverview: '用量总览',
@@ -2124,6 +2146,7 @@ export const zhCN = {
         edit: '编辑',
         delete: '删除',
         copy: '复制',
+        copyIdentifier: '复制标识 {{identifier}}',
         reveal: '显示',
         hide: '隐藏',
         generate: '生成密钥',
@@ -2135,6 +2158,9 @@ export const zhCN = {
         filterPlaceholder: '筛选密钥',
         empty: '当前筛选条件下没有访问密钥。',
         index: '序号',
+        identity: '标识 / 密钥',
+        identifierTooltip: '稳定标识用于关联用量、计费和请求事件中的同一个访问密钥。',
+        identifierUnavailable: '无稳定标识',
         key: '密钥',
         owner: '所属用户',
         credentialScope: '凭证范围',
@@ -2196,6 +2222,7 @@ export const zhCN = {
       },
       toast: {
         copied: '访问密钥已复制。',
+        identifierCopied: '标识已复制。',
         created: '访问密钥已创建。',
         updated: '访问密钥已更新。',
         replaced: '访问密钥列表已替换。',
@@ -3326,9 +3353,14 @@ export const zhCN = {
         yes: '是',
         no: '否',
       },
+      caller: {
+        notRecorded: '未记录调用方',
+        userNotRecorded: '未记录用户',
+        keyNotRecorded: '未记录客户端 Key',
+        ipNotRecorded: '未记录客户端 IP',
+      },
       table: {
         title: '请求事件',
-        columnsButton: '列',
         columnsMenu: '显示列',
         ttft: 'TTFT {{value}}',
         emptyTitle: '没有匹配的请求事件',
@@ -3755,7 +3787,6 @@ export const zhCN = {
         metric: '排序指标',
         showTop50: '查看前 50 名',
         showTop10: '收起到前 10 名',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         columns: {
           rank: '排名',
@@ -3804,7 +3835,6 @@ export const zhCN = {
         previous: '上一页',
         next: '下一页',
         ttft: 'TTFT {{value}}',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         sortColumn: '将 {{column}} 按 {{sort}} 排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3878,6 +3908,7 @@ export const zhCN = {
           homeIp: 'Home 节点',
           client: '调用用户',
           clientKey: 'Client Key',
+          clientIp: '客户端 IP',
           credential: '执行凭证',
           authIndex: 'Auth Index',
           model: '模型',
@@ -3918,7 +3949,6 @@ export const zhCN = {
         pageSize: '每页条数',
         previous: '上一页',
         next: '下一页',
-        columnsButton: '自定义列',
         columnsMenu: '显示列',
         sortColumn: '将 {{column}} 按{{direction}}排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3967,15 +3997,24 @@ export const zhCN = {
       },
       activity: {
         title: '请求健康时间线',
-        summary: '{{buckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
         emptyTitle: '暂无健康时间线',
         unavailable: '当前没有健康时段。',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '请求健康时间点阵',
+        interval: {
+          minute: '按分钟',
+          hour: '按小时',
+          day: '按日',
+          week: '按周',
+        },
         status: {
           healthy: '健康',
-          warning: '有失败',
           degraded: '降级',
-          failed: '失败',
+          unavailable: '不可用',
           empty: '无流量',
+          unknown: '未知',
         },
       },
       health: {
@@ -4601,7 +4640,7 @@ export const zhCN = {
         title: '访问密钥',
         description:
           '下游客户端 API key 将独立于上游 Provider key 管理，支持掩码展示和聚焦的新建、编辑、删除流程。',
-        itemOne: '使用 GET、PUT、PATCH 和 DELETE /api-keys。',
+        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
         itemTwo: '不要假设服务端会返回文档之外的 key metadata。',
       },
       config: {

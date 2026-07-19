@@ -101,7 +101,11 @@ function readResponseErrorDetails(data: unknown): ResponseErrorDetails {
   }
 
   const error = response.error
-  if (typeof error === 'string' && error.trim()) return { message: error.trim() }
+  if (typeof error === 'string' && error.trim()) {
+    details.backendCode = error.trim()
+    details.message ??= error.trim()
+    return details
+  }
   if (error && typeof error === 'object') {
     const nested = error as Record<string, unknown>
     const nestedMessage = nested.message

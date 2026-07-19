@@ -1,24 +1,44 @@
 import type { BillingFilters, BillingPagination } from '@/lib/api/management/billing-types'
-import { createLocalDateRange } from '@/lib/billing/date-range'
+import { createDateRangeInTimeZone } from '@/lib/billing/date-range'
 
 export type BillingTab = 'overview' | 'charges' | 'balanceRecords' | 'modelPrices'
 
 export type DateRangePreset = 'today' | '7d' | '30d' | 'custom'
 
-export function createDefaultBillingFilters(): BillingFilters {
-  const range = createLocalDateRange(6)
+export function createDefaultBillingFilters(timezone = 'UTC', now = new Date()): BillingFilters {
+  const range = createDateRangeInTimeZone(6, timezone, now)
 
   return {
     ...range,
+    timezone,
     user: '',
     provider: '',
     model: '',
   }
 }
 
-export function createDatePresetRange(preset: Exclude<DateRangePreset, 'custom'>) {
+export function createDatePresetRange(
+  preset: Exclude<DateRangePreset, 'custom'>,
+  timezone: string,
+  now = new Date(),
+) {
   const days = preset === 'today' ? 0 : preset === '7d' ? 6 : 29
-  return createLocalDateRange(days)
+  return createDateRangeInTimeZone(days, timezone, now)
+}
+
+export function alignBillingFiltersToReportTimezone(
+  filters: BillingFilters,
+  preset: DateRangePreset,
+  timezone: string,
+  now = new Date(),
+): BillingFilters {
+  if (filters.timezone === timezone) return filters
+
+  return {
+    ...filters,
+    ...(preset === 'custom' ? {} : createDatePresetRange(preset, timezone, now)),
+    timezone,
+  }
 }
 
 export const defaultBillingPagination: BillingPagination = {

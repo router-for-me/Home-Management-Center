@@ -15,6 +15,7 @@ export const ru = {
       connect: 'Подключить',
       manageConnection: 'Подключение',
       copyFailed: 'Не удалось скопировать',
+      customizeColumns: 'Настроить столбцы',
     },
     language: {
       switch: 'Язык',
@@ -489,6 +490,11 @@ export const ru = {
         user: 'Фильтр по пользователю',
         provider: 'Фильтр по провайдеру',
         model: 'Фильтр по ID модели',
+        reportTimezoneMenuNote: 'Границы дат рассчитываются в {{timezone}}',
+        reportTimezoneLoadError:
+          'Не удалось прочитать часовой пояс отчетов. Текущий отчет не загружен.',
+        reportTimezoneRetry: 'Повторить',
+        reportTimezoneChanged: 'Часовой пояс отчетов изменен на {{timezone}}. Отчет обновлен.',
       },
       common: {
         actions: 'Действия',
@@ -1143,24 +1149,29 @@ export const ru = {
       },
       health: {
         ready: {
-          title: 'Сервис готов к модельным запросам',
+          title: 'Вызовы моделей доступны',
           description:
-            'Модельные сервисы, учетные данные аккаунтов и клиентские ключи доступны. Можно проверять использование, журналы и конфигурацию.',
+            'Обнаружены доступные модели и клиентский ключ. Доступ к моделям может обеспечиваться ключами модельных сервисов либо OAuth и файловыми учетными данными.',
         },
-        needsModelService: {
-          title: 'Сначала настройте модельный сервис',
+        modelStatusUnknown: {
+          title: 'Не удалось подтвердить доступность моделей',
           description:
-            'Доступные модельные ключи не возвращены, поэтому шлюз может не обслуживать модельные запросы. Добавьте хотя бы один ключ модельного сервиса.',
+            'Не удалось загрузить данные доступных моделей. Повторите синхронизацию или проверьте состояние данных, не считая текущие нулевые значения отсутствующей конфигурацией.',
         },
-        needsCredential: {
-          title: 'Нужны учетные данные аккаунта',
+        needsUpstreamAccess: {
+          title: 'Добавьте доступ к вышестоящим моделям',
           description:
-            'Модельные сервисы подключены, но доступные учетные данные аккаунтов не возвращены. Каналы OAuth или файловых учетных данных могут не работать.',
+            'В runtime нет доступных моделей, ключей модельных сервисов или учетных данных аккаунтов. Настройте хотя бы один способ доступа к вышестоящему сервису.',
+        },
+        reviewUpstreamAccess: {
+          title: 'Сейчас нет доступных моделей',
+          description:
+            'Вышестоящая конфигурация найдена, но runtime не зарегистрировал доступные модели. Проверьте модельные сервисы, учетные данные и сопоставления моделей.',
         },
         needsClientKey: {
           title: 'Создайте клиентский ключ доступа',
           description:
-            'На сервере есть данные доступа к моделям, но нет клиентского ключа для вызова серверного API.',
+            'В runtime есть доступные модели, но у клиентов еще нет ключа для вызова gateway API.',
         },
         limited: {
           title: 'Сервис подключен с ограниченными возможностями',
@@ -1177,7 +1188,7 @@ export const ru = {
         eyebrow: 'Обзор',
         title: 'Обзор серверной части',
         description:
-          'Проверьте, работает ли подключенный gateway server, какие модельные сервисы настроены, и доступны ли клиентские ключи и учетные данные аккаунтов.',
+          'Проверьте, может ли подключенный gateway обслуживать модельные запросы, а также состояние клиентских ключей, модельных сервисов и учетных данных.',
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
         runtime: 'Подключенный сервер: {{mode}}',
@@ -1188,6 +1199,8 @@ export const ru = {
         title: 'Рекомендуемые действия',
         configureProviders: 'Настроить модельный сервис',
         addCredential: 'Добавить учетные данные',
+        reviewModelServices: 'Проверить модельные сервисы',
+        reviewCredentials: 'Проверить учетные данные',
         createClientKey: 'Создать клиентский ключ',
         checkRouting: 'Проверить маршрутизацию',
         reviewDebug: 'Проверить Debug режим',
@@ -1207,11 +1220,11 @@ export const ru = {
       },
       metrics: {
         providers: {
-          title: 'Доступные модельные ключи',
+          title: 'Включенные ключи модельных сервисов',
           detail: 'Подключено типов модельных сервисов: {{count}}',
         },
         credentials: {
-          title: 'Доступные учетные данные',
+          title: 'Включенные учетные данные',
           detail: 'Найдено записей учетных данных: {{count}}',
         },
         clientKeys: {
@@ -1278,18 +1291,25 @@ export const ru = {
       },
       usageActivity: {
         title: 'Состояние запросов',
-        description:
-          'Последние интервалы использования: активность запросов, доля успеха и распределение отказов.',
+        description: 'Активность, доля успеха и отказы за весь выбранный временной диапазон.',
         summary:
-          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+          '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
         action: 'Смотреть диагностику',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Матрица состояния запросов',
         bucketTitle: '{{label}}: запросов {{requests}} · успех {{successRate}}',
+        interval: {
+          minute: 'По минутам',
+          hour: 'По часам',
+          day: 'По дням',
+          week: 'По неделям',
+        },
         status: {
-          healthy: 'Healthy',
-          warning: 'Has failures',
-          degraded: 'Degraded',
-          failed: 'Failed',
-          empty: 'No traffic',
+          healthy: 'Норма',
+          degraded: 'Снижение',
+          unavailable: 'Недоступно',
+          empty: 'Нет трафика',
+          unknown: 'Неизвестно',
         },
       },
       quickActions: {
@@ -1388,6 +1408,7 @@ export const ru = {
         latestVersion: 'Последняя версия',
         clientKeys: 'Клиентские ключи',
         authFiles: 'Учетные данные аккаунтов',
+        models: 'Доступные модели',
         topology: 'Топология кластера',
         nodes: 'Узлы',
         usageOverview: 'Usage overview',
@@ -2200,6 +2221,7 @@ export const ru = {
         edit: 'Изменить',
         delete: 'Удалить',
         copy: 'Копировать',
+        copyIdentifier: 'Копировать идентификатор {{identifier}}',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',
@@ -2212,6 +2234,10 @@ export const ru = {
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
+        identity: 'Идентификатор / ключ',
+        identifierTooltip:
+          'Стабильный идентификатор связывает один access key в usage, billing и request events.',
+        identifierUnavailable: 'Нет стабильного идентификатора',
         key: 'Key',
         owner: 'Владелец',
         credentialScope: 'Credential scope',
@@ -2275,6 +2301,7 @@ export const ru = {
       },
       toast: {
         copied: 'Access key скопирован.',
+        identifierCopied: 'Идентификатор скопирован.',
         created: 'Access key создан.',
         updated: 'Access key обновлен.',
         replaced: 'Список access keys заменен.',
@@ -3479,9 +3506,14 @@ export const ru = {
         yes: 'Да',
         no: 'Нет',
       },
+      caller: {
+        notRecorded: 'Источник вызова не записан',
+        userNotRecorded: 'Пользователь не записан',
+        keyNotRecorded: 'Клиентский ключ не записан',
+        ipNotRecorded: 'IP клиента не записан',
+      },
       table: {
         title: 'События запросов',
-        columnsButton: 'Колонки',
         columnsMenu: 'Видимые колонки',
         ttft: 'TTFT {{value}}',
         emptyTitle: 'Подходящих событий нет',
@@ -3926,7 +3958,6 @@ export const ru = {
         metric: 'Метрика',
         showTop50: 'Показать топ-50',
         showTop10: 'Вернуться к топ-10',
-        columnsButton: 'Столбцы',
         columnsMenu: 'Видимые столбцы',
         columns: {
           rank: 'Ранг',
@@ -3975,7 +4006,6 @@ export const ru = {
         previous: 'Назад',
         next: 'Вперед',
         ttft: 'TTFT {{value}}',
-        columnsButton: 'Настроить столбцы',
         columnsMenu: 'Видимые столбцы',
         sortColumn: 'Сортировать {{column}}: {{sort}}',
         clearSortColumn: 'Сбросить сортировку {{column}}',
@@ -4049,6 +4079,7 @@ export const ru = {
           homeIp: 'Home-узел',
           client: 'Клиентский пользователь',
           clientKey: 'Клиентский ключ',
+          clientIp: 'IP клиента',
           credential: 'Исполнительные учетные данные',
           authIndex: 'Auth Index',
           model: 'Модель',
@@ -4089,7 +4120,6 @@ export const ru = {
         pageSize: 'Строк на странице',
         previous: 'Назад',
         next: 'Далее',
-        columnsButton: 'Настроить столбцы',
         columnsMenu: 'Видимые столбцы',
         sortColumn: 'Сортировать {{column}}: {{direction}}',
         clearSortColumn: 'Сбросить сортировку {{column}}',
@@ -4139,15 +4169,23 @@ export const ru = {
       activity: {
         title: 'Временная шкала состояния запросов',
         summary:
-          '{{buckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
+          '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
         emptyTitle: 'Нет временной шкалы состояния',
         unavailable: 'Интервалы активности недоступны.',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Матрица состояния запросов',
+        interval: {
+          minute: 'По минутам',
+          hour: 'По часам',
+          day: 'По дням',
+          week: 'По неделям',
+        },
         status: {
           healthy: 'Норма',
-          warning: 'Предупреждение',
           degraded: 'Снижение',
-          failed: 'Ошибка',
+          unavailable: 'Недоступно',
           empty: 'Нет трафика',
+          unknown: 'Неизвестно',
         },
       },
       health: {
@@ -4805,7 +4843,7 @@ export const ru = {
         title: 'Ключи доступа',
         description:
           'Клиентские API keys будут управляться отдельно от ключей upstream providers, с маскированным отображением и отдельными сценариями создания, редактирования и удаления.',
-        itemOne: 'Использовать GET, PUT, PATCH и DELETE /api-keys.',
+        itemOne: 'Использовать GET, POST, PUT, PATCH и DELETE /api-keys.',
         itemTwo:
           'Не предполагать server-side metadata за пределами документированного массива ключей.',
       },

@@ -30,6 +30,10 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { ProviderLogo } from '@/components/shared/provider-logo'
+import {
+  UsageActivityMatrix,
+  type UsageActivityMatrixBucket,
+} from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type {
@@ -99,6 +103,8 @@ const credentialSourceNameKeys = {
 const recommendedActionIcons: Record<DashboardRecommendedAction['id'], LucideIcon> = {
   configureProviders: Network,
   addCredential: ShieldCheck,
+  reviewModelServices: Network,
+  reviewCredentials: ShieldCheck,
   createClientKey: KeyRound,
   checkRouting: Route,
   reviewDebug: AlertTriangle,
@@ -144,7 +150,7 @@ function interactiveCardClassName() {
 }
 
 function cornerDrillDownClassName() {
-  return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-3 bottom-3 inline-flex size-7 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
+  return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-2 bottom-2 inline-flex size-10 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
 }
 
 function DashboardDrillDownLink({ label, to }: { label: string; to: DashboardLinkTarget }) {
@@ -769,17 +775,45 @@ function getUsageActivityBucketClassName(
   status: DashboardUsageActivitySummary['buckets'][number]['status'],
 ) {
   if (status === 'healthy') return 'bg-success/85'
-  if (status === 'warning') return 'bg-warning/85'
-  // degraded uses a light destructive hue so it is distinguishable from amber `warning`
-  // for color-vision-deficient users, not just a lower-opacity warning.
-  if (status === 'degraded') return 'bg-destructive/45'
-  if (status === 'failed') return 'bg-destructive/85'
+  if (status === 'degraded') return 'bg-warning/85'
+  if (status === 'unavailable') return 'bg-destructive/85'
+  if (status === 'unknown') return 'bg-info/65'
   return 'bg-muted'
 }
 
 function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActivitySummary }) {
   const { t } = useTranslation()
-  const bucketColumnCount = Math.max(4, Math.ceil(summary.buckets.length / 2))
+  const dateFormatter = new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: summary.timezone,
+  })
+  const formatRangeDate = (value: string) => dateFormatter.format(new Date(value))
+  const rangeLabel = t('dashboard.usageActivity.range', {
+    from: formatRangeDate(summary.rangeFrom),
+    to: formatRangeDate(summary.rangeTo),
+    interval: t(`dashboard.usageActivity.interval.${summary.interval}`, {
+      defaultValue: summary.interval,
+    }),
+  })
+  const legendStatuses = [
+    'healthy',
+    'degraded',
+    'unavailable',
+    'empty',
+    ...(summary.buckets.some((bucket) => bucket.status === 'unknown')
+      ? (['unknown'] as const)
+      : []),
+  ] as const
+  const getBucketLabel = (bucket: UsageActivityMatrixBucket) =>
+    t('dashboard.usageActivity.bucketTitle', {
+      label: bucket.label
+        .split(' - ')
+        .map((value) => formatShortDateTime(value))
+        .join(' – '),
+      requests: formatNumber(bucket.requestCount),
+      successRate: formatPercent(bucket.successRate),
+    })
 
   return (
     <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 pb-12 shadow-sm">
@@ -796,7 +830,8 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
           </p>
           <p className="text-muted-foreground mt-1 text-sm">
             {t('dashboard.usageActivity.summary', {
-              buckets: formatNumber(summary.activeBucketCount),
+              activeBuckets: formatNumber(summary.activeBucketCount),
+              totalBuckets: formatNumber(summary.bucketCount),
               requests: formatNumber(summary.requestCount),
               successRate: formatPercent(summary.successRate),
             })}
@@ -807,31 +842,19 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
           label={t('dashboard.usageActivity.action')}
         />
       </div>
-      <div
-        className="mt-5 grid gap-0.5 sm:gap-1"
-        style={{
-          gridTemplateColumns: `repeat(${bucketColumnCount}, minmax(0, 1fr))`,
-        }}
-      >
-        {summary.buckets.map((bucket) => {
-          const bucketTitle = t('dashboard.usageActivity.bucketTitle', {
-            label: bucket.label,
-            requests: formatNumber(bucket.requestCount),
-            successRate: formatPercent(bucket.successRate),
-          })
-          return (
-            <span
-              key={bucket.id}
-              role="img"
-              aria-label={`${t(`dashboard.usageActivity.status.${bucket.status}`)} · ${bucketTitle}`}
-              className={cn('h-2.5 rounded-[2px]', getUsageActivityBucketClassName(bucket.status))}
-              title={bucketTitle}
-            />
-          )
-        })}
+      <div className="mt-4">
+        <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
+        <UsageActivityMatrix
+          ariaLabel={t('dashboard.usageActivity.matrixLabel')}
+          buckets={summary.buckets}
+          className="mt-2"
+          getBucketLabel={getBucketLabel}
+          getStatusClassName={getUsageActivityBucketClassName}
+          getStatusLabel={(status) => t(`dashboard.usageActivity.status.${status}`)}
+        />
       </div>
-      <div className="text-muted-foreground mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-4 text-xs">
-        {(['healthy', 'warning', 'degraded', 'failed', 'empty'] as const).map((status) => (
+      <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+        {legendStatuses.map((status) => (
           <span key={status} className="inline-flex items-center gap-1.5">
             <span
               className={cn('size-2 rounded-[2px]', getUsageActivityBucketClassName(status))}

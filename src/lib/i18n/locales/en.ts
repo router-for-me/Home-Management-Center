@@ -15,6 +15,7 @@ export const en = {
       connect: 'Connect',
       manageConnection: 'Connection',
       copyFailed: 'Copy failed',
+      customizeColumns: 'Customize columns',
     },
     language: {
       switch: 'Language',
@@ -489,6 +490,11 @@ export const en = {
         user: 'Filter user',
         provider: 'Filter provider',
         model: 'Filter model ID',
+        reportTimezoneMenuNote: 'Date boundaries use {{timezone}}',
+        reportTimezoneLoadError:
+          'Unable to read the report timezone. The current report was not loaded.',
+        reportTimezoneRetry: 'Retry',
+        reportTimezoneChanged: 'Report timezone updated to {{timezone}}. The report was refreshed.',
       },
       common: {
         actions: 'Actions',
@@ -1145,24 +1151,29 @@ export const en = {
       },
       health: {
         ready: {
-          title: 'Service is ready for model requests',
+          title: 'Model requests are available',
           description:
-            'Model services, account credentials, and client access keys are available. Continue with usage, logs, or configuration checks.',
+            'Available models and a client access key were detected. Model access can come from model service keys or OAuth and file-backed credentials.',
         },
-        needsModelService: {
-          title: 'Configure a model service first',
+        modelStatusUnknown: {
+          title: 'Model request status cannot be confirmed',
           description:
-            'No available model keys were returned, so the gateway may not be able to serve model requests. Add at least one model service key.',
+            'Available model data could not be loaded. Sync again or review data status instead of treating the current inventory counts as missing configuration.',
         },
-        needsCredential: {
-          title: 'Account credentials need attention',
+        needsUpstreamAccess: {
+          title: 'Add upstream model access',
           description:
-            'Model services are connected, but no available account credentials were returned. OAuth or file-backed channels may not work.',
+            'The runtime has no available models and no model service keys or account credentials were detected. Configure at least one upstream access method.',
+        },
+        reviewUpstreamAccess: {
+          title: 'No models are currently available',
+          description:
+            'Upstream configuration was detected, but the runtime has not registered any available models. Review model services or account credential status and model mappings.',
         },
         needsClientKey: {
           title: 'Create a client access key',
           description:
-            'The server has model access information, but no client key is available for callers to use the server API.',
+            'The runtime has available models, but callers do not yet have a client key for the gateway API.',
         },
         limited: {
           title: 'Service is connected with limited capabilities',
@@ -1179,7 +1190,7 @@ export const en = {
         eyebrow: 'Home overview',
         title: 'Server runtime overview',
         description:
-          'Check whether the connected gateway server is running, which model services are configured, and whether client keys and account credentials are available.',
+          'Check whether the connected gateway can serve model requests and review the runtime state of client keys, model services, and account credentials.',
         refresh: 'Sync data',
         syncing: 'Syncing',
         runtime: 'Connected server: {{mode}}',
@@ -1190,6 +1201,8 @@ export const en = {
         title: 'Suggested actions',
         configureProviders: 'Configure model service',
         addCredential: 'Add account credential',
+        reviewModelServices: 'Review model services',
+        reviewCredentials: 'Review account credentials',
         createClientKey: 'Create client key',
         checkRouting: 'Check routing config',
         reviewDebug: 'Review Debug mode',
@@ -1209,11 +1222,11 @@ export const en = {
       },
       metrics: {
         providers: {
-          title: 'Available model keys',
+          title: 'Enabled model service keys',
           detail: '{{count}} model service types connected',
         },
         credentials: {
-          title: 'Available account credentials',
+          title: 'Enabled account credentials',
           detail: '{{count}} credential records found',
         },
         clientKeys: {
@@ -1280,16 +1293,25 @@ export const en = {
       },
       usageActivity: {
         title: 'Request health',
-        description: 'Recent usage intervals showing request activity, success rate, and failures.',
-        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        description: 'Request activity, success rate, and failures across the complete time range.',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
         action: 'View diagnostics',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Request health activity matrix',
         bucketTitle: '{{label}}: {{requests}} requests · {{successRate}} success',
+        interval: {
+          minute: 'Per minute',
+          hour: 'Hourly',
+          day: 'Daily',
+          week: 'Weekly',
+        },
         status: {
           healthy: 'Healthy',
-          warning: 'Has failures',
           degraded: 'Degraded',
-          failed: 'Failed',
+          unavailable: 'Unavailable',
           empty: 'No traffic',
+          unknown: 'Unknown',
         },
       },
       quickActions: {
@@ -1387,6 +1409,7 @@ export const en = {
         latestVersion: 'Latest version',
         clientKeys: 'Client keys',
         authFiles: 'Auth files',
+        models: 'Available models',
         topology: 'Cluster topology',
         nodes: 'Nodes',
         usageOverview: 'Usage overview',
@@ -2198,6 +2221,7 @@ export const en = {
         edit: 'Edit',
         delete: 'Delete',
         copy: 'Copy',
+        copyIdentifier: 'Copy identifier {{identifier}}',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
@@ -2210,6 +2234,10 @@ export const en = {
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
+        identity: 'Identifier / key',
+        identifierTooltip:
+          'The stable identifier links the same access key across usage, billing, and request events.',
+        identifierUnavailable: 'No stable identifier',
         key: 'Key',
         owner: 'Owner',
         credentialScope: 'Credential scope',
@@ -2273,6 +2301,7 @@ export const en = {
       },
       toast: {
         copied: 'Access key copied.',
+        identifierCopied: 'Identifier copied.',
         created: 'Access key created.',
         updated: 'Access key updated.',
         replaced: 'Access key list replaced.',
@@ -3462,9 +3491,14 @@ export const en = {
         yes: 'Yes',
         no: 'No',
       },
+      caller: {
+        notRecorded: 'Caller not recorded',
+        userNotRecorded: 'User not recorded',
+        keyNotRecorded: 'Client key not recorded',
+        ipNotRecorded: 'Client IP not recorded',
+      },
       table: {
         title: 'Request Events',
-        columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         ttft: 'TTFT {{value}}',
         emptyTitle: 'No matching request events',
@@ -3909,7 +3943,6 @@ export const en = {
         metric: 'Metric',
         showTop50: 'Show Top 50',
         showTop10: 'Back to Top 10',
-        columnsButton: 'Columns',
         columnsMenu: 'Visible columns',
         columns: {
           rank: 'Rank',
@@ -3958,7 +3991,6 @@ export const en = {
         previous: 'Previous',
         next: 'Next',
         ttft: 'TTFT {{value}}',
-        columnsButton: 'Customize columns',
         columnsMenu: 'Visible columns',
         sortColumn: 'Sort {{column}} by {{sort}}',
         clearSortColumn: 'Clear {{column}} sort',
@@ -4032,6 +4064,7 @@ export const en = {
           homeIp: 'Home node',
           client: 'Client user',
           clientKey: 'Client key',
+          clientIp: 'Client IP',
           credential: 'Execution credential',
           authIndex: 'Auth index',
           model: 'Model',
@@ -4072,7 +4105,6 @@ export const en = {
         pageSize: 'Rows per page',
         previous: 'Previous',
         next: 'Next',
-        columnsButton: 'Customize columns',
         columnsMenu: 'Visible columns',
         sortColumn: 'Sort {{column}} {{direction}}',
         clearSortColumn: 'Clear {{column}} sort',
@@ -4121,15 +4153,24 @@ export const en = {
       },
       activity: {
         title: 'Request health timeline',
-        summary: '{{buckets}} active intervals · {{requests}} requests · {{successRate}} success',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
         emptyTitle: 'No health timeline',
         unavailable: 'Activity intervals are not available.',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: 'Request health activity matrix',
+        interval: {
+          minute: 'Per minute',
+          hour: 'Hourly',
+          day: 'Daily',
+          week: 'Weekly',
+        },
         status: {
           healthy: 'Healthy',
-          warning: 'Warning',
           degraded: 'Degraded',
-          failed: 'Failed',
+          unavailable: 'Unavailable',
           empty: 'No traffic',
+          unknown: 'Unknown',
         },
       },
       health: {
@@ -4779,7 +4820,7 @@ export const en = {
         title: 'Access Keys',
         description:
           'Client-facing API keys will be managed separately from upstream provider keys, with masked display and focused create, edit, delete flows.',
-        itemOne: 'Use GET, PUT, PATCH, and DELETE /api-keys.',
+        itemOne: 'Use GET, POST, PUT, PATCH, and DELETE /api-keys.',
         itemTwo: 'Do not assume server-side metadata beyond the documented key array.',
       },
       config: {

@@ -58,7 +58,7 @@ export type UsageSortKey =
   | 'latency_asc'
 export type UsageRecordSortableField = 'timestamp' | 'total_tokens' | 'total_amount' | 'latency_ms'
 export type UsageCostCategory = 'input' | 'output' | 'cache' | 'reasoning' | 'request' | 'other'
-export type UsageActivityStatus = 'empty' | 'healthy' | 'warning' | 'degraded' | 'failed'
+export type UsageActivityStatus = 'empty' | 'healthy' | 'degraded' | 'unavailable' | 'unknown'
 export type UsageHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'disabled' | 'unknown'
 export type UsageQuotaStatus = 'ok' | 'warning' | 'exceeded' | 'unknown'
 export type UsageAggregateGroupBy =
@@ -1089,17 +1089,11 @@ function normalizeAggregateComparison(value: unknown): UsageAggregateComparison 
 }
 
 function normalizeActivityStatus(value: string | null): UsageActivityStatus {
-  if (
-    value === 'empty' ||
-    value === 'healthy' ||
-    value === 'warning' ||
-    value === 'degraded' ||
-    value === 'failed'
-  ) {
+  if (value === 'empty' || value === 'healthy' || value === 'degraded' || value === 'unavailable') {
     return value
   }
 
-  return 'empty'
+  return 'unknown'
 }
 
 function normalizeUsageHealthStatus(value: string | null): UsageHealthStatus {

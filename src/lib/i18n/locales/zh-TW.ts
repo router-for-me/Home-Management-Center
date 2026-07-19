@@ -15,6 +15,7 @@ export const zhTW = {
       connect: '連線',
       manageConnection: '連線管理',
       copyFailed: '複製失敗',
+      customizeColumns: '自訂欄位',
     },
     language: {
       switch: '語言',
@@ -474,6 +475,10 @@ export const zhTW = {
         user: '篩選使用者',
         provider: '篩選模型供應商',
         model: '篩選模型 ID',
+        reportTimezoneMenuNote: '日期邊界依 {{timezone}} 計算',
+        reportTimezoneLoadError: '無法讀取報表統計時區，目前報表尚未載入。',
+        reportTimezoneRetry: '重試',
+        reportTimezoneChanged: '報表統計時區已更新為 {{timezone}}，報表已重新整理。',
       },
       common: {
         actions: '操作',
@@ -1098,23 +1103,28 @@ export const zhTW = {
       },
       health: {
         ready: {
-          title: '服務可用於模型請求',
+          title: '模型呼叫已可用',
           description:
-            '模型服務、帳號憑證和用戶端存取金鑰均已就緒，可以繼續查看用量、日誌和設定狀態。',
+            '已偵測到可用模型和用戶端存取金鑰。模型存取可由模型服務金鑰或 OAuth、檔案憑證提供。',
         },
-        needsModelService: {
-          title: '需要先設定模型服務',
+        modelStatusUnknown: {
+          title: '暫時無法確認模型呼叫狀態',
           description:
-            '目前沒有可用模型金鑰，閘道可能無法處理模型請求。請先新增至少一個模型服務金鑰。',
+            '可用模型資料載入失敗。請先同步資料或查看資料狀態，不要依目前資源計數判斷設定是否缺失。',
         },
-        needsCredential: {
-          title: '需要補充帳號憑證',
+        needsUpstreamAccess: {
+          title: '需要新增上游模型存取',
           description:
-            '模型服務已接入，但沒有可用帳號憑證。需要使用 OAuth 或檔案憑證的通道可能無法運作。',
+            '執行環境目前沒有可用模型，也沒有偵測到模型服務金鑰或帳號憑證。請至少設定一種上游存取方式。',
+        },
+        reviewUpstreamAccess: {
+          title: '目前沒有可用模型',
+          description:
+            '已偵測到上游設定，但執行環境沒有註冊可用模型。請檢查模型服務或帳號憑證的狀態與模型對應。',
         },
         needsClientKey: {
           title: '需要建立用戶端存取金鑰',
-          description: '服務端已有模型接入資訊，但還沒有用戶端可用於呼叫服務端介面的存取金鑰。',
+          description: '執行環境已有可用模型，但還沒有用戶端可用於呼叫閘道介面的存取金鑰。',
         },
         limited: {
           title: '服務已連線，部分能力受限',
@@ -1131,7 +1141,7 @@ export const zhTW = {
         eyebrow: '首頁總覽',
         title: '服務端執行概覽',
         description:
-          '查看目前連線的 Home Center 服務端是否正常，模型服務是否已接入，用戶端金鑰與帳號憑證是否可用。',
+          '查看目前連線的閘道是否可處理模型請求，以及用戶端金鑰、模型服務和帳號憑證的執行狀態。',
         refresh: '同步資料',
         syncing: '同步中',
         runtime: '已連線服務端：{{mode}}',
@@ -1142,6 +1152,8 @@ export const zhTW = {
         title: '建議操作',
         configureProviders: '設定模型服務',
         addCredential: '新增帳號憑證',
+        reviewModelServices: '檢查模型服務',
+        reviewCredentials: '檢查帳號憑證',
         createClientKey: '建立用戶端金鑰',
         checkRouting: '檢查路由設定',
         reviewDebug: '檢查 Debug 模式',
@@ -1161,11 +1173,11 @@ export const zhTW = {
       },
       metrics: {
         providers: {
-          title: '可用模型金鑰',
+          title: '已啟用模型服務金鑰',
           detail: '已接入 {{count}} 類模型服務',
         },
         credentials: {
-          title: '可用帳號憑證',
+          title: '已啟用帳號憑證',
           detail: '共發現 {{count}} 筆憑證記錄',
         },
         clientKeys: {
@@ -1232,16 +1244,25 @@ export const zhTW = {
       },
       usageActivity: {
         title: '請求健康度',
-        description: '按最近用量時段展示請求活躍度、成功率和失敗分布。',
-        summary: '{{buckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
+        description: '按完整時間範圍展示請求活躍度、成功率和失敗分布。',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
         action: '查看呼叫診斷',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '請求健康度時間點陣',
         bucketTitle: '{{label}}：{{requests}} 次請求 · {{successRate}} 成功率',
+        interval: {
+          minute: '按分鐘',
+          hour: '按小時',
+          day: '按日',
+          week: '按週',
+        },
         status: {
           healthy: '健康',
-          warning: '有失敗',
           degraded: '降級',
-          failed: '失敗',
+          unavailable: '不可用',
           empty: '無流量',
+          unknown: '未知',
         },
       },
       quickActions: {
@@ -1335,6 +1356,7 @@ export const zhTW = {
         latestVersion: '最新版本',
         clientKeys: '用戶端金鑰',
         authFiles: '帳號憑證',
+        models: '可用模型',
         topology: '集群拓撲',
         nodes: '節點',
         usageOverview: '用量總覽',
@@ -2122,6 +2144,7 @@ export const zhTW = {
         edit: '編輯',
         delete: '刪除',
         copy: '複製',
+        copyIdentifier: '複製識別碼 {{identifier}}',
         reveal: '顯示',
         hide: '隱藏',
         generate: '產生金鑰',
@@ -2133,6 +2156,9 @@ export const zhTW = {
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
+        identity: '識別碼 / 金鑰',
+        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求事件中的同一個存取金鑰。',
+        identifierUnavailable: '無穩定識別碼',
         key: '金鑰',
         owner: '所屬使用者',
         credentialScope: '憑證範圍',
@@ -2194,6 +2220,7 @@ export const zhTW = {
       },
       toast: {
         copied: '存取金鑰已複製。',
+        identifierCopied: '識別碼已複製。',
         created: '存取金鑰已建立。',
         updated: '存取金鑰已更新。',
         replaced: '存取金鑰列表已替換。',
@@ -3325,9 +3352,14 @@ export const zhTW = {
         yes: '是',
         no: '否',
       },
+      caller: {
+        notRecorded: '未記錄呼叫方',
+        userNotRecorded: '未記錄使用者',
+        keyNotRecorded: '未記錄用戶端 Key',
+        ipNotRecorded: '未記錄用戶端 IP',
+      },
       table: {
         title: '請求事件',
-        columnsButton: '欄位',
         columnsMenu: '顯示欄位',
         ttft: 'TTFT {{value}}',
         emptyTitle: '沒有匹配的請求事件',
@@ -3754,7 +3786,6 @@ export const zhTW = {
         metric: '排序指標',
         showTop50: '查看前 50 名',
         showTop10: '收合到前 10 名',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         columns: {
           rank: '排名',
@@ -3803,7 +3834,6 @@ export const zhTW = {
         previous: '上一頁',
         next: '下一頁',
         ttft: 'TTFT {{value}}',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         sortColumn: '將 {{column}} 依 {{sort}} 排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3877,6 +3907,7 @@ export const zhTW = {
           homeIp: 'Home 節點',
           client: '呼叫使用者',
           clientKey: 'Client Key',
+          clientIp: '用戶端 IP',
           credential: '執行憑證',
           authIndex: 'Auth Index',
           model: '模型',
@@ -3917,7 +3948,6 @@ export const zhTW = {
         pageSize: '每頁筆數',
         previous: '上一頁',
         next: '下一頁',
-        columnsButton: '自訂欄位',
         columnsMenu: '顯示欄位',
         sortColumn: '將 {{column}} 依{{direction}}排序',
         clearSortColumn: '取消 {{column}} 排序',
@@ -3966,15 +3996,24 @@ export const zhTW = {
       },
       activity: {
         title: '請求健康時間線',
-        summary: '{{buckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
+        summary:
+          '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
         emptyTitle: '暫無健康時間線',
         unavailable: '目前沒有健康時段。',
+        range: '{{from}}–{{to}} · {{interval}}',
+        matrixLabel: '請求健康時間點陣',
+        interval: {
+          minute: '按分鐘',
+          hour: '按小時',
+          day: '按日',
+          week: '按週',
+        },
         status: {
           healthy: '健康',
-          warning: '有失敗',
           degraded: '降級',
-          failed: '失敗',
+          unavailable: '不可用',
           empty: '無流量',
+          unknown: '未知',
         },
       },
       health: {
@@ -4600,7 +4639,7 @@ export const zhTW = {
         title: '存取金鑰',
         description:
           '下游用戶端 API key 將獨立於上游 Provider key 管理，支援遮罩顯示和聚焦的新建、編輯、刪除流程。',
-        itemOne: '使用 GET、PUT、PATCH 和 DELETE /api-keys。',
+        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
         itemTwo: '不要假設服務端會回傳文件之外的 key metadata。',
       },
       config: {

@@ -4,6 +4,7 @@ import {
   type ReactNode,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -87,6 +88,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   type BillingTab,
   type DateRangePreset,
+  alignBillingFiltersToReportTimezone,
   billingPageSizes,
   createDatePresetRange,
   createDefaultBillingFilters,
@@ -531,11 +533,10 @@ function MetricStrip({
 }
 
 function createDefaultBillingTextFilters() {
-  const filters = createDefaultBillingFilters()
   return {
-    user: filters.user,
-    model: filters.model,
-    provider: filters.provider,
+    user: '',
+    model: '',
+    provider: '',
   }
 }
 
@@ -1030,7 +1031,7 @@ function ModelPricesTab({
   const saveTierSource = async () => {
     setSettingsError(null)
     try {
-      await workbench.updateBillingSettings(tierSourceDraft)
+      await workbench.updateBillingSettings({ serviceTierSource: tierSourceDraft })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
       setConfirmTierSourceChange(false)
@@ -2432,18 +2433,36 @@ export function BillingWorkbenchPage() {
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [modelPriceImportApplying, setModelPriceImportApplying] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
+  const previousReportTimezoneRef = useRef<string | null>(null)
   const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
   const activeFetching =
-    activeTab === 'overview'
+    workbench.billingSettingsFetching ||
+    (activeTab === 'overview'
       ? workbench.overviewFetching
       : activeTab === 'charges'
         ? workbench.chargesFetching
         : activeTab === 'balanceRecords'
           ? workbench.balanceRecordsFetching
           : workbench.modelPricesFetching ||
-            workbench.billingSettingsFetching ||
             workbench.modelPriceCandidatesFetching ||
-            workbench.billingTierDiagnosticsFetching
+            workbench.billingTierDiagnosticsFetching)
+
+  useEffect(() => {
+    const timezone = workbench.reportTimezone
+    if (!timezone) return
+
+    const previousTimezone = previousReportTimezoneRef.current
+    previousReportTimezoneRef.current = timezone
+    setFilters((current) => alignBillingFiltersToReportTimezone(current, datePreset, timezone))
+
+    if (previousTimezone && previousTimezone !== timezone) {
+      toast.info(t('billingPage.filters.reportTimezoneChanged', { timezone }))
+    }
+    if (previousTimezone !== timezone) {
+      setChargePagination(defaultBillingPagination)
+      setBalancePagination(defaultBillingPagination)
+    }
+  }, [datePreset, t, workbench.reportTimezone])
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -2490,9 +2509,42 @@ export function BillingWorkbenchPage() {
   const handlePresetChange = (preset: DateRangePreset) => {
     setDatePreset(preset)
     if (preset !== 'custom') {
-      updateFilters(createDatePresetRange(preset))
+      updateFilters(createDatePresetRange(preset, filters.timezone))
     }
   }
+
+  const refreshCurrentView = () => {
+    if (activeTab === 'modelPrices') {
+      void Promise.all([
+        workbench.refreshModelPrices(),
+        workbench.refreshBillingSettings(),
+        workbench.refreshModelPriceCandidates(),
+        workbench.refreshBillingTierDiagnostics(),
+      ])
+      return
+    }
+
+    const previousTimezone = workbench.reportTimezone
+    void workbench.refreshBillingSettings().then((result) => {
+      if (!previousTimezone || result.isError || result.data?.reportTimezone !== previousTimezone) {
+        return
+      }
+
+      if (activeTab === 'overview') void workbench.refreshOverview()
+      if (activeTab === 'charges') void workbench.refreshCharges()
+      if (activeTab === 'balanceRecords') void workbench.refreshBalanceRecords()
+    })
+  }
+
+  const dateFiltersDisabled =
+    workbench.billingSettingsLoading ||
+    Boolean(workbench.billingSettingsError) ||
+    !workbench.reportTimezone
+  const reportTimezoneContext = workbench.reportTimezone
+    ? t('billingPage.filters.reportTimezoneMenuNote', {
+        timezone: workbench.reportTimezone,
+      })
+    : null
 
   const closeSheet = () => {
     if (sheetMode?.type === 'model-price-import' && modelPriceImportApplying) return
@@ -2509,23 +2561,7 @@ export function BillingWorkbenchPage() {
         title={t('billingPage.header.title')}
         description={t('billingPage.header.description')}
         actions={
-          <Button
-            variant="outline"
-            disabled={activeFetching}
-            onClick={() => {
-              if (activeTab === 'overview') void workbench.refreshOverview()
-              if (activeTab === 'charges') void workbench.refreshCharges()
-              if (activeTab === 'balanceRecords') void workbench.refreshBalanceRecords()
-              if (activeTab === 'modelPrices') {
-                void Promise.all([
-                  workbench.refreshModelPrices(),
-                  workbench.refreshBillingSettings(),
-                  workbench.refreshModelPriceCandidates(),
-                  workbench.refreshBillingTierDiagnostics(),
-                ])
-              }
-            }}
-          >
+          <Button variant="outline" disabled={activeFetching} onClick={refreshCurrentView}>
             <RefreshCw
               className={activeFetching ? 'size-4 animate-spin' : 'size-4'}
               aria-hidden="true"
@@ -2538,23 +2574,44 @@ export function BillingWorkbenchPage() {
       {activeTab !== 'modelPrices' ? (
         <div className="bg-card rounded-lg border p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
-            <Select
-              value={datePreset}
-              onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
-                <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
-                <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
-                <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="min-w-0">
+              <Select
+                value={datePreset}
+                disabled={dateFiltersDisabled}
+                onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
+              >
+                <SelectTrigger
+                  aria-describedby={
+                    reportTimezoneContext ? 'billing-report-timezone-context' : undefined
+                  }
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
+                  <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
+                  <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
+                  <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
+                  {reportTimezoneContext ? (
+                    <div
+                      aria-hidden="true"
+                      className="text-muted-foreground mt-1 max-w-64 border-t px-2 pt-2 pb-1 text-xs leading-4 whitespace-normal"
+                    >
+                      {reportTimezoneContext}
+                    </div>
+                  ) : null}
+                </SelectContent>
+              </Select>
+              {reportTimezoneContext ? (
+                <span id="billing-report-timezone-context" className="sr-only">
+                  {reportTimezoneContext}
+                </span>
+              ) : null}
+            </div>
             <Input
               type="date"
               value={filters.from}
+              disabled={dateFiltersDisabled}
               onChange={(event) => {
                 setDatePreset('custom')
                 updateFilters({ from: event.target.value })
@@ -2563,6 +2620,7 @@ export function BillingWorkbenchPage() {
             <Input
               type="date"
               value={filters.to}
+              disabled={dateFiltersDisabled}
               onChange={(event) => {
                 setDatePreset('custom')
                 updateFilters({ to: event.target.value })
@@ -2594,6 +2652,31 @@ export function BillingWorkbenchPage() {
               />
             </div>
           </div>
+          {!workbench.billingSettingsLoading &&
+          (workbench.billingSettingsError || !workbench.reportTimezone) ? (
+            <div
+              className="text-destructive mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+              role="alert"
+            >
+              <span>{t('billingPage.filters.reportTimezoneLoadError')}</span>
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                className="text-destructive hover:text-destructive h-auto px-1 py-0 text-xs"
+                disabled={workbench.billingSettingsFetching}
+                onClick={() => void workbench.refreshBillingSettings()}
+              >
+                <RefreshCw
+                  className={
+                    workbench.billingSettingsFetching ? 'size-3.5 animate-spin' : 'size-3.5'
+                  }
+                  aria-hidden="true"
+                />
+                {t('billingPage.filters.reportTimezoneRetry')}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -2617,8 +2700,10 @@ export function BillingWorkbenchPage() {
         ))}
       </div>
 
-      {activeTab === 'overview' ? <OverviewTab workbench={workbench} /> : null}
-      {activeTab === 'charges' ? (
+      {activeTab === 'overview' && !workbench.billingSettingsError ? (
+        <OverviewTab workbench={workbench} />
+      ) : null}
+      {activeTab === 'charges' && !workbench.billingSettingsError ? (
         <ChargeRecordsTab
           workbench={workbench}
           pagination={chargePagination}
@@ -2626,7 +2711,7 @@ export function BillingWorkbenchPage() {
           onView={(record) => setSheetMode({ type: 'charge-detail', record })}
         />
       ) : null}
-      {activeTab === 'balanceRecords' ? (
+      {activeTab === 'balanceRecords' && !workbench.billingSettingsError ? (
         <BalanceRecordsTab
           workbench={workbench}
           pagination={balancePagination}

@@ -51,6 +51,10 @@ function createSnapshot(config: Record<string, unknown>): DashboardSnapshot {
         unavailable: false,
       },
     ],
+    availableModels: {
+      status: 'loaded',
+      count: 1,
+    },
     providers: [
       {
         id: 'codex',
