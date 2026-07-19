@@ -1,8 +1,14 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  alignBillingFiltersToReportTimezone,
+  createDefaultBillingFilters,
+} from '../../src/features/billing/billing-model'
+import {
+  createDateRangeInTimeZone,
   createLocalDateRange,
   createLocalMonthToDateRange,
+  createMonthToDateRangeInTimeZone,
   formatLocalDateInput,
   toBillingDateRangeParams,
 } from '../../src/lib/billing/date-range'
@@ -30,10 +36,39 @@ describe('billing local calendar ranges', () => {
     })
   })
 
-  test('converts date inputs to the complete local day in RFC3339 form', () => {
+  test('uses the selected IANA timezone instead of the browser timezone', () => {
+    const instant = new Date('2026-07-19T00:30:00Z')
+
+    expect(createDateRangeInTimeZone(0, 'Asia/Tokyo', instant)).toEqual({
+      from: '2026-07-19',
+      to: '2026-07-19',
+    })
+    expect(createDateRangeInTimeZone(0, 'America/Los_Angeles', instant)).toEqual({
+      from: '2026-07-18',
+      to: '2026-07-18',
+    })
+  })
+
+  test('subtracts calendar dates across DST changes instead of fixed 24-hour durations', () => {
+    expect(
+      createDateRangeInTimeZone(1, 'America/Los_Angeles', new Date('2026-03-09T06:30:00Z')),
+    ).toEqual({ from: '2026-03-07', to: '2026-03-08' })
+
+    expect(
+      createDateRangeInTimeZone(1, 'America/Los_Angeles', new Date('2026-11-02T07:30:00Z')),
+    ).toEqual({ from: '2026-10-31', to: '2026-11-01' })
+  })
+
+  test('creates month-to-date ranges in the selected timezone', () => {
+    expect(
+      createMonthToDateRangeInTimeZone('Asia/Shanghai', new Date('2026-07-31T16:30:00Z')),
+    ).toEqual({ from: '2026-08-01', to: '2026-08-01' })
+  })
+
+  test('converts date inputs to a half-open local calendar range', () => {
     expect(toBillingDateRangeParams({ from: '2026-07-10', to: '2026-07-10' })).toEqual({
       from: new Date(2026, 6, 10, 0, 0, 0, 0).toISOString(),
-      to: new Date(2026, 6, 10, 23, 59, 59, 999).toISOString(),
+      to: new Date(2026, 6, 11, 0, 0, 0, 0).toISOString(),
     })
   })
 
@@ -51,5 +86,41 @@ describe('billing local calendar ranges', () => {
       from: '2026-02-30',
       to: undefined,
     })
+  })
+})
+
+describe('billing report timezone alignment', () => {
+  const now = new Date('2026-07-19T00:30:00Z')
+
+  test('recalculates preset dates when the backend report timezone changes', () => {
+    const filters = createDefaultBillingFilters('UTC', now)
+
+    expect(
+      alignBillingFiltersToReportTimezone(filters, 'today', 'America/Los_Angeles', now),
+    ).toEqual({
+      ...filters,
+      from: '2026-07-18',
+      to: '2026-07-18',
+      timezone: 'America/Los_Angeles',
+    })
+  })
+
+  test('preserves custom calendar dates while adopting the backend report timezone', () => {
+    const filters = {
+      ...createDefaultBillingFilters('UTC', now),
+      from: '2026-06-01',
+      to: '2026-06-30',
+    }
+
+    expect(alignBillingFiltersToReportTimezone(filters, 'custom', 'Asia/Shanghai', now)).toEqual({
+      ...filters,
+      timezone: 'Asia/Shanghai',
+    })
+  })
+
+  test('keeps the current filters when the timezone is already aligned', () => {
+    const filters = createDefaultBillingFilters('UTC', now)
+
+    expect(alignBillingFiltersToReportTimezone(filters, '7d', 'UTC', now)).toBe(filters)
   })
 })

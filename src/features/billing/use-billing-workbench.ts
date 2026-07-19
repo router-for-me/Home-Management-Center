@@ -23,7 +23,7 @@ import {
 import type {
   BillingFilters,
   BillingPagination,
-  BillingServiceTierSource,
+  BillingSettingsUpdate,
   ModelPrice,
   ModelPriceInput,
 } from '@/lib/api/management/billing-types'
@@ -176,6 +176,26 @@ export function useBillingWorkbench(
 ) {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, ready, runtimeMode } = useManagementSession()
+  const billingSettingsQueryKey = ['billing', 'settings', session.baseUrl, connectedAt]
+  const billingSettingsQuery = useQuery({
+    queryKey: billingSettingsQueryKey,
+    enabled: ready,
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await fetchBillingSettings(session)
+      } catch (error) {
+        throw toBillingApiError(error)
+      }
+    },
+  })
+  const reportTimezone = billingSettingsQuery.data?.reportTimezone ?? null
+  const reportReady =
+    ready &&
+    billingSettingsQuery.isSuccess &&
+    Boolean(reportTimezone) &&
+    filters.timezone === reportTimezone &&
+    Boolean(filters.from && filters.to)
   const queryScope = useMemo(
     () => [session.baseUrl, connectedAt, filters] as const,
     [connectedAt, filters, session.baseUrl],
@@ -194,7 +214,7 @@ export function useBillingWorkbench(
 
   const overviewQuery = useQuery({
     queryKey: overviewQueryKey,
-    enabled: ready && activeTab === 'overview',
+    enabled: reportReady && activeTab === 'overview',
     retry: false,
     queryFn: async () => {
       try {
@@ -207,7 +227,7 @@ export function useBillingWorkbench(
 
   const chargesQuery = useQuery({
     queryKey: chargesQueryKey,
-    enabled: ready && activeTab === 'charges',
+    enabled: reportReady && activeTab === 'charges',
     retry: false,
     queryFn: async () => {
       try {
@@ -220,7 +240,7 @@ export function useBillingWorkbench(
 
   const balanceRecordsQuery = useQuery({
     queryKey: balanceRecordsQueryKey,
-    enabled: ready && activeTab === 'balanceRecords',
+    enabled: reportReady && activeTab === 'balanceRecords',
     retry: false,
     queryFn: async () => {
       try {
@@ -238,19 +258,6 @@ export function useBillingWorkbench(
     queryFn: async () => {
       try {
         return await fetchModelPrices(session, { provider: '', model: '' })
-      } catch (error) {
-        throw toBillingApiError(error)
-      }
-    },
-  })
-
-  const billingSettingsQuery = useQuery({
-    queryKey: ['billing', 'settings', session.baseUrl, connectedAt],
-    enabled: ready && activeTab === 'modelPrices',
-    retry: false,
-    queryFn: async () => {
-      try {
-        return await fetchBillingSettings(session)
       } catch (error) {
         throw toBillingApiError(error)
       }
@@ -324,9 +331,12 @@ export function useBillingWorkbench(
   })
 
   const updateBillingSettingsMutation = useMutation({
-    mutationFn: (source: BillingServiceTierSource) => updateBillingSettings(session, source),
+    mutationFn: (input: BillingSettingsUpdate) => updateBillingSettings(session, input),
     onSuccess: (settings) => {
-      queryClient.setQueryData(['billing', 'settings', session.baseUrl, connectedAt], settings)
+      queryClient.setQueryData(billingSettingsQueryKey, settings)
+      void queryClient.invalidateQueries({ queryKey: ['billing', 'overview'] })
+      void queryClient.invalidateQueries({ queryKey: ['billing', 'charges'] })
+      void queryClient.invalidateQueries({ queryKey: ['billing', 'balanceRecords'] })
     },
     onError: toError,
   })
@@ -384,24 +394,35 @@ export function useBillingWorkbench(
     checking,
     ready,
     runtimeMode,
+    reportTimezone,
     modelPriceImportPreferenceScope: session.baseUrl,
     overview: overviewQuery.data?.overview ?? null,
     overviewFetchedAt: overviewQuery.data?.fetchedAt ?? null,
-    overviewLoading: overviewQuery.isLoading,
+    overviewLoading: billingSettingsQuery.isLoading || overviewQuery.isLoading,
     overviewFetching: overviewQuery.isFetching,
-    overviewError: overviewQuery.error ? toError(overviewQuery.error).message : null,
+    overviewError: billingSettingsQuery.error
+      ? toError(billingSettingsQuery.error).message
+      : overviewQuery.error
+        ? toError(overviewQuery.error).message
+        : null,
     charges: chargesQuery.data?.items ?? [],
     chargesTotal: chargesQuery.data?.total ?? 0,
-    chargesLoading: chargesQuery.isLoading,
+    chargesLoading: billingSettingsQuery.isLoading || chargesQuery.isLoading,
     chargesFetching: chargesQuery.isFetching,
-    chargesError: chargesQuery.error ? toError(chargesQuery.error).message : null,
+    chargesError: billingSettingsQuery.error
+      ? toError(billingSettingsQuery.error).message
+      : chargesQuery.error
+        ? toError(chargesQuery.error).message
+        : null,
     balanceRecords: balanceRecordsQuery.data?.items ?? [],
     balanceRecordsTotal: balanceRecordsQuery.data?.total ?? 0,
-    balanceRecordsLoading: balanceRecordsQuery.isLoading,
+    balanceRecordsLoading: billingSettingsQuery.isLoading || balanceRecordsQuery.isLoading,
     balanceRecordsFetching: balanceRecordsQuery.isFetching,
-    balanceRecordsError: balanceRecordsQuery.error
-      ? toError(balanceRecordsQuery.error).message
-      : null,
+    balanceRecordsError: billingSettingsQuery.error
+      ? toError(billingSettingsQuery.error).message
+      : balanceRecordsQuery.error
+        ? toError(balanceRecordsQuery.error).message
+        : null,
     modelPrices: modelPricesQuery.data?.items ?? [],
     modelPriceSchemaVersion: modelPricesQuery.data?.schemaVersion ?? null,
     modelPricesLoading: modelPricesQuery.isLoading,

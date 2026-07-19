@@ -475,6 +475,10 @@ export const zhCN = {
         user: '筛选用户',
         provider: '筛选模型供应商',
         model: '筛选模型 ID',
+        reportTimezoneMenuNote: '日期边界按 {{timezone}} 计算',
+        reportTimezoneLoadError: '无法读取报表统计时区，当前报表未加载。',
+        reportTimezoneRetry: '重试',
+        reportTimezoneChanged: '报表统计时区已更新为 {{timezone}}，报表已刷新。',
       },
       common: {
         actions: '操作',

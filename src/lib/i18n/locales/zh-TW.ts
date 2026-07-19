@@ -475,6 +475,10 @@ export const zhTW = {
         user: '篩選使用者',
         provider: '篩選模型供應商',
         model: '篩選模型 ID',
+        reportTimezoneMenuNote: '日期邊界依 {{timezone}} 計算',
+        reportTimezoneLoadError: '無法讀取報表統計時區，目前報表尚未載入。',
+        reportTimezoneRetry: '重試',
+        reportTimezoneChanged: '報表統計時區已更新為 {{timezone}}，報表已重新整理。',
       },
       common: {
         actions: '操作',

@@ -490,6 +490,11 @@ export const en = {
         user: 'Filter user',
         provider: 'Filter provider',
         model: 'Filter model ID',
+        reportTimezoneMenuNote: 'Date boundaries use {{timezone}}',
+        reportTimezoneLoadError:
+          'Unable to read the report timezone. The current report was not loaded.',
+        reportTimezoneRetry: 'Retry',
+        reportTimezoneChanged: 'Report timezone updated to {{timezone}}. The report was refreshed.',
       },
       common: {
         actions: 'Actions',

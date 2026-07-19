@@ -490,6 +490,11 @@ export const ru = {
         user: 'Фильтр по пользователю',
         provider: 'Фильтр по провайдеру',
         model: 'Фильтр по ID модели',
+        reportTimezoneMenuNote: 'Границы дат рассчитываются в {{timezone}}',
+        reportTimezoneLoadError:
+          'Не удалось прочитать часовой пояс отчетов. Текущий отчет не загружен.',
+        reportTimezoneRetry: 'Повторить',
+        reportTimezoneChanged: 'Часовой пояс отчетов изменен на {{timezone}}. Отчет обновлен.',
       },
       common: {
         actions: 'Действия',
