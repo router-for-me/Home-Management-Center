@@ -30,6 +30,14 @@ export function createLocalMonthToDateRange(now = new Date()): BillingDateRange 
   }
 }
 
+export function getBillingTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
 function parseLocalDateBoundary(value: string, boundary: 'start' | 'end') {
   const match = dateOnlyPattern.exec(value.trim())
   if (!match) return null

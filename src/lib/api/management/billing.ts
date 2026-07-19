@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-import { toBillingDateRangeParams } from '../../billing/date-range'
+import { getBillingTimeZone } from '../../billing/date-range'
 import type {
   BalanceOperationInput,
   BalanceRecord,
@@ -24,6 +24,8 @@ import { createManagementClient, toManagementApiError } from './client'
 import type { ManagementSessionInput } from './types'
 
 type UnknownRecord = Record<string, unknown>
+
+const billingOverviewContractError = 'billing_overview_contract_invalid'
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -81,12 +83,19 @@ function isPositiveIntegerText(value: string) {
   return /^[1-9]\d*$/.test(value.trim())
 }
 
-function compactParams(filters: BillingFilters, pagination?: BillingPagination) {
+export function toBillingQueryParams(
+  filters: BillingFilters,
+  pagination?: BillingPagination,
+  timezone = getBillingTimeZone(),
+) {
   const user = filters.user.trim()
-  const range = toBillingDateRangeParams(filters)
+  const from = filters.from.trim()
+  const to = filters.to.trim()
 
   return {
-    ...range,
+    from: from || undefined,
+    to: to || undefined,
+    timezone,
     user: user || undefined,
     user_id: isPositiveIntegerText(user) ? user : undefined,
     provider: filters.provider.trim() || undefined,
@@ -119,15 +128,39 @@ function normalizeTrendPoint(value: unknown): BillingTrendPoint {
   }
 }
 
-function normalizeOverview(value: unknown, filters: BillingFilters): BillingOverview {
-  const record = toRecord(value)
-  const overview = isRecord(record.overview) ? record.overview : record
+function normalizeBillingRange(value: unknown) {
+  if (!isRecord(value)) {
+    throw new Error(billingOverviewContractError)
+  }
+
+  const from = value.from
+  const to = value.to
+  const timezone = value.timezone
+  if (
+    typeof from !== 'string' ||
+    typeof to !== 'string' ||
+    typeof timezone !== 'string' ||
+    !timezone.trim()
+  ) {
+    throw new Error(billingOverviewContractError)
+  }
 
   return {
-    range: {
-      from: readString(overview, ['from', 'range_from', 'rangeFrom']) ?? filters.from,
-      to: readString(overview, ['to', 'range_to', 'rangeTo']) ?? filters.to,
-    },
+    from: from.trim(),
+    to: to.trim(),
+    timezone: timezone.trim(),
+  }
+}
+
+export function normalizeBillingOverview(value: unknown): BillingOverview {
+  const record = toRecord(value)
+  if (!isRecord(record.overview)) {
+    throw new Error(billingOverviewContractError)
+  }
+  const overview = record.overview
+
+  return {
+    range: normalizeBillingRange(overview.range),
     totalChargeAmount:
       readNumber(overview, ['total_charge_amount', 'totalChargeAmount', 'charge_amount']) ?? 0,
     totalRechargeAmount:
@@ -362,12 +395,12 @@ export async function fetchBillingOverview(
 ) {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/billing/overview', {
-    params: compactParams(filters),
+    params: toBillingQueryParams(filters),
   })
 
   return {
     fetchedAt: new Date().toISOString(),
-    overview: normalizeOverview(response.data, filters),
+    overview: normalizeBillingOverview(response.data),
   }
 }
 
@@ -378,7 +411,7 @@ export async function fetchChargeRecords(
 ) {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/billing/charges', {
-    params: compactParams(filters, pagination),
+    params: toBillingQueryParams(filters, pagination),
   })
 
   return normalizePage(response.data, pagination, normalizeChargeRecord)
@@ -391,7 +424,7 @@ export async function fetchBalanceRecords(
 ) {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/billing/balance-records', {
-    params: compactParams(filters, pagination),
+    params: toBillingQueryParams(filters, pagination),
   })
 
   return normalizePage(response.data, pagination, normalizeBalanceRecord)
