@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
 import {
+  alignBillingFiltersToReportTimezone,
+  createDefaultBillingFilters,
+} from '../../src/features/billing/billing-model'
+import {
   createDateRangeInTimeZone,
   createLocalDateRange,
   createLocalMonthToDateRange,
@@ -82,5 +86,41 @@ describe('billing local calendar ranges', () => {
       from: '2026-02-30',
       to: undefined,
     })
+  })
+})
+
+describe('billing report timezone alignment', () => {
+  const now = new Date('2026-07-19T00:30:00Z')
+
+  test('recalculates preset dates when the backend report timezone changes', () => {
+    const filters = createDefaultBillingFilters('UTC', now)
+
+    expect(
+      alignBillingFiltersToReportTimezone(filters, 'today', 'America/Los_Angeles', now),
+    ).toEqual({
+      ...filters,
+      from: '2026-07-18',
+      to: '2026-07-18',
+      timezone: 'America/Los_Angeles',
+    })
+  })
+
+  test('preserves custom calendar dates while adopting the backend report timezone', () => {
+    const filters = {
+      ...createDefaultBillingFilters('UTC', now),
+      from: '2026-06-01',
+      to: '2026-06-30',
+    }
+
+    expect(alignBillingFiltersToReportTimezone(filters, 'custom', 'Asia/Shanghai', now)).toEqual({
+      ...filters,
+      timezone: 'Asia/Shanghai',
+    })
+  })
+
+  test('keeps the current filters when the timezone is already aligned', () => {
+    const filters = createDefaultBillingFilters('UTC', now)
+
+    expect(alignBillingFiltersToReportTimezone(filters, '7d', 'UTC', now)).toBe(filters)
   })
 })

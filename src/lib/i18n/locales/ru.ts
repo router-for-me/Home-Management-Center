@@ -490,10 +490,11 @@ export const ru = {
         user: 'Фильтр по пользователю',
         provider: 'Фильтр по провайдеру',
         model: 'Фильтр по ID модели',
-        reportTimezone: 'Часовой пояс отчетов',
-        reportTimezoneDescription:
-          'Предустановки дат, границы календарных дат и дневные группы используют эту настройку backend.',
-        configureReportTimezone: 'Настроить часовой пояс',
+        reportTimezoneMenuNote: 'Границы дат рассчитываются в {{timezone}}',
+        reportTimezoneLoadError:
+          'Не удалось прочитать часовой пояс отчетов. Текущий отчет не загружен.',
+        reportTimezoneRetry: 'Повторить',
+        reportTimezoneChanged: 'Часовой пояс отчетов изменен на {{timezone}}. Отчет обновлен.',
       },
       common: {
         actions: 'Действия',
@@ -514,13 +515,6 @@ export const ru = {
       },
       settings: {
         serviceTierSource: 'Источник tier для биллинга',
-        reportTimezoneDialogTitle: 'Настроить часовой пояс отчетов',
-        reportTimezoneDialogDescription:
-          'Выберите часовой пояс IANA для календарных границ и дневной группировки финансовых отчетов.',
-        reportTimezoneLabel: 'Часовой пояс IANA',
-        reportTimezoneHint:
-          'Примеры: UTC, Asia/Shanghai, America/Los_Angeles. Настройка меняет только границы и группировку отчетов, но не исторические списания или баланс.',
-        reportTimezoneSaved: 'Часовой пояс отчетов сохранен.',
         runtimeContextTitle: 'Контекст биллинга во время выполнения',
         globalBadge: 'Глобально',
         scopedPricingSupported: 'Поддерживаются Tier и диапазоны контекста',

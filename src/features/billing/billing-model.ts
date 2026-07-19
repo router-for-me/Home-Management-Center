@@ -26,6 +26,21 @@ export function createDatePresetRange(
   return createDateRangeInTimeZone(days, timezone, now)
 }
 
+export function alignBillingFiltersToReportTimezone(
+  filters: BillingFilters,
+  preset: DateRangePreset,
+  timezone: string,
+  now = new Date(),
+): BillingFilters {
+  if (filters.timezone === timezone) return filters
+
+  return {
+    ...filters,
+    ...(preset === 'custom' ? {} : createDatePresetRange(preset, timezone, now)),
+    timezone,
+  }
+}
+
 export const defaultBillingPagination: BillingPagination = {
   limit: 50,
   offset: 0,
