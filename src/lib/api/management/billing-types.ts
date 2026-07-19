@@ -1,6 +1,7 @@
 export type BillingDateRange = {
   from: string
   to: string
+  timezone: string
 }
 
 export type BillingTrendPoint = {
