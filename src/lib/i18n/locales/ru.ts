@@ -639,6 +639,8 @@ export const ru = {
         outputTokens: 'Выходные токены',
         cacheTokens: 'Токены кэша',
         matchedPriceRule: 'Сработавшее правило цены',
+        unpricedDescription:
+          'Без тарифа: {{provider}}/{{model}} учтён по нулевой цене. Проверьте настройку правила цены.',
         selectedTier: 'Tier выбранного правила',
         selectedBand: 'Нижняя граница контекста',
         requestedTier: 'Запрошенный tier',
@@ -760,6 +762,8 @@ export const ru = {
           modelSearchPlaceholder: 'Поиск по ID модели, имени или названию провайдера',
           modelCandidateEmpty: 'Нет моделей, доступных для выбора.',
           modelSearchEmpty: 'Нет моделей по условиям поиска.',
+          providerMetadataMissing:
+            'Пропущено моделей без providers: {{count}}; проверьте ответ /models.',
           selectedModel: 'Выбранная модель',
           selectedModelsCount: 'Выбрано моделей: {{count}}',
           clearSelection: 'Очистить выбор',
