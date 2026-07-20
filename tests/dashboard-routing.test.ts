@@ -33,6 +33,8 @@ const capabilities: CapabilityMap = {
   requestErrorLogs: true,
   users: true,
   accessGroups: true,
+  credentialInFlight: true,
+  credentialConcurrencyLimits: true,
 }
 
 function createSnapshot(config: Record<string, unknown>): DashboardSnapshot {

@@ -45,6 +45,8 @@ const noCapabilities: CapabilityMap = {
   requestErrorLogs: false,
   users: false,
   accessGroups: false,
+  credentialInFlight: false,
+  credentialConcurrencyLimits: false,
 }
 
 afterEach(() => {

@@ -9,6 +9,7 @@ import {
 } from 'react'
 
 import {
+  AlertTriangle,
   BarChart3,
   Check,
   Copy,
@@ -113,6 +114,7 @@ import type {
 } from '@/lib/api/management/billing-types'
 import type { UserResource } from '@/lib/api/management/users'
 import { hasSeparateCacheWriteRate } from '@/lib/billing/cache-write-pricing'
+import { createBillingModelPriceCandidateId } from '@/lib/billing/model-price-candidates'
 import type {
   ModelPriceImportApplyItem,
   ModelPriceImportApplyResult,
@@ -162,6 +164,20 @@ function toProviderLogoId(provider: string) {
   if (normalized === 'anthropic') return 'claude'
   if (normalized === 'google') return 'gemini'
   return provider
+}
+
+function isUnpricedCharge(record: ChargeRecord) {
+  return record.matchedPriceRule?.trim().toLowerCase() === 'default:zero'
+}
+
+function formatUnpricedChargeMessage(
+  record: Pick<ChargeRecord, 'provider' | 'model'>,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  return t('billingPage.chargeDetail.unpricedDescription', {
+    provider: record.provider || t('billingPage.common.na'),
+    model: record.model || t('billingPage.common.na'),
+  })
 }
 
 function toModelPriceInput(
@@ -254,7 +270,8 @@ function formatMoney(value: number) {
 
 function formatSignedAmount(value: number) {
   const absolute = formatMoney(Math.abs(value))
-  return value >= 0 ? `+${absolute}` : `-${absolute}`
+  if (value === 0) return absolute
+  return value > 0 ? `+${absolute}` : `-${absolute}`
 }
 
 function CacheWritePriceValue({
@@ -802,41 +819,73 @@ function ChargeRecordsTab({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {workbench.charges.map((record) => (
-              <TableRow key={record.id} variant="resource">
-                <TableCell>
-                  {formatDateTime(record.createdAt, t('billingPage.common.na'))}
-                </TableCell>
-                <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {record.apiKeyMasked || record.apiKeyLabel || t('billingPage.common.na')}
-                </TableCell>
-                <TableCell>{record.provider || t('billingPage.common.na')}</TableCell>
-                <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                  {record.model || t('billingPage.common.na')}
-                </TableCell>
-                <TableCell className="max-w-[180px] truncate font-mono text-xs">
-                  {record.requestId}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {t('billingPage.charges.tokenSummary', {
-                    input: formatNumber(record.inputTokens),
-                    output: formatNumber(record.outputTokens),
-                    cache: formatNumber(record.cacheTokens),
-                  })}
-                </TableCell>
-                <TableCell className="text-destructive font-medium tabular-nums">
-                  {formatSignedAmount(-Math.abs(record.amount))}
-                </TableCell>
-                <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
-                <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                  <Button variant="text" size="sm" onClick={() => onView(record)}>
-                    <Eye className="size-4" aria-hidden="true" />
-                    {t('billingPage.common.view')}
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {workbench.charges.map((record) => {
+              const unpriced = isUnpricedCharge(record)
+              const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
+              return (
+                <TableRow key={record.id} variant="resource">
+                  <TableCell>
+                    {formatDateTime(record.createdAt, t('billingPage.common.na'))}
+                  </TableCell>
+                  <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {record.apiKeyMasked || record.apiKeyLabel || t('billingPage.common.na')}
+                  </TableCell>
+                  <TableCell>{record.provider || t('billingPage.common.na')}</TableCell>
+                  <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                    {record.model || t('billingPage.common.na')}
+                  </TableCell>
+                  <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                    {record.requestId}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {t('billingPage.charges.tokenSummary', {
+                      input: formatNumber(record.inputTokens),
+                      output: formatNumber(record.outputTokens),
+                      cache: formatNumber(record.cacheTokens),
+                    })}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'font-medium tabular-nums',
+                      unpriced ? 'text-warning-foreground dark:text-warning' : 'text-destructive',
+                    )}
+                  >
+                    <div className="inline-flex items-center gap-1">
+                      <span>{formatSignedAmount(-Math.abs(record.amount))}</span>
+                      {unpricedMessage ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="text"
+                              size="icon-xs"
+                              className="text-warning-foreground hover:bg-warning/12 hover:text-warning-foreground focus-visible:ring-warning/30 dark:text-warning dark:hover:text-warning size-5"
+                              aria-label={unpricedMessage}
+                            >
+                              <AlertTriangle className="size-3.5" aria-hidden="true" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-80 text-left leading-5 text-wrap break-words"
+                          >
+                            {unpricedMessage}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                  <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                  <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
+                    <Button variant="text" size="sm" onClick={() => onView(record)}>
+                      <Eye className="size-4" aria-hidden="true" />
+                      {t('billingPage.common.view')}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       )}
@@ -1587,6 +1636,8 @@ function ModelPricesTab({
 
 function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
   const { t } = useTranslation()
+  const unpriced = isUnpricedCharge(record)
+  const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
   const copy = (value: string) => {
     void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
   }
@@ -1636,6 +1687,15 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
 
   return (
     <DrawerScaffoldBody className="grid gap-5">
+      {unpricedMessage ? (
+        <div
+          className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning flex items-start gap-3 rounded-md border px-3 py-2.5 text-sm"
+          role="status"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <p className="min-w-0 text-xs leading-5 break-words">{unpricedMessage}</p>
+        </div>
+      ) : null}
       <div className="grid gap-2">
         {rows.map(([label, value, copyable]) => (
           <div key={label} className="grid gap-1 rounded-md border px-3 py-2">
@@ -1765,7 +1825,7 @@ function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: U
 }
 
 function createModelPriceCandidateValue(provider: string, model: string) {
-  return JSON.stringify([provider, model])
+  return createBillingModelPriceCandidateId(provider, model)
 }
 
 function createCurrentModelPriceCandidate(
@@ -1776,7 +1836,7 @@ function createCurrentModelPriceCandidate(
   if (!provider || !model) return null
 
   return {
-    id: `${provider}:${model}`,
+    id: createBillingModelPriceCandidateId(provider, model),
     provider,
     model,
     label: model,
@@ -2435,6 +2495,18 @@ export function BillingWorkbenchPage() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
   const previousReportTimezoneRef = useRef<string | null>(null)
   const workbench = useBillingWorkbench(activeTab, filters, chargePagination, balancePagination)
+  const modelPriceCandidateIssues: string[] = []
+  if (workbench.modelPriceCandidatesIssue) {
+    modelPriceCandidateIssues.push(workbench.modelPriceCandidatesIssue)
+  }
+  if (workbench.modelPriceCandidatesMissingProviderMetadataCount > 0) {
+    modelPriceCandidateIssues.push(
+      t('billingPage.prices.form.providerMetadataMissing', {
+        count: workbench.modelPriceCandidatesMissingProviderMetadataCount,
+      }),
+    )
+  }
+  const modelPriceCandidatesIssue = modelPriceCandidateIssues.join('\n') || null
   const activeFetching =
     workbench.billingSettingsFetching ||
     (activeTab === 'overview'
@@ -2819,7 +2891,7 @@ export function BillingWorkbenchPage() {
                   candidatesLoading={workbench.modelPriceCandidatesLoading}
                   candidatesFetching={workbench.modelPriceCandidatesFetching}
                   candidatesError={workbench.modelPriceCandidatesError}
-                  candidatesIssue={workbench.modelPriceCandidatesIssue}
+                  candidatesIssue={modelPriceCandidatesIssue}
                   existingPrices={workbench.modelPrices}
                   schemaVersion={workbench.modelPriceSchemaVersion}
                   tierSource={workbench.billingSettings?.serviceTierSource ?? null}
@@ -2938,7 +3010,7 @@ export function BillingWorkbenchPage() {
                   candidatesLoading={workbench.modelPriceCandidatesLoading}
                   candidatesFetching={workbench.modelPriceCandidatesFetching}
                   candidatesError={workbench.modelPriceCandidatesError}
-                  candidatesIssue={workbench.modelPriceCandidatesIssue}
+                  candidatesIssue={modelPriceCandidatesIssue}
                   schemaVersion={workbench.modelPriceSchemaVersion}
                   tierSource={workbench.billingSettings?.serviceTierSource ?? null}
                   mutating={workbench.mutating}

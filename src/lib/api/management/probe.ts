@@ -27,6 +27,8 @@ const capabilityRequests: Record<
     | 'oauthUsage'
     | 'quotaSnapshots'
     | 'quotaSnapshotDetails'
+    | 'credentialInFlight'
+    | 'credentialConcurrencyLimits'
   >,
   {
     path: string
@@ -89,6 +91,8 @@ const emptyCapabilities: CapabilityMap = {
   requestErrorLogs: false,
   users: false,
   accessGroups: false,
+  credentialInFlight: false,
+  credentialConcurrencyLimits: false,
 }
 
 type ProbedCapabilityKey = keyof typeof capabilityRequests
@@ -212,6 +216,17 @@ function readDeclaredUsageRealtimeCapability(configData: unknown) {
     'usageRealtime',
     'usage_realtime_snapshot',
     'usageRealtimeSnapshot',
+  ])
+}
+
+function readDeclaredCredentialInFlightCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['credential_in_flight', 'credentialInFlight'])
+}
+
+function readDeclaredCredentialConcurrencyLimitsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'credential_concurrency_limits',
+    'credentialConcurrencyLimits',
   ])
 }
 
@@ -464,6 +479,12 @@ export async function probeManagementRuntime(
   const declaredAccessGroups = capabilitiesPayload
     ? readDeclaredAccessGroupsCapability(capabilitySource)
     : null
+  const declaredCredentialInFlight = capabilitiesPayload
+    ? readDeclaredCredentialInFlightCapability(capabilitySource)
+    : null
+  const declaredCredentialConcurrencyLimits = capabilitiesPayload
+    ? readDeclaredCredentialConcurrencyLimitsCapability(capabilitySource)
+    : null
 
   const capabilityKeysToProbe: ProbedCapabilityKey[] = capabilitiesPayload
     ? [
@@ -524,6 +545,8 @@ export async function probeManagementRuntime(
     logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
     accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
+    credentialInFlight: declaredCredentialInFlight ?? false,
+    credentialConcurrencyLimits: declaredCredentialConcurrencyLimits ?? false,
   }
 
   return {
