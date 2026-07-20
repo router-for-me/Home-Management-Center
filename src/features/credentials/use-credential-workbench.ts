@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type CredentialInFlightRequest,
   type CredentialMetadataInput,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthStartInput,
@@ -8,6 +9,8 @@ import {
   type VertexImportInput,
   deleteCredentialResource,
   downloadCredentialResource,
+  fetchCredentialInFlightDetail,
+  fetchCredentialInFlightSummary,
   fetchCredentialModels,
   fetchCredentialOAuthStatus,
   fetchCredentialSnapshot,
@@ -44,6 +47,10 @@ export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
+  const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
+  const credentialConcurrencyLimits = useCapabilityStore(
+    (state) => state.capabilities.credentialConcurrencyLimits,
+  )
   const queryKey = ['management-credentials', session.baseUrl, connectedAt]
 
   const query = useQuery({
@@ -58,8 +65,26 @@ export function useCredentialWorkbench() {
     },
   })
 
+  const inFlightQueryKey = ['management-credential-in-flight', session.baseUrl, connectedAt]
+  const inFlightQuery = useQuery({
+    queryKey: inFlightQueryKey,
+    enabled: connected && Boolean(session.managementKey) && credentialInFlight,
+    queryFn: async () => {
+      try {
+        return await fetchCredentialInFlightSummary(session)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchInterval: credentialInFlight ? 5_000 : false,
+    refetchIntervalInBackground: false,
+  })
+
   const invalidate = async () => {
-    await queryClient.invalidateQueries({ queryKey })
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({ queryKey: inFlightQueryKey }),
+    ])
   }
 
   const statusMutation = useMutation({
@@ -202,12 +227,17 @@ export function useCredentialWorkbench() {
   return {
     connected,
     checking,
+    credentialInFlight,
+    credentialConcurrencyLimits,
     oauthProviders: getCredentialOAuthProviders(runtimeMode),
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
     errorMessage: query.error?.message ?? null,
+    inFlightSnapshot: inFlightQuery.data ?? null,
+    inFlightStale: inFlightQuery.isError && inFlightQuery.data !== undefined,
+    inFlightErrorMessage: inFlightQuery.error?.message ?? null,
     refetch: () => {
       void query.refetch()
     },
@@ -246,5 +276,64 @@ export function useCredentialWorkbench() {
       oauthStatusMutation.isPending ||
       oauthCallbackMutation.isPending ||
       vertexImportMutation.isPending,
+  }
+}
+
+export function useCredentialInFlightDetail(credentialId: string | null, enabled: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
+  const query = useInfiniteQuery({
+    queryKey: [
+      'management-credential-in-flight-detail',
+      session.baseUrl,
+      connectedAt,
+      credentialId,
+    ],
+    enabled:
+      connected &&
+      Boolean(session.managementKey) &&
+      credentialInFlight &&
+      enabled &&
+      Boolean(credentialId),
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      try {
+        return await fetchCredentialInFlightDetail(session, credentialId ?? '', pageParam)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    refetchInterval: enabled && credentialInFlight ? 5_000 : false,
+    refetchIntervalInBackground: false,
+  })
+
+  const pages = query.data?.pages ?? []
+  const latestPage = pages.at(-1) ?? null
+  const requests: CredentialInFlightRequest[] = []
+  const seenLeaseIds = new Set<string>()
+  for (const page of pages) {
+    for (const request of page.requests) {
+      if (seenLeaseIds.has(request.leaseId)) continue
+      seenLeaseIds.add(request.leaseId)
+      requests.push(request)
+    }
+  }
+  return {
+    detail:
+      pages.length > 0 && latestPage
+        ? {
+            observedAt: latestPage.observedAt,
+            credential: latestPage.credential,
+            requests,
+          }
+        : null,
+    isPending: query.isPending,
+    isFetching: query.isFetching,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isStale: query.isError && query.data !== undefined,
+    errorMessage: query.error?.message ?? null,
+    hasNextPage: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
   }
 }

@@ -23,6 +23,8 @@ export type CapabilityKey =
   | 'requestErrorLogs'
   | 'users'
   | 'accessGroups'
+  | 'credentialInFlight'
+  | 'credentialConcurrencyLimits'
 
 export type CapabilityMap = Record<CapabilityKey, boolean>
 
