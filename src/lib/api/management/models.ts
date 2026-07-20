@@ -11,6 +11,7 @@ export type ModelResource = {
   name: string | null
   ownedBy: string | null
   type: string | null
+  providers: string[]
   channel: string | null
   scope: ManagementModelScope
   object: string | null
@@ -22,6 +23,7 @@ type ModelsSnapshot = {
   fetchedAt: string
   scope: ManagementModelScope
   resources: ModelResource[]
+  missingProviderMetadataCount: number
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -48,6 +50,22 @@ function readNumber(record: UnknownRecord, keys: string[]) {
   return null
 }
 
+function readStringArray(record: UnknownRecord, key: string) {
+  const value = record[key]
+  if (!Array.isArray(value)) return []
+
+  const result: string[] = []
+  const seen = new Set<string>()
+  for (const item of value) {
+    if (typeof item !== 'string') continue
+    const normalized = item.trim().toLowerCase()
+    if (!normalized || seen.has(normalized)) continue
+    seen.add(normalized)
+    result.push(normalized)
+  }
+  return result
+}
+
 function normalizeModelResource(
   record: UnknownRecord,
   scope: ManagementModelScope,
@@ -64,6 +82,7 @@ function normalizeModelResource(
     name,
     ownedBy: readString(record, ['owned_by', 'ownedBy', 'owner']),
     type: readString(record, ['type']),
+    providers: readStringArray(record, 'providers'),
     channel: channel ?? readString(record, ['channel', 'provider']),
     scope,
     object: readString(record, ['object']),
@@ -95,6 +114,18 @@ function readModelEntries(responseData: unknown, scope: ManagementModelScope) {
   })
 }
 
+export function normalizeModelsSnapshotResponse(
+  responseData: unknown,
+  scope: ManagementModelScope,
+) {
+  const resources = readModelEntries(responseData, scope)
+  return {
+    resources,
+    missingProviderMetadataCount: resources.filter((resource) => resource.providers.length === 0)
+      .length,
+  }
+}
+
 export async function fetchModelsSnapshot(
   session: ManagementSessionInput,
   input: { scope?: ManagementModelScope; channel?: string } = {},
@@ -108,10 +139,11 @@ export async function fetchModelsSnapshot(
     },
   })
 
+  const normalized = normalizeModelsSnapshotResponse(response.data, scope)
   return {
     fetchedAt: new Date().toISOString(),
     scope,
-    resources: readModelEntries(response.data, scope),
+    ...normalized,
   }
 }
 

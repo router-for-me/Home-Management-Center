@@ -639,6 +639,8 @@ export const en = {
         outputTokens: 'Output tokens',
         cacheTokens: 'Cache tokens',
         matchedPriceRule: 'Matched price rule',
+        unpricedDescription:
+          'Unpriced: {{provider}}/{{model}} was billed at zero. Check its price rule configuration.',
         selectedTier: 'Selected rule tier',
         selectedBand: 'Selected band lower bound',
         requestedTier: 'Requested tier',
@@ -760,6 +762,8 @@ export const en = {
           modelSearchPlaceholder: 'Search model ID, name, or provider name',
           modelCandidateEmpty: 'No models are available for selection.',
           modelSearchEmpty: 'No models match your search.',
+          providerMetadataMissing:
+            'Ignored {{count}} models without providers; check the /models response.',
           selectedModel: 'Selected model',
           selectedModelsCount: '{{count}} models selected',
           clearSelection: 'Clear selection',

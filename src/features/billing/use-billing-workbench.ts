@@ -27,13 +27,12 @@ import type {
   ModelPrice,
   ModelPriceInput,
 } from '@/lib/api/management/billing-types'
-import {
-  type ManagementModelScope,
-  type ModelResource,
-  fetchModelsSnapshot,
-  toModelsApiError,
-} from '@/lib/api/management/models'
+import { fetchModelsSnapshot, toModelsApiError } from '@/lib/api/management/models'
 import { fetchUsersSnapshot, toUserApiError } from '@/lib/api/management/users'
+import {
+  type BillingModelPriceCandidate,
+  createModelPriceCandidates,
+} from '@/lib/billing/model-price-candidates'
 import type {
   ModelPriceImportApplyInput,
   ModelPriceImportPreviewInput,
@@ -42,20 +41,12 @@ import type {
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
-export type BillingModelPriceCandidate = {
-  id: string
-  provider: string
-  model: string
-  label: string
-  description: string
-  ownedBy: string | null
-  type: string | null
-  scopes: ManagementModelScope[]
-}
+export type { BillingModelPriceCandidate } from '@/lib/billing/model-price-candidates'
 
 type BillingModelPriceCandidateSnapshot = {
   candidates: BillingModelPriceCandidate[]
   issue: string | null
+  missingProviderMetadataCount: number
 }
 
 function toError(error: unknown) {
@@ -65,86 +56,6 @@ function toError(error: unknown) {
 
 function readSettledError(result: PromiseSettledResult<unknown>) {
   return result.status === 'rejected' ? toError(result.reason).message : null
-}
-
-function normalizeModelProvider(resource: ModelResource) {
-  const channel = resource.channel?.trim()
-  if (channel) return normalizeBillingProvider(channel)
-
-  const type = resource.type?.trim()
-  if (type) return normalizeBillingProvider(type)
-
-  const ownedBy = resource.ownedBy?.trim()
-  if (ownedBy) return normalizeBillingProvider(ownedBy)
-
-  return ''
-}
-
-function normalizeBillingProvider(value: string) {
-  const normalized = value.trim().toLowerCase()
-  if (
-    normalized === 'codex-free' ||
-    normalized === 'codex-team' ||
-    normalized === 'codex-plus' ||
-    normalized === 'codex-pro'
-  ) {
-    return 'codex'
-  }
-
-  return normalized
-}
-
-function normalizeModelPriceCandidate(resource: ModelResource): BillingModelPriceCandidate | null {
-  const provider = normalizeModelProvider(resource)
-  if (!provider) return null
-
-  return {
-    id: `${provider}:${resource.id}`,
-    provider,
-    model: resource.id,
-    label: resource.displayName,
-    description: resource.name ?? resource.id,
-    ownedBy: resource.ownedBy,
-    type: resource.type,
-    scopes: [resource.scope],
-  }
-}
-
-function createModelPriceCandidates(available: ModelResource[], staticModels: ModelResource[]) {
-  const candidates = new Map<string, BillingModelPriceCandidate>()
-
-  for (const resource of [...staticModels, ...available]) {
-    const candidate = normalizeModelPriceCandidate(resource)
-    if (!candidate) continue
-
-    const existing = candidates.get(candidate.id)
-    if (!existing) {
-      candidates.set(candidate.id, candidate)
-      continue
-    }
-
-    for (const scope of candidate.scopes) {
-      if (!existing.scopes.includes(scope)) {
-        existing.scopes.push(scope)
-      }
-    }
-
-    existing.label = existing.label || candidate.label
-    existing.description = existing.description || candidate.description
-    existing.ownedBy = existing.ownedBy ?? candidate.ownedBy
-    existing.type = existing.type ?? candidate.type
-  }
-
-  return [...candidates.values()].sort((left, right) => {
-    const leftAvailable = left.scopes.includes('available') ? 0 : 1
-    const rightAvailable = right.scopes.includes('available') ? 0 : 1
-
-    return (
-      leftAvailable - rightAvailable ||
-      left.provider.localeCompare(right.provider) ||
-      left.model.localeCompare(right.model)
-    )
-  })
 }
 
 function useManagementSession() {
@@ -294,14 +205,20 @@ export function useBillingWorkbench(
       const issue = [readSettledError(availableResult), readSettledError(staticResult)]
         .filter(Boolean)
         .join('\n')
+      const missingProviderMetadataCount =
+        (availableResult.status === 'fulfilled'
+          ? availableResult.value.missingProviderMetadataCount
+          : 0) +
+        (staticResult.status === 'fulfilled' ? staticResult.value.missingProviderMetadataCount : 0)
 
-      if (candidates.length === 0 && issue) {
+      if (candidates.length === 0 && issue && missingProviderMetadataCount === 0) {
         throw toModelsApiError(new Error(issue))
       }
 
       return {
         candidates,
         issue: issue || null,
+        missingProviderMetadataCount,
       }
     },
   })
@@ -444,6 +361,8 @@ export function useBillingWorkbench(
     modelPriceCandidatesLoading: modelPriceCandidatesQuery.isLoading,
     modelPriceCandidatesFetching: modelPriceCandidatesQuery.isFetching,
     modelPriceCandidatesIssue: modelPriceCandidatesQuery.data?.issue ?? null,
+    modelPriceCandidatesMissingProviderMetadataCount:
+      modelPriceCandidatesQuery.data?.missingProviderMetadataCount ?? 0,
     modelPriceCandidatesError: modelPriceCandidatesQuery.error
       ? toError(modelPriceCandidatesQuery.error).message
       : null,
