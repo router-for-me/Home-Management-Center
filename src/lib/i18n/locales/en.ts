@@ -2090,6 +2090,7 @@ export const en = {
         source: 'Source',
         type: 'Type',
         status: 'Status',
+        inFlight: 'In flight',
         toggleStatus: 'Toggle credential {{name}} status',
         updatedAt: 'Updated',
         actions: 'Actions',
@@ -2123,6 +2124,10 @@ export const en = {
       detail: {
         title: 'Credential detail',
         empty: 'Select a credential to inspect metadata and actions.',
+        sections: {
+          overview: 'Overview',
+          concurrency: 'Concurrency',
+        },
         noModels: 'No models are available for this credential.',
         modelsTitle: 'Available models',
         modelsDescription: 'Query the runtime for models available to this credential.',
@@ -2153,9 +2158,9 @@ export const en = {
         eyebrow: 'Edit metadata',
         contextTitle: 'Current credential',
         editableHint:
-          'Only Prefix, Proxy URL, priority, and note are editable here. Account, source, and model provider come from the runtime credential record.',
+          'Prefix, Proxy URL, priority, and note are editable here. Concurrency controls appear below when the backend supports them. Account, source, and model provider come from the runtime credential record.',
         editableHintWithWebsockets:
-          'Prefix, Proxy URL, priority, Codex WebSocket, and note are editable here. Account, source, and model provider come from the runtime credential record.',
+          'Prefix, Proxy URL, priority, Codex WebSocket, and note are editable here. Concurrency controls appear below when the backend supports them. Account, source, and model provider come from the runtime credential record.',
         context: {
           provider: 'Model provider',
           source: 'Source',
@@ -2169,6 +2174,62 @@ export const en = {
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
         note: 'Note',
+      },
+      concurrency: {
+        current: 'Current',
+        limit: 'Limit',
+        remaining: 'Available slots',
+        unlimited: 'Unlimited',
+        totalSaturated:
+          'The credential concurrency limit is full. New work will fall back or return busy.',
+        modelsSaturated: 'Saturated model limits: {{count}}.',
+        stale: 'In-flight data could not be refreshed. Showing the last successful result.',
+        summaryLoadFailed: 'Could not load in-flight data: {{message}}',
+        unavailable: 'In-flight data is unavailable.',
+        modelsTitle: 'Model concurrency',
+        modelsDescription:
+          'Counts reflect active Home leases by effective upstream model. Available slots also respect the credential-wide limit.',
+        noModels: 'No model concurrency records.',
+        requestsTitle: 'Open requests',
+        requestsDescription:
+          'Shows tracked request identity and runtime metadata only, never request payloads. Fail-open dispatches without a lease are not included.',
+        requestId: 'Request ID',
+        model: 'Model',
+        cpaNode: 'CPA node',
+        startedAt: 'Started',
+        age: 'Age',
+        ageSeconds: '{{count}}s',
+        ageMinutesSeconds: '{{minutes}}m {{seconds}}s',
+        ageHoursMinutes: '{{hours}}h {{minutes}}m',
+        copyRequestId: 'Copy request ID',
+        requestIdCopied: 'Request ID copied.',
+        requestIdCopyFailed: 'Could not copy the request ID.',
+        requestsLoading: 'Loading open requests…',
+        requestsUnavailable: 'Open request details are unavailable.',
+        noRequests: 'No requests are currently in flight.',
+        loadMore: 'Load more',
+        editTitle: 'Concurrency limits',
+        editDescription:
+          'Empty or 0 means unlimited. Model limits match the effective upstream model ID; thinking suffix variants share the base model limit. Limit changes never terminate existing requests. Upgrade every CPA node for dispatch leases before enabling limits.',
+        totalLimit: 'Credential-wide limit',
+        modelLimits: 'Model limits',
+        addModel: 'Add model',
+        modelPlaceholder: 'Model ID',
+        modelInputLabel: 'Model ID for row {{index}}',
+        modelLimitInputLabel: 'Concurrency limit for model row {{index}}',
+        removeModel: 'Remove model limit',
+        removeModelAtIndex: 'Remove model limit row {{index}}',
+        noModelLimits: 'No model limits configured.',
+        contractInvalid:
+          'Home reports concurrency editing support, but /auth-files returned invalid or missing limit fields. Existing limits will not be changed.',
+        lowerLimitWarning:
+          'The new limit is below current in-flight usage. Existing requests continue; new dispatches that exceed the limit are blocked until usage falls below it.',
+        validation: {
+          totalLimit: 'The credential-wide limit must be a non-negative integer.',
+          modelRequired: 'Enter a model ID or remove the row.',
+          modelLimit: 'The limit for {{model}} must be a non-negative integer.',
+          duplicateModel: 'Model {{model}} is configured more than once.',
+        },
       },
       delete: {
         title: 'Delete credential?',

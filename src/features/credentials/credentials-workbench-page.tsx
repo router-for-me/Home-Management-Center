@@ -71,9 +71,23 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { findCredentialRouteResource } from '@/features/credentials/credential-route'
-import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
 import {
+  CredentialConcurrencyDetail,
+  CredentialConcurrencyEditor,
+  CredentialInFlightCell,
+  type CredentialMetadataForm,
+  canonicalConcurrencyModelKey,
+  getCredentialInFlightId,
+  parseConcurrencyLimit,
+} from '@/features/credentials/credential-concurrency'
+import { findCredentialRouteResource } from '@/features/credentials/credential-route'
+import {
+  useCredentialInFlightDetail,
+  useCredentialWorkbench,
+} from '@/features/credentials/use-credential-workbench'
+import {
+  type CredentialInFlightDetail,
+  type CredentialInFlightSummary,
   type CredentialMetadataInput,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthCallbackProvider,
@@ -96,10 +110,8 @@ import {
 } from './credential-upload'
 
 type MetadataPanelMode = 'detail' | 'edit'
+type CredentialDetailSection = 'overview' | 'concurrency'
 type CreateCredentialMode = 'oauth' | 'upload' | 'vertex'
-type CredentialMetadataForm = Omit<CredentialMetadataInput, 'websockets'> & {
-  websockets: boolean
-}
 type OAuthSessionSummary = {
   provider: CredentialOAuthProvider
   state: string | null
@@ -183,6 +195,10 @@ function createMetadataForm(resource: CredentialResource | null): CredentialMeta
         : String(resource.priority),
     websockets: resource?.websockets ?? false,
     note: resource?.note ?? '',
+    maxInFlight: resource?.maxInFlight ? String(resource.maxInFlight) : '',
+    maxInFlightByModel: Object.entries(resource?.maxInFlightByModel ?? {})
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([model, limit]) => ({ model, limit: String(limit) })),
   }
 }
 
@@ -657,7 +673,10 @@ function OAuthClosurePanel({
           </div>
 
           {localError ? (
-            <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            <div
+              role="alert"
+              className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+            >
               {localError}
             </div>
           ) : null}
@@ -1389,6 +1408,8 @@ function CreateCredentialSheet({
 
 function CredentialList({
   resources,
+  inFlightByCredentialId,
+  showInFlight,
   selectedResourceId,
   selectedResourceIds,
   mutating,
@@ -1401,6 +1422,8 @@ function CredentialList({
   onViewResource,
 }: {
   resources: CredentialResource[]
+  inFlightByCredentialId: Map<string, CredentialInFlightSummary>
+  showInFlight: boolean
   selectedResourceId: string | null
   selectedResourceIds: Set<string>
   mutating: boolean
@@ -1425,7 +1448,7 @@ function CredentialList({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="min-w-[1410px] table-fixed"
+      className={cn(showInFlight ? 'min-w-[1530px]' : 'min-w-[1410px]', 'table-fixed')}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -1434,6 +1457,7 @@ function CredentialList({
         <col className="w-[105px]" />
         <col className="w-[105px]" />
         <col className="w-[170px]" />
+        {showInFlight ? <col className="w-[120px]" /> : null}
         <col className="w-[180px]" />
         <col className="w-[336px]" />
       </colgroup>
@@ -1452,6 +1476,7 @@ function CredentialList({
           <TableHead>{t('credentialsPage.list.source')}</TableHead>
           <TableHead>{t('credentialsPage.list.type')}</TableHead>
           <TableHead>{t('credentialsPage.list.status')}</TableHead>
+          {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
           <TableHead>{t('credentialsPage.list.updatedAt')}</TableHead>
           <TableHead className="table-sticky-action-head w-[336px] text-right">
             {t('credentialsPage.list.actions')}
@@ -1467,6 +1492,8 @@ function CredentialList({
           const updatedAt =
             formatDateTime(resource.updatedAt ?? resource.modifiedAt) ??
             t('credentialsPage.status.notAvailable')
+          const inFlightSummary =
+            inFlightByCredentialId.get(getCredentialInFlightId(resource)) ?? null
 
           return (
             <TableRow
@@ -1549,6 +1576,11 @@ function CredentialList({
                   />
                 </div>
               </TableCell>
+              {showInFlight ? (
+                <TableCell>
+                  <CredentialInFlightCell summary={inFlightSummary} />
+                </TableCell>
+              ) : null}
               <TableCell className="pr-4">
                 <p className="text-muted-foreground truncate text-xs">{updatedAt}</p>
               </TableCell>
@@ -1613,15 +1645,39 @@ function CredentialList({
 function CredentialDetailContent({
   resource,
   mode,
+  detailSection,
+  showConcurrency,
+  canEditConcurrency,
+  inFlightSummary,
+  inFlightDetail,
+  inFlightPending,
+  inFlightFetching,
+  inFlightStale,
+  inFlightErrorMessage,
+  inFlightHasNextPage,
+  inFlightFetchingNextPage,
   mutating,
   models,
   onModeChange,
+  onDetailSectionChange,
+  onLoadMoreInFlight,
   onUpdateMetadata,
   onToggleStatus,
   onFetchModels,
 }: {
   resource: CredentialResource | null
   mode: MetadataPanelMode
+  detailSection: CredentialDetailSection
+  showConcurrency: boolean
+  canEditConcurrency: boolean
+  inFlightSummary: CredentialInFlightSummary | null
+  inFlightDetail: Pick<CredentialInFlightDetail, 'observedAt' | 'credential' | 'requests'> | null
+  inFlightPending: boolean
+  inFlightFetching: boolean
+  inFlightStale: boolean
+  inFlightErrorMessage: string | null
+  inFlightHasNextPage: boolean
+  inFlightFetchingNextPage: boolean
   mutating: boolean
   models: Array<{
     id: string
@@ -1630,6 +1686,8 @@ function CredentialDetailContent({
     ownedBy: string | null
   }> | null
   onModeChange: (mode: MetadataPanelMode) => void
+  onDetailSectionChange: (section: CredentialDetailSection) => void
+  onLoadMoreInFlight: () => void
   onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
   onToggleStatus: () => Promise<void>
   onFetchModels: () => Promise<void>
@@ -1647,28 +1705,63 @@ function CredentialDetailContent({
     return null
   }
 
+  const providerLabel = getCredentialProviderLabel(t, resource.provider)
+  const sourceLabel = getCredentialSourceLabel(t, resource.source)
+  const resourceIdentifier = resource.name ?? resource.authIndex ?? resource.identifier
+  const isCodexCredential = isCodexCredentialResource(resource)
+  const concurrencyEditable = canEditConcurrency && resource.concurrencyFieldsValid
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     try {
       setLocalError(null)
+      const maxInFlight = parseConcurrencyLimit(form.maxInFlight)
+      if (concurrencyEditable && maxInFlight === undefined) {
+        throw new Error(t('credentialsPage.concurrency.validation.totalLimit'))
+      }
+      const maxInFlightByModel: Record<string, number> = {}
+      if (concurrencyEditable) {
+        for (const row of form.maxInFlightByModel) {
+          const model = canonicalConcurrencyModelKey(row.model)
+          const rawLimit = row.limit.trim()
+          if (!model && !rawLimit) continue
+          const limit = parseConcurrencyLimit(row.limit)
+          if (limit === undefined) {
+            if (!model) {
+              throw new Error(t('credentialsPage.concurrency.validation.modelRequired'))
+            }
+            throw new Error(t('credentialsPage.concurrency.validation.modelLimit', { model }))
+          }
+          if (!model) {
+            if (limit === null || limit === 0) continue
+            throw new Error(t('credentialsPage.concurrency.validation.modelRequired'))
+          }
+          if (limit === null || limit === 0) continue
+          if (Object.prototype.hasOwnProperty.call(maxInFlightByModel, model)) {
+            throw new Error(t('credentialsPage.concurrency.validation.duplicateModel', { model }))
+          }
+          maxInFlightByModel[model] = limit
+        }
+      }
       await onUpdateMetadata({
         prefix: form.prefix,
         proxyUrl: form.proxyUrl,
         priority: form.priority,
         note: form.note,
         ...(isCodexCredential ? { websockets: form.websockets } : {}),
+        ...(concurrencyEditable
+          ? {
+              maxInFlight: maxInFlight && maxInFlight > 0 ? maxInFlight : null,
+              maxInFlightByModel,
+            }
+          : {}),
       })
       onModeChange('detail')
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
   }
-
-  const providerLabel = getCredentialProviderLabel(t, resource.provider)
-  const sourceLabel = getCredentialSourceLabel(t, resource.source)
-  const resourceIdentifier = resource.name ?? resource.authIndex ?? resource.identifier
-  const isCodexCredential = isCodexCredentialResource(resource)
 
   if (mode === 'edit') {
     return (
@@ -1765,6 +1858,22 @@ function CredentialDetailContent({
             />
           </label>
 
+          {concurrencyEditable ? (
+            <CredentialConcurrencyEditor
+              form={form}
+              summary={inFlightDetail?.credential ?? inFlightSummary}
+              mutating={mutating}
+              onChange={setForm}
+            />
+          ) : canEditConcurrency ? (
+            <div
+              role="alert"
+              className="border-warning/35 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm leading-5"
+            >
+              {t('credentialsPage.concurrency.contractInvalid')}
+            </div>
+          ) : null}
+
           {localError ? (
             <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
               {localError}
@@ -1792,42 +1901,88 @@ function CredentialDetailContent({
     )
   }
 
-  return (
-    <div className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-muted-foreground text-xs font-medium uppercase">
-            {t('credentialsPage.detail.title')}
-          </p>
-          <h2 className="mt-2 truncate text-base font-semibold">
-            {getCredentialDisplayName(resource)}
-          </h2>
-          <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-            {resourceIdentifier}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap justify-end gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link
-              to="/admin/quota"
-              search={{ q: resource.authIndex ?? resource.name ?? resource.identifier }}
-            >
-              <CircleGauge className="size-4" aria-hidden="true" />
-              {t('credentialsPage.actions.viewQuota')}
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={mutating}
-            onClick={() => onModeChange('edit')}
+  const detailHeader = (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-muted-foreground text-xs font-medium uppercase">
+          {t('credentialsPage.detail.title')}
+        </p>
+        <h2 className="mt-2 truncate text-base font-semibold">
+          {getCredentialDisplayName(resource)}
+        </h2>
+        <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+          {resourceIdentifier}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+        <Button asChild variant="outline" size="sm">
+          <Link
+            to="/admin/quota"
+            search={{ q: resource.authIndex ?? resource.name ?? resource.identifier }}
           >
-            <Pencil className="size-4" aria-hidden="true" />
-            {t('credentialsPage.actions.edit')}
-          </Button>
+            <CircleGauge className="size-4" aria-hidden="true" />
+            {t('credentialsPage.actions.viewQuota')}
+          </Link>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={mutating}
+          onClick={() => onModeChange('edit')}
+        >
+          <Pencil className="size-4" aria-hidden="true" />
+          {t('credentialsPage.actions.edit')}
+        </Button>
+      </div>
+    </div>
+  )
+  const detailNavigation = showConcurrency ? (
+    <ToggleGroup
+      type="single"
+      value={detailSection}
+      className="bg-muted/45 mt-5 grid grid-cols-2 rounded-md p-1"
+      onValueChange={(value) => {
+        if (value === 'overview' || value === 'concurrency') {
+          onDetailSectionChange(value)
+        }
+      }}
+    >
+      <ToggleGroupItem value="overview" className="h-8">
+        {t('credentialsPage.detail.sections.overview')}
+      </ToggleGroupItem>
+      <ToggleGroupItem value="concurrency" className="h-8">
+        {t('credentialsPage.detail.sections.concurrency')}
+      </ToggleGroupItem>
+    </ToggleGroup>
+  ) : null
+
+  if (showConcurrency && detailSection === 'concurrency') {
+    return (
+      <div className="p-5">
+        {detailHeader}
+        {detailNavigation}
+        <div className="mt-5">
+          <CredentialConcurrencyDetail
+            summary={inFlightSummary}
+            detail={inFlightDetail}
+            pending={inFlightPending}
+            fetching={inFlightFetching}
+            stale={inFlightStale}
+            errorMessage={inFlightErrorMessage}
+            hasNextPage={inFlightHasNextPage}
+            fetchingNextPage={inFlightFetchingNextPage}
+            onLoadMore={onLoadMoreInFlight}
+          />
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className="p-5">
+      {detailHeader}
+      {detailNavigation}
 
       <dl className="mt-5 grid gap-3 text-sm">
         {[
@@ -1988,6 +2143,7 @@ export function CredentialsWorkbenchPage({
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
   const [selectedResourceIds, setSelectedResourceIds] = useState<Set<string>>(() => new Set())
   const [panelMode, setPanelMode] = useState<MetadataPanelMode>('detail')
+  const [detailSection, setDetailSection] = useState<CredentialDetailSection>('overview')
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [oauthSessions, setOAuthSessions] = useState<OAuthSessionMap>({})
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
@@ -2027,6 +2183,21 @@ export function CredentialsWorkbenchPage({
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     resources.find((resource) => resource.id === selectedResourceId) ??
     null
+  const inFlightByCredentialId = useMemo(
+    () =>
+      new Map((workbench.inFlightSnapshot?.items ?? []).map((item) => [item.credentialId, item])),
+    [workbench.inFlightSnapshot],
+  )
+  const selectedInFlightCredentialId = selectedResource
+    ? getCredentialInFlightId(selectedResource)
+    : null
+  const selectedInFlightSummary = selectedInFlightCredentialId
+    ? (inFlightByCredentialId.get(selectedInFlightCredentialId) ?? null)
+    : null
+  const inFlightDetailQuery = useCredentialInFlightDetail(
+    selectedInFlightCredentialId,
+    detailSheetOpen && workbench.credentialInFlight && detailSection === 'concurrency',
+  )
   const selectedResources = resources.filter((resource) => selectedResourceIds.has(resource.id))
   const selectedDisabledCount = selectedResources.filter((resource) => resource.disabled).length
   const selectedEnabledCount = selectedResources.length - selectedDisabledCount
@@ -2057,6 +2228,7 @@ export function CredentialsWorkbenchPage({
 
     setSelectedResourceId(resource.id)
     setPanelMode('detail')
+    setDetailSection('overview')
     setDetailSheetOpen(true)
   }, [initialCredentialId, initialSearch, resources])
 
@@ -2064,9 +2236,16 @@ export function CredentialsWorkbenchPage({
     if (selectedResourceId && !resources.some((resource) => resource.id === selectedResourceId)) {
       setSelectedResourceId(null)
       setPanelMode('detail')
+      setDetailSection('overview')
       setDetailSheetOpen(false)
     }
   }, [resources, selectedResourceId])
+
+  useEffect(() => {
+    if (!workbench.credentialInFlight && detailSection === 'concurrency') {
+      setDetailSection('overview')
+    }
+  }, [detailSection, workbench.credentialInFlight])
 
   useEffect(() => {
     const resourceIds = new Set(resources.map((resource) => resource.id))
@@ -2326,6 +2505,7 @@ export function CredentialsWorkbenchPage({
       }
 
       setPanelMode('detail')
+      setDetailSection('overview')
       setConfirmation(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
@@ -2501,6 +2681,21 @@ export function CredentialsWorkbenchPage({
             actionsClassName="w-full md:w-auto"
           />
           <div className="p-4">
+            {workbench.credentialInFlight && workbench.inFlightErrorMessage ? (
+              <div className="border-warning/35 bg-warning/10 mb-3 flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+                <AlertTriangle
+                  className="text-warning-foreground dark:text-warning mt-0.5 size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <span>
+                  {workbench.inFlightStale
+                    ? t('credentialsPage.concurrency.stale')
+                    : t('credentialsPage.concurrency.summaryLoadFailed', {
+                        message: workbench.inFlightErrorMessage,
+                      })}
+                </span>
+              </div>
+            ) : null}
             {selectedResourceIds.size > 0 ? (
               <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
@@ -2556,6 +2751,8 @@ export function CredentialsWorkbenchPage({
             ) : null}
             <CredentialList
               resources={filteredResources}
+              inFlightByCredentialId={inFlightByCredentialId}
+              showInFlight={workbench.credentialInFlight}
               selectedResourceId={selectedResourceId}
               selectedResourceIds={selectedResourceIds}
               mutating={workbench.mutating}
@@ -2566,6 +2763,7 @@ export function CredentialsWorkbenchPage({
               onEditResource={(resource) => {
                 setSelectedResourceId(resource.id)
                 setPanelMode('edit')
+                setDetailSection('overview')
                 setDetailSheetOpen(true)
               }}
               onToggleSelection={handleToggleSelection}
@@ -2576,6 +2774,7 @@ export function CredentialsWorkbenchPage({
               onViewResource={(resource) => {
                 setSelectedResourceId(resource.id)
                 setPanelMode('detail')
+                setDetailSection('overview')
                 setDetailSheetOpen(true)
               }}
             />
@@ -2583,8 +2782,24 @@ export function CredentialsWorkbenchPage({
         </TableSurface>
       </div>
 
-      <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
-        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
+      <Sheet
+        open={detailSheetOpen}
+        onOpenChange={(open) => {
+          setDetailSheetOpen(open)
+          if (!open) {
+            setPanelMode('detail')
+            setDetailSection('overview')
+          }
+        }}
+      >
+        <SheetContent
+          className={cn(
+            'w-full overflow-y-auto p-0',
+            panelMode === 'edit' || detailSection === 'concurrency'
+              ? 'sm:max-w-3xl'
+              : 'sm:max-w-xl',
+          )}
+        >
           <SheetHeader className="border-b p-5">
             <SheetTitle>
               {panelMode === 'edit'
@@ -2600,9 +2815,25 @@ export function CredentialsWorkbenchPage({
           <CredentialDetailContent
             resource={selectedResource}
             mode={panelMode}
+            detailSection={detailSection}
+            showConcurrency={workbench.credentialInFlight}
+            canEditConcurrency={workbench.credentialConcurrencyLimits}
+            inFlightSummary={selectedInFlightSummary}
+            inFlightDetail={inFlightDetailQuery.detail}
+            inFlightPending={inFlightDetailQuery.isPending}
+            inFlightFetching={inFlightDetailQuery.isFetching}
+            inFlightStale={inFlightDetailQuery.isStale}
+            inFlightErrorMessage={inFlightDetailQuery.errorMessage}
+            inFlightHasNextPage={inFlightDetailQuery.hasNextPage}
+            inFlightFetchingNextPage={inFlightDetailQuery.isFetchingNextPage}
             mutating={workbench.mutating}
             models={workbench.models}
-            onModeChange={setPanelMode}
+            onModeChange={(mode) => {
+              setPanelMode(mode)
+              if (mode === 'edit') setDetailSection('overview')
+            }}
+            onDetailSectionChange={setDetailSection}
+            onLoadMoreInFlight={() => void inFlightDetailQuery.fetchNextPage()}
             onUpdateMetadata={handleMetadataUpdate}
             onToggleStatus={() => handleToggleStatus(selectedResource)}
             onFetchModels={handleFetchModels}

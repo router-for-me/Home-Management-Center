@@ -33,6 +33,8 @@ const emptyCapabilities: CapabilityMap = {
   requestErrorLogs: false,
   users: false,
   accessGroups: false,
+  credentialInFlight: false,
+  credentialConcurrencyLimits: false,
 }
 
 type CapabilityStatus = 'idle' | 'probing' | 'ready' | 'error'

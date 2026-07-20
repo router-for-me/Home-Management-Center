@@ -13,6 +13,8 @@ export type CredentialMetadataInput = {
   priority: string
   note: string
   websockets?: boolean
+  maxInFlight?: number | null
+  maxInFlightByModel?: Record<string, number>
 }
 
 export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai'
@@ -80,6 +82,9 @@ export type CredentialResource = {
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
+  maxInFlight: number | null
+  maxInFlightByModel: Record<string, number>
+  concurrencyFieldsValid: boolean
   selector: UnknownRecord
   raw: UnknownRecord
 }
@@ -135,6 +140,51 @@ type CredentialModel = {
 type CredentialsSnapshot = {
   fetchedAt: string
   resources: CredentialResource[]
+}
+
+export type CredentialInFlightModelSummary = {
+  model: string
+  inFlight: number
+  maxInFlight: number | null
+  remaining: number | null
+  saturated: boolean
+}
+
+export type CredentialInFlightSummary = {
+  credentialId: string
+  inFlight: number
+  maxInFlight: number | null
+  remaining: number | null
+  totalSaturated: boolean
+  saturatedModelCount: number
+  models: CredentialInFlightModelSummary[]
+}
+
+export type CredentialInFlightRequest = {
+  leaseId: string
+  requestId: string
+  credentialId: string
+  provider: string | null
+  requestedModel: string | null
+  model: string
+  cpaNodeId: string | null
+  cpaIp: string | null
+  cpaLabel: string | null
+  startedAt: string
+  lastRenewedAt: string | null
+  expiresAt: string | null
+}
+
+type CredentialInFlightSnapshot = {
+  observedAt: string
+  items: CredentialInFlightSummary[]
+}
+
+export type CredentialInFlightDetail = {
+  observedAt: string
+  credential: CredentialInFlightSummary
+  requests: CredentialInFlightRequest[]
+  nextCursor: string | null
 }
 
 type CredentialOAuthStartResult = {
@@ -193,6 +243,61 @@ function readFlexibleBoolean(record: UnknownRecord, key: string): boolean | null
 function readNumber(record: UnknownRecord, key: string): number | null {
   const value = record[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function readNonNegativeInteger(record: UnknownRecord, key: string): number | null {
+  const value = readNumber(record, key)
+  return value !== null && Number.isSafeInteger(value) && value >= 0 ? value : null
+}
+
+function readNullableNonNegativeInteger(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: number | null } | { valid: false } {
+  const value = record[key]
+  if (value === null) return { valid: true, value: null }
+  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) {
+    return { valid: true, value }
+  }
+  return { valid: false }
+}
+
+function readRequiredBoolean(record: UnknownRecord, key: string): boolean | null {
+  const value = record[key]
+  return typeof value === 'boolean' ? value : null
+}
+
+function readDateTime(record: UnknownRecord, key: string): string | null {
+  const value = readString(record, key)
+  return value && Number.isFinite(Date.parse(value)) ? value : null
+}
+
+function invalidCredentialInFlightContract(): never {
+  throw new Error('Home returned an invalid credential in-flight response.')
+}
+
+function readConcurrencyModelLimits(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: Record<string, number> } | { valid: false } {
+  const value = record[key]
+  if (value === null) return { valid: true, value: {} }
+  if (!isRecord(value)) return { valid: false }
+  const limits: Record<string, number> = {}
+  for (const [rawModel, rawLimit] of Object.entries(value)) {
+    const model = rawModel.trim()
+    if (
+      !model ||
+      typeof rawLimit !== 'number' ||
+      !Number.isSafeInteger(rawLimit) ||
+      rawLimit < 0 ||
+      Object.prototype.hasOwnProperty.call(limits, model)
+    ) {
+      return { valid: false }
+    }
+    if (rawLimit > 0) limits[model] = rawLimit
+  }
+  return { valid: true, value: limits }
 }
 
 function readFiles(responseData: unknown): UnknownRecord[] {
@@ -352,6 +457,8 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
   const provider = readString(record, 'provider') ?? readString(record, 'type') ?? 'unknown'
   const type = readString(record, 'type') ?? provider
   const identifier = id ?? authIndex ?? name ?? `${provider}-${index + 1}`
+  const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
+  const maxInFlightByModel = readConcurrencyModelLimits(record, 'max_in_flight_by_model')
 
   return {
     id: `${provider}:${identifier}`,
@@ -385,8 +492,92 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     prefix: readString(record, 'prefix'),
     proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
     websockets: readCredentialWebsockets(record),
+    maxInFlight:
+      maxInFlight.valid && maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
+    maxInFlightByModel: maxInFlightByModel.valid ? maxInFlightByModel.value : {},
+    concurrencyFieldsValid: maxInFlight.valid && maxInFlightByModel.valid,
     selector: createSelector(record, index),
     raw: record,
+  }
+}
+
+function normalizeCredentialInFlightModelSummary(
+  record: UnknownRecord,
+): CredentialInFlightModelSummary | null {
+  const model = readString(record, 'model')
+  const inFlight = readNonNegativeInteger(record, 'in_flight')
+  const saturated = readRequiredBoolean(record, 'saturated')
+  const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
+  const remaining = readNullableNonNegativeInteger(record, 'remaining')
+  if (!model || inFlight === null || saturated === null || !maxInFlight.valid || !remaining.valid) {
+    return null
+  }
+  return {
+    model,
+    inFlight,
+    maxInFlight: maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
+    remaining: remaining.value,
+    saturated,
+  }
+}
+
+function normalizeCredentialInFlightSummary(
+  record: UnknownRecord,
+): CredentialInFlightSummary | null {
+  const credentialId = readString(record, 'credential_id')
+  const inFlight = readNonNegativeInteger(record, 'in_flight')
+  const totalSaturated = readRequiredBoolean(record, 'total_saturated')
+  const saturatedModelCount = readNonNegativeInteger(record, 'saturated_model_count')
+  const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
+  const remaining = readNullableNonNegativeInteger(record, 'remaining')
+  if (
+    !credentialId ||
+    inFlight === null ||
+    totalSaturated === null ||
+    saturatedModelCount === null ||
+    !maxInFlight.valid ||
+    !remaining.valid ||
+    !Array.isArray(record.models)
+  ) {
+    return null
+  }
+  if (!record.models.every(isRecord)) return null
+  const normalizedModels = record.models.map(normalizeCredentialInFlightModelSummary)
+  if (normalizedModels.some((item) => item === null)) return null
+  const models = normalizedModels as CredentialInFlightModelSummary[]
+  return {
+    credentialId,
+    inFlight,
+    maxInFlight: maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
+    remaining: remaining.value,
+    totalSaturated,
+    saturatedModelCount,
+    models,
+  }
+}
+
+function normalizeCredentialInFlightRequest(
+  record: UnknownRecord,
+): CredentialInFlightRequest | null {
+  const leaseId = readString(record, 'lease_id')
+  const requestId = readString(record, 'request_id')
+  const credentialId = readString(record, 'credential_id')
+  const model = readString(record, 'model')
+  const startedAt = readDateTime(record, 'started_at')
+  if (!leaseId || !requestId || !credentialId || !model || !startedAt) return null
+  return {
+    leaseId,
+    requestId,
+    credentialId,
+    provider: readString(record, 'provider'),
+    requestedModel: readString(record, 'requested_model'),
+    model,
+    cpaNodeId: readString(record, 'cpa_node_id'),
+    cpaIp: readString(record, 'cpa_ip'),
+    cpaLabel: readString(record, 'cpa_label'),
+    startedAt,
+    lastRenewedAt: readDateTime(record, 'last_renewed_at'),
+    expiresAt: readDateTime(record, 'expires_at'),
   }
 }
 
@@ -409,6 +600,13 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     payload.websockets = input.websockets
   }
 
+  if (input.maxInFlight !== undefined) {
+    payload.max_in_flight = input.maxInFlight
+  }
+  if (input.maxInFlightByModel !== undefined) {
+    payload.max_in_flight_by_model = input.maxInFlightByModel
+  }
+
   return payload
 }
 
@@ -427,6 +625,61 @@ export async function fetchCredentialSnapshot(
     resources: readFiles(response.data).map((record, index) =>
       normalizeCredentialResource(record, index),
     ),
+  }
+}
+
+export async function fetchCredentialInFlightSummary(
+  session: ManagementSessionInput,
+): Promise<CredentialInFlightSnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/credentials/in-flight/summary')
+  if (!isRecord(response.data)) {
+    invalidCredentialInFlightContract()
+  }
+  const root = response.data
+  const rawItems = root.items
+  if (!Array.isArray(rawItems)) invalidCredentialInFlightContract()
+  const observedAt = readDateTime(root, 'observed_at')
+  if (!observedAt) invalidCredentialInFlightContract()
+  if (!rawItems.every(isRecord)) invalidCredentialInFlightContract()
+  const items = rawItems.map(normalizeCredentialInFlightSummary)
+  if (items.some((item) => item === null)) invalidCredentialInFlightContract()
+  return {
+    observedAt,
+    items: items as CredentialInFlightSummary[],
+  }
+}
+
+export async function fetchCredentialInFlightDetail(
+  session: ManagementSessionInput,
+  credentialId: string,
+  cursor?: string | null,
+): Promise<CredentialInFlightDetail> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>(
+    `/credentials/${encodeURIComponent(credentialId)}/in-flight`,
+    { params: { limit: 50, cursor: cursor || undefined } },
+  )
+  if (!isRecord(response.data)) invalidCredentialInFlightContract()
+  const root = response.data
+  const credential = isRecord(root.credential) ? root.credential : null
+  const requestsRoot = isRecord(root.requests) ? root.requests : null
+  const observedAt = readDateTime(root, 'observed_at')
+  if (!credential || !requestsRoot || !Array.isArray(requestsRoot.items) || !observedAt) {
+    invalidCredentialInFlightContract()
+  }
+  if (!requestsRoot.items.every(isRecord)) invalidCredentialInFlightContract()
+  const requests = requestsRoot.items.map(normalizeCredentialInFlightRequest)
+  if (requests.some((item) => item === null)) invalidCredentialInFlightContract()
+  const normalizedCredential = normalizeCredentialInFlightSummary(credential)
+  if (!normalizedCredential) {
+    invalidCredentialInFlightContract()
+  }
+  return {
+    observedAt,
+    credential: normalizedCredential,
+    requests: requests as CredentialInFlightRequest[],
+    nextCursor: readString(requestsRoot, 'next_cursor'),
   }
 }
 

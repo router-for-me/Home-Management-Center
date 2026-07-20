@@ -2090,6 +2090,7 @@ export const ru = {
         source: 'Источник',
         type: 'Тип',
         status: 'Статус',
+        inFlight: 'В работе',
         toggleStatus: 'Переключить статус credential {{name}}',
         updatedAt: 'Обновлено',
         actions: 'Действия',
@@ -2123,6 +2124,10 @@ export const ru = {
       detail: {
         title: 'Детали credential',
         empty: 'Выберите credential, чтобы посмотреть metadata и действия.',
+        sections: {
+          overview: 'Обзор',
+          concurrency: 'Параллельность',
+        },
         noModels: 'Для этого credential пока нет моделей.',
         modelsTitle: 'Доступные модели',
         modelsDescription: 'Запросить у runtime модели, доступные для этого credential.',
@@ -2153,9 +2158,9 @@ export const ru = {
         eyebrow: 'Изменить metadata',
         contextTitle: 'Текущий credential',
         editableHint:
-          'Здесь можно изменить только Prefix, Proxy URL, приоритет и заметку. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
+          'Здесь можно изменить Prefix, Proxy URL, приоритет и заметку. Если backend поддерживает лимиты, ниже появятся настройки параллельности. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
         editableHintWithWebsockets:
-          'Здесь можно изменить Prefix, Proxy URL, приоритет, Codex WebSocket и заметку. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
+          'Здесь можно изменить Prefix, Proxy URL, приоритет, Codex WebSocket и заметку. Если backend поддерживает лимиты, ниже появятся настройки параллельности. Аккаунт, источник и поставщик моделей приходят из записи credential в runtime.',
         context: {
           provider: 'Поставщик моделей',
           source: 'Источник',
@@ -2169,6 +2174,62 @@ export const ru = {
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
         note: 'Заметка',
+      },
+      concurrency: {
+        current: 'Сейчас',
+        limit: 'Лимит',
+        remaining: 'Свободные слоты',
+        unlimited: 'Без ограничений',
+        totalSaturated:
+          'Общий лимит credential исчерпан. Новый запрос переключится на другой credential или получит busy.',
+        modelsSaturated: 'Исчерпано лимитов моделей: {{count}}.',
+        stale: 'Не удалось обновить данные in-flight. Показан последний успешный результат.',
+        summaryLoadFailed: 'Не удалось загрузить данные in-flight: {{message}}',
+        unavailable: 'Данные in-flight недоступны.',
+        modelsTitle: 'Параллельность по моделям',
+        modelsDescription:
+          'Счётчики отражают активные lease Home по фактической upstream-модели и учитывают общий лимит credential.',
+        noModels: 'Нет данных о параллельности моделей.',
+        requestsTitle: 'Активные запросы',
+        requestsDescription:
+          'Показываются только идентификаторы и runtime metadata отслеживаемых запросов, без payload. Fail-open dispatch без lease не учитывается.',
+        requestId: 'Request ID',
+        model: 'Модель',
+        cpaNode: 'Узел CPA',
+        startedAt: 'Начало',
+        age: 'Длительность',
+        ageSeconds: '{{count}} с',
+        ageMinutesSeconds: '{{minutes}} мин {{seconds}} с',
+        ageHoursMinutes: '{{hours}} ч {{minutes}} мин',
+        copyRequestId: 'Скопировать request ID',
+        requestIdCopied: 'Request ID скопирован.',
+        requestIdCopyFailed: 'Не удалось скопировать request ID.',
+        requestsLoading: 'Загрузка активных запросов…',
+        requestsUnavailable: 'Сведения об активных запросах недоступны.',
+        noRequests: 'Сейчас нет запросов в работе.',
+        loadMore: 'Загрузить ещё',
+        editTitle: 'Лимиты параллельности',
+        editDescription:
+          'Пустое значение или 0 означает отсутствие лимита. Лимит сопоставляется с фактическим upstream model ID; варианты с thinking suffix используют лимит базовой модели. Изменение лимита не завершает активные запросы. Перед включением лимитов обновите все узлы CPA до версии с поддержкой dispatch lease.',
+        totalLimit: 'Общий лимит credential',
+        modelLimits: 'Лимиты моделей',
+        addModel: 'Добавить модель',
+        modelPlaceholder: 'Model ID',
+        modelInputLabel: 'Model ID в строке {{index}}',
+        modelLimitInputLabel: 'Лимит параллельности в строке модели {{index}}',
+        removeModel: 'Удалить лимит модели',
+        removeModelAtIndex: 'Удалить строку лимита модели {{index}}',
+        noModelLimits: 'Лимиты моделей не настроены.',
+        contractInvalid:
+          'Home сообщает о поддержке редактирования лимитов, но /auth-files вернул отсутствующие или некорректные поля. Текущие лимиты не будут изменены.',
+        lowerLimitWarning:
+          'Новый лимит ниже текущего числа запросов. Активные запросы продолжатся; новые dispatch сверх лимита будут блокироваться, пока нагрузка не опустится ниже него.',
+        validation: {
+          totalLimit: 'Общий лимит credential должен быть неотрицательным целым числом.',
+          modelRequired: 'Введите model ID или удалите строку.',
+          modelLimit: 'Лимит для {{model}} должен быть неотрицательным целым числом.',
+          duplicateModel: 'Модель {{model}} настроена несколько раз.',
+        },
       },
       delete: {
         title: 'Удалить credential?',
