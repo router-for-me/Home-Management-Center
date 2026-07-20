@@ -247,6 +247,9 @@ export const ru = {
       fields: {
         username: 'Username',
         usernamePlaceholder: 'Введите username',
+        emailOptional: 'Электронная почта (необязательно)',
+        emailPlaceholder: 'Введите адрес электронной почты',
+        emailHint: 'Подтвердите адрес, прежде чем использовать его для восстановления пароля.',
         password: 'Password',
         passwordPlaceholder: 'Введите password',
         confirmPassword: 'Подтвердите password',
@@ -263,13 +266,13 @@ export const ru = {
         title: 'Вход пользователя',
         description: 'Войдите, чтобы управлять клиентскими ключами и безопасностью аккаунта.',
         action: 'Войти',
+        forgotPassword: 'Забыли пароль?',
         switchPrompt: 'Нет аккаунта?',
         switchAction: 'Создать',
       },
       register: {
         title: 'Регистрация пользователя',
-        description:
-          'Создайте аккаунт Home. Платежи, email verification и восстановление password не входят в первый scope Home.',
+        description: 'Создайте аккаунт Home и перейдите в личную рабочую область.',
         action: 'Зарегистрироваться',
         switchPrompt: 'Уже есть аккаунт?',
         switchAction: 'Войти',
@@ -284,6 +287,78 @@ export const ru = {
         passwordRequired: 'Password обязателен.',
         passwordMismatch: 'Passwords не совпадают.',
         totpRequired: 'TOTP код обязателен.',
+      },
+    },
+    userRecovery: {
+      backToLogin: 'Назад ко входу',
+      actions: {
+        retry: 'Повторить',
+        returnToLogin: 'Вернуться ко входу',
+        returnToWorkspace: 'Вернуться в рабочую область',
+        tryAnother: 'Отправить еще один запрос',
+        requestNewLink: 'Запросить новую ссылку',
+      },
+      capabilities: {
+        loading: 'Загрузка восстановления пароля...',
+        loadError: 'Восстановление пароля временно недоступно. Повторите попытку позже.',
+        disabled: 'На этом сервере Home восстановление пароля не настроено.',
+        legacy: 'Эта версия Home не поддерживает восстановление пароля.',
+      },
+      forgot: {
+        title: 'Восстановление пароля',
+        description:
+          'Введите подтвержденный адрес аккаунта. Результат намеренно одинаков для любого адреса.',
+        email: 'Адрес электронной почты',
+        emailPlaceholder: 'name@example.com',
+        action: 'Отправить инструкции',
+        acceptedTitle: 'Запрос принят',
+        acceptedDescription:
+          'Если подходящий аккаунт найден, инструкции по сбросу пароля будут отправлены. Проверьте входящие и спам.',
+        validation: {
+          emailRequired: 'Укажите адрес электронной почты.',
+        },
+      },
+      reset: {
+        title: 'Новый пароль',
+        description: 'После сброса защита TOTP и Passkey останется включенной.',
+        newPassword: 'Новый пароль',
+        newPasswordPlaceholder: 'Введите новый пароль',
+        confirmPassword: 'Подтвердите новый пароль',
+        confirmPasswordPlaceholder: 'Введите новый пароль еще раз',
+        action: 'Обновить пароль',
+        successTitle: 'Пароль обновлен',
+        successDescription:
+          'Существующие пользовательские сессии завершены. Войдите снова; аккаунт по-прежнему может запросить TOTP или Passkey.',
+        validation: {
+          passwordRequired: 'Новый пароль обязателен.',
+          passwordMismatch: 'Новые пароли не совпадают.',
+        },
+      },
+      verify: {
+        title: 'Подтверждение электронной почты',
+        description: 'Подтвердите адрес, прежде чем использовать его для восстановления пароля.',
+        confirmation: 'Подтвердить адрес, связанный с этим одноразовым запросом?',
+        action: 'Подтвердить адрес',
+        successTitle: 'Адрес подтвержден',
+        successDescription:
+          'Теперь этот адрес можно использовать для восстановления пароля, пока отправка писем включена.',
+      },
+      token: {
+        capturing: 'Защищаем ссылку...',
+        invalidReset: 'Ссылка сброса отсутствует, недействительна, истекла или уже использована.',
+        invalidVerify:
+          'Ссылка подтверждения отсутствует, недействительна, истекла или уже использована.',
+      },
+      errors: {
+        network: 'Не удалось подключиться к Home. Проверьте соединение и повторите попытку.',
+        invalidEmail: 'Введите корректный адрес электронной почты.',
+        emailUnavailable: 'Этот адрес электронной почты нельзя использовать.',
+        featureUnavailable:
+          'На этом сервере Home подтверждение адреса и восстановление недоступны.',
+        rateLimited: 'Подождите перед повторным запросом письма.',
+        emailNotConfigured: 'Сначала добавьте адрес электронной почты.',
+        invalidToken: 'Ссылка недействительна или истекла.',
+        generic: 'Не удалось выполнить операцию безопасности. Повторите попытку.',
       },
     },
     userWorkspace: {
@@ -392,15 +467,40 @@ export const ru = {
       },
       security: {
         title: 'Безопасность аккаунта',
-        description: 'Смените login password, привяжите TOTP или добавьте Passkey.',
+        description: 'Управляйте адресом восстановления, паролем, TOTP и Passkey.',
         password: {
           title: 'Смена password',
-          description: 'При следующем входе используйте новый password.',
+          description:
+            'Смена пароля завершает другие пользовательские сессии. Этот браузер получит новую сессию.',
           newPassword: 'Новый password',
           newPasswordPlaceholder: 'Введите новый password',
           confirmPassword: 'Подтвердите password',
           confirmPasswordPlaceholder: 'Введите новый password еще раз',
           action: 'Обновить password',
+        },
+        email: {
+          title: 'Адрес восстановления',
+          description: 'На подтвержденный адрес можно отправлять инструкции по сбросу пароля.',
+          verified: 'Подтвержден',
+          unverified: 'Не подтвержден',
+          notConfigured: 'Не настроен',
+          loadingCapability: 'Проверяем поддержку электронной почты...',
+          capabilityError: 'Не удалось проверить поддержку электронной почты.',
+          disabled: 'На этом сервере Home подтверждение адреса и восстановление отключены.',
+          legacy: 'Эта версия Home не поддерживает подтверждение адреса и восстановление.',
+          current: 'Сохраненный адрес: {{email}}',
+          changeLabel: 'Новый адрес электронной почты',
+          addLabel: 'Адрес электронной почты',
+          placeholder: 'name@example.com',
+          saveHint: 'Сохранение сбросит прежнее подтверждение и запросит новое письмо.',
+          save: 'Сохранить адрес',
+          verifiedDescription: 'Этот адрес готов к восстановлению пароля.',
+          unverifiedDescription:
+            'Подтвердите адрес, прежде чем использовать его для восстановления.',
+          emptyDescription: 'Добавьте адрес для самостоятельного восстановления пароля.',
+          resend: 'Отправить письмо повторно',
+          change: 'Изменить адрес',
+          add: 'Добавить адрес',
         },
         totp: {
           title: 'TOTP two-step verification',
@@ -436,6 +536,7 @@ export const ru = {
           passwordMismatch: 'Новые passwords не совпадают.',
           totpSetupRequired: 'Сначала покажите или regenerate TOTP setup.',
           totpCodeRequired: 'TOTP code обязателен.',
+          emailRequired: 'Адрес электронной почты обязателен.',
         },
         delete: {
           title: 'Удалить security setting?',
@@ -454,6 +555,9 @@ export const ru = {
         totpDeleted: 'TOTP удален.',
         passkeyCreated: 'Passkey добавлен.',
         passkeyDeleted: 'Passkey удален.',
+        emailUpdated: 'Адрес сохранен.',
+        emailUpdatedAndSent: 'Адрес сохранен, письмо подтверждения запрошено.',
+        emailVerificationSent: 'Письмо подтверждения запрошено.',
       },
     },
     billingPage: {

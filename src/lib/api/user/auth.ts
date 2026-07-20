@@ -9,9 +9,17 @@ export type UserAccount = {
   totpEnabled: boolean
   passkeyCount: number
   passkeys: UserPasskeyResource[]
+  emailStatus: UserEmailStatus
   createdAt: string | null
   updatedAt: string | null
   raw: unknown
+}
+
+export type UserEmailStatus = {
+  configured: boolean
+  verified: boolean
+  masked: string
+  recoveryReady: boolean
 }
 
 export type UserPasskeyResource = {
@@ -31,6 +39,10 @@ export type UserAuthSession = {
 export type UserAuthInput = {
   username: string
   password: string
+}
+
+export type UserRegistrationInput = UserAuthInput & {
+  email?: string
 }
 
 export type UserTotpLoginInput = UserAuthInput & {
@@ -77,6 +89,17 @@ function normalizeUserPasskey(value: unknown): UserPasskeyResource {
   }
 }
 
+function normalizeUserEmailStatus(value: unknown): UserEmailStatus {
+  const record = isRecord(value) ? value : {}
+
+  return {
+    configured: readBoolean(record, ['configured']),
+    verified: readBoolean(record, ['verified']),
+    masked: readString(record, ['masked']) ?? '',
+    recoveryReady: readBoolean(record, ['recovery_ready', 'recoveryReady']),
+  }
+}
+
 export function normalizeUserPasskeys(value: unknown): UserPasskeyResource[] {
   if (Array.isArray(value)) {
     return value.map(normalizeUserPasskey).filter((passkey) => passkey.id)
@@ -105,13 +128,14 @@ export function normalizeUserAccount(value: unknown): UserAccount {
     totpEnabled: readBoolean(record, ['totp_enabled', 'totpEnabled']),
     passkeyCount: readNumber(record, ['passkey_count', 'passkeyCount']) ?? passkeys.length,
     passkeys,
+    emailStatus: normalizeUserEmailStatus(record.email_status ?? record.emailStatus),
     createdAt: readString(record, ['created_at', 'createdAt']),
     updatedAt: readString(record, ['updated_at', 'updatedAt']),
     raw: value,
   }
 }
 
-function normalizeAuthSession(value: unknown): UserAuthSession {
+export function normalizeUserAuthSession(value: unknown): UserAuthSession {
   const record = isRecord(value) ? value : {}
   const token = readString(record, ['token'])
   const expiresAt = readString(record, ['expires_at', 'expiresAt'])
@@ -129,18 +153,20 @@ function normalizeAuthSession(value: unknown): UserAuthSession {
 }
 
 export async function registerUser(
-  input: UserAuthInput,
+  input: UserRegistrationInput,
   session: UserSessionInput = {},
 ): Promise<UserAuthSession> {
   const client = createUserClient(session)
 
   try {
+    const email = input.email?.trim()
     const response = await client.post<unknown>('/register', {
       username: input.username.trim(),
       password: input.password,
+      email: email || undefined,
     })
 
-    return normalizeAuthSession(response.data)
+    return normalizeUserAuthSession(response.data)
   } catch (error) {
     throw toUserApiError(error)
   }
@@ -158,7 +184,7 @@ export async function loginUser(
       password: input.password,
     })
 
-    return normalizeAuthSession(response.data)
+    return normalizeUserAuthSession(response.data)
   } catch (error) {
     throw toUserApiError(error)
   }
@@ -196,7 +222,7 @@ export async function loginUserWithTotp(
       totp_code: input.totpCode.trim(),
     })
 
-    return normalizeAuthSession(response.data)
+    return normalizeUserAuthSession(response.data)
   } catch (error) {
     throw toUserApiError(error)
   }

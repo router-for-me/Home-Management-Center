@@ -1,14 +1,17 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
 
 import {
   ArrowLeft,
+  BadgeCheck,
+  CircleAlert,
   Copy,
   Edit3,
   KeyRound,
   Loader2,
   LogOut,
+  Mail,
   Plus,
   RefreshCcw,
   ShieldCheck,
@@ -51,12 +54,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { UserApiKeyInput, UserApiKeyResource } from '@/lib/api/user/api-keys'
-import type { UserPasskeyResource } from '@/lib/api/user/auth'
+import type { UserEmailStatus, UserPasskeyResource } from '@/lib/api/user/auth'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 import { useUserWorkspace } from './use-user-workspace'
 import { UserBillingReport } from './user-billing-report'
+import { userSecurityErrorMessage } from './user-security-errors'
 
 type KeySheetMode = { type: 'create' } | { type: 'edit'; resource: UserApiKeyResource }
 type SecurityDeleteTarget = { type: 'totp' } | { type: 'passkey'; passkey: UserPasskeyResource }
@@ -262,12 +266,21 @@ function SecurityPanel({
   passkeys,
   passkeyCreating,
   passkeyDeleting,
+  emailStatus,
+  emailCapability,
+  emailCapabilityLoading,
+  emailCapabilityError,
+  emailUpdating,
+  emailVerificationRequesting,
   onShowTotp,
   onBindTotp,
   onDeleteTotp,
   onChangePassword,
   onCreatePasskey,
   onDeletePasskey,
+  onRefreshEmailCapability,
+  onUpdateEmail,
+  onRequestEmailVerification,
 }: {
   totpEnabled: boolean
   passkeyCount: number
@@ -279,24 +292,41 @@ function SecurityPanel({
   passkeys: UserPasskeyResource[]
   passkeyCreating: boolean
   passkeyDeleting: boolean
+  emailStatus: UserEmailStatus
+  emailCapability: ReturnType<typeof useUserWorkspace>['userCapabilities']
+  emailCapabilityLoading: boolean
+  emailCapabilityError: string | null
+  emailUpdating: boolean
+  emailVerificationRequesting: boolean
   onShowTotp: (regenerate?: boolean) => Promise<void>
   onBindTotp: (input: { secret: string; code: string; issuer?: string }) => Promise<unknown>
   onDeleteTotp: () => Promise<unknown>
   onChangePassword: (input: { newPassword: string }) => Promise<unknown>
   onCreatePasskey: (input: { name?: string }) => Promise<unknown>
   onDeletePasskey: (passkey: UserPasskeyResource) => Promise<unknown>
+  onRefreshEmailCapability: () => Promise<unknown>
+  onUpdateEmail: (email: string) => Promise<unknown>
+  onRequestEmailVerification: () => Promise<unknown>
 }) {
   const { t } = useTranslation()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [passkeyName, setPasskeyName] = useState('')
+  const [emailDraft, setEmailDraft] = useState('')
+  const [emailEditing, setEmailEditing] = useState(false)
   const [totpAction, setTotpAction] = useState<'show' | 'regenerate' | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const securityErrorRef = useRef<HTMLDivElement>(null)
   const [pendingSecurityDelete, setPendingSecurityDelete] = useState<SecurityDeleteTarget | null>(
     null,
   )
   const securityDeleting = totpDeleting || passkeyDeleting
+  const emailMutating = emailUpdating || emailVerificationRequesting
+
+  useEffect(() => {
+    if (localError) securityErrorRef.current?.focus()
+  }, [localError])
 
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -371,6 +401,41 @@ function SecurityPanel({
     }
   }
 
+  const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const email = emailDraft.trim()
+    if (!email) {
+      setLocalError(t('userWorkspace.security.validation.emailRequired'))
+      return
+    }
+
+    try {
+      setLocalError(null)
+      await onUpdateEmail(email)
+      setEmailDraft('')
+      setEmailEditing(false)
+      try {
+        await onRequestEmailVerification()
+        toast.success(t('userWorkspace.toast.emailUpdatedAndSent'))
+      } catch (requestError) {
+        toast.success(t('userWorkspace.toast.emailUpdated'))
+        setLocalError(userSecurityErrorMessage(t, requestError))
+      }
+    } catch (requestError) {
+      setLocalError(userSecurityErrorMessage(t, requestError))
+    }
+  }
+
+  const handleEmailVerification = async () => {
+    try {
+      setLocalError(null)
+      await onRequestEmailVerification()
+      toast.success(t('userWorkspace.toast.emailVerificationSent'))
+    } catch (requestError) {
+      setLocalError(userSecurityErrorMessage(t, requestError))
+    }
+  }
+
   const handleSecurityDelete = async () => {
     if (!pendingSecurityDelete) return
 
@@ -402,6 +467,18 @@ function SecurityPanel({
           </p>
         </div>
       </div>
+
+      {localError ? (
+        <div
+          ref={securityErrorRef}
+          role="alert"
+          aria-live="assertive"
+          tabIndex={-1}
+          className="border-destructive/30 bg-destructive/10 text-destructive mx-4 mt-4 rounded-md border px-3 py-2 text-sm outline-none"
+        >
+          {localError}
+        </div>
+      ) : null}
 
       <div className="grid gap-0 md:grid-cols-2">
         <form
@@ -537,6 +614,168 @@ function SecurityPanel({
       </div>
 
       <div className="grid gap-4 border-t p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="bg-info/10 text-info flex size-9 shrink-0 items-center justify-center rounded-md">
+              <Mail className="size-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold">{t('userWorkspace.security.email.title')}</h3>
+              <p className="text-muted-foreground mt-1 text-sm leading-6">
+                {t('userWorkspace.security.email.description')}
+              </p>
+            </div>
+          </div>
+          {!emailCapabilityLoading && !emailCapabilityError ? (
+            <span
+              className={
+                emailStatus.verified
+                  ? 'border-success/30 bg-success/10 text-success-foreground w-fit rounded-md border px-2 py-1 text-xs font-medium'
+                  : emailStatus.configured
+                    ? 'border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning w-fit rounded-md border px-2 py-1 text-xs font-medium'
+                    : 'border-info/25 bg-info/10 text-info w-fit rounded-md border px-2 py-1 text-xs font-medium'
+              }
+            >
+              {emailStatus.verified
+                ? t('userWorkspace.security.email.verified')
+                : emailStatus.configured
+                  ? t('userWorkspace.security.email.unverified')
+                  : t('userWorkspace.security.email.notConfigured')}
+            </span>
+          ) : null}
+        </div>
+
+        {emailCapabilityLoading ? (
+          <div className="text-muted-foreground flex items-center gap-2 text-sm" role="status">
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            {t('userWorkspace.security.email.loadingCapability')}
+          </div>
+        ) : emailCapabilityError ? (
+          <div className="grid gap-3">
+            <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>{t('userWorkspace.security.email.capabilityError')}</span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-fit"
+              onClick={() => void onRefreshEmailCapability()}
+            >
+              <RefreshCcw className="size-4" aria-hidden="true" />
+              {t('userRecovery.actions.retry')}
+            </Button>
+          </div>
+        ) : !emailCapability?.emailVerification ? (
+          <div className="border-border bg-muted/40 flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
+            <CircleAlert
+              className="text-muted-foreground mt-0.5 size-4 shrink-0"
+              aria-hidden="true"
+            />
+            <div>
+              <p>
+                {emailCapability?.endpointSupported
+                  ? t('userWorkspace.security.email.disabled')
+                  : t('userWorkspace.security.email.legacy')}
+              </p>
+              {emailStatus.configured && emailStatus.masked ? (
+                <p className="text-muted-foreground mt-1">
+                  {t('userWorkspace.security.email.current', {
+                    email: emailStatus.masked,
+                  })}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : emailEditing ? (
+          <form
+            className="grid gap-3 md:max-w-2xl md:grid-cols-[minmax(0,1fr)_auto]"
+            onSubmit={(event) => void handleEmailSubmit(event)}
+          >
+            <label className="grid gap-2 text-sm font-medium md:col-span-2">
+              <span>
+                {emailStatus.configured
+                  ? t('userWorkspace.security.email.changeLabel')
+                  : t('userWorkspace.security.email.addLabel')}
+              </span>
+              <Input
+                type="email"
+                value={emailDraft}
+                autoComplete="email"
+                disabled={emailMutating}
+                placeholder={t('userWorkspace.security.email.placeholder')}
+                onChange={(event) => setEmailDraft(event.target.value)}
+              />
+              <span className="text-muted-foreground text-xs leading-5">
+                {t('userWorkspace.security.email.saveHint')}
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2 md:col-span-2">
+              <Button type="submit" disabled={emailMutating}>
+                {emailMutating ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                {t('userWorkspace.security.email.save')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={emailMutating}
+                onClick={() => {
+                  setEmailDraft('')
+                  setEmailEditing(false)
+                }}
+              >
+                {t('common.cancel')}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              {emailStatus.configured && emailStatus.masked ? (
+                <p className="font-medium break-all">{emailStatus.masked}</p>
+              ) : null}
+              <p className="text-muted-foreground text-sm leading-6">
+                {emailStatus.verified
+                  ? t('userWorkspace.security.email.verifiedDescription')
+                  : emailStatus.configured
+                    ? t('userWorkspace.security.email.unverifiedDescription')
+                    : t('userWorkspace.security.email.emptyDescription')}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              {emailStatus.configured && !emailStatus.verified ? (
+                <Button
+                  type="button"
+                  disabled={emailMutating}
+                  onClick={() => void handleEmailVerification()}
+                >
+                  {emailVerificationRequesting ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Mail className="size-4" aria-hidden="true" />
+                  )}
+                  {t('userWorkspace.security.email.resend')}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant={emailStatus.configured ? 'outline' : 'default'}
+                disabled={emailMutating}
+                onClick={() => setEmailEditing(true)}
+              >
+                {emailStatus.verified ? <BadgeCheck className="size-4" aria-hidden="true" /> : null}
+                {emailStatus.configured
+                  ? t('userWorkspace.security.email.change')
+                  : t('userWorkspace.security.email.add')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 border-t p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h3 className="text-sm font-semibold">{t('userWorkspace.security.passkey.title')}</h3>
@@ -624,12 +863,6 @@ function SecurityPanel({
           </Button>
         </div>
       </div>
-
-      {localError ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive mx-4 mb-4 rounded-md border px-3 py-2 text-sm">
-          {localError}
-        </div>
-      ) : null}
 
       <AlertDialog
         open={Boolean(pendingSecurityDelete)}
@@ -825,6 +1058,12 @@ export function UserWorkspacePage() {
               passkeys={workbench.passkeys}
               passkeyCreating={workbench.passkeyCreating}
               passkeyDeleting={workbench.passkeyDeleting}
+              emailStatus={user.emailStatus}
+              emailCapability={workbench.userCapabilities}
+              emailCapabilityLoading={workbench.userCapabilitiesLoading}
+              emailCapabilityError={workbench.userCapabilitiesError}
+              emailUpdating={workbench.emailUpdating}
+              emailVerificationRequesting={workbench.emailVerificationRequesting}
               onShowTotp={async (regenerate) => {
                 await workbench.showTotpSetup({ regenerate })
               }}
@@ -833,6 +1072,11 @@ export function UserWorkspacePage() {
               onChangePassword={workbench.changePassword}
               onCreatePasskey={workbench.createPasskey}
               onDeletePasskey={workbench.deletePasskey}
+              onRefreshEmailCapability={async () => {
+                await workbench.refreshUserCapabilities()
+              }}
+              onUpdateEmail={workbench.updateEmail}
+              onRequestEmailVerification={workbench.requestEmailVerification}
             />
           </div>
         )}

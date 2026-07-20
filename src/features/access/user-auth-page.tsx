@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Link, useNavigate } from '@tanstack/react-router'
 
@@ -15,6 +15,9 @@ import { loginUserWithBrowserPasskey } from '@/lib/api/user/passkeys'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
+import { useUserCapabilities } from './use-user-capabilities'
+import { userSecurityErrorMessage } from './user-security-errors'
+
 type UserAuthPageProps = {
   mode: 'login' | 'register'
 }
@@ -25,6 +28,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const status = useUserSessionStore((state) => state.status)
+  const baseUrl = useUserSessionStore((state) => state.baseUrl)
   const rememberSession = useUserSessionStore((state) => state.rememberSession)
   const setChecking = useUserSessionStore((state) => state.setChecking)
   const setAuthenticated = useUserSessionStore((state) => state.setAuthenticated)
@@ -34,11 +38,18 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [email, setEmail] = useState('')
   const [totpCode, setTotpCode] = useState('')
   const [remember, setRemember] = useState(rememberSession)
   const [step, setStep] = useState<AuthStep>('password')
   const [localError, setLocalError] = useState<string | null>(null)
+  const errorRef = useRef<HTMLDivElement>(null)
+  const capabilities = useUserCapabilities()
   const checking = status === 'checking'
+
+  useEffect(() => {
+    if (localError) errorRef.current?.focus()
+  }, [localError])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -69,18 +80,21 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
       setChecking()
       const session =
         mode === 'register'
-          ? await registerUser({ username: trimmedUsername, password })
+          ? await registerUser({ username: trimmedUsername, password, email }, { baseUrl })
           : step === 'passkey'
-            ? await loginUserWithBrowserPasskey(trimmedUsername)
+            ? await loginUserWithBrowserPasskey(trimmedUsername, { baseUrl })
             : step === 'totp'
-              ? await loginUserWithTotp({
-                  username: trimmedUsername,
-                  password,
-                  totpCode,
-                })
-              : await loginUser({ username: trimmedUsername, password })
+              ? await loginUserWithTotp(
+                  {
+                    username: trimmedUsername,
+                    password,
+                    totpCode,
+                  },
+                  { baseUrl },
+                )
+              : await loginUser({ username: trimmedUsername, password }, { baseUrl })
 
-      setAuthenticated(session, remember)
+      setAuthenticated(session, remember, baseUrl)
       await navigate({ to: '/user/workspace' })
     } catch (error) {
       if (isUserApiError(error) && mode === 'login') {
@@ -99,11 +113,19 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
         }
       }
 
-      const message = isUserApiError(error)
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : String(error)
+      const emailErrorCodes = new Set([
+        'invalid_email',
+        'email_unavailable',
+        'email_feature_unavailable',
+      ])
+      const message =
+        isUserApiError(error) && emailErrorCodes.has(error.code)
+          ? userSecurityErrorMessage(t, error)
+          : isUserApiError(error)
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : String(error)
 
       setError(message)
       setLocalError(message)
@@ -156,9 +178,34 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                   onChange={(event) => setUsername(event.target.value)}
                 />
               </label>
+              {mode === 'register' && capabilities.data?.emailRegistration ? (
+                <label className="grid gap-2 text-sm font-medium">
+                  <span>{t('userAccess.fields.emailOptional')}</span>
+                  <Input
+                    type="email"
+                    value={email}
+                    autoComplete="email"
+                    placeholder={t('userAccess.fields.emailPlaceholder')}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                  <span className="text-muted-foreground text-xs leading-5">
+                    {t('userAccess.fields.emailHint')}
+                  </span>
+                </label>
+              ) : null}
               {step !== 'passkey' ? (
                 <label className="grid gap-2 text-sm font-medium">
-                  <span>{t('userAccess.fields.password')}</span>
+                  <span className="flex items-center justify-between gap-3">
+                    <span>{t('userAccess.fields.password')}</span>
+                    {mode === 'login' && step === 'password' ? (
+                      <Link
+                        to="/user/forgot-password"
+                        className="text-primary focus-visible:ring-ring/50 rounded-sm text-xs font-medium outline-none hover:underline focus-visible:ring-3"
+                      >
+                        {t('userAccess.login.forgotPassword')}
+                      </Link>
+                    ) : null}
+                  </span>
                   <Input
                     type="password"
                     value={password}
@@ -207,7 +254,13 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 </span>
               </label>
               {localError ? (
-                <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+                <div
+                  ref={errorRef}
+                  role="alert"
+                  aria-live="assertive"
+                  tabIndex={-1}
+                  className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm outline-none"
+                >
                   {localError}
                 </div>
               ) : null}

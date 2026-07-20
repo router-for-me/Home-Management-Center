@@ -9,10 +9,16 @@ export type UserSessionInput = {
   token?: string | null
 }
 
-export type UserApiError = {
-  message: string
-  status?: number
-  code: string
+export class UserApiError extends Error {
+  readonly status?: number
+  readonly code: string
+
+  constructor(message: string, code: string, status?: number) {
+    super(message)
+    this.name = 'UserApiError'
+    this.code = code
+    this.status = status
+  }
 }
 
 export function isUserApiError(error: unknown): error is UserApiError {
@@ -77,11 +83,10 @@ export function createUserClient({ baseUrl, token }: UserSessionInput = {}): Axi
 }
 
 export function toUserApiError(error: unknown): UserApiError {
+  if (error instanceof UserApiError) return error
+
   if (error instanceof TypeError || error instanceof DOMException) {
-    return {
-      message: error.message,
-      code: 'network',
-    }
+    return new UserApiError(error.message, 'network')
   }
 
   if (axios.isAxiosError(error)) {
@@ -90,22 +95,16 @@ export function toUserApiError(error: unknown): UserApiError {
     const responseCode = axiosError.response?.data?.error
     const responseMessage = axiosError.response?.data?.message
 
-    return {
-      message: responseMessage ?? responseCode ?? axiosError.message,
+    return new UserApiError(
+      responseMessage ?? responseCode ?? axiosError.message,
+      responseCode ?? (status ? 'unknown' : 'network'),
       status,
-      code: responseCode ?? (status ? 'unknown' : 'network'),
-    }
+    )
   }
 
   if (error instanceof Error) {
-    return {
-      message: error.message,
-      code: 'unknown',
-    }
+    return new UserApiError(error.message, 'unknown')
   }
 
-  return {
-    message: String(error),
-    code: 'unknown',
-  }
+  return new UserApiError(String(error), 'unknown')
 }
