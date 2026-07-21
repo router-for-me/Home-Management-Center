@@ -41,6 +41,7 @@ const noCapabilities: CapabilityMap = {
   oauthUsage: false,
   quotaSnapshots: false,
   quotaSnapshotDetails: false,
+  quotaRecollect: false,
   logs: false,
   requestErrorLogs: false,
   users: false,

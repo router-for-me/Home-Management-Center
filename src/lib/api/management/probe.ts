@@ -29,6 +29,7 @@ const capabilityRequests: Record<
     | 'quotaSnapshotDetails'
     | 'credentialInFlight'
     | 'credentialConcurrencyLimits'
+    | 'quotaRecollect'
   >,
   {
     path: string
@@ -93,6 +94,7 @@ const emptyCapabilities: CapabilityMap = {
   oauthUsage: false,
   quotaSnapshots: false,
   quotaSnapshotDetails: false,
+  quotaRecollect: false,
   logs: false,
   requestErrorLogs: false,
   users: false,
@@ -295,6 +297,15 @@ function readDeclaredQuotaSnapshotDetailsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['quota_snapshot_details', 'quotaSnapshotDetails'])
 }
 
+function readDeclaredQuotaRecollectCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'quota_recollect',
+    'quotaRecollect',
+    'quota_collect',
+    'quotaCollect',
+  ])
+}
+
 function readDeclaredLogsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['logs', 'runtime_logs', 'runtimeLogs'])
 }
@@ -487,6 +498,9 @@ export async function probeManagementRuntime(
   const declaredQuotaSnapshotDetails = capabilitiesPayload
     ? readDeclaredQuotaSnapshotDetailsCapability(capabilitySource)
     : null
+  const declaredQuotaRecollect = capabilitiesPayload
+    ? readDeclaredQuotaRecollectCapability(capabilitySource)
+    : null
   const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
@@ -557,6 +571,7 @@ export async function probeManagementRuntime(
     oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
     quotaSnapshots: declaredQuotaSnapshots ?? false,
     quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? false,
+    quotaRecollect: declaredQuotaRecollect ?? false,
     users: declaredUsers ?? probedCapabilities.users,
     userPeriodLimits: declaredUserPeriodLimits ?? probedCapabilities.userPeriodLimits,
     usageQueue: false,

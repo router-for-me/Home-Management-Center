@@ -1,20 +1,13 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-import { normalizeQuotaRouteSearch } from '@/features/quota/quota-model'
-import { QuotaWorkbenchPage } from '@/features/quota/quota-workbench-page'
+import { Navigate, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/quota')({
-  component: QuotaPage,
-  validateSearch: normalizeQuotaRouteSearch,
+  component: QuotaRedirect,
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === 'string' && search.q.trim() ? search.q.trim() : undefined,
+  }),
 })
 
-function QuotaPage() {
+function QuotaRedirect() {
   const search = Route.useSearch()
-  const navigate = Route.useNavigate()
-  return (
-    <QuotaWorkbenchPage
-      initialSearch={search.q}
-      onSearchChange={(q) => void navigate({ search: { q: q.trim() || undefined }, replace: true })}
-    />
-  )
+  return <Navigate to="/admin/upstream" search={{ tab: 'accounts', q: search.q }} replace />
 }

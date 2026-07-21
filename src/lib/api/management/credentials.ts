@@ -10,7 +10,8 @@ export type CredentialStatusFilter = 'all' | 'active' | 'disabled' | 'unavailabl
 export type CredentialMetadataInput = {
   prefix: string
   proxyUrl: string
-  priority: string
+  // An empty string leaves priority unchanged; null clears it back to unset.
+  priority: string | null
   note: string
   websockets?: boolean
   maxInFlight?: number | null
@@ -337,12 +338,15 @@ function normalizeCredentialProvider(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? ''
 }
 
-export function isCodexCredentialResource(resource: Pick<CredentialResource, 'provider' | 'type'>) {
-  return (
-    normalizeCredentialProvider(resource.provider) === 'codex' ||
-    normalizeCredentialProvider(resource.provider) === 'codex-api-key' ||
-    normalizeCredentialProvider(resource.type) === 'codex' ||
-    normalizeCredentialProvider(resource.type) === 'codex-api-key'
+// WebSocket metadata is writable for Codex and xAI (Grok) credentials. Keep this in
+// sync with the backend auth-files field whitelist; other providers ignore the field.
+export function supportsCredentialWebsockets(
+  resource: Pick<CredentialResource, 'provider' | 'type'>,
+) {
+  const candidates = [resource.provider, resource.type].map(normalizeCredentialProvider)
+  return candidates.some(
+    (value) =>
+      value === 'codex' || value === 'codex-api-key' || value === 'xai' || value === 'xai-api-key',
   )
 }
 
@@ -591,12 +595,16 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     note: input.note.trim(),
   }
 
-  const priority = Number(input.priority)
-  if (input.priority.trim() && Number.isFinite(priority)) {
-    payload.priority = priority
+  if (input.priority === null) {
+    payload.priority = null
+  } else {
+    const priority = Number(input.priority)
+    if (input.priority.trim() && Number.isFinite(priority)) {
+      payload.priority = priority
+    }
   }
 
-  if (isCodexCredentialResource(resource) && typeof input.websockets === 'boolean') {
+  if (supportsCredentialWebsockets(resource) && typeof input.websockets === 'boolean') {
     payload.websockets = input.websockets
   }
 

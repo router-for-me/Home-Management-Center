@@ -292,16 +292,7 @@ function getRuntimeLogLevel(record: RuntimeLogRecord) {
   return match?.[1]?.toLowerCase() ?? null
 }
 
-export function downloadBlob(blob: Blob, fileName: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.append(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
-}
+export { downloadBlob } from '@/lib/download'
 
 export function isFileLoggingDisabledError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
