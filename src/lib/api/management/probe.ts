@@ -61,6 +61,12 @@ const capabilityRequests: Record<
   users: {
     path: '/users',
   },
+  userPeriodLimits: {
+    // Fallback for Home builds that expose the routes but predate the
+    // user_period_limits capability declaration: those answer 400 for the
+    // invalid id, older builds without the routes answer 404.
+    path: '/users/0/period-limits',
+  },
   accessGroups: {
     path: '/channel-groups',
   },
@@ -90,6 +96,7 @@ const emptyCapabilities: CapabilityMap = {
   logs: false,
   requestErrorLogs: false,
   users: false,
+  userPeriodLimits: false,
   accessGroups: false,
   credentialInFlight: false,
   credentialConcurrencyLimits: false,
@@ -304,6 +311,15 @@ function readDeclaredUsersCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['users', 'user_management', 'userManagement'])
 }
 
+function readDeclaredUserPeriodLimitsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'user_period_limits',
+    'userPeriodLimits',
+    'period_limits',
+    'periodLimits',
+  ])
+}
+
 function readDeclaredAccessGroupsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, [
     'access_groups',
@@ -476,6 +492,9 @@ export async function probeManagementRuntime(
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
     : null
   const declaredUsers = capabilitiesPayload ? readDeclaredUsersCapability(capabilitySource) : null
+  const declaredUserPeriodLimits = capabilitiesPayload
+    ? readDeclaredUserPeriodLimitsCapability(capabilitySource)
+    : null
   const declaredAccessGroups = capabilitiesPayload
     ? readDeclaredAccessGroupsCapability(capabilitySource)
     : null
@@ -493,6 +512,7 @@ export async function probeManagementRuntime(
         ...(declaredRequestEvents === null ? (['requestEvents'] as const) : []),
         ...(declaredRequestEventFilters === null ? (['requestEventFilters'] as const) : []),
         'users',
+        ...(declaredUserPeriodLimits === null ? (['userPeriodLimits'] as const) : []),
         'accessGroups',
       ]
     : (Object.keys(capabilityRequests) as ProbedCapabilityKey[])
@@ -538,6 +558,7 @@ export async function probeManagementRuntime(
     quotaSnapshots: declaredQuotaSnapshots ?? false,
     quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? false,
     users: declaredUsers ?? probedCapabilities.users,
+    userPeriodLimits: declaredUserPeriodLimits ?? probedCapabilities.userPeriodLimits,
     usageQueue: false,
     // GET /logs returns 400 when file logging is disabled, so probing it would create
     // console noise. Standalone runtimes that expose usage routes also expose the log
