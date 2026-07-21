@@ -247,6 +247,9 @@ export const en = {
       fields: {
         username: 'Username',
         usernamePlaceholder: 'Enter username',
+        emailOptional: 'Email (optional)',
+        emailPlaceholder: 'Enter email address',
+        emailHint: 'Verify this address before using it for password recovery.',
         password: 'Password',
         passwordPlaceholder: 'Enter password',
         confirmPassword: 'Confirm password',
@@ -262,13 +265,13 @@ export const en = {
         title: 'User login',
         description: 'Sign in to manage your client access keys and account security.',
         action: 'Log in',
+        forgotPassword: 'Forgot password?',
         switchPrompt: 'No account yet?',
         switchAction: 'Create one',
       },
       register: {
         title: 'User registration',
-        description:
-          'Create a Home user account. Payments, email verification, and password recovery are outside the first Home scope.',
+        description: 'Create a Home user account and continue to your personal workspace.',
         action: 'Register',
         switchPrompt: 'Already have an account?',
         switchAction: 'Log in',
@@ -284,6 +287,79 @@ export const en = {
         passwordRequired: 'Password is required.',
         passwordMismatch: 'The two passwords do not match.',
         totpRequired: 'TOTP code is required.',
+      },
+    },
+    userRecovery: {
+      backToLogin: 'Back to login',
+      actions: {
+        retry: 'Retry',
+        returnToLogin: 'Return to login',
+        returnToWorkspace: 'Return to workspace',
+        tryAnother: 'Submit another request',
+        requestNewLink: 'Request a new link',
+      },
+      capabilities: {
+        loading: 'Loading password recovery...',
+        loadError: 'Password recovery is temporarily unavailable. Try again shortly.',
+        disabled: 'Password recovery is not configured on this Home server.',
+        legacy: 'This Home version does not expose password recovery.',
+      },
+      forgot: {
+        title: 'Forgot password',
+        description:
+          'Enter the verified email for your account. The confirmation is intentionally the same for every address.',
+        email: 'Email address',
+        emailPlaceholder: 'name@example.com',
+        action: 'Send recovery instructions',
+        acceptedTitle: 'Request accepted',
+        acceptedDescription:
+          'If an eligible account matches, password reset instructions will be sent. Check your inbox and spam folder.',
+        validation: {
+          emailRequired: 'Email address is required.',
+        },
+      },
+      reset: {
+        title: 'Set a new password',
+        description:
+          'Choose a new password. TOTP and Passkey protections remain enabled after the reset.',
+        newPassword: 'New password',
+        newPasswordPlaceholder: 'Enter new password',
+        confirmPassword: 'Confirm new password',
+        confirmPasswordPlaceholder: 'Enter new password again',
+        action: 'Update password',
+        successTitle: 'Password updated',
+        successDescription:
+          'Existing user sessions were signed out. Log in again; this account may still require TOTP or a Passkey.',
+        validation: {
+          passwordRequired: 'New password is required.',
+          passwordMismatch: 'The two new passwords do not match.',
+        },
+      },
+      verify: {
+        title: 'Verify email',
+        description: 'Confirm ownership before this address can be used for password recovery.',
+        confirmation: 'Verify the email address linked to this one-time request?',
+        action: 'Confirm email',
+        successTitle: 'Email verified',
+        successDescription:
+          'This address can now be used for password recovery while mail is enabled.',
+      },
+      token: {
+        capturing: 'Securing the link...',
+        invalidReset: 'This password reset link is missing, invalid, expired, or already used.',
+        invalidVerify:
+          'This email verification link is missing, invalid, expired, or already used.',
+      },
+      errors: {
+        network: 'The Home server could not be reached. Check the connection and try again.',
+        invalidEmail: 'Enter a valid email address.',
+        emailUnavailable: 'This email address cannot be used.',
+        featureUnavailable:
+          'Email verification and recovery are not available on this Home server.',
+        rateLimited: 'Please wait before requesting another verification email.',
+        emailNotConfigured: 'Add an email address before requesting verification.',
+        invalidToken: 'This link is invalid or expired.',
+        generic: 'The security request could not be completed. Try again.',
       },
     },
     userWorkspace: {
@@ -391,15 +467,39 @@ export const en = {
       security: {
         title: 'Account security',
         description:
-          'Change the login password, bind TOTP two-step verification, or add a Passkey.',
+          'Manage the recovery email, login password, TOTP two-step verification, and Passkeys.',
         password: {
           title: 'Change password',
-          description: 'Use the new password the next time you sign in.',
+          description:
+            'Updating the password signs out other user sessions. This browser receives a replacement session.',
           newPassword: 'New password',
           newPasswordPlaceholder: 'Enter new password',
           confirmPassword: 'Confirm new password',
           confirmPasswordPlaceholder: 'Enter new password again',
           action: 'Update password',
+        },
+        email: {
+          title: 'Recovery email',
+          description: 'A verified address can receive password reset instructions.',
+          verified: 'Verified',
+          unverified: 'Not verified',
+          notConfigured: 'Not configured',
+          loadingCapability: 'Checking email capability...',
+          capabilityError: 'Email capability could not be checked.',
+          disabled: 'Email verification and password recovery are disabled on this Home server.',
+          legacy: 'This Home version does not expose email verification or password recovery.',
+          current: 'Stored address: {{email}}',
+          changeLabel: 'New email address',
+          addLabel: 'Email address',
+          placeholder: 'name@example.com',
+          saveHint: 'Saving clears prior verification and requests a new verification message.',
+          save: 'Save email',
+          verifiedDescription: 'This address is ready for password recovery.',
+          unverifiedDescription: 'Verify this address before it can be used for recovery.',
+          emptyDescription: 'Add an email to enable self-service password recovery.',
+          resend: 'Resend verification',
+          change: 'Change email',
+          add: 'Add email',
         },
         totp: {
           title: 'TOTP two-step verification',
@@ -435,6 +535,7 @@ export const en = {
           passwordMismatch: 'The two new passwords do not match.',
           totpSetupRequired: 'Show or regenerate TOTP setup first.',
           totpCodeRequired: 'TOTP code is required.',
+          emailRequired: 'Email address is required.',
         },
         delete: {
           title: 'Delete security setting?',
@@ -453,6 +554,9 @@ export const en = {
         totpDeleted: 'TOTP deleted.',
         passkeyCreated: 'Passkey added.',
         passkeyDeleted: 'Passkey deleted.',
+        emailUpdated: 'Email saved.',
+        emailUpdatedAndSent: 'Email saved and verification requested.',
+        emailVerificationSent: 'Verification email requested.',
       },
     },
     billingPage: {

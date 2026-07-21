@@ -9,6 +9,7 @@ import {
   updateUserApiKey,
 } from '@/lib/api/user/api-keys'
 import { type UserAccount, type UserPasskeyResource, fetchUserMe } from '@/lib/api/user/auth'
+import { requestUserEmailVerification, updateUserEmail } from '@/lib/api/user/email'
 import { createUserPasskeyWithBrowser, deleteUserPasskey } from '@/lib/api/user/passkeys'
 import {
   type BindTotpInput,
@@ -19,6 +20,8 @@ import {
   fetchUserTotpSetup,
 } from '@/lib/api/user/security'
 import { useUserSessionStore } from '@/stores/user-session-store'
+
+import { useUserCapabilities } from './use-user-capabilities'
 
 function toError(error: unknown) {
   if (error instanceof Error) return error
@@ -41,7 +44,11 @@ export function useUserWorkspace() {
   const token = useUserSessionStore((state) => state.token)
   const user = useUserSessionStore((state) => state.user)
   const updateUser = useUserSessionStore((state) => state.updateUser)
+  const replaceAuthenticatedSession = useUserSessionStore(
+    (state) => state.replaceAuthenticatedSession,
+  )
   const authenticated = status === 'authenticated' && Boolean(token)
+  const capabilitiesQuery = useUserCapabilities()
   const session = {
     baseUrl,
     token: token ?? '',
@@ -58,6 +65,7 @@ export function useUserWorkspace() {
     enabled: authenticated,
     queryFn: () => fetchUserMe(session),
     staleTime: 30_000,
+    refetchOnMount: 'always',
   })
 
   const apiKeysQuery = useQuery({
@@ -116,9 +124,30 @@ export function useUserWorkspace() {
 
   const changePasswordMutation = useMutation({
     mutationFn: (input: ChangePasswordInput) => changeUserPassword(session, input),
+    onSuccess: (result) => {
+      if (!result.session) {
+        syncUser(result.user)
+        return
+      }
+
+      replaceAuthenticatedSession(result.session)
+      queryClient.setQueryData(['user-info', baseUrl, result.session.token], result.session.user)
+      queryClient.removeQueries({ queryKey: userQueryKey, exact: true })
+      queryClient.removeQueries({ queryKey: apiKeysQueryKey, exact: true })
+    },
+    onError: toError,
+  })
+
+  const updateEmailMutation = useMutation({
+    mutationFn: (email: string) => updateUserEmail(session, email),
     onSuccess: (nextUser) => {
       syncUser(nextUser)
     },
+    onError: toError,
+  })
+
+  const requestEmailVerificationMutation = useMutation({
+    mutationFn: () => requestUserEmailVerification(session),
     onError: toError,
   })
 
@@ -181,6 +210,16 @@ export function useUserWorkspace() {
     totpDeleting: deleteTotpMutation.isPending,
     changePassword: changePasswordMutation.mutateAsync,
     passwordChanging: changePasswordMutation.isPending,
+    userCapabilities: capabilitiesQuery.data ?? null,
+    userCapabilitiesLoading: capabilitiesQuery.isLoading,
+    userCapabilitiesError: capabilitiesQuery.error
+      ? toError(capabilitiesQuery.error).message
+      : null,
+    refreshUserCapabilities: capabilitiesQuery.refetch,
+    updateEmail: updateEmailMutation.mutateAsync,
+    emailUpdating: updateEmailMutation.isPending,
+    requestEmailVerification: requestEmailVerificationMutation.mutateAsync,
+    emailVerificationRequesting: requestEmailVerificationMutation.isPending,
     passkeys: effectiveUser?.passkeys ?? [],
     createPasskey: createPasskeyMutation.mutateAsync,
     passkeyCreating: createPasskeyMutation.isPending,
@@ -196,6 +235,8 @@ export function useUserWorkspace() {
       bindTotpMutation.isPending ||
       deleteTotpMutation.isPending ||
       changePasswordMutation.isPending ||
+      updateEmailMutation.isPending ||
+      requestEmailVerificationMutation.isPending ||
       createPasskeyMutation.isPending ||
       deletePasskeyMutation.isPending,
   }

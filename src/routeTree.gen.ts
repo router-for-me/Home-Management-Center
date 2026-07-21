@@ -11,8 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UserWorkspaceRouteImport } from './routes/user.workspace'
+import { Route as UserVerifyEmailRouteImport } from './routes/user.verify-email'
+import { Route as UserResetPasswordRouteImport } from './routes/user.reset-password'
 import { Route as UserRegisterRouteImport } from './routes/user.register'
 import { Route as UserLoginRouteImport } from './routes/user.login'
+import { Route as UserForgotPasswordRouteImport } from './routes/user.forgot-password'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
 import { Route as AdminSystemNodesRouteImport } from './routes/admin.system-nodes'
@@ -39,6 +42,16 @@ const UserWorkspaceRoute = UserWorkspaceRouteImport.update({
   path: '/user/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UserVerifyEmailRoute = UserVerifyEmailRouteImport.update({
+  id: '/user/verify-email',
+  path: '/user/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserResetPasswordRoute = UserResetPasswordRouteImport.update({
+  id: '/user/reset-password',
+  path: '/user/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UserRegisterRoute = UserRegisterRouteImport.update({
   id: '/user/register',
   path: '/user/register',
@@ -47,6 +60,11 @@ const UserRegisterRoute = UserRegisterRouteImport.update({
 const UserLoginRoute = UserLoginRouteImport.update({
   id: '/user/login',
   path: '/user/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserForgotPasswordRoute = UserForgotPasswordRouteImport.update({
+  id: '/user/forgot-password',
+  path: '/user/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -142,8 +160,11 @@ export interface FileRoutesByFullPath {
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
+  '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
+  '/user/reset-password': typeof UserResetPasswordRoute
+  '/user/verify-email': typeof UserVerifyEmailRoute
   '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRoutesByTo {
@@ -163,8 +184,11 @@ export interface FileRoutesByTo {
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
+  '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
+  '/user/reset-password': typeof UserResetPasswordRoute
+  '/user/verify-email': typeof UserVerifyEmailRoute
   '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRoutesById {
@@ -185,8 +209,11 @@ export interface FileRoutesById {
   '/admin/system-nodes': typeof AdminSystemNodesRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
+  '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
   '/user/register': typeof UserRegisterRoute
+  '/user/reset-password': typeof UserResetPasswordRoute
+  '/user/verify-email': typeof UserVerifyEmailRoute
   '/user/workspace': typeof UserWorkspaceRoute
 }
 export interface FileRouteTypes {
@@ -208,8 +235,11 @@ export interface FileRouteTypes {
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
+    | '/user/forgot-password'
     | '/user/login'
     | '/user/register'
+    | '/user/reset-password'
+    | '/user/verify-email'
     | '/user/workspace'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -229,8 +259,11 @@ export interface FileRouteTypes {
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
+    | '/user/forgot-password'
     | '/user/login'
     | '/user/register'
+    | '/user/reset-password'
+    | '/user/verify-email'
     | '/user/workspace'
   id:
     | '__root__'
@@ -250,8 +283,11 @@ export interface FileRouteTypes {
     | '/admin/system-nodes'
     | '/admin/usage'
     | '/admin/users'
+    | '/user/forgot-password'
     | '/user/login'
     | '/user/register'
+    | '/user/reset-password'
+    | '/user/verify-email'
     | '/user/workspace'
   fileRoutesById: FileRoutesById
 }
@@ -272,8 +308,11 @@ export interface RootRouteChildren {
   AdminSystemNodesRoute: typeof AdminSystemNodesRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
+  UserForgotPasswordRoute: typeof UserForgotPasswordRoute
   UserLoginRoute: typeof UserLoginRoute
   UserRegisterRoute: typeof UserRegisterRoute
+  UserResetPasswordRoute: typeof UserResetPasswordRoute
+  UserVerifyEmailRoute: typeof UserVerifyEmailRoute
   UserWorkspaceRoute: typeof UserWorkspaceRoute
 }
 
@@ -293,6 +332,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UserWorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/user/verify-email': {
+      id: '/user/verify-email'
+      path: '/user/verify-email'
+      fullPath: '/user/verify-email'
+      preLoaderRoute: typeof UserVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/reset-password': {
+      id: '/user/reset-password'
+      path: '/user/reset-password'
+      fullPath: '/user/reset-password'
+      preLoaderRoute: typeof UserResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/user/register': {
       id: '/user/register'
       path: '/user/register'
@@ -305,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/user/login'
       fullPath: '/user/login'
       preLoaderRoute: typeof UserLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/forgot-password': {
+      id: '/user/forgot-password'
+      path: '/user/forgot-password'
+      fullPath: '/user/forgot-password'
+      preLoaderRoute: typeof UserForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/users': {
@@ -432,8 +492,11 @@ const rootRouteChildren: RootRouteChildren = {
   AdminSystemNodesRoute: AdminSystemNodesRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
+  UserForgotPasswordRoute: UserForgotPasswordRoute,
   UserLoginRoute: UserLoginRoute,
   UserRegisterRoute: UserRegisterRoute,
+  UserResetPasswordRoute: UserResetPasswordRoute,
+  UserVerifyEmailRoute: UserVerifyEmailRoute,
   UserWorkspaceRoute: UserWorkspaceRoute,
 }
 export const routeTree = rootRouteImport

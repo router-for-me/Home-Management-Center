@@ -1,4 +1,9 @@
-import { type UserAccount, normalizeUserAccount } from '@/lib/api/user/auth'
+import {
+  type UserAccount,
+  type UserAuthSession,
+  normalizeUserAccount,
+  normalizeUserAuthSession,
+} from '@/lib/api/user/auth'
 import { type UserSessionInput, createUserClient, toUserApiError } from '@/lib/api/user/client'
 
 type UnknownRecord = Record<string, unknown>
@@ -16,6 +21,11 @@ export type UserTotpSetup = {
 
 export type ChangePasswordInput = {
   newPassword: string
+}
+
+export type ChangePasswordResult = {
+  session: UserAuthSession | null
+  user: UserAccount
 }
 
 export type BindTotpInput = {
@@ -57,6 +67,22 @@ function readUserWriteResponse(value: unknown): UserAccount {
   return normalizeUserAccount(record.user)
 }
 
+function readPasswordWriteResponse(value: unknown): ChangePasswordResult {
+  const record = isRecord(value) ? value : {}
+  const token = readString(record, ['token'])
+  const expiresAt = readString(record, ['expires_at', 'expiresAt'])
+
+  if (token && expiresAt) {
+    const session = normalizeUserAuthSession(value)
+    return { session, user: session.user }
+  }
+
+  return {
+    session: null,
+    user: readUserWriteResponse(value),
+  }
+}
+
 function normalizeTotpSetup(value: unknown): UserTotpSetup {
   const record = isRecord(value) ? value : {}
 
@@ -83,7 +109,7 @@ export async function changeUserPassword(
       new_password: input.newPassword,
     })
 
-    return readUserWriteResponse(response.data)
+    return readPasswordWriteResponse(response.data)
   } catch (error) {
     throw toUserApiError(error)
   }
