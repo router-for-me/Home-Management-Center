@@ -14,7 +14,7 @@ import {
 import { buildUpstreamQuotaJoinMap, isQuotaAttentionStatus } from './upstream-quota-model'
 
 const upstreamQuotaRefreshIntervalMs = 30_000
-const upstreamQuotaListLimit = 200
+export const upstreamQuotaListLimit = 200
 
 export function useUpstreamQuota() {
   const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()

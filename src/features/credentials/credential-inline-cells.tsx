@@ -17,7 +17,9 @@ export type InlineMetadataSave = (
 ) => Promise<void>
 
 export function isValidPriorityDraft(value: string) {
-  return /^-?\d+$/.test(value.trim())
+  const trimmed = value.trim()
+  // Empty input is the explicit "clear priority" signal.
+  return trimmed === '' || /^-?\d+$/.test(trimmed)
 }
 
 export function buildInlineMetadataInput(
@@ -117,7 +119,8 @@ export function PriorityCell({
     }
 
     try {
-      await onSave(resource, { priority: next })
+      // Empty clears priority: the adapter sends an explicit null for it.
+      await onSave(resource, { priority: next === '' ? null : next })
       toast.success(t('credentialsPage.inline.saved'))
     } catch (error) {
       setValue(currentPriority)

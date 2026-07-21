@@ -52,15 +52,16 @@ function createCredentialResource(
 }
 
 describe('isValidPriorityDraft', () => {
-  test('accepts integers including negatives and surrounding whitespace', () => {
+  test('accepts integers, empty string (clear), and surrounding whitespace', () => {
     expect(isValidPriorityDraft('10')).toBe(true)
     expect(isValidPriorityDraft('0')).toBe(true)
     expect(isValidPriorityDraft('-1')).toBe(true)
     expect(isValidPriorityDraft(' 20 ')).toBe(true)
+    expect(isValidPriorityDraft('')).toBe(true)
+    expect(isValidPriorityDraft('   ')).toBe(true)
   })
 
   test('rejects non-integers', () => {
-    expect(isValidPriorityDraft('')).toBe(false)
     expect(isValidPriorityDraft('abc')).toBe(false)
     expect(isValidPriorityDraft('1.5')).toBe(false)
     expect(isValidPriorityDraft('10px')).toBe(false)

@@ -58,7 +58,7 @@ function formatInlineMoney(value: number | null, currency: string | null) {
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
-      currency,
+      currency: currency.toUpperCase(),
       maximumFractionDigits: 2,
     }).format(value)
   } catch {

@@ -10,7 +10,8 @@ export type CredentialStatusFilter = 'all' | 'active' | 'disabled' | 'unavailabl
 export type CredentialMetadataInput = {
   prefix: string
   proxyUrl: string
-  priority: string
+  // An empty string leaves priority unchanged; null clears it back to unset.
+  priority: string | null
   note: string
   websockets?: boolean
   maxInFlight?: number | null
@@ -594,9 +595,13 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     note: input.note.trim(),
   }
 
-  const priority = Number(input.priority)
-  if (input.priority.trim() && Number.isFinite(priority)) {
-    payload.priority = priority
+  if (input.priority === null) {
+    payload.priority = null
+  } else {
+    const priority = Number(input.priority)
+    if (input.priority.trim() && Number.isFinite(priority)) {
+      payload.priority = priority
+    }
   }
 
   if (supportsCredentialWebsockets(resource) && typeof input.websockets === 'boolean') {

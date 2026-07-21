@@ -169,4 +169,32 @@ describe('updateCredentialMetadata websockets payload', () => {
     expect(patch?.body).toMatchObject({ name: 'gemini-01' })
     expect((patch?.body as Record<string, unknown>).websockets).toBeUndefined()
   })
+
+  test('sends an explicit null to clear priority', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+
+    await updateCredentialMetadata(session, createCredentialResource('codex'), {
+      ...metadata,
+      priority: null,
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+    )
+    expect(patch?.body).toMatchObject({ priority: null })
+  })
+
+  test('leaves priority out when the input is an empty string', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+
+    await updateCredentialMetadata(session, createCredentialResource('codex'), {
+      ...metadata,
+      priority: '',
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+    )
+    expect((patch?.body as Record<string, unknown>).priority).toBeUndefined()
+  })
 })

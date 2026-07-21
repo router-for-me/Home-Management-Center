@@ -96,6 +96,7 @@ import {
   type UpstreamAccountsStats,
 } from '@/features/upstream/summary-cards'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
+import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
 import {
   type UpstreamQuotaEntry,
   type UpstreamQuotaView,
@@ -111,6 +112,7 @@ import {
   type CredentialResource,
   type CredentialStatusFilter,
 } from '@/lib/api/management/credentials'
+import { downloadBlob } from '@/lib/download'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -883,12 +885,7 @@ export function AccountsPanel({
 
     try {
       const result = await workbench.downloadCredential(resource)
-      const url = window.URL.createObjectURL(result.blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = result.fileName
-      anchor.click()
-      window.URL.revokeObjectURL(url)
+      downloadBlob(result.blob, result.fileName)
       toast.success(t('credentialsPage.toast.downloaded'))
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
@@ -1215,7 +1212,7 @@ export function AccountsPanel({
             />
             {quotaAvailable && quotaTruncated ? (
               <p className="text-muted-foreground mt-3 text-xs leading-5">
-                {t('upstreamPage.quota.truncated', { count: 200 })}
+                {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
               </p>
             ) : null}
           </div>
