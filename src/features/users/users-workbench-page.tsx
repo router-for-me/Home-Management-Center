@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react'
 
+import type { TFunction } from 'i18next'
 import {
   AlertTriangle,
   CheckCircle2,
@@ -20,6 +21,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  RotateCcw,
   Search,
   ShieldCheck,
   Trash2,
@@ -54,7 +56,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -64,6 +75,7 @@ import {
 } from '@/components/ui/select'
 import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -84,7 +96,24 @@ import type {
   AccessGroupResource,
 } from '@/lib/api/management/access-groups'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
-import type { UserFormInput, UserResource } from '@/lib/api/management/users'
+import {
+  type UserApiFieldError,
+  type UserFormInput,
+  type UserPeriodLimitsStatus,
+  type UserPeriodLimitsSummary,
+  type UserPeriodResetInput,
+  type UserPeriodResetMode,
+  type UserPeriodWindowConfig,
+  type UserPeriodWindowId,
+  type UserPeriodWindowMode,
+  type UserPeriodWindowStatus,
+  type UserResource,
+  defaultUserPeriodTimezone,
+  defaultUserPeriodWeekResetDay,
+  defaultUserPeriodWeekResetHour,
+  getUserApiFieldErrors,
+  userPeriodWindowIds,
+} from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -139,6 +168,152 @@ type BindingCandidateFilterOption = {
 
 const unassignedUserValue = '__unassigned__'
 const modelSourceFilters: ModelSourceFilter[] = ['all', 'available', 'static']
+
+const userPeriodTimezoneSuggestions = [
+  'Asia/Shanghai',
+  'Asia/Taipei',
+  'Asia/Tokyo',
+  'UTC',
+  'Europe/London',
+  'Europe/Berlin',
+  'America/New_York',
+  'America/Los_Angeles',
+]
+
+type UserPeriodWindowDraft = {
+  enabled: boolean
+  limit: string
+  mode: UserPeriodWindowMode
+}
+
+function windowModesFor(id: UserPeriodWindowId): UserPeriodWindowMode[] {
+  return id === '5h' ? ['first_use', 'sliding'] : ['first_use', 'sliding', 'calendar']
+}
+
+function createWindowDrafts(user: UserResource | null) {
+  const draft = (id: UserPeriodWindowId): UserPeriodWindowDraft => {
+    const config = user?.periodLimits.supported ? user.periodLimits.windows[id] : null
+
+    return {
+      enabled: config ? config.limit !== null : false,
+      limit: config?.limit !== null && config?.limit !== undefined ? String(config.limit) : '0',
+      mode: config?.mode ?? 'first_use',
+    }
+  }
+
+  return {
+    '5h': draft('5h'),
+    '1d': draft('1d'),
+    '7d': draft('7d'),
+    '30d': draft('30d'),
+  }
+}
+
+type UserPeriodWindowVisualStatus = 'disabled' | 'notStarted' | 'active' | 'exhausted'
+
+const periodWindowStatusClassNames: Record<UserPeriodWindowVisualStatus, string> = {
+  disabled: 'border-border bg-muted/50 text-muted-foreground',
+  notStarted: 'border-info/25 bg-info/10 text-info',
+  active: 'border-success/30 bg-success/10 text-success',
+  exhausted: 'border-destructive/30 bg-destructive/10 text-destructive',
+}
+
+type UserFormFieldError = {
+  anchor: 'username' | 'timezone' | UserPeriodWindowId | null
+  message: string
+}
+
+// Maps Management API field_errors entries to localized, form-anchored
+// messages. Entries the form cannot anchor keep a null anchor and are
+// surfaced through the generic error box with the raw backend message.
+function mapUserFormFieldErrors(
+  t: TFunction,
+  fieldErrors: UserApiFieldError[],
+): UserFormFieldError[] {
+  return fieldErrors.map((fieldError) => {
+    if (fieldError.field === 'username') {
+      return { anchor: 'username', message: t('usersPage.form.validation.usernameRequired') }
+    }
+    if (fieldError.field === 'timezone') {
+      return { anchor: 'timezone', message: t('usersPage.form.validation.timezoneInvalid') }
+    }
+
+    const limitMatch = /^limit_(5h|1d|7d|30d)_credits$/.exec(fieldError.field)
+    if (limitMatch) {
+      const windowId = limitMatch[1] as UserPeriodWindowId
+      return {
+        anchor: windowId,
+        message: t('usersPage.form.validation.limitInvalid', {
+          window: t(`usersPage.periodLimits.windows.${windowId}`),
+        }),
+      }
+    }
+
+    const modeMatch = /^window_mode_(5h|1d|7d|30d)$/.exec(fieldError.field)
+    if (modeMatch) {
+      const windowId = modeMatch[1] as UserPeriodWindowId
+      return {
+        anchor: windowId,
+        message: t('usersPage.form.validation.windowModeInvalid', {
+          window: t(`usersPage.periodLimits.windows.${windowId}`),
+        }),
+      }
+    }
+
+    if (fieldError.field === 'week_reset_day') {
+      return { anchor: '7d', message: t('usersPage.form.validation.weekResetDayInvalid') }
+    }
+    if (fieldError.field === 'week_reset_hour') {
+      return { anchor: '7d', message: t('usersPage.form.validation.weekResetHourInvalid') }
+    }
+
+    return { anchor: null, message: '' }
+  })
+}
+
+function mapPeriodResetFieldErrors(t: TFunction, fieldErrors: UserApiFieldError[]): string[] {
+  return fieldErrors.map((fieldError) => {
+    if (fieldError.field === 'mode') {
+      return t('usersPage.periodLimits.reset.validation.modeInvalid')
+    }
+    if (fieldError.field === 'windows') {
+      return t('usersPage.periodLimits.reset.validation.windowsInvalid')
+    }
+    return ''
+  })
+}
+
+function UserPeriodLimitsTableBadge({ summary }: { summary: UserPeriodLimitsSummary | null }) {
+  const { t } = useTranslation()
+
+  if (!summary) {
+    return <span className="text-muted-foreground">—</span>
+  }
+
+  if (summary.zeroLimitWindows.length > 0) {
+    const windows = summary.zeroLimitWindows.join(', ')
+    const label = t('usersPage.periodLimits.tableBlocked', { windows })
+
+    return (
+      <span
+        className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning inline-flex max-w-full items-center truncate rounded-md border px-2 py-1 text-xs font-medium"
+        title={label}
+      >
+        {label}
+      </span>
+    )
+  }
+
+  if (summary.enabledWindows.length > 0) {
+    return (
+      <span className="bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
+        {t('usersPage.periodLimits.tableEnabled', { count: summary.enabledWindows.length })}
+      </span>
+    )
+  }
+
+  return <span className="text-muted-foreground">—</span>
+}
 
 function formatDateTime(value: string | null) {
   if (!value) return null
@@ -383,12 +558,14 @@ function AccessGroupsUnsupportedState() {
 function UserForm({
   mode,
   user,
+  periodLimitsSupported,
   mutating,
   onCancel,
   onSubmit,
 }: {
   mode: 'create' | 'edit'
   user: UserResource | null
+  periodLimitsSupported: boolean
   mutating: boolean
   onCancel: () => void
   onSubmit: (input: UserFormInput) => Promise<void>
@@ -397,17 +574,40 @@ function UserForm({
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [credits, setCredits] = useState('0')
+  const [creditsUnlimited, setCreditsUnlimited] = useState(false)
+  const [timezone, setTimezone] = useState(defaultUserPeriodTimezone)
+  const [windowDrafts, setWindowDrafts] = useState<
+    Record<UserPeriodWindowId, UserPeriodWindowDraft>
+  >(() => createWindowDrafts(null))
+  const [weekResetDay, setWeekResetDay] = useState(String(defaultUserPeriodWeekResetDay))
+  const [weekResetHour, setWeekResetHour] = useState(String(defaultUserPeriodWeekResetHour))
   const [localError, setLocalError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<UserFormFieldError[]>([])
 
   useEffect(() => {
+    const editUser = mode === 'edit' ? user : null
     setLocalError(null)
-    setUsername(mode === 'edit' && user ? user.username : '')
+    setFieldErrors([])
+    setUsername(editUser ? editUser.username : '')
     setPassword('')
-    setCredits(mode === 'edit' && user ? String(user.credits) : '0')
+    setCredits(editUser ? String(editUser.credits) : '0')
+    setCreditsUnlimited(editUser?.creditsUnlimited ?? false)
+    setTimezone(editUser?.periodLimits.timezone || defaultUserPeriodTimezone)
+    setWindowDrafts(createWindowDrafts(editUser))
+    setWeekResetDay(String(editUser?.periodLimits.weekResetDay ?? defaultUserPeriodWeekResetDay))
+    setWeekResetHour(String(editUser?.periodLimits.weekResetHour ?? defaultUserPeriodWeekResetHour))
   }, [mode, user])
+
+  const updateWindowDraft = (id: UserPeriodWindowId, patch: Partial<UserPeriodWindowDraft>) => {
+    setWindowDrafts((current) => ({ ...current, [id]: { ...current[id], ...patch } }))
+  }
+
+  const fieldErrorFor = (anchor: UserFormFieldError['anchor']) =>
+    fieldErrors.find((fieldError) => fieldError.anchor === anchor)?.message ?? null
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setFieldErrors([])
     const trimmedUsername = username.trim()
 
     if (!trimmedUsername) {
@@ -421,15 +621,70 @@ function UserForm({
       return
     }
 
+    let periodLimits: UserFormInput['periodLimits']
+    if (periodLimitsSupported) {
+      const trimmedTimezone = timezone.trim()
+      if (!trimmedTimezone) {
+        setLocalError(t('usersPage.form.validation.timezoneRequired'))
+        return
+      }
+
+      const windows: Record<UserPeriodWindowId, UserPeriodWindowConfig> = {
+        '5h': { limit: null, mode: 'first_use' },
+        '1d': { limit: null, mode: 'first_use' },
+        '7d': { limit: null, mode: 'first_use' },
+        '30d': { limit: null, mode: 'first_use' },
+      }
+      for (const id of userPeriodWindowIds) {
+        const draft = windowDrafts[id]
+        const numericLimit = Number(draft.limit)
+        if (draft.enabled && (!Number.isFinite(numericLimit) || numericLimit < 0)) {
+          setLocalError(
+            t('usersPage.form.validation.limitInvalid', {
+              window: t(`usersPage.periodLimits.windows.${id}`),
+            }),
+          )
+          return
+        }
+        windows[id] = {
+          limit: draft.enabled ? numericLimit : null,
+          mode: draft.mode,
+        }
+      }
+
+      const numericWeekResetHour = Number(weekResetHour)
+      if (
+        !Number.isInteger(numericWeekResetHour) ||
+        numericWeekResetHour < 0 ||
+        numericWeekResetHour > 23
+      ) {
+        setLocalError(t('usersPage.form.validation.weekResetHourInvalid'))
+        return
+      }
+
+      periodLimits = {
+        creditsUnlimited,
+        timezone: trimmedTimezone,
+        windows,
+        weekResetDay: Number(weekResetDay),
+        weekResetHour: numericWeekResetHour,
+      }
+    }
+
     try {
       setLocalError(null)
+      setFieldErrors([])
       await onSubmit({
         username: trimmedUsername,
         password: password.trim() || undefined,
         credits: numericCredits,
+        periodLimits,
       })
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error))
+      const apiFieldErrors = mapUserFormFieldErrors(t, getUserApiFieldErrors(error))
+      setFieldErrors(apiFieldErrors)
+      const hasAnchored = apiFieldErrors.some((fieldError) => fieldError.anchor !== null)
+      setLocalError(hasAnchored ? null : error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -441,12 +696,16 @@ function UserForm({
           value={username}
           disabled={mutating || mode === 'edit'}
           placeholder={t('usersPage.form.usernamePlaceholder')}
+          aria-invalid={fieldErrorFor('username') ? true : undefined}
           onChange={(event) => setUsername(event.target.value)}
         />
         {mode === 'edit' ? (
           <span className="text-muted-foreground text-xs leading-5">
             {t('usersPage.form.usernameLockedHint')}
           </span>
+        ) : null}
+        {fieldErrorFor('username') ? (
+          <span className="text-destructive text-xs leading-5">{fieldErrorFor('username')}</span>
         ) : null}
       </label>
       <label className="grid gap-2 text-sm font-medium">
@@ -468,14 +727,181 @@ function UserForm({
           min="0"
           step="0.01"
           value={credits}
-          disabled={mutating}
+          disabled={mutating || (periodLimitsSupported && creditsUnlimited)}
           placeholder={t('usersPage.form.creditsPlaceholder')}
           onChange={(event) => setCredits(event.target.value)}
         />
         <span className="text-muted-foreground text-xs leading-5">
-          {t('usersPage.form.creditsHint')}
+          {periodLimitsSupported && creditsUnlimited
+            ? t('usersPage.form.creditsUnlimitedCreditsHint')
+            : t('usersPage.form.creditsHint')}
         </span>
       </label>
+      {periodLimitsSupported ? (
+        <div className="grid gap-3 rounded-md border p-4">
+          <div className="grid gap-1">
+            <p className="text-sm font-semibold">{t('usersPage.periodLimits.sectionTitle')}</p>
+            <p className="text-muted-foreground text-xs leading-5">
+              {t('usersPage.periodLimits.sectionHint')}
+            </p>
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
+            <div className="grid gap-1">
+              <span className="text-sm font-medium">{t('usersPage.form.creditsUnlimited')}</span>
+              <span className="text-muted-foreground text-xs leading-5">
+                {t('usersPage.form.creditsUnlimitedHint')}
+              </span>
+            </div>
+            <Switch
+              checked={creditsUnlimited}
+              disabled={mutating}
+              aria-label={t('usersPage.form.creditsUnlimited')}
+              onCheckedChange={setCreditsUnlimited}
+            />
+          </div>
+          {userPeriodWindowIds.map((id) => {
+            const draft = windowDrafts[id]
+            const limitIsZero = draft.enabled && Number(draft.limit) === 0
+
+            return (
+              <div key={id} className="grid gap-2 rounded-md border px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">
+                    {t(`usersPage.periodLimits.windows.${id}`)}
+                  </span>
+                  <Switch
+                    checked={draft.enabled}
+                    disabled={mutating}
+                    aria-label={t('usersPage.periodLimits.enableWindow', {
+                      window: t(`usersPage.periodLimits.windows.${id}`),
+                    })}
+                    onCheckedChange={(checked) => updateWindowDraft(id, { enabled: checked })}
+                  />
+                </div>
+                {draft.enabled ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
+                      <span>{t('usersPage.periodLimits.limitLabel')}</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={draft.limit}
+                        disabled={mutating}
+                        aria-invalid={fieldErrorFor(id) ? true : undefined}
+                        onChange={(event) => updateWindowDraft(id, { limit: event.target.value })}
+                      />
+                    </label>
+                    <div className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('usersPage.periodLimits.modeLabel')}
+                      </span>
+                      <Select
+                        value={draft.mode}
+                        disabled={mutating}
+                        onValueChange={(value) =>
+                          updateWindowDraft(id, { mode: value as UserPeriodWindowMode })
+                        }
+                      >
+                        <SelectTrigger
+                          className="w-full"
+                          aria-label={t('usersPage.periodLimits.modeLabel')}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {windowModesFor(id).map((modeOption) => (
+                            <SelectItem key={modeOption} value={modeOption}>
+                              {t(`usersPage.periodLimits.modes.${modeOption}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : null}
+                {limitIsZero ? (
+                  <p className="text-warning-foreground dark:text-warning text-xs leading-5">
+                    {t('usersPage.periodLimits.zeroLimitWarning')}
+                  </p>
+                ) : null}
+                {fieldErrorFor(id) ? (
+                  <p className="text-destructive text-xs leading-5">{fieldErrorFor(id)}</p>
+                ) : null}
+                {id === '7d' && draft.enabled && draft.mode === 'calendar' ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <span className="text-muted-foreground text-xs font-medium">
+                        {t('usersPage.periodLimits.weekResetDay')}
+                      </span>
+                      <Select
+                        value={weekResetDay}
+                        disabled={mutating}
+                        onValueChange={setWeekResetDay}
+                      >
+                        <SelectTrigger
+                          className="w-full"
+                          aria-label={t('usersPage.periodLimits.weekResetDay')}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                            <SelectItem key={day} value={String(day)}>
+                              {t(`usersPage.periodLimits.weekDays.${day}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
+                      <span>{t('usersPage.periodLimits.weekResetHour')}</span>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="23"
+                        step="1"
+                        value={weekResetHour}
+                        disabled={mutating}
+                        onChange={(event) => setWeekResetHour(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+              </div>
+            )
+          })}
+          <label className="grid gap-2 text-sm font-medium">
+            <span>{t('usersPage.form.timezone')}</span>
+            <Input
+              value={timezone}
+              list="user-period-timezone-suggestions"
+              disabled={mutating}
+              placeholder={defaultUserPeriodTimezone}
+              aria-invalid={fieldErrorFor('timezone') ? true : undefined}
+              onChange={(event) => setTimezone(event.target.value)}
+            />
+            {fieldErrorFor('timezone') ? (
+              <span className="text-destructive text-xs leading-5">
+                {fieldErrorFor('timezone')}
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-xs leading-5">
+                {t('usersPage.form.timezoneHint')}
+              </span>
+            )}
+          </label>
+          <datalist id="user-period-timezone-suggestions">
+            {userPeriodTimezoneSuggestions.map((zone) => (
+              <option key={zone} value={zone} />
+            ))}
+          </datalist>
+        </div>
+      ) : (
+        <div className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-xs leading-5">
+          {t('usersPage.periodLimits.unsupportedForm')}
+        </div>
+      )}
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
           {localError}
@@ -1348,16 +1774,116 @@ function GroupDetailForm({
   )
 }
 
+function PeriodLimitWindowCard({ window }: { window: UserPeriodWindowStatus }) {
+  const { t } = useTranslation()
+  const exhausted = window.enabled && window.remaining !== null && window.remaining <= 0
+  const status: UserPeriodWindowVisualStatus = !window.enabled
+    ? 'disabled'
+    : exhausted
+      ? 'exhausted'
+      : window.active
+        ? 'active'
+        : 'notStarted'
+  const ratio = window.enabled
+    ? window.limit !== null && window.limit > 0
+      ? Math.min(window.used / window.limit, 1)
+      : 1
+    : null
+  const percentage = ratio === null ? null : Math.round(ratio * 100)
+  const progressClassName =
+    status === 'exhausted'
+      ? 'bg-destructive'
+      : ratio !== null && ratio >= 0.8
+        ? 'bg-warning'
+        : 'bg-success'
+  const windowLabel = t(`usersPage.periodLimits.windows.${window.id}`)
+  const windowStart = formatDateTime(window.windowStart)
+  const windowEnd = formatDateTime(window.windowEnd)
+  const resetAt = formatDateTime(window.resetAt)
+
+  return (
+    <div className="grid gap-2 rounded-md border px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium">{windowLabel}</span>
+        <span
+          className={cn(
+            'inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium',
+            periodWindowStatusClassNames[status],
+          )}
+        >
+          {t(`usersPage.periodLimits.status.${status}`)}
+        </span>
+      </div>
+      {window.enabled ? (
+        <>
+          {percentage !== null ? (
+            <div
+              className="bg-muted h-1.5 overflow-hidden rounded-full"
+              role="progressbar"
+              aria-label={t('usersPage.periodLimits.progressLabel', { window: windowLabel })}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={percentage}
+            >
+              <div
+                className={cn('h-full rounded-full', progressClassName)}
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          ) : null}
+          <p className="text-xs tabular-nums">
+            {t('usersPage.periodLimits.usageSummary', {
+              used: formatMoney(window.used),
+              limit: window.limit !== null ? formatMoney(window.limit) : '—',
+              remaining: window.remaining !== null ? formatMoney(window.remaining) : '—',
+            })}
+          </p>
+          <p className="text-muted-foreground text-xs leading-5 break-words">
+            {t(`usersPage.periodLimits.modes.${window.mode}`)}
+            {window.active && windowStart && windowEnd
+              ? ` · ${t('usersPage.periodLimits.windowActive', {
+                  start: windowStart,
+                  end: windowEnd,
+                })}`
+              : !window.active && window.mode === 'first_use'
+                ? ` · ${t('usersPage.periodLimits.windowNotStarted')}`
+                : ''}
+            {resetAt ? ` · ${t('usersPage.periodLimits.windowResetsAt', { time: resetAt })}` : ''}
+          </p>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-xs leading-5">
+          {t('usersPage.periodLimits.noLimit')}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function UserDetailContent({
   user,
   accessKeys,
   channelGroups,
   modelGroups,
+  periodLimits,
+  periodLimitsSupported,
+  periodLimitsPending,
+  periodLimitsErrorMessage,
+  mutating,
+  onRetryPeriodLimits,
+  onResetPeriodLimits,
 }: {
   user: UserResource
   accessKeys: AccessKeyResource[]
   channelGroups: AccessGroupResource[]
   modelGroups: AccessGroupResource[]
+  periodLimits: UserPeriodLimitsStatus | null
+  periodLimitsSupported: boolean
+  periodLimitsPending: boolean
+  periodLimitsErrorMessage: string | null
+  mutating: boolean
+  onRetryPeriodLimits: () => void
+  onResetPeriodLimits: () => void
 }) {
   const { t } = useTranslation()
   const keys = getUserKeys(accessKeys, user)
@@ -1403,6 +1929,62 @@ function UserDetailContent({
       </div>
 
       <div className="grid gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold">{t('usersPage.detail.sections.periodLimits')}</h3>
+          {periodLimitsSupported ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={mutating || !periodLimits || Boolean(periodLimitsErrorMessage)}
+              onClick={onResetPeriodLimits}
+            >
+              <RotateCcw className="size-4" aria-hidden="true" />
+              {t('usersPage.periodLimits.actions.reset')}
+            </Button>
+          ) : null}
+        </div>
+        {!periodLimitsSupported ? (
+          <div className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-xs leading-5">
+            {t('usersPage.periodLimits.unsupportedDetail')}
+          </div>
+        ) : periodLimitsErrorMessage ? (
+          <div className="border-destructive/30 bg-destructive/10 grid gap-2 rounded-md border px-3 py-2.5">
+            <p className="text-destructive text-sm">{t('usersPage.periodLimits.loadError')}</p>
+            <p className="text-destructive/80 text-xs break-words">{periodLimitsErrorMessage}</p>
+            <div>
+              <Button variant="outline" size="sm" onClick={onRetryPeriodLimits}>
+                {t('usersPage.actions.retry')}
+              </Button>
+            </div>
+          </div>
+        ) : periodLimitsPending && !periodLimits ? (
+          <div className="grid gap-2">
+            {userPeriodWindowIds.map((id) => (
+              <Skeleton key={id} className="h-20 w-full rounded-md" />
+            ))}
+          </div>
+        ) : periodLimits ? (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <span className="bg-muted text-muted-foreground rounded-md border px-2 py-1 text-xs">
+                {t('usersPage.periodLimits.summaryTimezone', {
+                  timezone: periodLimits.timezone,
+                })}
+              </span>
+              {periodLimits.creditsUnlimited ? (
+                <span className="border-info/25 bg-info/10 text-info rounded-md border px-2 py-1 text-xs font-medium">
+                  {t('usersPage.periodLimits.summaryUnlimited')}
+                </span>
+              ) : null}
+            </div>
+            {periodLimits.windows.map((window) => (
+              <PeriodLimitWindowCard key={window.id} window={window} />
+            ))}
+          </>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3">
         <h3 className="text-sm font-semibold">{t('usersPage.detail.sections.access')}</h3>
         <div className="grid gap-2 text-sm">
           <div className="rounded-md border px-3 py-2.5">
@@ -1428,6 +2010,164 @@ function UserDetailContent({
         </div>
       </div>
     </div>
+  )
+}
+
+function PeriodResetDialog({
+  user,
+  status,
+  mutating,
+  onCancel,
+  onConfirm,
+}: {
+  user: UserResource | null
+  status: UserPeriodLimitsStatus | null
+  mutating: boolean
+  onCancel: () => void
+  onConfirm: (input: UserPeriodResetInput) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const [selected, setSelected] = useState<Set<UserPeriodWindowId>>(
+    () => new Set(userPeriodWindowIds),
+  )
+  const [mode, setMode] = useState<UserPeriodResetMode>('counter')
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user) return
+
+    setSelected(new Set(userPeriodWindowIds))
+    setMode('counter')
+    setLocalError(null)
+  }, [user])
+
+  const toggleWindow = (id: UserPeriodWindowId) => {
+    setSelected((current) => {
+      const next = new Set(current)
+
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
+  }
+
+  const handleConfirm = async () => {
+    if (selected.size === 0) {
+      setLocalError(t('usersPage.periodLimits.reset.validation.windowsRequired'))
+      return
+    }
+
+    try {
+      setLocalError(null)
+      await onConfirm({
+        windows: userPeriodWindowIds.filter((id) => selected.has(id)),
+        mode,
+      })
+    } catch (error) {
+      const apiFieldErrors = mapPeriodResetFieldErrors(t, getUserApiFieldErrors(error)).filter(
+        (message) => message.length > 0,
+      )
+      setLocalError(
+        apiFieldErrors.length > 0
+          ? apiFieldErrors.join(' ')
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      )
+    }
+  }
+
+  return (
+    <Dialog open={Boolean(user)} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent closeLabel={t('common.close')}>
+        <DialogHeader>
+          <DialogTitle>{t('usersPage.periodLimits.reset.title')}</DialogTitle>
+          <DialogDescription>
+            {t('usersPage.periodLimits.reset.description', { name: user?.username ?? '' })}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4">
+          <div className="grid gap-2">
+            <p className="text-sm font-medium">{t('usersPage.periodLimits.reset.windowsLabel')}</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {userPeriodWindowIds.map((id) => {
+                const windowStatus = status?.windows.find((window) => window.id === id)
+
+                return (
+                  <label
+                    key={id}
+                    className="hover:bg-accent/50 flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={selected.has(id)}
+                      disabled={mutating}
+                      onCheckedChange={() => toggleWindow(id)}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {t(`usersPage.periodLimits.windows.${id}`)}
+                    </span>
+                    {windowStatus?.enabled ? (
+                      <span className="text-muted-foreground shrink-0 text-xs">
+                        {t('usersPage.periodLimits.status.enabledShort')}
+                      </span>
+                    ) : null}
+                  </label>
+                )
+              })}
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <p className="text-sm font-medium">{t('usersPage.periodLimits.reset.modeLabel')}</p>
+            <RadioGroup
+              value={mode}
+              disabled={mutating}
+              onValueChange={(value) => setMode(value as UserPeriodResetMode)}
+            >
+              <label className="hover:bg-accent/50 flex items-start gap-2 rounded-md border px-3 py-2">
+                <RadioGroupItem value="counter" className="mt-0.5" disabled={mutating} />
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">
+                    {t('usersPage.periodLimits.reset.modes.counter')}
+                  </span>
+                  <span className="text-muted-foreground text-xs leading-5">
+                    {t('usersPage.periodLimits.reset.modes.counterHint')}
+                  </span>
+                </span>
+              </label>
+              <label className="hover:bg-accent/50 flex items-start gap-2 rounded-md border px-3 py-2">
+                <RadioGroupItem value="window_only" className="mt-0.5" disabled={mutating} />
+                <span className="grid gap-0.5">
+                  <span className="text-sm font-medium">
+                    {t('usersPage.periodLimits.reset.modes.windowOnly')}
+                  </span>
+                  <span className="text-muted-foreground text-xs leading-5">
+                    {t('usersPage.periodLimits.reset.modes.windowOnlyHint')}
+                  </span>
+                </span>
+              </label>
+            </RadioGroup>
+          </div>
+          {localError ? (
+            <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+              {localError}
+            </div>
+          ) : null}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" disabled={mutating} onClick={onCancel}>
+            {t('common.cancel')}
+          </Button>
+          <Button disabled={mutating} onClick={() => void handleConfirm()}>
+            {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+            {t('usersPage.periodLimits.reset.confirm')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1470,7 +2210,7 @@ function UsersTable({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="min-w-[1100px]"
+      className="min-w-[1220px]"
     >
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
@@ -1485,6 +2225,7 @@ function UsersTable({
           <TableHead>{t('usersPage.list.user')}</TableHead>
           <TableHead>{t('usersPage.list.status')}</TableHead>
           <TableHead>{t('usersPage.list.credits')}</TableHead>
+          <TableHead className="w-[120px]">{t('usersPage.list.periodLimits')}</TableHead>
           <TableHead>{t('usersPage.list.keys')}</TableHead>
           <TableHead>{t('usersPage.scopes.credential')}</TableHead>
           <TableHead>{t('usersPage.scopes.model')}</TableHead>
@@ -1524,6 +2265,9 @@ function UsersTable({
                 <StatusBadge deletedAt={user.deletedAt} />
               </TableCell>
               <TableCell>{formatNumber(user.credits)}</TableCell>
+              <TableCell className="w-[120px]">
+                <UserPeriodLimitsTableBadge summary={user.periodLimitsSummary} />
+              </TableCell>
               <TableCell>{formatNumber(keys.length)}</TableCell>
               <TableCell className="max-w-[220px] truncate">
                 {groupListLabel(
@@ -2059,12 +2803,19 @@ export function UsersWorkbenchPage() {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(() => new Set())
   const [pendingBalanceOperation, setPendingBalanceOperation] =
     useState<PendingBalanceOperation | null>(null)
+  const [pendingPeriodReset, setPendingPeriodReset] = useState<UserResource | null>(null)
   const loadCredentialCandidates =
     sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel'
   const loadModelCandidates = sheetMode?.type === 'detail-create' && sheetMode.kind === 'model'
+  const loadPeriodLimits = sheetMode?.type === 'user-detail'
   const selectedUserId =
     sheetMode?.type === 'user-detail' || sheetMode?.type === 'user-edit' ? sheetMode.user.id : null
-  const workbench = useUserWorkbench(selectedUserId, loadCredentialCandidates, loadModelCandidates)
+  const workbench = useUserWorkbench(
+    selectedUserId,
+    loadCredentialCandidates,
+    loadModelCandidates,
+    loadPeriodLimits,
+  )
 
   const users = workbench.users
   const accessKeys = workbench.accessKeys
@@ -2516,6 +3267,7 @@ export function UsersWorkbenchPage() {
             <UserForm
               mode={sheetMode.type === 'user-create' ? 'create' : 'edit'}
               user={sheetMode.type === 'user-edit' ? sheetMode.user : null}
+              periodLimitsSupported={workbench.capabilities.userPeriodLimits}
               mutating={workbench.mutating}
               onCancel={closeSheet}
               onSubmit={async (input) => {
@@ -2536,6 +3288,15 @@ export function UsersWorkbenchPage() {
               accessKeys={accessKeys}
               channelGroups={channelGroups}
               modelGroups={modelGroups}
+              periodLimits={workbench.selectedUserPeriodLimits}
+              periodLimitsSupported={workbench.capabilities.userPeriodLimits}
+              periodLimitsPending={workbench.isFetchingPeriodLimits}
+              periodLimitsErrorMessage={workbench.periodLimitsErrorMessage}
+              mutating={workbench.mutating}
+              onRetryPeriodLimits={workbench.refetchPeriodLimits}
+              onResetPeriodLimits={() =>
+                setPendingPeriodReset(workbench.selectedUser ?? sheetMode.user)
+              }
             />
           ) : sheetMode?.type === 'balance' ? (
             <BalanceOperationForm
@@ -2652,6 +3413,20 @@ export function UsersWorkbenchPage() {
           ) : null}
         </DrawerScaffoldContent>
       </Sheet>
+
+      <PeriodResetDialog
+        user={pendingPeriodReset}
+        status={workbench.selectedUserPeriodLimits}
+        mutating={workbench.mutating}
+        onCancel={() => setPendingPeriodReset(null)}
+        onConfirm={async (input) => {
+          if (!pendingPeriodReset) return
+
+          await workbench.resetPeriodLimits({ user: pendingPeriodReset, input })
+          toast.success(t('usersPage.toast.periodLimitsReset'))
+          setPendingPeriodReset(null)
+        }}
+      />
 
       <AlertDialog
         open={Boolean(pendingDelete)}
