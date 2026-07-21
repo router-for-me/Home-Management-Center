@@ -19,6 +19,7 @@ export type CapabilityKey =
   | 'oauthUsage'
   | 'quotaSnapshots'
   | 'quotaSnapshotDetails'
+  | 'quotaRecollect'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'

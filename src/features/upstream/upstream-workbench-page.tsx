@@ -1,0 +1,164 @@
+import { useEffect, useState } from 'react'
+
+import { useIsFetching, useQueryClient } from '@tanstack/react-query'
+
+import { Loader2, Plus, RefreshCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
+
+import { PageHeader } from '@/components/shared/page-header'
+import { Button } from '@/components/ui/button'
+import { AccountsPanel } from '@/features/credentials/accounts-panel'
+import { ProvidersPanel } from '@/features/providers/providers-panel'
+import {
+  UpstreamSummaryCards,
+  type UpstreamAccountsStats,
+  type UpstreamProvidersStats,
+} from '@/features/upstream/summary-cards'
+import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
+import type { UpstreamQuotaView } from '@/features/upstream/upstream-quota-model'
+import type { UpstreamTab } from '@/features/upstream/upstream-route'
+import { cn } from '@/lib/utils'
+
+const upstreamTabs: UpstreamTab[] = ['accounts', 'providers']
+
+export function UpstreamWorkbenchPage({
+  tab,
+  initialCredentialId,
+  initialSearch = '',
+  onTabChange,
+  onSearchChange,
+}: {
+  tab: UpstreamTab
+  initialCredentialId?: string
+  initialSearch?: string
+  onTabChange: (tab: UpstreamTab) => void
+  onSearchChange: (search: string) => void
+}) {
+  const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab] = useState<UpstreamTab>(tab)
+  const [accountsCreateOpen, setAccountsCreateOpen] = useState(false)
+  const [quotaView, setQuotaView] = useState<UpstreamQuotaView>('all')
+  const [accountsStats, setAccountsStats] = useState<UpstreamAccountsStats | null>(null)
+  const [providersStats, setProvidersStats] = useState<UpstreamProvidersStats | null>(null)
+  const quota = useUpstreamQuota()
+
+  useEffect(() => {
+    setActiveTab(tab)
+  }, [tab])
+
+  const fetchingCount =
+    useIsFetching({ queryKey: ['management-credentials'] }) +
+    useIsFetching({ queryKey: ['management-providers'] }) +
+    useIsFetching({ queryKey: ['upstream-quota-snapshot'] })
+  const syncing = fetchingCount > 0
+
+  const handleSync = async () => {
+    // The recollect endpoint does not exist yet; when capabilities.quotaRecollect
+    // turns true, trigger collection first and then re-read the snapshots.
+    // See .workbench/upstream-quota-backend-api-todo.md (TODO-1).
+    if (!quota.capabilities.quotaRecollect) {
+      toast.info(t('upstreamPage.sync.unavailable'))
+    }
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['management-credentials'] }),
+      queryClient.invalidateQueries({ queryKey: ['management-providers'] }),
+      queryClient.invalidateQueries({ queryKey: ['upstream-quota-snapshot'] }),
+    ])
+  }
+
+  const handleTabChange = (nextTab: UpstreamTab) => {
+    setActiveTab(nextTab)
+    onTabChange(nextTab)
+  }
+
+  const handleFilterAttention = () => {
+    setQuotaView('attention')
+    handleTabChange('accounts')
+  }
+
+  return (
+    <section className="grid w-full gap-5">
+      <PageHeader
+        title={t('upstreamPage.header.title')}
+        description={t('upstreamPage.header.description')}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={syncing}
+              onClick={() => void handleSync()}
+              aria-label={
+                syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')
+              }
+              title={syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
+            >
+              {syncing ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="size-4" aria-hidden="true" />
+              )}
+              {syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
+            </Button>
+            {activeTab === 'accounts' ? (
+              <Button size="sm" onClick={() => setAccountsCreateOpen(true)}>
+                <Plus className="size-4" aria-hidden="true" />
+                {t('credentialsPage.actions.addCredential')}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
+
+      <UpstreamSummaryCards
+        accounts={accountsStats}
+        providers={providersStats}
+        quotaAvailable={quota.available}
+        quotaAttention={quota.attentionCount}
+        onFilterAttention={handleFilterAttention}
+      />
+
+      <div
+        className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"
+        role="tablist"
+        aria-label={t('upstreamPage.tabs.label')}
+      >
+        {upstreamTabs.map((item) => (
+          <Button
+            key={item}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === item}
+            variant={activeTab === item ? 'default' : 'ghost'}
+            className="min-h-10 w-full justify-center sm:w-auto sm:min-w-32"
+            onClick={() => handleTabChange(item)}
+          >
+            {t(`upstreamPage.tabs.${item}`)}
+          </Button>
+        ))}
+      </div>
+
+      <div className={cn(activeTab === 'accounts' ? undefined : 'hidden')}>
+        <AccountsPanel
+          initialCredentialId={initialCredentialId}
+          initialSearch={initialSearch}
+          onSearchChange={onSearchChange}
+          createOpen={accountsCreateOpen}
+          onCreateOpenChange={setAccountsCreateOpen}
+          quotaView={quotaView}
+          onQuotaViewChange={setQuotaView}
+          quotaAvailable={quota.available}
+          quotaLoading={quota.isPending || quota.isFetching}
+          quotaTruncated={quota.truncated}
+          quotaMap={quota.map}
+          onStatsChange={setAccountsStats}
+        />
+      </div>
+      <div className={cn(activeTab === 'providers' ? undefined : 'hidden')}>
+        <ProvidersPanel onStatsChange={setProvidersStats} />
+      </div>
+    </section>
+  )
+}

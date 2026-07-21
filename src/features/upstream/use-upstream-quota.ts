@@ -1,45 +1,44 @@
+import { useMemo } from 'react'
+
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { useManagementSession } from '@/features/observability/use-management-session'
-import { type QuotaFilters, type QuotaPagination } from '@/features/quota/quota-model'
 import {
   fetchQuotaCredentialDetail,
   fetchQuotaSnapshot,
   toQuotaApiError,
 } from '@/lib/api/management/quota'
 
-const quotaRefreshIntervalMs = 30_000
+import { withUpstreamQuotaMock } from './quota-mock'
+import {
+  buildUpstreamQuotaJoinMap,
+  isQuotaAttentionStatus,
+} from './upstream-quota-model'
 
-export function useQuotaWorkbench(filters: QuotaFilters, pagination: QuotaPagination) {
-  const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
-    useManagementSession()
+const upstreamQuotaRefreshIntervalMs = 30_000
+const upstreamQuotaListLimit = 200
+
+export function useUpstreamQuota() {
+  const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()
   const available = capabilities.quotaSnapshots
+  const detailsAvailable = capabilities.quotaSnapshotDetails
   const canQuery = connected && capabilityReady && Boolean(session.managementKey) && available
 
   const query = useQuery({
-    queryKey: ['management-quota-snapshots', session.baseUrl, connectedAt, filters, pagination],
+    queryKey: ['upstream-quota-snapshot', session.baseUrl, connectedAt],
     enabled: canQuery,
     retry: false,
     placeholderData: keepPreviousData,
     staleTime: 0,
     refetchOnReconnect: false,
-    refetchInterval: canQuery ? quotaRefreshIntervalMs : false,
+    refetchInterval: canQuery ? upstreamQuotaRefreshIntervalMs : false,
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
         return await fetchQuotaSnapshot(session, {
-          limit: pagination.limit,
-          offset: pagination.offset,
-          search: filters.search.trim() || undefined,
-          provider: filters.provider === 'all' ? undefined : filters.provider,
-          quotaStatus: filters.status === 'all' ? undefined : filters.status,
-          freshness: filters.freshness === 'all' ? undefined : filters.freshness,
-          source: filters.source === 'all' ? undefined : filters.source,
-          credentialStatus:
-            filters.credentialStatus === 'all' ? undefined : filters.credentialStatus,
-          collectionStatus:
-            filters.collectionStatus === 'all' ? undefined : filters.collectionStatus,
-          sort: filters.sort,
+          limit: upstreamQuotaListLimit,
+          offset: 0,
+          sort: 'risk_desc',
         })
       } catch (error) {
         throw toQuotaApiError(error)
@@ -47,14 +46,24 @@ export function useQuotaWorkbench(filters: QuotaFilters, pagination: QuotaPagina
     },
   })
 
+  const entries = useMemo(() => withUpstreamQuotaMock(query.data?.items ?? []), [query.data])
+  const map = useMemo(() => buildUpstreamQuotaJoinMap(entries), [entries])
+  const attentionCount = useMemo(
+    () => entries.filter((entry) => isQuotaAttentionStatus(entry.status)).length,
+    [entries],
+  )
+  const total = query.data?.total ?? entries.length
+  const truncated = total > entries.length
+
   return {
-    connected,
-    checking,
-    capabilityReady,
-    capabilities,
-    runtimeMode,
     available,
-    snapshot: query.data ?? null,
+    detailsAvailable,
+    capabilities,
+    map,
+    entries,
+    attentionCount,
+    total,
+    truncated,
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,
@@ -63,12 +72,12 @@ export function useQuotaWorkbench(filters: QuotaFilters, pagination: QuotaPagina
   }
 }
 
-export function useQuotaCredentialDetail(credentialId: string | null) {
+export function useUpstreamQuotaCredentialDetail(credentialId: string | null) {
   const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()
   const available = capabilities.quotaSnapshotDetails
 
   const query = useQuery({
-    queryKey: ['management-quota-credential', session.baseUrl, connectedAt, credentialId],
+    queryKey: ['upstream-quota-credential', session.baseUrl, connectedAt, credentialId],
     enabled:
       Boolean(credentialId) &&
       connected &&

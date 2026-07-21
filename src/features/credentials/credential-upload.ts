@@ -47,6 +47,10 @@ export async function validateCredentialUploadFile(
   }
 }
 
+export function isCredentialUploadRetryable(errorCode: CredentialUploadErrorCode | null) {
+  return errorCode === 'network' || errorCode === 'server'
+}
+
 export function classifyCredentialUploadError(error: unknown): CredentialUploadErrorCode {
   const requestError = error as { status?: number; code?: string; message?: string }
   const message = requestError.message?.toLowerCase() ?? ''

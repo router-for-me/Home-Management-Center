@@ -18,6 +18,7 @@ import { Route as UserLoginRouteImport } from './routes/user.login'
 import { Route as UserForgotPasswordRouteImport } from './routes/user.forgot-password'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminUsageRouteImport } from './routes/admin.usage'
+import { Route as AdminUpstreamRouteImport } from './routes/admin.upstream'
 import { Route as AdminSystemNodesRouteImport } from './routes/admin.system-nodes'
 import { Route as AdminRequestEventsRouteImport } from './routes/admin.request-events'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
@@ -75,6 +76,11 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
 const AdminUsageRoute = AdminUsageRouteImport.update({
   id: '/admin/usage',
   path: '/admin/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUpstreamRoute = AdminUpstreamRouteImport.update({
+  id: '/admin/upstream',
+  path: '/admin/upstream',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSystemNodesRoute = AdminSystemNodesRouteImport.update({
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/upstream': typeof AdminUpstreamRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/upstream': typeof AdminUpstreamRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/request-events': typeof AdminRequestEventsRoute
   '/admin/system-nodes': typeof AdminSystemNodesRoute
+  '/admin/upstream': typeof AdminUpstreamRoute
   '/admin/usage': typeof AdminUsageRoute
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/request-events'
     | '/admin/system-nodes'
+    | '/admin/upstream'
     | '/admin/usage'
     | '/admin/users'
     | '/user/forgot-password'
@@ -257,6 +267,7 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/request-events'
     | '/admin/system-nodes'
+    | '/admin/upstream'
     | '/admin/usage'
     | '/admin/users'
     | '/user/forgot-password'
@@ -281,6 +292,7 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/request-events'
     | '/admin/system-nodes'
+    | '/admin/upstream'
     | '/admin/usage'
     | '/admin/users'
     | '/user/forgot-password'
@@ -306,6 +318,7 @@ export interface RootRouteChildren {
   AdminQuotaRoute: typeof AdminQuotaRoute
   AdminRequestEventsRoute: typeof AdminRequestEventsRoute
   AdminSystemNodesRoute: typeof AdminSystemNodesRoute
+  AdminUpstreamRoute: typeof AdminUpstreamRoute
   AdminUsageRoute: typeof AdminUsageRoute
   AdminUsersRoute: typeof AdminUsersRoute
   UserForgotPasswordRoute: typeof UserForgotPasswordRoute
@@ -379,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/usage'
       fullPath: '/admin/usage'
       preLoaderRoute: typeof AdminUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/upstream': {
+      id: '/admin/upstream'
+      path: '/admin/upstream'
+      fullPath: '/admin/upstream'
+      preLoaderRoute: typeof AdminUpstreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/system-nodes': {
@@ -490,6 +510,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminQuotaRoute: AdminQuotaRoute,
   AdminRequestEventsRoute: AdminRequestEventsRoute,
   AdminSystemNodesRoute: AdminSystemNodesRoute,
+  AdminUpstreamRoute: AdminUpstreamRoute,
   AdminUsageRoute: AdminUsageRoute,
   AdminUsersRoute: AdminUsersRoute,
   UserForgotPasswordRoute: UserForgotPasswordRoute,

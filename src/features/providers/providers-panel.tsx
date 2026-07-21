@@ -19,7 +19,6 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
-import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   TableSurface,
@@ -66,6 +65,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
+import type { UpstreamProvidersStats } from '@/features/upstream/summary-cards'
 import type {
   ProviderConnectivityTestInput,
   ProviderDescriptor,
@@ -404,20 +404,11 @@ function ProviderDisconnectedState() {
 }
 
 function ProviderLoadingState() {
-  const { t } = useTranslation()
-
   return (
-    <section className="grid gap-5">
-      <PageHeader
-        title={t('providersPage.loading.title')}
-        description={t('providersPage.loading.description')}
-        tags={<Skeleton className="h-7 w-36 rounded-md" />}
-      />
-      <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-        <Skeleton className="h-[520px] rounded-lg" />
-        <Skeleton className="h-[520px] rounded-lg" />
-      </div>
-    </section>
+    <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+      <Skeleton className="h-[520px] rounded-lg" />
+      <Skeleton className="h-[520px] rounded-lg" />
+    </div>
   )
 }
 
@@ -2208,7 +2199,13 @@ function ProviderFormPanel({
   )
 }
 
-export function ProvidersWorkbenchPage() {
+const EMPTY_PROVIDER_GROUPS: ProviderGroup[] = []
+
+export function ProvidersPanel({
+  onStatsChange,
+}: {
+  onStatsChange?: (stats: UpstreamProvidersStats) => void
+} = {}) {
   const { t } = useTranslation()
   const [activeProviderId, setActiveProviderId] = useState<ProviderId>('gemini')
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
@@ -2221,7 +2218,7 @@ export function ProvidersWorkbenchPage() {
   const [modelCatalogFilter, setModelCatalogFilter] = useState('')
   const workbench = useProviderWorkbench(modelCatalogChannel)
 
-  const groups = workbench.snapshot?.groups ?? []
+  const groups = workbench.snapshot?.groups ?? EMPTY_PROVIDER_GROUPS
   const activeGroup = groups.find((group) => group.id === activeProviderId) ?? groups[0]
   const activeResources = useMemo(() => {
     if (!activeGroup) return []
@@ -2244,11 +2241,6 @@ export function ProvidersWorkbenchPage() {
   }, [activeGroup, filter])
   const selectedResource =
     activeGroup?.resources.find((resource) => resource.id === selectedResourceId) ?? null
-  const totalResources = groups.reduce((total, group) => total + group.resources.length, 0)
-  const activeResourcesCount = groups.reduce(
-    (total, group) => total + group.resources.filter((resource) => !resource.disabled).length,
-    0,
-  )
   const activeProviderName = activeGroup ? t(`providersPage.providerNames.${activeGroup.id}`) : ''
   const currentModelCatalog =
     workbench.modelDefinitions?.channel === modelCatalogChannel ? workbench.modelDefinitions : null
@@ -2258,6 +2250,14 @@ export function ProvidersWorkbenchPage() {
       setActiveProviderId(groups[0].id)
     }
   }, [activeGroup, groups])
+
+  useEffect(() => {
+    if (!workbench.snapshot) return
+    onStatsChange?.({
+      totalKeys: groups.reduce((total, group) => total + group.resources.length, 0),
+      groupIds: groups.map((group) => group.id),
+    })
+  }, [groups, onStatsChange, workbench.snapshot])
 
   if (workbench.checking) {
     return <ProviderLoadingState />
@@ -2369,65 +2369,7 @@ export function ProvidersWorkbenchPage() {
   }
 
   return (
-    <section className="grid w-full gap-5">
-      <PageHeader
-        title={t('providersPage.header.title')}
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={workbench.isFetching}
-              onClick={workbench.refetch}
-              aria-label={
-                workbench.isFetching
-                  ? t('providersPage.actions.syncing')
-                  : t('providersPage.actions.refresh')
-              }
-              title={
-                workbench.isFetching
-                  ? t('providersPage.actions.syncing')
-                  : t('providersPage.actions.refresh')
-              }
-            >
-              {workbench.isFetching ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <RefreshCw className="size-4" aria-hidden="true" />
-              )}
-              {workbench.isFetching
-                ? t('providersPage.actions.syncing')
-                : t('providersPage.actions.refresh')}
-            </Button>
-            <Button
-              size="sm"
-              disabled={activeGroup.issue?.kind === 'unsupported'}
-              onClick={openCreatePanel}
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              {t('providersPage.actions.new')}
-            </Button>
-          </>
-        }
-        tags={
-          <>
-            <span className="border-primary/30 bg-primary/10 text-primary rounded-md border px-2.5 py-1 text-xs font-medium">
-              {t('providersPage.header.activeResources', {
-                active: activeResourcesCount,
-                total: totalResources,
-              })}
-            </span>
-            {workbench.snapshot.issues.length > 0 ? (
-              <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-2.5 py-1 text-xs font-medium">
-                {t('providersPage.header.issueCount', {
-                  count: workbench.snapshot.issues.length,
-                })}
-              </span>
-            ) : null}
-          </>
-        }
-      />
-
+    <section className="grid w-full gap-4">
       <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
         <ProviderCategoryList
           groups={groups}
@@ -2447,18 +2389,28 @@ export function ProvidersWorkbenchPage() {
               </span>
             }
             actions={
-              <div className="relative min-w-0 md:w-72">
-                <Search
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                  aria-hidden="true"
-                />
-                <Input
-                  className="pl-9"
-                  value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
-                  placeholder={t('providersPage.table.filterPlaceholder')}
-                />
-              </div>
+              <>
+                <div className="relative min-w-0 md:w-72">
+                  <Search
+                    className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    className="pl-9"
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                    placeholder={t('providersPage.table.filterPlaceholder')}
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  disabled={activeGroup.issue?.kind === 'unsupported'}
+                  onClick={openCreatePanel}
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  {t('providersPage.actions.new')}
+                </Button>
+              </>
             }
             actionsClassName="w-full md:w-auto"
           />
