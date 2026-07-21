@@ -1,11 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-import { ProvidersWorkbenchPage } from '@/features/providers/providers-workbench-page'
+import { Navigate, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/providers')({
-  component: ProvidersPage,
+  component: ProvidersRedirect,
 })
 
-function ProvidersPage() {
-  return <ProvidersWorkbenchPage />
+function ProvidersRedirect() {
+  return <Navigate to="/admin/upstream" search={{ tab: 'providers' }} replace />
 }

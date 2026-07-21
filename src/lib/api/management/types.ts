@@ -19,9 +19,11 @@ export type CapabilityKey =
   | 'oauthUsage'
   | 'quotaSnapshots'
   | 'quotaSnapshotDetails'
+  | 'quotaRecollect'
   | 'logs'
   | 'requestErrorLogs'
   | 'users'
+  | 'userPeriodLimits'
   | 'accessGroups'
   | 'credentialInFlight'
   | 'credentialConcurrencyLimits'
@@ -51,6 +53,11 @@ export type ManagementSessionInput = {
   managementKey: string
 }
 
+export type ManagementApiFieldError = {
+  field: string
+  code: string
+}
+
 export type ManagementApiError = {
   message: string
   status?: number
@@ -58,4 +65,5 @@ export type ManagementApiError = {
   backendCode?: string
   requestId?: string
   retryable?: boolean
+  fieldErrors?: ManagementApiFieldError[]
 }

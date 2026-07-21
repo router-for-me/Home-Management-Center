@@ -29,6 +29,7 @@ const capabilityRequests: Record<
     | 'quotaSnapshotDetails'
     | 'credentialInFlight'
     | 'credentialConcurrencyLimits'
+    | 'quotaRecollect'
   >,
   {
     path: string
@@ -61,6 +62,12 @@ const capabilityRequests: Record<
   users: {
     path: '/users',
   },
+  userPeriodLimits: {
+    // Fallback for Home builds that expose the routes but predate the
+    // user_period_limits capability declaration: those answer 400 for the
+    // invalid id, older builds without the routes answer 404.
+    path: '/users/0/period-limits',
+  },
   accessGroups: {
     path: '/channel-groups',
   },
@@ -87,9 +94,11 @@ const emptyCapabilities: CapabilityMap = {
   oauthUsage: false,
   quotaSnapshots: false,
   quotaSnapshotDetails: false,
+  quotaRecollect: false,
   logs: false,
   requestErrorLogs: false,
   users: false,
+  userPeriodLimits: false,
   accessGroups: false,
   credentialInFlight: false,
   credentialConcurrencyLimits: false,
@@ -288,6 +297,15 @@ function readDeclaredQuotaSnapshotDetailsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['quota_snapshot_details', 'quotaSnapshotDetails'])
 }
 
+function readDeclaredQuotaRecollectCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'quota_recollect',
+    'quotaRecollect',
+    'quota_collect',
+    'quotaCollect',
+  ])
+}
+
 function readDeclaredLogsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['logs', 'runtime_logs', 'runtimeLogs'])
 }
@@ -302,6 +320,15 @@ function readDeclaredRequestErrorLogsCapability(configData: unknown) {
 
 function readDeclaredUsersCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['users', 'user_management', 'userManagement'])
+}
+
+function readDeclaredUserPeriodLimitsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, [
+    'user_period_limits',
+    'userPeriodLimits',
+    'period_limits',
+    'periodLimits',
+  ])
 }
 
 function readDeclaredAccessGroupsCapability(configData: unknown) {
@@ -471,11 +498,17 @@ export async function probeManagementRuntime(
   const declaredQuotaSnapshotDetails = capabilitiesPayload
     ? readDeclaredQuotaSnapshotDetailsCapability(capabilitySource)
     : null
+  const declaredQuotaRecollect = capabilitiesPayload
+    ? readDeclaredQuotaRecollectCapability(capabilitySource)
+    : null
   const declaredLogs = capabilitiesPayload ? readDeclaredLogsCapability(capabilitySource) : null
   const declaredRequestErrorLogs = capabilitiesPayload
     ? readDeclaredRequestErrorLogsCapability(capabilitySource)
     : null
   const declaredUsers = capabilitiesPayload ? readDeclaredUsersCapability(capabilitySource) : null
+  const declaredUserPeriodLimits = capabilitiesPayload
+    ? readDeclaredUserPeriodLimitsCapability(capabilitySource)
+    : null
   const declaredAccessGroups = capabilitiesPayload
     ? readDeclaredAccessGroupsCapability(capabilitySource)
     : null
@@ -493,6 +526,7 @@ export async function probeManagementRuntime(
         ...(declaredRequestEvents === null ? (['requestEvents'] as const) : []),
         ...(declaredRequestEventFilters === null ? (['requestEventFilters'] as const) : []),
         'users',
+        ...(declaredUserPeriodLimits === null ? (['userPeriodLimits'] as const) : []),
         'accessGroups',
       ]
     : (Object.keys(capabilityRequests) as ProbedCapabilityKey[])
@@ -537,7 +571,9 @@ export async function probeManagementRuntime(
     oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
     quotaSnapshots: declaredQuotaSnapshots ?? false,
     quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? false,
+    quotaRecollect: declaredQuotaRecollect ?? false,
     users: declaredUsers ?? probedCapabilities.users,
+    userPeriodLimits: declaredUserPeriodLimits ?? probedCapabilities.userPeriodLimits,
     usageQueue: false,
     // GET /logs returns 400 when file logging is disabled, so probing it would create
     // console noise. Standalone runtimes that expose usage routes also expose the log

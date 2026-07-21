@@ -44,11 +44,14 @@ import {
 } from '@/lib/api/management/providers'
 import {
   type UserFormInput,
+  type UserPeriodResetInput,
   type UserResource,
   createUser,
   deleteUser,
   fetchUserDetail,
+  fetchUserPeriodLimits,
   fetchUsersSnapshot,
+  resetUserPeriodLimits,
   toUserApiError,
   updateUser,
 } from '@/lib/api/management/users'
@@ -234,6 +237,7 @@ export function useUserWorkbench(
   selectedUserId?: string | null,
   loadCredentialCandidates = false,
   loadModelCandidates = false,
+  loadPeriodLimits = false,
 ) {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
@@ -262,6 +266,12 @@ export function useUserWorkbench(
     connectedAt,
   ]
   const detailQueryKey = ['management-user-detail', session.baseUrl, connectedAt, selectedUserId]
+  const periodLimitsQueryKey = [
+    'management-user-period-limits',
+    session.baseUrl,
+    connectedAt,
+    selectedUserId,
+  ]
 
   const usersQuery = useQuery({
     queryKey: usersQueryKey,
@@ -371,10 +381,26 @@ export function useUserWorkbench(
     },
   })
 
+  const periodLimitsQuery = useQuery({
+    queryKey: periodLimitsQueryKey,
+    enabled:
+      usersEnabled && capabilities.userPeriodLimits && Boolean(selectedUserId) && loadPeriodLimits,
+    queryFn: async () => {
+      if (!selectedUserId) throw new Error('Missing user id')
+
+      try {
+        return await fetchUserPeriodLimits(session, selectedUserId)
+      } catch (error) {
+        throw toUserApiError(error)
+      }
+    },
+  })
+
   const invalidateUsers = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: usersQueryKey }),
       queryClient.invalidateQueries({ queryKey: detailQueryKey }),
+      queryClient.invalidateQueries({ queryKey: periodLimitsQueryKey }),
     ])
   }
 
@@ -418,6 +444,26 @@ export function useUserWorkbench(
       }
     },
     onSuccess: invalidateAccess,
+  })
+
+  const resetPeriodLimitsMutation = useMutation({
+    mutationFn: async ({ user, input }: { user: UserResource; input: UserPeriodResetInput }) => {
+      try {
+        return await resetUserPeriodLimits(session, user.id, input)
+      } catch (error) {
+        throw toUserApiError(error)
+      }
+    },
+    onSuccess: async (status) => {
+      // The reset response carries the complete post-reset status; write it
+      // straight into the cache and only fall back to a refetch when the
+      // backend does not return it.
+      if (status) {
+        queryClient.setQueryData(periodLimitsQueryKey, status)
+        return
+      }
+      await queryClient.invalidateQueries({ queryKey: periodLimitsQueryKey })
+    },
   })
 
   const invalidateBalanceAfterOperation = async () => {
@@ -632,6 +678,7 @@ export function useUserWorkbench(
     createUserMutation.isPending ||
     updateUserMutation.isPending ||
     deleteUserMutation.isPending ||
+    resetPeriodLimitsMutation.isPending ||
     rechargeMutation.isPending ||
     deductionMutation.isPending ||
     rechargeBatchMutation.isPending ||
@@ -668,6 +715,14 @@ export function useUserWorkbench(
       ? toError(modelCandidatesQuery.error).message
       : null,
     selectedUser: detailQuery.data ?? null,
+    selectedUserPeriodLimits: periodLimitsQuery.data ?? null,
+    isFetchingPeriodLimits: periodLimitsQuery.isFetching,
+    periodLimitsErrorMessage: periodLimitsQuery.error
+      ? toError(periodLimitsQuery.error).message
+      : null,
+    refetchPeriodLimits: () => {
+      void periodLimitsQuery.refetch()
+    },
     fetchedAt: usersQuery.data?.fetchedAt ?? null,
     isPending:
       usersQuery.isPending ||
@@ -696,6 +751,7 @@ export function useUserWorkbench(
     createUser: createUserMutation.mutateAsync,
     updateUser: updateUserMutation.mutateAsync,
     deleteUser: deleteUserMutation.mutateAsync,
+    resetPeriodLimits: resetPeriodLimitsMutation.mutateAsync,
     recharge: rechargeMutation.mutateAsync,
     deduct: deductionMutation.mutateAsync,
     rechargeBatch: rechargeBatchMutation.mutateAsync,

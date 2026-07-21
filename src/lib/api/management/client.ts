@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 
-import type { ManagementApiError, ManagementSessionInput } from './types'
+import type { ManagementApiError, ManagementApiFieldError, ManagementSessionInput } from './types'
 
 const MANAGEMENT_PATH = '/v0/management'
 const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
@@ -88,6 +88,21 @@ type ResponseErrorDetails = {
   backendCode?: string
   requestId?: string
   retryable?: boolean
+  fieldErrors?: ManagementApiFieldError[]
+}
+
+function readFieldErrors(value: unknown): ManagementApiFieldError[] | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  const fieldErrors = value.flatMap((item) => {
+    if (!item || typeof item !== 'object') return []
+    const record = item as Record<string, unknown>
+    const field = typeof record.field === 'string' ? record.field.trim() : ''
+    const code = typeof record.code === 'string' ? record.code.trim() : ''
+    return field && code ? [{ field, code }] : []
+  })
+
+  return fieldErrors.length > 0 ? fieldErrors : undefined
 }
 
 function readResponseErrorDetails(data: unknown): ResponseErrorDetails {
@@ -99,6 +114,9 @@ function readResponseErrorDetails(data: unknown): ResponseErrorDetails {
     message:
       typeof directMessage === 'string' && directMessage.trim() ? directMessage.trim() : null,
   }
+
+  const fieldErrors = readFieldErrors(response.field_errors ?? response.fieldErrors)
+  if (fieldErrors) details.fieldErrors = fieldErrors
 
   const error = response.error
   if (typeof error === 'string' && error.trim()) {
@@ -147,6 +165,7 @@ export function toManagementApiError(error: unknown): ManagementApiError {
       ...(typeof responseError.retryable === 'boolean'
         ? { retryable: responseError.retryable }
         : {}),
+      ...(responseError.fieldErrors ? { fieldErrors: responseError.fieldErrors } : {}),
     }
 
     if (status === 401 || status === 403) {

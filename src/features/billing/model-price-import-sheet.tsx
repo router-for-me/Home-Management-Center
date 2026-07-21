@@ -83,6 +83,7 @@ import type {
   ModelPriceImportTargetFilter,
 } from '@/lib/billing/model-price-import-types'
 import { type ModelsDevCatalog, fetchModelsDevCatalog } from '@/lib/billing/models-dev-catalog'
+import { downloadBlob } from '@/lib/download'
 import { cn } from '@/lib/utils'
 
 type Props = {
@@ -228,14 +229,7 @@ function downloadCsv(
   rows: Array<Array<string | number | boolean | null | undefined>>,
 ) {
   const content = rows.map((row) => row.map(escapeCsv).join(',')).join('\n')
-  const url = URL.createObjectURL(
-    new Blob([`\ufeff${content}`], { type: 'text/csv;charset=utf-8' }),
-  )
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
+  downloadBlob(new Blob([`\ufeff${content}`], { type: 'text/csv;charset=utf-8' }), filename)
 }
 
 function PriceFieldList({

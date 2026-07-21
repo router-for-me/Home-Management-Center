@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import type { UserAccount, UserAuthSession } from '@/lib/api/user/auth'
+import { type UserAccount, type UserAuthSession, normalizeUserAccount } from '@/lib/api/user/auth'
 import { DEFAULT_USER_API_BASE_URL, normalizeUserBaseUrl } from '@/lib/api/user/client'
 
 const LOCAL_STORAGE_KEY = 'home-management-center.userSession'
@@ -26,6 +26,7 @@ type UserSessionState = {
   errorMessage: string | null
   setChecking: () => void
   setAuthenticated: (session: UserAuthSession, rememberSession: boolean, baseUrl?: string) => void
+  replaceAuthenticatedSession: (session: UserAuthSession) => void
   setError: (message: string) => void
   updateUser: (user: UserAccount) => void
   logout: () => void
@@ -60,6 +61,7 @@ function parseStoredSession(raw: string | null): StoredUserSession | null {
   return {
     ...parsed,
     baseUrl: normalizeUserBaseUrl(parsed.baseUrl),
+    user: normalizeUserAccount(parsed.user),
     rememberSession: Boolean(parsed.rememberSession),
   }
 }
@@ -118,6 +120,23 @@ export const useUserSessionStore = create<UserSessionState>((set, get) => ({
       expiresAt: session.expiresAt,
       user: session.user,
       rememberSession,
+    }
+
+    writeStoredSession(nextSession)
+    set({
+      ...nextSession,
+      status: 'authenticated',
+      errorMessage: null,
+    })
+  },
+  replaceAuthenticatedSession: (session) => {
+    const state = get()
+    const nextSession: StoredUserSession = {
+      baseUrl: normalizeUserBaseUrl(state.baseUrl),
+      token: session.token,
+      expiresAt: session.expiresAt,
+      user: session.user,
+      rememberSession: state.rememberSession,
     }
 
     writeStoredSession(nextSession)

@@ -1,16 +1,14 @@
 import {
   Activity,
   BarChart3,
-  CircleGauge,
   FileText,
   Gauge,
   KeyRound,
+  Layers,
   ListChecks,
   type LucideIcon,
-  Network,
   Plug,
   ServerCog,
-  ShieldCheck,
   SlidersHorizontal,
   UsersRound,
   WalletCards,
@@ -20,9 +18,7 @@ type NavigationGroupId = 'operate' | 'gateway' | 'finance' | 'observe' | 'contro
 
 type NavigationRoute =
   | '/admin/dashboard'
-  | '/admin/providers'
-  | '/admin/credentials'
-  | '/admin/quota'
+  | '/admin/upstream'
   | '/admin/access-keys'
   | '/admin/users'
   | '/admin/billing'
@@ -65,22 +61,10 @@ export const navigationGroups: NavigationGroup[] = [
     labelKey: 'navigationGroups.gateway',
     items: [
       {
-        to: '/admin/providers',
-        labelKey: 'navigation.providers',
-        metaKey: 'navigationMeta.providers',
-        icon: Network,
-      },
-      {
-        to: '/admin/credentials',
-        labelKey: 'navigation.credentials',
-        metaKey: 'navigationMeta.credentials',
-        icon: ShieldCheck,
-      },
-      {
-        to: '/admin/quota',
-        labelKey: 'navigation.quota',
-        metaKey: 'navigationMeta.quota',
-        icon: CircleGauge,
+        to: '/admin/upstream',
+        labelKey: 'navigation.upstream',
+        metaKey: 'navigationMeta.upstream',
+        icon: Layers,
       },
       {
         to: '/admin/access-keys',

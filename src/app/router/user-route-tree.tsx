@@ -1,6 +1,11 @@
 import { Navigate, Outlet, createRootRoute, createRoute } from '@tanstack/react-router'
 
 import { UserAuthPage } from '@/features/access/user-auth-page'
+import {
+  UserForgotPasswordPage,
+  UserResetPasswordPage,
+  UserVerifyEmailPage,
+} from '@/features/access/user-recovery-pages'
 import { UserWorkspacePage } from '@/features/access/user-workspace-page'
 
 const rootRoute = createRootRoute({
@@ -35,9 +40,30 @@ const workspaceRoute = createRoute({
   component: UserWorkspacePage,
 })
 
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/user/forgot-password',
+  component: UserForgotPasswordPage,
+})
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/user/reset-password',
+  component: UserResetPasswordPage,
+})
+
+const verifyEmailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/user/verify-email',
+  component: UserVerifyEmailPage,
+})
+
 export const userRouteTree = rootRoute.addChildren([
   indexRoute,
   loginRoute,
   registerRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
+  verifyEmailRoute,
   workspaceRoute,
 ])
