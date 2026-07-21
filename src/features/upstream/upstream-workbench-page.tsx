@@ -55,10 +55,16 @@ export function UpstreamWorkbenchPage({
   const syncing = fetchingCount > 0
 
   const handleSync = async () => {
-    // The recollect endpoint does not exist yet; when capabilities.quotaRecollect
-    // turns true, trigger collection first and then re-read the snapshots.
-    // See .workbench/upstream-quota-backend-api-todo.md (TODO-1).
-    if (!quota.capabilities.quotaRecollect) {
+    // When the backend exposes quota_recollect, trigger a collection round first;
+    // older runtimes fall back to re-reading the persisted snapshots.
+    if (quota.capabilities.quotaRecollect) {
+      try {
+        const result = await quota.syncQuota()
+        toast.success(t('upstreamPage.sync.triggered', { count: result?.accepted ?? 0 }))
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : String(error))
+      }
+    } else {
       toast.info(t('upstreamPage.sync.unavailable'))
     }
     await Promise.all([

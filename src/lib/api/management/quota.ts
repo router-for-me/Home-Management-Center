@@ -5,6 +5,11 @@ type UnknownRecord = Record<string, unknown>
 
 export type QuotaStatus = 'healthy' | 'low' | 'exhausted' | 'unknown' | 'error' | 'unsupported'
 
+export type QuotaPlan = {
+  name: string
+  premium: boolean
+}
+
 export type QuotaFreshness = 'fresh' | 'stale' | 'never'
 export type QuotaDataSource = 'response_header' | 'active_probe' | 'mixed' | 'none'
 export type QuotaCollectionStatus =
@@ -89,6 +94,7 @@ export type QuotaCredential = {
   consecutiveFailures: number
   lastError: QuotaCollectionError | null
   runtime: QuotaRuntime | null
+  plan: QuotaPlan | null
   primaryWindows: QuotaWindow[]
   windowCount: number
   windows: QuotaWindow[]
@@ -378,6 +384,13 @@ function normalizeQuotaRuntime(value: unknown): QuotaRuntime | null {
   return Object.values(runtime).some(Boolean) ? runtime : null
 }
 
+function normalizeQuotaPlan(value: unknown): QuotaPlan | null {
+  if (!isRecord(value)) return null
+  const name = readString(value, ['name'])
+  if (!name) return null
+  return { name, premium: readBoolean(value, ['premium']) ?? false }
+}
+
 function normalizeQuotaCredential(value: unknown, index: number): QuotaCredential {
   const record = isRecord(value) ? value : {}
   const rawPrimaryWindows = record.primary_windows ?? record.primaryWindows
@@ -418,6 +431,7 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
     consecutiveFailures: readCount(record, ['consecutive_failures', 'consecutiveFailures'], 0),
     lastError: normalizeCollectionError(record.error ?? record.last_error ?? record.lastError),
     runtime: normalizeQuotaRuntime(record.runtime),
+    plan: normalizeQuotaPlan(record.plan),
     primaryWindows,
     windowCount: readCount(
       record,
@@ -628,6 +642,32 @@ export async function fetchQuotaCredentialDetail(
     `/quota/credentials/${encodeURIComponent(credentialId)}`,
   )
   return normalizeQuotaCredentialDetail(response.data)
+}
+
+export type QuotaCollectInput = {
+  credentialIds?: string[]
+  providers?: string[]
+}
+
+export type QuotaCollectResult = {
+  accepted: number
+  running: boolean
+}
+
+export async function triggerQuotaCollection(
+  session: ManagementSessionInput,
+  input: QuotaCollectInput = {},
+): Promise<QuotaCollectResult> {
+  const client = createManagementClient(session)
+  const response = await client.post<unknown>('/quota/collect', {
+    credential_ids: input.credentialIds?.length ? input.credentialIds : undefined,
+    providers: input.providers?.length ? input.providers : undefined,
+  })
+  const root = isRecord(response.data) ? response.data : {}
+  return {
+    accepted: readCount(root, ['accepted'], 0),
+    running: readBoolean(root, ['running']) ?? false,
+  }
 }
 
 export function toQuotaApiError(error: unknown): Error & ManagementApiError {

@@ -1783,6 +1783,7 @@ export const en = {
       sync: {
         action: 'Sync data',
         syncing: 'Syncing',
+        triggered: 'Quota collection triggered for {{count}} credentials.',
         unavailable: 'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
       },
       summary: {

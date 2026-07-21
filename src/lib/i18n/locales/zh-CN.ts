@@ -1715,6 +1715,7 @@ export const zhCN = {
       sync: {
         action: '同步数据',
         syncing: '同步中',
+        triggered: '已触发 {{count}} 个凭证的额度采集。',
         unavailable: '当前后端暂不支持主动触发额度采集,已改为重新读取快照。',
       },
       summary: {

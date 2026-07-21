@@ -9,6 +9,7 @@ import {
   type UpstreamQuotaCellState,
   type UpstreamQuotaEntry,
   findCurrencyWindow,
+  findXaiOnDemandWindow,
 } from './upstream-quota-model'
 
 const upstreamQuotaStatusClassNames: Record<QuotaStatus, string> = {
@@ -148,20 +149,21 @@ function GenericWindowsCell({ entry }: { entry: UpstreamQuotaEntry }) {
 function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
+  const onDemandWindow = findXaiOnDemandWindow(entry)
 
   return (
     <div className="grid min-w-44 gap-1.5">
       <div className="flex flex-wrap items-center gap-1">
-        {entry.grokPlan ? (
+        {entry.plan ? (
           <span
             className={cn(
               'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-              entry.grokPlan.premium
+              entry.plan.premium
                 ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
                 : 'border-transparent bg-foreground text-background',
             )}
           >
-            {entry.grokPlan.name}
+            {entry.plan.name}
           </span>
         ) : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
@@ -174,10 +176,10 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
       ) : (
         <GenericWindowsCell entry={entry} />
       )}
-      {entry.grokOnDemand ? (
+      {onDemandWindow ? (
         <>
-          <InlineWindowBar window={entry.grokOnDemand} label={t('upstreamPage.quota.onDemand')} />
-          <InlineWindowMoneyLine window={entry.grokOnDemand} />
+          <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.onDemand')} />
+          <InlineWindowMoneyLine window={onDemandWindow} />
         </>
       ) : null}
     </div>

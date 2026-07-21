@@ -2,12 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
-import { withUpstreamQuotaMock } from '@/features/upstream/quota-mock'
 import {
   type UpstreamQuotaEntry,
   buildUpstreamQuotaJoinMap,
   findCurrencyWindow,
   findUpstreamQuotaEntry,
+  findXaiOnDemandWindow,
   isQuotaAttentionStatus,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
@@ -64,6 +64,7 @@ function createQuotaEntry(overrides: Partial<QuotaCredential> = {}): UpstreamQuo
     consecutiveFailures: 0,
     lastError: null,
     runtime: null,
+    plan: null,
     primaryWindows: [createWindow()],
     windowCount: 1,
     windows: [createWindow()],
@@ -76,6 +77,7 @@ function createXaiEntry(): UpstreamQuotaEntry {
     id: 'xai-01',
     authIndex: 'xai-01',
     provider: 'xai',
+    plan: { name: 'SuperGrok', premium: false },
     primaryWindows: [
       createWindow({
         id: 'xai-monthly-spend',
@@ -91,8 +93,35 @@ function createXaiEntry(): UpstreamQuotaEntry {
         remainingRatio: 0.28,
       }),
     ],
-    windows: [],
-    windowCount: 1,
+    windows: [
+      createWindow({
+        id: 'xai-monthly-spend',
+        label: 'Monthly Spend',
+        mode: 'fixed',
+        status: 'low',
+        unit: 'currency',
+        currency: 'USD',
+        used: 108,
+        remaining: 42,
+        limit: 150,
+        usedRatio: 0.72,
+        remainingRatio: 0.28,
+      }),
+      createWindow({
+        id: 'xai-on-demand',
+        label: 'On-Demand',
+        mode: 'balance',
+        status: 'healthy',
+        unit: 'currency',
+        currency: 'USD',
+        used: 12,
+        remaining: 38,
+        limit: 50,
+        usedRatio: 0.24,
+        remainingRatio: 0.76,
+      }),
+    ],
+    windowCount: 2,
   })
 }
 
@@ -159,42 +188,39 @@ describe('isQuotaAttentionStatus', () => {
 })
 
 describe('findCurrencyWindow', () => {
-  test('finds the currency window outside on-demand entries', () => {
+  test('finds the monthly currency window and the on-demand window separately', () => {
     const entry = createXaiEntry()
-    const currencyWindow = findCurrencyWindow(entry)
-    expect(currencyWindow?.id).toBe('xai-monthly-spend')
+    expect(findCurrencyWindow(entry)?.id).toBe('xai-monthly-spend')
+    expect(findXaiOnDemandWindow(entry)?.id).toBe('xai-on-demand')
   })
-})
 
-describe('withUpstreamQuotaMock', () => {
-  test('enriches xai entries only when enabled', () => {
-    const xai = createXaiEntry()
-    const claude = createQuotaEntry()
-
-    const enriched = withUpstreamQuotaMock([xai, claude], true)
-    expect(enriched[0].grokPlan?.name).toBe('SuperGrok')
-    expect(enriched[0].grokOnDemand?.unit).toBe('currency')
-    expect(enriched[1].grokPlan ?? null).toBeNull()
-
-    const untouched = withUpstreamQuotaMock([xai], false)
-    expect(untouched[0].grokPlan ?? null).toBeNull()
-    expect(untouched[0].grokOnDemand ?? null).toBeNull()
+  test('returns null when the on-demand window is absent', () => {
+    expect(findXaiOnDemandWindow(createQuotaEntry())).toBeNull()
   })
 })
 
 describe('UpstreamQuotaCell rendering', () => {
-  test('renders grok plan and on-demand rows when fields exist', () => {
-    const entry = withUpstreamQuotaMock([createXaiEntry()], true)[0]
+  test('renders grok plan and on-demand rows from real backend fields', () => {
+    const entry = createXaiEntry()
     const markup = renderToStaticMarkup(
       <UpstreamQuotaCell state={{ kind: 'entry', entry }} />,
     )
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('$42.00')
     expect(markup).toContain('$150.00')
+    expect(markup).toContain('$38.00')
+    expect(markup).toContain('$50.00')
   })
 
-  test('degrades to the currency window without grok fields', () => {
-    const entry = createXaiEntry()
+  test('degrades to the currency window without plan or on-demand fields', () => {
+    const entry = createQuotaEntry({
+      id: 'xai-01',
+      authIndex: 'xai-01',
+      provider: 'xai',
+      primaryWindows: [createXaiEntry().primaryWindows[0]!],
+      windows: [],
+      windowCount: 1,
+    })
     const markup = renderToStaticMarkup(
       <UpstreamQuotaCell state={{ kind: 'entry', entry }} />,
     )

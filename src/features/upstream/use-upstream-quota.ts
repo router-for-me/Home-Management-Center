@@ -4,16 +4,14 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 
 import { useManagementSession } from '@/features/observability/use-management-session'
 import {
+  type QuotaCollectResult,
   fetchQuotaCredentialDetail,
   fetchQuotaSnapshot,
   toQuotaApiError,
+  triggerQuotaCollection,
 } from '@/lib/api/management/quota'
 
-import { withUpstreamQuotaMock } from './quota-mock'
-import {
-  buildUpstreamQuotaJoinMap,
-  isQuotaAttentionStatus,
-} from './upstream-quota-model'
+import { buildUpstreamQuotaJoinMap, isQuotaAttentionStatus } from './upstream-quota-model'
 
 const upstreamQuotaRefreshIntervalMs = 30_000
 const upstreamQuotaListLimit = 200
@@ -46,7 +44,7 @@ export function useUpstreamQuota() {
     },
   })
 
-  const entries = useMemo(() => withUpstreamQuotaMock(query.data?.items ?? []), [query.data])
+  const entries = useMemo(() => query.data?.items ?? [], [query.data])
   const map = useMemo(() => buildUpstreamQuotaJoinMap(entries), [entries])
   const attentionCount = useMemo(
     () => entries.filter((entry) => isQuotaAttentionStatus(entry.status)).length,
@@ -69,6 +67,14 @@ export function useUpstreamQuota() {
     isError: query.isError,
     error: query.error ?? null,
     refetch: query.refetch,
+    syncQuota: async (): Promise<QuotaCollectResult | null> => {
+      if (!capabilities.quotaRecollect) return null
+      try {
+        return await triggerQuotaCollection(session, {})
+      } catch (error) {
+        throw toQuotaApiError(error)
+      }
+    },
   }
 }
 

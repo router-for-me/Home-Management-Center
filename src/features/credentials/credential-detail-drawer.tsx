@@ -40,6 +40,7 @@ import {
 import {
   type UpstreamQuotaEntry,
   findCurrencyWindow,
+  findXaiOnDemandWindow,
 } from '@/features/upstream/upstream-quota-model'
 import {
   type CredentialInFlightSummary,
@@ -431,20 +432,21 @@ function QuotaWindowDetailCard({ window }: { window: QuotaWindow }) {
 function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
+  const onDemandWindow = findXaiOnDemandWindow(entry)
 
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        {entry.grokPlan ? (
+        {entry.plan ? (
           <span
             className={cn(
               'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-              entry.grokPlan.premium
+              entry.plan.premium
                 ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
                 : 'border-transparent bg-foreground text-background',
             )}
           >
-            {entry.grokPlan.name}
+            {entry.plan.name}
           </span>
         ) : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
@@ -466,13 +468,13 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium">{t('upstreamPage.quota.onDemand')}</p>
           <span className="text-muted-foreground text-xs">
-            {entry.grokOnDemand
+            {onDemandWindow
               ? t('upstreamPage.quota.onDemandEnabled')
               : t('upstreamPage.quota.onDemandUnknown')}
           </span>
         </div>
-        {entry.grokOnDemand ? (
-          <InlineWindowBar window={entry.grokOnDemand} label={t('upstreamPage.quota.remaining')} />
+        {onDemandWindow ? (
+          <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.remaining')} />
         ) : null}
       </div>
       {entry.windows.length > 0 ? (

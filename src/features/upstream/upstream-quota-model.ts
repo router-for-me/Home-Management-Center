@@ -1,17 +1,7 @@
 import type { CredentialResource } from '@/lib/api/management/credentials'
 import type { QuotaCredential, QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
 
-// Grok (xAI) plan metadata the backend is expected to add to quota snapshots.
-// See .workbench/upstream-quota-backend-api-todo.md (TODO-2).
-export type GrokPlanInfo = {
-  name: string
-  premium: boolean
-}
-
-export type UpstreamQuotaEntry = QuotaCredential & {
-  grokPlan?: GrokPlanInfo | null
-  grokOnDemand?: QuotaWindow | null
-}
+export type UpstreamQuotaEntry = QuotaCredential
 
 export type UpstreamQuotaCellState =
   | { kind: 'capability-absent' }
@@ -20,6 +10,8 @@ export type UpstreamQuotaCellState =
   | { kind: 'entry'; entry: UpstreamQuotaEntry }
 
 export type UpstreamQuotaView = 'all' | 'attention' | 'ws'
+
+export const xaiOnDemandWindowId = 'xai-on-demand'
 
 export function isQuotaAttentionStatus(status: QuotaStatus) {
   return status === 'low' || status === 'exhausted' || status === 'error'
@@ -86,7 +78,13 @@ export function resolveUpstreamQuotaCellState({
 export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return (
-    windows.find((window) => window.unit === 'currency' && !window.id.includes('on-demand')) ??
-    null
+    windows.find(
+      (window) => window.unit === 'currency' && !window.id.includes('on-demand'),
+    ) ?? null
   )
+}
+
+export function findXaiOnDemandWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
+  const windows = [...entry.primaryWindows, ...entry.windows]
+  return windows.find((window) => window.id === xaiOnDemandWindowId) ?? null
 }

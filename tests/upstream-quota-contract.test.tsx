@@ -55,6 +55,70 @@ describe('upstream navigation and i18n', () => {
 })
 
 describe('quota snapshot normalization contracts', () => {
+  test('surfaces the xAI plan metadata from the backend contract', () => {
+    const snapshot = normalizeQuotaSnapshot({
+      generated_at: '2026-07-21T05:00:00Z',
+      items: [
+        {
+          credential_id: 'credential-xai',
+          auth_index: 'auth-xai',
+          provider: 'xai',
+          credential_type: 'oauth',
+          quota_status: 'healthy',
+          freshness: 'fresh',
+          source: 'active_probe',
+          collection_status: 'success',
+          plan: { name: 'SuperGrok Heavy', premium: true },
+          window_count: 2,
+          primary_windows: [
+            {
+              id: 'xai-monthly-spend',
+              scope: 'account',
+              mode: 'fixed',
+              status: 'healthy',
+              unit: 'currency',
+              currency: 'USD',
+              remaining: 108,
+              limit: 150,
+              source: 'active_probe',
+            },
+            {
+              id: 'xai-on-demand',
+              scope: 'account',
+              mode: 'balance',
+              status: 'healthy',
+              unit: 'currency',
+              currency: 'USD',
+              remaining: 38,
+              limit: 50,
+              source: 'active_probe',
+            },
+          ],
+        },
+      ],
+    })
+
+    const item = snapshot.items[0]
+    expect(item?.plan).toEqual({ name: 'SuperGrok Heavy', premium: true })
+    expect(item?.primaryWindows[1]?.id).toBe('xai-on-demand')
+  })
+
+  test('omits plan when the backend does not report one', () => {
+    const snapshot = normalizeQuotaSnapshot({
+      items: [
+        {
+          credential_id: 'credential-codex',
+          provider: 'codex',
+          quota_status: 'healthy',
+          freshness: 'fresh',
+          collection_status: 'success',
+        },
+      ],
+    })
+
+    expect(snapshot.items[0]?.plan).toBeNull()
+  })
+
   test('normalizes the current backend snake-case contract', () => {
     const snapshot = normalizeQuotaSnapshot({
       generated_at: '2026-07-15T05:00:00Z',

@@ -1715,6 +1715,7 @@ export const zhTW = {
       sync: {
         action: '同步資料',
         syncing: '同步中',
+        triggered: '已觸發 {{count}} 個憑證的額度採集。',
         unavailable: '目前後端暫不支援主動觸發額度採集,已改為重新讀取快照。',
       },
       summary: {
