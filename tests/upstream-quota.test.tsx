@@ -5,9 +5,11 @@ import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import {
   type UpstreamQuotaEntry,
   buildUpstreamQuotaJoinMap,
+  createUpstreamQuotaCollectionBaseline,
   findCurrencyWindow,
   findUpstreamQuotaEntry,
   findXaiOnDemandWindow,
+  getUpstreamQuotaCollectionProgress,
   isQuotaAttentionStatus,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
@@ -65,6 +67,7 @@ function createQuotaEntry(overrides: Partial<QuotaCredential> = {}): UpstreamQuo
     lastError: null,
     runtime: null,
     plan: null,
+    resetCredits: null,
     primaryWindows: [createWindow()],
     windowCount: 1,
     windows: [createWindow()],
@@ -187,6 +190,112 @@ describe('isQuotaAttentionStatus', () => {
   })
 })
 
+describe('quota collection progress', () => {
+  test('counts only new settled active-probe results', () => {
+    const collecting = createQuotaEntry({
+      id: 'auth-collecting',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const passiveHeader = createQuotaEntry({
+      id: 'auth-header',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const activeProbe = createQuotaEntry({
+      id: 'auth-active',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const mixedProbe = createQuotaEntry({
+      id: 'auth-mixed',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const failedProbe = createQuotaEntry({
+      id: 'auth-failed',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const baseline = createUpstreamQuotaCollectionBaseline([
+      collecting,
+      passiveHeader,
+      activeProbe,
+      mixedProbe,
+      failedProbe,
+    ])
+
+    expect(
+      getUpstreamQuotaCollectionProgress(
+        [
+          {
+            ...collecting,
+            collectionStatus: 'collecting',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+          {
+            ...passiveHeader,
+            source: 'response_header',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+          {
+            ...activeProbe,
+            source: 'active_probe',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+          {
+            ...mixedProbe,
+            source: 'mixed',
+            collectionStatus: 'partial',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+          {
+            ...failedProbe,
+            source: 'response_header',
+            collectionStatus: 'failed',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+        ],
+        baseline,
+      ),
+    ).toEqual({ completedCount: 3, collectingCount: 1, candidateCount: 5 })
+  })
+
+  test('does not count unchanged, disabled, or unsupported credentials', () => {
+    const unchanged = createQuotaEntry({
+      id: 'auth-unchanged',
+      source: 'active_probe',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const disabled = createQuotaEntry({
+      id: 'auth-disabled',
+      credentialStatus: 'disabled',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const unsupported = createQuotaEntry({
+      id: 'auth-unsupported',
+      status: 'unsupported',
+      collectionStatus: 'unsupported',
+      lastAttemptAt: '2026-07-22T01:00:00Z',
+    })
+    const baseline = createUpstreamQuotaCollectionBaseline([unchanged, disabled, unsupported])
+
+    expect(
+      getUpstreamQuotaCollectionProgress(
+        [
+          unchanged,
+          {
+            ...disabled,
+            source: 'active_probe',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+          {
+            ...unsupported,
+            source: 'active_probe',
+            lastAttemptAt: '2026-07-22T01:01:00Z',
+          },
+        ],
+        baseline,
+      ),
+    ).toEqual({ completedCount: 0, collectingCount: 0, candidateCount: 1 })
+  })
+})
+
 describe('findCurrencyWindow', () => {
   test('finds the monthly currency window and the on-demand window separately', () => {
     const entry = createXaiEntry()
@@ -235,6 +344,40 @@ describe('UpstreamQuotaCell rendering', () => {
     expect(markup).toContain('82%')
   })
 
+  test('renders Codex plan and keeps account and model weekly limits distinguishable', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const accountWeekly = createWindow({
+      id: 'codex-1-week',
+      label: null,
+      periodUnit: 'week',
+      periodValue: 1,
+      remainingRatio: 0.91,
+    })
+    const sparkWeekly = createWindow({
+      id: 'codex-bengalfox-1-week',
+      label: 'GPT-5.3-Codex-Spark',
+      scope: 'model',
+      scopeId: 'codex_bengalfox',
+      periodUnit: 'week',
+      periodValue: 1,
+      remainingRatio: 1,
+    })
+    const entry = createQuotaEntry({
+      provider: 'codex',
+      plan: { name: 'Pro 20x', premium: true },
+      primaryWindows: [accountWeekly, sparkWeekly],
+      windows: [accountWeekly, sparkWeekly],
+      windowCount: 2,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Pro 20x')
+    expect(markup).toContain('GPT-5.3-Codex-Spark')
+    expect(markup).toContain('Weekly')
+    expect(markup).toContain('91%')
+    expect(markup).toContain('100%')
+  })
   test('renders not-collected and capability-absent states', async () => {
     const i18n = (await import('i18next')).default
     await i18n.changeLanguage('en')

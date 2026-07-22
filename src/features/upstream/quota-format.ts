@@ -2,6 +2,13 @@ import type { TFunction } from 'i18next'
 
 import type { QuotaWindow } from '@/lib/api/management/quota'
 
+export function getUpstreamQuotaWindowIdentityLabel(window: QuotaWindow) {
+  const label = window.label?.trim()
+  if (!label) return null
+  const scopeId = window.scopeId?.trim().toLowerCase()
+  return window.id.startsWith('codex-') || scopeId?.startsWith('codex_') ? label : null
+}
+
 export function getUpstreamQuotaWindowDisplayLabel(
   window: QuotaWindow,
   t: TFunction,

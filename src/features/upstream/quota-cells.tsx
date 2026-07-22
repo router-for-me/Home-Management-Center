@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
-import type { QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
-import { getUpstreamQuotaWindowDisplayLabel } from '@/features/upstream/quota-format'
+import {
+  getUpstreamQuotaWindowDisplayLabel,
+  getUpstreamQuotaWindowIdentityLabel,
+} from '@/features/upstream/quota-format'
+import type { QuotaPlan, QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
 import { cn } from '@/lib/utils'
 
 import {
@@ -52,6 +55,21 @@ export function UpstreamQuotaMetaBadge({ children }: { children: React.ReactNode
   )
 }
 
+export function UpstreamQuotaPlanBadge({ plan }: { plan: QuotaPlan }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
+        plan.premium
+          ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
+          : 'bg-foreground text-background border-transparent',
+      )}
+    >
+      {plan.name}
+    </span>
+  )
+}
+
 function formatInlineMoney(value: number | null, currency: string | null) {
   if (value === null) return null
   if (!currency) return value.toFixed(2)
@@ -74,21 +92,31 @@ export function InlineWindowBar({
   label?: string
 }) {
   const { t, i18n } = useTranslation()
-  const percentage =
-    window.remainingRatio === null ? null : Math.round(window.remainingRatio * 100)
-  const displayLabel =
-    label ?? getUpstreamQuotaWindowDisplayLabel(window, t, i18n.resolvedLanguage ?? i18n.language)
+  const percentage = window.remainingRatio === null ? null : Math.round(window.remainingRatio * 100)
+  const periodLabel = getUpstreamQuotaWindowDisplayLabel(
+    window,
+    t,
+    i18n.resolvedLanguage ?? i18n.language,
+  )
+  const identityLabel = label ? null : getUpstreamQuotaWindowIdentityLabel(window)
+  const displayLabel = label ?? identityLabel ?? periodLabel
+  const ariaLabel = identityLabel ? `${identityLabel}, ${periodLabel}` : displayLabel
 
   return (
     <div className="grid min-w-0 gap-1">
-      <div className="grid grid-cols-[3rem_minmax(0,1fr)_2rem] items-center gap-2">
-        <span className="text-muted-foreground truncate text-[11px] font-medium">
-          {displayLabel}
+      <div className="grid grid-cols-[minmax(6.5rem,9rem)_minmax(2.5rem,1fr)_2.25rem] items-center gap-2">
+        <span className="min-w-0 text-[11px] font-medium" title={ariaLabel}>
+          <span className={cn('block truncate', !identityLabel && 'text-muted-foreground')}>
+            {displayLabel}
+          </span>
+          {identityLabel ? (
+            <span className="text-muted-foreground block truncate text-[10px]">{periodLabel}</span>
+          ) : null}
         </span>
         <div
           className="bg-muted h-1.5 overflow-hidden rounded-full"
           role="progressbar"
-          aria-label={displayLabel}
+          aria-label={ariaLabel}
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percentage ?? 0}
@@ -133,7 +161,7 @@ function GenericWindowsCell({ entry }: { entry: UpstreamQuotaEntry }) {
   }
 
   return (
-    <div className="grid min-w-40 gap-1.5">
+    <div className="grid min-w-52 gap-1.5">
       {shown.map((window) => (
         <InlineWindowBar key={window.id} window={window} />
       ))}
@@ -154,18 +182,7 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   return (
     <div className="grid min-w-44 gap-1.5">
       <div className="flex flex-wrap items-center gap-1">
-        {entry.plan ? (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-              entry.plan.premium
-                ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
-                : 'border-transparent bg-foreground text-background',
-            )}
-          >
-            {entry.plan.name}
-          </span>
-        ) : null}
+        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
       </div>
       {monthlyWindow ? (
@@ -219,8 +236,9 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
   }
 
   return (
-    <div className="grid min-w-40 gap-1.5">
+    <div className="grid min-w-52 gap-1.5">
       <div className="flex flex-wrap items-center gap-1">
+        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
         <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${entry.freshness}`)}</UpstreamQuotaMetaBadge>
       </div>

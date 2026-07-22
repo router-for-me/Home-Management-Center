@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useManagementSession } from '@/features/observability/use-management-session'
 import {
@@ -11,12 +11,30 @@ import {
   triggerQuotaCollection,
 } from '@/lib/api/management/quota'
 
-import { buildUpstreamQuotaJoinMap, isQuotaAttentionStatus } from './upstream-quota-model'
+import {
+  buildUpstreamQuotaJoinMap,
+  createUpstreamQuotaCollectionBaseline,
+  getUpstreamQuotaCollectionProgress,
+  isQuotaAttentionStatus,
+} from './upstream-quota-model'
 
 const upstreamQuotaRefreshIntervalMs = 30_000
+const upstreamQuotaCollectionPollIntervalMs = 1_000
+const upstreamQuotaCollectionMaxPolls = 30
 export const upstreamQuotaListLimit = 200
 
+type UpstreamQuotaSyncResult = QuotaCollectResult & {
+  completion: 'settled' | 'pending' | 'not-started'
+}
+
+function waitForQuotaPoll() {
+  return new Promise<void>((resolve) =>
+    window.setTimeout(resolve, upstreamQuotaCollectionPollIntervalMs),
+  )
+}
+
 export function useUpstreamQuota() {
+  const queryClient = useQueryClient()
   const { session, connected, connectedAt, capabilityReady, capabilities } = useManagementSession()
   const available = capabilities.quotaSnapshots
   const detailsAvailable = capabilities.quotaSnapshotDetails
@@ -67,10 +85,41 @@ export function useUpstreamQuota() {
     isError: query.isError,
     error: query.error ?? null,
     refetch: query.refetch,
-    syncQuota: async (): Promise<QuotaCollectResult | null> => {
+    syncQuota: async (
+      onQueued?: (result: QuotaCollectResult) => void,
+    ): Promise<UpstreamQuotaSyncResult | null> => {
       if (!capabilities.quotaRecollect) return null
       try {
-        return await triggerQuotaCollection(session, {})
+        const baseline = createUpstreamQuotaCollectionBaseline(query.data?.items ?? [])
+        const initialProgress = getUpstreamQuotaCollectionProgress(
+          query.data?.items ?? [],
+          baseline,
+        )
+        const result = await triggerQuotaCollection(session, {})
+        onQueued?.(result)
+        if (result.accepted === 0) {
+          return { ...result, completion: 'not-started' }
+        }
+        const canConfirmAllAccepted = result.accepted <= initialProgress.candidateCount
+        if (!canConfirmAllAccepted) {
+          return { ...result, completion: 'pending' }
+        }
+        for (let poll = 0; poll < upstreamQuotaCollectionMaxPolls; poll += 1) {
+          await waitForQuotaPoll()
+          const [refreshed] = await Promise.all([
+            query.refetch(),
+            queryClient.refetchQueries({
+              queryKey: ['upstream-quota-credential'],
+              type: 'active',
+            }),
+          ])
+          if (!refreshed.data) continue
+          const progress = getUpstreamQuotaCollectionProgress(refreshed.data.items, baseline)
+          if (canConfirmAllAccepted && progress.completedCount >= result.accepted) {
+            return { ...result, completion: 'settled' }
+          }
+        }
+        return { ...result, completion: 'pending' }
       } catch (error) {
         throw toQuotaApiError(error)
       }

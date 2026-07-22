@@ -1783,7 +1783,12 @@ export const en = {
       sync: {
         action: 'Sync data',
         syncing: 'Syncing',
-        triggered: 'Quota collection triggered for {{count}} credentials.',
+        queued: 'Queued quota collection for {{count}} credentials.',
+        updated: 'New active-probe results were detected and quota snapshots were refreshed.',
+        pending:
+          'Quota collection may still be running in the background; this page will keep refreshing.',
+        notQueued:
+          'No new jobs were queued; credentials may be ineligible, cooling down, or already queued or running.',
         unavailable: 'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
       },
       summary: {
@@ -1811,7 +1816,17 @@ export const en = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',
         truncated: 'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
-      status: {
+        codex: {
+          resetCredits: 'Rate-limit reset credits',
+          availableResetCredits: '{{count}} available',
+          resetCredit: 'Reset credit {{index}}',
+          expiresAt: 'Expires {{time}}',
+          resetCreditDetailsUnavailable:
+            '{{count}} more reset credits do not have expiry details.',
+          noResetCredits: 'No rate-limit reset credits are currently available.',
+          observedAt: 'Observed {{time}}',
+        },
+        status: {
         healthy: 'Healthy',
         low: 'Low quota',
         exhausted: 'Exhausted',

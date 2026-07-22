@@ -11,10 +11,72 @@ export type UpstreamQuotaCellState =
 
 export type UpstreamQuotaView = 'all' | 'attention' | 'ws'
 
+type UpstreamQuotaCollectionProgress = {
+  completedCount: number
+  collectingCount: number
+  candidateCount: number
+}
+
+type UpstreamQuotaCollectionBaselineEntry = {
+  lastAttemptAt: string | null
+}
+
 export const xaiOnDemandWindowId = 'xai-on-demand'
 
 export function isQuotaAttentionStatus(status: QuotaStatus) {
   return status === 'low' || status === 'exhausted' || status === 'error'
+}
+
+function isQuotaCollectionCandidate(entry: UpstreamQuotaEntry) {
+  return (
+    entry.credentialStatus === 'enabled' &&
+    entry.collectionStatus !== 'unsupported' &&
+    entry.status !== 'unsupported'
+  )
+}
+
+function hasNewActiveProbeResult(
+  entry: UpstreamQuotaEntry,
+  baseline: UpstreamQuotaCollectionBaselineEntry | undefined,
+) {
+  if (!baseline || entry.lastAttemptAt === baseline.lastAttemptAt) return false
+  if (entry.collectionStatus === 'collecting') return false
+  if (
+    entry.collectionStatus !== 'success' &&
+    entry.collectionStatus !== 'partial' &&
+    entry.collectionStatus !== 'failed'
+  ) {
+    return false
+  }
+  return (
+    entry.collectionStatus === 'failed' ||
+    entry.source === 'active_probe' ||
+    entry.source === 'mixed'
+  )
+}
+
+export function createUpstreamQuotaCollectionBaseline(entries: UpstreamQuotaEntry[]) {
+  return new Map(
+    entries.map((entry) => [entry.id, { lastAttemptAt: entry.lastAttemptAt }] as const),
+  )
+}
+
+export function getUpstreamQuotaCollectionProgress(
+  entries: UpstreamQuotaEntry[],
+  baseline: ReadonlyMap<string, UpstreamQuotaCollectionBaselineEntry>,
+): UpstreamQuotaCollectionProgress {
+  let completedCount = 0
+  let collectingCount = 0
+  let candidateCount = 0
+
+  for (const entry of entries) {
+    if (!isQuotaCollectionCandidate(entry)) continue
+    candidateCount += 1
+    if (entry.collectionStatus === 'collecting') collectingCount += 1
+    if (hasNewActiveProbeResult(entry, baseline.get(entry.id))) completedCount += 1
+  }
+
+  return { completedCount, collectingCount, candidateCount }
 }
 
 function normalizeJoinKey(value: string | null | undefined) {

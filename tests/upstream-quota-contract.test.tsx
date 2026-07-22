@@ -117,6 +117,46 @@ describe('quota snapshot normalization contracts', () => {
     })
 
     expect(snapshot.items[0]?.plan).toBeNull()
+    expect(snapshot.items[0]?.resetCredits).toBeNull()
+  })
+
+  test('normalizes Codex plan and detail-only reset credits', () => {
+    const detail = normalizeQuotaCredentialDetail({
+      credential: {
+        credential_id: 'credential-codex-pro',
+        provider: 'codex',
+        quota_status: 'healthy',
+        freshness: 'fresh',
+        collection_status: 'success',
+        source: 'active_probe',
+        plan: { name: 'Pro 20x', premium: true },
+      },
+      windows: [],
+      reset_credits: {
+        available_count: 3,
+        observed_at: '2026-07-22T01:00:00Z',
+        credits: [
+          {
+            status: 'available',
+            granted_at: '2026-07-20T00:00:00Z',
+            expires_at: '2026-07-27T07:40:51Z',
+          },
+        ],
+      },
+    })
+
+    expect(detail.plan).toEqual({ name: 'Pro 20x', premium: true })
+    expect(detail.resetCredits).toEqual({
+      availableCount: 3,
+      observedAt: '2026-07-22T01:00:00Z',
+      credits: [
+        {
+          status: 'available',
+          grantedAt: '2026-07-20T00:00:00Z',
+          expiresAt: '2026-07-27T07:40:51Z',
+        },
+      ],
+    })
   })
 
   test('normalizes the current backend snake-case contract', () => {
