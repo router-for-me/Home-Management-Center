@@ -1,7 +1,15 @@
+import { createElement } from 'react'
+
 import axios, { type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
+import i18n from 'i18next'
+import { renderToStaticMarkup } from 'react-dom/server'
 
+import { TooltipProvider } from '../src/components/ui/tooltip'
 import {
+  CredentialConcurrencyDetail,
+  CredentialConcurrencyEditor,
+  CredentialInFlightCell,
   canonicalConcurrencyModelKey,
   isValidConcurrencyModelKey,
   parseConcurrencyLimit,
@@ -16,6 +24,7 @@ import {
   updateCredentialMetadata,
 } from '../src/lib/api/management/credentials'
 import { probeManagementRuntime } from '../src/lib/api/management/probe'
+import '../src/lib/i18n/i18n'
 
 const defaultAxiosAdapter = axios.defaults.adapter
 const session = { baseUrl: 'http://management.test', managementKey: 'test-key' }
@@ -325,6 +334,139 @@ describe('credential concurrency v2 contract', () => {
     })
   })
 
+  test('uses the newest policy projection without carrying enforcement across versions', async () => {
+    useResponse({ ...observationMetadata(), items: [observedSummary()] })
+    const observed = (await fetchCredentialInFlightSummary(session)).items[0] ?? null
+
+    useResponse({ items: [{ ...limiterState(), observed: null, fully_enforced: 'unknown' }] })
+    const limiter = (await fetchCredentialConcurrencySnapshot(session)).items[0] ?? null
+    expect(mergeCredentialConcurrencySummary(observed, limiter)?.fullyEnforced).toBe('false')
+
+    const newerLimiter = limiter
+      ? {
+          ...limiter,
+          maxInFlight: null,
+          remaining: null,
+          policyVersion: 4,
+          observationBarrierRevision: 8,
+          models: limiter.models.filter((model) => model.model === 'gpt-5.6'),
+        }
+      : null
+    const newerLimiterMerge = mergeCredentialConcurrencySummary(observed, newerLimiter)
+    expect(newerLimiterMerge).toMatchObject({
+      observedInFlight: 3,
+      admittedInFlight: 2,
+      maxInFlight: null,
+      remaining: null,
+      policyVersion: 4,
+      fullyEnforced: 'unknown',
+    })
+    expect(newerLimiterMerge?.models.find((model) => model.model === 'gpt-5.5')).toEqual({
+      model: 'gpt-5.5',
+      observedInFlight: 3,
+      admittedInFlight: null,
+      maxInFlight: null,
+      remaining: null,
+      saturated: false,
+    })
+
+    const newestObserved = observed
+      ? {
+          ...observed,
+          maxInFlight: 6,
+          remaining: 4,
+          policyVersion: 5,
+          observationBarrierRevision: 9,
+          fullyEnforced: 'true' as const,
+        }
+      : null
+    expect(mergeCredentialConcurrencySummary(newestObserved, newerLimiter)).toMatchObject({
+      observedInFlight: 3,
+      admittedInFlight: 2,
+      maxInFlight: 6,
+      remaining: 4,
+      policyVersion: 5,
+      fullyEnforced: 'true',
+    })
+  })
+
+  test('renders list, model, and request concurrency states from the v2 view model', async () => {
+    await i18n.changeLanguage('en')
+    useResponse({ ...observationMetadata(), items: [observedSummary()] })
+    const snapshot = await fetchCredentialInFlightSummary(session)
+    const summary = snapshot.items[0] ?? null
+    expect(summary).not.toBeNull()
+
+    const cellMarkup = renderToStaticMarkup(
+      createElement(
+        TooltipProvider,
+        null,
+        createElement(CredentialInFlightCell, {
+          summary: summary ? { ...summary, maxInFlight: 3, totalSaturated: true } : null,
+        }),
+      ),
+    )
+    expect(cellMarkup).toContain('3 / 3')
+    expect(cellMarkup).toContain('The credential concurrency limit is full')
+
+    const detailMarkup = renderToStaticMarkup(
+      createElement(CredentialConcurrencyDetail, {
+        summary,
+        observation: snapshot,
+        observationAvailable: true,
+        detail: {
+          ...snapshot,
+          requests: [
+            {
+              requestId: 'request-rendered',
+              credentialId: 'auth-1',
+              model: 'gpt-5.5',
+              requestKind: 'sse',
+              startedAt: '2026-07-21T11:59:00Z',
+            },
+          ],
+          nextOffset: null,
+        },
+        pending: false,
+        fetching: false,
+        stale: false,
+        errorMessage: null,
+        hasNextPage: false,
+        fetchingNextPage: false,
+        onLoadMore: () => undefined,
+      }),
+    )
+    expect(detailMarkup).toContain('Observed')
+    expect(detailMarkup).toContain('Admitted')
+    expect(detailMarkup).toContain('gpt-5.5')
+    expect(detailMarkup).toContain('request-rendered')
+    expect(detailMarkup).toContain('sse')
+  })
+
+  test('renders the non-kill warning when a proposed limit is below current work', async () => {
+    await i18n.changeLanguage('en')
+    useResponse({ ...observationMetadata(), items: [observedSummary()] })
+    const summary = (await fetchCredentialInFlightSummary(session)).items[0] ?? null
+    const markup = renderToStaticMarkup(
+      createElement(CredentialConcurrencyEditor, {
+        form: {
+          prefix: '',
+          proxyUrl: '',
+          priority: '',
+          note: '',
+          websockets: false,
+          maxInFlight: '1',
+          maxInFlightByModel: [{ model: 'gpt-5.5', limit: '1' }],
+        },
+        summary,
+        mutating: false,
+        onChange: () => undefined,
+      }),
+    )
+    expect(markup).toContain('Existing requests continue')
+    expect(markup).toContain('new dispatches that exceed the limit are blocked')
+  })
+
   test('rejects malformed snapshot and request records instead of under-reporting work', async () => {
     const invalidMetadata = observationMetadata() as Record<string, unknown>
     delete invalidMetadata.protocol_coverage_complete
@@ -347,6 +489,11 @@ describe('credential concurrency v2 contract', () => {
     })
     await expect(fetchCredentialInFlightDetail(session, 'auth-1')).rejects.toThrow(
       'invalid credential in-flight response',
+    )
+
+    useResponse({ items: [limiterState()] })
+    await expect(fetchCredentialConcurrencySnapshot(session)).rejects.toThrow(
+      'invalid credential concurrency response',
     )
   })
 

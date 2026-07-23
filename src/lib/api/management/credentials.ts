@@ -769,7 +769,14 @@ function mergeCredentialConcurrencyModels(
 ) {
   const models = new Map<string, CredentialInFlightModelSummary>()
   for (const model of observedModels) {
-    models.set(model.model, model)
+    models.set(model.model, {
+      model: model.model,
+      observedInFlight: model.observedInFlight,
+      admittedInFlight: null,
+      maxInFlight: null,
+      remaining: null,
+      saturated: false,
+    })
   }
   for (const limiterModel of limiterModels) {
     const observedModel = models.get(limiterModel.model)
@@ -781,34 +788,58 @@ function mergeCredentialConcurrencyModels(
   return [...models.values()]
 }
 
+function selectCredentialConcurrencyAuthority(
+  observed: CredentialInFlightSummary | null,
+  limiter: CredentialInFlightSummary | null,
+) {
+  // Snapshot and limiter endpoints poll independently, so their policy projections can briefly
+  // straddle an update. Policy versions are monotonic for one stable credential ID.
+  const observedVersion = observed?.policyVersion ?? null
+  const limiterVersion = limiter?.policyVersion ?? null
+  if (observedVersion === null) return limiterVersion === null ? null : limiter
+  if (limiterVersion === null) return observed
+  return limiterVersion >= observedVersion ? limiter : observed
+}
+
 export function mergeCredentialConcurrencySummary(
   observed: CredentialInFlightSummary | null,
   limiter: CredentialInFlightSummary | null,
 ): CredentialInFlightSummary | null {
   if (!observed && !limiter) return null
   if (observed && limiter && observed.credentialId !== limiter.credentialId) return null
-  const source = limiter ?? observed
+  const source = observed ?? limiter
   if (!source) return null
-  const models = mergeCredentialConcurrencyModels(observed?.models ?? [], limiter?.models ?? [])
-  const fullyEnforced =
-    observed?.fullyEnforced && observed.fullyEnforced !== 'unknown'
-      ? observed.fullyEnforced
-      : (limiter?.fullyEnforced ?? observed?.fullyEnforced ?? 'unknown')
+  const authority = selectCredentialConcurrencyAuthority(observed, limiter)
+  const models =
+    authority === limiter
+      ? mergeCredentialConcurrencyModels(observed?.models ?? [], limiter?.models ?? [])
+      : (observed?.models ?? limiter?.models ?? [])
+  let fullyEnforced: CredentialConcurrencyEnforcement = 'unknown'
+  if (!authority) {
+    fullyEnforced = observed?.fullyEnforced ?? 'unknown'
+  } else if (authority === observed || authority.observed !== null) {
+    fullyEnforced = authority.fullyEnforced
+  } else if (
+    observed?.policyVersion !== null &&
+    observed?.policyVersion === authority.policyVersion &&
+    observed.observationBarrierRevision === authority.observationBarrierRevision
+  ) {
+    fullyEnforced = observed.fullyEnforced
+  }
   return {
     credentialId: source.credentialId,
-    observedInFlight: observed?.observedInFlight ?? limiter?.observedInFlight ?? null,
-    admittedInFlight: limiter?.admittedInFlight ?? observed?.admittedInFlight ?? null,
-    maxInFlight: limiter ? limiter.maxInFlight : (observed?.maxInFlight ?? null),
-    remaining: limiter ? limiter.remaining : (observed?.remaining ?? null),
-    totalSaturated: limiter?.totalSaturated ?? observed?.totalSaturated ?? false,
+    observedInFlight: observed?.observedInFlight ?? authority?.observedInFlight ?? null,
+    admittedInFlight: authority?.admittedInFlight ?? null,
+    maxInFlight: authority?.maxInFlight ?? null,
+    remaining: authority?.remaining ?? null,
+    totalSaturated: authority?.totalSaturated ?? false,
     saturatedModelCount: models.filter((model) => model.saturated).length,
     models,
-    policyVersion: limiter?.policyVersion ?? observed?.policyVersion ?? null,
-    effectiveAt: limiter?.effectiveAt ?? observed?.effectiveAt ?? null,
-    observationBarrierRevision:
-      limiter?.observationBarrierRevision ?? observed?.observationBarrierRevision ?? null,
+    policyVersion: authority?.policyVersion ?? null,
+    effectiveAt: authority?.effectiveAt ?? null,
+    observationBarrierRevision: authority?.observationBarrierRevision ?? null,
     fullyEnforced,
-    observed: observed?.observed ?? limiter?.observed ?? null,
+    observed: observed?.observed ?? authority?.observed ?? null,
   }
 }
 
@@ -1048,7 +1079,17 @@ export async function fetchCredentialConcurrencySnapshot(
   const rawItems = response.data.items
   if (!rawItems.every(isRecord)) invalidCredentialConcurrencyContract()
   const items = rawItems.map(normalizeCredentialConcurrencyState)
-  if (items.some((item) => item === null)) invalidCredentialConcurrencyContract()
+  if (
+    items.some(
+      (item) =>
+        item === null ||
+        item.observed !== null ||
+        item.observedInFlight !== null ||
+        item.fullyEnforced !== 'unknown',
+    )
+  ) {
+    invalidCredentialConcurrencyContract()
+  }
   return { items: items as CredentialInFlightSummary[] }
 }
 
