@@ -1789,7 +1789,8 @@ export const en = {
           'Quota collection may still be running in the background; this page will keep refreshing.',
         notQueued:
           'No new jobs were queued; credentials may be ineligible, cooling down, or already queued or running.',
-        unavailable: 'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
+        unavailable:
+          'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
       },
       summary: {
         accounts: 'Account credentials',
@@ -1805,7 +1806,8 @@ export const en = {
       quota: {
         notCollected: 'Not collected',
         unsupported: 'Unsupported',
-        unsupportedHint: 'Quota collection is not available for this credential type (common for provider API keys).',
+        unsupportedHint:
+          'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
         monthly: 'Monthly',
         monthlyCredits: 'Monthly credits',
@@ -1815,73 +1817,80 @@ export const en = {
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',
-        truncated: 'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
+        truncated:
+          'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
+        antigravity: {
+          gemini: 'Gemini',
+          thirdParty: 'Claude + GPT',
+          upgrading: 'Refreshing Antigravity quota into the grouped format.',
+          legacy:
+            'Stored Antigravity quota uses an older or unrecognized format. Collect again to refresh it.',
+        },
         codex: {
           resetCredits: 'Rate-limit reset credits',
           availableResetCredits: '{{count}} available',
           resetCredit: 'Reset credit {{index}}',
           expiresAt: 'Expires {{time}}',
-          resetCreditDetailsUnavailable:
-            '{{count}} more reset credits do not have expiry details.',
+          resetCreditDetailsUnavailable: '{{count}} more reset credits do not have expiry details.',
           noResetCredits: 'No rate-limit reset credits are currently available.',
           observedAt: 'Observed {{time}}',
         },
         status: {
-        healthy: 'Healthy',
-        low: 'Low quota',
-        exhausted: 'Exhausted',
-        unknown: 'Unknown',
-        error: 'Query failed',
-        unsupported: 'Unsupported',
-      },
-      freshness: {
-        fresh: 'Fresh',
-        stale: 'Stale',
-        never: 'Never collected',
-      },
-      source: {
-        response_header: 'Response header',
-        active_probe: 'Active probe',
-        mixed: 'Mixed sources',
-        none: 'No source',
-      },
-      collection: {
-        idle: 'Waiting for collection',
-        collecting: 'Collecting in background',
-        success: 'Collection successful',
-        partial: 'Partially collected',
-        failed: 'Collection failed',
-        unsupported: 'Collection unsupported',
-      },
-      common: {
-        notAvailable: 'Not available',
-        yes: 'Yes',
-        no: 'No',
-      },
-      window: {
-        period: {
-          day: 'Daily',
-          week: 'Weekly',
-          month: 'Monthly',
+          healthy: 'Healthy',
+          low: 'Low quota',
+          exhausted: 'Exhausted',
+          unknown: 'Unknown',
+          error: 'Query failed',
+          unsupported: 'Unsupported',
         },
-        unknownPeriod: 'Unknown period',
-        resetAt: 'Reset time',
-        observedAt: 'Window observed at',
-      },
-      detail: {
-        loading: 'Loading full quota details',
-        loadError: 'Full details could not be loaded; showing the list snapshot',
-        collection: 'Collection details',
-        collectionStatus: 'Collection status',
-        source: 'Data source',
-        observedAt: 'Last observed',
-        lastAttemptAt: 'Last collection attempt',
-        nextProbeAt: 'Next active probe',
-        consecutiveFailures: 'Consecutive failures',
-        lastError: 'Latest collection error',
-        noWindowsTitle: 'No quota windows',
-      },
-      noWindows: 'No quota windows',
+        freshness: {
+          fresh: 'Fresh',
+          stale: 'Stale',
+          never: 'Never collected',
+        },
+        source: {
+          response_header: 'Response header',
+          active_probe: 'Active probe',
+          mixed: 'Mixed sources',
+          none: 'No source',
+        },
+        collection: {
+          idle: 'Waiting for collection',
+          collecting: 'Collecting in background',
+          success: 'Collection successful',
+          partial: 'Partially collected',
+          failed: 'Collection failed',
+          unsupported: 'Collection unsupported',
+        },
+        common: {
+          notAvailable: 'Not available',
+          yes: 'Yes',
+          no: 'No',
+        },
+        window: {
+          period: {
+            day: 'Daily',
+            week: 'Weekly',
+            month: 'Monthly',
+          },
+          unknownPeriod: 'Unknown period',
+          resetAt: 'Reset time',
+          observedAt: 'Window observed at',
+        },
+        detail: {
+          loading: 'Loading full quota details',
+          loadError: 'Full details could not be loaded; showing the list snapshot',
+          collection: 'Collection details',
+          collectionStatus: 'Collection status',
+          source: 'Data source',
+          observedAt: 'Last observed',
+          lastAttemptAt: 'Last collection attempt',
+          nextProbeAt: 'Next active probe',
+          consecutiveFailures: 'Consecutive failures',
+          lastError: 'Latest collection error',
+          noWindowsTitle: 'No quota windows',
+        },
+        noWindows: 'No quota windows',
       },
       quotaChips: {
         all: 'All quota',
@@ -1899,7 +1908,8 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyHint: 'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
+          proxyHint:
+            'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values win. Editable inline in the table too.',
           prefixHint: 'Rarely used; maintained here instead of a table column.',
@@ -1907,7 +1917,8 @@ export const en = {
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
-          enableDescription: 'A disabled credential does not serve model requests and can be re-enabled anytime.',
+          enableDescription:
+            'A disabled credential does not serve model requests and can be re-enabled anytime.',
         },
         danger: {
           downloadTitle: 'Download credential JSON',
@@ -1921,7 +1932,8 @@ export const en = {
         },
         quota: {
           unavailableTitle: 'Quota details unsupported',
-          unavailableDescription: 'The Management API does not expose quota snapshot details; only list summaries are shown.',
+          unavailableDescription:
+            'The Management API does not expose quota snapshot details; only list summaries are shown.',
           readOnlyNote: 'Quota is a read-only snapshot and does not trigger upstream probes.',
         },
       },

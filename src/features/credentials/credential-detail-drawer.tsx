@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react'
 import { AlertTriangle, CircleGauge, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   DrawerScaffoldBody,
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SheetDescription, SheetTitle } from '@/components/ui/sheet'
@@ -31,7 +31,6 @@ import {
   getCredentialSourceLabel,
 } from '@/features/credentials/credential-display'
 import { useCredentialInFlightDetail } from '@/features/credentials/use-credential-workbench'
-import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
   InlineWindowBar,
   UpstreamQuotaMetaBadge,
@@ -39,10 +38,13 @@ import {
   UpstreamQuotaStatusBadge,
 } from '@/features/upstream/quota-cells'
 import {
+  type AntigravityQuotaGroup,
   type UpstreamQuotaEntry,
   findCurrencyWindow,
   findXaiOnDemandWindow,
+  resolveAntigravityQuotaPresentation,
 } from '@/features/upstream/upstream-quota-model'
+import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
   type CredentialInFlightSummary,
   type CredentialMetadataInput,
@@ -161,7 +163,10 @@ function OverviewTab({
               : t('credentialsPage.inline.notApplicable'),
           ],
           ['path', resource.path ?? t('credentialsPage.status.notAvailable')],
-          ['size', formatCredentialBytes(resource.size) ?? t('credentialsPage.status.notAvailable')],
+          [
+            'size',
+            formatCredentialBytes(resource.size) ?? t('credentialsPage.status.notAvailable'),
+          ],
           [
             'updatedAt',
             formatCredentialDateTime(resource.updatedAt ?? resource.modifiedAt) ??
@@ -175,7 +180,9 @@ function OverviewTab({
           ['note', resource.note ?? t('credentialsPage.status.notSet')],
           [
             'quotaStatus',
-            quotaEntry ? t(`upstreamPage.quota.status.${quotaEntry.status}`) : t('credentialsPage.status.notAvailable'),
+            quotaEntry
+              ? t(`upstreamPage.quota.status.${quotaEntry.status}`)
+              : t('credentialsPage.status.notAvailable'),
           ],
         ].map(([key, value]) => (
           <div key={key} className="rounded-md border px-3 py-2.5">
@@ -276,16 +283,18 @@ function MetadataTab({
   }
 
   return (
-    <form id="credential-metadata-form" className="grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      id="credential-metadata-form"
+      className="grid gap-4"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <label className="grid gap-2 text-sm font-medium">
         <span>{t('credentialsPage.form.proxyUrl')}</span>
         <Input
           value={form.proxyUrl}
           placeholder="socks5://user:pass@host:port/"
           disabled={mutating}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, proxyUrl: event.target.value }))
-          }
+          onChange={(event) => setForm((current) => ({ ...current, proxyUrl: event.target.value }))}
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.proxyHint')}
@@ -298,9 +307,7 @@ function MetadataTab({
           inputMode="numeric"
           placeholder={t('upstreamPage.drawer.metadata.priorityPlaceholder')}
           disabled={mutating}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, priority: event.target.value }))
-          }
+          onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.priorityHint')}
@@ -324,9 +331,7 @@ function MetadataTab({
         <Input
           value={form.prefix}
           disabled={mutating}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, prefix: event.target.value }))
-          }
+          onChange={(event) => setForm((current) => ({ ...current, prefix: event.target.value }))}
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.prefixHint')}
@@ -365,9 +370,7 @@ function MetadataTab({
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">
-              {t('upstreamPage.drawer.metadata.enableTitle')}
-            </p>
+            <p className="text-sm font-medium">{t('upstreamPage.drawer.metadata.enableTitle')}</p>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
               {t('upstreamPage.drawer.metadata.enableDescription')}
             </p>
@@ -406,26 +409,57 @@ function MetadataTab({
   )
 }
 
-function QuotaWindowDetailCard({ window }: { window: QuotaWindow }) {
+function QuotaWindowTiming({ window }: { window: QuotaWindow }) {
   const { t } = useTranslation()
 
   return (
+    <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
+      <div>
+        <dt className="text-muted-foreground">{t('upstreamPage.quota.window.resetAt')}</dt>
+        <dd className="mt-0.5">
+          {formatCredentialDateTime(window.resetAt) ?? t('upstreamPage.quota.common.notAvailable')}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-muted-foreground">{t('upstreamPage.quota.window.observedAt')}</dt>
+        <dd className="mt-0.5">
+          {formatCredentialDateTime(window.observedAt) ??
+            t('upstreamPage.quota.common.notAvailable')}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
+function QuotaWindowDetailCard({ window }: { window: QuotaWindow }) {
+  return (
     <div className="grid gap-3 rounded-md border p-4">
       <InlineWindowBar window={window} />
-      <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
-        <div>
-          <dt className="text-muted-foreground">{t('upstreamPage.quota.window.resetAt')}</dt>
-          <dd className="mt-0.5">
-            {formatCredentialDateTime(window.resetAt) ?? t('upstreamPage.quota.common.notAvailable')}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t('upstreamPage.quota.window.observedAt')}</dt>
-          <dd className="mt-0.5">
-            {formatCredentialDateTime(window.observedAt) ?? t('upstreamPage.quota.common.notAvailable')}
-          </dd>
-        </div>
-      </dl>
+      <QuotaWindowTiming window={window} />
+    </div>
+  )
+}
+
+function AntigravityQuotaGroups({ groups }: { groups: AntigravityQuotaGroup[] }) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="overflow-hidden rounded-md border">
+      {groups.map((group, groupIndex) => (
+        <section key={group.id} className={cn('px-4 py-3.5', groupIndex > 0 && 'border-t')}>
+          <h3 className="text-sm font-semibold">
+            {t(`upstreamPage.quota.antigravity.${group.id === 'gemini' ? 'gemini' : 'thirdParty'}`)}
+          </h3>
+          <div className="mt-3 divide-y">
+            {group.windows.map((window) => (
+              <div key={window.id} className="grid gap-2.5 py-3 first:pt-0 last:pb-0">
+                <InlineWindowBar window={window} />
+                <QuotaWindowTiming window={window} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   )
 }
@@ -505,7 +539,9 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
       <div className="flex flex-wrap items-center gap-2">
         {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${entry.freshness}`)}</UpstreamQuotaMetaBadge>
+        <UpstreamQuotaMetaBadge>
+          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
+        </UpstreamQuotaMetaBadge>
       </div>
       {monthlyWindow ? (
         <div className="grid gap-2 rounded-md border p-4">
@@ -543,22 +579,58 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   )
 }
 
-function QuotaDetailBody({ item }: { item: QuotaCredential }) {
+export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
   const { t } = useTranslation()
   const windows = item.windows.length > 0 ? item.windows : item.primaryWindows
+  const isAntigravity = item.provider.trim().toLowerCase() === 'antigravity'
   const isCodex = item.provider.trim().toLowerCase() === 'codex'
+  const antigravityPresentation = isAntigravity
+    ? resolveAntigravityQuotaPresentation(item, windows)
+    : null
+  const antigravityNeedsRefresh =
+    antigravityPresentation?.kind === 'collecting' || antigravityPresentation?.kind === 'legacy'
+  const displayStatus = antigravityNeedsRefresh ? 'unknown' : item.status
+  const displayFreshness = antigravityNeedsRefresh ? 'stale' : item.freshness
 
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center gap-2">
         <ProviderLogo providerId={item.provider} size="lg" />
         {item.plan ? <UpstreamQuotaPlanBadge plan={item.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={item.status} />
-        <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${item.freshness}`)}</UpstreamQuotaMetaBadge>
-        <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.source.${item.source}`)}</UpstreamQuotaMetaBadge>
+        <UpstreamQuotaStatusBadge status={displayStatus} />
+        <UpstreamQuotaMetaBadge>
+          {t(`upstreamPage.quota.freshness.${displayFreshness}`)}
+        </UpstreamQuotaMetaBadge>
+        <UpstreamQuotaMetaBadge>
+          {t(`upstreamPage.quota.source.${item.source}`)}
+        </UpstreamQuotaMetaBadge>
+        {isAntigravity && item.collectionStatus !== 'success' ? (
+          <UpstreamQuotaMetaBadge>
+            {t(`upstreamPage.quota.collection.${item.collectionStatus}`)}
+          </UpstreamQuotaMetaBadge>
+        ) : null}
       </div>
 
-      {windows.length > 0 ? (
+      {antigravityPresentation?.kind === 'windows' ? (
+        <AntigravityQuotaGroups groups={antigravityPresentation.groups} />
+      ) : antigravityPresentation ? (
+        <p
+          className={cn(
+            'rounded-md border px-3 py-2.5 text-sm leading-6',
+            antigravityPresentation.kind === 'failed'
+              ? 'border-destructive/30 bg-destructive/10 text-destructive'
+              : 'text-muted-foreground',
+          )}
+        >
+          {antigravityPresentation.kind === 'failed'
+            ? (item.lastError?.message ?? t('upstreamPage.quota.collectFailed'))
+            : antigravityPresentation.kind === 'collecting'
+              ? t('upstreamPage.quota.antigravity.upgrading')
+              : antigravityPresentation.kind === 'legacy'
+                ? t('upstreamPage.quota.antigravity.legacy')
+                : t('upstreamPage.quota.notCollected')}
+        </p>
+      ) : windows.length > 0 ? (
         <div className="grid gap-3">
           {windows.map((window) => (
             <QuotaWindowDetailCard key={window.id} window={window} />
@@ -585,20 +657,20 @@ function QuotaDetailBody({ item }: { item: QuotaCredential }) {
             [t('upstreamPage.quota.detail.source'), t(`upstreamPage.quota.source.${item.source}`)],
             [
               t('upstreamPage.quota.detail.observedAt'),
-              formatCredentialDateTime(item.observedAt) ?? t('upstreamPage.quota.common.notAvailable'),
+              formatCredentialDateTime(item.observedAt) ??
+                t('upstreamPage.quota.common.notAvailable'),
             ],
             [
               t('upstreamPage.quota.detail.lastAttemptAt'),
-              formatCredentialDateTime(item.lastAttemptAt) ?? t('upstreamPage.quota.common.notAvailable'),
+              formatCredentialDateTime(item.lastAttemptAt) ??
+                t('upstreamPage.quota.common.notAvailable'),
             ],
             [
               t('upstreamPage.quota.detail.nextProbeAt'),
-              formatCredentialDateTime(item.nextProbeAt) ?? t('upstreamPage.quota.common.notAvailable'),
+              formatCredentialDateTime(item.nextProbeAt) ??
+                t('upstreamPage.quota.common.notAvailable'),
             ],
-            [
-              t('upstreamPage.quota.detail.consecutiveFailures'),
-              String(item.consecutiveFailures),
-            ],
+            [t('upstreamPage.quota.detail.consecutiveFailures'), String(item.consecutiveFailures)],
           ].map(([label, value]) => (
             <div key={label} className="min-w-0 rounded-md border px-3 py-2.5">
               <dt className="text-muted-foreground text-xs">{label}</dt>
@@ -640,8 +712,7 @@ function CredentialQuotaTab({
   quotaEntry: UpstreamQuotaEntry | null
 }) {
   const { t } = useTranslation()
-  const credentialId =
-    quotaEntry?.id ?? resource.authIndex ?? resource.name ?? resource.identifier
+  const credentialId = quotaEntry?.id ?? resource.authIndex ?? resource.name ?? resource.identifier
   const detail = useUpstreamQuotaCredentialDetail(credentialId)
 
   if (!detail.available) {
@@ -680,11 +751,7 @@ function CredentialQuotaTab({
 
   return (
     <div className="grid gap-4">
-      {isXai ? (
-        <GrokQuotaDetail entry={detail.item} />
-      ) : (
-        <QuotaDetailBody item={detail.item} />
-      )}
+      {isXai ? <GrokQuotaDetail entry={detail.item} /> : <UpstreamQuotaDetail item={detail.item} />}
       <p className="text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
         {t('upstreamPage.drawer.quota.readOnlyNote')}
       </p>
@@ -804,9 +871,7 @@ function DangerTab({
       <div className="rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="text-sm font-medium">
-              {t('upstreamPage.drawer.danger.downloadTitle')}
-            </h3>
+            <h3 className="text-sm font-medium">{t('upstreamPage.drawer.danger.downloadTitle')}</h3>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
               {t('upstreamPage.drawer.danger.downloadDescription')}
             </p>
@@ -917,7 +982,9 @@ export function CredentialDetailDrawer({
             onToggleStatus={onToggleStatus}
           />
         ) : null}
-        {tab === 'quota' ? <CredentialQuotaTab resource={resource} quotaEntry={quotaEntry} /> : null}
+        {tab === 'quota' ? (
+          <CredentialQuotaTab resource={resource} quotaEntry={quotaEntry} />
+        ) : null}
         {tab === 'concurrency' && showConcurrency ? (
           <ConcurrencyTab resource={resource} summary={inFlightSummary} />
         ) : null}
