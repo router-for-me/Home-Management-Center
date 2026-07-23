@@ -1715,8 +1715,11 @@ export const zhTW = {
       sync: {
         action: '同步資料',
         syncing: '同步中',
-        triggered: '已觸發 {{count}} 個憑證的額度採集。',
-        unavailable: '目前後端暫不支援主動觸發額度採集,已改為重新讀取快照。',
+        queued: '已將 {{count}} 個憑證加入額度採集佇列。',
+        updated: '偵測到新的主動探測結果，額度快照已更新。',
+        pending: '額度採集仍可能在背景執行，頁面會繼續自動更新。',
+        notQueued: '沒有新工作入列；憑證可能不符合條件、處於冷卻期，或已在排隊或採集中。',
+        unavailable: '目前後端暫不支援主動觸發額度採集，已改為重新讀取快照。',
       },
       summary: {
         accounts: '帳號憑證',
@@ -1743,7 +1746,16 @@ export const zhTW = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} 更多',
         truncated: '額度快照依風險排序僅涵蓋前 {{count}} 筆,其餘憑證顯示「未採集」。',
-      status: {
+        codex: {
+          resetCredits: '額度重設機會',
+          availableResetCredits: '可用 {{count}} 次',
+          resetCredit: '第 {{index}} 次',
+          expiresAt: '到期 {{time}}',
+          resetCreditDetailsUnavailable: '另有 {{count}} 次重設機會暫無到期明細。',
+          noResetCredits: '目前沒有可用的額度重設機會。',
+          observedAt: '觀測於 {{time}}',
+        },
+        status: {
         healthy: '正常',
         low: '額度偏低',
         exhausted: '額度耗盡',

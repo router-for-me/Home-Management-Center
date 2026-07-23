@@ -101,7 +101,7 @@ import {
   type UpstreamQuotaEntry,
   type UpstreamQuotaView,
   findUpstreamQuotaEntry,
-  isQuotaAttentionStatus,
+  isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import {
@@ -679,7 +679,7 @@ export function AccountsPanel({
       if (providerFilter !== 'all' && resource.provider !== providerFilter) return false
       if (quotaView === 'attention') {
         const entry = findUpstreamQuotaEntry(resolvedQuotaMap, resource)
-        if (!entry || !isQuotaAttentionStatus(entry.status)) return false
+        if (!entry || !isQuotaAttentionEntry(entry)) return false
       }
       if (quotaView === 'ws' && !resource.websockets) return false
       if (!normalizedSearch) return true

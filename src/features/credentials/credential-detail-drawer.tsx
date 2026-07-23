@@ -35,6 +35,7 @@ import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstre
 import {
   InlineWindowBar,
   UpstreamQuotaMetaBadge,
+  UpstreamQuotaPlanBadge,
   UpstreamQuotaStatusBadge,
 } from '@/features/upstream/quota-cells'
 import {
@@ -48,7 +49,7 @@ import {
   type CredentialResource,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
-import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
+import type { QuotaCredential, QuotaResetCredits, QuotaWindow } from '@/lib/api/management/quota'
 import { cn } from '@/lib/utils'
 
 export type CredentialDrawerTab =
@@ -429,6 +430,71 @@ function QuotaWindowDetailCard({ window }: { window: QuotaWindow }) {
   )
 }
 
+function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCredits }) {
+  const { t } = useTranslation()
+  const unavailableDetailCount = Math.max(
+    0,
+    resetCredits.availableCount - resetCredits.credits.length,
+  )
+
+  return (
+    <section className="overflow-hidden rounded-md border">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <h3 className="text-sm font-semibold">{t('upstreamPage.quota.codex.resetCredits')}</h3>
+        <span className="bg-muted/60 text-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium tabular-nums">
+          {t('upstreamPage.quota.codex.availableResetCredits', {
+            count: resetCredits.availableCount,
+          })}
+        </span>
+      </div>
+
+      {resetCredits.credits.length > 0 ? (
+        <div className="divide-y border-t">
+          {resetCredits.credits.map((credit, index) => (
+            <div
+              key={`${credit.grantedAt}-${credit.expiresAt ?? 'no-expiry'}-${index}`}
+              className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-3"
+            >
+              <p className="text-sm font-medium">
+                {t('upstreamPage.quota.codex.resetCredit', { index: index + 1 })}
+              </p>
+              <p className="text-muted-foreground text-xs tabular-nums">
+                {t('upstreamPage.quota.codex.expiresAt', {
+                  time:
+                    formatCredentialDateTime(credit.expiresAt) ??
+                    t('upstreamPage.quota.common.notAvailable'),
+                })}
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : resetCredits.availableCount === 0 ? (
+        <p className="text-muted-foreground border-t px-4 py-3 text-sm leading-6">
+          {t('upstreamPage.quota.codex.noResetCredits')}
+        </p>
+      ) : null}
+
+      {unavailableDetailCount > 0 ? (
+        <p className="text-muted-foreground border-t px-4 py-3 text-sm leading-6">
+          {t('upstreamPage.quota.codex.resetCreditDetailsUnavailable', {
+            count: unavailableDetailCount,
+          })}
+        </p>
+      ) : null}
+
+      {resetCredits.observedAt ? (
+        <p className="text-muted-foreground border-t px-4 py-2 text-xs">
+          {t('upstreamPage.quota.codex.observedAt', {
+            time:
+              formatCredentialDateTime(resetCredits.observedAt) ??
+              t('upstreamPage.quota.common.notAvailable'),
+          })}
+        </p>
+      ) : null}
+    </section>
+  )
+}
+
 function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
@@ -437,18 +503,7 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   return (
     <div className="grid gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        {entry.plan ? (
-          <span
-            className={cn(
-              'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-              entry.plan.premium
-                ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
-                : 'border-transparent bg-foreground text-background',
-            )}
-          >
-            {entry.plan.name}
-          </span>
-        ) : null}
+        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
         <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${entry.freshness}`)}</UpstreamQuotaMetaBadge>
       </div>
@@ -491,11 +546,13 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
 function QuotaDetailBody({ item }: { item: QuotaCredential }) {
   const { t } = useTranslation()
   const windows = item.windows.length > 0 ? item.windows : item.primaryWindows
+  const isCodex = item.provider.trim().toLowerCase() === 'codex'
 
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center gap-2">
         <ProviderLogo providerId={item.provider} size="lg" />
+        {item.plan ? <UpstreamQuotaPlanBadge plan={item.plan} /> : null}
         <UpstreamQuotaStatusBadge status={item.status} />
         <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${item.freshness}`)}</UpstreamQuotaMetaBadge>
         <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.source.${item.source}`)}</UpstreamQuotaMetaBadge>
@@ -512,6 +569,10 @@ function QuotaDetailBody({ item }: { item: QuotaCredential }) {
           {item.lastError?.message ?? t('upstreamPage.quota.detail.noWindowsTitle')}
         </p>
       )}
+
+      {isCodex && item.resetCredits ? (
+        <CodexResetCreditsDetail resetCredits={item.resetCredits} />
+      ) : null}
 
       <section>
         <h3 className="text-sm font-semibold">{t('upstreamPage.quota.detail.collection')}</h3>

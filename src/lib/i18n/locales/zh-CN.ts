@@ -1715,8 +1715,11 @@ export const zhCN = {
       sync: {
         action: '同步数据',
         syncing: '同步中',
-        triggered: '已触发 {{count}} 个凭证的额度采集。',
-        unavailable: '当前后端暂不支持主动触发额度采集,已改为重新读取快照。',
+        queued: '已将 {{count}} 个凭证加入额度采集队列。',
+        updated: '检测到新的主动探测结果，额度快照已刷新。',
+        pending: '额度采集仍可能在后台进行，页面会继续自动刷新。',
+        notQueued: '没有新任务入队；凭证可能不符合条件、处于冷却期，或已在排队或采集中。',
+        unavailable: '当前后端暂不支持主动触发额度采集，已改为重新读取快照。',
       },
       summary: {
         accounts: '账号凭证',
@@ -1743,7 +1746,16 @@ export const zhCN = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} 更多',
         truncated: '额度快照按风险序仅覆盖前 {{count}} 条,其余凭证显示「未采集」。',
-      status: {
+        codex: {
+          resetCredits: '额度重置机会',
+          availableResetCredits: '可用 {{count}} 次',
+          resetCredit: '第 {{index}} 次',
+          expiresAt: '到期 {{time}}',
+          resetCreditDetailsUnavailable: '另有 {{count}} 次重置机会暂无到期明细。',
+          noResetCredits: '当前没有可用的额度重置机会。',
+          observedAt: '观测于 {{time}}',
+        },
+        status: {
         healthy: '正常',
         low: '额度偏低',
         exhausted: '额度耗尽',
