@@ -1,7 +1,5 @@
 import { type ReactNode, useMemo, useState } from 'react'
 
-import { Link } from '@tanstack/react-router'
-
 import {
   AlertTriangle,
   CheckCircle2,
@@ -9,6 +7,7 @@ import {
   Download,
   ExternalLink,
   Info,
+  KeyRound,
   Loader2,
   Package,
   Plug,
@@ -63,11 +62,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { PluginStoreAuthSheet } from '@/features/plugins/plugin-store-auth-sheet'
 import {
-  type PluginPageVerdict,
   type PluginStatusFilter,
-  usePluginWorkbench,
-} from '@/features/plugins/use-plugin-workbench'
+  isPluginInstallActionDisabled,
+} from '@/features/plugins/plugin-store-model'
+import { type PluginPageVerdict, usePluginWorkbench } from '@/features/plugins/use-plugin-workbench'
 import type { PluginStoreEntry } from '@/lib/api/management/plugin-store'
 import type { SystemPluginReportStatus } from '@/lib/api/management/system-nodes'
 import { cn } from '@/lib/utils'
@@ -281,8 +281,7 @@ function getPluginRolloutBadge(plugin: PluginStoreEntry, reports: SystemPluginRe
 }
 
 function getAuthTone(plugin: PluginStoreEntry): BadgeTone {
-  if (!plugin.authRequired) return 'neutral'
-  return plugin.authConfigured ? 'success' : 'warning'
+  return plugin.authRequired ? 'warning' : 'neutral'
 }
 
 function getEffectiveTone(plugin: PluginStoreEntry): BadgeTone {
@@ -349,10 +348,12 @@ function PluginsErrorState({
   kind,
   message,
   onRetry,
+  onManageAuth,
 }: {
   kind: 'unsupported' | 'error'
   message: string | null
   onRetry: () => void
+  onManageAuth: () => void
 }) {
   const { t } = useTranslation()
   const unsupported = kind === 'unsupported'
@@ -391,10 +392,16 @@ function PluginsErrorState({
             </div>
           </div>
           {!unsupported ? (
-            <Button variant="outline" className="md:shrink-0" onClick={onRetry}>
-              <RefreshCw className="size-4" aria-hidden="true" />
-              {t('pluginPage.actions.refresh')}
-            </Button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Button variant="outline" onClick={onManageAuth}>
+                <KeyRound className="size-4" aria-hidden="true" />
+                {t('pluginPage.actions.manageAuth')}
+              </Button>
+              <Button variant="outline" onClick={onRetry}>
+                <RefreshCw className="size-4" aria-hidden="true" />
+                {t('pluginPage.actions.refresh')}
+              </Button>
+            </div>
           ) : null}
         </div>
       </div>
@@ -439,10 +446,12 @@ function PluginSummaryCard({
 function PluginDetailSheet({
   plugin,
   onClose,
+  onManageAuth,
   reports,
 }: {
   plugin: PluginStoreEntry | null
   onClose: () => void
+  onManageAuth: () => void
   reports: PluginReportView[]
 }) {
   const { t } = useTranslation()
@@ -509,12 +518,16 @@ function PluginDetailSheet({
               </StatusBadge>
               <StatusBadge tone={getAuthTone(plugin)}>
                 {plugin.authRequired
-                  ? plugin.authConfigured
-                    ? t('pluginPage.badges.authConfigured')
-                    : t('pluginPage.badges.authRequired')
+                  ? t('pluginPage.badges.authMayBeRequired')
                   : t('pluginPage.badges.authNotRequired')}
               </StatusBadge>
             </div>
+            {plugin.authRequired ? (
+              <Button type="button" variant="outline" size="sm" onClick={onManageAuth}>
+                <KeyRound className="size-4" aria-hidden="true" />
+                {t('pluginPage.actions.manageAuth')}
+              </Button>
+            ) : null}
           </section>
           <section className="grid gap-3 rounded-lg border p-4">
             <h3 className="text-sm font-semibold">{t('pluginPage.detail.version')}</h3>
@@ -634,6 +647,7 @@ export function PluginsWorkbenchPage() {
   const [typedConfirmation, setTypedConfirmation] = useState('')
   const [uninstallTarget, setUninstallTarget] = useState<PluginStoreEntry | null>(null)
   const [operationNotice, setOperationNotice] = useState<PluginOperationNotice | null>(null)
+  const [authOpen, setAuthOpen] = useState(false)
 
   const selectedReports = useMemo(
     () => (selectedPlugin ? getAllPluginReports(selectedPlugin, workbench) : []),
@@ -653,11 +667,15 @@ export function PluginsWorkbenchPage() {
   if (!workbench.capabilityReady || workbench.isPending) return <PluginsLoadingState />
   if (workbench.isError || !workbench.snapshot) {
     return (
-      <PluginsErrorState
-        kind={workbench.verdict === 'unsupported' ? 'unsupported' : 'error'}
-        message={workbench.error?.message ?? null}
-        onRetry={workbench.refetch}
-      />
+      <>
+        <PluginsErrorState
+          kind={workbench.verdict === 'unsupported' ? 'unsupported' : 'error'}
+          message={workbench.error?.message ?? null}
+          onRetry={workbench.refetch}
+          onManageAuth={() => setAuthOpen(true)}
+        />
+        <PluginStoreAuthSheet open={authOpen} onOpenChange={setAuthOpen} />
+      </>
     )
   }
 
@@ -798,16 +816,22 @@ export function PluginsWorkbenchPage() {
           </>
         }
         actions={
-          <Button variant="outline" disabled={workbench.isFetching} onClick={workbench.refetch}>
-            {workbench.isFetching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {workbench.isFetching
-              ? t('pluginPage.actions.syncing')
-              : t('pluginPage.actions.refresh')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setAuthOpen(true)}>
+              <KeyRound className="size-4" aria-hidden="true" />
+              {t('pluginPage.actions.manageAuth')}
+            </Button>
+            <Button variant="outline" disabled={workbench.isFetching} onClick={workbench.refetch}>
+              {workbench.isFetching ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <RefreshCw className="size-4" aria-hidden="true" />
+              )}
+              {workbench.isFetching
+                ? t('pluginPage.actions.syncing')
+                : t('pluginPage.actions.refresh')}
+            </Button>
+          </div>
         }
       />
 
@@ -1020,7 +1044,6 @@ export function PluginsWorkbenchPage() {
               {workbench.visiblePlugins.map((plugin) => {
                 const rowKey = workbench.getPluginStateKey(plugin)
                 const isInstalling = workbench.installingKey === rowKey
-                const authMissing = plugin.authRequired && !plugin.authConfigured
                 const rowReports = getAllPluginReports(plugin, workbench)
                 const rolloutBadge = getPluginRolloutBadge(plugin, rowReports)
                 const versionText =
@@ -1083,18 +1106,19 @@ export function PluginsWorkbenchPage() {
                       <div className="grid gap-1.5">
                         <StatusBadge tone={getAuthTone(plugin)}>
                           {plugin.authRequired
-                            ? plugin.authConfigured
-                              ? t('pluginPage.badges.authConfigured')
-                              : t('pluginPage.badges.authRequired')
+                            ? t('pluginPage.badges.authMayBeRequired')
                             : t('pluginPage.badges.authNotRequired')}
                         </StatusBadge>
-                        {authMissing ? (
-                          <Link
-                            to="/admin/config"
-                            className="text-primary text-xs font-medium hover:underline"
+                        {plugin.authRequired ? (
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="xs"
+                            className="h-auto justify-start px-0"
+                            onClick={() => setAuthOpen(true)}
                           >
-                            {t('pluginPage.actions.configureAuth')}
-                          </Link>
+                            {t('pluginPage.actions.manageAuth')}
+                          </Button>
                         ) : null}
                       </div>
                     </TableCell>
@@ -1113,10 +1137,7 @@ export function PluginsWorkbenchPage() {
                         {!plugin.installed || plugin.updateAvailable ? (
                           <Button
                             size="sm"
-                            disabled={authMissing || Boolean(workbench.installingKey)}
-                            title={
-                              authMissing ? t('pluginPage.actions.authRequiredHint') : undefined
-                            }
+                            disabled={isPluginInstallActionDisabled(workbench.installingKey)}
                             onClick={() => {
                               setInstallTarget(plugin)
                               setInstallVersion('')
@@ -1162,7 +1183,13 @@ export function PluginsWorkbenchPage() {
         plugin={selectedPlugin}
         reports={selectedReports}
         onClose={() => setSelectedPlugin(null)}
+        onManageAuth={() => {
+          setSelectedPlugin(null)
+          setAuthOpen(true)
+        }}
       />
+
+      <PluginStoreAuthSheet open={authOpen} onOpenChange={setAuthOpen} />
 
       <AlertDialog
         open={Boolean(installTarget)}

@@ -12,7 +12,6 @@ export type ConfigFieldKey =
   | 'pluginsEnabled'
   | 'pluginsDir'
   | 'pluginStoreSourcesJson'
-  | 'pluginStoreAuthJson'
   | 'loggingToFile'
   | 'logsMaxTotalSizeMb'
   | 'errorLogsMaxFiles'
@@ -79,7 +78,6 @@ const yamlBackedConfigKeys = new Set<ConfigFieldKey>([
   'pluginsEnabled',
   'pluginsDir',
   'pluginStoreSourcesJson',
-  'pluginStoreAuthJson',
 ])
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -366,7 +364,6 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
       enabled: readBoolean(plugins, 'enabled'),
       dir: readString(plugins, 'dir', 'plugins'),
       'store-sources': Array.isArray(plugins['store-sources']) ? plugins['store-sources'] : [],
-      'store-auth': Array.isArray(plugins['store-auth']) ? plugins['store-auth'] : [],
     },
   }
 }
@@ -447,16 +444,6 @@ function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
           doc.setIn(['plugins', 'store-sources'], sources)
         } else if (docHas(doc, ['plugins', 'store-sources'])) {
           doc.deleteIn(['plugins', 'store-sources'])
-        }
-        break
-      }
-      case 'pluginStoreAuthJson': {
-        ensureMapInDoc(doc, ['plugins'])
-        const authRules = parseJsonArrayText(change.nextValue)
-        if (authRules.length > 0) {
-          doc.setIn(['plugins', 'store-auth'], authRules)
-        } else if (docHas(doc, ['plugins', 'store-auth'])) {
-          doc.deleteIn(['plugins', 'store-auth'])
         }
         break
       }
@@ -555,7 +542,6 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     pluginsEnabled: readBoolean(plugins, 'enabled'),
     pluginsDir: readString(plugins, 'dir', 'plugins'),
     pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
-    pluginStoreAuthJson: stringifyJsonArray(plugins['store-auth']),
     loggingToFile: readBoolean(rawConfig, 'logging-to-file'),
     logsMaxTotalSizeMb: readNumber(rawConfig, 'logs-max-total-size-mb'),
     errorLogsMaxFiles: readNumber(rawConfig, 'error-logs-max-files', 10),

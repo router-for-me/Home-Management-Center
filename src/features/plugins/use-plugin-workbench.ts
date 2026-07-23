@@ -3,6 +3,10 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
 import {
+  type PluginStatusFilter,
+  matchesPluginStatusFilter,
+} from '@/features/plugins/plugin-store-model'
+import {
   type PluginStoreEntry,
   type PluginStoreInstallInput,
   type PluginStoreResponse,
@@ -19,8 +23,6 @@ import {
 import type { ManagementApiError } from '@/lib/api/management/types'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
-
-export type PluginStatusFilter = 'all' | 'installed' | 'notInstalled' | 'updates' | 'authRequired'
 
 export type PluginPageVerdict =
   | 'ready'
@@ -99,14 +101,6 @@ function getPluginSearchText(plugin: PluginStoreEntry) {
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
-}
-
-function getPluginStatusMatch(plugin: PluginStoreEntry, filter: PluginStatusFilter) {
-  if (filter === 'installed') return plugin.installed
-  if (filter === 'notInstalled') return !plugin.installed
-  if (filter === 'updates') return plugin.installed && plugin.updateAvailable
-  if (filter === 'authRequired') return plugin.authRequired && !plugin.authConfigured
-  return true
 }
 
 function getPluginSourceFilterKey(plugin: Pick<PluginStoreEntry, 'sourceId' | 'sourceUrl'>) {
@@ -226,8 +220,7 @@ export function usePluginWorkbench() {
       available: plugins.length,
       installed: plugins.filter((plugin) => plugin.installed).length,
       updates: plugins.filter((plugin) => plugin.installed && plugin.updateAvailable).length,
-      authRequired: plugins.filter((plugin) => plugin.authRequired && !plugin.authConfigured)
-        .length,
+      authRequired: plugins.filter((plugin) => plugin.authRequired).length,
       sourceErrors: store?.sourceErrors.length ?? 0,
       sources: store?.sources.length ?? 0,
     }
@@ -240,7 +233,7 @@ export function usePluginWorkbench() {
     return plugins.filter((plugin) => {
       const sourceMatches =
         sourceFilter === 'all' || getPluginSourceFilterKey(plugin) === sourceFilter
-      const statusMatches = getPluginStatusMatch(plugin, statusFilter)
+      const statusMatches = matchesPluginStatusFilter(plugin, statusFilter)
       const textMatches =
         !normalizedFilter || getPluginSearchText(plugin).includes(normalizedFilter)
 

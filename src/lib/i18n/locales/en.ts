@@ -2991,12 +2991,6 @@ export const en = {
             'Append plugin store registry URLs. The built-in official source is always kept.',
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
-        pluginStoreAuthJson: {
-          label: 'Store auth rules',
-          description:
-            'Configure auth for private registries, GitHub Release metadata, or artifact downloads. Rules reference environment variable names only.',
-          placeholder: '[]',
-        },
         requestRetry: {
           label: 'Request retries',
           description: 'Number of retries after request failures.',
@@ -3135,43 +3129,6 @@ export const en = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: 'One registry.json URL per line. Empty lines are ignored when saving.',
         count: '{{count}} third-party sources configured',
-      },
-      pluginStoreAuth: {
-        secretHint:
-          'Enter environment variable names only, never real tokens or passwords. The backend reads the actual values from its runtime environment.',
-        empty: 'No auth rules configured. Public plugin sources do not require one.',
-        ruleTitle: 'Auth rule {{index}}',
-        add: 'Add auth rule',
-        remove: 'Remove rule',
-        match: 'Matching URL prefix',
-        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
-        type: 'Auth type',
-        applyTo: 'Apply to',
-        applyToHint:
-          'When nothing is selected, the rule applies to all registry, metadata, and artifact requests.',
-        tokenEnv: 'Token environment variable',
-        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
-        usernameEnv: 'Username environment variable',
-        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
-        passwordEnv: 'Password environment variable',
-        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
-        headerName: 'Header name',
-        headerNamePlaceholder: 'X-Plugin-Token',
-        headerValueEnv: 'Header value environment variable',
-        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
-        allowInsecure: 'Allow insecure HTTP URLs',
-        types: {
-          none: 'No auth',
-          bearer: 'Bearer',
-          'github-token': 'GitHub Token',
-          basic: 'Basic',
-          header: 'Custom header',
-        },
-        applyToOptions: {
-          registry: 'Registry',
-          metadata: 'Metadata',
-          artifact: 'Artifact',
-        },
       },
       payload: {
         summaryTitle: 'Request payload rewriting',
@@ -4746,8 +4703,115 @@ export const en = {
         install: 'Install',
         update: 'Update',
         uninstall: 'Uninstall',
-        authRequiredHint: 'Store authentication is required before this plugin can be installed.',
-        configureAuth: 'Configure store auth',
+        manageAuth: 'Manage store auth',
+      },
+      auth: {
+        title: 'Store authentication',
+        description:
+          'Manage encrypted, write-only credentials used for registry, metadata, and artifact requests.',
+        orderHint:
+          'Rules are evaluated in creation order and the first matching enabled rule wins. Matches must use HTTPS.',
+        secret: {
+          showValue: 'Show credential value',
+          hideValue: 'Hide credential value',
+        },
+        form: {
+          createTitle: 'Add authentication rule',
+          editTitle: 'Edit authentication rule',
+          description: 'Define the request prefix, request kinds, and authentication method.',
+          writeOnlyHint:
+            'Credential values are write-only and encrypted by Home. They are never returned to this browser.',
+          matchHint:
+            'Use an absolute HTTPS prefix without a username, password, query, or fragment.',
+          enabledHint: 'Disabled rules remain stored but are not applied.',
+          applyToHint: 'Leave every option clear to apply the rule to all request kinds.',
+          credentialsRetainedHint:
+            'Credentials are already configured. Leave secret fields blank to retain the stored values.',
+        },
+        fields: {
+          name: 'Rule name',
+          match: 'Match URL prefix',
+          authType: 'Authentication type',
+          enabled: 'Rule enabled',
+          applyTo: 'Apply to',
+          token: 'Token',
+          username: 'Username',
+          password: 'Password',
+          headerName: 'Header name',
+          headerValue: 'Header value',
+        },
+        placeholders: {
+          name: 'Private release artifacts',
+          match: 'https://downloads.example/private/',
+          secretRetain: 'Leave blank to retain stored value',
+          token: 'Enter token',
+          username: 'Enter username',
+          password: 'Enter password',
+          headerName: 'X-Plugin-Token',
+          headerValue: 'Enter header value',
+        },
+        types: {
+          none: 'No authentication',
+          bearer: 'Bearer',
+          basic: 'Basic',
+          header: 'Custom header',
+          'github-token': 'GitHub token',
+        },
+        scopes: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
+          all: 'All request kinds',
+        },
+        validation: {
+          required: 'This field is required.',
+          httpsRequired: 'Enter an absolute HTTPS prefix without credentials, query, or fragment.',
+          invalidHeaderName: 'Enter a valid HTTP header name without spaces or separators.',
+          credentialsRequired: 'Enter a credential value for this authentication type.',
+        },
+        unsupported: {
+          title: 'Store authentication is not supported',
+          description: 'The connected backend does not expose the /plugin-store-auth routes.',
+        },
+        error: {
+          title: 'Unable to load authentication rules',
+          description: 'Check the Management API connection and try again.',
+        },
+        list: {
+          title: 'Authentication rules',
+          count: '{{count}} rules',
+          order: 'Priority {{order}}',
+        },
+        actions: {
+          add: 'Add rule',
+          create: 'Create rule',
+          edit: 'Edit',
+          delete: 'Delete',
+          save: 'Save changes',
+          back: 'Back to rules',
+        },
+        empty: {
+          title: 'No authentication rules',
+          description:
+            'Add a rule when a private registry, release metadata endpoint, or artifact URL requires credentials.',
+        },
+        status: {
+          enabled: 'Enabled',
+          disabled: 'Disabled',
+          notRequired: 'No credentials required',
+          configured: 'Credentials configured',
+          missing: 'Credentials missing',
+        },
+        toast: {
+          created: '{{name}} was created.',
+          updated: '{{name}} was updated.',
+          deleted: '{{name}} was deleted.',
+        },
+        delete: {
+          title: 'Delete authentication rule?',
+          description:
+            'Deleting {{name}} removes these credentials from the shared database and records a cluster synchronization event.',
+        },
       },
       verdict: {
         ready: {
@@ -4806,8 +4870,8 @@ export const en = {
         effectiveHint: 'Installed entries with pinned store manifests',
         updates: 'Updates',
         updatesHint: 'Installed plugins with newer registry versions',
-        authRequired: 'Auth blockers',
-        authHint: 'Plugins waiting for configured store auth',
+        authRequired: 'Auth hints',
+        authHint: 'Plugins whose registry metadata declares that credentials may be required',
         rollout: 'Node reports',
         rolloutHint: 'Latest CPA node reports for plugin install, load, or delete tasks',
       },
@@ -4829,7 +4893,7 @@ export const en = {
         installed: 'Installed',
         notInstalled: 'Not installed',
         updates: 'Updates',
-        authRequired: 'Auth required',
+        authRequired: 'May require auth',
         allSources: 'All sources',
       },
       columns: {
@@ -4856,8 +4920,7 @@ export const en = {
         notRegistered: 'Not registered',
         effective: 'Effective',
         inactive: 'Inactive',
-        authConfigured: 'Auth configured',
-        authRequired: 'Auth required',
+        authMayBeRequired: 'May require auth',
         authNotRequired: 'No auth',
         globalEnabled: 'Global plugins enabled',
         globalDisabled: 'Global plugins disabled',
