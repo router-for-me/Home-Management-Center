@@ -11,6 +11,20 @@ export type UpstreamQuotaCellState =
 
 export type UpstreamQuotaView = 'all' | 'attention' | 'ws'
 
+export type AntigravityQuotaGroupId = 'gemini' | 'third-party'
+
+export type AntigravityQuotaGroup = {
+  id: AntigravityQuotaGroupId
+  windows: QuotaWindow[]
+}
+
+export type AntigravityQuotaPresentation =
+  | { kind: 'windows'; groups: AntigravityQuotaGroup[] }
+  | { kind: 'collecting'; groups: [] }
+  | { kind: 'failed'; groups: [] }
+  | { kind: 'legacy'; groups: [] }
+  | { kind: 'not-collected'; groups: [] }
+
 type UpstreamQuotaCollectionProgress = {
   completedCount: number
   collectingCount: number
@@ -22,6 +36,8 @@ type UpstreamQuotaCollectionBaselineEntry = {
 }
 
 export const xaiOnDemandWindowId = 'xai-on-demand'
+
+const antigravityQuotaGroupOrder: AntigravityQuotaGroupId[] = ['gemini', 'third-party']
 
 export function isQuotaAttentionEntry(
   entry: Pick<UpstreamQuotaEntry, 'status' | 'freshness' | 'collectionStatus'>,
@@ -161,4 +177,65 @@ export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | nul
 export function findXaiOnDemandWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return windows.find((window) => window.id === xaiOnDemandWindowId) ?? null
+}
+
+function normalizeAntigravityQuotaGroupId(
+  value: string | null | undefined,
+): AntigravityQuotaGroupId | null {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === 'gemini' || normalized === 'third-party' ? normalized : null
+}
+
+function antigravityQuotaWindowOrder(window: QuotaWindow) {
+  if (window.periodUnit === 'hour' && window.periodValue === 5) return 0
+  if (window.periodUnit === 'week' && window.periodValue === 1) return 1
+  return 2
+}
+
+export function groupAntigravityQuotaWindows(windows: QuotaWindow[]): AntigravityQuotaGroup[] {
+  const grouped = new Map<AntigravityQuotaGroupId, QuotaWindow[]>()
+  const seenWindowIds = new Set<string>()
+
+  for (const window of windows) {
+    const groupId = normalizeAntigravityQuotaGroupId(window.scopeId)
+    if (!groupId || seenWindowIds.has(window.id)) continue
+    seenWindowIds.add(window.id)
+    const groupWindows = grouped.get(groupId) ?? []
+    groupWindows.push(window)
+    grouped.set(groupId, groupWindows)
+  }
+
+  return antigravityQuotaGroupOrder.flatMap((id) => {
+    const groupWindows = grouped.get(id)
+    if (!groupWindows?.length) return []
+    return [
+      {
+        id,
+        windows: [...groupWindows].sort((left, right) => {
+          const order = antigravityQuotaWindowOrder(left) - antigravityQuotaWindowOrder(right)
+          return order || left.id.localeCompare(right.id)
+        }),
+      },
+    ]
+  })
+}
+
+export function resolveAntigravityQuotaPresentation(
+  entry: Pick<
+    UpstreamQuotaEntry,
+    'collectionStatus' | 'freshness' | 'lastAttemptAt' | 'status' | 'windowCount'
+  >,
+  windows: QuotaWindow[],
+): AntigravityQuotaPresentation {
+  const groups = groupAntigravityQuotaWindows(windows)
+  if (groups.length > 0) return { kind: 'windows', groups }
+
+  if (entry.collectionStatus === 'collecting') return { kind: 'collecting', groups: [] }
+  if (entry.collectionStatus === 'failed' || entry.status === 'error') {
+    return { kind: 'failed', groups: [] }
+  }
+  if (entry.freshness === 'never' && entry.windowCount === 0 && entry.lastAttemptAt === null) {
+    return { kind: 'not-collected', groups: [] }
+  }
+  return { kind: 'legacy', groups: [] }
 }

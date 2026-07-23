@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
+import { UpstreamQuotaDetail } from '@/features/credentials/credential-detail-drawer'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import {
   type UpstreamQuotaEntry,
@@ -11,7 +12,9 @@ import {
   findXaiOnDemandWindow,
   getUpstreamQuotaAttentionCount,
   getUpstreamQuotaCollectionProgress,
+  groupAntigravityQuotaWindows,
   isQuotaAttentionEntry,
+  resolveAntigravityQuotaPresentation,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
@@ -334,6 +337,55 @@ describe('findCurrencyWindow', () => {
   })
 })
 
+describe('Antigravity quota grouping', () => {
+  test('keeps only stable scopes and orders 5-hour windows before weekly windows', () => {
+    const groups = groupAntigravityQuotaWindows([
+      createWindow({
+        id: 'antigravity-3p-weekly',
+        scopeId: 'third-party',
+        periodUnit: 'week',
+        periodValue: 1,
+      }),
+      createWindow({ id: 'antigravity-model-chat-20706', scopeId: 'chat-20706' }),
+      createWindow({
+        id: 'antigravity-gemini-weekly',
+        scopeId: 'gemini',
+        periodUnit: 'week',
+        periodValue: 1,
+      }),
+      createWindow({ id: 'antigravity-gemini-5h', scopeId: 'gemini' }),
+    ])
+
+    expect(groups.map((group) => group.id)).toEqual(['gemini', 'third-party'])
+    expect(groups[0]?.windows.map((window) => window.id)).toEqual([
+      'antigravity-gemini-5h',
+      'antigravity-gemini-weekly',
+    ])
+    expect(groups[1]?.windows.map((window) => window.id)).toEqual(['antigravity-3p-weekly'])
+  })
+
+  test('distinguishes never-collected entries from legacy snapshots', () => {
+    const neverCollected = createQuotaEntry({
+      provider: 'antigravity',
+      status: 'unknown',
+      freshness: 'never',
+      collectionStatus: 'idle',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 0,
+    })
+    const legacy = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 1,
+    })
+
+    expect(resolveAntigravityQuotaPresentation(neverCollected, []).kind).toBe('not-collected')
+    expect(resolveAntigravityQuotaPresentation(legacy, []).kind).toBe('legacy')
+  })
+})
+
 describe('UpstreamQuotaCell rendering', () => {
   test('renders grok plan and on-demand rows from real backend fields', () => {
     const entry = createXaiEntry()
@@ -418,6 +470,209 @@ describe('UpstreamQuotaCell rendering', () => {
     expect(markup).toContain('Healthy')
     expect(markup).toContain('Partially collected')
   })
+
+  test('renders Antigravity Free quota as two weekly groups', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [
+        createWindow({
+          id: 'antigravity-gemini-weekly',
+          scopeId: 'gemini',
+          periodUnit: 'week',
+          periodValue: 1,
+          remainingRatio: 0.8,
+        }),
+        createWindow({
+          id: 'antigravity-3p-weekly',
+          scopeId: 'third-party',
+          periodUnit: 'week',
+          periodValue: 1,
+          remainingRatio: 0.6,
+        }),
+      ],
+      windows: [],
+      windowCount: 2,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Gemini')
+    expect(markup).toContain('Claude + GPT')
+    expect(markup).toContain('Weekly')
+    expect(markup).toContain('80%')
+    expect(markup).toContain('60%')
+  })
+
+  test('renders Antigravity Pro quota with one 5-hour primary per group', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [
+        createWindow({
+          id: 'antigravity-gemini-5h',
+          scopeId: 'gemini',
+          remainingRatio: 0.7,
+        }),
+        createWindow({
+          id: 'antigravity-3p-5h',
+          scopeId: 'third-party',
+          remainingRatio: 0.4,
+        }),
+      ],
+      windows: [],
+      windowCount: 4,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('5 hours')
+    expect(markup).toContain('70%')
+    expect(markup).toContain('40%')
+    expect(markup).toContain('+2 more')
+  })
+
+  test('supports an asymmetric optional 5-hour bucket', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [
+        createWindow({
+          id: 'antigravity-gemini-5h',
+          scopeId: 'gemini',
+          remainingRatio: 0.7,
+        }),
+        createWindow({
+          id: 'antigravity-3p-weekly',
+          scopeId: 'third-party',
+          periodUnit: 'week',
+          periodValue: 1,
+          remainingRatio: 0.6,
+        }),
+      ],
+      windows: [],
+      windowCount: 3,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('5 hours')
+    expect(markup).toContain('Weekly')
+    expect(markup).toContain('+1 more')
+  })
+
+  test('keeps Antigravity partial collection visible', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      collectionStatus: 'partial',
+      primaryWindows: [
+        createWindow({
+          id: 'antigravity-gemini-weekly',
+          scopeId: 'gemini',
+          periodUnit: 'week',
+          periodValue: 1,
+        }),
+        createWindow({
+          id: 'antigravity-3p-weekly',
+          scopeId: 'third-party',
+          periodUnit: 'week',
+          periodValue: 1,
+        }),
+      ],
+      windows: [],
+      windowCount: 2,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Healthy')
+    expect(markup).toContain('Partially collected')
+  })
+
+  test('does not present legacy Antigravity scopes as healthy empty quota', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [createWindow({ id: 'antigravity-model-chat-20706', scopeId: 'chat-20706' })],
+      windows: [],
+      windowCount: 1,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Unknown')
+    expect(markup).toContain('Stale')
+    expect(markup).toContain('older or unrecognized format')
+    expect(markup).not.toContain('Healthy')
+    expect(markup).not.toContain('No quota windows')
+  })
+
+  test('shows collecting and failed Antigravity legacy upgrades explicitly', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const collecting = createQuotaEntry({
+      provider: 'antigravity',
+      status: 'unknown',
+      freshness: 'stale',
+      collectionStatus: 'collecting',
+      lastAttemptAt: '2026-07-23T04:00:00Z',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 1,
+    })
+    const failed = createQuotaEntry({
+      provider: 'antigravity',
+      status: 'error',
+      freshness: 'stale',
+      collectionStatus: 'failed',
+      lastAttemptAt: '2026-07-23T04:00:00Z',
+      lastError: {
+        code: 'UPSTREAM_UNAVAILABLE',
+        message: 'upgrade failed',
+        retryable: true,
+        occurredAt: null,
+        upstreamStatusCode: null,
+        requestId: null,
+      },
+      primaryWindows: [],
+      windows: [],
+      windowCount: 1,
+    })
+
+    const collectingMarkup = renderToStaticMarkup(
+      <UpstreamQuotaCell state={{ kind: 'entry', entry: collecting }} />,
+    )
+    expect(collectingMarkup).toContain('Collecting in background')
+    expect(collectingMarkup).toContain('Refreshing Antigravity quota')
+    expect(collectingMarkup).not.toContain('Healthy')
+
+    const failedMarkup = renderToStaticMarkup(
+      <UpstreamQuotaCell state={{ kind: 'entry', entry: failed }} />,
+    )
+    expect(failedMarkup).toContain('Query failed')
+    expect(failedMarkup).toContain('Collection failed')
+    expect(failedMarkup).toContain('upgrade failed')
+  })
+
+  test('shows a genuinely never-collected Antigravity credential as not collected', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'antigravity',
+      status: 'unknown',
+      freshness: 'never',
+      collectionStatus: 'idle',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 0,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Not collected')
+    expect(markup).not.toContain('older or unrecognized format')
+  })
+
   test('renders not-collected and capability-absent states', async () => {
     const i18n = (await import('i18next')).default
     await i18n.changeLanguage('en')
@@ -432,6 +687,85 @@ describe('UpstreamQuotaCell rendering', () => {
 
     const loading = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'loading' }} />)
     expect(loading).toContain('data-slot="skeleton"')
+  })
+})
+
+describe('UpstreamQuotaDetail rendering', () => {
+  test('groups all stable Antigravity windows and ignores legacy scopes', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const item = createQuotaEntry({
+      provider: 'antigravity',
+      primaryWindows: [],
+      windows: [
+        createWindow({
+          id: 'antigravity-gemini-5h',
+          scopeId: 'gemini',
+          remainingRatio: 0.7,
+        }),
+        createWindow({
+          id: 'antigravity-gemini-weekly',
+          scopeId: 'gemini',
+          periodUnit: 'week',
+          periodValue: 1,
+          remainingRatio: 0.8,
+        }),
+        createWindow({
+          id: 'antigravity-3p-5h',
+          scopeId: 'third-party',
+          remainingRatio: 0.4,
+        }),
+        createWindow({
+          id: 'antigravity-3p-weekly',
+          scopeId: 'third-party',
+          periodUnit: 'week',
+          periodValue: 1,
+          remainingRatio: 0.6,
+        }),
+        createWindow({
+          id: 'antigravity-model-chat-20706',
+          scopeId: 'chat-20706',
+          remainingRatio: 0.13,
+        }),
+      ],
+      windowCount: 5,
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaDetail item={item} />)
+    expect(markup).toContain('Gemini')
+    expect(markup).toContain('Claude + GPT')
+    expect(markup).toContain('70%')
+    expect(markup).toContain('80%')
+    expect(markup).toContain('40%')
+    expect(markup).toContain('60%')
+    expect(markup).not.toContain('13%')
+  })
+
+  test('preserves Codex plan and reset-credit detail', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const item = createQuotaEntry({
+      provider: 'codex',
+      plan: { name: 'Pro 20x', premium: true },
+      resetCredits: {
+        availableCount: 2,
+        observedAt: '2026-07-23T04:00:00Z',
+        credits: [
+          {
+            status: 'available',
+            grantedAt: '2026-07-22T04:00:00Z',
+            expiresAt: '2026-07-29T04:00:00Z',
+          },
+        ],
+      },
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaDetail item={item} />)
+    expect(markup).toContain('Pro 20x')
+    expect(markup).toContain('Rate-limit reset credits')
+    expect(markup).toContain('2 available')
+    expect(markup).toContain('Reset credit 1')
+    expect(markup).toContain('1 more reset credits')
   })
 })
 
