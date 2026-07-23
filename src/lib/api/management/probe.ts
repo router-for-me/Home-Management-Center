@@ -238,14 +238,11 @@ export function readDeclaredUsageTokenBreakdownV2Capability(capabilitiesData: un
 }
 
 function readDeclaredCredentialInFlightCapability(configData: unknown) {
-  return readDeclaredCapabilityValue(configData, ['credential_in_flight', 'credentialInFlight'])
+  return readDeclaredCapabilityValue(configData, ['credential_in_flight_snapshots'])
 }
 
 function readDeclaredCredentialConcurrencyLimitsCapability(configData: unknown) {
-  return readDeclaredCapabilityValue(configData, [
-    'credential_concurrency_limits',
-    'credentialConcurrencyLimits',
-  ])
+  return readDeclaredCapabilityValue(configData, ['credential_concurrency_limits_v2'])
 }
 
 function readDeclaredRequestEventsCapability(configData: unknown) {

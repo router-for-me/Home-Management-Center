@@ -21,6 +21,7 @@ import {
   type CredentialMetadataForm,
   canonicalConcurrencyModelKey,
   getCredentialInFlightId,
+  isValidConcurrencyModelKey,
   parseConcurrencyLimit,
 } from '@/features/credentials/credential-concurrency'
 import {
@@ -30,7 +31,10 @@ import {
   getCredentialProviderLabel,
   getCredentialSourceLabel,
 } from '@/features/credentials/credential-display'
-import { useCredentialInFlightDetail } from '@/features/credentials/use-credential-workbench'
+import {
+  useCredentialConcurrencyPolicy,
+  useCredentialInFlightDetail,
+} from '@/features/credentials/use-credential-workbench'
 import {
   InlineWindowBar,
   UpstreamQuotaMetaBadge,
@@ -46,6 +50,8 @@ import {
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
+  type CredentialConcurrencyPolicy,
+  type CredentialInFlightObservationMetadata,
   type CredentialInFlightSummary,
   type CredentialMetadataInput,
   type CredentialResource,
@@ -73,7 +79,12 @@ function visibleDrawerTabs(showConcurrency: boolean): CredentialDrawerTab[] {
   ]
 }
 
-function createMetadataForm(resource: CredentialResource | null): CredentialMetadataForm {
+function createMetadataForm(
+  resource: CredentialResource | null,
+  policy: CredentialConcurrencyPolicy | null = null,
+): CredentialMetadataForm {
+  const maxInFlight = policy?.maxInFlight ?? resource?.maxInFlight ?? null
+  const maxInFlightByModel = policy?.maxInFlightByModel ?? resource?.maxInFlightByModel ?? {}
   return {
     prefix: resource?.prefix ?? '',
     proxyUrl: resource?.proxyUrl ?? '',
@@ -83,8 +94,8 @@ function createMetadataForm(resource: CredentialResource | null): CredentialMeta
         : String(resource.priority),
     websockets: resource?.websockets ?? false,
     note: resource?.note ?? '',
-    maxInFlight: resource?.maxInFlight ? String(resource.maxInFlight) : '',
-    maxInFlightByModel: Object.entries(resource?.maxInFlightByModel ?? {})
+    maxInFlight: maxInFlight ? String(maxInFlight) : '',
+    maxInFlightByModel: Object.entries(maxInFlightByModel)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([model, limit]) => ({ model, limit: String(limit) })),
   }
@@ -207,6 +218,9 @@ function MetadataTab({
   resource,
   mutating,
   canEditConcurrency,
+  concurrencyPolicy,
+  concurrencyPolicyPending,
+  concurrencyPolicyError,
   inFlightSummary,
   onUpdateMetadata,
   onToggleStatus,
@@ -214,22 +228,27 @@ function MetadataTab({
   resource: CredentialResource
   mutating: boolean
   canEditConcurrency: boolean
+  concurrencyPolicy: CredentialConcurrencyPolicy | null
+  concurrencyPolicyPending: boolean
+  concurrencyPolicyError: string | null
   inFlightSummary: CredentialInFlightSummary | null
   onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
   onToggleStatus: () => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [form, setForm] = useState<CredentialMetadataForm>(() => createMetadataForm(resource))
+  const [form, setForm] = useState<CredentialMetadataForm>(() =>
+    createMetadataForm(resource, concurrencyPolicy),
+  )
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
-    setForm(createMetadataForm(resource))
+    setForm(createMetadataForm(resource, concurrencyPolicy))
     setLocalError(null)
-  }, [resource])
+  }, [concurrencyPolicy, resource])
 
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
-  const concurrencyEditable = canEditConcurrency && resource.concurrencyFieldsValid
+  const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -246,6 +265,9 @@ function MetadataTab({
           const model = canonicalConcurrencyModelKey(row.model)
           const rawLimit = row.limit.trim()
           if (!model && !rawLimit) continue
+          if (!isValidConcurrencyModelKey(row.model)) {
+            throw new Error(t('credentialsPage.concurrency.validation.modelInvalid'))
+          }
           const limit = parseConcurrencyLimit(row.limit)
           if (limit === undefined) {
             if (!model) {
@@ -264,21 +286,42 @@ function MetadataTab({
           maxInFlightByModel[model] = limit
         }
       }
+      const normalizedMaxInFlight = maxInFlight && maxInFlight > 0 ? maxInFlight : null
+      const currentModelLimits = concurrencyPolicy?.maxInFlightByModel ?? {}
+      const modelLimitsChanged =
+        Object.keys(currentModelLimits).length !== Object.keys(maxInFlightByModel).length ||
+        Object.entries(maxInFlightByModel).some(
+          ([model, limit]) => currentModelLimits[model] !== limit,
+        )
+      const concurrencyChanged =
+        concurrencyEditable &&
+        (normalizedMaxInFlight !== concurrencyPolicy?.maxInFlight || modelLimitsChanged)
       await onUpdateMetadata({
         prefix: form.prefix,
         proxyUrl: form.proxyUrl,
         priority: form.priority,
         note: form.note,
         ...(websocketsSupported ? { websockets: form.websockets } : {}),
-        ...(concurrencyEditable
+        ...(concurrencyChanged
           ? {
-              maxInFlight: maxInFlight && maxInFlight > 0 ? maxInFlight : null,
+              maxInFlight: normalizedMaxInFlight,
               maxInFlightByModel,
+              concurrencyVersion: concurrencyPolicy?.version,
             }
           : {}),
       })
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error))
+      const backendCode =
+        error && typeof error === 'object' && 'backendCode' in error
+          ? String(error.backendCode)
+          : null
+      setLocalError(
+        backendCode === 'concurrency_policy_version_conflict'
+          ? t('credentialsPage.concurrency.versionConflict')
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      )
     }
   }
 
@@ -384,7 +427,9 @@ function MetadataTab({
         </div>
       </div>
 
-      {concurrencyEditable ? (
+      {canEditConcurrency && concurrencyPolicyPending ? (
+        <Skeleton className="h-40 w-full" />
+      ) : concurrencyEditable ? (
         <CredentialConcurrencyEditor
           form={form}
           summary={inFlightSummary}
@@ -396,7 +441,11 @@ function MetadataTab({
           role="alert"
           className="border-warning/35 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm leading-5"
         >
-          {t('credentialsPage.concurrency.contractInvalid')}
+          {concurrencyPolicyError
+            ? t('credentialsPage.concurrency.policyLoadFailed', {
+                message: concurrencyPolicyError,
+              })
+            : t('credentialsPage.concurrency.contractInvalid')}
         </div>
       ) : null}
 
@@ -762,21 +811,33 @@ function CredentialQuotaTab({
 function ConcurrencyTab({
   resource,
   summary,
+  observation,
+  observationAvailable,
+  summaryPending,
+  summaryStale,
+  summaryErrorMessage,
 }: {
   resource: CredentialResource
   summary: CredentialInFlightSummary | null
+  observation: CredentialInFlightObservationMetadata | null
+  observationAvailable: boolean
+  summaryPending: boolean
+  summaryStale: boolean
+  summaryErrorMessage: string | null
 }) {
   const inFlightCredentialId = getCredentialInFlightId(resource)
-  const query = useCredentialInFlightDetail(inFlightCredentialId, true)
+  const query = useCredentialInFlightDetail(inFlightCredentialId, observationAvailable)
 
   return (
     <CredentialConcurrencyDetail
       summary={summary}
+      observation={observation}
+      observationAvailable={observationAvailable}
       detail={query.detail}
-      pending={query.isPending}
+      pending={summaryPending || (observationAvailable && query.isPending)}
       fetching={query.isFetching}
-      stale={query.isStale}
-      errorMessage={query.errorMessage}
+      stale={summaryStale || query.isStale}
+      errorMessage={query.errorMessage ?? summaryErrorMessage}
       hasNextPage={query.hasNextPage ?? false}
       fetchingNextPage={query.isFetchingNextPage}
       onLoadMore={() => void query.fetchNextPage()}
@@ -922,8 +983,13 @@ export function CredentialDetailDrawer({
   models,
   quotaEntry,
   showConcurrency,
+  observationAvailable,
   canEditConcurrency,
   inFlightSummary,
+  inFlightObservation,
+  concurrencyPending,
+  concurrencyStale,
+  concurrencyErrorMessage,
   onTabChange,
   onUpdateMetadata,
   onToggleStatus,
@@ -942,8 +1008,13 @@ export function CredentialDetailDrawer({
   }> | null
   quotaEntry: UpstreamQuotaEntry | null
   showConcurrency: boolean
+  observationAvailable: boolean
   canEditConcurrency: boolean
   inFlightSummary: CredentialInFlightSummary | null
+  inFlightObservation: CredentialInFlightObservationMetadata | null
+  concurrencyPending: boolean
+  concurrencyStale: boolean
+  concurrencyErrorMessage: string | null
   onTabChange: (tab: CredentialDrawerTab) => void
   onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
   onToggleStatus: () => Promise<void>
@@ -954,6 +1025,10 @@ export function CredentialDetailDrawer({
   const { t } = useTranslation()
   const displayName = getCredentialDisplayName(resource)
   const resourceIdentifier = resource.name ?? resource.authIndex ?? resource.identifier
+  const concurrencyPolicyQuery = useCredentialConcurrencyPolicy(
+    getCredentialInFlightId(resource),
+    canEditConcurrency && tab === 'metadata',
+  )
 
   return (
     <>
@@ -977,6 +1052,9 @@ export function CredentialDetailDrawer({
             resource={resource}
             mutating={mutating}
             canEditConcurrency={canEditConcurrency}
+            concurrencyPolicy={concurrencyPolicyQuery.policy}
+            concurrencyPolicyPending={concurrencyPolicyQuery.isPending}
+            concurrencyPolicyError={concurrencyPolicyQuery.errorMessage}
             inFlightSummary={inFlightSummary}
             onUpdateMetadata={onUpdateMetadata}
             onToggleStatus={onToggleStatus}
@@ -986,7 +1064,15 @@ export function CredentialDetailDrawer({
           <CredentialQuotaTab resource={resource} quotaEntry={quotaEntry} />
         ) : null}
         {tab === 'concurrency' && showConcurrency ? (
-          <ConcurrencyTab resource={resource} summary={inFlightSummary} />
+          <ConcurrencyTab
+            resource={resource}
+            summary={inFlightSummary}
+            observation={inFlightObservation}
+            observationAvailable={observationAvailable}
+            summaryPending={concurrencyPending}
+            summaryStale={concurrencyStale}
+            summaryErrorMessage={concurrencyErrorMessage}
+          />
         ) : null}
         {tab === 'models' ? (
           <ModelsTab mutating={mutating} models={models} onFetchModels={onFetchModels} />

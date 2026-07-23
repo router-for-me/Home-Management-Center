@@ -19,9 +19,11 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type {
   CredentialInFlightDetail,
+  CredentialInFlightObservationMetadata,
   CredentialInFlightSummary,
   CredentialResource,
 } from '@/lib/api/management/credentials'
+import { getCredentialBindingAuthId } from '@/lib/api/management/credentials'
 import { cn } from '@/lib/utils'
 
 export type CredentialMetadataForm = {
@@ -35,7 +37,7 @@ export type CredentialMetadataForm = {
 }
 
 export function getCredentialInFlightId(resource: CredentialResource) {
-  return resource.authIndex ?? resource.identifier
+  return getCredentialBindingAuthId(resource)
 }
 
 export function parseConcurrencyLimit(value: string) {
@@ -47,11 +49,24 @@ export function parseConcurrencyLimit(value: string) {
 }
 
 export function canonicalConcurrencyModelKey(value: string) {
-  const trimmed = value.trim()
+  const trimAsciiWhitespace = (input: string) =>
+    input.replace(/^[ \t\r\n\v\f]+|[ \t\r\n\v\f]+$/g, '')
+  const trimmed = trimAsciiWhitespace(value).toLowerCase()
   const lastOpen = trimmed.lastIndexOf('(')
   if (lastOpen < 0 || !trimmed.endsWith(')')) return trimmed
-  const baseModel = trimmed.slice(0, lastOpen).trim()
+  const suffix = trimmed.slice(lastOpen + 1, -1)
+  const recognizedSuffix =
+    suffix === '-1' ||
+    ['none', 'auto', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(suffix) ||
+    (/^\d{1,10}$/.test(suffix) && Number(suffix) <= 2_147_483_647)
+  if (!recognizedSuffix) return trimmed
+  const baseModel = trimAsciiWhitespace(trimmed.slice(0, lastOpen))
   return baseModel || trimmed
+}
+
+export function isValidConcurrencyModelKey(value: string) {
+  const model = canonicalConcurrencyModelKey(value)
+  return Boolean(model) && new TextEncoder().encode(model).byteLength <= 256
 }
 
 function formatRequestAge(startedAt: string, now: number, t: TFunction) {
@@ -104,7 +119,8 @@ async function copyTextToClipboard(value: string) {
 
 export function CredentialInFlightCell({ summary }: { summary: CredentialInFlightSummary | null }) {
   const { t } = useTranslation()
-  if (!summary) {
+  const current = summary?.observedInFlight ?? summary?.admittedInFlight ?? null
+  if (!summary || (current === null && summary.maxInFlight === null)) {
     return <span className="text-muted-foreground">—</span>
   }
   const warning = summary.totalSaturated || summary.saturatedModelCount > 0
@@ -120,7 +136,7 @@ export function CredentialInFlightCell({ summary }: { summary: CredentialInFligh
           summary.totalSaturated ? 'text-warning-foreground dark:text-warning font-medium' : null,
         )}
       >
-        {summary.inFlight} / {summary.maxInFlight ?? '∞'}
+        {current ?? '—'} / {summary.maxInFlight ?? '∞'}
       </span>
       {warning ? (
         <Tooltip>
@@ -142,6 +158,8 @@ export function CredentialInFlightCell({ summary }: { summary: CredentialInFligh
 
 export function CredentialConcurrencyDetail({
   summary,
+  observation,
+  observationAvailable,
   detail,
   pending,
   fetching,
@@ -152,7 +170,9 @@ export function CredentialConcurrencyDetail({
   onLoadMore,
 }: {
   summary: CredentialInFlightSummary | null
-  detail: Pick<CredentialInFlightDetail, 'observedAt' | 'credential' | 'requests'> | null
+  observation: CredentialInFlightObservationMetadata | null
+  observationAvailable: boolean
+  detail: CredentialInFlightDetail | null
   pending: boolean
   fetching: boolean
   stale: boolean
@@ -163,14 +183,28 @@ export function CredentialConcurrencyDetail({
 }) {
   const { t, i18n } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
-  const effectiveSummary = detail?.credential ?? summary
   const requests = detail?.requests ?? []
-  const requestDetailUnavailable = detail === null && (pending || Boolean(errorMessage))
-  const warningMessage = stale
-    ? t('credentialsPage.concurrency.stale')
-    : errorMessage
-      ? t('credentialsPage.concurrency.summaryLoadFailed', { message: errorMessage })
-      : null
+  const metadata = detail ?? observation
+  const requestDetailUnavailable =
+    observationAvailable && detail === null && (pending || Boolean(errorMessage))
+  const warningMessages = [
+    ...(errorMessage
+      ? [t('credentialsPage.concurrency.summaryLoadFailed', { message: errorMessage })]
+      : []),
+    ...(stale || metadata?.stale ? [t('credentialsPage.concurrency.stale')] : []),
+    ...(metadata &&
+    (!metadata.coverageComplete ||
+      !metadata.aggregatesComplete ||
+      !metadata.protocolCoverageComplete)
+      ? [t('credentialsPage.concurrency.observationIncomplete')]
+      : []),
+    ...(metadata?.detailsTruncated ? [t('credentialsPage.concurrency.detailsTruncated')] : []),
+    ...(summary?.fullyEnforced === 'false'
+      ? [t('credentialsPage.concurrency.notFullyEnforced')]
+      : summary?.policyVersion !== null && summary?.fullyEnforced === 'unknown'
+        ? [t('credentialsPage.concurrency.enforcementUnknown')]
+        : []),
+  ]
 
   useEffect(() => {
     if (requests.length === 0) return
@@ -178,109 +212,134 @@ export function CredentialConcurrencyDetail({
     return () => window.clearInterval(timer)
   }, [requests.length])
 
-  if (pending && !effectiveSummary) {
+  if (pending && !summary && !detail) {
     return <Skeleton className="h-48 w-full" />
-  }
-  if (!effectiveSummary) {
-    return (
-      <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
-        {warningMessage ?? t('credentialsPage.concurrency.unavailable')}
-      </div>
-    )
   }
 
   return (
     <div className="space-y-5">
-      {warningMessage ? (
-        <div className="border-warning/35 bg-warning/10 rounded-md border px-3 py-2 text-sm">
-          {warningMessage}
+      {warningMessages.length > 0 ? (
+        <div className="border-warning/35 bg-warning/10 space-y-1 rounded-md border px-3 py-2 text-sm">
+          {warningMessages.map((message) => (
+            <p key={message}>{message}</p>
+          ))}
         </div>
       ) : null}
-      <div className="grid overflow-hidden rounded-md border sm:grid-cols-3">
-        {[
-          [t('credentialsPage.concurrency.current'), String(effectiveSummary.inFlight)],
-          [
-            t('credentialsPage.concurrency.limit'),
-            effectiveSummary.maxInFlight === null
-              ? t('credentialsPage.concurrency.unlimited')
-              : String(effectiveSummary.maxInFlight),
-          ],
-          [
-            t('credentialsPage.concurrency.remaining'),
-            effectiveSummary.remaining === null
-              ? t('credentialsPage.concurrency.unlimited')
-              : String(effectiveSummary.remaining),
-          ],
-        ].map(([label, value], index) => (
-          <div
-            key={label}
-            className={cn('px-4 py-3', index > 0 ? 'border-t sm:border-t-0 sm:border-l' : null)}
-          >
-            <p className="text-muted-foreground text-xs">{label}</p>
-            <p className="mt-1 font-mono text-sm font-medium tabular-nums">{value}</p>
+      {summary ? (
+        <>
+          <div className="grid overflow-hidden rounded-md border sm:grid-cols-4">
+            {[
+              [
+                t('credentialsPage.concurrency.observed'),
+                summary.observedInFlight === null ? '—' : String(summary.observedInFlight),
+              ],
+              [
+                t('credentialsPage.concurrency.admitted'),
+                summary.admittedInFlight === null ? '—' : String(summary.admittedInFlight),
+              ],
+              [
+                t('credentialsPage.concurrency.limit'),
+                summary.maxInFlight === null
+                  ? t('credentialsPage.concurrency.unlimited')
+                  : String(summary.maxInFlight),
+              ],
+              [
+                t('credentialsPage.concurrency.remaining'),
+                summary.remaining === null
+                  ? t('credentialsPage.concurrency.unlimited')
+                  : String(summary.remaining),
+              ],
+            ].map(([label, value], index) => (
+              <div
+                key={label}
+                className={cn('px-4 py-3', index > 0 ? 'border-t sm:border-t-0 sm:border-l' : null)}
+              >
+                <p className="text-muted-foreground text-xs">{label}</p>
+                <p className="mt-1 font-mono text-sm font-medium tabular-nums">{value}</p>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      <section>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-medium">{t('credentialsPage.concurrency.modelsTitle')}</h3>
-            <p className="text-muted-foreground mt-1 text-xs">
-              {t('credentialsPage.concurrency.modelsDescription')}
-            </p>
-          </div>
-          {fetching ? (
-            <Loader2 className="text-muted-foreground size-4 animate-spin" aria-hidden="true" />
-          ) : null}
-        </div>
-        <Table containerClassName="mt-3 rounded-md border" className="min-w-[520px] table-fixed">
-          <colgroup>
-            <col />
-            <col className="w-[96px]" />
-            <col className="w-[96px]" />
-            <col className="w-[104px]" />
-          </colgroup>
-          <TableHeader>
-            <TableRow variant="static">
-              <TableHead>{t('credentialsPage.concurrency.model')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.current')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.limit')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.remaining')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {effectiveSummary.models.length > 0 ? (
-              effectiveSummary.models.map((model) => (
-                <TableRow key={model.model} variant="static">
-                  <TableCell className="truncate font-mono text-xs">{model.model}</TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">{model.inFlight}</TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">
-                    {model.maxInFlight ?? '∞'}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">
-                    <span
-                      className={cn(
-                        model.saturated
-                          ? 'text-warning-foreground dark:text-warning font-medium'
-                          : null,
-                      )}
-                    >
-                      {model.remaining ?? '∞'}
-                    </span>
-                  </TableCell>
+          <section>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-medium">
+                  {t('credentialsPage.concurrency.modelsTitle')}
+                </h3>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {t('credentialsPage.concurrency.modelsDescription')}
+                </p>
+              </div>
+              {fetching ? (
+                <Loader2 className="text-muted-foreground size-4 animate-spin" aria-hidden="true" />
+              ) : null}
+            </div>
+            <Table
+              containerClassName="mt-3 rounded-md border"
+              className="min-w-[620px] table-fixed"
+            >
+              <colgroup>
+                <col />
+                <col className="w-[92px]" />
+                <col className="w-[92px]" />
+                <col className="w-[92px]" />
+                <col className="w-[104px]" />
+              </colgroup>
+              <TableHeader>
+                <TableRow variant="static">
+                  <TableHead>{t('credentialsPage.concurrency.model')}</TableHead>
+                  <TableHead>{t('credentialsPage.concurrency.observed')}</TableHead>
+                  <TableHead>{t('credentialsPage.concurrency.admitted')}</TableHead>
+                  <TableHead>{t('credentialsPage.concurrency.limit')}</TableHead>
+                  <TableHead>{t('credentialsPage.concurrency.remaining')}</TableHead>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow variant="static">
-                <TableCell colSpan={4} className="text-muted-foreground py-8 text-center text-sm">
-                  {t('credentialsPage.concurrency.noModels')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </section>
+              </TableHeader>
+              <TableBody>
+                {summary.models.length > 0 ? (
+                  summary.models.map((model) => (
+                    <TableRow key={model.model} variant="static">
+                      <TableCell className="truncate font-mono text-xs">{model.model}</TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums">
+                        {model.observedInFlight ?? '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums">
+                        {model.admittedInFlight ?? '—'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums">
+                        {model.maxInFlight ?? '∞'}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs tabular-nums">
+                        <span
+                          className={cn(
+                            model.saturated
+                              ? 'text-warning-foreground dark:text-warning font-medium'
+                              : null,
+                          )}
+                        >
+                          {model.remaining ?? '∞'}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow variant="static">
+                    <TableCell
+                      colSpan={5}
+                      className="text-muted-foreground py-8 text-center text-sm"
+                    >
+                      {t('credentialsPage.concurrency.noModels')}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </section>
+        </>
+      ) : (
+        <div className="text-muted-foreground rounded-md border px-4 py-8 text-center text-sm">
+          {t('credentialsPage.concurrency.unavailable')}
+        </div>
+      )}
 
       <section>
         <div>
@@ -289,88 +348,89 @@ export function CredentialConcurrencyDetail({
             {t('credentialsPage.concurrency.requestsDescription')}
           </p>
         </div>
-        <Table containerClassName="mt-3 rounded-md border" className="min-w-[760px] table-fixed">
-          <colgroup>
-            <col className="w-[180px]" />
-            <col className="w-[220px]" />
-            <col className="w-[150px]" />
-            <col className="w-[140px]" />
-            <col className="w-[70px]" />
-          </colgroup>
-          <TableHeader>
-            <TableRow variant="static">
-              <TableHead>{t('credentialsPage.concurrency.requestId')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.model')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.cpaNode')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.startedAt')}</TableHead>
-              <TableHead>{t('credentialsPage.concurrency.age')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requestDetailUnavailable ? (
+        {!observationAvailable ? (
+          <div className="text-muted-foreground mt-3 rounded-md border px-4 py-6 text-center text-sm">
+            {t('credentialsPage.concurrency.observationUnsupported')}
+          </div>
+        ) : (
+          <Table containerClassName="mt-3 rounded-md border" className="min-w-[760px] table-fixed">
+            <colgroup>
+              <col className="w-[190px]" />
+              <col className="w-[210px]" />
+              <col className="w-[110px]" />
+              <col className="w-[150px]" />
+              <col className="w-[80px]" />
+            </colgroup>
+            <TableHeader>
               <TableRow variant="static">
-                <TableCell colSpan={5} className="text-muted-foreground py-8 text-center text-sm">
-                  {pending
-                    ? t('credentialsPage.concurrency.requestsLoading')
-                    : t('credentialsPage.concurrency.requestsUnavailable')}
-                </TableCell>
+                <TableHead>{t('credentialsPage.concurrency.requestId')}</TableHead>
+                <TableHead>{t('credentialsPage.concurrency.model')}</TableHead>
+                <TableHead>{t('credentialsPage.concurrency.requestKind')}</TableHead>
+                <TableHead>{t('credentialsPage.concurrency.startedAt')}</TableHead>
+                <TableHead>{t('credentialsPage.concurrency.age')}</TableHead>
               </TableRow>
-            ) : requests.length > 0 ? (
-              requests.map((request) => (
-                <TableRow key={request.leaseId} variant="static">
-                  <TableCell>
-                    <div className="flex min-w-0 items-center gap-1">
-                      <span className="truncate font-mono text-xs">{request.requestId}</span>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="icon"
-                        className="size-7 shrink-0"
-                        aria-label={t('credentialsPage.concurrency.copyRequestId')}
-                        onClick={() => {
-                          void copyTextToClipboard(request.requestId)
-                            .then(() =>
-                              toast.success(t('credentialsPage.concurrency.requestIdCopied')),
-                            )
-                            .catch(() =>
-                              toast.error(t('credentialsPage.concurrency.requestIdCopyFailed')),
-                            )
-                        }}
-                      >
-                        <Copy className="size-3.5" aria-hidden="true" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <p className="truncate font-mono text-xs">{request.model}</p>
-                    {request.requestedModel && request.requestedModel !== request.model ? (
-                      <p className="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">
-                        {request.requestedModel}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="truncate text-xs">
-                    {request.cpaLabel ?? request.cpaNodeId ?? request.cpaIp ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
-                    {formatDateTime(request.startedAt, i18n.resolvedLanguage ?? i18n.language) ??
-                      '—'}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums">
-                    {formatRequestAge(request.startedAt, now, t)}
+            </TableHeader>
+            <TableBody>
+              {requestDetailUnavailable ? (
+                <TableRow variant="static">
+                  <TableCell colSpan={5} className="text-muted-foreground py-8 text-center text-sm">
+                    {pending
+                      ? t('credentialsPage.concurrency.requestsLoading')
+                      : t('credentialsPage.concurrency.requestsUnavailable')}
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow variant="static">
-                <TableCell colSpan={5} className="text-muted-foreground py-8 text-center text-sm">
-                  {t('credentialsPage.concurrency.noRequests')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-        {hasNextPage ? (
+              ) : requests.length > 0 ? (
+                requests.map((request) => (
+                  <TableRow key={request.requestId} variant="static">
+                    <TableCell>
+                      <div className="flex min-w-0 items-center gap-1">
+                        <span className="truncate font-mono text-xs">{request.requestId}</span>
+                        <Button
+                          type="button"
+                          variant="text"
+                          size="icon"
+                          className="size-7 shrink-0"
+                          aria-label={t('credentialsPage.concurrency.copyRequestId')}
+                          onClick={() => {
+                            void copyTextToClipboard(request.requestId)
+                              .then(() =>
+                                toast.success(t('credentialsPage.concurrency.requestIdCopied')),
+                              )
+                              .catch(() =>
+                                toast.error(t('credentialsPage.concurrency.requestIdCopyFailed')),
+                              )
+                          }}
+                        >
+                          <Copy className="size-3.5" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="truncate font-mono text-xs">{request.model}</p>
+                    </TableCell>
+                    <TableCell className="truncate font-mono text-xs">
+                      {request.requestKind}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {formatDateTime(request.startedAt, i18n.resolvedLanguage ?? i18n.language) ??
+                        '—'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs tabular-nums">
+                      {formatRequestAge(request.startedAt, now, t)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow variant="static">
+                  <TableCell colSpan={5} className="text-muted-foreground py-8 text-center text-sm">
+                    {t('credentialsPage.concurrency.noRequests')}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
+        {observationAvailable && hasNextPage ? (
           <div className="mt-3 flex justify-center">
             <Button
               type="button"
@@ -404,14 +464,19 @@ export function CredentialConcurrencyEditor({
 }) {
   const { t } = useTranslation()
   const proposedTotal = parseConcurrencyLimit(form.maxInFlight)
+  const currentTotal = Math.max(summary?.observedInFlight ?? 0, summary?.admittedInFlight ?? 0)
   const totalWarning =
     proposedTotal !== undefined && proposedTotal !== null && proposedTotal > 0 && summary
-      ? proposedTotal < summary.inFlight
+      ? proposedTotal < currentTotal
       : false
   const modelWarning = form.maxInFlightByModel.some((row) => {
     const limit = parseConcurrencyLimit(row.limit)
     const modelKey = canonicalConcurrencyModelKey(row.model)
-    const current = summary?.models.find((model) => model.model === modelKey)?.inFlight ?? 0
+    const currentModel = summary?.models.find((model) => model.model === modelKey)
+    const current = Math.max(
+      currentModel?.observedInFlight ?? 0,
+      currentModel?.admittedInFlight ?? 0,
+    )
     return limit !== undefined && limit !== null && limit > 0 && limit < current
   })
 

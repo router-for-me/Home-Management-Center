@@ -9,11 +9,14 @@ import {
   type VertexImportInput,
   deleteCredentialResource,
   downloadCredentialResource,
+  fetchCredentialConcurrencyPolicy,
+  fetchCredentialConcurrencySnapshot,
   fetchCredentialInFlightDetail,
   fetchCredentialInFlightSummary,
   fetchCredentialModels,
   fetchCredentialOAuthStatus,
   fetchCredentialSnapshot,
+  getCredentialBindingAuthId,
   getCredentialOAuthProviders,
   importVertexCredential,
   startCredentialOAuth,
@@ -41,6 +44,19 @@ function useManagementSession() {
     connected: status === 'connected',
     checking: status === 'checking',
   }
+}
+
+function credentialConcurrencyPolicyQueryKey(
+  baseUrl: string,
+  connectedAt: string | null,
+  credentialId?: string | null,
+) {
+  return [
+    'management-credential-concurrency-policy',
+    baseUrl,
+    connectedAt,
+    ...(credentialId ? [credentialId] : []),
+  ]
 }
 
 export function useCredentialWorkbench() {
@@ -80,10 +96,29 @@ export function useCredentialWorkbench() {
     refetchIntervalInBackground: false,
   })
 
+  const concurrencyQueryKey = ['management-credential-concurrency', session.baseUrl, connectedAt]
+  const concurrencyQuery = useQuery({
+    queryKey: concurrencyQueryKey,
+    enabled: connected && Boolean(session.managementKey) && credentialConcurrencyLimits,
+    queryFn: async () => {
+      try {
+        return await fetchCredentialConcurrencySnapshot(session)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchInterval: credentialConcurrencyLimits ? 5_000 : false,
+    refetchIntervalInBackground: false,
+  })
+
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: inFlightQueryKey }),
+      queryClient.invalidateQueries({ queryKey: concurrencyQueryKey }),
+      queryClient.invalidateQueries({
+        queryKey: credentialConcurrencyPolicyQueryKey(session.baseUrl, connectedAt),
+      }),
     ])
   }
 
@@ -119,6 +154,20 @@ export function useCredentialWorkbench() {
       }
     },
     onSuccess: invalidate,
+    onError: (error, { resource }) => {
+      const backendCode =
+        error && typeof error === 'object' && 'backendCode' in error
+          ? String(error.backendCode)
+          : null
+      if (backendCode !== 'concurrency_policy_version_conflict') return
+      void queryClient.invalidateQueries({
+        queryKey: credentialConcurrencyPolicyQueryKey(
+          session.baseUrl,
+          connectedAt,
+          getCredentialBindingAuthId(resource),
+        ),
+      })
+    },
   })
 
   const deleteMutation = useMutation({
@@ -236,6 +285,11 @@ export function useCredentialWorkbench() {
     isError: query.isError,
     errorMessage: query.error?.message ?? null,
     inFlightSnapshot: inFlightQuery.data ?? null,
+    inFlightPending: inFlightQuery.isPending,
+    concurrencySnapshot: concurrencyQuery.data ?? null,
+    concurrencyPending: concurrencyQuery.isPending,
+    concurrencyStale: concurrencyQuery.isError && concurrencyQuery.data !== undefined,
+    concurrencyErrorMessage: concurrencyQuery.error?.message ?? null,
     inFlightStale: inFlightQuery.isError && inFlightQuery.data !== undefined,
     inFlightErrorMessage: inFlightQuery.error?.message ?? null,
     refetch: () => {
@@ -295,7 +349,7 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
       credentialInFlight &&
       enabled &&
       Boolean(credentialId),
-    initialPageParam: null as string | null,
+    initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       try {
         return await fetchCredentialInFlightDetail(session, credentialId ?? '', pageParam)
@@ -303,7 +357,7 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
         throw toCredentialApiError(error)
       }
     },
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     refetchInterval: enabled && credentialInFlight ? 5_000 : false,
     refetchIntervalInBackground: false,
   })
@@ -311,11 +365,12 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
   const pages = query.data?.pages ?? []
   const latestPage = pages.at(-1) ?? null
   const requests: CredentialInFlightRequest[] = []
-  const seenLeaseIds = new Set<string>()
+  const seenRequestIds = new Set<string>()
   for (const page of pages) {
     for (const request of page.requests) {
-      if (seenLeaseIds.has(request.leaseId)) continue
-      seenLeaseIds.add(request.leaseId)
+      const requestKey = `${request.credentialId}\u0000${request.requestId}`
+      if (seenRequestIds.has(requestKey)) continue
+      seenRequestIds.add(requestKey)
       requests.push(request)
     }
   }
@@ -323,8 +378,7 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
     detail:
       pages.length > 0 && latestPage
         ? {
-            observedAt: latestPage.observedAt,
-            credential: latestPage.credential,
+            ...latestPage,
             requests,
           }
         : null,
@@ -335,5 +389,38 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
     errorMessage: query.error?.message ?? null,
     hasNextPage: query.hasNextPage,
     fetchNextPage: query.fetchNextPage,
+  }
+}
+
+export function useCredentialConcurrencyPolicy(credentialId: string | null, enabled: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  const credentialConcurrencyLimits = useCapabilityStore(
+    (state) => state.capabilities.credentialConcurrencyLimits,
+  )
+  const query = useQuery({
+    queryKey: credentialConcurrencyPolicyQueryKey(session.baseUrl, connectedAt, credentialId),
+    enabled:
+      connected &&
+      Boolean(session.managementKey) &&
+      credentialConcurrencyLimits &&
+      enabled &&
+      Boolean(credentialId),
+    queryFn: async () => {
+      try {
+        return await fetchCredentialConcurrencyPolicy(session, credentialId ?? '')
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  })
+
+  return {
+    policy: query.data ?? null,
+    isPending: query.isPending,
+    isFetching: query.isFetching,
+    errorMessage: query.error?.message ?? null,
+    refetch: query.refetch,
   }
 }

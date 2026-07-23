@@ -109,6 +109,7 @@ import {
   type CredentialOAuthProvider,
   type CredentialResource,
   type CredentialStatusFilter,
+  mergeCredentialConcurrencySummary,
 } from '@/lib/api/management/credentials'
 import { downloadBlob } from '@/lib/download'
 import { cn } from '@/lib/utils'
@@ -661,11 +662,24 @@ export function AccountsPanel({
 
   const resolvedQuotaMap = quotaMap ?? EMPTY_QUOTA_MAP
   const resources = workbench.snapshot?.resources ?? EMPTY_CREDENTIAL_RESOURCES
-  const inFlightByCredentialId = useMemo(
-    () =>
-      new Map((workbench.inFlightSnapshot?.items ?? []).map((item) => [item.credentialId, item])),
-    [workbench.inFlightSnapshot],
-  )
+  const inFlightByCredentialId = useMemo(() => {
+    const observed = new Map(
+      (workbench.inFlightSnapshot?.items ?? []).map((item) => [item.credentialId, item]),
+    )
+    const limiter = new Map(
+      (workbench.concurrencySnapshot?.items ?? []).map((item) => [item.credentialId, item]),
+    )
+    const credentialIds = new Set([...observed.keys(), ...limiter.keys()])
+    const merged = new Map<string, CredentialInFlightSummary>()
+    for (const credentialId of credentialIds) {
+      const summary = mergeCredentialConcurrencySummary(
+        observed.get(credentialId) ?? null,
+        limiter.get(credentialId) ?? null,
+      )
+      if (summary) merged.set(credentialId, summary)
+    }
+    return merged
+  }, [workbench.concurrencySnapshot, workbench.inFlightSnapshot])
   const filteredResources = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 
@@ -1190,7 +1204,7 @@ export function AccountsPanel({
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
             quotaMap={resolvedQuotaMap}
-            showInFlight={workbench.credentialInFlight}
+            showInFlight={workbench.credentialInFlight || workbench.credentialConcurrencyLimits}
             inFlightByCredentialId={inFlightByCredentialId}
             onDeleteResource={(resource) => {
               handleDelete(resource)
@@ -1225,10 +1239,22 @@ export function AccountsPanel({
               mutating={workbench.mutating}
               models={workbench.models}
               quotaEntry={findUpstreamQuotaEntry(resolvedQuotaMap, selectedResource)}
-              showConcurrency={workbench.credentialInFlight}
+              showConcurrency={
+                workbench.credentialInFlight || workbench.credentialConcurrencyLimits
+              }
+              observationAvailable={workbench.credentialInFlight}
               canEditConcurrency={workbench.credentialConcurrencyLimits}
               inFlightSummary={
                 inFlightByCredentialId.get(getCredentialInFlightId(selectedResource)) ?? null
+              }
+              inFlightObservation={workbench.inFlightSnapshot}
+              concurrencyPending={
+                (workbench.credentialInFlight && workbench.inFlightPending) ||
+                (workbench.credentialConcurrencyLimits && workbench.concurrencyPending)
+              }
+              concurrencyStale={workbench.inFlightStale || workbench.concurrencyStale}
+              concurrencyErrorMessage={
+                workbench.inFlightErrorMessage ?? workbench.concurrencyErrorMessage
               }
               onTabChange={setDrawerTab}
               onUpdateMetadata={handleMetadataUpdate}
