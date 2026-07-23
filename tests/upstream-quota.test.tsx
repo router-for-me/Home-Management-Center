@@ -9,6 +9,7 @@ import {
   findCurrencyWindow,
   findUpstreamQuotaEntry,
   findXaiOnDemandWindow,
+  getUpstreamQuotaAttentionCount,
   getUpstreamQuotaCollectionProgress,
   isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
@@ -195,6 +196,26 @@ describe('isQuotaAttentionEntry', () => {
   })
 })
 
+describe('getUpstreamQuotaAttentionCount', () => {
+  test('uses the global backend summary when the loaded page is truncated', () => {
+    const entries = Array.from({ length: 200 }, (_, index) =>
+      createQuotaEntry({ id: `auth-${index}`, status: index < 25 ? 'low' : 'healthy' }),
+    )
+
+    expect(getUpstreamQuotaAttentionCount(entries, { needsAttention: 250 })).toBe(250)
+  })
+
+  test('falls back to loaded entry semantics when no global summary is available', () => {
+    const entries = [
+      createQuotaEntry(),
+      createQuotaEntry({ id: 'partial', collectionStatus: 'partial' }),
+      createQuotaEntry({ id: 'stale', freshness: 'stale' }),
+    ]
+
+    expect(getUpstreamQuotaAttentionCount(entries, null)).toBe(2)
+  })
+})
+
 describe('quota collection progress', () => {
   test('counts only new settled active-probe results', () => {
     const collecting = createQuotaEntry({
@@ -316,9 +337,7 @@ describe('findCurrencyWindow', () => {
 describe('UpstreamQuotaCell rendering', () => {
   test('renders grok plan and on-demand rows from real backend fields', () => {
     const entry = createXaiEntry()
-    const markup = renderToStaticMarkup(
-      <UpstreamQuotaCell state={{ kind: 'entry', entry }} />,
-    )
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('$42.00')
     expect(markup).toContain('$150.00')
@@ -335,9 +354,7 @@ describe('UpstreamQuotaCell rendering', () => {
       windows: [],
       windowCount: 1,
     })
-    const markup = renderToStaticMarkup(
-      <UpstreamQuotaCell state={{ kind: 'entry', entry }} />,
-    )
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).not.toContain('SuperGrok')
     expect(markup).toContain('$42.00')
   })
@@ -410,9 +427,7 @@ describe('UpstreamQuotaCell rendering', () => {
     )
     expect(notCollected).toContain('Not collected')
 
-    const absent = renderToStaticMarkup(
-      <UpstreamQuotaCell state={{ kind: 'capability-absent' }} />,
-    )
+    const absent = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'capability-absent' }} />)
     expect(absent).toContain('Unsupported')
 
     const loading = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'loading' }} />)
