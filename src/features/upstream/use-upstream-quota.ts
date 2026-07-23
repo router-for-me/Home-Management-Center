@@ -15,7 +15,7 @@ import {
   buildUpstreamQuotaJoinMap,
   createUpstreamQuotaCollectionBaseline,
   getUpstreamQuotaCollectionProgress,
-  isQuotaAttentionStatus,
+  isQuotaAttentionEntry,
 } from './upstream-quota-model'
 
 const upstreamQuotaRefreshIntervalMs = 30_000
@@ -64,10 +64,7 @@ export function useUpstreamQuota() {
 
   const entries = useMemo(() => query.data?.items ?? [], [query.data])
   const map = useMemo(() => buildUpstreamQuotaJoinMap(entries), [entries])
-  const attentionCount = useMemo(
-    () => entries.filter((entry) => isQuotaAttentionStatus(entry.status)).length,
-    [entries],
-  )
+  const attentionCount = useMemo(() => entries.filter(isQuotaAttentionEntry).length, [entries])
   const total = query.data?.total ?? entries.length
   const truncated = total > entries.length
 

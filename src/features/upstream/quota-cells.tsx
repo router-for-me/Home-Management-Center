@@ -5,7 +5,12 @@ import {
   getUpstreamQuotaWindowDisplayLabel,
   getUpstreamQuotaWindowIdentityLabel,
 } from '@/features/upstream/quota-format'
-import type { QuotaPlan, QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
+import type {
+  QuotaCollectionStatus,
+  QuotaPlan,
+  QuotaStatus,
+  QuotaWindow,
+} from '@/lib/api/management/quota'
 import { cn } from '@/lib/utils'
 
 import {
@@ -51,6 +56,24 @@ export function UpstreamQuotaMetaBadge({ children }: { children: React.ReactNode
   return (
     <span className="bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
       {children}
+    </span>
+  )
+}
+
+function UpstreamQuotaCollectionBadge({ status }: { status: QuotaCollectionStatus }) {
+  const { t } = useTranslation()
+  if (status !== 'partial' && status !== 'failed') return null
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium',
+        status === 'failed'
+          ? 'border-destructive/30 bg-destructive/10 text-destructive'
+          : 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
+      )}
+    >
+      {t(`upstreamPage.quota.collection.${status}`)}
     </span>
   )
 }
@@ -184,6 +207,10 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
       <div className="flex flex-wrap items-center gap-1">
         {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
+        <UpstreamQuotaMetaBadge>
+          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
+        </UpstreamQuotaMetaBadge>
+        <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
       </div>
       {monthlyWindow ? (
         <>
@@ -222,7 +249,10 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
       <div className="grid min-w-40 gap-1">
         <div className="flex flex-wrap items-center gap-1">
           <UpstreamQuotaStatusBadge status="error" />
-          <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${entry.freshness}`)}</UpstreamQuotaMetaBadge>
+          <UpstreamQuotaMetaBadge>
+            {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
+          </UpstreamQuotaMetaBadge>
+          <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
         </div>
         <p className="text-destructive line-clamp-2 text-[11px] leading-4">
           {entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')}
@@ -240,7 +270,10 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
       <div className="flex flex-wrap items-center gap-1">
         {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
         <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>{t(`upstreamPage.quota.freshness.${entry.freshness}`)}</UpstreamQuotaMetaBadge>
+        <UpstreamQuotaMetaBadge>
+          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
+        </UpstreamQuotaMetaBadge>
+        <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
       </div>
       <GenericWindowsCell entry={entry} />
     </div>

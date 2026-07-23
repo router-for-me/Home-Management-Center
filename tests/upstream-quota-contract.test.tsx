@@ -159,6 +159,80 @@ describe('quota snapshot normalization contracts', () => {
     })
   })
 
+  test('preserves backend-selected Codex families across a three-window detail response', () => {
+    const accountFiveHour = {
+      id: 'codex-5-hour',
+      scope: 'account',
+      mode: 'rolling',
+      status: 'healthy',
+      unit: 'percentage',
+      remaining_ratio: 0.82,
+      period_unit: 'hour',
+      period_value: 5,
+      source: 'active_probe',
+    }
+    const accountWeekly = {
+      id: 'codex-1-week',
+      scope: 'account',
+      mode: 'rolling',
+      status: 'healthy',
+      unit: 'percentage',
+      remaining_ratio: 0.91,
+      period_unit: 'week',
+      period_value: 1,
+      source: 'active_probe',
+    }
+    const sparkWeekly = {
+      id: 'codex-bengalfox-1-week',
+      label: 'GPT-5.3-Codex-Spark',
+      scope: 'model',
+      scope_id: 'codex_bengalfox',
+      mode: 'rolling',
+      status: 'healthy',
+      unit: 'percentage',
+      remaining_ratio: 1,
+      period_unit: 'week',
+      period_value: 1,
+      source: 'active_probe',
+    }
+    const detail = normalizeQuotaCredentialDetail({
+      credential: {
+        credential_id: 'credential-codex-families',
+        provider: 'codex',
+        quota_status: 'healthy',
+        freshness: 'fresh',
+        collection_status: 'partial',
+        source: 'active_probe',
+        plan: { name: 'Pro 20x', premium: true },
+        window_count: 3,
+        primary_windows: [accountWeekly, sparkWeekly],
+      },
+      windows: [accountFiveHour, accountWeekly, sparkWeekly],
+      reset_credits: {
+        available_count: 1,
+        observed_at: '2026-07-23T01:00:00Z',
+        credits: [],
+      },
+    })
+
+    expect(detail.primaryWindows.map((window) => window.id)).toEqual([
+      'codex-1-week',
+      'codex-bengalfox-1-week',
+    ])
+    expect(detail.windows.map((window) => window.id)).toEqual([
+      'codex-5-hour',
+      'codex-1-week',
+      'codex-bengalfox-1-week',
+    ])
+    expect(detail.windowCount).toBe(3)
+    expect(detail.collectionStatus).toBe('partial')
+    expect(detail.resetCredits).toEqual({
+      availableCount: 1,
+      observedAt: '2026-07-23T01:00:00Z',
+      credits: [],
+    })
+  })
+
   test('normalizes the current backend snake-case contract', () => {
     const snapshot = normalizeQuotaSnapshot({
       generated_at: '2026-07-15T05:00:00Z',

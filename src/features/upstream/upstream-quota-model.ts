@@ -1,5 +1,5 @@
 import type { CredentialResource } from '@/lib/api/management/credentials'
-import type { QuotaCredential, QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
+import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
 
 export type UpstreamQuotaEntry = QuotaCredential
 
@@ -23,8 +23,15 @@ type UpstreamQuotaCollectionBaselineEntry = {
 
 export const xaiOnDemandWindowId = 'xai-on-demand'
 
-export function isQuotaAttentionStatus(status: QuotaStatus) {
-  return status === 'low' || status === 'exhausted' || status === 'error'
+export function isQuotaAttentionEntry(
+  entry: Pick<UpstreamQuotaEntry, 'status' | 'freshness' | 'collectionStatus'>,
+) {
+  return (
+    entry.status !== 'healthy' ||
+    entry.freshness !== 'fresh' ||
+    entry.collectionStatus === 'partial' ||
+    entry.collectionStatus === 'failed'
+  )
 }
 
 function isQuotaCollectionCandidate(entry: UpstreamQuotaEntry) {

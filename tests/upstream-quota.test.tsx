@@ -10,7 +10,7 @@ import {
   findUpstreamQuotaEntry,
   findXaiOnDemandWindow,
   getUpstreamQuotaCollectionProgress,
-  isQuotaAttentionStatus,
+  isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
@@ -179,14 +179,19 @@ describe('quota join map', () => {
   })
 })
 
-describe('isQuotaAttentionStatus', () => {
-  test('matches low/exhausted/error only', () => {
-    expect(isQuotaAttentionStatus('low')).toBe(true)
-    expect(isQuotaAttentionStatus('exhausted')).toBe(true)
-    expect(isQuotaAttentionStatus('error')).toBe(true)
-    expect(isQuotaAttentionStatus('healthy')).toBe(false)
-    expect(isQuotaAttentionStatus('unknown')).toBe(false)
-    expect(isQuotaAttentionStatus('unsupported')).toBe(false)
+describe('isQuotaAttentionEntry', () => {
+  test('matches backend quota, freshness, and collection degradation semantics', () => {
+    expect(isQuotaAttentionEntry(createQuotaEntry())).toBe(false)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ status: 'low' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ status: 'exhausted' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ status: 'error' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ status: 'unknown' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ status: 'unsupported' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ freshness: 'stale' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ freshness: 'never' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ collectionStatus: 'partial' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ collectionStatus: 'failed' }))).toBe(true)
+    expect(isQuotaAttentionEntry(createQuotaEntry({ collectionStatus: 'collecting' }))).toBe(false)
   })
 })
 
@@ -354,6 +359,13 @@ describe('UpstreamQuotaCell rendering', () => {
       periodValue: 1,
       remainingRatio: 0.91,
     })
+    const accountFiveHour = createWindow({
+      id: 'codex-5-hour',
+      label: null,
+      periodUnit: 'hour',
+      periodValue: 5,
+      remainingRatio: 0.82,
+    })
     const sparkWeekly = createWindow({
       id: 'codex-bengalfox-1-week',
       label: 'GPT-5.3-Codex-Spark',
@@ -367,8 +379,8 @@ describe('UpstreamQuotaCell rendering', () => {
       provider: 'codex',
       plan: { name: 'Pro 20x', premium: true },
       primaryWindows: [accountWeekly, sparkWeekly],
-      windows: [accountWeekly, sparkWeekly],
-      windowCount: 2,
+      windows: [accountFiveHour, accountWeekly, sparkWeekly],
+      windowCount: 3,
     })
 
     const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
@@ -377,6 +389,17 @@ describe('UpstreamQuotaCell rendering', () => {
     expect(markup).toContain('Weekly')
     expect(markup).toContain('91%')
     expect(markup).toContain('100%')
+    expect(markup).toContain('+1 more')
+  })
+
+  test('surfaces partial collection even when the current quota status is healthy', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('en')
+    const entry = createQuotaEntry({ collectionStatus: 'partial' })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Healthy')
+    expect(markup).toContain('Partially collected')
   })
   test('renders not-collected and capability-absent states', async () => {
     const i18n = (await import('i18next')).default
