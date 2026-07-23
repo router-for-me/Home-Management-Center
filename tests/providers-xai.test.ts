@@ -33,6 +33,7 @@ const noCapabilities: CapabilityMap = {
   usageProviderHealth: false,
   usageCredentialHealth: false,
   usageRealtime: false,
+  usageTokenBreakdownV2: false,
   requestEvents: false,
   requestEventDetails: false,
   requestEventExport: false,

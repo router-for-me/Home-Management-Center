@@ -158,6 +158,7 @@ export function useUsageObservabilityWorkbench() {
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageOverview,
+      scopedCapabilities.usageTokenBreakdownV2,
       aggregateFilters,
     ],
     enabled: canQuery && scopedCapabilities.usageOverview,
@@ -169,7 +170,11 @@ export function useUsageObservabilityWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageOverview(session, aggregateFilters)
+        return await fetchUsageOverview(
+          session,
+          aggregateFilters,
+          scopedCapabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -182,6 +187,7 @@ export function useUsageObservabilityWorkbench() {
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageRecords,
+      scopedCapabilities.usageTokenBreakdownV2,
       filters,
     ],
     enabled: canQuery && scopedCapabilities.usageRecords,
@@ -196,7 +202,7 @@ export function useUsageObservabilityWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageRecords(session, filters)
+        return await fetchUsageRecords(session, filters, scopedCapabilities.usageTokenBreakdownV2)
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -209,6 +215,7 @@ export function useUsageObservabilityWorkbench() {
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageAggregates,
+      scopedCapabilities.usageTokenBreakdownV2,
       aggregateFilters,
       rankingGroup,
       rankingMetric,
@@ -228,13 +235,18 @@ export function useUsageObservabilityWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageAggregates(session, aggregateFilters, {
-          groupBy: rankingGroup,
-          metric: rankingMetric,
-          sortDirection: defaultUsageAggregatesQuery.sortDirection,
-          limit: rankingLimit,
-          offset: 0,
-        })
+        return await fetchUsageAggregates(
+          session,
+          aggregateFilters,
+          {
+            groupBy: rankingGroup,
+            metric: rankingMetric,
+            sortDirection: defaultUsageAggregatesQuery.sortDirection,
+            limit: rankingLimit,
+            offset: 0,
+          },
+          scopedCapabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -247,6 +259,7 @@ export function useUsageObservabilityWorkbench() {
       session.baseUrl,
       connectedAt,
       scopedCapabilities.usageAggregates,
+      scopedCapabilities.usageTokenBreakdownV2,
       aggregateFilters,
       credentialUsageSort,
       credentialUsageLimit,
@@ -268,14 +281,19 @@ export function useUsageObservabilityWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageAggregates(session, aggregateFilters, {
-          groupBy: 'credential',
-          metric: credentialUsageSort?.metric ?? defaultUsageAggregatesQuery.metric,
-          sortDirection:
-            credentialUsageSort?.direction ?? defaultUsageAggregatesQuery.sortDirection,
-          limit: credentialUsageLimit,
-          offset: credentialUsageOffset,
-        })
+        return await fetchUsageAggregates(
+          session,
+          aggregateFilters,
+          {
+            groupBy: 'credential',
+            metric: credentialUsageSort?.metric ?? defaultUsageAggregatesQuery.metric,
+            sortDirection:
+              credentialUsageSort?.direction ?? defaultUsageAggregatesQuery.sortDirection,
+            limit: credentialUsageLimit,
+            offset: credentialUsageOffset,
+          },
+          scopedCapabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -283,7 +301,13 @@ export function useUsageObservabilityWorkbench() {
   })
 
   const detailQuery = useQuery({
-    queryKey: ['management-usage-record-detail', session.baseUrl, connectedAt, selectedRecordId],
+    queryKey: [
+      'management-usage-record-detail',
+      session.baseUrl,
+      connectedAt,
+      scopedCapabilities.usageTokenBreakdownV2,
+      selectedRecordId,
+    ],
     enabled:
       connected &&
       capabilityReady &&
@@ -296,7 +320,11 @@ export function useUsageObservabilityWorkbench() {
       if (!selectedRecordId) throw new Error('Usage record is not selected')
 
       try {
-        return await fetchUsageRecordDetail(session, selectedRecordId)
+        return await fetchUsageRecordDetail(
+          session,
+          selectedRecordId,
+          scopedCapabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }

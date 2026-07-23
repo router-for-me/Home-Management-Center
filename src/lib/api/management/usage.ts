@@ -54,5 +54,7 @@ export type {
   UsageSortKey,
   UsageStatusFilter,
   UsageTimeRangePreset,
+  UsageTokenAccountingQuality,
+  UsageTokenBreakdown,
   UsageLogsSnapshot as UsageSnapshot,
 } from '@/lib/api/management/usage-logs'

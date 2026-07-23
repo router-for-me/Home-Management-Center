@@ -3666,9 +3666,27 @@ export const zhTW = {
         usageProviderHealth: '供應商健康',
         usageCredentialHealth: '憑證健康',
         usageRealtime: '即時快照',
+        usageTokenBreakdownV2: '規範 Token 明細',
         requestLogIndex: '請求日誌檔案',
         logs: '執行日誌',
         requestErrorLogs: '錯誤日誌',
+      },
+      tokenAccounting: {
+        unavailableTitle: '規範 Token 統計尚未就緒',
+        unavailableDescription:
+          'Home 仍在回填 Token Accounting v2，或尚未宣告此能力。頁面會隱藏 Token 圖表和相關統計，不會重用可能重疊的舊計數器。',
+        unavailableShort: '規範 Token 明細不可用',
+        chartUnavailable: 'Home 宣告 Token Accounting v2 就緒後才會顯示 Token 趨勢。',
+        detailUnavailable: '此請求沒有已宣告的規範 Token 明細。下方舊計數器僅保留供技術診斷使用。',
+        inconsistentTitle: '部分 Token 計數互相矛盾',
+        inconsistentDescription:
+          '後端回報的 Token 計數互相矛盾。頁面只顯示權威總量，並隱藏各組成桶。',
+        inconsistentShort: '計數矛盾，只顯示總量',
+        quality: {
+          complete: '完整',
+          unclassified: '未分類',
+          inconsistent: '不一致',
+        },
       },
       unavailable: {
         title: '目前執行環境不提供觀測介面',
@@ -3847,10 +3865,17 @@ export const zhTW = {
           cost: '消費',
         },
         tokenSeries: {
-          input: '輸入',
-          output: '輸出',
-          cache: '快取',
+          uncachedInput: '未快取輸入',
+          cacheRead: '快取讀取',
+          cacheWrite: '快取寫入',
+          nonReasoningOutput: '一般輸出',
           reasoning: '推理',
+          unclassified: '未分類',
+        },
+        tooltip: {
+          total: '總量',
+          input: '輸入組成',
+          output: '輸出組成',
         },
       },
       costBreakdown: {
@@ -3990,6 +4015,9 @@ export const zhTW = {
         requestLogUnavailable: '目前記錄沒有可下載的請求日誌。',
         downloadingRequestLog: '正在下載',
         technicalMetadata: '技術中繼資料',
+        technicalTokenCounters: '舊版 Token 計數器',
+        technicalTokenCountersDescription:
+          '這些原始計數器可能互相重疊，只保留供協定診斷使用，不能直接相加。',
         requestLogStatuses: {
           local: '可在本機下載',
           remote: '可從遠端 Home 取得',
@@ -4028,9 +4056,27 @@ export const zhTW = {
           input: '輸入',
           output: '輸出',
           reasoning: '推理',
+          uncachedInput: '未快取輸入',
           cacheRead: '快取讀取',
           cacheCreate: '快取寫入',
+          cacheWrite: '快取寫入',
+          nonReasoningOutput: '一般輸出',
+          unclassified: '未分類',
+          quality: '統計品質',
           total: '總計',
+        },
+        tokenGroups: {
+          input: '輸入組成',
+          output: '輸出組成',
+        },
+        legacyTokenFields: {
+          input: '原始 input_tokens',
+          output: '原始 output_tokens',
+          reasoning: '原始 reasoning_tokens',
+          cached: '原始 cached_tokens',
+          cacheRead: '原始 cache_read_tokens',
+          cacheCreate: '原始 cache_creation_tokens',
+          total: '原始 total_tokens',
         },
         payloadFields: {
           method: '方法',

@@ -351,7 +351,12 @@ export async function fetchManagementDashboardSnapshot(
         )
       : Promise.resolve([]),
     capabilities.usageOverview
-      ? readOptional(issues, 'usageOverview', async () => fetchUsageOverview(session), null)
+      ? readOptional(
+          issues,
+          'usageOverview',
+          async () => fetchUsageOverview(session, undefined, capabilities.usageTokenBreakdownV2),
+          null,
+        )
       : Promise.resolve(null),
   ])
   const fallbackNodes =

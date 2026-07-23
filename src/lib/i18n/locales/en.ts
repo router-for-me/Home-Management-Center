@@ -3834,9 +3834,28 @@ export const en = {
         usageProviderHealth: 'Provider health',
         usageCredentialHealth: 'Credential health',
         usageRealtime: 'Realtime',
+        usageTokenBreakdownV2: 'Canonical token breakdown',
         requestLogIndex: 'Request log files',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
+      },
+      tokenAccounting: {
+        unavailableTitle: 'Canonical token accounting is not ready',
+        unavailableDescription:
+          'Home is still backfilling token accounting v2 or does not declare the capability. Token charts and token-based statistics stay hidden instead of reusing overlapping legacy counters.',
+        unavailableShort: 'Canonical breakdown unavailable',
+        chartUnavailable: 'Token trends stay hidden until Home declares token accounting v2 ready.',
+        detailUnavailable:
+          'This request has no declared canonical breakdown. Legacy counters remain available below for technical diagnosis only.',
+        inconsistentTitle: 'Some token counters are inconsistent',
+        inconsistentDescription:
+          'The backend reported contradictory token counters. Only the authoritative total is shown; the component buckets are withheld.',
+        inconsistentShort: 'Inconsistent counters; total only',
+        quality: {
+          complete: 'Complete',
+          unclassified: 'Unclassified',
+          inconsistent: 'Inconsistent',
+        },
       },
       unavailable: {
         title: 'This runtime does not expose observability routes',
@@ -4018,10 +4037,17 @@ export const en = {
           cost: 'Spend',
         },
         tokenSeries: {
-          input: 'Input',
-          output: 'Output',
-          cache: 'Cache',
+          uncachedInput: 'Uncached input',
+          cacheRead: 'Cache read',
+          cacheWrite: 'Cache write',
+          nonReasoningOutput: 'Regular output',
           reasoning: 'Reasoning',
+          unclassified: 'Unclassified',
+        },
+        tooltip: {
+          total: 'Total',
+          input: 'Input composition',
+          output: 'Output composition',
         },
       },
       costBreakdown: {
@@ -4162,6 +4188,9 @@ export const en = {
         requestLogUnavailable: 'No downloadable request log is available for this record.',
         downloadingRequestLog: 'Downloading',
         technicalMetadata: 'Technical metadata',
+        technicalTokenCounters: 'Legacy token counters',
+        technicalTokenCountersDescription:
+          'These raw counters can overlap and are retained only for protocol diagnosis. Do not add them together.',
         requestLogStatuses: {
           local: 'Available locally',
           remote: 'Available from remote Home',
@@ -4200,9 +4229,27 @@ export const en = {
           input: 'Input',
           output: 'Output',
           reasoning: 'Reasoning',
+          uncachedInput: 'Uncached input',
           cacheRead: 'Cache read',
           cacheCreate: 'Cache write',
+          cacheWrite: 'Cache write',
+          nonReasoningOutput: 'Regular output',
+          unclassified: 'Unclassified',
+          quality: 'Accounting quality',
           total: 'Total',
+        },
+        tokenGroups: {
+          input: 'Input composition',
+          output: 'Output composition',
+        },
+        legacyTokenFields: {
+          input: 'Raw input_tokens',
+          output: 'Raw output_tokens',
+          reasoning: 'Raw reasoning_tokens',
+          cached: 'Raw cached_tokens',
+          cacheRead: 'Raw cache_read_tokens',
+          cacheCreate: 'Raw cache_creation_tokens',
+          total: 'Raw total_tokens',
         },
         payloadFields: {
           method: 'Method',

@@ -1,4 +1,4 @@
-import { Info, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Info, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -48,7 +48,7 @@ function isFailedUsageIssue(issue: UsageIssue) {
 
 function hasUsageActivity(snapshot: UsageSnapshot) {
   const overviewRequestCount = snapshot.overview?.totals.requestCount ?? 0
-  const overviewTokenCount = snapshot.overview?.totals.totalTokens ?? 0
+  const overviewTokenCount = snapshot.overview?.totals.tokenBreakdown?.totalTokens ?? 0
   const recordCount = snapshot.records?.total ?? 0
   const credentialUsageCount = snapshot.credentialUsage?.total ?? 0
 
@@ -99,9 +99,54 @@ function UsageCapabilityStrip({ capabilities }: { capabilities: CapabilityMap })
       label: t('usageLogsPage.capabilities.usageAggregates'),
       unavailableTone: 'info',
     },
+    {
+      available: capabilities.usageTokenBreakdownV2,
+      label: t('usageLogsPage.capabilities.usageTokenBreakdownV2'),
+      unavailableTone: 'warning',
+    },
   ] satisfies CapabilityStripItem[]
 
   return <CapabilityStrip items={capabilityItems} />
+}
+
+function TokenAccountingNotice({
+  capabilities,
+  snapshot,
+}: {
+  capabilities: CapabilityMap
+  snapshot: UsageSnapshot
+}) {
+  const { t } = useTranslation()
+  const quality = snapshot.overview?.totals.tokenBreakdown?.quality
+  const unavailable = !capabilities.usageTokenBreakdownV2
+  const inconsistent = quality === 'inconsistent'
+
+  if (!unavailable && !inconsistent) return null
+
+  return (
+    <div
+      className="border-warning/35 bg-warning/10 text-warning-foreground dark:text-warning flex gap-3 rounded-lg border p-4"
+      role="status"
+    >
+      <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold">
+          {t(
+            unavailable
+              ? 'usageLogsPage.tokenAccounting.unavailableTitle'
+              : 'usageLogsPage.tokenAccounting.inconsistentTitle',
+          )}
+        </p>
+        <p className="mt-1 text-sm leading-6">
+          {t(
+            unavailable
+              ? 'usageLogsPage.tokenAccounting.unavailableDescription'
+              : 'usageLogsPage.tokenAccounting.inconsistentDescription',
+          )}
+        </p>
+      </div>
+    </div>
+  )
 }
 
 function UsageObservabilityHeader({
@@ -274,16 +319,24 @@ export function UsageObservabilityPage() {
         )}
       />
 
+      <TokenAccountingNotice capabilities={capabilities} snapshot={snapshot} />
+
       <UsageFiltersToolbar
         filters={workbench.filters}
         options={snapshot.filterOptions}
         onChange={workbench.updateFilters}
       />
 
-      <UsageKpiStrip overview={snapshot.overview} />
+      <UsageKpiStrip
+        overview={snapshot.overview}
+        tokenAccountingAvailable={capabilities.usageTokenBreakdownV2}
+      />
 
       <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(480px,0.75fr)]">
-        <UsageTrendPanel overview={snapshot.overview} />
+        <UsageTrendPanel
+          overview={snapshot.overview}
+          tokenAccountingAvailable={capabilities.usageTokenBreakdownV2}
+        />
         <CostBreakdownPanel overview={snapshot.overview} />
       </div>
 

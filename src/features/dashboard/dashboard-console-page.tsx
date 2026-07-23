@@ -429,7 +429,10 @@ function RankPreviewList({
               <p className="text-muted-foreground mt-0.5 truncate text-xs">
                 {t('dashboard.rankPreview.requestsTokens', {
                   requests: formatNumber(item.requestCount),
-                  tokens: formatCompactNumber(item.totalTokens),
+                  tokens:
+                    item.totalTokens === null
+                      ? t('usageLogsPage.status.notAvailable')
+                      : formatCompactNumber(item.totalTokens),
                 })}
               </p>
             </div>

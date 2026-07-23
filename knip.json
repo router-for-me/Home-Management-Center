@@ -19,7 +19,6 @@
     "react-hook-form",
     "recharts",
     "tw-animate-css",
-    "vaul",
-    "zod"
+    "vaul"
   ]
 }
