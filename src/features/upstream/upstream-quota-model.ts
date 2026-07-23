@@ -1,5 +1,5 @@
 import type { CredentialResource } from '@/lib/api/management/credentials'
-import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
+import type { QuotaCredential, QuotaSummary, QuotaWindow } from '@/lib/api/management/quota'
 
 export type UpstreamQuotaEntry = QuotaCredential
 
@@ -32,6 +32,13 @@ export function isQuotaAttentionEntry(
     entry.collectionStatus === 'partial' ||
     entry.collectionStatus === 'failed'
   )
+}
+
+export function getUpstreamQuotaAttentionCount(
+  entries: UpstreamQuotaEntry[],
+  globalSummary: Pick<QuotaSummary, 'needsAttention'> | null | undefined,
+) {
+  return globalSummary?.needsAttention ?? entries.filter(isQuotaAttentionEntry).length
 }
 
 function isQuotaCollectionCandidate(entry: UpstreamQuotaEntry) {
@@ -147,9 +154,7 @@ export function resolveUpstreamQuotaCellState({
 export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return (
-    windows.find(
-      (window) => window.unit === 'currency' && !window.id.includes('on-demand'),
-    ) ?? null
+    windows.find((window) => window.unit === 'currency' && !window.id.includes('on-demand')) ?? null
   )
 }
 
