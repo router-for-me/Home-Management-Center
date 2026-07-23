@@ -72,7 +72,12 @@ export function useCallDiagnosticsWorkbench() {
   })
 
   const overviewQuery = useQuery({
-    queryKey: ['management-diagnostics-overview', session.baseUrl, connectedAt],
+    queryKey: [
+      'management-diagnostics-overview',
+      session.baseUrl,
+      connectedAt,
+      capabilities.usageTokenBreakdownV2,
+    ],
     enabled: canQuery && capabilities.usageOverview,
     placeholderData: keepPreviousData,
     retry: false,
@@ -82,7 +87,11 @@ export function useCallDiagnosticsWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageOverview(session, defaultUsageFilters)
+        return await fetchUsageOverview(
+          session,
+          defaultUsageFilters,
+          capabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }
@@ -126,7 +135,12 @@ export function useCallDiagnosticsWorkbench() {
   })
 
   const realtimeQuery = useQuery({
-    queryKey: ['management-diagnostics-realtime', session.baseUrl, connectedAt],
+    queryKey: [
+      'management-diagnostics-realtime',
+      session.baseUrl,
+      connectedAt,
+      capabilities.usageTokenBreakdownV2,
+    ],
     enabled: canQuery && capabilities.usageRealtime,
     placeholderData: keepPreviousData,
     retry: false,
@@ -136,7 +150,11 @@ export function useCallDiagnosticsWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchUsageRealtime(session, defaultUsageFilters)
+        return await fetchUsageRealtime(
+          session,
+          defaultUsageFilters,
+          capabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toUsageApiError(error)
       }

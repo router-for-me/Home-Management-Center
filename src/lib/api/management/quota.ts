@@ -10,6 +10,18 @@ export type QuotaPlan = {
   premium: boolean
 }
 
+export type QuotaResetCredit = {
+  status: 'available'
+  grantedAt: string
+  expiresAt: string | null
+}
+
+export type QuotaResetCredits = {
+  availableCount: number
+  observedAt: string | null
+  credits: QuotaResetCredit[]
+}
+
 export type QuotaFreshness = 'fresh' | 'stale' | 'never'
 export type QuotaDataSource = 'response_header' | 'active_probe' | 'mixed' | 'none'
 export type QuotaCollectionStatus =
@@ -95,6 +107,7 @@ export type QuotaCredential = {
   lastError: QuotaCollectionError | null
   runtime: QuotaRuntime | null
   plan: QuotaPlan | null
+  resetCredits: QuotaResetCredits | null
   primaryWindows: QuotaWindow[]
   windowCount: number
   windows: QuotaWindow[]
@@ -391,6 +404,37 @@ function normalizeQuotaPlan(value: unknown): QuotaPlan | null {
   return { name, premium: readBoolean(value, ['premium']) ?? false }
 }
 
+function normalizeQuotaResetCredit(value: unknown): QuotaResetCredit | null {
+  if (!isRecord(value)) return null
+  const status = readString(value, ['status'])
+  const grantedAt = readString(value, ['granted_at', 'grantedAt'])
+  if (status !== 'available' || !grantedAt) return null
+
+  return {
+    status,
+    grantedAt,
+    expiresAt: readString(value, ['expires_at', 'expiresAt']),
+  }
+}
+
+function normalizeQuotaResetCredits(value: unknown): QuotaResetCredits | null {
+  if (!isRecord(value)) return null
+  const rawCredits = Array.isArray(value.credits) ? value.credits : []
+  const credits = rawCredits.flatMap((credit) => {
+    const normalized = normalizeQuotaResetCredit(credit)
+    return normalized ? [normalized] : []
+  })
+
+  return {
+    availableCount: Math.max(
+      credits.length,
+      readCount(value, ['available_count', 'availableCount'], credits.length),
+    ),
+    observedAt: readString(value, ['observed_at', 'observedAt']),
+    credits,
+  }
+}
+
 function normalizeQuotaCredential(value: unknown, index: number): QuotaCredential {
   const record = isRecord(value) ? value : {}
   const rawPrimaryWindows = record.primary_windows ?? record.primaryWindows
@@ -432,6 +476,7 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
     lastError: normalizeCollectionError(record.error ?? record.last_error ?? record.lastError),
     runtime: normalizeQuotaRuntime(record.runtime),
     plan: normalizeQuotaPlan(record.plan),
+    resetCredits: normalizeQuotaResetCredits(record.reset_credits ?? record.resetCredits),
     primaryWindows,
     windowCount: readCount(
       record,
@@ -628,6 +673,7 @@ export function normalizeQuotaCredentialDetail(responseData: unknown): QuotaCred
       last_success_at: collection.last_success_at ?? rawCredential.last_success_at,
       consecutive_failures: collection.consecutive_failures ?? rawCredential.consecutive_failures,
       error: collection.error ?? rawCredential.error,
+      reset_credits: root.reset_credits ?? root.resetCredits ?? rawCredential.reset_credits,
     },
     0,
   )

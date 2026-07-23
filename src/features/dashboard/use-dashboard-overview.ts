@@ -47,6 +47,7 @@ export function useDashboardOverview(): DashboardOverviewQueryState {
       capabilities.nodes,
       capabilities.usage,
       capabilities.usageOverview,
+      capabilities.usageTokenBreakdownV2,
       capabilities.logs,
       capabilities.requestErrorLogs,
       capabilities.users,

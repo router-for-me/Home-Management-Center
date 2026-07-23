@@ -17,6 +17,7 @@ const capabilities: CapabilityMap = {
   usageProviderHealth: true,
   usageCredentialHealth: true,
   usageRealtime: true,
+  usageTokenBreakdownV2: true,
   requestEvents: true,
   requestEventDetails: true,
   requestEventExport: true,

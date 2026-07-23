@@ -34,7 +34,6 @@ export type PluginStoreEntry = {
   repository: string
   installType: string
   authRequired: boolean
-  authConfigured: boolean
   platforms: PluginStorePlatform[]
   logo: string
   homepage: string
@@ -186,7 +185,6 @@ function normalizePluginStoreEntry(value: unknown): PluginStoreEntry | null {
     repository: readString(record, 'repository'),
     installType: readString(record, 'install_type'),
     authRequired: readBoolean(record, 'auth_required'),
-    authConfigured: readBoolean(record, 'auth_configured'),
     platforms: Array.isArray(record.platforms)
       ? record.platforms.flatMap((item) => {
           const platform = normalizePlatform(item)

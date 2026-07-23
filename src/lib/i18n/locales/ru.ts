@@ -1782,8 +1782,13 @@ export const ru = {
       sync: {
         action: 'Синхронизировать',
         syncing: 'Синхронизация',
-        triggered: 'Запущен сбор квоты для {{count}} учётных данных.',
-        unavailable: 'Бэкенд пока не поддерживает запуск сбора квоты; вместо этого снапшоты были перечитаны.',
+        queued: 'В очередь сбора квоты добавлено учётных данных: {{count}}.',
+        updated: 'Обнаружены новые результаты активной проверки, снапшоты квоты обновлены.',
+        pending: 'Сбор квоты может продолжаться в фоне; страница будет обновляться автоматически.',
+        notQueued:
+          'Новые задания не добавлены; учётные данные могут не соответствовать условиям, находиться в периоде ожидания либо уже быть в очереди или выполняться.',
+        unavailable:
+          'Бэкенд пока не поддерживает запуск сбора квоты; вместо этого снапшоты были перечитаны.',
       },
       summary: {
         accounts: 'Учётные данные',
@@ -1799,7 +1804,8 @@ export const ru = {
       quota: {
         notCollected: 'Не собрано',
         unsupported: 'Не поддерживается',
-        unsupportedHint: 'Сбор квоты недоступен для этого типа учётных данных (обычно для API-ключей поставщика).',
+        unsupportedHint:
+          'Сбор квоты недоступен для этого типа учётных данных (обычно для API-ключей поставщика).',
         collectFailed: 'Ошибка сбора',
         monthly: 'Месяц',
         monthlyCredits: 'Месячные кредиты',
@@ -1809,63 +1815,81 @@ export const ru = {
         remaining: 'Остаток',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: 'Ещё {{count}}',
-        truncated: 'Снапшоты квоты покрывают только первые {{count}} учётных данных по риску; остальные показывают «Не собрано».',
-      status: {
-        healthy: 'Норма',
-        low: 'Низкая квота',
-        exhausted: 'Квота исчерпана',
-        unknown: 'Неизвестно',
-        error: 'Ошибка запроса',
-        unsupported: 'Не поддерживается',
-      },
-      freshness: {
-        fresh: 'Актуально',
-        stale: 'Устарело',
-        never: 'Не собиралось',
-      },
-      source: {
-        response_header: 'Response header',
-        active_probe: 'Активная проверка',
-        mixed: 'Смешанные источники',
-        none: 'Нет источника',
-      },
-      collection: {
-        idle: 'Ожидает сбора',
-        collecting: 'Backend собирает данные',
-        success: 'Сбор выполнен',
-        partial: 'Собрано частично',
-        failed: 'Ошибка сбора',
-        unsupported: 'Сбор не поддерживается',
-      },
-      common: {
-        notAvailable: 'Нет данных',
-        yes: 'Да',
-        no: 'Нет',
-      },
-      window: {
-        period: {
-          day: 'Ежедневно',
-          week: 'Еженедельно',
-          month: 'Ежемесячно',
+        truncated:
+          'Снапшоты квоты покрывают только первые {{count}} учётных данных по риску; остальные показывают «Не собрано».',
+        antigravity: {
+          gemini: 'Gemini',
+          thirdParty: 'Claude + GPT',
+          upgrading: 'Квота Antigravity обновляется до сгруппированного формата.',
+          legacy:
+            'Сохранённая квота Antigravity имеет старый или неизвестный формат. Запустите сбор повторно.',
         },
-        unknownPeriod: 'Неизвестный период',
-        resetAt: 'Время сброса',
-        observedAt: 'Наблюдение окна',
-      },
-      detail: {
-        loading: 'Загрузка полных сведений о квоте',
-        loadError: 'Полные сведения не загружены; показан снимок из списка',
-        collection: 'Сведения о сборе',
-        collectionStatus: 'Статус сбора',
-        source: 'Источник данных',
-        observedAt: 'Последнее наблюдение',
-        lastAttemptAt: 'Последняя попытка сбора',
-        nextProbeAt: 'Следующая активная проверка',
-        consecutiveFailures: 'Ошибок подряд',
-        lastError: 'Последняя ошибка сбора',
-        noWindowsTitle: 'Нет окон квоты',
-      },
-      noWindows: 'Нет окон квоты',
+        codex: {
+          resetCredits: 'Кредиты сброса лимита',
+          availableResetCredits: 'Доступно: {{count}}',
+          resetCredit: 'Кредит сброса {{index}}',
+          expiresAt: 'Истекает {{time}}',
+          resetCreditDetailsUnavailable:
+            'Для ещё {{count}} кредитов сброса нет данных о сроке действия.',
+          noResetCredits: 'Доступных кредитов сброса лимита сейчас нет.',
+          observedAt: 'Данные на {{time}}',
+        },
+        status: {
+          healthy: 'Норма',
+          low: 'Низкая квота',
+          exhausted: 'Квота исчерпана',
+          unknown: 'Неизвестно',
+          error: 'Ошибка запроса',
+          unsupported: 'Не поддерживается',
+        },
+        freshness: {
+          fresh: 'Актуально',
+          stale: 'Устарело',
+          never: 'Не собиралось',
+        },
+        source: {
+          response_header: 'Response header',
+          active_probe: 'Активная проверка',
+          mixed: 'Смешанные источники',
+          none: 'Нет источника',
+        },
+        collection: {
+          idle: 'Ожидает сбора',
+          collecting: 'Backend собирает данные',
+          success: 'Сбор выполнен',
+          partial: 'Собрано частично',
+          failed: 'Ошибка сбора',
+          unsupported: 'Сбор не поддерживается',
+        },
+        common: {
+          notAvailable: 'Нет данных',
+          yes: 'Да',
+          no: 'Нет',
+        },
+        window: {
+          period: {
+            day: 'Ежедневно',
+            week: 'Еженедельно',
+            month: 'Ежемесячно',
+          },
+          unknownPeriod: 'Неизвестный период',
+          resetAt: 'Время сброса',
+          observedAt: 'Наблюдение окна',
+        },
+        detail: {
+          loading: 'Загрузка полных сведений о квоте',
+          loadError: 'Полные сведения не загружены; показан снимок из списка',
+          collection: 'Сведения о сборе',
+          collectionStatus: 'Статус сбора',
+          source: 'Источник данных',
+          observedAt: 'Последнее наблюдение',
+          lastAttemptAt: 'Последняя попытка сбора',
+          nextProbeAt: 'Следующая активная проверка',
+          consecutiveFailures: 'Ошибок подряд',
+          lastError: 'Последняя ошибка сбора',
+          noWindowsTitle: 'Нет окон квоты',
+        },
+        noWindows: 'Нет окон квоты',
       },
       quotaChips: {
         all: 'Все квоты',
@@ -1883,15 +1907,18 @@ export const ru = {
           danger: 'Опасная зона',
         },
         metadata: {
-          proxyHint: 'Прокси на уровне учётных данных; оставьте пустым, чтобы не задавать. Также редактируется в таблице.',
+          proxyHint:
+            'Прокси на уровне учётных данных; оставьте пустым, чтобы не задавать. Также редактируется в таблице.',
           priorityPlaceholder: 'например, 10 или -1',
-          priorityHint: 'Только целые числа; большее значение — выше приоритет. Также редактируется в таблице.',
+          priorityHint:
+            'Только целые числа; большее значение — выше приоритет. Также редактируется в таблице.',
           prefixHint: 'Используется редко; редактируется здесь, а не в колонке таблицы.',
           secondarySection: 'Дополнительно',
           websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
           websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
-          enableDescription: 'Отключённая запись не обслуживает запросы к моделям и может быть включена снова в любой момент.',
+          enableDescription:
+            'Отключённая запись не обслуживает запросы к моделям и может быть включена снова в любой момент.',
         },
         danger: {
           downloadTitle: 'Скачать JSON учётных данных',
@@ -1905,7 +1932,8 @@ export const ru = {
         },
         quota: {
           unavailableTitle: 'Детали квоты не поддерживаются',
-          unavailableDescription: 'Management API не предоставляет детали снапшотов квоты; показаны только сводки списка.',
+          unavailableDescription:
+            'Management API не предоставляет детали снапшотов квоты; показаны только сводки списка.',
           readOnlyNote: 'Квота — снапшот только для чтения, не инициирует проверки апстрима.',
         },
       },
@@ -2974,12 +3002,6 @@ export const ru = {
             'Дополнительные URL plugin store registry. Встроенный официальный источник всегда сохраняется.',
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
-        pluginStoreAuthJson: {
-          label: 'Правила store auth',
-          description:
-            'Настройка auth для private registry, GitHub Release metadata или artifact downloads. Правила ссылаются только на имена переменных окружения.',
-          placeholder: '[]',
-        },
         requestRetry: {
           label: 'Повторы запросов',
           description: 'Количество повторов после ошибок запроса.',
@@ -3118,43 +3140,6 @@ export const ru = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: 'Один registry.json URL на строку. Пустые строки игнорируются при сохранении.',
         count: 'Сторонних источников настроено: {{count}}',
-      },
-      pluginStoreAuth: {
-        secretHint:
-          'Указывайте только имена переменных окружения, без реальных tokens или passwords. Backend читает значения из runtime environment.',
-        empty: 'Правила auth не настроены. Публичные источники плагинов не требуют правил.',
-        ruleTitle: 'Правило auth {{index}}',
-        add: 'Добавить правило auth',
-        remove: 'Удалить правило',
-        match: 'Префикс URL для совпадения',
-        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
-        type: 'Тип auth',
-        applyTo: 'Применять к',
-        applyToHint:
-          'Если ничего не выбрано, правило применяется ко всем registry, metadata и artifact requests.',
-        tokenEnv: 'Переменная окружения token',
-        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
-        usernameEnv: 'Переменная окружения username',
-        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
-        passwordEnv: 'Переменная окружения password',
-        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
-        headerName: 'Имя Header',
-        headerNamePlaceholder: 'X-Plugin-Token',
-        headerValueEnv: 'Переменная окружения значения Header',
-        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
-        allowInsecure: 'Разрешить небезопасные HTTP URLs',
-        types: {
-          none: 'Без auth',
-          bearer: 'Bearer',
-          'github-token': 'GitHub Token',
-          basic: 'Basic',
-          header: 'Custom header',
-        },
-        applyToOptions: {
-          registry: 'Registry',
-          metadata: 'Metadata',
-          artifact: 'Artifact',
-        },
       },
       payload: {
         summaryTitle: 'Перезапись payload запроса',
@@ -3866,9 +3851,29 @@ export const ru = {
         usageProviderHealth: 'Состояние провайдеров',
         usageCredentialHealth: 'Состояние учетных данных',
         usageRealtime: 'Реальное время',
+        usageTokenBreakdownV2: 'Каноническая структура токенов',
         requestLogIndex: 'Файлы журналов запросов',
         logs: 'Журналы runtime',
         requestErrorLogs: 'Журналы ошибок',
+      },
+      tokenAccounting: {
+        unavailableTitle: 'Канонический учет токенов еще не готов',
+        unavailableDescription:
+          'Home еще выполняет backfill Token Accounting v2 или не объявил capability. Графики и статистика токенов скрыты, чтобы не использовать пересекающиеся старые счетчики.',
+        unavailableShort: 'Каноническая структура недоступна',
+        chartUnavailable:
+          'Динамика токенов появится после того, как Home объявит готовность Token Accounting v2.',
+        detailUnavailable:
+          'Для этого запроса нет объявленной канонической структуры. Старые счетчики ниже доступны только для технической диагностики.',
+        inconsistentTitle: 'Некоторые счетчики токенов противоречат друг другу',
+        inconsistentDescription:
+          'Backend сообщил противоречивые счетчики токенов. Показан только авторитетный итог, а составляющие скрыты.',
+        inconsistentShort: 'Счетчики противоречат; показан только итог',
+        quality: {
+          complete: 'Полная',
+          unclassified: 'Без классификации',
+          inconsistent: 'Противоречивая',
+        },
       },
       unavailable: {
         title: 'Этот runtime не предоставляет маршруты наблюдаемости',
@@ -4050,10 +4055,17 @@ export const ru = {
           cost: 'Расход',
         },
         tokenSeries: {
-          input: 'Ввод',
-          output: 'Вывод',
-          cache: 'Кэш',
+          uncachedInput: 'Ввод без кэша',
+          cacheRead: 'Чтение кэша',
+          cacheWrite: 'Запись кэша',
+          nonReasoningOutput: 'Обычный вывод',
           reasoning: 'Рассуждение',
+          unclassified: 'Без классификации',
+        },
+        tooltip: {
+          total: 'Всего',
+          input: 'Состав ввода',
+          output: 'Состав вывода',
         },
       },
       costBreakdown: {
@@ -4194,6 +4206,9 @@ export const ru = {
         requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
         downloadingRequestLog: 'Скачивание',
         technicalMetadata: 'Технические метаданные',
+        technicalTokenCounters: 'Старые счетчики токенов',
+        technicalTokenCountersDescription:
+          'Эти исходные счетчики могут пересекаться и сохранены только для диагностики протокола. Их нельзя складывать.',
         requestLogStatuses: {
           local: 'Доступен локально',
           remote: 'Доступен с удаленного Home',
@@ -4232,9 +4247,27 @@ export const ru = {
           input: 'Ввод',
           output: 'Вывод',
           reasoning: 'Рассуждение',
+          uncachedInput: 'Ввод без кэша',
           cacheRead: 'Чтение кэша',
           cacheCreate: 'Запись кэша',
+          cacheWrite: 'Запись кэша',
+          nonReasoningOutput: 'Обычный вывод',
+          unclassified: 'Без классификации',
+          quality: 'Качество учета',
           total: 'Итого',
+        },
+        tokenGroups: {
+          input: 'Состав ввода',
+          output: 'Состав вывода',
+        },
+        legacyTokenFields: {
+          input: 'Исходный input_tokens',
+          output: 'Исходный output_tokens',
+          reasoning: 'Исходный reasoning_tokens',
+          cached: 'Исходный cached_tokens',
+          cacheRead: 'Исходный cache_read_tokens',
+          cacheCreate: 'Исходный cache_creation_tokens',
+          total: 'Исходный total_tokens',
         },
         payloadFields: {
           method: 'Метод',
@@ -4740,8 +4773,116 @@ export const ru = {
         install: 'Установить',
         update: 'Обновить',
         uninstall: 'Удалить',
-        authRequiredHint: 'Для установки этого плагина сначала нужна аутентификация магазина.',
-        configureAuth: 'Настроить store auth',
+        manageAuth: 'Аутентификация',
+      },
+      auth: {
+        title: 'Аутентификация магазина',
+        description:
+          'Управляйте зашифрованными учетными данными только для записи, которые используются для запросов registry, metadata и артефактов.',
+        orderHint:
+          'Правила проверяются в порядке создания; применяется первое включенное совпавшее правило. Адрес должен использовать HTTPS.',
+        secret: {
+          showValue: 'Показать значение учетных данных',
+          hideValue: 'Скрыть значение учетных данных',
+        },
+        form: {
+          createTitle: 'Добавить правило аутентификации',
+          editTitle: 'Изменить правило аутентификации',
+          description: 'Задайте префикс запроса, типы запросов и способ аутентификации.',
+          writeOnlyHint:
+            'Значения учетных данных доступны только для записи и шифруются Home. Браузер никогда не получает их открытый текст.',
+          matchHint:
+            'Используйте абсолютный префикс HTTPS без имени пользователя, пароля, параметров запроса и фрагмента.',
+          enabledHint: 'Отключенные правила сохраняются, но не применяются.',
+          applyToHint: 'Не выбирайте варианты, чтобы применять правило ко всем типам запросов.',
+          credentialsRetainedHint:
+            'Учетные данные уже настроены. Оставьте секретные поля пустыми, чтобы сохранить текущие значения.',
+        },
+        fields: {
+          name: 'Название правила',
+          match: 'Префикс URL',
+          authType: 'Тип аутентификации',
+          enabled: 'Правило включено',
+          applyTo: 'Применять к',
+          token: 'Токен',
+          username: 'Имя пользователя',
+          password: 'Пароль',
+          headerName: 'Имя заголовка',
+          headerValue: 'Значение заголовка',
+        },
+        placeholders: {
+          name: 'Приватные артефакты релиза',
+          match: 'https://downloads.example/private/',
+          secretRetain: 'Оставьте пустым, чтобы сохранить значение',
+          token: 'Введите токен',
+          username: 'Введите имя пользователя',
+          password: 'Введите пароль',
+          headerName: 'X-Plugin-Token',
+          headerValue: 'Введите значение заголовка',
+        },
+        types: {
+          none: 'Без аутентификации',
+          bearer: 'Bearer',
+          basic: 'Basic',
+          header: 'Пользовательский заголовок',
+          'github-token': 'Токен GitHub',
+        },
+        scopes: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Артефакт',
+          all: 'Все типы запросов',
+        },
+        validation: {
+          required: 'Это поле обязательно.',
+          httpsRequired:
+            'Введите абсолютный префикс HTTPS без учетных данных, параметров запроса и фрагмента.',
+          invalidHeaderName: 'Введите корректное имя HTTP-заголовка без пробелов и разделителей.',
+          credentialsRequired: 'Введите учетные данные для выбранного типа аутентификации.',
+        },
+        unsupported: {
+          title: 'Аутентификация магазина не поддерживается',
+          description: 'Подключенный backend не предоставляет маршруты /plugin-store-auth.',
+        },
+        error: {
+          title: 'Не удалось загрузить правила аутентификации',
+          description: 'Проверьте подключение к Management API и повторите попытку.',
+        },
+        list: {
+          title: 'Правила аутентификации',
+          count: 'Правил: {{count}}',
+          order: 'Приоритет {{order}}',
+        },
+        actions: {
+          add: 'Добавить правило',
+          create: 'Создать правило',
+          edit: 'Изменить',
+          delete: 'Удалить',
+          save: 'Сохранить изменения',
+          back: 'Вернуться к правилам',
+        },
+        empty: {
+          title: 'Правил аутентификации нет',
+          description:
+            'Добавьте правило, если приватный registry, endpoint metadata релиза или URL артефакта требует учетные данные.',
+        },
+        status: {
+          enabled: 'Включено',
+          disabled: 'Отключено',
+          notRequired: 'Учетные данные не нужны',
+          configured: 'Учетные данные настроены',
+          missing: 'Учетные данные отсутствуют',
+        },
+        toast: {
+          created: 'Правило {{name}} создано.',
+          updated: 'Правило {{name}} обновлено.',
+          deleted: 'Правило {{name}} удалено.',
+        },
+        delete: {
+          title: 'Удалить правило аутентификации?',
+          description:
+            'Удаление {{name}} удаляет эти учетные данные из общей базы и создает событие синхронизации кластера.',
+        },
       },
       verdict: {
         ready: {
@@ -4801,8 +4942,8 @@ export const ru = {
         effectiveHint: 'Записи с закрепленным store manifest',
         updates: 'Обновления',
         updatesHint: 'Установленные плагины с новой registry-версией',
-        authRequired: 'Блокировки auth',
-        authHint: 'Плагины ожидают настроенный store-auth',
+        authRequired: 'Подсказки аутентификации',
+        authHint: 'Плагины, в metadata которых указана возможная необходимость учетных данных',
         rollout: 'Отчеты узлов',
         rolloutHint:
           'Последние отчеты CPA-узлов по задачам установки, загрузки или удаления плагинов',
@@ -4825,7 +4966,7 @@ export const ru = {
         installed: 'Установлено',
         notInstalled: 'Не установлено',
         updates: 'Обновления',
-        authRequired: 'Требует auth',
+        authRequired: 'Может требовать вход',
         allSources: 'Все источники',
       },
       columns: {
@@ -4852,8 +4993,7 @@ export const ru = {
         notRegistered: 'Не зарегистрирован',
         effective: 'Effective',
         inactive: 'Неактивен',
-        authConfigured: 'Auth настроен',
-        authRequired: 'Нужен auth',
+        authMayBeRequired: 'Может требовать вход',
         authNotRequired: 'Без auth',
         globalEnabled: 'Плагины включены глобально',
         globalDisabled: 'Плагины отключены глобально',

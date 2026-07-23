@@ -11,6 +11,7 @@ export type CapabilityKey =
   | 'usageProviderHealth'
   | 'usageCredentialHealth'
   | 'usageRealtime'
+  | 'usageTokenBreakdownV2'
   | 'requestEvents'
   | 'requestEventDetails'
   | 'requestEventExport'

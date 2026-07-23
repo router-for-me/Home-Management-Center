@@ -1783,8 +1783,14 @@ export const en = {
       sync: {
         action: 'Sync data',
         syncing: 'Syncing',
-        triggered: 'Quota collection triggered for {{count}} credentials.',
-        unavailable: 'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
+        queued: 'Queued quota collection for {{count}} credentials.',
+        updated: 'New active-probe results were detected and quota snapshots were refreshed.',
+        pending:
+          'Quota collection may still be running in the background; this page will keep refreshing.',
+        notQueued:
+          'No new jobs were queued; credentials may be ineligible, cooling down, or already queued or running.',
+        unavailable:
+          'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
       },
       summary: {
         accounts: 'Account credentials',
@@ -1800,7 +1806,8 @@ export const en = {
       quota: {
         notCollected: 'Not collected',
         unsupported: 'Unsupported',
-        unsupportedHint: 'Quota collection is not available for this credential type (common for provider API keys).',
+        unsupportedHint:
+          'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
         monthly: 'Monthly',
         monthlyCredits: 'Monthly credits',
@@ -1810,63 +1817,80 @@ export const en = {
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',
-        truncated: 'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
-      status: {
-        healthy: 'Healthy',
-        low: 'Low quota',
-        exhausted: 'Exhausted',
-        unknown: 'Unknown',
-        error: 'Query failed',
-        unsupported: 'Unsupported',
-      },
-      freshness: {
-        fresh: 'Fresh',
-        stale: 'Stale',
-        never: 'Never collected',
-      },
-      source: {
-        response_header: 'Response header',
-        active_probe: 'Active probe',
-        mixed: 'Mixed sources',
-        none: 'No source',
-      },
-      collection: {
-        idle: 'Waiting for collection',
-        collecting: 'Collecting in background',
-        success: 'Collection successful',
-        partial: 'Partially collected',
-        failed: 'Collection failed',
-        unsupported: 'Collection unsupported',
-      },
-      common: {
-        notAvailable: 'Not available',
-        yes: 'Yes',
-        no: 'No',
-      },
-      window: {
-        period: {
-          day: 'Daily',
-          week: 'Weekly',
-          month: 'Monthly',
+        truncated:
+          'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
+        antigravity: {
+          gemini: 'Gemini',
+          thirdParty: 'Claude + GPT',
+          upgrading: 'Refreshing Antigravity quota into the grouped format.',
+          legacy:
+            'Stored Antigravity quota uses an older or unrecognized format. Collect again to refresh it.',
         },
-        unknownPeriod: 'Unknown period',
-        resetAt: 'Reset time',
-        observedAt: 'Window observed at',
-      },
-      detail: {
-        loading: 'Loading full quota details',
-        loadError: 'Full details could not be loaded; showing the list snapshot',
-        collection: 'Collection details',
-        collectionStatus: 'Collection status',
-        source: 'Data source',
-        observedAt: 'Last observed',
-        lastAttemptAt: 'Last collection attempt',
-        nextProbeAt: 'Next active probe',
-        consecutiveFailures: 'Consecutive failures',
-        lastError: 'Latest collection error',
-        noWindowsTitle: 'No quota windows',
-      },
-      noWindows: 'No quota windows',
+        codex: {
+          resetCredits: 'Rate-limit reset credits',
+          availableResetCredits: '{{count}} available',
+          resetCredit: 'Reset credit {{index}}',
+          expiresAt: 'Expires {{time}}',
+          resetCreditDetailsUnavailable: '{{count}} more reset credits do not have expiry details.',
+          noResetCredits: 'No rate-limit reset credits are currently available.',
+          observedAt: 'Observed {{time}}',
+        },
+        status: {
+          healthy: 'Healthy',
+          low: 'Low quota',
+          exhausted: 'Exhausted',
+          unknown: 'Unknown',
+          error: 'Query failed',
+          unsupported: 'Unsupported',
+        },
+        freshness: {
+          fresh: 'Fresh',
+          stale: 'Stale',
+          never: 'Never collected',
+        },
+        source: {
+          response_header: 'Response header',
+          active_probe: 'Active probe',
+          mixed: 'Mixed sources',
+          none: 'No source',
+        },
+        collection: {
+          idle: 'Waiting for collection',
+          collecting: 'Collecting in background',
+          success: 'Collection successful',
+          partial: 'Partially collected',
+          failed: 'Collection failed',
+          unsupported: 'Collection unsupported',
+        },
+        common: {
+          notAvailable: 'Not available',
+          yes: 'Yes',
+          no: 'No',
+        },
+        window: {
+          period: {
+            day: 'Daily',
+            week: 'Weekly',
+            month: 'Monthly',
+          },
+          unknownPeriod: 'Unknown period',
+          resetAt: 'Reset time',
+          observedAt: 'Window observed at',
+        },
+        detail: {
+          loading: 'Loading full quota details',
+          loadError: 'Full details could not be loaded; showing the list snapshot',
+          collection: 'Collection details',
+          collectionStatus: 'Collection status',
+          source: 'Data source',
+          observedAt: 'Last observed',
+          lastAttemptAt: 'Last collection attempt',
+          nextProbeAt: 'Next active probe',
+          consecutiveFailures: 'Consecutive failures',
+          lastError: 'Latest collection error',
+          noWindowsTitle: 'No quota windows',
+        },
+        noWindows: 'No quota windows',
       },
       quotaChips: {
         all: 'All quota',
@@ -1884,7 +1908,8 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyHint: 'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
+          proxyHint:
+            'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values win. Editable inline in the table too.',
           prefixHint: 'Rarely used; maintained here instead of a table column.',
@@ -1892,7 +1917,8 @@ export const en = {
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
-          enableDescription: 'A disabled credential does not serve model requests and can be re-enabled anytime.',
+          enableDescription:
+            'A disabled credential does not serve model requests and can be re-enabled anytime.',
         },
         danger: {
           downloadTitle: 'Download credential JSON',
@@ -1906,7 +1932,8 @@ export const en = {
         },
         quota: {
           unavailableTitle: 'Quota details unsupported',
-          unavailableDescription: 'The Management API does not expose quota snapshot details; only list summaries are shown.',
+          unavailableDescription:
+            'The Management API does not expose quota snapshot details; only list summaries are shown.',
           readOnlyNote: 'Quota is a read-only snapshot and does not trigger upstream probes.',
         },
       },
@@ -2964,12 +2991,6 @@ export const en = {
             'Append plugin store registry URLs. The built-in official source is always kept.',
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
-        pluginStoreAuthJson: {
-          label: 'Store auth rules',
-          description:
-            'Configure auth for private registries, GitHub Release metadata, or artifact downloads. Rules reference environment variable names only.',
-          placeholder: '[]',
-        },
         requestRetry: {
           label: 'Request retries',
           description: 'Number of retries after request failures.',
@@ -3108,43 +3129,6 @@ export const en = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: 'One registry.json URL per line. Empty lines are ignored when saving.',
         count: '{{count}} third-party sources configured',
-      },
-      pluginStoreAuth: {
-        secretHint:
-          'Enter environment variable names only, never real tokens or passwords. The backend reads the actual values from its runtime environment.',
-        empty: 'No auth rules configured. Public plugin sources do not require one.',
-        ruleTitle: 'Auth rule {{index}}',
-        add: 'Add auth rule',
-        remove: 'Remove rule',
-        match: 'Matching URL prefix',
-        matchPlaceholder: 'https://api.github.com/repos/owner/repo/releases/',
-        type: 'Auth type',
-        applyTo: 'Apply to',
-        applyToHint:
-          'When nothing is selected, the rule applies to all registry, metadata, and artifact requests.',
-        tokenEnv: 'Token environment variable',
-        tokenEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_TOKEN',
-        usernameEnv: 'Username environment variable',
-        usernameEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_USER',
-        passwordEnv: 'Password environment variable',
-        passwordEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_PASSWORD',
-        headerName: 'Header name',
-        headerNamePlaceholder: 'X-Plugin-Token',
-        headerValueEnv: 'Header value environment variable',
-        headerValueEnvPlaceholder: 'CLIPROXY_PLUGIN_STORE_HEADER',
-        allowInsecure: 'Allow insecure HTTP URLs',
-        types: {
-          none: 'No auth',
-          bearer: 'Bearer',
-          'github-token': 'GitHub Token',
-          basic: 'Basic',
-          header: 'Custom header',
-        },
-        applyToOptions: {
-          registry: 'Registry',
-          metadata: 'Metadata',
-          artifact: 'Artifact',
-        },
       },
       payload: {
         summaryTitle: 'Request payload rewriting',
@@ -3850,9 +3834,28 @@ export const en = {
         usageProviderHealth: 'Provider health',
         usageCredentialHealth: 'Credential health',
         usageRealtime: 'Realtime',
+        usageTokenBreakdownV2: 'Canonical token breakdown',
         requestLogIndex: 'Request log files',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',
+      },
+      tokenAccounting: {
+        unavailableTitle: 'Canonical token accounting is not ready',
+        unavailableDescription:
+          'Home is still backfilling token accounting v2 or does not declare the capability. Token charts and token-based statistics stay hidden instead of reusing overlapping legacy counters.',
+        unavailableShort: 'Canonical breakdown unavailable',
+        chartUnavailable: 'Token trends stay hidden until Home declares token accounting v2 ready.',
+        detailUnavailable:
+          'This request has no declared canonical breakdown. Legacy counters remain available below for technical diagnosis only.',
+        inconsistentTitle: 'Some token counters are inconsistent',
+        inconsistentDescription:
+          'The backend reported contradictory token counters. Only the authoritative total is shown; the component buckets are withheld.',
+        inconsistentShort: 'Inconsistent counters; total only',
+        quality: {
+          complete: 'Complete',
+          unclassified: 'Unclassified',
+          inconsistent: 'Inconsistent',
+        },
       },
       unavailable: {
         title: 'This runtime does not expose observability routes',
@@ -4034,10 +4037,17 @@ export const en = {
           cost: 'Spend',
         },
         tokenSeries: {
-          input: 'Input',
-          output: 'Output',
-          cache: 'Cache',
+          uncachedInput: 'Uncached input',
+          cacheRead: 'Cache read',
+          cacheWrite: 'Cache write',
+          nonReasoningOutput: 'Regular output',
           reasoning: 'Reasoning',
+          unclassified: 'Unclassified',
+        },
+        tooltip: {
+          total: 'Total',
+          input: 'Input composition',
+          output: 'Output composition',
         },
       },
       costBreakdown: {
@@ -4178,6 +4188,9 @@ export const en = {
         requestLogUnavailable: 'No downloadable request log is available for this record.',
         downloadingRequestLog: 'Downloading',
         technicalMetadata: 'Technical metadata',
+        technicalTokenCounters: 'Legacy token counters',
+        technicalTokenCountersDescription:
+          'These raw counters can overlap and are retained only for protocol diagnosis. Do not add them together.',
         requestLogStatuses: {
           local: 'Available locally',
           remote: 'Available from remote Home',
@@ -4216,9 +4229,27 @@ export const en = {
           input: 'Input',
           output: 'Output',
           reasoning: 'Reasoning',
+          uncachedInput: 'Uncached input',
           cacheRead: 'Cache read',
           cacheCreate: 'Cache write',
+          cacheWrite: 'Cache write',
+          nonReasoningOutput: 'Regular output',
+          unclassified: 'Unclassified',
+          quality: 'Accounting quality',
           total: 'Total',
+        },
+        tokenGroups: {
+          input: 'Input composition',
+          output: 'Output composition',
+        },
+        legacyTokenFields: {
+          input: 'Raw input_tokens',
+          output: 'Raw output_tokens',
+          reasoning: 'Raw reasoning_tokens',
+          cached: 'Raw cached_tokens',
+          cacheRead: 'Raw cache_read_tokens',
+          cacheCreate: 'Raw cache_creation_tokens',
+          total: 'Raw total_tokens',
         },
         payloadFields: {
           method: 'Method',
@@ -4719,8 +4750,115 @@ export const en = {
         install: 'Install',
         update: 'Update',
         uninstall: 'Uninstall',
-        authRequiredHint: 'Store authentication is required before this plugin can be installed.',
-        configureAuth: 'Configure store auth',
+        manageAuth: 'Manage store auth',
+      },
+      auth: {
+        title: 'Store authentication',
+        description:
+          'Manage encrypted, write-only credentials used for registry, metadata, and artifact requests.',
+        orderHint:
+          'Rules are evaluated in creation order and the first matching enabled rule wins. Matches must use HTTPS.',
+        secret: {
+          showValue: 'Show credential value',
+          hideValue: 'Hide credential value',
+        },
+        form: {
+          createTitle: 'Add authentication rule',
+          editTitle: 'Edit authentication rule',
+          description: 'Define the request prefix, request kinds, and authentication method.',
+          writeOnlyHint:
+            'Credential values are write-only and encrypted by Home. They are never returned to this browser.',
+          matchHint:
+            'Use an absolute HTTPS prefix without a username, password, query, or fragment.',
+          enabledHint: 'Disabled rules remain stored but are not applied.',
+          applyToHint: 'Leave every option clear to apply the rule to all request kinds.',
+          credentialsRetainedHint:
+            'Credentials are already configured. Leave secret fields blank to retain the stored values.',
+        },
+        fields: {
+          name: 'Rule name',
+          match: 'Match URL prefix',
+          authType: 'Authentication type',
+          enabled: 'Rule enabled',
+          applyTo: 'Apply to',
+          token: 'Token',
+          username: 'Username',
+          password: 'Password',
+          headerName: 'Header name',
+          headerValue: 'Header value',
+        },
+        placeholders: {
+          name: 'Private release artifacts',
+          match: 'https://downloads.example/private/',
+          secretRetain: 'Leave blank to retain stored value',
+          token: 'Enter token',
+          username: 'Enter username',
+          password: 'Enter password',
+          headerName: 'X-Plugin-Token',
+          headerValue: 'Enter header value',
+        },
+        types: {
+          none: 'No authentication',
+          bearer: 'Bearer',
+          basic: 'Basic',
+          header: 'Custom header',
+          'github-token': 'GitHub token',
+        },
+        scopes: {
+          registry: 'Registry',
+          metadata: 'Metadata',
+          artifact: 'Artifact',
+          all: 'All request kinds',
+        },
+        validation: {
+          required: 'This field is required.',
+          httpsRequired: 'Enter an absolute HTTPS prefix without credentials, query, or fragment.',
+          invalidHeaderName: 'Enter a valid HTTP header name without spaces or separators.',
+          credentialsRequired: 'Enter a credential value for this authentication type.',
+        },
+        unsupported: {
+          title: 'Store authentication is not supported',
+          description: 'The connected backend does not expose the /plugin-store-auth routes.',
+        },
+        error: {
+          title: 'Unable to load authentication rules',
+          description: 'Check the Management API connection and try again.',
+        },
+        list: {
+          title: 'Authentication rules',
+          count: '{{count}} rules',
+          order: 'Priority {{order}}',
+        },
+        actions: {
+          add: 'Add rule',
+          create: 'Create rule',
+          edit: 'Edit',
+          delete: 'Delete',
+          save: 'Save changes',
+          back: 'Back to rules',
+        },
+        empty: {
+          title: 'No authentication rules',
+          description:
+            'Add a rule when a private registry, release metadata endpoint, or artifact URL requires credentials.',
+        },
+        status: {
+          enabled: 'Enabled',
+          disabled: 'Disabled',
+          notRequired: 'No credentials required',
+          configured: 'Credentials configured',
+          missing: 'Credentials missing',
+        },
+        toast: {
+          created: '{{name}} was created.',
+          updated: '{{name}} was updated.',
+          deleted: '{{name}} was deleted.',
+        },
+        delete: {
+          title: 'Delete authentication rule?',
+          description:
+            'Deleting {{name}} removes these credentials from the shared database and records a cluster synchronization event.',
+        },
       },
       verdict: {
         ready: {
@@ -4779,8 +4917,8 @@ export const en = {
         effectiveHint: 'Installed entries with pinned store manifests',
         updates: 'Updates',
         updatesHint: 'Installed plugins with newer registry versions',
-        authRequired: 'Auth blockers',
-        authHint: 'Plugins waiting for configured store auth',
+        authRequired: 'Auth hints',
+        authHint: 'Plugins whose registry metadata declares that credentials may be required',
         rollout: 'Node reports',
         rolloutHint: 'Latest CPA node reports for plugin install, load, or delete tasks',
       },
@@ -4802,7 +4940,7 @@ export const en = {
         installed: 'Installed',
         notInstalled: 'Not installed',
         updates: 'Updates',
-        authRequired: 'Auth required',
+        authRequired: 'May require auth',
         allSources: 'All sources',
       },
       columns: {
@@ -4829,8 +4967,7 @@ export const en = {
         notRegistered: 'Not registered',
         effective: 'Effective',
         inactive: 'Inactive',
-        authConfigured: 'Auth configured',
-        authRequired: 'Auth required',
+        authMayBeRequired: 'May require auth',
         authNotRequired: 'No auth',
         globalEnabled: 'Global plugins enabled',
         globalDisabled: 'Global plugins disabled',

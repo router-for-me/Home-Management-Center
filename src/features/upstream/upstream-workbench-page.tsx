@@ -11,13 +11,13 @@ import { Button } from '@/components/ui/button'
 import { AccountsPanel } from '@/features/credentials/accounts-panel'
 import { ProvidersPanel } from '@/features/providers/providers-panel'
 import {
-  UpstreamSummaryCards,
   type UpstreamAccountsStats,
   type UpstreamProvidersStats,
+  UpstreamSummaryCards,
 } from '@/features/upstream/summary-cards'
-import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
 import type { UpstreamQuotaView } from '@/features/upstream/upstream-quota-model'
 import type { UpstreamTab } from '@/features/upstream/upstream-route'
+import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
 import { cn } from '@/lib/utils'
 
 const upstreamTabs: UpstreamTab[] = ['accounts', 'providers']
@@ -42,6 +42,7 @@ export function UpstreamWorkbenchPage({
   const [quotaView, setQuotaView] = useState<UpstreamQuotaView>('all')
   const [accountsStats, setAccountsStats] = useState<UpstreamAccountsStats | null>(null)
   const [providersStats, setProvidersStats] = useState<UpstreamProvidersStats | null>(null)
+  const [quotaSyncing, setQuotaSyncing] = useState(false)
   const quota = useUpstreamQuota()
 
   useEffect(() => {
@@ -52,26 +53,40 @@ export function UpstreamWorkbenchPage({
     useIsFetching({ queryKey: ['management-credentials'] }) +
     useIsFetching({ queryKey: ['management-providers'] }) +
     useIsFetching({ queryKey: ['upstream-quota-snapshot'] })
-  const syncing = fetchingCount > 0
+  const syncing = quotaSyncing || fetchingCount > 0
 
   const handleSync = async () => {
-    // When the backend exposes quota_recollect, trigger a collection round first;
-    // older runtimes fall back to re-reading the persisted snapshots.
-    if (quota.capabilities.quotaRecollect) {
-      try {
-        const result = await quota.syncQuota()
-        toast.success(t('upstreamPage.sync.triggered', { count: result?.accepted ?? 0 }))
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : String(error))
+    setQuotaSyncing(true)
+    try {
+      if (quota.capabilities.quotaRecollect) {
+        try {
+          const result = await quota.syncQuota((queued) => {
+            toast.info(
+              queued.accepted > 0
+                ? t('upstreamPage.sync.queued', { count: queued.accepted })
+                : t('upstreamPage.sync.notQueued'),
+            )
+          })
+          if (result?.completion === 'settled') {
+            toast.success(t('upstreamPage.sync.updated'))
+          } else if (result?.completion === 'pending') {
+            toast.info(t('upstreamPage.sync.pending'))
+          }
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : String(error))
+        }
+      } else {
+        toast.info(t('upstreamPage.sync.unavailable'))
       }
-    } else {
-      toast.info(t('upstreamPage.sync.unavailable'))
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['management-credentials'] }),
+        queryClient.invalidateQueries({ queryKey: ['management-providers'] }),
+        queryClient.invalidateQueries({ queryKey: ['upstream-quota-snapshot'] }),
+        queryClient.invalidateQueries({ queryKey: ['upstream-quota-credential'] }),
+      ])
+    } finally {
+      setQuotaSyncing(false)
     }
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['management-credentials'] }),
-      queryClient.invalidateQueries({ queryKey: ['management-providers'] }),
-      queryClient.invalidateQueries({ queryKey: ['upstream-quota-snapshot'] }),
-    ])
   }
 
   const handleTabChange = (nextTab: UpstreamTab) => {
@@ -96,9 +111,7 @@ export function UpstreamWorkbenchPage({
               size="sm"
               disabled={syncing}
               onClick={() => void handleSync()}
-              aria-label={
-                syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')
-              }
+              aria-label={syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
               title={syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
             >
               {syncing ? (
