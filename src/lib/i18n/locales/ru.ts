@@ -3851,9 +3851,29 @@ export const ru = {
         usageProviderHealth: 'Состояние провайдеров',
         usageCredentialHealth: 'Состояние учетных данных',
         usageRealtime: 'Реальное время',
+        usageTokenBreakdownV2: 'Каноническая структура токенов',
         requestLogIndex: 'Файлы журналов запросов',
         logs: 'Журналы runtime',
         requestErrorLogs: 'Журналы ошибок',
+      },
+      tokenAccounting: {
+        unavailableTitle: 'Канонический учет токенов еще не готов',
+        unavailableDescription:
+          'Home еще выполняет backfill Token Accounting v2 или не объявил capability. Графики и статистика токенов скрыты, чтобы не использовать пересекающиеся старые счетчики.',
+        unavailableShort: 'Каноническая структура недоступна',
+        chartUnavailable:
+          'Динамика токенов появится после того, как Home объявит готовность Token Accounting v2.',
+        detailUnavailable:
+          'Для этого запроса нет объявленной канонической структуры. Старые счетчики ниже доступны только для технической диагностики.',
+        inconsistentTitle: 'Некоторые счетчики токенов противоречат друг другу',
+        inconsistentDescription:
+          'Backend сообщил противоречивые счетчики токенов. Показан только авторитетный итог, а составляющие скрыты.',
+        inconsistentShort: 'Счетчики противоречат; показан только итог',
+        quality: {
+          complete: 'Полная',
+          unclassified: 'Без классификации',
+          inconsistent: 'Противоречивая',
+        },
       },
       unavailable: {
         title: 'Этот runtime не предоставляет маршруты наблюдаемости',
@@ -4035,10 +4055,17 @@ export const ru = {
           cost: 'Расход',
         },
         tokenSeries: {
-          input: 'Ввод',
-          output: 'Вывод',
-          cache: 'Кэш',
+          uncachedInput: 'Ввод без кэша',
+          cacheRead: 'Чтение кэша',
+          cacheWrite: 'Запись кэша',
+          nonReasoningOutput: 'Обычный вывод',
           reasoning: 'Рассуждение',
+          unclassified: 'Без классификации',
+        },
+        tooltip: {
+          total: 'Всего',
+          input: 'Состав ввода',
+          output: 'Состав вывода',
         },
       },
       costBreakdown: {
@@ -4179,6 +4206,9 @@ export const ru = {
         requestLogUnavailable: 'Для этой записи нет доступного журнала запроса.',
         downloadingRequestLog: 'Скачивание',
         technicalMetadata: 'Технические метаданные',
+        technicalTokenCounters: 'Старые счетчики токенов',
+        technicalTokenCountersDescription:
+          'Эти исходные счетчики могут пересекаться и сохранены только для диагностики протокола. Их нельзя складывать.',
         requestLogStatuses: {
           local: 'Доступен локально',
           remote: 'Доступен с удаленного Home',
@@ -4217,9 +4247,27 @@ export const ru = {
           input: 'Ввод',
           output: 'Вывод',
           reasoning: 'Рассуждение',
+          uncachedInput: 'Ввод без кэша',
           cacheRead: 'Чтение кэша',
           cacheCreate: 'Запись кэша',
+          cacheWrite: 'Запись кэша',
+          nonReasoningOutput: 'Обычный вывод',
+          unclassified: 'Без классификации',
+          quality: 'Качество учета',
           total: 'Итого',
+        },
+        tokenGroups: {
+          input: 'Состав ввода',
+          output: 'Состав вывода',
+        },
+        legacyTokenFields: {
+          input: 'Исходный input_tokens',
+          output: 'Исходный output_tokens',
+          reasoning: 'Исходный reasoning_tokens',
+          cached: 'Исходный cached_tokens',
+          cacheRead: 'Исходный cache_read_tokens',
+          cacheCreate: 'Исходный cache_creation_tokens',
+          total: 'Исходный total_tokens',
         },
         payloadFields: {
           method: 'Метод',

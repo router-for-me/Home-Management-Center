@@ -126,7 +126,7 @@ export type DashboardRankPreviewItem = {
   id: string
   label: string
   requestCount: number
-  totalTokens: number
+  totalTokens: number | null
   successRate: number
   failedCount: number
   lastUsedAt: string | null
@@ -315,7 +315,7 @@ function createRankPreviewItems(
     id: item.id,
     label: item.label,
     requestCount: item.requestCount,
-    totalTokens: item.totalTokens,
+    totalTokens: item.tokenBreakdown?.totalTokens ?? null,
     successRate: item.successRate,
     failedCount: item.failedCount,
     lastUsedAt: item.lastUsedAt,
@@ -327,13 +327,14 @@ function createOperatingKpis(
   usageOverview: DashboardSnapshot['usageOverview'],
 ): DashboardOperatingKpi[] {
   const totals = usageOverview?.totals
+  const totalTokens = totals?.tokenBreakdown?.totalTokens ?? null
 
   return [
     {
       id: 'tokens',
-      value: totals?.totalTokens ?? null,
+      value: totalTokens,
       detailValue: totals?.activeModelCount ?? null,
-      tone: totals && totals.totalTokens > 0 ? 'positive' : 'neutral',
+      tone: totalTokens !== null && totalTokens > 0 ? 'positive' : 'neutral',
       format: 'compact',
     },
     {
@@ -396,18 +397,21 @@ function createUsageConsumptionTrendSummary(
 ): DashboardUsageConsumptionTrendSummary | null {
   const buckets = usageOverview?.trend ?? []
   if (buckets.length === 0 || !usageOverview) return null
-  const totalTokens =
-    usageOverview.totals.totalTokens ??
-    buckets.reduce((total, bucket) => total + bucket.totalTokens, 0)
+  const totalTokens = usageOverview.totals.tokenBreakdown?.totalTokens
+  const bucketBreakdowns = buckets.map((bucket) => bucket.tokenBreakdown)
+  if (totalTokens === undefined || bucketBreakdowns.some((breakdown) => breakdown === null)) {
+    return null
+  }
 
   return {
     totalTokens,
     bucketCount: buckets.length,
-    activeBucketCount: buckets.filter((bucket) => bucket.totalTokens > 0).length,
-    points: buckets.map((bucket) => ({
+    activeBucketCount: bucketBreakdowns.filter((breakdown) => (breakdown?.totalTokens ?? 0) > 0)
+      .length,
+    points: buckets.map((bucket, index) => ({
       id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
       label: `${bucket.bucketStart} - ${bucket.bucketEnd}`,
-      tokens: bucket.totalTokens,
+      tokens: bucketBreakdowns[index]?.totalTokens ?? 0,
       requestCount: bucket.requestCount,
     })),
   }

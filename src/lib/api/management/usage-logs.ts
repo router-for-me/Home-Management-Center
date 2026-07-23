@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type {
   CapabilityMap,
@@ -272,6 +274,26 @@ export type UsageTokens = {
   totalTokens: number
 }
 
+export type UsageTokenAccountingQuality = 'complete' | 'unclassified' | 'inconsistent'
+
+export type UsageTokenBreakdown = {
+  schemaVersion: 2
+  quality: UsageTokenAccountingQuality
+  totalTokens: number
+  input: {
+    totalTokens: number
+    uncachedTokens: number
+    cacheReadTokens: number
+    cacheWriteTokens: number
+  }
+  output: {
+    totalTokens: number
+    nonReasoningTokens: number
+    reasoningTokens: number
+  }
+  unclassifiedTokens: number
+}
+
 export type UsagePerformance = {
   latencyMs: number
   ttftMs: number | null
@@ -338,6 +360,7 @@ export type UsageRecord = {
   serviceTier: string | null
   reasoningEffort: string | null
   tokens: UsageTokens
+  tokenBreakdown: UsageTokenBreakdown | null
   performance: UsagePerformance
   client: UsageClientIdentity | null
   credential: UsageExecutionCredential | null
@@ -407,6 +430,7 @@ export type UsageTotals = {
   cacheReadTokens: number
   cacheCreationTokens: number
   totalTokens: number
+  tokenBreakdown: UsageTokenBreakdown | null
   totalAmount: number | null
   currency: string | null
   blendedCostPer1mTokens: number | null
@@ -433,6 +457,7 @@ export type UsageTrendBucket = {
   cacheReadTokens: number
   cacheCreationTokens: number
   totalTokens: number
+  tokenBreakdown: UsageTokenBreakdown | null
   totalAmount: number | null
   currency: string | null
   avgLatencyMs: number
@@ -463,6 +488,7 @@ export type UsageModelEfficiencyItem = {
   provider: string | null
   requestCount: number
   totalTokens: number
+  tokenBreakdown: UsageTokenBreakdown | null
   totalAmount: number | null
   currency: string | null
   costPer1mTokens: number | null
@@ -508,6 +534,7 @@ export type UsageAggregateItem = {
   cachedTokens: number | null
   cacheRate: number | null
   totalTokens: number
+  tokenBreakdown: UsageTokenBreakdown | null
   totalAmount: number | null
   currency: string | null
   avgLatencyMs: number | null
@@ -582,7 +609,7 @@ export type UsageRealtimeVelocityBucket = {
   bucketStart: string
   bucketEnd: string
   rpm: number
-  tpm: number
+  tpm: number | null
   errorRate: number
 }
 
@@ -595,7 +622,8 @@ export type UsageRealtimeCurrentUsageItem = {
   id: string
   label: string
   requestCount: number
-  totalTokens: number
+  totalTokens: number | null
+  tokenBreakdown: UsageTokenBreakdown | null
   totalAmount: number | null
   currency: string | null
 }
@@ -721,6 +749,89 @@ function readConfigBoolean(record: UnknownRecord, key: string): boolean {
 
 function readArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : []
+}
+
+const usageTokenCountSchema = z.number().int().nonnegative()
+const usageTokenBreakdownSchema = z
+  .object({
+    schema_version: z.literal(2),
+    quality: z.enum(['complete', 'unclassified', 'inconsistent']),
+    total_tokens: usageTokenCountSchema,
+    input: z
+      .object({
+        total_tokens: usageTokenCountSchema,
+        uncached_tokens: usageTokenCountSchema,
+        cache_read_tokens: usageTokenCountSchema,
+        cache_write_tokens: usageTokenCountSchema,
+      })
+      .strict(),
+    output: z
+      .object({
+        total_tokens: usageTokenCountSchema,
+        non_reasoning_tokens: usageTokenCountSchema,
+        reasoning_tokens: usageTokenCountSchema,
+      })
+      .strict(),
+    unclassified_tokens: usageTokenCountSchema,
+  })
+  .strict()
+  .superRefine((breakdown, context) => {
+    const inputTotal =
+      breakdown.input.uncached_tokens +
+      breakdown.input.cache_read_tokens +
+      breakdown.input.cache_write_tokens
+    if (breakdown.input.total_tokens !== inputTotal) {
+      context.addIssue({
+        code: 'custom',
+        path: ['input', 'total_tokens'],
+        message: 'input token buckets do not equal input.total_tokens',
+      })
+    }
+
+    const outputTotal = breakdown.output.non_reasoning_tokens + breakdown.output.reasoning_tokens
+    if (breakdown.output.total_tokens !== outputTotal) {
+      context.addIssue({
+        code: 'custom',
+        path: ['output', 'total_tokens'],
+        message: 'output token buckets do not equal output.total_tokens',
+      })
+    }
+
+    const total =
+      breakdown.input.total_tokens + breakdown.output.total_tokens + breakdown.unclassified_tokens
+    if (breakdown.total_tokens !== total) {
+      context.addIssue({
+        code: 'custom',
+        path: ['total_tokens'],
+        message: 'token groups do not equal total_tokens',
+      })
+    }
+  })
+
+export function parseUsageTokenBreakdown(value: unknown): UsageTokenBreakdown {
+  const breakdown = usageTokenBreakdownSchema.parse(value)
+
+  return {
+    schemaVersion: 2,
+    quality: breakdown.quality,
+    totalTokens: breakdown.total_tokens,
+    input: {
+      totalTokens: breakdown.input.total_tokens,
+      uncachedTokens: breakdown.input.uncached_tokens,
+      cacheReadTokens: breakdown.input.cache_read_tokens,
+      cacheWriteTokens: breakdown.input.cache_write_tokens,
+    },
+    output: {
+      totalTokens: breakdown.output.total_tokens,
+      nonReasoningTokens: breakdown.output.non_reasoning_tokens,
+      reasoningTokens: breakdown.output.reasoning_tokens,
+    },
+    unclassifiedTokens: breakdown.unclassified_tokens,
+  }
+}
+
+function normalizeUsageTokenBreakdown(value: unknown, enabled: boolean) {
+  return enabled ? parseUsageTokenBreakdown(value) : null
 }
 
 function hasOwnRecordKey(record: UnknownRecord, key: string) {
@@ -1150,11 +1261,19 @@ function normalizeErrorSummary(value: unknown): UsageErrorSummary | null {
   }
 }
 
-function normalizeUsageRecord(value: unknown, index: number): UsageRecord {
+function normalizeUsageRecord(
+  value: unknown,
+  index: number,
+  tokenBreakdownV2: boolean,
+): UsageRecord {
   const record = toRecord(value)
   const usageId = readNumberFromKeys(record, ['usage_id', 'usageId']) ?? index + 1
   const failed =
     readBoolean(record, 'failed') ?? readString(record, 'status')?.toLowerCase() === 'failed'
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     id: readString(record, 'id') ?? String(usageId),
@@ -1174,6 +1293,7 @@ function normalizeUsageRecord(value: unknown, index: number): UsageRecord {
     serviceTier: readStringFromKeys(record, ['service_tier', 'serviceTier']),
     reasoningEffort: readStringFromKeys(record, ['reasoning_effort', 'reasoningEffort']),
     tokens: normalizeTokens(record.tokens),
+    tokenBreakdown,
     performance: normalizePerformance(record.performance),
     client: normalizeClient(record.client),
     credential: normalizeCredential(record.credential),
@@ -1183,9 +1303,14 @@ function normalizeUsageRecord(value: unknown, index: number): UsageRecord {
   }
 }
 
-function normalizeUsageRecordsPage(responseData: unknown): UsageRecordsPage {
+export function normalizeUsageRecordsPage(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): UsageRecordsPage {
   const root = toRecord(responseData)
-  const items = readArray(root.items).map(normalizeUsageRecord)
+  const items = readArray(root.items).map((item, index) =>
+    normalizeUsageRecord(item, index, tokenBreakdownV2),
+  )
 
   return {
     items,
@@ -1197,9 +1322,12 @@ function normalizeUsageRecordsPage(responseData: unknown): UsageRecordsPage {
   }
 }
 
-function normalizeUsageRecordDetail(responseData: unknown): UsageRecordDetail {
+export function normalizeUsageRecordDetail(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): UsageRecordDetail {
   const root = toRecord(responseData)
-  const record = normalizeUsageRecord(root.record ?? root, 0)
+  const record = normalizeUsageRecord(root.record ?? root, 0, tokenBreakdownV2)
   const payload = toRecord(root.payload_summary ?? root.payloadSummary)
   const related = normalizeUsageRecordRelated(root.related)
   const logExcerpt = readArray(root.log_excerpt ?? root.logExcerpt).filter(
@@ -1242,11 +1370,19 @@ function normalizeUsageRecordRelated(value: unknown): UsageRecordRelated | null 
   }
 }
 
-function normalizeAggregateItem(value: unknown, index: number): UsageAggregateItem {
+function normalizeAggregateItem(
+  value: unknown,
+  index: number,
+  tokenBreakdownV2: boolean,
+): UsageAggregateItem {
   const record = toRecord(value)
   const requestCount = readNumberFromKeys(record, ['request_count', 'requestCount']) ?? 0
   const successCount = readNumberFromKeys(record, ['success_count', 'successCount']) ?? 0
   const failedCount = readNumberFromKeys(record, ['failed_count', 'failedCount']) ?? 0
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     id: readString(record, 'id') ?? `aggregate-${index + 1}`,
@@ -1266,6 +1402,7 @@ function normalizeAggregateItem(value: unknown, index: number): UsageAggregateIt
     cachedTokens: readNumberFromKeys(record, ['cached_tokens', 'cachedTokens']),
     cacheRate: readNumberFromKeys(record, ['cache_rate', 'cacheRate']),
     totalTokens: readNumberFromKeys(record, ['total_tokens', 'totalTokens']) ?? 0,
+    tokenBreakdown,
     totalAmount: readNumberFromKeys(record, ['total_amount', 'totalAmount']),
     currency: readString(record, 'currency'),
     avgLatencyMs: readNumberFromKeys(record, ['avg_latency_ms', 'avgLatencyMs']),
@@ -1277,13 +1414,18 @@ function normalizeAggregateItem(value: unknown, index: number): UsageAggregateIt
   }
 }
 
-function normalizeAggregateItems(value: unknown): UsageAggregateItem[] {
-  return readArray(value).map(normalizeAggregateItem)
+function normalizeAggregateItems(value: unknown, tokenBreakdownV2: boolean): UsageAggregateItem[] {
+  return readArray(value).map((item, index) =>
+    normalizeAggregateItem(item, index, tokenBreakdownV2),
+  )
 }
 
-function normalizeAggregateResponse(responseData: unknown): UsageAggregateResponse {
+export function normalizeAggregateResponse(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): UsageAggregateResponse {
   const root = toRecord(responseData)
-  const items = normalizeAggregateItems(root.items)
+  const items = normalizeAggregateItems(root.items, tokenBreakdownV2)
 
   return {
     groupBy: readStringFromKeys(root, ['group_by', 'groupBy']) ?? 'unknown',
@@ -1340,14 +1482,17 @@ function normalizeUsageHealthResponse(
   }
 }
 
-function normalizeUsageRealtimeVelocityBucket(value: unknown): UsageRealtimeVelocityBucket {
+function normalizeUsageRealtimeVelocityBucket(
+  value: unknown,
+  tokenBreakdownV2: boolean,
+): UsageRealtimeVelocityBucket {
   const record = toRecord(value)
 
   return {
     bucketStart: readStringFromKeys(record, ['bucket_start', 'bucketStart']) ?? '',
     bucketEnd: readStringFromKeys(record, ['bucket_end', 'bucketEnd']) ?? '',
     rpm: readNumber(record, 'rpm') ?? 0,
-    tpm: readNumber(record, 'tpm') ?? 0,
+    tpm: tokenBreakdownV2 ? readNumber(record, 'tpm') : null,
     errorRate: readNumberFromKeys(record, ['error_rate', 'errorRate']) ?? 0,
   }
 }
@@ -1364,15 +1509,21 @@ function normalizeUsageRealtimeLatencyBucket(value: unknown): UsageRealtimeLaten
 function normalizeUsageRealtimeCurrentUsageItem(
   value: unknown,
   index: number,
+  tokenBreakdownV2: boolean,
 ): UsageRealtimeCurrentUsageItem {
   const record = toRecord(value)
   const id = readTextFromKeys(record, ['id']) ?? `current-usage-${index + 1}`
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     id,
     label: readString(record, 'label') ?? id,
     requestCount: readNumberFromKeys(record, ['request_count', 'requestCount']) ?? 0,
-    totalTokens: readNumberFromKeys(record, ['total_tokens', 'totalTokens']) ?? 0,
+    totalTokens: tokenBreakdown?.totalTokens ?? null,
+    tokenBreakdown,
     totalAmount: readNumberFromKeys(record, ['total_amount', 'totalAmount']),
     currency: readString(record, 'currency'),
   }
@@ -1396,7 +1547,10 @@ function normalizeRealtimeGroupBy(value: string | null): UsageAggregateGroupBy {
   return 'model'
 }
 
-function normalizeUsageRealtimeSnapshot(responseData: unknown): UsageRealtimeSnapshot {
+export function normalizeUsageRealtimeSnapshot(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): UsageRealtimeSnapshot {
   const root = toRecord(responseData)
 
   return {
@@ -1404,18 +1558,24 @@ function normalizeUsageRealtimeSnapshot(responseData: unknown): UsageRealtimeSna
     bucketSeconds: readNumberFromKeys(root, ['bucket_seconds', 'bucketSeconds']) ?? 60,
     updatedAt: readStringFromKeys(root, ['updated_at', 'updatedAt']) ?? new Date().toISOString(),
     groupBy: normalizeRealtimeGroupBy(readStringFromKeys(root, ['group_by', 'groupBy'])),
-    velocity: readArray(root.velocity).map(normalizeUsageRealtimeVelocityBucket),
+    velocity: readArray(root.velocity).map((item) =>
+      normalizeUsageRealtimeVelocityBucket(item, tokenBreakdownV2),
+    ),
     latencyDistribution: readArray(root.latency_distribution ?? root.latencyDistribution).map(
       normalizeUsageRealtimeLatencyBucket,
     ),
-    currentUsage: readArray(root.current_usage ?? root.currentUsage).map(
-      normalizeUsageRealtimeCurrentUsageItem,
+    currentUsage: readArray(root.current_usage ?? root.currentUsage).map((item, index) =>
+      normalizeUsageRealtimeCurrentUsageItem(item, index, tokenBreakdownV2),
     ),
   }
 }
 
-function normalizeTotals(value: unknown): UsageTotals {
+function normalizeTotals(value: unknown, tokenBreakdownV2: boolean): UsageTotals {
   const record = toRecord(value)
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     requestCount: readNumberFromKeys(record, ['request_count', 'requestCount']) ?? 0,
@@ -1431,6 +1591,7 @@ function normalizeTotals(value: unknown): UsageTotals {
     cacheCreationTokens:
       readNumberFromKeys(record, ['cache_creation_tokens', 'cacheCreationTokens']) ?? 0,
     totalTokens: readNumberFromKeys(record, ['total_tokens', 'totalTokens']) ?? 0,
+    tokenBreakdown,
     totalAmount: readNumberFromKeys(record, ['total_amount', 'totalAmount']),
     currency: readString(record, 'currency'),
     blendedCostPer1mTokens: readNumberFromKeys(record, [
@@ -1464,8 +1625,12 @@ function normalizeLiveSummary(value: unknown): UsageLiveSummary {
   }
 }
 
-function normalizeTrendBucket(value: unknown): UsageTrendBucket {
+function normalizeTrendBucket(value: unknown, tokenBreakdownV2: boolean): UsageTrendBucket {
   const record = toRecord(value)
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     bucketStart: readStringFromKeys(record, ['bucket_start', 'bucketStart']) ?? '',
@@ -1481,6 +1646,7 @@ function normalizeTrendBucket(value: unknown): UsageTrendBucket {
     cacheCreationTokens:
       readNumberFromKeys(record, ['cache_creation_tokens', 'cacheCreationTokens']) ?? 0,
     totalTokens: readNumberFromKeys(record, ['total_tokens', 'totalTokens']) ?? 0,
+    tokenBreakdown,
     totalAmount: readNumberFromKeys(record, ['total_amount', 'totalAmount']),
     currency: readString(record, 'currency'),
     avgLatencyMs: readNumberFromKeys(record, ['avg_latency_ms', 'avgLatencyMs']) ?? 0,
@@ -1526,14 +1692,22 @@ function normalizeActivityBucket(value: unknown): UsageActivityBucket {
   }
 }
 
-function normalizeModelEfficiencyItem(value: unknown): UsageModelEfficiencyItem {
+function normalizeModelEfficiencyItem(
+  value: unknown,
+  tokenBreakdownV2: boolean,
+): UsageModelEfficiencyItem {
   const record = toRecord(value)
+  const tokenBreakdown = normalizeUsageTokenBreakdown(
+    record.token_breakdown ?? record.tokenBreakdown,
+    tokenBreakdownV2,
+  )
 
   return {
     model: readString(record, 'model') ?? 'unknown',
     provider: readString(record, 'provider'),
     requestCount: readNumberFromKeys(record, ['request_count', 'requestCount']) ?? 0,
     totalTokens: readNumberFromKeys(record, ['total_tokens', 'totalTokens']) ?? 0,
+    tokenBreakdown,
     totalAmount: readNumberFromKeys(record, ['total_amount', 'totalAmount']),
     currency: readString(record, 'currency'),
     costPer1mTokens: readNumberFromKeys(record, ['cost_per_1m_tokens', 'costPer1mTokens']),
@@ -1560,7 +1734,10 @@ function normalizeQuotaWindow(value: unknown): UsageQuotaWindow {
   }
 }
 
-function normalizeUsageOverview(responseData: unknown): UsageOverview {
+export function normalizeUsageOverview(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): UsageOverview {
   const root = toRecord(responseData)
   const range = toRecord(root.range)
   const top = toRecord(root.top)
@@ -1573,22 +1750,22 @@ function normalizeUsageOverview(responseData: unknown): UsageOverview {
       interval: readString(range, 'interval') ?? 'auto',
     },
     live: normalizeLiveSummary(root.live),
-    totals: normalizeTotals(root.totals),
-    trend: readArray(root.trend).map(normalizeTrendBucket),
+    totals: normalizeTotals(root.totals, tokenBreakdownV2),
+    trend: readArray(root.trend).map((bucket) => normalizeTrendBucket(bucket, tokenBreakdownV2)),
     costBreakdown: readArray(root.cost_breakdown ?? root.costBreakdown).map(
       normalizeCostBreakdownItem,
     ),
-    modelEfficiency: readArray(root.model_efficiency ?? root.modelEfficiency).map(
-      normalizeModelEfficiencyItem,
+    modelEfficiency: readArray(root.model_efficiency ?? root.modelEfficiency).map((item) =>
+      normalizeModelEfficiencyItem(item, tokenBreakdownV2),
     ),
     top: {
-      users: normalizeAggregateItems(top.users),
-      clientKeys: normalizeAggregateItems(top.client_keys ?? top.clientKeys),
-      credentials: normalizeAggregateItems(top.credentials),
-      providers: normalizeAggregateItems(top.providers),
-      models: normalizeAggregateItems(top.models),
-      endpoints: normalizeAggregateItems(top.endpoints),
-      errors: normalizeAggregateItems(top.errors),
+      users: normalizeAggregateItems(top.users, tokenBreakdownV2),
+      clientKeys: normalizeAggregateItems(top.client_keys ?? top.clientKeys, tokenBreakdownV2),
+      credentials: normalizeAggregateItems(top.credentials, tokenBreakdownV2),
+      providers: normalizeAggregateItems(top.providers, tokenBreakdownV2),
+      models: normalizeAggregateItems(top.models, tokenBreakdownV2),
+      endpoints: normalizeAggregateItems(top.endpoints, tokenBreakdownV2),
+      errors: normalizeAggregateItems(top.errors, tokenBreakdownV2),
     },
     activity: readArray(root.activity).map(normalizeActivityBucket),
   }
@@ -1870,7 +2047,7 @@ export async function fetchUsageLogsSnapshot(
             const response = await client.get<unknown>('/usage/overview', {
               params: aggregateQueryParams,
             })
-            return normalizeUsageOverview(response.data)
+            return normalizeUsageOverview(response.data, capabilities.usageTokenBreakdownV2)
           },
           null,
         )
@@ -1883,7 +2060,7 @@ export async function fetchUsageLogsSnapshot(
             const response = await client.get<unknown>('/usage/records', {
               params: queryParams,
             })
-            return normalizeUsageRecordsPage(response.data)
+            return normalizeUsageRecordsPage(response.data, capabilities.usageTokenBreakdownV2)
           },
           null,
         )
@@ -1903,7 +2080,7 @@ export async function fetchUsageLogsSnapshot(
                 offset: 0,
               },
             })
-            return normalizeAggregateResponse(response.data)
+            return normalizeAggregateResponse(response.data, capabilities.usageTokenBreakdownV2)
           },
           null,
         )
@@ -1947,7 +2124,7 @@ export async function fetchUsageLogsSnapshot(
                 group_by: 'model',
               },
             })
-            return normalizeUsageRealtimeSnapshot(response.data)
+            return normalizeUsageRealtimeSnapshot(response.data, capabilities.usageTokenBreakdownV2)
           },
           null,
         )
@@ -2013,24 +2190,26 @@ export async function fetchUsageLogsSnapshot(
 export async function fetchUsageOverview(
   session: ManagementSessionInput,
   filters: UsageFilters = defaultUsageFilters,
+  tokenBreakdownV2 = false,
 ): Promise<UsageOverview | null> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/usage/overview', {
     params: getUsageScopeQueryParams(filters),
   })
 
-  return normalizeUsageOverview(response.data)
+  return normalizeUsageOverview(response.data, tokenBreakdownV2)
 }
 
 export async function fetchUsageRecords(
   session: ManagementSessionInput,
   filters: UsageFilters = defaultUsageFilters,
+  tokenBreakdownV2 = false,
 ): Promise<UsageRecordsPage> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/usage/records', {
     params: getUsageRecordQueryParams(filters),
   })
-  return normalizeUsageRecordsPage(response.data)
+  return normalizeUsageRecordsPage(response.data, tokenBreakdownV2)
 }
 
 export async function fetchUsageRuntimeSettings(
@@ -2071,6 +2250,7 @@ export async function fetchUsageCredentialHealth(
 export async function fetchUsageRealtime(
   session: ManagementSessionInput,
   filters: UsageFilters = defaultUsageFilters,
+  tokenBreakdownV2 = false,
 ): Promise<UsageRealtimeSnapshot> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/usage/realtime', {
@@ -2081,7 +2261,7 @@ export async function fetchUsageRealtime(
       group_by: 'model',
     },
   })
-  return normalizeUsageRealtimeSnapshot(response.data)
+  return normalizeUsageRealtimeSnapshot(response.data, tokenBreakdownV2)
 }
 
 export async function fetchRequestLogIndex(
@@ -2107,6 +2287,7 @@ export async function fetchUsageAggregates(
   session: ManagementSessionInput,
   filters: UsageFilters = defaultUsageFilters,
   query: UsageAggregatesQuery = defaultUsageAggregatesQuery,
+  tokenBreakdownV2 = false,
 ): Promise<UsageAggregateResponse> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/usage/aggregates', {
@@ -2120,12 +2301,13 @@ export async function fetchUsageAggregates(
     },
   })
 
-  return normalizeAggregateResponse(response.data)
+  return normalizeAggregateResponse(response.data, tokenBreakdownV2)
 }
 
 export async function fetchUsageRecordDetail(
   session: ManagementSessionInput,
   recordId: string,
+  tokenBreakdownV2 = false,
 ): Promise<UsageRecordDetail> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>(`/usage/records/${encodeURIComponent(recordId)}`, {
@@ -2134,7 +2316,7 @@ export async function fetchUsageRecordDetail(
       include_logs: true,
     },
   })
-  return normalizeUsageRecordDetail(response.data)
+  return normalizeUsageRecordDetail(response.data, tokenBreakdownV2)
 }
 
 export async function exportUsageRecords(

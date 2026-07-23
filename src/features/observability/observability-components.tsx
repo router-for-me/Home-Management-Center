@@ -118,6 +118,7 @@ import type {
   UsageRecordDetail,
   UsageRecordSortableField,
   UsageRecordsPage,
+  UsageTokenBreakdown,
 } from '@/lib/api/management/usage-logs'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -1173,24 +1174,30 @@ function getRequestSparkline(trend: UsageOverview['trend']) {
 }
 
 function getTokenSparkline(trend: UsageOverview['trend']) {
-  return trend.map((bucket) => bucket.totalTokens)
+  return trend.map((bucket) => bucket.tokenBreakdown?.totalTokens ?? 0)
 }
 
-function getKpiCardData(overview: UsageOverview, t: TFunction): KpiCardData[] {
+function getKpiCardData(
+  overview: UsageOverview,
+  tokenAccountingAvailable: boolean,
+  t: TFunction,
+): KpiCardData[] {
   const trend = overview.trend
   const totals = overview.totals
   const requestSparkline = getRequestSparkline(trend)
-  const tokenSparkline = getTokenSparkline(trend)
+  const tokenSparkline = tokenAccountingAvailable ? getTokenSparkline(trend) : []
   const amountSparkline = getAmountSparkline(trend)
+  const totalTokens = tokenAccountingAvailable ? totals.tokenBreakdown?.totalTokens : null
 
   return [
     {
       key: 'tokens',
       labelKey: 'usageLogsPage.kpi.tokens',
-      value: formatCompactNumber(totals.totalTokens),
+      value:
+        totalTokens === null || totalTokens === undefined ? '--' : formatCompactNumber(totalTokens),
       icon: <CirclePile className="size-3.5" aria-hidden="true" />,
       sparkline: tokenSparkline,
-      comparisonDelta: compareTrendValues(tokenSparkline),
+      comparisonDelta: tokenAccountingAvailable ? compareTrendValues(tokenSparkline) : null,
       tone: 'neutral' as const,
     },
     {
@@ -1246,7 +1253,13 @@ function getEmptyKpiCardData(): KpiCardData[] {
   ]
 }
 
-function SystemHealthCard({ overview }: { overview: UsageOverview }) {
+function SystemHealthCard({
+  overview,
+  tokenAccountingAvailable,
+}: {
+  overview: UsageOverview
+  tokenAccountingAvailable: boolean
+}) {
   const { t } = useTranslation()
   const live = overview.live
   const errorRateAlert = live.errorRate > 0.05
@@ -1262,7 +1275,7 @@ function SystemHealthCard({ overview }: { overview: UsageOverview }) {
     {
       key: 'tpm',
       label: t('usageLogsPage.kpi.healthMetrics.tpm'),
-      value: formatCompactNumber(live.tpm),
+      value: tokenAccountingAvailable ? formatCompactNumber(live.tpm) : '—',
       tone: 'text-foreground',
       alert: false,
     },
@@ -1318,9 +1331,17 @@ function SystemHealthCard({ overview }: { overview: UsageOverview }) {
   )
 }
 
-export function UsageKpiStrip({ overview }: { overview: UsageOverview | null }) {
+export function UsageKpiStrip({
+  overview,
+  tokenAccountingAvailable,
+}: {
+  overview: UsageOverview | null
+  tokenAccountingAvailable: boolean
+}) {
   const { t } = useTranslation()
-  const kpis = overview ? getKpiCardData(overview, t) : getEmptyKpiCardData()
+  const kpis = overview
+    ? getKpiCardData(overview, tokenAccountingAvailable, t)
+    : getEmptyKpiCardData()
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -1337,7 +1358,7 @@ export function UsageKpiStrip({ overview }: { overview: UsageOverview | null }) 
         />
       ))}
       {overview ? (
-        <SystemHealthCard overview={overview} />
+        <SystemHealthCard overview={overview} tokenAccountingAvailable={tokenAccountingAvailable} />
       ) : (
         <TableEmptyState
           compact
@@ -1352,13 +1373,25 @@ export function UsageKpiStrip({ overview }: { overview: UsageOverview | null }) 
 }
 
 type UsageTrendOverlayMetric = 'requests' | 'cost'
-type TokenSeriesKey = 'inputTokens' | 'outputTokens' | 'cachedTokens' | 'reasoningTokens'
+type TokenSeriesKey =
+  | 'uncachedInputTokens'
+  | 'cacheReadTokens'
+  | 'cacheWriteTokens'
+  | 'nonReasoningOutputTokens'
+  | 'reasoningTokens'
+  | 'unclassifiedTokens'
 type TokenUsageChartDatum = {
   label: string
-  inputTokens: number
-  outputTokens: number
-  cachedTokens: number
+  totalTokens: number
+  inputTotalTokens: number
+  outputTotalTokens: number
+  uncachedInputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  nonReasoningOutputTokens: number
   reasoningTokens: number
+  unclassifiedTokens: number
+  quality: UsageTokenBreakdown['quality']
   overlayValue: number
   requestCount: number
   totalAmount: number | null
@@ -1369,28 +1402,89 @@ const tokenSeries: Array<{
   key: TokenSeriesKey
   labelKey: string
   color: string
+  group: 'input' | 'output' | 'other'
 }> = [
   {
-    key: 'inputTokens',
-    labelKey: 'usageLogsPage.trend.tokenSeries.input',
+    key: 'uncachedInputTokens',
+    labelKey: 'usageLogsPage.trend.tokenSeries.uncachedInput',
     color: 'var(--info)',
+    group: 'input',
   },
   {
-    key: 'outputTokens',
-    labelKey: 'usageLogsPage.trend.tokenSeries.output',
-    color: 'var(--success)',
-  },
-  {
-    key: 'cachedTokens',
-    labelKey: 'usageLogsPage.trend.tokenSeries.cache',
+    key: 'cacheReadTokens',
+    labelKey: 'usageLogsPage.trend.tokenSeries.cacheRead',
     color: 'var(--primary)',
+    group: 'input',
+  },
+  {
+    key: 'cacheWriteTokens',
+    labelKey: 'usageLogsPage.trend.tokenSeries.cacheWrite',
+    color: 'var(--warning)',
+    group: 'input',
+  },
+  {
+    key: 'nonReasoningOutputTokens',
+    labelKey: 'usageLogsPage.trend.tokenSeries.nonReasoningOutput',
+    color: 'var(--success)',
+    group: 'output',
   },
   {
     key: 'reasoningTokens',
     labelKey: 'usageLogsPage.trend.tokenSeries.reasoning',
-    color: 'var(--warning)',
+    color: 'color-mix(in oklch, var(--warning) 55%, var(--destructive))',
+    group: 'output',
+  },
+  {
+    key: 'unclassifiedTokens',
+    labelKey: 'usageLogsPage.trend.tokenSeries.unclassified',
+    color: 'var(--muted-foreground)',
+    group: 'other',
   },
 ]
+
+function toTokenUsageChartDatum(
+  breakdown: UsageTokenBreakdown,
+): Pick<
+  TokenUsageChartDatum,
+  | 'totalTokens'
+  | 'inputTotalTokens'
+  | 'outputTotalTokens'
+  | 'uncachedInputTokens'
+  | 'cacheReadTokens'
+  | 'cacheWriteTokens'
+  | 'nonReasoningOutputTokens'
+  | 'reasoningTokens'
+  | 'unclassifiedTokens'
+  | 'quality'
+> {
+  if (breakdown.quality === 'inconsistent') {
+    return {
+      totalTokens: breakdown.totalTokens,
+      inputTotalTokens: 0,
+      outputTotalTokens: 0,
+      uncachedInputTokens: 0,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      nonReasoningOutputTokens: 0,
+      reasoningTokens: 0,
+      unclassifiedTokens: breakdown.totalTokens,
+      quality: breakdown.quality,
+    }
+  }
+
+  return {
+    totalTokens: breakdown.totalTokens,
+    inputTotalTokens: breakdown.input.totalTokens,
+    outputTotalTokens: breakdown.output.totalTokens,
+    uncachedInputTokens: breakdown.input.uncachedTokens,
+    cacheReadTokens: breakdown.input.cacheReadTokens,
+    cacheWriteTokens: breakdown.input.cacheWriteTokens,
+    nonReasoningOutputTokens: breakdown.output.nonReasoningTokens,
+    reasoningTokens: breakdown.output.reasoningTokens,
+    unclassifiedTokens: breakdown.unclassifiedTokens,
+    quality: breakdown.quality,
+  }
+}
 
 function getOverlayValue(metric: UsageTrendOverlayMetric, bucket: UsageOverview['trend'][number]) {
   return metric === 'cost' ? (bucket.totalAmount ?? 0) : bucket.requestCount
@@ -1412,13 +1506,13 @@ function formatOverlayValue(
 function TokenUsageChart({
   data,
   overlayMetric,
-  visibleSeriesKeys,
+  focusedSeriesKey,
   t,
   currency,
 }: {
   data: TokenUsageChartDatum[]
   overlayMetric: UsageTrendOverlayMetric
-  visibleSeriesKeys: TokenSeriesKey[]
+  focusedSeriesKey: TokenSeriesKey | null
   t: TFunction
   currency?: string | null
 }) {
@@ -1439,11 +1533,7 @@ function TokenUsageChart({
   }
   const innerWidth = width - margin.left - margin.right
   const innerHeight = height - margin.top - margin.bottom
-  const visibleTokenSeries = tokenSeries.filter((series) => visibleSeriesKeys.includes(series.key))
-  const maxTokens = Math.max(
-    ...data.map((item) => visibleTokenSeries.reduce((sum, series) => sum + item[series.key], 0)),
-    1,
-  )
+  const maxTokens = Math.max(...data.map((item) => item.totalTokens), 1)
   const maxOverlay = Math.max(...data.map((item) => item.overlayValue), 1)
   const overlayY = (value: number) => margin.top + innerHeight - (value / maxOverlay) * innerHeight
   const getX = (index: number) => margin.left + (index / Math.max(1, data.length - 1)) * innerWidth
@@ -1529,7 +1619,7 @@ function TokenUsageChart({
         {data.map((item, index) => {
           const x = margin.left + index * bandWidth + (bandWidth - barWidth) / 2
           let stackY = margin.top + innerHeight
-          const values = visibleTokenSeries.map((series) => ({
+          const values = tokenSeries.map((series) => ({
             ...series,
             value: item[series.key],
           }))
@@ -1539,9 +1629,13 @@ function TokenUsageChart({
               <title>
                 {[
                   item.label,
-                  ...visibleTokenSeries.map(
-                    (series) => `${t(series.labelKey)}: ${formatCompactNumber(item[series.key])}`,
-                  ),
+                  `${t('usageLogsPage.trend.tooltip.total')}: ${formatCompactNumber(item.totalTokens)}`,
+                  ...(item.quality === 'inconsistent'
+                    ? [t('usageLogsPage.tokenAccounting.inconsistentShort')]
+                    : tokenSeries.map(
+                        (series) =>
+                          `${t(series.labelKey)}: ${formatCompactNumber(item[series.key])}`,
+                      )),
                   `${t(`usageLogsPage.trend.overlay.${overlayMetric}`)}: ${formatOverlayValue(
                     overlayMetric,
                     item.overlayValue,
@@ -1556,6 +1650,11 @@ function TokenUsageChart({
                 const segmentIsActive =
                   activeTarget?.index === index && activeTarget.seriesKey === series.key
                 const bucketIsActive = activeTarget?.index === index
+                const focusOpacity = focusedSeriesKey
+                  ? focusedSeriesKey === series.key
+                    ? 0.95
+                    : 0.18
+                  : 0.9
 
                 return (
                   <rect
@@ -1569,7 +1668,13 @@ function TokenUsageChart({
                     width={barWidth}
                     height={Math.max(0, barHeight)}
                     fill={series.color}
-                    opacity={activeTarget ? (bucketIsActive ? 1 : 0.42) : 0.9}
+                    opacity={
+                      activeTarget
+                        ? bucketIsActive
+                          ? focusOpacity
+                          : Math.min(focusOpacity, 0.32)
+                        : focusOpacity
+                    }
                     rx={seriesIndex === values.length - 1 ? 3 : 0}
                     stroke={segmentIsActive ? 'var(--foreground)' : 'transparent'}
                     strokeWidth={segmentIsActive ? 1.5 : 0}
@@ -1644,65 +1749,100 @@ function TokenUsageChart({
       {activeDatum ? (
         <div className="bg-popover text-popover-foreground pointer-events-none absolute top-2 right-2 max-w-[240px] rounded-md border px-3 py-2 text-xs shadow-sm">
           <p className="font-medium">{activeDatum.label}</p>
-          <p className="text-muted-foreground mt-1">
+          <div className="mt-2 flex items-center justify-between gap-4">
+            <span className="font-medium">{t('usageLogsPage.trend.tooltip.total')}</span>
+            <span className="font-semibold tabular-nums">
+              {formatCompactNumber(activeDatum.totalTokens)}
+            </span>
+          </div>
+          <p className="text-muted-foreground mt-1.5">
             {t(`usageLogsPage.trend.overlay.${overlayMetric}`)}:{' '}
             {formatOverlayValue(overlayMetric, activeDatum.overlayValue, t, currency)}
           </p>
-          <div className="mt-2 grid gap-1">
-            {visibleTokenSeries.map((series) => (
-              <div key={series.key} className="flex items-center justify-between gap-4">
-                <span className="inline-flex min-w-0 items-center gap-1.5">
-                  <span
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: series.color }}
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">{t(series.labelKey)}</span>
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatCompactNumber(activeDatum[series.key])}
-                </span>
-              </div>
-            ))}
-          </div>
+          {activeDatum.quality === 'inconsistent' ? (
+            <p className="text-warning-foreground dark:text-warning mt-2 leading-5">
+              {t('usageLogsPage.tokenAccounting.inconsistentShort')}
+            </p>
+          ) : (
+            <>
+              {(['input', 'output'] as const).map((group) => (
+                <div key={group} className="mt-2 border-t pt-2">
+                  <div className="mb-1.5 flex items-center justify-between gap-4 font-medium">
+                    <span>{t(`usageLogsPage.trend.tooltip.${group}`)}</span>
+                    <span className="tabular-nums">
+                      {formatCompactNumber(
+                        group === 'input'
+                          ? activeDatum.inputTotalTokens
+                          : activeDatum.outputTotalTokens,
+                      )}
+                    </span>
+                  </div>
+                  <div className="grid gap-1">
+                    {tokenSeries
+                      .filter((series) => series.group === group)
+                      .map((series) => (
+                        <div key={series.key} className="flex items-center justify-between gap-4">
+                          <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <span
+                              className="size-2 shrink-0 rounded-full"
+                              style={{ backgroundColor: series.color }}
+                              aria-hidden="true"
+                            />
+                            <span className="truncate">{t(series.labelKey)}</span>
+                          </span>
+                          <span className="font-medium tabular-nums">
+                            {formatCompactNumber(activeDatum[series.key])}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ))}
+              {activeDatum.unclassifiedTokens > 0 ? (
+                <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2">
+                  <span>{t('usageLogsPage.trend.tokenSeries.unclassified')}</span>
+                  <span className="font-medium tabular-nums">
+                    {formatCompactNumber(activeDatum.unclassifiedTokens)}
+                  </span>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
       ) : null}
     </div>
   )
 }
 
-export function UsageTrendPanel({ overview }: { overview: UsageOverview | null }) {
+export function UsageTrendPanel({
+  overview,
+  tokenAccountingAvailable,
+}: {
+  overview: UsageOverview | null
+  tokenAccountingAvailable: boolean
+}) {
   const { t, i18n } = useTranslation()
   const [overlayMetric, setOverlayMetric] = useState<UsageTrendOverlayMetric>('requests')
-  const [visibleSeriesKeys, setVisibleSeriesKeys] = useState<TokenSeriesKey[]>(
-    tokenSeries.map((series) => series.key),
-  )
+  const [focusedSeriesKey, setFocusedSeriesKey] = useState<TokenSeriesKey | null>(null)
   const chartData = useMemo(
     () =>
-      overview?.trend.map((bucket) => ({
-        label: formatShortDateTime(bucket.bucketStart, i18n),
-        inputTokens: bucket.inputTokens,
-        outputTokens: bucket.outputTokens,
-        cachedTokens: bucket.cachedTokens,
-        reasoningTokens: bucket.reasoningTokens,
-        overlayValue: getOverlayValue(overlayMetric, bucket),
-        requestCount: bucket.requestCount,
-        totalAmount: bucket.totalAmount,
-        failedCount: bucket.failedCount,
-      })) ?? [],
-    [i18n, overlayMetric, overview?.trend],
+      tokenAccountingAvailable
+        ? (overview?.trend.flatMap((bucket) => {
+            if (!bucket.tokenBreakdown) return []
+            return [
+              {
+                label: formatShortDateTime(bucket.bucketStart, i18n),
+                ...toTokenUsageChartDatum(bucket.tokenBreakdown),
+                overlayValue: getOverlayValue(overlayMetric, bucket),
+                requestCount: bucket.requestCount,
+                totalAmount: bucket.totalAmount,
+                failedCount: bucket.failedCount,
+              },
+            ]
+          }) ?? [])
+        : [],
+    [i18n, overlayMetric, overview?.trend, tokenAccountingAvailable],
   )
-  const toggleSeries = (seriesKey: TokenSeriesKey) => {
-    setVisibleSeriesKeys((currentKeys) => {
-      if (currentKeys.includes(seriesKey)) {
-        return currentKeys.length === 1
-          ? currentKeys
-          : currentKeys.filter((key) => key !== seriesKey)
-      }
-
-      return [...currentKeys, seriesKey]
-    })
-  }
 
   return (
     <TableSurface className="flex min-w-0 flex-col p-4">
@@ -1733,13 +1873,15 @@ export function UsageTrendPanel({ overview }: { overview: UsageOverview | null }
           <button
             type="button"
             key={series.key}
-            aria-pressed={visibleSeriesKeys.includes(series.key)}
-            onClick={() => toggleSeries(series.key)}
+            aria-pressed={focusedSeriesKey === series.key}
+            onClick={() =>
+              setFocusedSeriesKey((currentKey) => (currentKey === series.key ? null : series.key))
+            }
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors',
-              visibleSeriesKeys.includes(series.key)
+              focusedSeriesKey === null || focusedSeriesKey === series.key
                 ? 'text-foreground bg-background hover:bg-muted/40'
-                : 'text-muted-foreground bg-muted/40 hover:bg-muted/70',
+                : 'text-muted-foreground bg-muted/20 opacity-55 hover:opacity-80',
             )}
           >
             <span
@@ -1756,7 +1898,7 @@ export function UsageTrendPanel({ overview }: { overview: UsageOverview | null }
           <TokenUsageChart
             data={chartData}
             overlayMetric={overlayMetric}
-            visibleSeriesKeys={visibleSeriesKeys}
+            focusedSeriesKey={focusedSeriesKey}
             t={t}
             currency={overview.totals.currency}
           />
@@ -1765,7 +1907,11 @@ export function UsageTrendPanel({ overview }: { overview: UsageOverview | null }
             kind="empty"
             className="m-0 min-h-[260px]"
             title={t('usageLogsPage.trend.emptyTitle')}
-            description={t('usageLogsPage.trend.unavailable')}
+            description={t(
+              tokenAccountingAvailable
+                ? 'usageLogsPage.trend.unavailable'
+                : 'usageLogsPage.tokenAccounting.chartUnavailable',
+            )}
           />
         )}
       </div>
@@ -1936,7 +2082,9 @@ export function RealtimeUsagePanel({ realtime }: { realtime: UsageRealtimeSnapsh
               {t('usageLogsPage.realtime.metrics.tpm')}
             </p>
             <p className="mt-1 text-xl font-semibold tabular-nums">
-              {formatCompactNumber(latestBucket?.tpm ?? 0)}
+              {latestBucket?.tpm === null || latestBucket?.tpm === undefined
+                ? '—'
+                : formatCompactNumber(latestBucket.tpm)}
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
               {t('usageLogsPage.realtime.bucket', {
@@ -2157,7 +2305,7 @@ function getTopSpendItems(items: UsageAggregateItem[]) {
     const amountDelta = (right.totalAmount ?? -1) - (left.totalAmount ?? -1)
     if (amountDelta !== 0) return amountDelta
     if (right.requestCount !== left.requestCount) return right.requestCount - left.requestCount
-    return right.totalTokens - left.totalTokens
+    return (right.tokenBreakdown?.totalTokens ?? -1) - (left.tokenBreakdown?.totalTokens ?? -1)
   })
 }
 
@@ -2167,8 +2315,9 @@ function getAverageRequestCost(item: UsageAggregateItem) {
 }
 
 function getCostPerMillionTokens(item: UsageAggregateItem) {
-  if (item.totalAmount === null || item.totalTokens <= 0) return null
-  return (item.totalAmount / item.totalTokens) * 1_000_000
+  const totalTokens = item.tokenBreakdown?.totalTokens
+  if (item.totalAmount === null || !totalTokens || totalTokens <= 0) return null
+  return (item.totalAmount / totalTokens) * 1_000_000
 }
 
 function formatRankingColumnValue(
@@ -2183,8 +2332,10 @@ function formatRankingColumnValue(
   if (column === 'costPerMillionTokens')
     return formatAmountUnit(t, getCostPerMillionTokens(item), item.currency) ?? '—'
   if (column === 'successRate') return formatPercent(item.successRate)
-  if (column === 'cacheRate') return item.cacheRate === null ? '—' : formatPercent(item.cacheRate)
-  if (column === 'tokens') return formatNumber(item.totalTokens)
+  if (column === 'cacheRate')
+    return !item.tokenBreakdown || item.cacheRate === null ? '—' : formatPercent(item.cacheRate)
+  if (column === 'tokens')
+    return item.tokenBreakdown ? formatNumber(item.tokenBreakdown.totalTokens) : '—'
   if (column === 'avgLatency') return formatDuration(item.avgLatencyMs) ?? '—'
 
   return '—'
@@ -3166,11 +3317,20 @@ export function RequestRecordsTable({
                     {isColumnVisible('tokens') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
-                          {formatCompactNumber(record.tokens.totalTokens)}
+                          {record.tokenBreakdown
+                            ? formatCompactNumber(record.tokenBreakdown.totalTokens)
+                            : t('usageLogsPage.status.notAvailable')}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          {formatCompactNumber(record.tokens.inputTokens)} /{' '}
-                          {formatCompactNumber(record.tokens.outputTokens)}
+                          {record.tokenBreakdown?.quality === 'inconsistent'
+                            ? t('usageLogsPage.tokenAccounting.inconsistentShort')
+                            : record.tokenBreakdown
+                              ? `${formatCompactNumber(
+                                  record.tokenBreakdown.input.totalTokens,
+                                )} / ${formatCompactNumber(
+                                  record.tokenBreakdown.output.totalTokens,
+                                )}`
+                              : t('usageLogsPage.tokenAccounting.unavailableShort')}
                         </p>
                       </TableCell>
                     ) : null}
@@ -3830,6 +3990,124 @@ function QuotaWindowProgress({ window }: { window: UsageQuotaWindow }) {
   )
 }
 
+function RequestTokenBreakdown({ record }: { record: UsageRecord }) {
+  const { t } = useTranslation()
+  const breakdown = record.tokenBreakdown
+  const legacyTokenFields = [
+    ['input', record.tokens.inputTokens],
+    ['output', record.tokens.outputTokens],
+    ['reasoning', record.tokens.reasoningTokens],
+    ['cached', record.tokens.cachedTokens],
+    ['cacheRead', record.tokens.cacheReadTokens],
+    ['cacheCreate', record.tokens.cacheCreationTokens],
+    ['total', record.tokens.totalTokens],
+  ] as const
+
+  return (
+    <div>
+      <h3 className="text-sm font-medium">{t('usageLogsPage.detail.tokens')}</h3>
+      {!breakdown ? (
+        <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning mt-2 flex gap-2 rounded-md border p-3 text-sm leading-6">
+          <AlertTriangle className="mt-1 size-4 shrink-0" aria-hidden="true" />
+          <span>{t('usageLogsPage.tokenAccounting.detailUnavailable')}</span>
+        </div>
+      ) : breakdown.quality === 'inconsistent' ? (
+        <div className="mt-2 grid gap-3">
+          <div className="border-warning/30 bg-warning/10 text-warning-foreground dark:text-warning flex gap-2 rounded-md border p-3 text-sm leading-6">
+            <AlertTriangle className="mt-1 size-4 shrink-0" aria-hidden="true" />
+            <span>{t('usageLogsPage.tokenAccounting.inconsistentDescription')}</span>
+          </div>
+          <DiagnosticDetailField label={t('usageLogsPage.detail.tokenFields.total')}>
+            {formatNumber(breakdown.totalTokens)}
+          </DiagnosticDetailField>
+        </div>
+      ) : (
+        <div className="mt-2 grid gap-4">
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            <DiagnosticDetailField label={t('usageLogsPage.detail.tokenFields.total')}>
+              {formatNumber(breakdown.totalTokens)}
+            </DiagnosticDetailField>
+            <DiagnosticDetailField label={t('usageLogsPage.detail.tokenFields.quality')}>
+              {t(`usageLogsPage.tokenAccounting.quality.${breakdown.quality}`)}
+            </DiagnosticDetailField>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="min-w-0">
+              <h4 className="text-muted-foreground text-xs font-semibold">
+                {t('usageLogsPage.detail.tokenGroups.input')}
+              </h4>
+              <div className="mt-2 grid min-w-0 grid-cols-1 gap-2">
+                {[
+                  ['input', breakdown.input.totalTokens],
+                  ['uncachedInput', breakdown.input.uncachedTokens],
+                  ['cacheRead', breakdown.input.cacheReadTokens],
+                  ['cacheWrite', breakdown.input.cacheWriteTokens],
+                ].map(([key, value]) => (
+                  <DiagnosticDetailField
+                    key={key}
+                    label={t(`usageLogsPage.detail.tokenFields.${key}`)}
+                  >
+                    {formatNumber(Number(value))}
+                  </DiagnosticDetailField>
+                ))}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h4 className="text-muted-foreground text-xs font-semibold">
+                {t('usageLogsPage.detail.tokenGroups.output')}
+              </h4>
+              <div className="mt-2 grid min-w-0 grid-cols-1 gap-2">
+                {[
+                  ['output', breakdown.output.totalTokens],
+                  ['nonReasoningOutput', breakdown.output.nonReasoningTokens],
+                  ['reasoning', breakdown.output.reasoningTokens],
+                ].map(([key, value]) => (
+                  <DiagnosticDetailField
+                    key={key}
+                    label={t(`usageLogsPage.detail.tokenFields.${key}`)}
+                  >
+                    {formatNumber(Number(value))}
+                  </DiagnosticDetailField>
+                ))}
+              </div>
+            </div>
+          </div>
+          {breakdown.unclassifiedTokens > 0 ? (
+            <DiagnosticDetailField label={t('usageLogsPage.detail.tokenFields.unclassified')}>
+              {formatNumber(breakdown.unclassifiedTokens)}
+            </DiagnosticDetailField>
+          ) : null}
+        </div>
+      )}
+
+      <Collapsible className="mt-3">
+        <CollapsibleTrigger className="group text-muted-foreground focus-visible:ring-ring/50 flex items-center gap-1.5 rounded-sm text-xs font-medium outline-none focus-visible:ring-[3px]">
+          {t('usageLogsPage.detail.technicalTokenCounters')}
+          <ChevronDown
+            className="size-3.5 transition-transform group-data-[state=open]:rotate-180"
+            aria-hidden="true"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <p className="text-muted-foreground mb-2 text-xs leading-5">
+            {t('usageLogsPage.detail.technicalTokenCountersDescription')}
+          </p>
+          <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+            {legacyTokenFields.map(([key, value]) => (
+              <DiagnosticDetailField
+                key={key}
+                label={t(`usageLogsPage.detail.legacyTokenFields.${key}`)}
+              >
+                {formatNumber(value)}
+              </DiagnosticDetailField>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  )
+}
+
 export function RequestDetailSheet({
   detail,
   pending,
@@ -3982,26 +4260,7 @@ export function RequestDetailSheet({
                 </DiagnosticDetailField>
               </div>
 
-              <div>
-                <h3 className="text-sm font-medium">{t('usageLogsPage.detail.tokens')}</h3>
-                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
-                  {[
-                    ['input', record.tokens.inputTokens],
-                    ['output', record.tokens.outputTokens],
-                    ['reasoning', record.tokens.reasoningTokens],
-                    ['cacheRead', record.tokens.cacheReadTokens],
-                    ['cacheCreate', record.tokens.cacheCreationTokens],
-                    ['total', record.tokens.totalTokens],
-                  ].map(([key, value]) => (
-                    <DiagnosticDetailField
-                      key={key}
-                      label={t(`usageLogsPage.detail.tokenFields.${key}`)}
-                    >
-                      {formatNumber(Number(value))}
-                    </DiagnosticDetailField>
-                  ))}
-                </div>
-              </div>
+              <RequestTokenBreakdown record={record} />
 
               <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.latency')}>
@@ -4491,14 +4750,25 @@ export function CredentialUsageTable({
                       ) : null}
                       {isColumnVisible('tokens') ? (
                         <TableCell className="text-right">
-                          <p className="font-medium">{formatCompactNumber(row.totalTokens)}</p>
+                          <p className="font-medium">
+                            {row.tokenBreakdown
+                              ? formatCompactNumber(row.tokenBreakdown.totalTokens)
+                              : t('usageLogsPage.status.notAvailable')}
+                          </p>
                           <p className="text-muted-foreground flex items-center justify-end gap-1.5 text-xs">
-                            <MetricDelta delta={row.comparison?.totalTokensDelta} />
-                            <span>
-                              {t('usageLogsPage.credentials.cacheRate', {
-                                value: row.cacheRate === null ? '—' : formatPercent(row.cacheRate),
-                              })}
-                            </span>
+                            {row.tokenBreakdown ? (
+                              <>
+                                <MetricDelta delta={row.comparison?.totalTokensDelta} />
+                                <span>
+                                  {t('usageLogsPage.credentials.cacheRate', {
+                                    value:
+                                      row.cacheRate === null ? '—' : formatPercent(row.cacheRate),
+                                  })}
+                                </span>
+                              </>
+                            ) : (
+                              <span>{t('usageLogsPage.tokenAccounting.unavailableShort')}</span>
+                            )}
                           </p>
                         </TableCell>
                       ) : null}

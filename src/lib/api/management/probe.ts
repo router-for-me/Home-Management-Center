@@ -21,6 +21,7 @@ const capabilityRequests: Record<
     | 'usageProviderHealth'
     | 'usageCredentialHealth'
     | 'usageRealtime'
+    | 'usageTokenBreakdownV2'
     | 'requestEventDetails'
     | 'requestEventExport'
     | 'requestLogIndex'
@@ -86,6 +87,7 @@ const emptyCapabilities: CapabilityMap = {
   usageProviderHealth: false,
   usageCredentialHealth: false,
   usageRealtime: false,
+  usageTokenBreakdownV2: false,
   requestEvents: false,
   requestEventDetails: false,
   requestEventExport: false,
@@ -228,6 +230,13 @@ function readDeclaredUsageRealtimeCapability(configData: unknown) {
   ])
 }
 
+export function readDeclaredUsageTokenBreakdownV2Capability(capabilitiesData: unknown) {
+  if (!isRecord(capabilitiesData)) return false
+  const capabilities = capabilitiesData.capabilities
+  if (!isRecord(capabilities)) return false
+  return readBoolean(capabilities, 'usage_token_breakdown_v2') === true
+}
+
 function readDeclaredCredentialInFlightCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['credential_in_flight', 'credentialInFlight'])
 }
@@ -355,6 +364,14 @@ async function readCapabilitiesPayload(client: AxiosInstance): Promise<UnknownRe
   return isRecord(response.data) ? response.data : null
 }
 
+export async function fetchDeclaredUsageTokenBreakdownV2Capability(
+  session: ManagementSessionInput,
+): Promise<boolean | null> {
+  const client = createManagementClient(session)
+  const payload = await readCapabilitiesPayload(client)
+  return payload === null ? null : readDeclaredUsageTokenBreakdownV2Capability(payload)
+}
+
 function getHeader(response: AxiosResponse, name: string): string | undefined {
   const headers = response.headers as Record<string, unknown>
   const value = headers[name.toLowerCase()]
@@ -474,6 +491,9 @@ export async function probeManagementRuntime(
   const declaredUsageRealtime = capabilitiesPayload
     ? readDeclaredUsageRealtimeCapability(capabilitySource)
     : null
+  const declaredUsageTokenBreakdownV2 = capabilitiesPayload
+    ? readDeclaredUsageTokenBreakdownV2Capability(capabilitiesPayload)
+    : false
   const declaredRequestEvents = capabilitiesPayload
     ? readDeclaredRequestEventsCapability(capabilitySource)
     : null
@@ -562,6 +582,7 @@ export async function probeManagementRuntime(
     usageProviderHealth: declaredUsageProviderHealth ?? false,
     usageCredentialHealth: declaredUsageCredentialHealth ?? false,
     usageRealtime: declaredUsageRealtime ?? false,
+    usageTokenBreakdownV2: declaredUsageTokenBreakdownV2,
     requestEvents: declaredRequestEvents ?? probedCapabilities.requestEvents,
     requestEventDetails:
       declaredRequestEventDetails ?? declaredRequestEvents ?? probedCapabilities.requestEvents,

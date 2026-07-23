@@ -21,6 +21,7 @@ const emptyCapabilities: CapabilityMap = {
   usageProviderHealth: false,
   usageCredentialHealth: false,
   usageRealtime: false,
+  usageTokenBreakdownV2: false,
   requestEvents: false,
   requestEventDetails: false,
   requestEventExport: false,
@@ -50,6 +51,7 @@ type CapabilityState = {
   error: ManagementApiError | null
   setProbing: () => void
   setProbeResult: (result: CapabilityProbeResult) => void
+  setUsageTokenBreakdownV2: (available: boolean) => void
   setError: (error: ManagementApiError) => void
   reset: () => void
 }
@@ -75,6 +77,17 @@ export const useCapabilityStore = create<CapabilityState>((set) => ({
       probedAt: result.probedAt,
       error: null,
     }),
+  setUsageTokenBreakdownV2: (available) =>
+    set((state) =>
+      state.capabilities.usageTokenBreakdownV2 === available
+        ? state
+        : {
+            capabilities: {
+              ...state.capabilities,
+              usageTokenBreakdownV2: available,
+            },
+          },
+    ),
   setError: (error) =>
     set({
       status: 'error',

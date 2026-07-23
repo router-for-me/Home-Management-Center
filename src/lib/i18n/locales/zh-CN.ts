@@ -3665,9 +3665,27 @@ export const zhCN = {
         usageProviderHealth: '供应商健康',
         usageCredentialHealth: '凭证健康',
         usageRealtime: '实时快照',
+        usageTokenBreakdownV2: '规范 Token 明细',
         requestLogIndex: '请求日志文件',
         logs: '运行日志',
         requestErrorLogs: '错误日志',
+      },
+      tokenAccounting: {
+        unavailableTitle: '规范 Token 统计尚未就绪',
+        unavailableDescription:
+          'Home 仍在回填 Token Accounting v2，或尚未声明该能力。页面会隐藏 Token 图表和相关统计，不会复用可能重叠的旧计数器。',
+        unavailableShort: '规范 Token 明细不可用',
+        chartUnavailable: 'Home 声明 Token Accounting v2 就绪后才会展示 Token 趋势。',
+        detailUnavailable: '此请求没有已声明的规范 Token 明细。下方旧计数器仅保留用于技术诊断。',
+        inconsistentTitle: '部分 Token 计数存在矛盾',
+        inconsistentDescription:
+          '后端报告的 Token 计数互相矛盾。页面仅展示权威总量，并隐藏各组成桶。',
+        inconsistentShort: '计数矛盾，仅展示总量',
+        quality: {
+          complete: '完整',
+          unclassified: '未分类',
+          inconsistent: '不一致',
+        },
       },
       unavailable: {
         title: '当前运行时不提供观测接口',
@@ -3846,10 +3864,17 @@ export const zhCN = {
           cost: '消费',
         },
         tokenSeries: {
-          input: '输入',
-          output: '输出',
-          cache: '缓存',
+          uncachedInput: '未缓存输入',
+          cacheRead: '缓存读取',
+          cacheWrite: '缓存写入',
+          nonReasoningOutput: '普通输出',
           reasoning: '推理',
+          unclassified: '未分类',
+        },
+        tooltip: {
+          total: '总量',
+          input: '输入构成',
+          output: '输出构成',
         },
       },
       costBreakdown: {
@@ -3989,6 +4014,9 @@ export const zhCN = {
         requestLogUnavailable: '当前记录没有可下载的请求日志。',
         downloadingRequestLog: '正在下载',
         technicalMetadata: '技术元数据',
+        technicalTokenCounters: '旧版 Token 计数器',
+        technicalTokenCountersDescription:
+          '这些原始计数器可能互相重叠，仅保留用于协议诊断，不能直接相加。',
         requestLogStatuses: {
           local: '本地可下载',
           remote: '可从远程 Home 获取',
@@ -4027,9 +4055,27 @@ export const zhCN = {
           input: '输入',
           output: '输出',
           reasoning: '推理',
+          uncachedInput: '未缓存输入',
           cacheRead: '缓存读取',
           cacheCreate: '缓存写入',
+          cacheWrite: '缓存写入',
+          nonReasoningOutput: '普通输出',
+          unclassified: '未分类',
+          quality: '统计质量',
           total: '总计',
+        },
+        tokenGroups: {
+          input: '输入构成',
+          output: '输出构成',
+        },
+        legacyTokenFields: {
+          input: '原始 input_tokens',
+          output: '原始 output_tokens',
+          reasoning: '原始 reasoning_tokens',
+          cached: '原始 cached_tokens',
+          cacheRead: '原始 cache_read_tokens',
+          cacheCreate: '原始 cache_creation_tokens',
+          total: '原始 total_tokens',
         },
         payloadFields: {
           method: '方法',
