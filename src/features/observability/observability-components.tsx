@@ -58,6 +58,7 @@ import {
 } from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -476,9 +477,9 @@ function SectionHeader({ title, description }: { title: string; description?: st
 }
 
 const usageFilterGridClassName = 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
-const usageTouchControlClassName = 'min-h-10 sm:min-h-8'
-const usageTouchInputClassName = 'min-h-10 sm:h-8 sm:min-h-8'
-const usageTouchButtonClassName = 'min-h-10 sm:min-h-8'
+const usageTouchControlClassName = responsiveCompactControlClassName
+const usageTouchInputClassName = responsiveCompactControlClassName
+const usageTouchButtonClassName = responsiveCompactControlClassName
 const runtimeLogLevelOptions: RuntimeLogLevelFilter[] = [
   'all',
   'trace',
@@ -650,6 +651,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
             <Input
+              size="sm"
               className={usageTouchInputClassName}
               type="date"
               value={filters.customFrom}
@@ -659,6 +661,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
             <Input
+              size="sm"
               className={usageTouchInputClassName}
               type="date"
               value={filters.customTo}
@@ -2962,6 +2965,7 @@ function RequestRecordFiltersToolbar({
           aria-hidden="true"
         />
         <Input
+          size="sm"
           className={cn(usageTouchInputClassName, 'pl-9')}
           value={filters.search}
           disabled={disabled}
@@ -3011,6 +3015,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="numeric"
@@ -3023,6 +3028,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minLatencyMs: event.target.value })}
           />
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="numeric"
@@ -3042,6 +3048,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="decimal"
@@ -3054,6 +3061,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minAmount: event.target.value })}
           />
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="decimal"

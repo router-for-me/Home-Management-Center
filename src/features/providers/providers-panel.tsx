@@ -1575,7 +1575,7 @@ function ProviderFormPanel({
                     aria-hidden="true"
                   />
                   <Input
-                    className="h-9 pr-9 pl-9"
+                    className="pr-9 pl-9"
                     value={form.testModel ?? ''}
                     onChange={(event) => {
                       updateField('testModel', event.target.value)
@@ -1638,7 +1638,7 @@ function ProviderFormPanel({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 sm:shrink-0"
+                  className="sm:shrink-0"
                   disabled={mutating || connectivityState === 'loading'}
                   onClick={() => void handleTestModel()}
                 >
@@ -2396,6 +2396,7 @@ export function ProvidersPanel({
                     aria-hidden="true"
                   />
                   <Input
+                    size="sm"
                     className="pl-9"
                     value={filter}
                     onChange={(event) => setFilter(event.target.value)}

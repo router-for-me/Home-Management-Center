@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   Dialog,
   DialogContent,
@@ -1247,7 +1248,8 @@ function ModelPricesTab({
                 aria-hidden="true"
               />
               <Input
-                className="min-h-10 pl-9 sm:h-8 sm:min-h-8"
+                size="sm"
+                className={cn(responsiveCompactControlClassName, 'pl-9')}
                 type="search"
                 value={priceSearch}
                 placeholder={t('billingPage.prices.filters.search')}
@@ -1259,7 +1261,7 @@ function ModelPricesTab({
               onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.tier')}
               >
@@ -1278,7 +1280,7 @@ function ModelPricesTab({
               onValueChange={(value) => setSourceFilter(value as typeof sourceFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.source')}
               >
@@ -1296,7 +1298,7 @@ function ModelPricesTab({
               onValueChange={(value) => setStateFilter(value as typeof stateFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.state')}
               >
@@ -1312,7 +1314,7 @@ function ModelPricesTab({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 justify-center sm:ml-auto sm:min-h-8"
+              className={cn(responsiveCompactControlClassName, 'justify-center sm:ml-auto')}
               disabled={!hasPriceFilters}
               onClick={clearPriceFilters}
             >

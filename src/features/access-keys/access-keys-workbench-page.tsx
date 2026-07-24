@@ -1032,6 +1032,7 @@ export function AccessKeysWorkbenchPage() {
                   aria-hidden="true"
                 />
                 <Input
+                  size="sm"
                   className="pl-9"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}

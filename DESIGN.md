@@ -125,6 +125,7 @@ Control sizing:
 - Input, select trigger, button, and toggle-group item sizes with the same name must resolve to the same visual height.
 - Choose one control size for each horizontal toolbar row. Feature code may set width and spacing, but should not override component height with local `h-*` classes.
 - Responsive filter layouts should reflow or wrap controls instead of changing their height independently at a breakpoint.
+- Compact table toolbars may opt into the shared responsive compact modifier so every `sm` control in the row grows to 40px on narrow screens and returns to 32px from the `sm` breakpoint onward.
 
 Shell:
 
