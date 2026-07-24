@@ -1,21 +1,28 @@
+import { useEffect, useMemo } from 'react'
+
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type CredentialInFlightDetail,
   type CredentialInFlightRequest,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthStartInput,
   type CredentialResource,
   type VertexImportInput,
   deleteCredentialResource,
   downloadCredentialResource,
+  fetchCredentialConcurrencyPolicy,
+  fetchCredentialConcurrencySnapshot,
   fetchCredentialInFlightDetail,
   fetchCredentialInFlightSummary,
   fetchCredentialModels,
   fetchCredentialOAuthStatus,
   fetchCredentialSnapshot,
+  getCredentialBindingAuthId,
   getCredentialOAuthProviders,
   importVertexCredential,
+  matchesCredentialBackendError,
   startCredentialOAuth,
   submitCredentialOAuthCallback,
   toCredentialApiError,
@@ -41,6 +48,49 @@ function useManagementSession() {
     connected: status === 'connected',
     checking: status === 'checking',
   }
+}
+
+function credentialConcurrencyPolicyQueryKey(
+  baseUrl: string,
+  connectedAt: string | null,
+  credentialId?: string | null,
+) {
+  return [
+    'management-credential-concurrency-policy',
+    baseUrl,
+    connectedAt,
+    ...(credentialId ? [credentialId] : []),
+  ]
+}
+
+export function shouldResetCredentialInFlightPagination(
+  error: unknown,
+  hasAccumulatedCursor: boolean,
+) {
+  return (
+    hasAccumulatedCursor &&
+    matchesCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired')
+  )
+}
+
+export function shouldRetryCredentialInFlightPagination(failureCount: number, error: unknown) {
+  if (failureCount >= 3 || error === null || typeof error !== 'object') return false
+  const record = error as Record<string, unknown>
+  if (
+    matchesCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired') ||
+    matchesCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_store_failed') ||
+    matchesCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_load_failed')
+  ) {
+    return false
+  }
+  const status = typeof record.status === 'number' ? record.status : null
+  if (status !== null && status >= 400 && status < 500) return false
+  if (record.code === 'network') return true
+  return status !== null && status >= 500 && status < 600 && record.retryable === true
+}
+
+export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetail[]) {
+  return pages.flatMap((page) => page.requests)
 }
 
 export function useCredentialWorkbench() {
@@ -80,10 +130,29 @@ export function useCredentialWorkbench() {
     refetchIntervalInBackground: false,
   })
 
+  const concurrencyQueryKey = ['management-credential-concurrency', session.baseUrl, connectedAt]
+  const concurrencyQuery = useQuery({
+    queryKey: concurrencyQueryKey,
+    enabled: connected && Boolean(session.managementKey) && credentialConcurrencyLimits,
+    queryFn: async () => {
+      try {
+        return await fetchCredentialConcurrencySnapshot(session)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchInterval: credentialConcurrencyLimits ? 5_000 : false,
+    refetchIntervalInBackground: false,
+  })
+
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: inFlightQueryKey }),
+      queryClient.invalidateQueries({ queryKey: concurrencyQueryKey }),
+      queryClient.invalidateQueries({
+        queryKey: credentialConcurrencyPolicyQueryKey(session.baseUrl, connectedAt),
+      }),
     ])
   }
 
@@ -110,7 +179,7 @@ export function useCredentialWorkbench() {
       input,
     }: {
       resource: CredentialResource
-      input: CredentialMetadataInput
+      input: CredentialMetadataPatch
     }) => {
       try {
         return await updateCredentialMetadata(session, resource, input)
@@ -119,6 +188,18 @@ export function useCredentialWorkbench() {
       }
     },
     onSuccess: invalidate,
+    onError: (error, { resource }) => {
+      if (!matchesCredentialBackendError(error, 409, 'concurrency_policy_version_conflict')) {
+        return
+      }
+      void queryClient.invalidateQueries({
+        queryKey: credentialConcurrencyPolicyQueryKey(
+          session.baseUrl,
+          connectedAt,
+          getCredentialBindingAuthId(resource),
+        ),
+      })
+    },
   })
 
   const deleteMutation = useMutation({
@@ -236,6 +317,11 @@ export function useCredentialWorkbench() {
     isError: query.isError,
     errorMessage: query.error?.message ?? null,
     inFlightSnapshot: inFlightQuery.data ?? null,
+    inFlightPending: inFlightQuery.isPending,
+    concurrencySnapshot: concurrencyQuery.data ?? null,
+    concurrencyPending: concurrencyQuery.isPending,
+    concurrencyStale: concurrencyQuery.isError && concurrencyQuery.data !== undefined,
+    concurrencyErrorMessage: concurrencyQuery.error?.message ?? null,
     inFlightStale: inFlightQuery.isError && inFlightQuery.data !== undefined,
     inFlightErrorMessage: inFlightQuery.error?.message ?? null,
     refetch: () => {
@@ -280,60 +366,128 @@ export function useCredentialWorkbench() {
 }
 
 export function useCredentialInFlightDetail(credentialId: string | null, enabled: boolean) {
+  const queryClient = useQueryClient()
   const { session, connected, connectedAt } = useManagementSession()
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
-  const query = useInfiniteQuery({
-    queryKey: [
+  const credentialInFlightSnapshotCursor = useCapabilityStore(
+    (state) => state.capabilities.credentialInFlightSnapshotCursor,
+  )
+  const queryKey = useMemo(
+    () => [
       'management-credential-in-flight-detail',
       session.baseUrl,
       connectedAt,
       credentialId,
+      credentialInFlightSnapshotCursor,
     ],
+    [connectedAt, credentialId, credentialInFlightSnapshotCursor, session.baseUrl],
+  )
+  const query = useInfiniteQuery({
+    queryKey,
     enabled:
       connected &&
       Boolean(session.managementKey) &&
       credentialInFlight &&
       enabled &&
       Boolean(credentialId),
-    initialPageParam: null as string | null,
+    initialPageParam: {
+      offset: 0,
+      snapshotCursor: null as string | null,
+      expectedTotal: null as number | null,
+      expectedSnapshotExpiresAt: null as string | null,
+    },
     queryFn: async ({ pageParam }) => {
       try {
-        return await fetchCredentialInFlightDetail(session, credentialId ?? '', pageParam)
+        return await fetchCredentialInFlightDetail(session, credentialId ?? '', {
+          offset: pageParam.offset,
+          stableSnapshot: credentialInFlightSnapshotCursor && pageParam.snapshotCursor === null,
+          snapshotCursor: pageParam.snapshotCursor,
+          expectedTotal: pageParam.expectedTotal,
+          expectedSnapshotExpiresAt: pageParam.expectedSnapshotExpiresAt,
+        })
       } catch (error) {
         throw toCredentialApiError(error)
       }
     },
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    refetchInterval: enabled && credentialInFlight ? 5_000 : false,
+    getNextPageParam: (lastPage) =>
+      lastPage.nextOffset === null
+        ? undefined
+        : {
+            offset: lastPage.nextOffset,
+            snapshotCursor: lastPage.snapshotCursor,
+            expectedTotal: lastPage.total,
+            expectedSnapshotExpiresAt: lastPage.snapshotExpiresAt,
+          },
+    retry: (failureCount, error) => shouldRetryCredentialInFlightPagination(failureCount, error),
+    refetchInterval: (currentQuery) => {
+      if (!enabled || !credentialInFlight) return false
+      const pages = currentQuery.state.data?.pages ?? []
+      return pages.some((page) => page.snapshotCursor !== null) ? false : 5_000
+    },
     refetchIntervalInBackground: false,
   })
 
   const pages = query.data?.pages ?? []
+  const cursorExpired = shouldResetCredentialInFlightPagination(
+    query.error,
+    pages.some((page) => page.snapshotCursor !== null),
+  )
+  useEffect(() => {
+    if (!cursorExpired) return
+    void queryClient.resetQueries({ queryKey, exact: true })
+  }, [cursorExpired, queryClient, queryKey])
+
   const latestPage = pages.at(-1) ?? null
-  const requests: CredentialInFlightRequest[] = []
-  const seenLeaseIds = new Set<string>()
-  for (const page of pages) {
-    for (const request of page.requests) {
-      if (seenLeaseIds.has(request.leaseId)) continue
-      seenLeaseIds.add(request.leaseId)
-      requests.push(request)
-    }
-  }
+  const requests: CredentialInFlightRequest[] = flattenCredentialInFlightRequests(pages)
   return {
     detail:
       pages.length > 0 && latestPage
         ? {
-            observedAt: latestPage.observedAt,
-            credential: latestPage.credential,
+            ...latestPage,
             requests,
+            paginationLimited: pages.some((page) => page.paginationLimited),
           }
         : null,
     isPending: query.isPending,
     isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
-    isStale: query.isError && query.data !== undefined,
-    errorMessage: query.error?.message ?? null,
+    isStale: !cursorExpired && query.isError && query.data !== undefined,
+    errorMessage: cursorExpired ? null : (query.error?.message ?? null),
     hasNextPage: query.hasNextPage,
     fetchNextPage: query.fetchNextPage,
+    refresh: () => queryClient.resetQueries({ queryKey, exact: true }),
+  }
+}
+
+export function useCredentialConcurrencyPolicy(credentialId: string | null, enabled: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  const credentialConcurrencyLimits = useCapabilityStore(
+    (state) => state.capabilities.credentialConcurrencyLimits,
+  )
+  const query = useQuery({
+    queryKey: credentialConcurrencyPolicyQueryKey(session.baseUrl, connectedAt, credentialId),
+    enabled:
+      connected &&
+      Boolean(session.managementKey) &&
+      credentialConcurrencyLimits &&
+      enabled &&
+      Boolean(credentialId),
+    queryFn: async () => {
+      try {
+        return await fetchCredentialConcurrencyPolicy(session, credentialId ?? '')
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  })
+
+  return {
+    policy: query.data ?? null,
+    isPending: query.isPending,
+    isFetching: query.isFetching,
+    errorMessage: query.error?.message ?? null,
+    refetch: query.refetch,
   }
 }

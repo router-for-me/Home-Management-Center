@@ -78,7 +78,7 @@ function decodeCredentialDescriptor(value: unknown): PublicKeyCredentialDescript
     ...record,
     id: id ? base64UrlToArrayBuffer(id) : new ArrayBuffer(0),
     type: 'public-key',
-  } as PublicKeyCredentialDescriptor
+  }
 }
 
 function decodeCreationOptions(value: UnknownRecord): PublicKeyCredentialCreationOptions {
@@ -119,7 +119,7 @@ function decodeRequestOptions(value: UnknownRecord): PublicKeyCredentialRequestO
     allowCredentials: Array.isArray(value.allowCredentials)
       ? value.allowCredentials.map(decodeCredentialDescriptor)
       : undefined,
-  } as PublicKeyCredentialRequestOptions
+  }
 }
 
 function credentialToJSON(credential: PublicKeyCredential) {

@@ -1772,8 +1772,6 @@ export const en = {
     upstreamPage: {
       header: {
         title: 'Upstream',
-        description:
-          'Manage account credentials and model providers in one place. Edit enablement, Proxy URL, WebSocket, and priority directly in the table; secondary fields like Prefix live in the detail drawer. Quota is embedded as a first-class column (including Kimi / Grok).',
       },
       tabs: {
         label: 'Upstream sections',
@@ -1868,6 +1866,9 @@ export const en = {
           no: 'No',
         },
         window: {
+          labels: {
+            usage: 'Usage',
+          },
           period: {
             day: 'Daily',
             week: 'Weekly',
@@ -1893,7 +1894,6 @@ export const en = {
         noWindows: 'No quota windows',
       },
       quotaChips: {
-        all: 'All quota',
         attention: 'Attention',
         ws: 'WS only',
       },
@@ -1908,17 +1908,12 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyHint:
-            'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
           priorityPlaceholder: 'e.g. 10 or -1',
-          priorityHint: 'Integers only; higher values win. Editable inline in the table too.',
-          prefixHint: 'Rarely used; maintained here instead of a table column.',
+          priorityHint: 'Integers only; higher values have higher scheduling priority.',
           secondarySection: 'Less common',
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
-          enableDescription:
-            'A disabled credential does not serve model requests and can be re-enabled anytime.',
         },
         danger: {
           downloadTitle: 'Download credential JSON',
@@ -1952,7 +1947,7 @@ export const en = {
       },
       actions: {
         addCredential: 'Add credential',
-        detail: 'Details',
+        detail: 'View',
         quota: 'Quota',
         models: 'Models',
         upload: 'Upload JSON',
@@ -1965,10 +1960,11 @@ export const en = {
       },
       filters: {
         status: 'Status',
-        source: 'Source',
         provider: 'Model provider',
-        allSources: 'All sources',
         allProviders: 'All model providers',
+        quickFilters: 'Quick filters',
+        resultCount: 'Showing {{visible}} of {{total}} credentials',
+        clear: 'Clear filters',
       },
       statusFilters: {
         all: 'All credentials',
@@ -2096,24 +2092,23 @@ export const en = {
       },
       list: {
         title: 'Credential resources',
-        filterPlaceholder: 'Filter credentials',
-        empty: 'No credentials match the current filters.',
+        filterPlaceholder: 'Search credentials',
+        emptyTitle: 'No credentials yet',
+        emptyDescription: 'Add or import a credential to manage it here.',
+        filteredEmptyTitle: 'No matching credentials',
+        filteredEmptyDescription: 'Adjust the current filters or clear them all.',
         credential: 'Credential / account',
         quota: 'Quota',
         provider: 'Model provider',
         inFlight: 'In flight',
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: 'Priority',
         actions: 'Actions',
       },
       inline: {
         saved: 'Saved.',
-        priorityInvalid: 'Priority must be an integer.',
-        proxyUrlLabel: 'Edit Proxy URL',
-        priorityLabel: 'Edit priority',
         websocketsLabel: 'Toggle WebSocket',
         websocketsUnsupported: 'WebSocket is not supported for this provider',
         notApplicable: 'n/a',
@@ -2151,10 +2146,6 @@ export const en = {
         modelsTitle: 'Available models',
         modelsDescription: 'Query the runtime for models available to this credential.',
         modelCount: '{{count}} models loaded.',
-        enableDescription:
-          'This credential is disabled. Enable it to let it participate in model requests again.',
-        disableDescription:
-          'Disable this credential to remove it from model requests. You can re-enable it later.',
         fields: {
           provider: 'Model provider',
           type: 'Type',
@@ -2179,6 +2170,7 @@ export const en = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Priority',
+        priorityInvalid: 'Priority must be an integer.',
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
@@ -2186,6 +2178,9 @@ export const en = {
       },
       concurrency: {
         current: 'Current',
+        observed: 'Observed',
+        observedCompact: '{{count}} observed',
+        admitted: 'Admitted',
         limit: 'Limit',
         remaining: 'Available slots',
         unlimited: 'Unlimited',
@@ -2194,17 +2189,36 @@ export const en = {
         modelsSaturated: 'Saturated model limits: {{count}}.',
         stale: 'In-flight data could not be refreshed. Showing the last successful result.',
         summaryLoadFailed: 'Could not load in-flight data: {{message}}',
+        observationLoadFailed: 'Observation data is unavailable: {{message}}',
+        limiterLoadFailed: 'Authoritative limiter state is unavailable: {{message}}',
+        observationIncomplete:
+          'The current CPA snapshot coverage is incomplete. Observed totals may be partial.',
+        detailsTruncated:
+          'Request details were truncated by Home. Aggregate in-flight totals remain available.',
+        paginationLimited:
+          'Stable snapshot pagination is unavailable for this view. Only the first {{count}} in-flight requests are shown.',
+        paginationPinned:
+          'Request pages are pinned to one stable snapshot. Refresh to load current data.',
+        paginationExpired:
+          'This stable request snapshot has expired. Refresh before loading more requests.',
+        refreshSnapshot: 'Refresh requests',
+        notFullyEnforced:
+          'Some observed work is not accounted for by the authoritative limiter yet.',
+        enforcementUnknown:
+          'Home cannot currently confirm that this policy is fully enforced across active CPA lifetimes.',
         unavailable: 'In-flight data is unavailable.',
+        observationUnsupported:
+          'In-flight snapshots are not enabled. Authoritative limiter state and policies remain available.',
         modelsTitle: 'Model concurrency',
         modelsDescription:
-          'Counts reflect active Home leases by effective upstream model. Available slots also respect the credential-wide limit.',
+          'Observed counts come from complete CPA snapshots. Admitted counts and available slots come from the authoritative limiter.',
         noModels: 'No model concurrency records.',
         requestsTitle: 'Open requests',
         requestsDescription:
-          'Shows tracked request identity and runtime metadata only, never request payloads. Fail-open dispatches without a lease are not included.',
+          'Shows only request ID, normalized upstream model, request kind, and start time from the latest complete snapshot. CPA identity and request payloads are never exposed.',
         requestId: 'Request ID',
         model: 'Model',
-        cpaNode: 'CPA node',
+        requestKind: 'Kind',
         startedAt: 'Started',
         age: 'Age',
         ageSeconds: '{{count}}s',
@@ -2218,8 +2232,6 @@ export const en = {
         noRequests: 'No requests are currently in flight.',
         loadMore: 'Load more',
         editTitle: 'Concurrency limits',
-        editDescription:
-          'Empty or 0 means unlimited. Model limits match the effective upstream model ID; thinking suffix variants share the base model limit. Limit changes never terminate existing requests. Upgrade every CPA node for dispatch leases before enabling limits.',
         totalLimit: 'Credential-wide limit',
         modelLimits: 'Model limits',
         addModel: 'Add model',
@@ -2230,12 +2242,16 @@ export const en = {
         removeModelAtIndex: 'Remove model limit row {{index}}',
         noModelLimits: 'No model limits configured.',
         contractInvalid:
-          'Home reports concurrency editing support, but /auth-files returned invalid or missing limit fields. Existing limits will not be changed.',
+          'Home reports concurrency policy support, but the current policy could not be loaded safely. Existing limits will not be changed.',
+        policyLoadFailed: 'Could not load the current concurrency policy: {{message}}',
+        versionConflict:
+          'The concurrency policy changed after it was loaded. Review the refreshed values and save again.',
         lowerLimitWarning:
           'The new limit is below current in-flight usage. Existing requests continue; new dispatches that exceed the limit are blocked until usage falls below it.',
         validation: {
           totalLimit: 'The credential-wide limit must be a non-negative integer.',
           modelRequired: 'Enter a model ID or remove the row.',
+          modelInvalid: 'Enter a valid model ID no longer than 256 UTF-8 bytes.',
           modelLimit: 'The limit for {{model}} must be a non-negative integer.',
           duplicateModel: 'Model {{model}} is configured more than once.',
         },
@@ -2247,6 +2263,7 @@ export const en = {
       toast: {
         downloaded: 'Credential downloaded.',
         updated: 'Credential metadata updated.',
+        noChanges: 'No changes to save.',
         deleted: 'Credential deleted.',
         bulkEnabled: '{{count}} credentials enabled.',
         bulkDisabled: '{{count}} credentials disabled.',
@@ -4032,6 +4049,12 @@ export const en = {
         title: 'Token usage over time',
         emptyTitle: 'No trend data',
         unavailable: 'No trend data is available for this range.',
+        accessibility: {
+          keyboardInstructions:
+            'Use the Left and Right Arrow keys to inspect each time bucket. Press Home or End to jump to the first or last bucket.',
+          dataTableCaption: 'Token usage trend data',
+          time: 'Time',
+        },
         overlay: {
           requests: 'Requests',
           cost: 'Spend',

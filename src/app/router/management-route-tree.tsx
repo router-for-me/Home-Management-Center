@@ -12,10 +12,10 @@ import { LogsWorkbenchPage } from '@/features/logs/logs-workbench-page'
 import { PluginsWorkbenchPage } from '@/features/plugins/plugins-workbench-page'
 import { RequestEventsPage } from '@/features/request-events/request-events-page'
 import { SystemNodesWorkbenchPage } from '@/features/system-nodes/system-nodes-workbench-page'
-import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
-import { UsersWorkbenchPage } from '@/features/users/users-workbench-page'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
 import { UpstreamWorkbenchPage } from '@/features/upstream/upstream-workbench-page'
+import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
+import { UsersWorkbenchPage } from '@/features/users/users-workbench-page'
 
 const rootRoute = createRootRoute({
   component: ManagementRootRoute,

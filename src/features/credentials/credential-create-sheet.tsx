@@ -37,10 +37,7 @@ import {
 } from '@/lib/api/management/credentials'
 import { cn } from '@/lib/utils'
 
-import {
-  type CredentialUploadItem,
-  isCredentialUploadRetryable,
-} from './credential-upload'
+import { type CredentialUploadItem, isCredentialUploadRetryable } from './credential-upload'
 
 export type CreateCredentialMode = 'oauth' | 'upload' | 'vertex'
 

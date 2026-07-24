@@ -9,8 +9,6 @@ export type UpstreamQuotaCellState =
   | { kind: 'not-collected' }
   | { kind: 'entry'; entry: UpstreamQuotaEntry }
 
-export type UpstreamQuotaView = 'all' | 'attention' | 'ws'
-
 export type AntigravityQuotaGroupId = 'gemini' | 'third-party'
 
 export type AntigravityQuotaGroup = {
@@ -18,7 +16,7 @@ export type AntigravityQuotaGroup = {
   windows: QuotaWindow[]
 }
 
-export type AntigravityQuotaPresentation =
+type AntigravityQuotaPresentation =
   | { kind: 'windows'; groups: AntigravityQuotaGroup[] }
   | { kind: 'collecting'; groups: [] }
   | { kind: 'failed'; groups: [] }
@@ -35,7 +33,7 @@ type UpstreamQuotaCollectionBaselineEntry = {
   lastAttemptAt: string | null
 }
 
-export const xaiOnDemandWindowId = 'xai-on-demand'
+const xaiOnDemandWindowId = 'xai-on-demand'
 
 const antigravityQuotaGroupOrder: AntigravityQuotaGroupId[] = ['gemini', 'third-party']
 

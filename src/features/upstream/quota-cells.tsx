@@ -116,7 +116,7 @@ export function InlineWindowBar({ window, label }: { window: QuotaWindow; label?
     t,
     i18n.resolvedLanguage ?? i18n.language,
   )
-  const identityLabel = label ? null : getUpstreamQuotaWindowIdentityLabel(window)
+  const identityLabel = label ? null : getUpstreamQuotaWindowIdentityLabel(window, t)
   const displayLabel = label ?? identityLabel ?? periodLabel
   const ariaLabel = identityLabel ? `${identityLabel}, ${periodLabel}` : displayLabel
 

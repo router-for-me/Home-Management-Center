@@ -1,6 +1,6 @@
 type UnknownRecord = Record<string, unknown>
 
-export type ManagementRoutingStrategy = 'round-robin' | 'fill-first' | 'unknown'
+type ManagementRoutingStrategy = 'round-robin' | 'fill-first' | 'unknown'
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)

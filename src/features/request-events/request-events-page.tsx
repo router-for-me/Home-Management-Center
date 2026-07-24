@@ -31,6 +31,7 @@ import {
 } from '@/components/shared/table-surface'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -152,9 +153,9 @@ const defaultVisibleColumns: RequestEventColumnKey[] = [
 ]
 
 const actionColumnWidth = 112
-const touchControlClassName = 'min-h-10 sm:min-h-8'
-const touchButtonClassName = 'min-h-10 sm:min-h-8'
-const touchInputClassName = 'min-h-10 sm:h-8 sm:min-h-8'
+const touchControlClassName = responsiveCompactControlClassName
+const touchButtonClassName = responsiveCompactControlClassName
+const touchInputClassName = responsiveCompactControlClassName
 const requestEventFilterGridClassName = 'grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
 const requestEventSearchFields: RequestEventSearchField[] = [
   'requestId',
@@ -532,6 +533,7 @@ function RequestEventsFiltersToolbar({
       {filters.range === 'custom' ? (
         <div className={cn(requestEventFilterGridClassName, 'mt-3 border-t pt-3')}>
           <Input
+            size="sm"
             className={touchInputClassName}
             type="datetime-local"
             value={filters.customFrom}
@@ -540,6 +542,7 @@ function RequestEventsFiltersToolbar({
             onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
           />
           <Input
+            size="sm"
             className={touchInputClassName}
             type="datetime-local"
             value={filters.customTo}
@@ -747,7 +750,8 @@ function NumberRangeInputGroup({
   return (
     <div
       className={cn(
-        'border-input bg-background focus-within:ring-ring flex min-h-10 min-w-0 items-center rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px] sm:h-8 sm:min-h-8',
+        responsiveCompactControlClassName,
+        'border-input bg-background focus-within:ring-ring flex min-w-0 items-center rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
         invalid && 'border-destructive focus-within:ring-destructive/20',
         disabled && 'pointer-events-none opacity-50',
         className,
@@ -757,6 +761,7 @@ function NumberRangeInputGroup({
       aria-invalid={invalid || undefined}
     >
       <Input
+        size="sm"
         className="h-full min-h-0 rounded-r-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
         inputMode="numeric"
@@ -775,6 +780,7 @@ function NumberRangeInputGroup({
         {separatorLabel}
       </span>
       <Input
+        size="sm"
         className="h-full min-h-0 rounded-l-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
         inputMode="numeric"

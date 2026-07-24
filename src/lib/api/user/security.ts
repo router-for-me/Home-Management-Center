@@ -8,7 +8,7 @@ import { type UserSessionInput, createUserClient, toUserApiError } from '@/lib/a
 
 type UnknownRecord = Record<string, unknown>
 
-export type UserTotpSetup = {
+type UserTotpSetup = {
   secret: string
   otpAuthUrl: string
   issuer: string
@@ -23,7 +23,7 @@ export type ChangePasswordInput = {
   newPassword: string
 }
 
-export type ChangePasswordResult = {
+type ChangePasswordResult = {
   session: UserAuthSession | null
   user: UserAccount
 }

@@ -2161,7 +2161,7 @@ function ModelAliasEditor({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="default"
                   className="justify-start lg:justify-center"
                   disabled={disabled}
                   onClick={() => removeAlias(rowIndex)}
@@ -2477,7 +2477,7 @@ function PayloadHeaderRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="default"
                     disabled={disabled}
                     onClick={() => removeHeader(index)}
                   >
@@ -2700,7 +2700,7 @@ function PayloadConditionRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="default"
                     disabled={disabled}
                     onClick={() => removeCondition(index)}
                   >
@@ -2794,7 +2794,7 @@ function PayloadPathListRows({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="default"
                   disabled={disabled}
                   onClick={() => removePath(index)}
                 >
@@ -2957,7 +2957,7 @@ function PayloadModelRow({
         <Button
           type="button"
           variant={advancedExpanded ? 'secondary' : 'outline'}
-          size="sm"
+          size="default"
           className="w-full justify-start"
           disabled={disabled}
           onClick={() => setAdvancedExpanded((expanded) => !expanded)}
@@ -2975,7 +2975,7 @@ function PayloadModelRow({
         <Button
           type="button"
           variant="text"
-          size="sm"
+          size="default"
           disabled={disabled || !canRemove}
           onClick={onRemove}
         >
@@ -3302,7 +3302,7 @@ function PayloadParamRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="default"
                     disabled={disabled}
                     onClick={() => removeParam(index)}
                   >
@@ -3394,7 +3394,7 @@ function PayloadFilterParamRows({
               <Button
                 type="button"
                 variant="text"
-                size="sm"
+                size="default"
                 disabled={disabled}
                 onClick={() => removeParam(index)}
               >

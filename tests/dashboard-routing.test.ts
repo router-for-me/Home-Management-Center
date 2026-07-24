@@ -36,6 +36,7 @@ const capabilities: CapabilityMap = {
   users: true,
   accessGroups: true,
   credentialInFlight: true,
+  credentialInFlightSnapshotCursor: true,
   credentialConcurrencyLimits: true,
 }
 

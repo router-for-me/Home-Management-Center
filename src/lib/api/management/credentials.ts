@@ -1,4 +1,4 @@
-import type { AxiosProgressEvent } from 'axios'
+import type { AxiosProgressEvent, AxiosResponse } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
@@ -16,6 +16,15 @@ export type CredentialMetadataInput = {
   websockets?: boolean
   maxInFlight?: number | null
   maxInFlightByModel?: Record<string, number>
+  concurrencyVersion?: number
+}
+
+export type CredentialMetadataPatch = Partial<CredentialMetadataInput>
+
+export type CredentialMetadataAvailability = {
+  prefix: boolean
+  proxyUrl: boolean
+  websockets: boolean
 }
 
 export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai'
@@ -83,6 +92,7 @@ export type CredentialResource = {
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
+  metadataAvailability: CredentialMetadataAvailability
   maxInFlight: number | null
   maxInFlightByModel: Record<string, number>
   concurrencyFieldsValid: boolean
@@ -125,7 +135,7 @@ type CredentialUploadResponse = {
   name?: string
 }
 
-export type CredentialUploadResult = {
+type CredentialUploadResult = {
   status: string
   uploaded: number
   files: string[]
@@ -145,47 +155,93 @@ type CredentialsSnapshot = {
 
 export type CredentialInFlightModelSummary = {
   model: string
-  inFlight: number
+  observedInFlight: number | null
+  admittedInFlight: number | null
   maxInFlight: number | null
   remaining: number | null
   saturated: boolean
 }
 
+export type CredentialInFlightObservedState = {
+  inFlight: number
+  accounted: number
+  unaccounted: number
+  stale: boolean
+  coverageComplete: boolean
+  aggregatesComplete: boolean
+  detailsTruncated: boolean
+}
+
+export type CredentialConcurrencyEnforcement = 'unknown' | 'false' | 'true'
+
 export type CredentialInFlightSummary = {
   credentialId: string
-  inFlight: number
+  observedInFlight: number | null
+  admittedInFlight: number | null
   maxInFlight: number | null
   remaining: number | null
   totalSaturated: boolean
   saturatedModelCount: number
   models: CredentialInFlightModelSummary[]
+  policyVersion: number | null
+  effectiveAt: string | null
+  observationBarrierRevision: number | null
+  fullyEnforced: CredentialConcurrencyEnforcement
+  observed: CredentialInFlightObservedState | null
 }
 
 export type CredentialInFlightRequest = {
-  leaseId: string
   requestId: string
   credentialId: string
-  provider: string | null
-  requestedModel: string | null
   model: string
-  cpaNodeId: string | null
-  cpaIp: string | null
-  cpaLabel: string | null
+  requestKind: string
   startedAt: string
-  lastRenewedAt: string | null
-  expiresAt: string | null
 }
 
-type CredentialInFlightSnapshot = {
-  observedAt: string
+export type CredentialInFlightObservationMetadata = {
+  observedAt: string | null
+  stale: boolean
+  coverageComplete: boolean
+  aggregatesComplete: boolean
+  protocolCoverageComplete: boolean
+  minimumProcessedBarrierRevision: number | null
+  detailsTruncated: boolean
+}
+
+type CredentialInFlightSnapshot = CredentialInFlightObservationMetadata & {
   items: CredentialInFlightSummary[]
 }
 
-export type CredentialInFlightDetail = {
-  observedAt: string
-  credential: CredentialInFlightSummary
+export type CredentialInFlightDetail = CredentialInFlightObservationMetadata & {
   requests: CredentialInFlightRequest[]
-  nextCursor: string | null
+  total: number | null
+  nextOffset: number | null
+  snapshotCursor: string | null
+  snapshotCursorReadAt: string | null
+  snapshotExpiresAt: string | null
+  snapshotClientExpiresAtMs: number | null
+  paginationLimited: boolean
+}
+
+type CredentialInFlightDetailPageRequest = {
+  offset?: number
+  stableSnapshot?: boolean
+  snapshotCursor?: string | null
+  expectedTotal?: number | null
+  expectedSnapshotExpiresAt?: string | null
+}
+
+type CredentialConcurrencySnapshot = {
+  items: CredentialInFlightSummary[]
+}
+
+export type CredentialConcurrencyPolicy = {
+  credentialId: string
+  maxInFlight: number | null
+  maxInFlightByModel: Record<string, number>
+  version: number
+  effectiveAt: string | null
+  observationBarrierRevision: number
 }
 
 type CredentialOAuthStartResult = {
@@ -273,8 +329,67 @@ function readDateTime(record: UnknownRecord, key: string): string | null {
   return value && Number.isFinite(Date.parse(value)) ? value : null
 }
 
+function hasOwn(record: UnknownRecord, key: string) {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function readNullableDateTime(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: string | null } | { valid: false } {
+  if (!hasOwn(record, key)) return { valid: false }
+  if (record[key] === null) return { valid: true, value: null }
+  const value = readDateTime(record, key)
+  return value ? { valid: true, value } : { valid: false }
+}
+
+function readNullableString(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: string | null } | { valid: false } {
+  if (!hasOwn(record, key)) return { valid: false }
+  if (record[key] === null) return { valid: true, value: null }
+  const value = readString(record, key)
+  return value ? { valid: true, value } : { valid: false }
+}
+
+function estimateSnapshotClientExpiresAtMs(
+  snapshotCursorReadAt: string | null,
+  snapshotExpiresAt: string | null,
+) {
+  if (!snapshotCursorReadAt || !snapshotExpiresAt) return null
+  const serverNowMs = Date.parse(snapshotCursorReadAt)
+  const snapshotExpiresAtMs = Date.parse(snapshotExpiresAt)
+  const remainingMs = snapshotExpiresAtMs - serverNowMs
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return null
+  return Date.now() + remainingMs
+}
+
+export function matchesCredentialBackendError(error: unknown, status: number, backendCode: string) {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'status' in error &&
+    error.status === status &&
+    'backendCode' in error &&
+    String(error.backendCode) === backendCode
+  )
+}
+
+function readOptionalNullableNonNegativeInteger(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: number | null } | { valid: false } {
+  if (!hasOwn(record, key) || record[key] === null) return { valid: true, value: null }
+  return readNullableNonNegativeInteger(record, key)
+}
+
 function invalidCredentialInFlightContract(): never {
   throw new Error('Home returned an invalid credential in-flight response.')
+}
+
+function invalidCredentialConcurrencyContract(): never {
+  throw new Error('Home returned an invalid credential concurrency response.')
 }
 
 function readConcurrencyModelLimits(
@@ -353,6 +468,16 @@ export function supportsCredentialWebsockets(
 function readNestedFlexibleBoolean(record: UnknownRecord, rootKey: string, key: string) {
   const nested = record[rootKey]
   return isRecord(nested) ? readFlexibleBoolean(nested, key) : null
+}
+
+function readNestedString(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) ? readString(nested, key) : null
+}
+
+function hasNestedField(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) && hasOwn(nested, key)
 }
 
 function readCredentialWebsockets(record: UnknownRecord) {
@@ -493,9 +618,26 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     path: readString(record, 'path'),
     priority: readNumber(record, 'priority'),
     note: readString(record, 'note'),
-    prefix: readString(record, 'prefix'),
-    proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
+    prefix: readString(record, 'prefix') ?? readNestedString(record, 'metadata', 'prefix'),
+    proxyUrl:
+      readString(record, 'proxy_url') ??
+      readString(record, 'proxy-url') ??
+      readNestedString(record, 'metadata', 'proxy_url') ??
+      readNestedString(record, 'metadata', 'proxy-url'),
     websockets: readCredentialWebsockets(record),
+    metadataAvailability: {
+      prefix: hasOwn(record, 'prefix') || hasNestedField(record, 'metadata', 'prefix'),
+      proxyUrl:
+        hasOwn(record, 'proxy_url') ||
+        hasOwn(record, 'proxy-url') ||
+        hasNestedField(record, 'metadata', 'proxy_url') ||
+        hasNestedField(record, 'metadata', 'proxy-url'),
+      websockets:
+        hasOwn(record, 'websockets') ||
+        hasOwn(record, 'websocket') ||
+        hasNestedField(record, 'attributes', 'websockets') ||
+        hasNestedField(record, 'metadata', 'websockets'),
+    },
     maxInFlight:
       maxInFlight.valid && maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
     maxInFlightByModel: maxInFlightByModel.valid ? maxInFlightByModel.value : {},
@@ -505,23 +647,282 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
   }
 }
 
-function normalizeCredentialInFlightModelSummary(
+function normalizeCredentialInFlightObservedState(
+  record: UnknownRecord,
+): CredentialInFlightObservedState | null {
+  const inFlight = readNonNegativeInteger(record, 'in_flight')
+  const accounted = readNonNegativeInteger(record, 'accounted')
+  const unaccounted = readNonNegativeInteger(record, 'unaccounted')
+  const stale = readRequiredBoolean(record, 'stale')
+  const coverageComplete = readRequiredBoolean(record, 'coverage_complete')
+  const aggregatesComplete = readRequiredBoolean(record, 'aggregates_complete')
+  const detailsTruncated = readRequiredBoolean(record, 'details_truncated')
+  if (
+    inFlight === null ||
+    accounted === null ||
+    unaccounted === null ||
+    stale === null ||
+    coverageComplete === null ||
+    aggregatesComplete === null ||
+    detailsTruncated === null
+  ) {
+    return null
+  }
+  const classifiedInFlight = accounted + unaccounted
+  if (!Number.isSafeInteger(classifiedInFlight) || classifiedInFlight !== inFlight) return null
+  return {
+    inFlight,
+    accounted,
+    unaccounted,
+    stale,
+    coverageComplete,
+    aggregatesComplete,
+    detailsTruncated,
+  }
+}
+
+function normalizeCredentialInFlightObservationMetadata(
+  record: UnknownRecord,
+): CredentialInFlightObservationMetadata | null {
+  const observedAt = readNullableDateTime(record, 'observed_at')
+  const stale = readRequiredBoolean(record, 'stale')
+  const coverageComplete = readRequiredBoolean(record, 'coverage_complete')
+  const aggregatesComplete = readRequiredBoolean(record, 'aggregates_complete')
+  const protocolCoverageComplete = readRequiredBoolean(record, 'protocol_coverage_complete')
+  const minimumProcessedBarrierRevision = readNullableNonNegativeInteger(
+    record,
+    'minimum_processed_barrier_revision',
+  )
+  const detailsTruncated = readRequiredBoolean(record, 'details_truncated')
+  if (
+    !observedAt.valid ||
+    stale === null ||
+    coverageComplete === null ||
+    aggregatesComplete === null ||
+    protocolCoverageComplete === null ||
+    !minimumProcessedBarrierRevision.valid ||
+    detailsTruncated === null
+  ) {
+    return null
+  }
+  return {
+    observedAt: observedAt.value,
+    stale,
+    coverageComplete,
+    aggregatesComplete,
+    protocolCoverageComplete,
+    minimumProcessedBarrierRevision: minimumProcessedBarrierRevision.value,
+    detailsTruncated,
+  }
+}
+
+function normalizeCredentialObservedModel(
   record: UnknownRecord,
 ): CredentialInFlightModelSummary | null {
   const model = readString(record, 'model')
-  const inFlight = readNonNegativeInteger(record, 'in_flight')
+  const observedInFlight = readNonNegativeInteger(record, 'in_flight')
   const saturated = readRequiredBoolean(record, 'saturated')
   const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
   const remaining = readNullableNonNegativeInteger(record, 'remaining')
-  if (!model || inFlight === null || saturated === null || !maxInFlight.valid || !remaining.valid) {
+  if (
+    !model ||
+    observedInFlight === null ||
+    saturated === null ||
+    !maxInFlight.valid ||
+    !remaining.valid
+  ) {
     return null
   }
   return {
     model,
-    inFlight,
-    maxInFlight: maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
+    observedInFlight,
+    admittedInFlight: null,
+    maxInFlight: maxInFlight.value,
     remaining: remaining.value,
     saturated,
+  }
+}
+
+function normalizeCredentialLimiterModel(
+  record: UnknownRecord,
+): CredentialInFlightModelSummary | null {
+  const model = readString(record, 'model')
+  const maxInFlight = readNonNegativeInteger(record, 'max_in_flight')
+  const admittedInFlight = readNonNegativeInteger(record, 'admitted_in_flight')
+  const remaining = readNonNegativeInteger(record, 'remaining')
+  const saturated = readRequiredBoolean(record, 'saturated')
+  if (
+    !model ||
+    maxInFlight === null ||
+    maxInFlight === 0 ||
+    admittedInFlight === null ||
+    remaining === null ||
+    saturated === null
+  ) {
+    return null
+  }
+  const expectedRemaining = Math.max(0, maxInFlight - admittedInFlight)
+  if (remaining !== expectedRemaining || saturated !== admittedInFlight >= maxInFlight) {
+    return null
+  }
+  return {
+    model,
+    observedInFlight: null,
+    admittedInFlight,
+    maxInFlight,
+    remaining,
+    saturated,
+  }
+}
+
+function readCredentialConcurrencyEnforcement(
+  record: UnknownRecord,
+): CredentialConcurrencyEnforcement | null {
+  const value = readString(record, 'fully_enforced')
+  return value === 'unknown' || value === 'false' || value === 'true' ? value : null
+}
+
+function normalizeCredentialConcurrencyState(
+  record: UnknownRecord,
+): CredentialInFlightSummary | null {
+  const credentialId = readString(record, 'credential_id')
+  const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
+  const admittedInFlight = readNonNegativeInteger(record, 'admitted_in_flight')
+  const remaining = readNullableNonNegativeInteger(record, 'remaining')
+  const totalSaturated = readRequiredBoolean(record, 'total_saturated')
+  const policyVersion = readNonNegativeInteger(record, 'policy_version')
+  const effectiveAt = readDateTime(record, 'effective_at')
+  const observationBarrierRevision = readNonNegativeInteger(record, 'observation_barrier_revision')
+  const fullyEnforced = readCredentialConcurrencyEnforcement(record)
+  const observedValue = record.observed
+  const observed =
+    observedValue === null
+      ? null
+      : isRecord(observedValue)
+        ? normalizeCredentialInFlightObservedState(observedValue)
+        : null
+  if (
+    !credentialId ||
+    !maxInFlight.valid ||
+    admittedInFlight === null ||
+    !remaining.valid ||
+    totalSaturated === null ||
+    policyVersion === null ||
+    !effectiveAt ||
+    observationBarrierRevision === null ||
+    fullyEnforced === null ||
+    !hasOwn(record, 'observed') ||
+    (observedValue !== null && observed === null) ||
+    !Array.isArray(record.models) ||
+    !record.models.every(isRecord)
+  ) {
+    return null
+  }
+  if (
+    (maxInFlight.value === null && remaining.value !== null) ||
+    (maxInFlight.value !== null &&
+      (remaining.value !== Math.max(0, maxInFlight.value - admittedInFlight) ||
+        totalSaturated !== admittedInFlight >= maxInFlight.value))
+  ) {
+    return null
+  }
+  const normalizedModels = record.models.map(normalizeCredentialLimiterModel)
+  if (normalizedModels.some((item) => item === null)) return null
+  const models = normalizedModels as CredentialInFlightModelSummary[]
+  return {
+    credentialId,
+    observedInFlight: observed?.inFlight ?? null,
+    admittedInFlight,
+    maxInFlight: maxInFlight.value,
+    remaining: remaining.value,
+    totalSaturated,
+    saturatedModelCount: models.filter((model) => model.saturated).length,
+    models,
+    policyVersion,
+    effectiveAt,
+    observationBarrierRevision,
+    fullyEnforced,
+    observed,
+  }
+}
+
+function mergeCredentialConcurrencyModels(
+  observedModels: CredentialInFlightModelSummary[],
+  limiterModels: CredentialInFlightModelSummary[],
+) {
+  const models = new Map<string, CredentialInFlightModelSummary>()
+  for (const model of observedModels) {
+    models.set(model.model, {
+      model: model.model,
+      observedInFlight: model.observedInFlight,
+      admittedInFlight: null,
+      maxInFlight: null,
+      remaining: null,
+      saturated: false,
+    })
+  }
+  for (const limiterModel of limiterModels) {
+    const observedModel = models.get(limiterModel.model)
+    models.set(limiterModel.model, {
+      ...limiterModel,
+      observedInFlight: observedModel?.observedInFlight ?? limiterModel.observedInFlight,
+    })
+  }
+  return [...models.values()]
+}
+
+function selectCredentialConcurrencyAuthority(
+  observed: CredentialInFlightSummary | null,
+  limiter: CredentialInFlightSummary | null,
+) {
+  // Snapshot and limiter endpoints poll independently, so their policy projections can briefly
+  // straddle an update. Policy versions are monotonic for one stable credential ID.
+  const observedVersion = observed?.policyVersion ?? null
+  const limiterVersion = limiter?.policyVersion ?? null
+  if (observedVersion === null) return limiterVersion === null ? null : limiter
+  if (limiterVersion === null) return observed
+  return limiterVersion >= observedVersion ? limiter : observed
+}
+
+export function mergeCredentialConcurrencySummary(
+  observed: CredentialInFlightSummary | null,
+  limiter: CredentialInFlightSummary | null,
+): CredentialInFlightSummary | null {
+  if (!observed && !limiter) return null
+  if (observed && limiter && observed.credentialId !== limiter.credentialId) return null
+  const source = observed ?? limiter
+  if (!source) return null
+  const authority = selectCredentialConcurrencyAuthority(observed, limiter)
+  const models =
+    authority === limiter
+      ? mergeCredentialConcurrencyModels(observed?.models ?? [], limiter?.models ?? [])
+      : (observed?.models ?? limiter?.models ?? [])
+  let fullyEnforced: CredentialConcurrencyEnforcement = 'unknown'
+  if (!authority) {
+    fullyEnforced = observed?.fullyEnforced ?? 'unknown'
+  } else if (authority === observed || authority.observed !== null) {
+    fullyEnforced = authority.fullyEnforced
+  } else if (
+    observed?.policyVersion !== null &&
+    observed?.policyVersion === authority.policyVersion &&
+    observed.observationBarrierRevision === authority.observationBarrierRevision
+  ) {
+    fullyEnforced = observed.fullyEnforced
+  }
+  return {
+    credentialId: source.credentialId,
+    observedInFlight: observed?.observedInFlight ?? authority?.observedInFlight ?? null,
+    admittedInFlight: authority?.admittedInFlight ?? null,
+    maxInFlight: authority?.maxInFlight ?? null,
+    remaining: authority?.remaining ?? null,
+    totalSaturated: authority?.totalSaturated ?? false,
+    saturatedModelCount: models.filter((model) => model.saturated).length,
+    models,
+    policyVersion: authority?.policyVersion ?? null,
+    effectiveAt: authority?.effectiveAt ?? null,
+    observationBarrierRevision: authority?.observationBarrierRevision ?? null,
+    fullyEnforced,
+    observed: observed?.observed ?? authority?.observed ?? null,
   }
 }
 
@@ -529,75 +930,172 @@ function normalizeCredentialInFlightSummary(
   record: UnknownRecord,
 ): CredentialInFlightSummary | null {
   const credentialId = readString(record, 'credential_id')
-  const inFlight = readNonNegativeInteger(record, 'in_flight')
+  const observedInFlight = readNonNegativeInteger(record, 'in_flight')
+  const admittedInFlight = readOptionalNullableNonNegativeInteger(record, 'admitted_in_flight')
   const totalSaturated = readRequiredBoolean(record, 'total_saturated')
   const saturatedModelCount = readNonNegativeInteger(record, 'saturated_model_count')
   const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
   const remaining = readNullableNonNegativeInteger(record, 'remaining')
+  const observedValue = record.observed
+  const observed = isRecord(observedValue)
+    ? normalizeCredentialInFlightObservedState(observedValue)
+    : null
+  const limiterValue = record.limiter
+  const limiter = isRecord(limiterValue) ? normalizeCredentialConcurrencyState(limiterValue) : null
   if (
     !credentialId ||
-    inFlight === null ||
+    observedInFlight === null ||
+    !admittedInFlight.valid ||
     totalSaturated === null ||
     saturatedModelCount === null ||
     !maxInFlight.valid ||
     !remaining.valid ||
-    !Array.isArray(record.models)
+    !observed ||
+    !hasOwn(record, 'limiter') ||
+    (limiterValue !== null && limiter === null) ||
+    (limiter && limiter.credentialId !== credentialId) ||
+    !Array.isArray(record.models) ||
+    !record.models.every(isRecord)
   ) {
     return null
   }
-  if (!record.models.every(isRecord)) return null
-  const normalizedModels = record.models.map(normalizeCredentialInFlightModelSummary)
+  if (observed.inFlight !== observedInFlight) return null
+  const normalizedModels = record.models.map(normalizeCredentialObservedModel)
   if (normalizedModels.some((item) => item === null)) return null
   const models = normalizedModels as CredentialInFlightModelSummary[]
-  return {
+  if (!limiter) {
+    if (
+      admittedInFlight.value !== null ||
+      maxInFlight.value !== null ||
+      remaining.value !== null ||
+      totalSaturated ||
+      saturatedModelCount !== 0 ||
+      models.some(
+        (model) => model.maxInFlight !== null || model.remaining !== null || model.saturated,
+      )
+    ) {
+      return null
+    }
+  } else {
+    if (
+      admittedInFlight.value !== limiter.admittedInFlight ||
+      maxInFlight.value !== limiter.maxInFlight ||
+      remaining.value !== limiter.remaining ||
+      totalSaturated !== limiter.totalSaturated ||
+      saturatedModelCount !== limiter.saturatedModelCount
+    ) {
+      return null
+    }
+    const limiterModels = new Map(limiter.models.map((model) => [model.model, model]))
+    for (const model of models) {
+      const limiterModel = limiterModels.get(model.model)
+      if (
+        model.maxInFlight !== (limiterModel?.maxInFlight ?? null) ||
+        model.remaining !== (limiterModel?.remaining ?? null) ||
+        model.saturated !== (limiterModel?.saturated ?? false)
+      ) {
+        return null
+      }
+    }
+  }
+  const summary: CredentialInFlightSummary = {
     credentialId,
-    inFlight,
-    maxInFlight: maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
+    observedInFlight,
+    admittedInFlight: admittedInFlight.value,
+    maxInFlight: maxInFlight.value,
     remaining: remaining.value,
     totalSaturated,
     saturatedModelCount,
     models,
+    policyVersion: null,
+    effectiveAt: null,
+    observationBarrierRevision: null,
+    fullyEnforced: 'unknown',
+    observed,
   }
+  return mergeCredentialConcurrencySummary(summary, limiter)
 }
 
 function normalizeCredentialInFlightRequest(
   record: UnknownRecord,
 ): CredentialInFlightRequest | null {
-  const leaseId = readString(record, 'lease_id')
   const requestId = readString(record, 'request_id')
   const credentialId = readString(record, 'credential_id')
   const model = readString(record, 'model')
+  const requestKind = readString(record, 'request_kind')
   const startedAt = readDateTime(record, 'started_at')
-  if (!leaseId || !requestId || !credentialId || !model || !startedAt) return null
+  const limiterValue = record.limiter
+  const limiter = isRecord(limiterValue) ? normalizeCredentialConcurrencyState(limiterValue) : null
+  if (
+    !requestId ||
+    !credentialId ||
+    !model ||
+    !requestKind ||
+    !startedAt ||
+    !hasOwn(record, 'limiter') ||
+    (limiterValue !== null && limiter === null) ||
+    (limiter && limiter.credentialId !== credentialId)
+  ) {
+    return null
+  }
   return {
-    leaseId,
     requestId,
     credentialId,
-    provider: readString(record, 'provider'),
-    requestedModel: readString(record, 'requested_model'),
     model,
-    cpaNodeId: readString(record, 'cpa_node_id'),
-    cpaIp: readString(record, 'cpa_ip'),
-    cpaLabel: readString(record, 'cpa_label'),
+    requestKind,
     startedAt,
-    lastRenewedAt: readDateTime(record, 'last_renewed_at'),
-    expiresAt: readDateTime(record, 'expires_at'),
   }
 }
 
-function createFieldsPayload(resource: CredentialResource, input: CredentialMetadataInput) {
+function normalizeCredentialConcurrencyPolicy(
+  record: UnknownRecord,
+): CredentialConcurrencyPolicy | null {
+  const credentialId = readString(record, 'credential_id')
+  const maxInFlight = readNullableNonNegativeInteger(record, 'max_in_flight')
+  const maxInFlightByModel = readConcurrencyModelLimits(record, 'max_in_flight_by_model')
+  const version = readNonNegativeInteger(record, 'version')
+  const effectiveAt = readNullableDateTime(record, 'effective_at')
+  const observationBarrierRevision = readNonNegativeInteger(record, 'observation_barrier_revision')
+  if (
+    !credentialId ||
+    !maxInFlight.valid ||
+    !maxInFlightByModel.valid ||
+    version === null ||
+    !effectiveAt.valid ||
+    observationBarrierRevision === null
+  ) {
+    return null
+  }
+  return {
+    credentialId,
+    maxInFlight: maxInFlight.value,
+    maxInFlightByModel: maxInFlightByModel.value,
+    version,
+    effectiveAt: effectiveAt.value,
+    observationBarrierRevision,
+  }
+}
+
+function createFieldsPayload(resource: CredentialResource, input: CredentialMetadataPatch) {
   const payload: UnknownRecord = {
     name: getStatusSelector(resource),
     ...resource.selector,
-    prefix: input.prefix.trim(),
-    proxy_url: input.proxyUrl.trim(),
-    'proxy-url': input.proxyUrl.trim(),
-    note: input.note.trim(),
+  }
+
+  if (typeof input.prefix === 'string') {
+    payload.prefix = input.prefix.trim()
+  }
+  if (typeof input.proxyUrl === 'string') {
+    payload.proxy_url = input.proxyUrl.trim()
+    payload['proxy-url'] = input.proxyUrl.trim()
+  }
+  if (typeof input.note === 'string') {
+    payload.note = input.note.trim()
   }
 
   if (input.priority === null) {
     payload.priority = null
-  } else {
+  } else if (typeof input.priority === 'string') {
     const priority = Number(input.priority)
     if (input.priority.trim() && Number.isFinite(priority)) {
       payload.priority = priority
@@ -613,6 +1111,9 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
   }
   if (input.maxInFlightByModel !== undefined) {
     payload.max_in_flight_by_model = input.maxInFlightByModel
+  }
+  if (input.concurrencyVersion !== undefined) {
+    payload.version = input.concurrencyVersion
   }
 
   return payload
@@ -645,49 +1146,203 @@ export async function fetchCredentialInFlightSummary(
     invalidCredentialInFlightContract()
   }
   const root = response.data
+  const metadata = normalizeCredentialInFlightObservationMetadata(root)
   const rawItems = root.items
-  if (!Array.isArray(rawItems)) invalidCredentialInFlightContract()
-  const observedAt = readDateTime(root, 'observed_at')
-  if (!observedAt) invalidCredentialInFlightContract()
+  if (!metadata || !Array.isArray(rawItems)) invalidCredentialInFlightContract()
   if (!rawItems.every(isRecord)) invalidCredentialInFlightContract()
   const items = rawItems.map(normalizeCredentialInFlightSummary)
   if (items.some((item) => item === null)) invalidCredentialInFlightContract()
   return {
-    observedAt,
+    ...metadata,
     items: items as CredentialInFlightSummary[],
   }
 }
 
+export async function fetchCredentialConcurrencySnapshot(
+  session: ManagementSessionInput,
+): Promise<CredentialConcurrencySnapshot> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/credentials/concurrency')
+  if (!isRecord(response.data) || !Array.isArray(response.data.items)) {
+    invalidCredentialConcurrencyContract()
+  }
+  const rawItems = response.data.items
+  if (!rawItems.every(isRecord)) invalidCredentialConcurrencyContract()
+  const items = rawItems.map(normalizeCredentialConcurrencyState)
+  if (
+    items.some(
+      (item) =>
+        item === null ||
+        item.observed !== null ||
+        item.observedInFlight !== null ||
+        item.fullyEnforced !== 'unknown',
+    )
+  ) {
+    invalidCredentialConcurrencyContract()
+  }
+  return { items: items as CredentialInFlightSummary[] }
+}
+
+export async function fetchCredentialConcurrencyPolicy(
+  session: ManagementSessionInput,
+  credentialId: string,
+): Promise<CredentialConcurrencyPolicy> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>(
+    `/credentials/${encodeURIComponent(credentialId)}/concurrency-policy`,
+  )
+  if (!isRecord(response.data)) invalidCredentialConcurrencyContract()
+  const policy = normalizeCredentialConcurrencyPolicy(response.data)
+  if (!policy || policy.credentialId !== credentialId) invalidCredentialConcurrencyContract()
+  return policy
+}
+
+const credentialInFlightPageSize = 50
+
 export async function fetchCredentialInFlightDetail(
   session: ManagementSessionInput,
   credentialId: string,
-  cursor?: string | null,
+  page: CredentialInFlightDetailPageRequest = {},
 ): Promise<CredentialInFlightDetail> {
+  const offset = page.offset ?? 0
+  const snapshotCursor = page.snapshotCursor?.trim() || null
+  const expectedTotal = page.expectedTotal ?? null
+  const expectedSnapshotExpiresAt = page.expectedSnapshotExpiresAt?.trim() || null
+  const stablePagination = page.stableSnapshot === true || snapshotCursor !== null
+  if (
+    !Number.isSafeInteger(offset) ||
+    offset < 0 ||
+    (expectedTotal !== null && (!Number.isSafeInteger(expectedTotal) || expectedTotal < 0)) ||
+    (expectedSnapshotExpiresAt !== null &&
+      !Number.isFinite(Date.parse(expectedSnapshotExpiresAt))) ||
+    (snapshotCursor === null && (expectedTotal !== null || expectedSnapshotExpiresAt !== null)) ||
+    (snapshotCursor !== null && (expectedTotal === null || expectedSnapshotExpiresAt === null))
+  ) {
+    invalidCredentialInFlightContract()
+  }
   const client = createManagementClient(session)
-  const response = await client.get<unknown>(
-    `/credentials/${encodeURIComponent(credentialId)}/in-flight`,
-    { params: { limit: 50, cursor: cursor || undefined } },
-  )
+  let usesStablePagination = stablePagination
+  let response: AxiosResponse<unknown>
+  try {
+    response = await client.get<unknown>('/credentials/in-flight', {
+      params: {
+        credential_id: credentialId,
+        limit: stablePagination ? credentialInFlightPageSize : credentialInFlightPageSize + 1,
+        offset,
+        ...(page.stableSnapshot === true && snapshotCursor === null
+          ? { stable_snapshot: true }
+          : {}),
+        ...(snapshotCursor ? { snapshot_cursor: snapshotCursor } : {}),
+      },
+    })
+  } catch (error) {
+    const apiError = toManagementApiError(error)
+    if (
+      page.stableSnapshot !== true ||
+      snapshotCursor !== null ||
+      offset !== 0 ||
+      apiError.status !== 500 ||
+      apiError.backendCode !== 'in_flight_snapshot_cursor_store_failed'
+    ) {
+      throw error
+    }
+    response = await client.get<unknown>('/credentials/in-flight', {
+      params: {
+        credential_id: credentialId,
+        limit: credentialInFlightPageSize + 1,
+        offset: 0,
+      },
+    })
+    usesStablePagination = false
+  }
   if (!isRecord(response.data)) invalidCredentialInFlightContract()
   const root = response.data
-  const credential = isRecord(root.credential) ? root.credential : null
-  const requestsRoot = isRecord(root.requests) ? root.requests : null
-  const observedAt = readDateTime(root, 'observed_at')
-  if (!credential || !requestsRoot || !Array.isArray(requestsRoot.items) || !observedAt) {
+  const metadata = normalizeCredentialInFlightObservationMetadata(root)
+  if (!metadata || !Array.isArray(root.items) || !root.items.every(isRecord)) {
     invalidCredentialInFlightContract()
   }
-  if (!requestsRoot.items.every(isRecord)) invalidCredentialInFlightContract()
-  const requests = requestsRoot.items.map(normalizeCredentialInFlightRequest)
+  const requests = root.items.map(normalizeCredentialInFlightRequest)
   if (requests.some((item) => item === null)) invalidCredentialInFlightContract()
-  const normalizedCredential = normalizeCredentialInFlightSummary(credential)
-  if (!normalizedCredential) {
+  const normalizedRequests = requests as CredentialInFlightRequest[]
+  if (normalizedRequests.some((request) => request.credentialId !== credentialId)) {
     invalidCredentialInFlightContract()
   }
+
+  if (usesStablePagination) {
+    const total = readNonNegativeInteger(root, 'total')
+    const nextOffset = readNullableNonNegativeInteger(root, 'next_offset')
+    const responseCursor = readNullableString(root, 'snapshot_cursor')
+    const snapshotCursorReadAt = readNullableDateTime(root, 'snapshot_cursor_read_at')
+    const snapshotExpiresAt = readNullableDateTime(root, 'snapshot_expires_at')
+    if (
+      total === null ||
+      !nextOffset.valid ||
+      !responseCursor.valid ||
+      !snapshotCursorReadAt.valid ||
+      !snapshotExpiresAt.valid ||
+      normalizedRequests.length > credentialInFlightPageSize ||
+      (responseCursor.value === null) !== (snapshotCursorReadAt.value === null) ||
+      (responseCursor.value === null) !== (snapshotExpiresAt.value === null)
+    ) {
+      invalidCredentialInFlightContract()
+    }
+    const expectedCount = Math.min(credentialInFlightPageSize, Math.max(0, total - offset))
+    const consumed = offset + normalizedRequests.length
+    if (offset > total || normalizedRequests.length !== expectedCount) {
+      invalidCredentialInFlightContract()
+    }
+    if (consumed < total) {
+      if (nextOffset.value !== consumed || responseCursor.value === null) {
+        invalidCredentialInFlightContract()
+      }
+    } else if (nextOffset.value !== null) {
+      invalidCredentialInFlightContract()
+    }
+    if (snapshotCursor !== null && responseCursor.value !== snapshotCursor) {
+      invalidCredentialInFlightContract()
+    }
+    if (expectedTotal !== null && total !== expectedTotal) {
+      invalidCredentialInFlightContract()
+    }
+    if (
+      expectedSnapshotExpiresAt !== null &&
+      snapshotExpiresAt.value !== expectedSnapshotExpiresAt
+    ) {
+      invalidCredentialInFlightContract()
+    }
+    if (snapshotCursor === null && nextOffset.value === null && responseCursor.value !== null) {
+      invalidCredentialInFlightContract()
+    }
+    return {
+      ...metadata,
+      requests: normalizedRequests,
+      total,
+      nextOffset: nextOffset.value,
+      snapshotCursor: responseCursor.value,
+      snapshotCursorReadAt: snapshotCursorReadAt.value,
+      snapshotExpiresAt: snapshotExpiresAt.value,
+      snapshotClientExpiresAtMs: estimateSnapshotClientExpiresAtMs(
+        snapshotCursorReadAt.value,
+        snapshotExpiresAt.value,
+      ),
+      paginationLimited: false,
+    }
+  }
+
+  if (normalizedRequests.length > credentialInFlightPageSize + 1) {
+    invalidCredentialInFlightContract()
+  }
+  const paginationLimited = normalizedRequests.length > credentialInFlightPageSize
   return {
-    observedAt,
-    credential: normalizedCredential,
-    requests: requests as CredentialInFlightRequest[],
-    nextCursor: readString(requestsRoot, 'next_cursor'),
+    ...metadata,
+    requests: normalizedRequests.slice(0, credentialInFlightPageSize),
+    total: null,
+    nextOffset: null,
+    snapshotCursor: null,
+    snapshotCursorReadAt: null,
+    snapshotExpiresAt: null,
+    snapshotClientExpiresAtMs: null,
+    paginationLimited,
   }
 }
 
@@ -716,7 +1371,7 @@ export async function updateCredentialStatus(
 export async function updateCredentialMetadata(
   session: ManagementSessionInput,
   resource: CredentialResource,
-  input: CredentialMetadataInput,
+  input: CredentialMetadataPatch,
 ) {
   const client = createManagementClient(session)
   await client.patch('/auth-files/fields', createFieldsPayload(resource, input))
@@ -880,5 +1535,8 @@ export function toCredentialApiError(error: unknown) {
   return Object.assign(new Error(apiError.message, { cause: error }), {
     status: apiError.status,
     code: apiError.code,
+    backendCode: apiError.backendCode,
+    retryable: apiError.retryable,
+    fieldErrors: apiError.fieldErrors,
   })
 }

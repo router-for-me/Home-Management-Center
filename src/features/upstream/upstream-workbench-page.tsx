@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 
-import { Loader2, Plus, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/shared/page-header'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AccountsPanel } from '@/features/credentials/accounts-panel'
 import { ProvidersPanel } from '@/features/providers/providers-panel'
 import {
@@ -15,10 +16,8 @@ import {
   type UpstreamProvidersStats,
   UpstreamSummaryCards,
 } from '@/features/upstream/summary-cards'
-import type { UpstreamQuotaView } from '@/features/upstream/upstream-quota-model'
 import type { UpstreamTab } from '@/features/upstream/upstream-route'
 import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
-import { cn } from '@/lib/utils'
 
 const upstreamTabs: UpstreamTab[] = ['accounts', 'providers']
 
@@ -38,8 +37,8 @@ export function UpstreamWorkbenchPage({
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<UpstreamTab>(tab)
-  const [accountsCreateOpen, setAccountsCreateOpen] = useState(false)
-  const [quotaView, setQuotaView] = useState<UpstreamQuotaView>('all')
+  const [attentionOnly, setAttentionOnly] = useState(false)
+  const [websocketOnly, setWebsocketOnly] = useState(false)
   const [accountsStats, setAccountsStats] = useState<UpstreamAccountsStats | null>(null)
   const [providersStats, setProvidersStats] = useState<UpstreamProvidersStats | null>(null)
   const [quotaSyncing, setQuotaSyncing] = useState(false)
@@ -48,6 +47,10 @@ export function UpstreamWorkbenchPage({
   useEffect(() => {
     setActiveTab(tab)
   }, [tab])
+
+  useEffect(() => {
+    if (!quota.available) setAttentionOnly(false)
+  }, [quota.available])
 
   const fetchingCount =
     useIsFetching({ queryKey: ['management-credentials'] }) +
@@ -95,7 +98,7 @@ export function UpstreamWorkbenchPage({
   }
 
   const handleFilterAttention = () => {
-    setQuotaView('attention')
+    setAttentionOnly(true)
     handleTabChange('accounts')
   }
 
@@ -103,7 +106,6 @@ export function UpstreamWorkbenchPage({
     <section className="grid w-full gap-5">
       <PageHeader
         title={t('upstreamPage.header.title')}
-        description={t('upstreamPage.header.description')}
         actions={
           <>
             <Button
@@ -121,12 +123,6 @@ export function UpstreamWorkbenchPage({
               )}
               {syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
             </Button>
-            {activeTab === 'accounts' ? (
-              <Button size="sm" onClick={() => setAccountsCreateOpen(true)}>
-                <Plus className="size-4" aria-hidden="true" />
-                {t('credentialsPage.actions.addCredential')}
-              </Button>
-            ) : null}
           </>
         }
       />
@@ -139,45 +135,39 @@ export function UpstreamWorkbenchPage({
         onFilterAttention={handleFilterAttention}
       />
 
-      <div
-        className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"
-        role="tablist"
-        aria-label={t('upstreamPage.tabs.label')}
+      <Tabs
+        value={activeTab}
+        className="grid gap-5"
+        onValueChange={(value) => handleTabChange(value as UpstreamTab)}
       >
-        {upstreamTabs.map((item) => (
-          <Button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === item}
-            variant={activeTab === item ? 'default' : 'ghost'}
-            className="min-h-10 w-full justify-center sm:w-auto sm:min-w-32"
-            onClick={() => handleTabChange(item)}
-          >
-            {t(`upstreamPage.tabs.${item}`)}
-          </Button>
-        ))}
-      </div>
+        <TabsList aria-label={t('upstreamPage.tabs.label')}>
+          {upstreamTabs.map((item) => (
+            <TabsTrigger key={item} value={item} className="min-w-32">
+              {t(`upstreamPage.tabs.${item}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      <div className={cn(activeTab === 'accounts' ? undefined : 'hidden')}>
-        <AccountsPanel
-          initialCredentialId={initialCredentialId}
-          initialSearch={initialSearch}
-          onSearchChange={onSearchChange}
-          createOpen={accountsCreateOpen}
-          onCreateOpenChange={setAccountsCreateOpen}
-          quotaView={quotaView}
-          onQuotaViewChange={setQuotaView}
-          quotaAvailable={quota.available}
-          quotaLoading={quota.isPending || quota.isFetching}
-          quotaTruncated={quota.truncated}
-          quotaMap={quota.map}
-          onStatsChange={setAccountsStats}
-        />
-      </div>
-      <div className={cn(activeTab === 'providers' ? undefined : 'hidden')}>
-        <ProvidersPanel onStatsChange={setProvidersStats} />
-      </div>
+        <TabsContent value="accounts" forceMount className="data-[state=inactive]:hidden">
+          <AccountsPanel
+            initialCredentialId={initialCredentialId}
+            initialSearch={initialSearch}
+            onSearchChange={onSearchChange}
+            attentionOnly={attentionOnly}
+            websocketOnly={websocketOnly}
+            onAttentionOnlyChange={setAttentionOnly}
+            onWebsocketOnlyChange={setWebsocketOnly}
+            quotaAvailable={quota.available}
+            quotaLoading={quota.isPending || quota.isFetching}
+            quotaTruncated={quota.truncated}
+            quotaMap={quota.map}
+            onStatsChange={setAccountsStats}
+          />
+        </TabsContent>
+        <TabsContent value="providers" forceMount className="data-[state=inactive]:hidden">
+          <ProvidersPanel onStatsChange={setProvidersStats} />
+        </TabsContent>
+      </Tabs>
     </section>
   )
 }

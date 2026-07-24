@@ -1,4 +1,13 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import type { i18n as I18nInstance, TFunction } from 'i18next'
 import {
@@ -49,6 +58,7 @@ import {
 } from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -88,10 +98,9 @@ import {
   LiveRefreshStatusNotice,
   NewItemsNotice,
 } from '@/features/observability/live-refresh-control'
-import type { RuntimeMode } from '@/lib/api/management/types'
+import { createTokenUsageChartLayout } from '@/features/observability/token-usage-chart-layout'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
-  ApiKeyUsageResource,
   RequestErrorLogFile,
   RequestLogIndex,
   RuntimeLogFilters,
@@ -123,7 +132,6 @@ import type {
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
-type UsageVerdict = 'ready' | 'partial' | 'legacy' | 'logsOnly' | 'disabled' | 'unsupported'
 type KpiTone = 'neutral' | 'positive' | 'warning' | 'danger' | 'info'
 type KpiComparisonMode = 'increaseGood' | 'increaseBad'
 type KpiCardData = {
@@ -300,30 +308,6 @@ export function isFileLoggingDisabledError(error: unknown) {
   return message.toLowerCase().includes('logging to file disabled')
 }
 
-function getUsageTotals(resources: ApiKeyUsageResource[]) {
-  return resources.reduce(
-    (acc, resource) => ({
-      success: acc.success + resource.success,
-      failed: acc.failed + resource.failed,
-      recentWindows: acc.recentWindows + resource.recentRequestCount,
-    }),
-    { success: 0, failed: 0, recentWindows: 0 },
-  )
-}
-
-function getUsageVerdict(
-  snapshot: UsageLogsSnapshot,
-  runtimeHasAnyCapability: boolean,
-): UsageVerdict {
-  if (!snapshot.settings.usageStatisticsEnabled) return 'disabled'
-  if (snapshot.issues.length > 0) return 'partial'
-  if (snapshot.overview && snapshot.records) return 'ready'
-  if (snapshot.apiKeyUsage.length > 0) return 'legacy'
-  if (snapshot.runtimeLogs !== null || snapshot.requestErrorLogs.length > 0) return 'logsOnly'
-  if (!runtimeHasAnyCapability) return 'unsupported'
-  return 'partial'
-}
-
 type ObservabilityCopyKey = 'usagePage' | 'requestEventsPage' | 'callDiagnosticsPage' | 'logsPage'
 
 // Shared verdict badge palette for the observability surfaces (usage, diagnostics, logs).
@@ -410,7 +394,7 @@ export type CapabilityStripItem = {
   unavailableTone: CapabilityBadgeUnavailableTone
 }
 
-export function CapabilityBadge({
+function CapabilityBadge({
   available,
   label,
   unavailableTone = 'warning',
@@ -457,143 +441,6 @@ export function CapabilityStrip({ items }: { items: CapabilityStripItem[] }) {
   )
 }
 
-export function UsageCapabilityStrip({
-  capabilities,
-}: {
-  capabilities: {
-    usage: boolean
-    usageOverview: boolean
-    usageRecords: boolean
-    usageAggregates: boolean
-    usageExport: boolean
-    logs: boolean
-    requestErrorLogs: boolean
-  }
-}) {
-  const { t } = useTranslation()
-  const capabilityItems: CapabilityStripItem[] = [
-    {
-      available: capabilities.usageOverview,
-      label: t('usageLogsPage.capabilities.usageOverview'),
-      unavailableTone: 'warning',
-    },
-    {
-      available: capabilities.usageRecords,
-      label: t('usageLogsPage.capabilities.usageRecords'),
-      unavailableTone: 'warning',
-    },
-    {
-      available: capabilities.usageAggregates,
-      label: t('usageLogsPage.capabilities.usageAggregates'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.usageExport,
-      label: t('usageLogsPage.capabilities.usageExport'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.logs,
-      label: t('usageLogsPage.capabilities.logs'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.requestErrorLogs,
-      label: t('usageLogsPage.capabilities.requestErrorLogs'),
-      unavailableTone: 'info',
-    },
-  ]
-  return <CapabilityStrip items={capabilityItems} />
-}
-
-export function UsageVerdictHeader({
-  snapshot,
-  capabilities,
-  runtimeMode,
-  isFetching,
-  isExporting,
-  onRefresh,
-  onExport,
-}: {
-  snapshot: UsageLogsSnapshot
-  capabilities: {
-    usage: boolean
-    usageOverview: boolean
-    usageRecords: boolean
-    usageAggregates: boolean
-    usageExport: boolean
-    logs: boolean
-    requestErrorLogs: boolean
-  }
-  runtimeMode: RuntimeMode
-  isFetching: boolean
-  isExporting: boolean
-  onRefresh: () => void
-  onExport: () => void
-}) {
-  const { t, i18n } = useTranslation()
-  const runtimeHasAnyCapability =
-    capabilities.usage ||
-    capabilities.usageOverview ||
-    capabilities.usageRecords ||
-    capabilities.logs ||
-    capabilities.requestErrorLogs
-  const verdict = getUsageVerdict(snapshot, runtimeHasAnyCapability)
-
-  return (
-    <PageHeader
-      title={t(`usageLogsPage.verdict.${verdict}.title`)}
-      titleMeta={
-        <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
-          {t(`usageLogsPage.verdict.${verdict}.badge`)}
-        </span>
-      }
-      description={t(`usageLogsPage.verdict.${verdict}.description`, {
-        mode: t(`runtimeMode.${runtimeMode}`),
-      })}
-      meta={
-        <>
-          <span>
-            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-          </span>
-          <span>
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-            })}
-          </span>
-        </>
-      }
-      tags={<UsageCapabilityStrip capabilities={capabilities} />}
-      actions={
-        <>
-          <Button
-            variant="outline"
-            disabled={!capabilities.usageExport || isExporting}
-            onClick={onExport}
-          >
-            {isExporting ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Download className="size-4" aria-hidden="true" />
-            )}
-            {capabilities.usageExport
-              ? t('usageLogsPage.actions.exportCsv')
-              : t('usageLogsPage.actions.exportUnsupported')}
-          </Button>
-          <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
-            {isFetching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
-          </Button>
-        </>
-      }
-    />
-  )
-}
-
 export function IssueList({ issues }: { issues: UsageLogIssue[] }) {
   const { t } = useTranslation()
   if (issues.length === 0) return null
@@ -618,7 +465,7 @@ export function IssueList({ issues }: { issues: UsageLogIssue[] }) {
   )
 }
 
-export function SectionHeader({ title, description }: { title: string; description?: string }) {
+function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="min-w-0">
       <h2 className="text-base font-semibold">{title}</h2>
@@ -630,9 +477,9 @@ export function SectionHeader({ title, description }: { title: string; descripti
 }
 
 const usageFilterGridClassName = 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
-const usageTouchControlClassName = 'min-h-10 sm:min-h-8'
-const usageTouchInputClassName = 'min-h-10 sm:h-8 sm:min-h-8'
-const usageTouchButtonClassName = 'min-h-10 sm:min-h-8'
+const usageTouchControlClassName = responsiveCompactControlClassName
+const usageTouchInputClassName = responsiveCompactControlClassName
+const usageTouchButtonClassName = responsiveCompactControlClassName
 const runtimeLogLevelOptions: RuntimeLogLevelFilter[] = [
   'all',
   'trace',
@@ -804,6 +651,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
             <Input
+              size="sm"
               className={usageTouchInputClassName}
               type="date"
               value={filters.customFrom}
@@ -813,6 +661,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
             <Input
+              size="sm"
               className={usageTouchInputClassName}
               type="date"
               value={filters.customTo}
@@ -1381,6 +1230,7 @@ type TokenSeriesKey =
   | 'reasoningTokens'
   | 'unclassifiedTokens'
 type TokenUsageChartDatum = {
+  id: string
   label: string
   totalTokens: number
   inputTotalTokens: number
@@ -1503,6 +1353,29 @@ function formatOverlayValue(
   return formatCompactNumber(value)
 }
 
+function getTokenUsageChartSummary(
+  item: TokenUsageChartDatum,
+  overlayMetric: UsageTrendOverlayMetric,
+  t: TFunction,
+  currency?: string | null,
+) {
+  return [
+    item.label,
+    `${t('usageLogsPage.trend.tooltip.total')}: ${formatCompactNumber(item.totalTokens)}`,
+    ...(item.quality === 'inconsistent'
+      ? [t('usageLogsPage.tokenAccounting.inconsistentShort')]
+      : tokenSeries.map(
+          (series) => `${t(series.labelKey)}: ${formatCompactNumber(item[series.key])}`,
+        )),
+    `${t(`usageLogsPage.trend.overlay.${overlayMetric}`)}: ${formatOverlayValue(
+      overlayMetric,
+      item.overlayValue,
+      t,
+      currency,
+    )}`,
+  ]
+}
+
 function TokenUsageChart({
   data,
   overlayMetric,
@@ -1517,11 +1390,10 @@ function TokenUsageChart({
   currency?: string | null
 }) {
   const chartRef = useRef<HTMLDivElement>(null)
+  const instructionsId = useId()
   const [chartWidth, setChartWidth] = useState(760)
-  const [activeTarget, setActiveTarget] = useState<{
-    index: number
-    seriesKey?: TokenSeriesKey | 'overlay'
-  } | null>(null)
+  const [chartFocused, setChartFocused] = useState(false)
+  const [activeId, setActiveId] = useState<string | null>(null)
   const width = chartWidth
   const height = 260
   const compact = width < 520
@@ -1531,21 +1403,30 @@ function TokenUsageChart({
     bottom: 42,
     left: compact ? 48 : 64,
   }
-  const innerWidth = width - margin.left - margin.right
+  const layout = createTokenUsageChartLayout({
+    width,
+    marginLeft: margin.left,
+    marginRight: margin.right,
+    itemCount: data.length,
+  })
+  const { innerWidth, bandWidth, barWidth, getCenterX: getX } = layout
   const innerHeight = height - margin.top - margin.bottom
   const maxTokens = Math.max(...data.map((item) => item.totalTokens), 1)
   const maxOverlay = Math.max(...data.map((item) => item.overlayValue), 1)
   const overlayY = (value: number) => margin.top + innerHeight - (value / maxOverlay) * innerHeight
-  const getX = (index: number) => margin.left + (index / Math.max(1, data.length - 1)) * innerWidth
-  const bandWidth = innerWidth / Math.max(1, data.length)
-  const barWidth = Math.min(38, Math.max(10, bandWidth * 0.58))
   const overlayPoints = data.map((item, index) => `${getX(index)},${overlayY(item.overlayValue)}`)
   const gridTicks = [0, 0.25, 0.5, 0.75, 1]
   const labelIndexes = [...new Set([0, Math.floor(data.length / 2), data.length - 1])].filter(
     (index) => index >= 0 && index < data.length,
   )
-  const activeDatum = activeTarget ? data[activeTarget.index] : null
-  const activeX = activeTarget ? getX(activeTarget.index) : null
+  const indexById = useMemo(() => new Map(data.map((item, index) => [item.id, index])), [data])
+  const activeIndex = activeId ? (indexById.get(activeId) ?? -1) : -1
+  const activeDatum = activeIndex >= 0 ? data[activeIndex] : null
+  const activeX = activeDatum ? getX(activeIndex) : null
+  const activeSummary = activeDatum
+    ? getTokenUsageChartSummary(activeDatum, overlayMetric, t, currency).join('. ')
+    : ''
+  const showAllOverlayPoints = bandWidth >= 12
 
   useEffect(() => {
     const element = chartRef.current
@@ -1568,17 +1449,71 @@ function TokenUsageChart({
     return () => observer.disconnect()
   }, [])
 
+  const activateIndex = (index: number) => {
+    const nextIndex = Math.min(data.length - 1, Math.max(0, index))
+    const nextId = data[nextIndex]?.id ?? null
+    setActiveId((currentId) => (currentId === nextId ? currentId : nextId))
+  }
+
+  const activatePointerTarget = (event: ReactPointerEvent<SVGRectElement>) => {
+    const svg = event.currentTarget.ownerSVGElement
+    if (!svg) return
+
+    const bounds = svg.getBoundingClientRect()
+    if (bounds.width <= 0) return
+
+    const pointerX = ((event.clientX - bounds.left) / bounds.width) * width
+    activateIndex(layout.getIndexAtX(pointerX))
+  }
+
+  const handleChartKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = activeIndex >= 0 ? activeIndex : 0
+    const nextIndex =
+      event.key === 'ArrowLeft'
+        ? currentIndex - 1
+        : event.key === 'ArrowRight'
+          ? currentIndex + 1
+          : event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? data.length - 1
+              : null
+
+    if (nextIndex === null) return
+    event.preventDefault()
+    activateIndex(nextIndex)
+  }
+
   return (
     <div
       ref={chartRef}
-      className="relative w-full min-w-0"
-      onMouseLeave={() => setActiveTarget(null)}
+      role="group"
+      tabIndex={0}
+      aria-label={t('usageLogsPage.trend.title')}
+      aria-describedby={instructionsId}
+      className="focus-visible:ring-ring focus-visible:ring-offset-card relative w-full min-w-0 rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      onFocus={() => {
+        setChartFocused(true)
+        if (!activeDatum) activateIndex(0)
+      }}
+      onBlur={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        setChartFocused(false)
+        setActiveId(null)
+      }}
+      onKeyDown={handleChartKeyDown}
+      onPointerLeave={() => {
+        if (!chartFocused) setActiveId(null)
+      }}
     >
+      <p id={instructionsId} className="sr-only">
+        {t('usageLogsPage.trend.accessibility.keyboardInstructions')}
+      </p>
       <svg
         className="h-[260px] w-full overflow-visible"
         viewBox={`0 0 ${width} ${height}`}
-        role="img"
-        aria-label={t('usageLogsPage.trend.title')}
+        aria-hidden="true"
+        focusable="false"
         preserveAspectRatio="xMidYMid meet"
       >
         {gridTicks.map((tick) => {
@@ -1617,39 +1552,24 @@ function TokenUsageChart({
         })}
 
         {data.map((item, index) => {
-          const x = margin.left + index * bandWidth + (bandWidth - barWidth) / 2
+          const x = layout.getBarX(index)
           let stackY = margin.top + innerHeight
-          const values = tokenSeries.map((series) => ({
-            ...series,
-            value: item[series.key],
-          }))
+          const values = tokenSeries
+            .map((series) => ({
+              ...series,
+              value: item[series.key],
+            }))
+            .filter((series) => series.value > 0)
 
           return (
-            <g key={`${item.label}:${index}`}>
+            <g key={item.id}>
               <title>
-                {[
-                  item.label,
-                  `${t('usageLogsPage.trend.tooltip.total')}: ${formatCompactNumber(item.totalTokens)}`,
-                  ...(item.quality === 'inconsistent'
-                    ? [t('usageLogsPage.tokenAccounting.inconsistentShort')]
-                    : tokenSeries.map(
-                        (series) =>
-                          `${t(series.labelKey)}: ${formatCompactNumber(item[series.key])}`,
-                      )),
-                  `${t(`usageLogsPage.trend.overlay.${overlayMetric}`)}: ${formatOverlayValue(
-                    overlayMetric,
-                    item.overlayValue,
-                    t,
-                    currency,
-                  )}`,
-                ].join('\n')}
+                {getTokenUsageChartSummary(item, overlayMetric, t, currency).join('\n')}
               </title>
               {values.map((series, seriesIndex) => {
                 const barHeight = (series.value / maxTokens) * innerHeight
                 stackY -= barHeight
-                const segmentIsActive =
-                  activeTarget?.index === index && activeTarget.seriesKey === series.key
-                const bucketIsActive = activeTarget?.index === index
+                const bucketIsActive = activeIndex === index
                 const focusOpacity = focusedSeriesKey
                   ? focusedSeriesKey === series.key
                     ? 0.95
@@ -1659,30 +1579,20 @@ function TokenUsageChart({
                 return (
                   <rect
                     key={series.key}
-                    tabIndex={0}
-                    aria-label={`${item.label} ${t(series.labelKey)} ${formatCompactNumber(
-                      series.value,
-                    )}`}
                     x={x}
                     y={stackY}
                     width={barWidth}
                     height={Math.max(0, barHeight)}
                     fill={series.color}
                     opacity={
-                      activeTarget
+                      activeIndex >= 0
                         ? bucketIsActive
                           ? focusOpacity
                           : Math.min(focusOpacity, 0.32)
                         : focusOpacity
                     }
-                    rx={seriesIndex === values.length - 1 ? 3 : 0}
-                    stroke={segmentIsActive ? 'var(--foreground)' : 'transparent'}
-                    strokeWidth={segmentIsActive ? 1.5 : 0}
-                    className="cursor-pointer transition-opacity"
-                    vectorEffect="non-scaling-stroke"
-                    onFocus={() => setActiveTarget({ index, seriesKey: series.key })}
-                    onBlur={() => setActiveTarget(null)}
-                    onMouseEnter={() => setActiveTarget({ index, seriesKey: series.key })}
+                    rx={seriesIndex === values.length - 1 ? Math.min(3, barWidth / 2) : 0}
+                    className="pointer-events-none transition-opacity"
                   />
                 )
               })}
@@ -1713,39 +1623,88 @@ function TokenUsageChart({
             vectorEffect="non-scaling-stroke"
           />
         ) : null}
-        {data.map((item, index) => (
-          <circle
-            key={`${item.label}:overlay`}
-            tabIndex={0}
-            aria-label={`${item.label} ${t(
-              `usageLogsPage.trend.overlay.${overlayMetric}`,
-            )} ${formatOverlayValue(overlayMetric, item.overlayValue, t, currency)}`}
-            cx={getX(index)}
-            cy={overlayY(item.overlayValue)}
-            r={activeTarget?.index === index && activeTarget.seriesKey === 'overlay' ? 4.5 : 3}
-            fill="var(--card)"
-            stroke="var(--foreground)"
-            strokeWidth={activeTarget?.index === index ? 2.4 : 2}
-            className="cursor-pointer"
-            vectorEffect="non-scaling-stroke"
-            onFocus={() => setActiveTarget({ index, seriesKey: 'overlay' })}
-            onBlur={() => setActiveTarget(null)}
-            onMouseEnter={() => setActiveTarget({ index, seriesKey: 'overlay' })}
-          />
-        ))}
+        {data.map((item, index) => {
+          const pointIsActive = activeIndex === index
+          if (!showAllOverlayPoints && !pointIsActive) return null
+
+          return (
+            <circle
+              key={`${item.id}:overlay`}
+              cx={getX(index)}
+              cy={overlayY(item.overlayValue)}
+              r={pointIsActive ? 4.5 : 3}
+              fill="var(--card)"
+              stroke="var(--foreground)"
+              strokeWidth={pointIsActive ? 2.4 : 2}
+              className="pointer-events-none"
+              vectorEffect="non-scaling-stroke"
+            />
+          )
+        })}
         {labelIndexes.map((index) => (
           <text
             key={index}
             x={getX(index)}
             y={height - 12}
-            textAnchor={index === 0 ? 'start' : index === data.length - 1 ? 'end' : 'middle'}
+            textAnchor="middle"
             fill="var(--muted-foreground)"
             fontSize="11"
           >
             {data[index]?.label}
           </text>
         ))}
+        <rect
+          x={margin.left}
+          y={margin.top}
+          width={innerWidth}
+          height={innerHeight}
+          fill="transparent"
+          pointerEvents="all"
+          className="cursor-crosshair"
+          onPointerMove={activatePointerTarget}
+          onPointerDown={(event) => {
+            chartRef.current?.focus({ preventScroll: true })
+            activatePointerTarget(event)
+          }}
+        />
       </svg>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {chartFocused ? activeSummary : ''}
+      </span>
+      <table className="sr-only">
+        <caption>{t('usageLogsPage.trend.accessibility.dataTableCaption')}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('usageLogsPage.trend.accessibility.time')}</th>
+            <th scope="col">{t('usageLogsPage.trend.tooltip.total')}</th>
+            {tokenSeries.map((series) => (
+              <th key={series.key} scope="col">
+                {t(series.labelKey)}
+              </th>
+            ))}
+            <th scope="col">{t(`usageLogsPage.trend.overlay.${overlayMetric}`)}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((item) => (
+            <tr key={`${item.id}:accessible`}>
+              <th scope="row">{item.label}</th>
+              <td>
+                {formatCompactNumber(item.totalTokens)}
+                {item.quality === 'inconsistent'
+                  ? ` — ${t('usageLogsPage.tokenAccounting.inconsistentShort')}`
+                  : null}
+              </td>
+              {tokenSeries.map((series) => (
+                <td key={series.key}>
+                  {item.quality === 'inconsistent' ? '—' : formatCompactNumber(item[series.key])}
+                </td>
+              ))}
+              <td>{formatOverlayValue(overlayMetric, item.overlayValue, t, currency)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {activeDatum ? (
         <div className="bg-popover text-popover-foreground pointer-events-none absolute top-2 right-2 max-w-[240px] rounded-md border px-3 py-2 text-xs shadow-sm">
           <p className="font-medium">{activeDatum.label}</p>
@@ -1831,6 +1790,7 @@ export function UsageTrendPanel({
             if (!bucket.tokenBreakdown) return []
             return [
               {
+                id: `${bucket.bucketStart}:${bucket.bucketEnd}`,
                 label: formatShortDateTime(bucket.bucketStart, i18n),
                 ...toTokenUsageChartDatum(bucket.tokenBreakdown),
                 overlayValue: getOverlayValue(overlayMetric, bucket),
@@ -3005,6 +2965,7 @@ function RequestRecordFiltersToolbar({
           aria-hidden="true"
         />
         <Input
+          size="sm"
           className={cn(usageTouchInputClassName, 'pl-9')}
           value={filters.search}
           disabled={disabled}
@@ -3054,6 +3015,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="numeric"
@@ -3066,6 +3028,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minLatencyMs: event.target.value })}
           />
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="numeric"
@@ -3085,6 +3048,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="decimal"
@@ -3097,6 +3061,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minAmount: event.target.value })}
           />
           <Input
+            size="sm"
             className={usageTouchInputClassName}
             type="number"
             inputMode="decimal"
@@ -5229,116 +5194,6 @@ export function UsageHealthPanel({
           title={t('usageLogsPage.health.credentials.title')}
           updatedAt={credentialUpdatedAt}
         />
-      </div>
-    </TableSurface>
-  )
-}
-
-export function SummaryCards({ snapshot }: { snapshot: UsageLogsSnapshot }) {
-  const { t } = useTranslation()
-  const totals = getUsageTotals(snapshot.apiKeyUsage)
-  const cards = [
-    {
-      label: t('usageLogsPage.summary.keys'),
-      value: formatNumber(snapshot.apiKeyUsage.length),
-      detail: t('usageLogsPage.summary.keysDetail', {
-        count: formatNumber(totals.recentWindows),
-      }),
-    },
-    {
-      label: t('usageLogsPage.summary.requests'),
-      value: formatNumber(totals.success + totals.failed),
-      detail: t('usageLogsPage.summary.requestsDetail', {
-        success: formatNumber(totals.success),
-        failed: formatNumber(totals.failed),
-      }),
-    },
-    {
-      label: t('usageLogsPage.summary.logs'),
-      value: formatNumber(snapshot.runtimeLogs?.lineCount ?? 0),
-      detail: t('usageLogsPage.summary.logsDetail', {
-        count: formatNumber(snapshot.requestErrorLogs.length),
-      }),
-    },
-  ]
-
-  return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {cards.map((card) => (
-        <div key={card.label} className="bg-card rounded-lg border p-4 shadow-sm">
-          <p className="text-muted-foreground text-sm">{card.label}</p>
-          <p className="mt-2 text-2xl font-semibold">{card.value}</p>
-          <p className="text-muted-foreground mt-1 text-xs">{card.detail}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export function ApiKeyUsageTable({
-  resources,
-  canRead,
-}: {
-  resources: ApiKeyUsageResource[]
-  canRead: boolean
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <TableSurface className="min-w-0 p-4">
-      <SectionHeader
-        title={t('usageLogsPage.usage.title')}
-        description={t('usageLogsPage.usage.description')}
-      />
-      <div className="isolate mt-3 overflow-hidden rounded-md border">
-        {!canRead ? (
-          <TableEmptyState
-            kind="unsupported"
-            className="m-0 border-0"
-            title={t('usageLogsPage.usage.unavailableTitle')}
-            description={t('usageLogsPage.usage.unavailable')}
-          />
-        ) : resources.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
-              <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow variant="static">
-                  <TableHead>{t('usageLogsPage.usage.provider')}</TableHead>
-                  <TableHead>{t('usageLogsPage.usage.baseUrl')}</TableHead>
-                  <TableHead>{t('usageLogsPage.usage.key')}</TableHead>
-                  <TableHead className="text-right">{t('usageLogsPage.usage.success')}</TableHead>
-                  <TableHead className="text-right">{t('usageLogsPage.usage.failed')}</TableHead>
-                  <TableHead className="text-right">
-                    {t('usageLogsPage.usage.recentWindows')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resources.map((resource) => (
-                  <TableRow key={resource.id} variant="resource">
-                    <TableCell className="font-medium">{resource.provider}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[260px] truncate font-mono text-xs">
-                      {resource.baseUrl || t('usageLogsPage.status.notAvailable')}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{resource.apiKeyPreview}</TableCell>
-                    <TableCell className="text-right">{formatNumber(resource.success)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(resource.failed)}</TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(resource.recentRequestCount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <TableEmptyState
-            kind="empty"
-            className="m-0 border-0"
-            title={t('usageLogsPage.usage.emptyTitle')}
-            description={t('usageLogsPage.usage.empty')}
-          />
-        )}
       </div>
     </TableSurface>
   )

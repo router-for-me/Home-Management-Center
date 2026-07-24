@@ -318,7 +318,7 @@ function normalizeModelPriceSource(value: string | null): ModelPriceSource {
   return 'manual'
 }
 
-export function normalizeModelPrice(value: unknown, index: number): ModelPrice {
+function normalizeModelPrice(value: unknown, index: number): ModelPrice {
   const record = toRecord(value)
   const provider = readString(record, ['provider']) ?? ''
   const model = readString(record, ['model', 'model_id', 'modelId']) ?? ''

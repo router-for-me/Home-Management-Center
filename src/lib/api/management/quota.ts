@@ -37,7 +37,7 @@ export type QuotaWindowMode = 'rolling' | 'fixed' | 'balance' | 'unknown'
 export type QuotaWindowScope = 'account' | 'project' | 'model' | 'organization' | 'unknown'
 export type QuotaUnit = 'requests' | 'tokens' | 'credits' | 'currency' | 'percentage' | 'unknown'
 export type QuotaWindowPeriodUnit = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'unknown'
-export type QuotaSort =
+type QuotaSort =
   | 'risk_desc'
   | 'observed_at_desc'
   | 'observed_at_asc'
@@ -127,12 +127,12 @@ export type QuotaSummary = {
   needsAttention: number
 }
 
-export type QuotaFacetOption = {
+type QuotaFacetOption = {
   value: string
   count: number
 }
 
-export type QuotaFacets = {
+type QuotaFacets = {
   providers: QuotaFacetOption[]
   quotaStatuses: QuotaFacetOption[]
   freshness: QuotaFacetOption[]
@@ -141,7 +141,7 @@ export type QuotaFacets = {
   collectionStatuses: QuotaFacetOption[]
 }
 
-export type QuotaSnapshot = {
+type QuotaSnapshot = {
   fetchedAt: string
   lastObservedAt: string | null
   total: number
@@ -154,7 +154,7 @@ export type QuotaSnapshot = {
   items: QuotaCredential[]
 }
 
-export type QuotaListQuery = {
+type QuotaListQuery = {
   limit: number
   offset: number
   search?: string
@@ -487,7 +487,7 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
   }
 }
 
-export function createQuotaSummary(items: QuotaCredential[]): QuotaSummary {
+function createQuotaSummary(items: QuotaCredential[]): QuotaSummary {
   const summary: QuotaSummary = {
     total: items.length,
     healthy: 0,
@@ -528,7 +528,7 @@ function createFacetOptions(values: string[]) {
   )
 }
 
-export function createQuotaFacets(items: QuotaCredential[]): QuotaFacets {
+function createQuotaFacets(items: QuotaCredential[]): QuotaFacets {
   return {
     providers: createFacetOptions(items.map((item) => item.provider)),
     quotaStatuses: createFacetOptions(items.map((item) => item.status)),
@@ -690,7 +690,7 @@ export async function fetchQuotaCredentialDetail(
   return normalizeQuotaCredentialDetail(response.data)
 }
 
-export type QuotaCollectInput = {
+type QuotaCollectInput = {
   credentialIds?: string[]
   providers?: string[]
 }

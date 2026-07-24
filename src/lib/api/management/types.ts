@@ -27,6 +27,7 @@ export type CapabilityKey =
   | 'userPeriodLimits'
   | 'accessGroups'
   | 'credentialInFlight'
+  | 'credentialInFlightSnapshotCursor'
   | 'credentialConcurrencyLimits'
 
 export type CapabilityMap = Record<CapabilityKey, boolean>

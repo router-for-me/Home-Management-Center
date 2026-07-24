@@ -1,4 +1,4 @@
-export const MODELS_DEV_API_URL = 'https://models.dev/api.json'
+const MODELS_DEV_API_URL = 'https://models.dev/api.json'
 
 export type ModelsDevCost = {
   input: number

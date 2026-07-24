@@ -65,11 +65,12 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   CredentialInFlightCell,
+  type CredentialInFlightCellStatus,
   getCredentialInFlightId,
 } from '@/features/credentials/credential-concurrency'
 import {
-  CreateCredentialSheet,
   type CreateCredentialMode,
+  CreateCredentialSheet,
   type OAuthSessionMap,
   type OAuthStatusMap,
 } from '@/features/credentials/credential-create-sheet'
@@ -80,37 +81,34 @@ import {
 import {
   getCredentialDisplayName,
   getCredentialProviderLabel,
-  getCredentialSourceLabel,
   getCredentialStatusTone,
 } from '@/features/credentials/credential-display'
 import {
+  filterCredentialResources,
+  hasCredentialFilters,
+} from '@/features/credentials/credential-filters'
+import {
   type InlineMetadataSave,
-  PriorityCell,
-  ProxyUrlCell,
   WebsocketsCell,
-  buildInlineMetadataInput,
 } from '@/features/credentials/credential-inline-cells'
 import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
-import {
-  type UpstreamAccountsStats,
-} from '@/features/upstream/summary-cards'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
-import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
+import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
-  type UpstreamQuotaView,
   findUpstreamQuotaEntry,
-  isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
+import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
 import {
   type CredentialInFlightSummary,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthProvider,
   type CredentialResource,
   type CredentialStatusFilter,
+  mergeCredentialConcurrencySummary,
 } from '@/lib/api/management/credentials'
 import { downloadBlob } from '@/lib/download'
 import { cn } from '@/lib/utils'
@@ -208,132 +206,167 @@ function CredentialErrorState({
   )
 }
 
-function AccountsToolbar({
+export function AccountsToolbar({
   resources,
   search,
   statusFilter,
-  sourceFilter,
   providerFilter,
   quotaAvailable,
-  quotaView,
+  attentionOnly,
+  websocketOnly,
+  filteredCount,
   onSearchChange,
   onStatusFilterChange,
-  onSourceFilterChange,
   onProviderFilterChange,
-  onQuotaViewChange,
+  onAttentionOnlyChange,
+  onWebsocketOnlyChange,
+  onClearFilters,
 }: {
   resources: CredentialResource[]
   search: string
   statusFilter: CredentialStatusFilter
-  sourceFilter: string
   providerFilter: string
   quotaAvailable: boolean
-  quotaView: UpstreamQuotaView
+  attentionOnly: boolean
+  websocketOnly: boolean
+  filteredCount: number
   onSearchChange: (search: string) => void
   onStatusFilterChange: (filter: CredentialStatusFilter) => void
-  onSourceFilterChange: (source: string) => void
   onProviderFilterChange: (provider: string) => void
-  onQuotaViewChange: (view: UpstreamQuotaView) => void
+  onAttentionOnlyChange: (attentionOnly: boolean) => void
+  onWebsocketOnlyChange: (websocketOnly: boolean) => void
+  onClearFilters: () => void
 }) {
-  const { t } = useTranslation()
-  const sources = Array.from(new Set(resources.map((resource) => resource.source))).sort()
-  const providers = Array.from(new Set(resources.map((resource) => resource.provider))).sort()
+  const { i18n, t } = useTranslation()
+  const providerCollator = new Intl.Collator(i18n.resolvedLanguage, {
+    sensitivity: 'base',
+    usage: 'sort',
+  })
+  const providers = Array.from(new Set(resources.map((resource) => resource.provider)))
+    .map((provider) => ({
+      id: provider,
+      label: getCredentialProviderLabel(t, provider),
+    }))
+    .sort((left, right) => providerCollator.compare(left.label, right.label))
   const statusFilters: CredentialStatusFilter[] = ['all', 'active', 'disabled', 'unavailable']
+  const activeQuickFilters = [
+    ...(quotaAvailable && attentionOnly ? ['attention'] : []),
+    ...(websocketOnly ? ['ws'] : []),
+  ]
+  const hasActiveFilters = hasCredentialFilters({
+    search,
+    statusFilter,
+    providerFilter,
+    quotaAvailable,
+    attentionOnly,
+    websocketOnly,
+  })
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-      <div className="relative min-w-0 flex-1 sm:max-w-72">
+    <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center">
+      <div className="relative w-full min-w-0 lg:max-w-80 lg:flex-1">
         <Search
           className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
           aria-hidden="true"
         />
         <Input
-          className="h-8 pl-9"
+          type="search"
+          size="lg"
+          className="pl-9"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t('credentialsPage.list.filterPlaceholder')}
+          aria-label={t('credentialsPage.list.filterPlaceholder')}
         />
       </div>
-      <ToggleGroup
-        type="single"
-        value={statusFilter}
-        className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-        onValueChange={(value) => {
-          if (value) onStatusFilterChange(value as CredentialStatusFilter)
-        }}
-      >
-        {statusFilters.map((filter) => (
-          <ToggleGroupItem
-            key={filter}
-            value={filter}
-            className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
-          >
-            {t(`credentialsPage.statusFilters.${filter}`)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <ToggleGroup
-        type="single"
-        value={providerFilter}
-        className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-        onValueChange={(value) => {
-          if (value) onProviderFilterChange(value)
-        }}
-      >
-        <ToggleGroupItem
-          value="all"
-          className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
+      <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
-          {t('credentialsPage.filters.allProviders')}
-        </ToggleGroupItem>
-        {providers.map((provider) => (
-          <ToggleGroupItem
-            key={provider}
-            value={provider}
-            className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
+          <SelectTrigger
+            size="lg"
+            className="w-full sm:w-40"
+            aria-label={t('credentialsPage.filters.status')}
           >
-            {getCredentialProviderLabel(t, provider)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
-        <SelectTrigger className="h-8 w-36" aria-label={t('credentialsPage.filters.source')}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t('credentialsPage.filters.allSources')}</SelectItem>
-          {sources.map((source) => (
-            <SelectItem key={source} value={source}>
-              {getCredentialSourceLabel(t, source)}
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {statusFilters.map((filter) => (
+              <SelectItem key={filter} value={filter} className="min-h-11 sm:min-h-10">
+                {t(`credentialsPage.statusFilters.${filter}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={providerFilter} onValueChange={onProviderFilterChange}>
+          <SelectTrigger
+            size="lg"
+            className="w-full sm:w-52"
+            aria-label={t('credentialsPage.filters.provider')}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="min-h-11 sm:min-h-10">
+              {t('credentialsPage.filters.allProviders')}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {quotaAvailable ? (
+            {providers.map((provider) => (
+              <SelectItem key={provider.id} value={provider.id} className="min-h-11 sm:min-h-10">
+                {provider.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <ToggleGroup
-          type="single"
-          value={quotaView}
-          className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-          onValueChange={(value) => {
-            if (value) onQuotaViewChange(value as UpstreamQuotaView)
+          type="multiple"
+          value={activeQuickFilters}
+          variant="outline"
+          size="lg"
+          className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
+          aria-label={t('credentialsPage.filters.quickFilters')}
+          onValueChange={(values) => {
+            onAttentionOnlyChange(quotaAvailable && values.includes('attention'))
+            onWebsocketOnlyChange(values.includes('ws'))
           }}
         >
-          {(['all', 'attention', 'ws'] as UpstreamQuotaView[]).map((view) => (
+          {quotaAvailable ? (
             <ToggleGroupItem
-              key={view}
-              value={view}
-              className={cn(
-                'h-7 border border-transparent px-2.5 text-xs data-[state=on]:font-semibold',
-                view === 'attention'
-                  ? 'data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning'
-                  : 'data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary',
-              )}
+              value="attention"
+              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
             >
-              {t(`upstreamPage.quotaChips.${view}`)}
+              {t('upstreamPage.quotaChips.attention')}
             </ToggleGroupItem>
-          ))}
+          ) : null}
+          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
         </ToggleGroup>
-      ) : null}
+
+        <div className="col-span-full flex min-h-10 min-w-0 items-center justify-between gap-2 sm:ml-auto">
+          <p
+            className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
+            role="status"
+            aria-live="polite"
+          >
+            {t('credentialsPage.filters.resultCount', {
+              visible: filteredCount,
+              total: resources.length,
+            })}
+          </p>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="px-2.5"
+              onClick={onClearFilters}
+            >
+              {t('credentialsPage.filters.clear')}
+            </Button>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
@@ -348,6 +381,9 @@ function CredentialList({
   quotaMap,
   showInFlight,
   inFlightByCredentialId,
+  inFlightStatus,
+  emptyState,
+  onClearFilters,
   onDeleteResource,
   onDownloadResource,
   onOpenDrawer,
@@ -365,6 +401,9 @@ function CredentialList({
   quotaMap: Map<string, UpstreamQuotaEntry>
   showInFlight: boolean
   inFlightByCredentialId: Map<string, CredentialInFlightSummary>
+  inFlightStatus: CredentialInFlightCellStatus
+  emptyState: 'empty' | 'filtered-empty'
+  onClearFilters: () => void
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onOpenDrawer: (resource: CredentialResource, tab: CredentialDrawerTab) => void
@@ -380,13 +419,34 @@ function CredentialList({
     !allSelected && resources.some((resource) => selectedResourceIds.has(resource.id))
 
   if (resources.length === 0) {
-    return <TableEmptyState kind="empty" className="m-0" title={t('credentialsPage.list.empty')} />
+    const filtered = emptyState === 'filtered-empty'
+    return (
+      <TableEmptyState
+        kind={emptyState}
+        className="m-0"
+        title={t(
+          filtered ? 'credentialsPage.list.filteredEmptyTitle' : 'credentialsPage.list.emptyTitle',
+        )}
+        description={t(
+          filtered
+            ? 'credentialsPage.list.filteredEmptyDescription'
+            : 'credentialsPage.list.emptyDescription',
+        )}
+        action={
+          filtered ? (
+            <Button type="button" variant="outline" size="lg" onClick={onClearFilters}>
+              {t('credentialsPage.filters.clear')}
+            </Button>
+          ) : undefined
+        }
+      />
+    )
   }
 
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className={cn('table-fixed', showInFlight ? 'min-w-[1570px]' : 'min-w-[1460px]')}
+      className={cn('table-fixed', showInFlight ? 'min-w-[1410px]' : 'min-w-[1300px]')}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -395,9 +455,8 @@ function CredentialList({
         <col className="w-[150px]" />
         <col className="w-[232px]" />
         {showInFlight ? <col className="w-[110px]" /> : null}
-        <col className="w-[200px]" />
         <col className="w-[96px]" />
-        <col className="w-[80px]" />
+        <col className="w-[112px]" />
         <col className="w-[290px]" />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
@@ -415,7 +474,6 @@ function CredentialList({
           <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
           <TableHead>{t('credentialsPage.list.quota')}</TableHead>
           {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
-          <TableHead>{t('credentialsPage.list.proxyUrl')}</TableHead>
           <TableHead>{t('credentialsPage.list.ws')}</TableHead>
           <TableHead>{t('credentialsPage.list.priority')}</TableHead>
           <TableHead className="table-sticky-action-head w-[290px] text-right">
@@ -528,17 +586,22 @@ function CredentialList({
               </TableCell>
               {showInFlight ? (
                 <TableCell>
-                  <CredentialInFlightCell summary={inFlightSummary} />
+                  <CredentialInFlightCell summary={inFlightSummary} status={inFlightStatus} />
                 </TableCell>
               ) : null}
-              <TableCell>
-                <ProxyUrlCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-              </TableCell>
               <TableCell>
                 <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
               </TableCell>
               <TableCell>
-                <PriorityCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                {resource.priority === null ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t('credentialsPage.status.notSet')}
+                  </span>
+                ) : (
+                  <span className="font-mono text-xs font-medium tabular-nums">
+                    {resource.priority}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="table-sticky-action-cell w-[290px] pl-4 text-right transition-colors">
                 <div className="table-action-cell-content">
@@ -613,10 +676,10 @@ export function AccountsPanel({
   initialCredentialId,
   initialSearch = '',
   onSearchChange,
-  createOpen,
-  onCreateOpenChange,
-  quotaView = 'all',
-  onQuotaViewChange,
+  attentionOnly = false,
+  websocketOnly = false,
+  onAttentionOnlyChange,
+  onWebsocketOnlyChange,
   quotaAvailable = false,
   quotaLoading = false,
   quotaTruncated = false,
@@ -626,10 +689,10 @@ export function AccountsPanel({
   initialCredentialId?: string
   initialSearch?: string
   onSearchChange?: (search: string) => void
-  createOpen?: boolean
-  onCreateOpenChange?: (open: boolean) => void
-  quotaView?: UpstreamQuotaView
-  onQuotaViewChange?: (view: UpstreamQuotaView) => void
+  attentionOnly?: boolean
+  websocketOnly?: boolean
+  onAttentionOnlyChange?: (attentionOnly: boolean) => void
+  onWebsocketOnlyChange?: (websocketOnly: boolean) => void
   quotaAvailable?: boolean
   quotaLoading?: boolean
   quotaTruncated?: boolean
@@ -640,7 +703,6 @@ export function AccountsPanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
-  const [sourceFilter, setSourceFilter] = useState('all')
   const [providerFilter, setProviderFilter] = useState('all')
   const [search, setSearch] = useState(initialSearch)
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
@@ -649,57 +711,75 @@ export function AccountsPanel({
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [oauthSessions, setOAuthSessions] = useState<OAuthSessionMap>({})
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
-  const [internalCreateOpen, setInternalCreateOpen] = useState(false)
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
   const autoOpenedCredentialRef = useRef<string | null>(null)
 
-  const createSheetOpen = createOpen ?? internalCreateOpen
-  const setCreateSheetOpen = (open: boolean) => {
-    if (createOpen === undefined) setInternalCreateOpen(open)
-    onCreateOpenChange?.(open)
-  }
-
   const resolvedQuotaMap = quotaMap ?? EMPTY_QUOTA_MAP
   const resources = workbench.snapshot?.resources ?? EMPTY_CREDENTIAL_RESOURCES
-  const inFlightByCredentialId = useMemo(
-    () =>
-      new Map((workbench.inFlightSnapshot?.items ?? []).map((item) => [item.credentialId, item])),
-    [workbench.inFlightSnapshot],
-  )
+  const inFlightByCredentialId = useMemo(() => {
+    const observed = new Map(
+      (workbench.inFlightSnapshot?.items ?? []).map((item) => [item.credentialId, item]),
+    )
+    const limiter = new Map(
+      (workbench.concurrencySnapshot?.items ?? []).map((item) => [item.credentialId, item]),
+    )
+    const credentialIds = new Set([...observed.keys(), ...limiter.keys()])
+    const merged = new Map<string, CredentialInFlightSummary>()
+    for (const credentialId of credentialIds) {
+      const summary = mergeCredentialConcurrencySummary(
+        observed.get(credentialId) ?? null,
+        limiter.get(credentialId) ?? null,
+      )
+      if (summary) merged.set(credentialId, summary)
+    }
+    return merged
+  }, [workbench.concurrencySnapshot, workbench.inFlightSnapshot])
+  const inFlightStatus: CredentialInFlightCellStatus = {
+    observation: workbench.inFlightSnapshot,
+    observationStale: workbench.inFlightStale,
+    observationErrorMessage: workbench.inFlightErrorMessage,
+    limiterStale: workbench.concurrencyStale,
+    limiterErrorMessage: workbench.concurrencyErrorMessage,
+  }
+  const concurrencyErrorMessage = [
+    workbench.inFlightErrorMessage,
+    workbench.concurrencyErrorMessage,
+  ]
+    .filter(
+      (message, index, messages): message is string =>
+        Boolean(message) && messages.indexOf(message) === index,
+    )
+    .join(' · ')
   const filteredResources = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
-
-    return resources.filter((resource) => {
-      if (statusFilter === 'active' && (resource.disabled || resource.unavailable)) return false
-      if (statusFilter === 'disabled' && !resource.disabled) return false
-      if (statusFilter === 'unavailable' && !resource.unavailable) return false
-      if (sourceFilter !== 'all' && resource.source !== sourceFilter) return false
-      if (providerFilter !== 'all' && resource.provider !== providerFilter) return false
-      if (quotaView === 'attention') {
-        const entry = findUpstreamQuotaEntry(resolvedQuotaMap, resource)
-        if (!entry || !isQuotaAttentionEntry(entry)) return false
-      }
-      if (quotaView === 'ws' && !resource.websockets) return false
-      if (!normalizedSearch) return true
-
-      return [
-        getCredentialDisplayName(resource),
-        resource.name,
-        resource.authIndex,
-        resource.email,
-        resource.account,
-        resource.provider,
-        resource.type,
-        resource.source,
-        resource.note,
-        resource.proxyUrl,
-      ]
-        .filter(Boolean)
-        .some((value) => value?.toLowerCase().includes(normalizedSearch))
+    return filterCredentialResources(resources, resolvedQuotaMap, {
+      search,
+      statusFilter,
+      providerFilter,
+      quotaAvailable,
+      attentionOnly,
+      websocketOnly,
     })
-  }, [providerFilter, quotaView, resolvedQuotaMap, resources, search, sourceFilter, statusFilter])
+  }, [
+    attentionOnly,
+    providerFilter,
+    quotaAvailable,
+    resolvedQuotaMap,
+    resources,
+    search,
+    statusFilter,
+    websocketOnly,
+  ])
+  const hasActiveFilters = hasCredentialFilters({
+    search,
+    statusFilter,
+    providerFilter,
+    quotaAvailable,
+    attentionOnly,
+    websocketOnly,
+  })
   const selectedResource =
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     resources.find((resource) => resource.id === selectedResourceId) ??
@@ -711,9 +791,27 @@ export function AccountsPanel({
     (item) => item.status === 'queued' || item.status === 'uploading',
   )
 
+  const handleClearFilters = () => {
+    setSearch('')
+    setStatusFilter('all')
+    setProviderFilter('all')
+    onSearchChange?.('')
+    onAttentionOnlyChange?.(false)
+    onWebsocketOnlyChange?.(false)
+  }
+
   useEffect(() => {
     setSearch((current) => (current === initialSearch ? current : initialSearch))
   }, [initialSearch])
+
+  useEffect(() => {
+    if (
+      providerFilter !== 'all' &&
+      !resources.some((resource) => resource.provider === providerFilter)
+    ) {
+      setProviderFilter('all')
+    }
+  }, [providerFilter, resources])
 
   useEffect(() => {
     if (
@@ -1011,7 +1109,7 @@ export function AccountsPanel({
     }
   }
 
-  const handleMetadataUpdate = async (input: CredentialMetadataInput) => {
+  const handleMetadataUpdate = async (input: CredentialMetadataPatch) => {
     if (!selectedResource) return
     await workbench.updateMetadata({
       resource: selectedResource,
@@ -1023,7 +1121,7 @@ export function AccountsPanel({
   const handleInlineMetadataSave: InlineMetadataSave = async (resource, patch) => {
     await workbench.updateMetadata({
       resource,
-      input: buildInlineMetadataInput(resource, patch),
+      input: patch,
     })
   }
 
@@ -1102,7 +1200,6 @@ export function AccountsPanel({
           title={t('credentialsPage.list.title')}
           actions={
             <Button
-              variant="outline"
               size="sm"
               disabled={workbench.mutating}
               onClick={() => setCreateSheetOpen(true)}
@@ -1117,121 +1214,137 @@ export function AccountsPanel({
           resources={resources}
           search={search}
           statusFilter={statusFilter}
-          sourceFilter={sourceFilter}
           providerFilter={providerFilter}
           quotaAvailable={quotaAvailable}
-          quotaView={quotaView}
+          attentionOnly={attentionOnly}
+          websocketOnly={websocketOnly}
+          filteredCount={filteredResources.length}
           onSearchChange={(value) => {
             setSearch(value)
             onSearchChange?.(value)
           }}
           onStatusFilterChange={setStatusFilter}
-          onSourceFilterChange={setSourceFilter}
           onProviderFilterChange={setProviderFilter}
-          onQuotaViewChange={(view) => onQuotaViewChange?.(view)}
+          onAttentionOnlyChange={(value) => onAttentionOnlyChange?.(value)}
+          onWebsocketOnlyChange={(value) => onWebsocketOnlyChange?.(value)}
+          onClearFilters={handleClearFilters}
         />
         <div className="p-4">
-            {selectedResourceIds.size > 0 ? (
-              <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {t('credentialsPage.bulk.selected', { count: selectedResourceIds.size })}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {t('credentialsPage.bulk.selectedSummary', {
-                      enabled: selectedEnabledCount,
-                      disabled: selectedDisabledCount,
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={workbench.mutating}
-                    onClick={() => setSelectedResourceIds(new Set())}
-                  >
-                    {t('credentialsPage.bulk.clearSelection')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={workbench.mutating || selectedDisabledCount === 0}
-                    onClick={() => void handleBulkStatus(false)}
-                  >
-                    <CheckCircle2 className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.enableSelected')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={workbench.mutating || selectedEnabledCount === 0}
-                    onClick={() => void handleBulkStatus(true)}
-                  >
-                    <AlertTriangle className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.disableSelected')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={workbench.mutating}
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.deleteSelected')}
-                  </Button>
-                </div>
+          {selectedResourceIds.size > 0 ? (
+            <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {t('credentialsPage.bulk.selected', { count: selectedResourceIds.size })}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t('credentialsPage.bulk.selectedSummary', {
+                    enabled: selectedEnabledCount,
+                    disabled: selectedDisabledCount,
+                  })}
+                </p>
               </div>
-            ) : null}
-            <CredentialList
-              resources={filteredResources}
-              selectedResourceId={selectedResourceId}
-              selectedResourceIds={selectedResourceIds}
-              mutating={workbench.mutating}
-              quotaAvailable={quotaAvailable}
-              quotaLoading={quotaLoading}
-              quotaMap={resolvedQuotaMap}
-              showInFlight={workbench.credentialInFlight}
-              inFlightByCredentialId={inFlightByCredentialId}
-              onDeleteResource={(resource) => {
-                handleDelete(resource)
-              }}
-              onDownloadResource={(resource) => void handleDownload(resource)}
-              onOpenDrawer={(resource, tab) => {
-                setSelectedResourceId(resource.id)
-                setDrawerTab(tab)
-                setDetailSheetOpen(true)
-              }}
-              onSaveInline={handleInlineMetadataSave}
-              onToggleSelection={handleToggleSelection}
-              onToggleAll={handleToggleAll}
-              onToggleStatus={(resource, disabled) => {
-                void handleSetStatus(resource, disabled)
-              }}
-            />
-            {quotaAvailable && quotaTruncated ? (
-              <p className="text-muted-foreground mt-3 text-xs leading-5">
-                {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
-              </p>
-            ) : null}
-          </div>
-        </TableSurface>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={workbench.mutating}
+                  onClick={() => setSelectedResourceIds(new Set())}
+                >
+                  {t('credentialsPage.bulk.clearSelection')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workbench.mutating || selectedDisabledCount === 0}
+                  onClick={() => void handleBulkStatus(false)}
+                >
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.enableSelected')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workbench.mutating || selectedEnabledCount === 0}
+                  onClick={() => void handleBulkStatus(true)}
+                >
+                  <AlertTriangle className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.disableSelected')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={workbench.mutating}
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.deleteSelected')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <CredentialList
+            resources={filteredResources}
+            selectedResourceId={selectedResourceId}
+            selectedResourceIds={selectedResourceIds}
+            mutating={workbench.mutating}
+            quotaAvailable={quotaAvailable}
+            quotaLoading={quotaLoading}
+            quotaMap={resolvedQuotaMap}
+            showInFlight={workbench.credentialInFlight || workbench.credentialConcurrencyLimits}
+            inFlightByCredentialId={inFlightByCredentialId}
+            inFlightStatus={inFlightStatus}
+            emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
+            onClearFilters={handleClearFilters}
+            onDeleteResource={(resource) => {
+              handleDelete(resource)
+            }}
+            onDownloadResource={(resource) => void handleDownload(resource)}
+            onOpenDrawer={(resource, tab) => {
+              setSelectedResourceId(resource.id)
+              setDrawerTab(tab)
+              setDetailSheetOpen(true)
+            }}
+            onSaveInline={handleInlineMetadataSave}
+            onToggleSelection={handleToggleSelection}
+            onToggleAll={handleToggleAll}
+            onToggleStatus={(resource, disabled) => {
+              void handleSetStatus(resource, disabled)
+            }}
+          />
+          {quotaAvailable && quotaTruncated ? (
+            <p className="text-muted-foreground mt-3 text-xs leading-5">
+              {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
+            </p>
+          ) : null}
+        </div>
+      </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
         <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
           {selectedResource ? (
             <CredentialDetailDrawer
               resource={selectedResource}
+              open={detailSheetOpen}
               tab={drawerTab}
               mutating={workbench.mutating}
               models={workbench.models}
               quotaEntry={findUpstreamQuotaEntry(resolvedQuotaMap, selectedResource)}
-              showConcurrency={workbench.credentialInFlight}
+              showConcurrency={
+                workbench.credentialInFlight || workbench.credentialConcurrencyLimits
+              }
+              observationAvailable={workbench.credentialInFlight}
               canEditConcurrency={workbench.credentialConcurrencyLimits}
               inFlightSummary={
                 inFlightByCredentialId.get(getCredentialInFlightId(selectedResource)) ?? null
               }
+              inFlightObservation={workbench.inFlightSnapshot}
+              concurrencyPending={
+                (workbench.credentialInFlight && workbench.inFlightPending) ||
+                (workbench.credentialConcurrencyLimits && workbench.concurrencyPending)
+              }
+              concurrencyStale={workbench.inFlightStale || workbench.concurrencyStale}
+              concurrencyErrorMessage={concurrencyErrorMessage || null}
               onTabChange={setDrawerTab}
               onUpdateMetadata={handleMetadataUpdate}
               onToggleStatus={() => handleToggleStatus(selectedResource)}

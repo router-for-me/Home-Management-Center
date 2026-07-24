@@ -182,12 +182,12 @@ export type RequestEventFilterOptions = {
   statusCodes: string[]
 }
 
-export type RequestEventDownloadResult = {
+type RequestEventDownloadResult = {
   blob: Blob
   fileName: string
 }
 
-export type RequestEventsApiError = Error & Pick<ManagementApiError, 'status' | 'code'>
+type RequestEventsApiError = Error & Pick<ManagementApiError, 'status' | 'code'>
 
 export const defaultRequestEventFilters: RequestEventFilters = {
   range: '24h',
