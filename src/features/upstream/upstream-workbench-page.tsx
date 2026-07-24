@@ -49,6 +49,10 @@ export function UpstreamWorkbenchPage({
     setActiveTab(tab)
   }, [tab])
 
+  useEffect(() => {
+    if (!quota.available) setAttentionOnly(false)
+  }, [quota.available])
+
   const fetchingCount =
     useIsFetching({ queryKey: ['management-credentials'] }) +
     useIsFetching({ queryKey: ['management-providers'] }) +

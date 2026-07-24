@@ -206,7 +206,7 @@ function CredentialErrorState({
   )
 }
 
-function AccountsToolbar({
+export function AccountsToolbar({
   resources,
   search,
   statusFilter,
@@ -271,27 +271,27 @@ function AccountsToolbar({
         />
         <Input
           type="search"
-          className="h-10 pl-9"
+          className="h-11 pl-9 sm:h-10"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t('credentialsPage.list.filterPlaceholder')}
           aria-label={t('credentialsPage.list.filterPlaceholder')}
         />
       </div>
-      <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
+      <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
         <Select
           value={statusFilter}
           onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
           <SelectTrigger
-            className="h-10 w-full sm:w-40"
+            className="h-11 w-full sm:h-10 sm:w-40"
             aria-label={t('credentialsPage.filters.status')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {statusFilters.map((filter) => (
-              <SelectItem key={filter} value={filter} className="min-h-10">
+              <SelectItem key={filter} value={filter} className="min-h-11 sm:min-h-10">
                 {t(`credentialsPage.statusFilters.${filter}`)}
               </SelectItem>
             ))}
@@ -300,17 +300,17 @@ function AccountsToolbar({
 
         <Select value={providerFilter} onValueChange={onProviderFilterChange}>
           <SelectTrigger
-            className="h-10 w-full sm:w-52"
+            className="h-11 w-full sm:h-10 sm:w-52"
             aria-label={t('credentialsPage.filters.provider')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="min-h-10">
+            <SelectItem value="all" className="min-h-11 sm:min-h-10">
               {t('credentialsPage.filters.allProviders')}
             </SelectItem>
             {providers.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id} className="min-h-10">
+              <SelectItem key={provider.id} value={provider.id} className="min-h-11 sm:min-h-10">
                 {provider.label}
               </SelectItem>
             ))}
@@ -322,7 +322,7 @@ function AccountsToolbar({
           value={activeQuickFilters}
           variant="outline"
           size="lg"
-          className="col-span-2 w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
+          className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
           aria-label={t('credentialsPage.filters.quickFilters')}
           onValueChange={(values) => {
             onAttentionOnlyChange(quotaAvailable && values.includes('attention'))
@@ -332,17 +332,19 @@ function AccountsToolbar({
           {quotaAvailable ? (
             <ToggleGroupItem
               value="attention"
-              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
+              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning h-11 sm:h-10"
             >
               {t('upstreamPage.quotaChips.attention')}
             </ToggleGroupItem>
           ) : null}
-          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
+          <ToggleGroupItem value="ws" className="h-11 sm:h-10">
+            {t('upstreamPage.quotaChips.ws')}
+          </ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="col-span-2 flex min-h-10 min-w-0 items-center gap-1 sm:ml-auto">
+        <div className="col-span-full flex min-h-11 min-w-0 items-center justify-between gap-2 sm:ml-auto sm:min-h-10">
           <p
-            className="text-muted-foreground min-w-0 text-xs tabular-nums"
+            className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
             role="status"
             aria-live="polite"
           >
@@ -356,7 +358,7 @@ function AccountsToolbar({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-10 px-2.5"
+              className="h-11 px-2.5 sm:h-10"
               onClick={onClearFilters}
             >
               {t('credentialsPage.filters.clear')}
@@ -431,7 +433,12 @@ function CredentialList({
         )}
         action={
           filtered ? (
-            <Button type="button" variant="outline" className="h-10" onClick={onClearFilters}>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 sm:h-10"
+              onClick={onClearFilters}
+            >
               {t('credentialsPage.filters.clear')}
             </Button>
           ) : undefined
@@ -810,6 +817,15 @@ export function AccountsPanel({
   useEffect(() => {
     setSearch((current) => (current === initialSearch ? current : initialSearch))
   }, [initialSearch])
+
+  useEffect(() => {
+    if (
+      providerFilter !== 'all' &&
+      !resources.some((resource) => resource.provider === providerFilter)
+    ) {
+      setProviderFilter('all')
+    }
+  }, [providerFilter, resources])
 
   useEffect(() => {
     if (
