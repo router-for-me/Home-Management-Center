@@ -13,7 +13,7 @@ import type {
 import { createManagementClient, toManagementApiError } from './client'
 import type { ManagementSessionInput } from './types'
 
-export type ModelPriceImportErrorCode =
+type ModelPriceImportErrorCode =
   | 'unsupported'
   | 'conflict'
   | 'expired'

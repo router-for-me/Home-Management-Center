@@ -64,7 +64,7 @@ export type PluginStoreInstallInput = {
   version?: string
 }
 
-export type PluginStoreInstallResult = {
+type PluginStoreInstallResult = {
   status: string
   sourceId: string
   sourceName: string
@@ -77,7 +77,7 @@ export type PluginStoreInstallResult = {
   restartRequired: boolean
 }
 
-export type PluginStoreUninstallResult = {
+type PluginStoreUninstallResult = {
   status: string
   id: string
   configuredRemoved: boolean

@@ -34,13 +34,13 @@ export type PluginPageVerdict =
   | 'rolloutPending'
   | 'updatesAvailable'
 
-export type PluginWorkbenchSnapshot = {
+type PluginWorkbenchSnapshot = {
   store: PluginStoreResponse
   nodeReports: SystemNodePluginReportSnapshot | null
   nodeReportError: ManagementApiError | null
 }
 
-export type PluginWorkbenchStats = {
+type PluginWorkbenchStats = {
   available: number
   installed: number
   updates: number

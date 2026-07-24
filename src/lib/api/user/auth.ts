@@ -36,16 +36,16 @@ export type UserAuthSession = {
   user: UserAccount
 }
 
-export type UserAuthInput = {
+type UserAuthInput = {
   username: string
   password: string
 }
 
-export type UserRegistrationInput = UserAuthInput & {
+type UserRegistrationInput = UserAuthInput & {
   email?: string
 }
 
-export type UserTotpLoginInput = UserAuthInput & {
+type UserTotpLoginInput = UserAuthInput & {
   totpCode: string
 }
 

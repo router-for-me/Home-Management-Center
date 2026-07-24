@@ -2,7 +2,7 @@ import { type UserSessionInput, createUserClient, toUserApiError } from '@/lib/a
 
 type UnknownRecord = Record<string, unknown>
 
-export type UserCapabilities = {
+type UserCapabilities = {
   endpointSupported: boolean
   emailRegistration: boolean
   emailVerification: boolean
@@ -34,7 +34,7 @@ function readString(record: UnknownRecord, keys: string[]) {
   return null
 }
 
-export function legacyUserCapabilities(): UserCapabilities {
+function legacyUserCapabilities(): UserCapabilities {
   return {
     endpointSupported: false,
     emailRegistration: false,

@@ -36,7 +36,7 @@ const preferencesSchema = z.object({
   targetFilter: z.enum(['all', 'missing', 'synced', 'selected']),
 })
 
-export type ModelPriceImportPreferences = {
+type ModelPriceImportPreferences = {
   policy: ModelPriceImportPolicy
   overwriteMode: ModelPriceImportOverwriteMode
   targetFilter: ModelPriceImportTargetFilter

@@ -12,7 +12,7 @@ import {
 
 import { cn } from '@/lib/utils'
 
-export type EmptyStateKind = 'empty' | 'filtered-empty' | 'unsupported' | 'disabled' | 'error'
+type EmptyStateKind = 'empty' | 'filtered-empty' | 'unsupported' | 'disabled' | 'error'
 
 type EmptyStateProps = {
   title: ReactNode
@@ -39,7 +39,7 @@ function getEmptyStateToneClassName(kind: EmptyStateKind) {
   return 'border-border bg-muted/40 text-muted-foreground'
 }
 
-export function EmptyState({
+function EmptyState({
   action,
   className,
   compact = false,

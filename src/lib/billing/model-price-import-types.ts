@@ -184,7 +184,7 @@ export type ModelPriceImportPendingApply = {
   input: ModelPriceImportApplyInput
 }
 
-export type ModelPriceImportApplyRowStatus =
+type ModelPriceImportApplyRowStatus =
   | 'created'
   | 'updated'
   | 'overwritten'

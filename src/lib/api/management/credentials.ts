@@ -125,7 +125,7 @@ type CredentialUploadResponse = {
   name?: string
 }
 
-export type CredentialUploadResult = {
+type CredentialUploadResult = {
   status: string
   uploaded: number
   files: string[]

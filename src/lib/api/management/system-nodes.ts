@@ -36,7 +36,7 @@ export type SystemHomeRole = 'master' | 'follower' | 'unknown'
 
 export type SystemTopologySource = 'topology' | 'nodes' | 'unsupported'
 
-export type SystemTopologySummary = {
+type SystemTopologySummary = {
   homeCount: number
   healthyHomeCount: number
   staleHomeCount: number
@@ -52,7 +52,7 @@ export type SystemTopologySummary = {
   retentionAfterSeconds: number | null
 }
 
-export type SystemTopologyHomeIdentity = {
+type SystemTopologyHomeIdentity = {
   id: string | null
   ip: string | null
   port: number | null

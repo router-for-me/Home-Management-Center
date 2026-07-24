@@ -2,7 +2,7 @@ import { normalizeCredentialRouteSearch } from '@/features/credentials/credentia
 
 export type UpstreamTab = 'accounts' | 'providers'
 
-export type UpstreamRouteSearch = {
+type UpstreamRouteSearch = {
   tab: UpstreamTab
   credential?: string
   q?: string

@@ -1,6 +1,12 @@
 {
-  "entry": ["src/main.tsx", "src/routes/**/*.tsx"],
-  "project": ["src/**/*.{ts,tsx}", "*.{ts,js,mjs,json}"],
+  "entry": [
+    "src/main.tsx",
+    "src/entries/*.tsx",
+    "src/routes/**/*.tsx",
+    "tests/**/*.{ts,tsx}",
+    "scripts/*.mjs"
+  ],
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}", "scripts/*.mjs", "*.{ts,js,mjs,json}"],
   "ignore": ["src/env.d.ts"],
   "ignoreIssues": {
     "src/components/ui/button.tsx": ["exports"],
@@ -15,7 +21,6 @@
     "@tanstack/react-virtual",
     "input-otp",
     "motion",
-    "qrcode.react",
     "react-hook-form",
     "recharts",
     "tw-animate-css",

@@ -18,7 +18,7 @@ export type AntigravityQuotaGroup = {
   windows: QuotaWindow[]
 }
 
-export type AntigravityQuotaPresentation =
+type AntigravityQuotaPresentation =
   | { kind: 'windows'; groups: AntigravityQuotaGroup[] }
   | { kind: 'collecting'; groups: [] }
   | { kind: 'failed'; groups: [] }
@@ -35,7 +35,7 @@ type UpstreamQuotaCollectionBaselineEntry = {
   lastAttemptAt: string | null
 }
 
-export const xaiOnDemandWindowId = 'xai-on-demand'
+const xaiOnDemandWindowId = 'xai-on-demand'
 
 const antigravityQuotaGroupOrder: AntigravityQuotaGroupId[] = ['gemini', 'third-party']
 
