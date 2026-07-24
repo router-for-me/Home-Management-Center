@@ -1950,7 +1950,7 @@ export const ru = {
         quota: 'Квота',
         models: 'Модели',
         upload: 'Загрузить JSON',
-        save: 'Сохранить metadata',
+        save: 'Сохранить метаданные',
         viewQuota: 'Открыть квоту',
         viewModels: 'Показать модели',
         reloadModels: 'Обновить',
@@ -2137,7 +2137,7 @@ export const ru = {
       },
       detail: {
         title: 'Детали credential',
-        empty: 'Выберите credential, чтобы посмотреть metadata и действия.',
+        empty: 'Выберите учётные данные, чтобы посмотреть метаданные и доступные действия.',
         noModels: 'Для этого credential пока нет моделей.',
         modelsTitle: 'Доступные модели',
         modelsDescription: 'Запросить у runtime модели, доступные для этого credential.',
@@ -2257,7 +2257,7 @@ export const ru = {
       },
       toast: {
         downloaded: 'Credential скачан.',
-        updated: 'Credential metadata обновлена.',
+        updated: 'Метаданные учётных данных обновлены.',
         noChanges: 'Нет изменений для сохранения.',
         deleted: 'Credential удален.',
         bulkEnabled: 'Credentials включены: {{count}}.',

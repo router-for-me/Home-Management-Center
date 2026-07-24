@@ -1875,7 +1875,7 @@ export const zhTW = {
         quota: '額度',
         models: '模型',
         upload: '上傳 JSON',
-        save: '儲存 metadata',
+        save: '儲存元資料',
         viewQuota: '查看額度',
         viewModels: '查看模型',
         reloadModels: '重新載入',
@@ -2059,7 +2059,7 @@ export const zhTW = {
       },
       detail: {
         title: '憑證詳情',
-        empty: '選擇一個憑證以查看 metadata 和操作。',
+        empty: '選擇一個憑證以查看元資料和操作。',
         noModels: '該憑證暫無模型。',
         modelsTitle: '可用模型',
         modelsDescription: '依目前憑證向執行環境查詢可用模型。',
@@ -2167,7 +2167,7 @@ export const zhTW = {
       },
       toast: {
         downloaded: '憑證已下載。',
-        updated: '憑證 metadata 已更新。',
+        updated: '憑證元資料已更新。',
         noChanges: '沒有需要儲存的變更。',
         deleted: '憑證已刪除。',
         bulkEnabled: '已啟用 {{count}} 個憑證。',

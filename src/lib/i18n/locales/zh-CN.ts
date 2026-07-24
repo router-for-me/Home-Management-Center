@@ -1875,7 +1875,7 @@ export const zhCN = {
         quota: '额度',
         models: '模型',
         upload: '上传 JSON',
-        save: '保存 metadata',
+        save: '保存元数据',
         viewQuota: '查看额度',
         viewModels: '查看模型',
         reloadModels: '重新加载',
@@ -2059,7 +2059,7 @@ export const zhCN = {
       },
       detail: {
         title: '凭证详情',
-        empty: '选择一个凭证以查看 metadata 和操作。',
+        empty: '选择一个凭证以查看元数据和操作。',
         noModels: '该凭证暂无模型。',
         modelsTitle: '可用模型',
         modelsDescription: '按当前凭证向运行时查询可用模型。',
@@ -2167,7 +2167,7 @@ export const zhCN = {
       },
       toast: {
         downloaded: '凭证已下载。',
-        updated: '凭证 metadata 已更新。',
+        updated: '凭证元数据已更新。',
         noChanges: '没有需要保存的更改。',
         deleted: '凭证已删除。',
         bulkEnabled: '已启用 {{count}} 个凭证。',
