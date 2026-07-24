@@ -1,12 +1,16 @@
-import { createHash } from 'node:crypto'
-import { readdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { join, relative, sep } from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises'
+import { join, relative, sep } from 'node:path'
 
 const distDir = new URL('../dist/', import.meta.url)
 const manifestPath = new URL('../dist/panel-manifest.json', import.meta.url)
 const requiredEntries = ['index.html', 'management.html', 'user.html']
 
+/**
+ * @param {readonly string[]} args
+ * @returns {string | null}
+ */
 function gitValue(args) {
   try {
     return execFileSync('git', args, {
@@ -19,8 +23,13 @@ function gitValue(args) {
   }
 }
 
+/**
+ * @param {string} dir
+ * @returns {Promise<string[]>}
+ */
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
+  /** @type {string[]} */
   const files = []
 
   for (const entry of entries) {
@@ -36,6 +45,7 @@ async function walk(dir) {
   return files
 }
 
+/** @param {string} path */
 async function fileRecord(path) {
   const [metadata, data] = await Promise.all([stat(path), readFile(path)])
   const pathname = relative(distDir.pathname, path).split(sep).join('/')

@@ -9,7 +9,7 @@ export type UserSessionInput = {
   token?: string | null
 }
 
-export class UserApiError extends Error {
+class UserApiError extends Error {
   readonly status?: number
   readonly code: string
 

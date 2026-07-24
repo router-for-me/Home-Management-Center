@@ -163,12 +163,6 @@ export type BillingTierDiagnostics = {
   lastResponseTierAt: string | null
 }
 
-export type ModelPriceList = {
-  items: ModelPrice[]
-  schemaVersion: number | null
-  fetchedAt: string
-}
-
 export type BillingPagination = {
   limit: number
   offset: number

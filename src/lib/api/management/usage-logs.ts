@@ -1,11 +1,7 @@
 import { z } from 'zod'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type {
-  CapabilityMap,
-  ManagementApiError,
-  ManagementSessionInput,
-} from '@/lib/api/management/types'
+import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
 export type UsageLogIssueScope =
@@ -32,7 +28,7 @@ export type UsageLogIssue = {
   code?: string
 }
 
-export type UsageLogsApiError = Error & Pick<ManagementApiError, 'status' | 'code'>
+type UsageLogsApiError = Error & Pick<ManagementApiError, 'status' | 'code'>
 
 export type UsageTimeRangePreset =
   | '4h'
@@ -47,7 +43,6 @@ export type UsageTimeRangePreset =
 export type UsageStatusFilter = 'all' | 'success' | 'failed'
 export type UsageCredentialType = 'provider_api_key' | 'oauth' | 'file_auth' | 'vertex' | 'unknown'
 export type UsageCredentialTypeFilter = 'all' | UsageCredentialType
-export type UsageMetricKey = 'requests' | 'tokens' | 'cost' | 'errors' | 'latency'
 export type UsageSortKey =
   | 'timestamp_desc'
   | 'timestamp_asc'
@@ -59,7 +54,7 @@ export type UsageSortKey =
   | 'latency_desc'
   | 'latency_asc'
 export type UsageRecordSortableField = 'timestamp' | 'total_tokens' | 'total_amount' | 'latency_ms'
-export type UsageCostCategory = 'input' | 'output' | 'cache' | 'reasoning' | 'request' | 'other'
+type UsageCostCategory = 'input' | 'output' | 'cache' | 'reasoning' | 'request' | 'other'
 export type UsageActivityStatus = 'empty' | 'healthy' | 'degraded' | 'unavailable' | 'unknown'
 export type UsageHealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'disabled' | 'unknown'
 export type UsageQuotaStatus = 'ok' | 'warning' | 'exceeded' | 'unknown'
@@ -86,7 +81,7 @@ export type UsageAggregateSortState = {
   direction: UsageAggregateSortDirection
 } | null
 
-export type UsageAggregatesQuery = {
+type UsageAggregatesQuery = {
   groupBy: UsageAggregateGroupBy
   metric: UsageAggregateMetric
   sortDirection: UsageAggregateSortDirection
@@ -102,14 +97,14 @@ export const defaultUsageAggregatesQuery: UsageAggregatesQuery = {
   offset: 0,
 }
 
-export const defaultUsageRecordSortableFields: UsageRecordSortableField[] = [
+const defaultUsageRecordSortableFields: UsageRecordSortableField[] = [
   'timestamp',
   'total_tokens',
   'total_amount',
   'latency_ms',
 ]
 
-export const defaultUsageAggregateSortableMetrics: UsageAggregateMetric[] = [
+const defaultUsageAggregateSortableMetrics: UsageAggregateMetric[] = [
   'request_count',
   'total_tokens',
   'total_amount',
@@ -217,7 +212,7 @@ export type RuntimeLogFilters = {
   before: string
 }
 
-export type RuntimeLogQuery = {
+type RuntimeLogQuery = {
   limit: number
   offset: number
 } & RuntimeLogFilters
@@ -385,7 +380,7 @@ export type UsagePayloadSummary = {
   toolCount: number | null
 }
 
-export type UsageRecordRelatedRequestLog = {
+type UsageRecordRelatedRequestLog = {
   requestId: string | null
   homeIp: string | null
   homePort: number | null
@@ -678,7 +673,7 @@ type ClearLogsResult = {
   removed: number | null
 }
 
-export type LogDownloadResult = {
+type LogDownloadResult = {
   blob: Blob
   fileName: string
 }
@@ -917,78 +912,6 @@ function normalizeUsageSort(value: string | null): UsageSortKey {
   }
 
   return 'timestamp_desc'
-}
-
-function maskApiKey(value: string) {
-  const trimmed = value.trim()
-  if (!trimmed) return ''
-  if (trimmed.length <= 10) return `${trimmed.slice(0, 2)}***`
-  return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`
-}
-
-function splitUsageKey(value: string) {
-  const separatorIndex = value.indexOf('|')
-
-  if (separatorIndex < 0) {
-    return {
-      baseUrl: '',
-      apiKeyPreview: maskApiKey(value),
-    }
-  }
-
-  return {
-    baseUrl: value.slice(0, separatorIndex),
-    apiKeyPreview: maskApiKey(value.slice(separatorIndex + 1)),
-  }
-}
-
-function normalizeIssue(scope: UsageLogIssueScope, error: unknown): UsageLogIssue {
-  const apiError = toManagementApiError(error)
-
-  return {
-    scope,
-    message: apiError.message,
-    status: apiError.status,
-    code: apiError.code,
-  }
-}
-
-async function readOptional<T>(
-  issues: UsageLogIssue[],
-  scope: UsageLogIssueScope,
-  request: () => Promise<T>,
-  fallback: T,
-): Promise<T> {
-  try {
-    return await request()
-  } catch (error) {
-    issues.push(normalizeIssue(scope, error))
-    return fallback
-  }
-}
-
-function normalizeApiKeyUsage(responseData: unknown): ApiKeyUsageResource[] {
-  const root = toRecord(responseData)
-
-  return Object.entries(root).flatMap(([provider, providerValue]) => {
-    const providerRecord = toRecord(providerValue)
-
-    return Object.entries(providerRecord).map(([usageKey, usageValue], index) => {
-      const usageRecord = toRecord(usageValue)
-      const recentRequests = usageRecord.recent_requests
-      const keyParts = splitUsageKey(usageKey)
-
-      return {
-        id: `${provider}:${usageKey}:${index}`,
-        provider,
-        baseUrl: keyParts.baseUrl,
-        apiKeyPreview: keyParts.apiKeyPreview,
-        success: readNumber(usageRecord, 'success') ?? 0,
-        failed: readNumber(usageRecord, 'failed') ?? 0,
-        recentRequestCount: Array.isArray(recentRequests) ? recentRequests.length : 0,
-      }
-    })
-  })
 }
 
 function readLogArray(record: UnknownRecord): unknown[] {
@@ -1322,7 +1245,7 @@ export function normalizeUsageRecordsPage(
   }
 }
 
-export function normalizeUsageRecordDetail(
+function normalizeUsageRecordDetail(
   responseData: unknown,
   tokenBreakdownV2 = false,
 ): UsageRecordDetail {
@@ -2012,179 +1935,6 @@ function getAttachmentFileName(headers: unknown, fallback: string) {
     readContentDispositionFileName(headerRecord['Content-Disposition']) ??
     fallback
   )
-}
-
-export async function fetchUsageLogsSnapshot(
-  session: ManagementSessionInput,
-  capabilities: CapabilityMap,
-  filters: UsageFilters,
-): Promise<UsageLogsSnapshot> {
-  const client = createManagementClient(session)
-  const issues: UsageLogIssue[] = []
-  const configResponse = await client.get<unknown>('/config')
-  const config = toRecord(configResponse.data)
-  const fileLoggingEnabled = readConfigBoolean(config, 'logging-to-file')
-  const usageStatisticsEnabled = readConfigBoolean(config, 'usage-statistics-enabled')
-  const queryParams = getUsageRecordQueryParams(filters)
-  const aggregateQueryParams = getUsageScopeQueryParams(filters)
-
-  const [
-    overview,
-    records,
-    credentialUsage,
-    providerHealth,
-    credentialHealth,
-    realtime,
-    requestLogs,
-    apiKeyUsage,
-    requestErrorLogs,
-  ] = await Promise.all([
-    capabilities.usageOverview
-      ? readOptional(
-          issues,
-          'usageOverview',
-          async () => {
-            const response = await client.get<unknown>('/usage/overview', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageOverview(response.data, capabilities.usageTokenBreakdownV2)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageRecords
-      ? readOptional(
-          issues,
-          'usageRecords',
-          async () => {
-            const response = await client.get<unknown>('/usage/records', {
-              params: queryParams,
-            })
-            return normalizeUsageRecordsPage(response.data, capabilities.usageTokenBreakdownV2)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageAggregates
-      ? readOptional(
-          issues,
-          'usageAggregates',
-          async () => {
-            const response = await client.get<unknown>('/usage/aggregates', {
-              params: {
-                ...aggregateQueryParams,
-                group_by: 'credential',
-                metric: 'request_count',
-                direction: 'desc',
-                limit: 20,
-                offset: 0,
-              },
-            })
-            return normalizeAggregateResponse(response.data, capabilities.usageTokenBreakdownV2)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageProviderHealth
-      ? readOptional(
-          issues,
-          'usageProviderHealth',
-          async () => {
-            const response = await client.get<unknown>('/usage/health/providers', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageHealthResponse(response.data, 'provider')
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageCredentialHealth
-      ? readOptional(
-          issues,
-          'usageCredentialHealth',
-          async () => {
-            const response = await client.get<unknown>('/usage/health/credentials', {
-              params: aggregateQueryParams,
-            })
-            return normalizeUsageHealthResponse(response.data, 'credential')
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usageRealtime
-      ? readOptional(
-          issues,
-          'usageRealtime',
-          async () => {
-            const response = await client.get<unknown>('/usage/realtime', {
-              params: {
-                ...aggregateQueryParams,
-                window_seconds: 900,
-                bucket_seconds: 60,
-                group_by: 'model',
-              },
-            })
-            return normalizeUsageRealtimeSnapshot(response.data, capabilities.usageTokenBreakdownV2)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.requestLogIndex
-      ? readOptional(
-          issues,
-          'requestLogIndex',
-          async () => {
-            const response = await client.get<unknown>('/request-logs', {
-              params: queryParams,
-            })
-            return normalizeRequestLogIndex(response.data)
-          },
-          null,
-        )
-      : Promise.resolve(null),
-    capabilities.usage
-      ? readOptional(
-          issues,
-          'apiKeyUsage',
-          async () => {
-            const response = await client.get<unknown>('/api-key-usage')
-            return normalizeApiKeyUsage(response.data)
-          },
-          [],
-        )
-      : Promise.resolve([]),
-    capabilities.requestErrorLogs
-      ? readOptional(
-          issues,
-          'requestErrorLogs',
-          async () => {
-            const response = await client.get<unknown>('/request-error-logs')
-            return normalizeRequestErrorLogs(response.data)
-          },
-          [],
-        )
-      : Promise.resolve([]),
-  ])
-
-  return {
-    fetchedAt: new Date().toISOString(),
-    settings: {
-      usageStatisticsEnabled,
-      fileLoggingEnabled,
-    },
-    overview,
-    records,
-    credentialUsage,
-    providerHealth,
-    credentialHealth,
-    realtime,
-    requestLogs,
-    apiKeyUsage,
-    runtimeLogs: null,
-    requestErrorLogs,
-    filterOptions: deriveFilterOptions({ overview, records, credentialUsage }),
-    issues,
-  }
 }
 
 export async function fetchUsageOverview(

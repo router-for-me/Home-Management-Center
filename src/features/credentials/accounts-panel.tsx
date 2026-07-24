@@ -68,8 +68,8 @@ import {
   getCredentialInFlightId,
 } from '@/features/credentials/credential-concurrency'
 import {
-  CreateCredentialSheet,
   type CreateCredentialMode,
+  CreateCredentialSheet,
   type OAuthSessionMap,
   type OAuthStatusMap,
 } from '@/features/credentials/credential-create-sheet'
@@ -92,11 +92,8 @@ import {
 } from '@/features/credentials/credential-inline-cells'
 import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
-import {
-  type UpstreamAccountsStats,
-} from '@/features/upstream/summary-cards'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
-import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
+import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
   type UpstreamQuotaView,
@@ -104,6 +101,7 @@ import {
   isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
+import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
 import {
   type CredentialInFlightSummary,
   type CredentialMetadataInput,
@@ -1131,92 +1129,92 @@ export function AccountsPanel({
           onQuotaViewChange={(view) => onQuotaViewChange?.(view)}
         />
         <div className="p-4">
-            {selectedResourceIds.size > 0 ? (
-              <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">
-                    {t('credentialsPage.bulk.selected', { count: selectedResourceIds.size })}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {t('credentialsPage.bulk.selectedSummary', {
-                      enabled: selectedEnabledCount,
-                      disabled: selectedDisabledCount,
-                    })}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={workbench.mutating}
-                    onClick={() => setSelectedResourceIds(new Set())}
-                  >
-                    {t('credentialsPage.bulk.clearSelection')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={workbench.mutating || selectedDisabledCount === 0}
-                    onClick={() => void handleBulkStatus(false)}
-                  >
-                    <CheckCircle2 className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.enableSelected')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={workbench.mutating || selectedEnabledCount === 0}
-                    onClick={() => void handleBulkStatus(true)}
-                  >
-                    <AlertTriangle className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.disableSelected')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    disabled={workbench.mutating}
-                    onClick={handleBulkDelete}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.bulk.deleteSelected')}
-                  </Button>
-                </div>
+          {selectedResourceIds.size > 0 ? (
+            <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">
+                  {t('credentialsPage.bulk.selected', { count: selectedResourceIds.size })}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs">
+                  {t('credentialsPage.bulk.selectedSummary', {
+                    enabled: selectedEnabledCount,
+                    disabled: selectedDisabledCount,
+                  })}
+                </p>
               </div>
-            ) : null}
-            <CredentialList
-              resources={filteredResources}
-              selectedResourceId={selectedResourceId}
-              selectedResourceIds={selectedResourceIds}
-              mutating={workbench.mutating}
-              quotaAvailable={quotaAvailable}
-              quotaLoading={quotaLoading}
-              quotaMap={resolvedQuotaMap}
-              showInFlight={workbench.credentialInFlight}
-              inFlightByCredentialId={inFlightByCredentialId}
-              onDeleteResource={(resource) => {
-                handleDelete(resource)
-              }}
-              onDownloadResource={(resource) => void handleDownload(resource)}
-              onOpenDrawer={(resource, tab) => {
-                setSelectedResourceId(resource.id)
-                setDrawerTab(tab)
-                setDetailSheetOpen(true)
-              }}
-              onSaveInline={handleInlineMetadataSave}
-              onToggleSelection={handleToggleSelection}
-              onToggleAll={handleToggleAll}
-              onToggleStatus={(resource, disabled) => {
-                void handleSetStatus(resource, disabled)
-              }}
-            />
-            {quotaAvailable && quotaTruncated ? (
-              <p className="text-muted-foreground mt-3 text-xs leading-5">
-                {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
-              </p>
-            ) : null}
-          </div>
-        </TableSurface>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={workbench.mutating}
+                  onClick={() => setSelectedResourceIds(new Set())}
+                >
+                  {t('credentialsPage.bulk.clearSelection')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workbench.mutating || selectedDisabledCount === 0}
+                  onClick={() => void handleBulkStatus(false)}
+                >
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.enableSelected')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workbench.mutating || selectedEnabledCount === 0}
+                  onClick={() => void handleBulkStatus(true)}
+                >
+                  <AlertTriangle className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.disableSelected')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={workbench.mutating}
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  {t('credentialsPage.bulk.deleteSelected')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          <CredentialList
+            resources={filteredResources}
+            selectedResourceId={selectedResourceId}
+            selectedResourceIds={selectedResourceIds}
+            mutating={workbench.mutating}
+            quotaAvailable={quotaAvailable}
+            quotaLoading={quotaLoading}
+            quotaMap={resolvedQuotaMap}
+            showInFlight={workbench.credentialInFlight}
+            inFlightByCredentialId={inFlightByCredentialId}
+            onDeleteResource={(resource) => {
+              handleDelete(resource)
+            }}
+            onDownloadResource={(resource) => void handleDownload(resource)}
+            onOpenDrawer={(resource, tab) => {
+              setSelectedResourceId(resource.id)
+              setDrawerTab(tab)
+              setDetailSheetOpen(true)
+            }}
+            onSaveInline={handleInlineMetadataSave}
+            onToggleSelection={handleToggleSelection}
+            onToggleAll={handleToggleAll}
+            onToggleStatus={(resource, disabled) => {
+              void handleSetStatus(resource, disabled)
+            }}
+          />
+          {quotaAvailable && quotaTruncated ? (
+            <p className="text-muted-foreground mt-3 text-xs leading-5">
+              {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
+            </p>
+          ) : null}
+        </div>
+      </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
         <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">

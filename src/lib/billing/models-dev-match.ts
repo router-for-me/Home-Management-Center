@@ -16,21 +16,13 @@ import {
   modelsDevProviderModelKey,
 } from './models-dev-catalog'
 
-export type {
-  ModelPriceImportAction,
-  ModelPriceImportExistingRule,
-  ModelPriceImportMatchStatus,
-  ModelPriceImportOverwriteMode,
-  ModelPriceImportPolicy,
-} from './model-price-import-types'
-
-export type ModelPriceImportCandidate = {
+type ModelPriceImportCandidate = {
   provider: string
   model: string
   label?: string
 }
 
-export type ModelPriceImportRow = {
+type ModelPriceImportRow = {
   key: string
   homeProvider: string
   homeModel: string
@@ -50,7 +42,7 @@ const FIRST_PARTY_LABS = ['anthropic', 'google', 'xai', 'openai'] as const
 const MARKETPLACE_PROVIDERS = new Set(['openrouter', 'requesty'])
 
 /** Home runtime model aliases -> preferred models.dev bare model ids. */
-export const DEFAULT_MODEL_ALIASES: Record<string, string[]> = {
+const DEFAULT_MODEL_ALIASES: Record<string, string[]> = {
   'gemini-3-flash-agent': ['gemini-3.5-flash', 'gemini-3.5-flash-preview', 'gemini-3-flash'],
   'gemini-pro-agent': ['gemini-3.1-pro-preview', 'gemini-3.1-pro', 'gemini-3-pro-preview'],
   'gemini-3-flash': ['gemini-3-flash', 'gemini-3-flash-preview'],
@@ -99,7 +91,7 @@ export function createDefaultImportPolicy(): ModelPriceImportPolicy {
   }
 }
 
-export function normalizeModelToken(value: string) {
+function normalizeModelToken(value: string) {
   return value
     .trim()
     .toLowerCase()

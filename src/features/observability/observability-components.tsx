@@ -98,10 +98,8 @@ import {
   NewItemsNotice,
 } from '@/features/observability/live-refresh-control'
 import { createTokenUsageChartLayout } from '@/features/observability/token-usage-chart-layout'
-import type { RuntimeMode } from '@/lib/api/management/types'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
-  ApiKeyUsageResource,
   RequestErrorLogFile,
   RequestLogIndex,
   RuntimeLogFilters,
@@ -133,7 +131,6 @@ import type {
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
-type UsageVerdict = 'ready' | 'partial' | 'legacy' | 'logsOnly' | 'disabled' | 'unsupported'
 type KpiTone = 'neutral' | 'positive' | 'warning' | 'danger' | 'info'
 type KpiComparisonMode = 'increaseGood' | 'increaseBad'
 type KpiCardData = {
@@ -310,30 +307,6 @@ export function isFileLoggingDisabledError(error: unknown) {
   return message.toLowerCase().includes('logging to file disabled')
 }
 
-function getUsageTotals(resources: ApiKeyUsageResource[]) {
-  return resources.reduce(
-    (acc, resource) => ({
-      success: acc.success + resource.success,
-      failed: acc.failed + resource.failed,
-      recentWindows: acc.recentWindows + resource.recentRequestCount,
-    }),
-    { success: 0, failed: 0, recentWindows: 0 },
-  )
-}
-
-function getUsageVerdict(
-  snapshot: UsageLogsSnapshot,
-  runtimeHasAnyCapability: boolean,
-): UsageVerdict {
-  if (!snapshot.settings.usageStatisticsEnabled) return 'disabled'
-  if (snapshot.issues.length > 0) return 'partial'
-  if (snapshot.overview && snapshot.records) return 'ready'
-  if (snapshot.apiKeyUsage.length > 0) return 'legacy'
-  if (snapshot.runtimeLogs !== null || snapshot.requestErrorLogs.length > 0) return 'logsOnly'
-  if (!runtimeHasAnyCapability) return 'unsupported'
-  return 'partial'
-}
-
 type ObservabilityCopyKey = 'usagePage' | 'requestEventsPage' | 'callDiagnosticsPage' | 'logsPage'
 
 // Shared verdict badge palette for the observability surfaces (usage, diagnostics, logs).
@@ -420,7 +393,7 @@ export type CapabilityStripItem = {
   unavailableTone: CapabilityBadgeUnavailableTone
 }
 
-export function CapabilityBadge({
+function CapabilityBadge({
   available,
   label,
   unavailableTone = 'warning',
@@ -467,143 +440,6 @@ export function CapabilityStrip({ items }: { items: CapabilityStripItem[] }) {
   )
 }
 
-export function UsageCapabilityStrip({
-  capabilities,
-}: {
-  capabilities: {
-    usage: boolean
-    usageOverview: boolean
-    usageRecords: boolean
-    usageAggregates: boolean
-    usageExport: boolean
-    logs: boolean
-    requestErrorLogs: boolean
-  }
-}) {
-  const { t } = useTranslation()
-  const capabilityItems: CapabilityStripItem[] = [
-    {
-      available: capabilities.usageOverview,
-      label: t('usageLogsPage.capabilities.usageOverview'),
-      unavailableTone: 'warning',
-    },
-    {
-      available: capabilities.usageRecords,
-      label: t('usageLogsPage.capabilities.usageRecords'),
-      unavailableTone: 'warning',
-    },
-    {
-      available: capabilities.usageAggregates,
-      label: t('usageLogsPage.capabilities.usageAggregates'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.usageExport,
-      label: t('usageLogsPage.capabilities.usageExport'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.logs,
-      label: t('usageLogsPage.capabilities.logs'),
-      unavailableTone: 'info',
-    },
-    {
-      available: capabilities.requestErrorLogs,
-      label: t('usageLogsPage.capabilities.requestErrorLogs'),
-      unavailableTone: 'info',
-    },
-  ]
-  return <CapabilityStrip items={capabilityItems} />
-}
-
-export function UsageVerdictHeader({
-  snapshot,
-  capabilities,
-  runtimeMode,
-  isFetching,
-  isExporting,
-  onRefresh,
-  onExport,
-}: {
-  snapshot: UsageLogsSnapshot
-  capabilities: {
-    usage: boolean
-    usageOverview: boolean
-    usageRecords: boolean
-    usageAggregates: boolean
-    usageExport: boolean
-    logs: boolean
-    requestErrorLogs: boolean
-  }
-  runtimeMode: RuntimeMode
-  isFetching: boolean
-  isExporting: boolean
-  onRefresh: () => void
-  onExport: () => void
-}) {
-  const { t, i18n } = useTranslation()
-  const runtimeHasAnyCapability =
-    capabilities.usage ||
-    capabilities.usageOverview ||
-    capabilities.usageRecords ||
-    capabilities.logs ||
-    capabilities.requestErrorLogs
-  const verdict = getUsageVerdict(snapshot, runtimeHasAnyCapability)
-
-  return (
-    <PageHeader
-      title={t(`usageLogsPage.verdict.${verdict}.title`)}
-      titleMeta={
-        <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
-          {t(`usageLogsPage.verdict.${verdict}.badge`)}
-        </span>
-      }
-      description={t(`usageLogsPage.verdict.${verdict}.description`, {
-        mode: t(`runtimeMode.${runtimeMode}`),
-      })}
-      meta={
-        <>
-          <span>
-            {t('usageLogsPage.header.runtime', { mode: t(`runtimeMode.${runtimeMode}`) })}
-          </span>
-          <span>
-            {t('usageLogsPage.header.updatedAt', {
-              time: formatDateTime(snapshot.fetchedAt, i18n) ?? snapshot.fetchedAt,
-            })}
-          </span>
-        </>
-      }
-      tags={<UsageCapabilityStrip capabilities={capabilities} />}
-      actions={
-        <>
-          <Button
-            variant="outline"
-            disabled={!capabilities.usageExport || isExporting}
-            onClick={onExport}
-          >
-            {isExporting ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Download className="size-4" aria-hidden="true" />
-            )}
-            {capabilities.usageExport
-              ? t('usageLogsPage.actions.exportCsv')
-              : t('usageLogsPage.actions.exportUnsupported')}
-          </Button>
-          <Button variant="outline" disabled={isFetching} onClick={onRefresh}>
-            {isFetching ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden="true" />
-            )}
-            {isFetching ? t('usageLogsPage.actions.syncing') : t('usageLogsPage.actions.refresh')}
-          </Button>
-        </>
-      }
-    />
-  )
-}
-
 export function IssueList({ issues }: { issues: UsageLogIssue[] }) {
   const { t } = useTranslation()
   if (issues.length === 0) return null
@@ -628,7 +464,7 @@ export function IssueList({ issues }: { issues: UsageLogIssue[] }) {
   )
 }
 
-export function SectionHeader({ title, description }: { title: string; description?: string }) {
+function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="min-w-0">
       <h2 className="text-base font-semibold">{title}</h2>
@@ -5350,116 +5186,6 @@ export function UsageHealthPanel({
           title={t('usageLogsPage.health.credentials.title')}
           updatedAt={credentialUpdatedAt}
         />
-      </div>
-    </TableSurface>
-  )
-}
-
-export function SummaryCards({ snapshot }: { snapshot: UsageLogsSnapshot }) {
-  const { t } = useTranslation()
-  const totals = getUsageTotals(snapshot.apiKeyUsage)
-  const cards = [
-    {
-      label: t('usageLogsPage.summary.keys'),
-      value: formatNumber(snapshot.apiKeyUsage.length),
-      detail: t('usageLogsPage.summary.keysDetail', {
-        count: formatNumber(totals.recentWindows),
-      }),
-    },
-    {
-      label: t('usageLogsPage.summary.requests'),
-      value: formatNumber(totals.success + totals.failed),
-      detail: t('usageLogsPage.summary.requestsDetail', {
-        success: formatNumber(totals.success),
-        failed: formatNumber(totals.failed),
-      }),
-    },
-    {
-      label: t('usageLogsPage.summary.logs'),
-      value: formatNumber(snapshot.runtimeLogs?.lineCount ?? 0),
-      detail: t('usageLogsPage.summary.logsDetail', {
-        count: formatNumber(snapshot.requestErrorLogs.length),
-      }),
-    },
-  ]
-
-  return (
-    <div className="grid gap-3 md:grid-cols-3">
-      {cards.map((card) => (
-        <div key={card.label} className="bg-card rounded-lg border p-4 shadow-sm">
-          <p className="text-muted-foreground text-sm">{card.label}</p>
-          <p className="mt-2 text-2xl font-semibold">{card.value}</p>
-          <p className="text-muted-foreground mt-1 text-xs">{card.detail}</p>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export function ApiKeyUsageTable({
-  resources,
-  canRead,
-}: {
-  resources: ApiKeyUsageResource[]
-  canRead: boolean
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <TableSurface className="min-w-0 p-4">
-      <SectionHeader
-        title={t('usageLogsPage.usage.title')}
-        description={t('usageLogsPage.usage.description')}
-      />
-      <div className="isolate mt-3 overflow-hidden rounded-md border">
-        {!canRead ? (
-          <TableEmptyState
-            kind="unsupported"
-            className="m-0 border-0"
-            title={t('usageLogsPage.usage.unavailableTitle')}
-            description={t('usageLogsPage.usage.unavailable')}
-          />
-        ) : resources.length > 0 ? (
-          <div className="overflow-x-auto">
-            <Table className="min-w-[760px]">
-              <TableHeader className="bg-muted/70 text-muted-foreground">
-                <TableRow variant="static">
-                  <TableHead>{t('usageLogsPage.usage.provider')}</TableHead>
-                  <TableHead>{t('usageLogsPage.usage.baseUrl')}</TableHead>
-                  <TableHead>{t('usageLogsPage.usage.key')}</TableHead>
-                  <TableHead className="text-right">{t('usageLogsPage.usage.success')}</TableHead>
-                  <TableHead className="text-right">{t('usageLogsPage.usage.failed')}</TableHead>
-                  <TableHead className="text-right">
-                    {t('usageLogsPage.usage.recentWindows')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {resources.map((resource) => (
-                  <TableRow key={resource.id} variant="resource">
-                    <TableCell className="font-medium">{resource.provider}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[260px] truncate font-mono text-xs">
-                      {resource.baseUrl || t('usageLogsPage.status.notAvailable')}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{resource.apiKeyPreview}</TableCell>
-                    <TableCell className="text-right">{formatNumber(resource.success)}</TableCell>
-                    <TableCell className="text-right">{formatNumber(resource.failed)}</TableCell>
-                    <TableCell className="text-right">
-                      {formatNumber(resource.recentRequestCount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        ) : (
-          <TableEmptyState
-            kind="empty"
-            className="m-0 border-0"
-            title={t('usageLogsPage.usage.emptyTitle')}
-            description={t('usageLogsPage.usage.empty')}
-          />
-        )}
       </div>
     </TableSurface>
   )
