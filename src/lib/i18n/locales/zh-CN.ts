@@ -1834,15 +1834,12 @@ export const zhCN = {
           danger: '危险操作',
         },
         metadata: {
-          proxyUnavailableHint: '当前后端未返回已保存的 Proxy URL。输入新值会替换现有设置。',
           priorityPlaceholder: '例如 10 或 -1',
           priorityHint: '仅支持整数；数值越大，调度优先级越高。',
-          prefixHint: '不常用;仅在详情二级维护,不占列表主列。',
           secondarySection: '次常用',
           websocketsXaiHint: '适用于 xAI/Grok。开启后该凭证可参与 WebSocket 传输。',
           websocketsUnsupported: '当前供应商不展示 WS 开关。',
           enableTitle: '启用凭证',
-          enableDescription: '禁用后该凭证不会参与模型请求,可随时重新启用。',
         },
         danger: {
           downloadTitle: '下载凭证 JSON',
@@ -2032,7 +2029,6 @@ export const zhCN = {
         saved: '已保存。',
         websocketsLabel: '切换 WebSocket',
         websocketsUnsupported: '当前供应商不支持 WebSocket 配置',
-        websocketsUnavailable: '当前后端未返回 WebSocket 状态',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2143,8 +2139,6 @@ export const zhCN = {
         noRequests: '当前没有在途请求。',
         loadMore: '加载更多',
         editTitle: '并发上限',
-        editDescription:
-          '空值或 0 表示不限制；模型上限使用 Home 的规范化模型键，已识别的 reasoning 后缀共享基础模型上限。修改上限不会终止现有请求。',
         totalLimit: '凭证总上限',
         modelLimits: '模型上限',
         addModel: '添加模型',

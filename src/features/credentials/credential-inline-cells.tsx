@@ -41,10 +41,7 @@ export function WebsocketsCell({
 
   if (!resource.metadataAvailability.websockets) {
     return (
-      <span
-        className="text-muted-foreground text-xs"
-        title={t('credentialsPage.inline.websocketsUnavailable')}
-      >
+      <span className="text-muted-foreground text-xs">
         {t('credentialsPage.status.notAvailable')}
       </span>
     )

@@ -478,11 +478,6 @@ function MetadataTab({
             handleFormChange((current) => ({ ...current, proxyUrl: event.target.value }))
           }
         />
-        {!resource.metadataAvailability.proxyUrl ? (
-          <span className="text-warning-foreground dark:text-warning text-xs leading-5 font-normal">
-            {t('upstreamPage.drawer.metadata.proxyUnavailableHint')}
-          </span>
-        ) : null}
       </label>
       <label className="grid gap-2 text-sm font-medium">
         <span>{t('credentialsPage.form.priority')}</span>
@@ -523,24 +518,23 @@ function MetadataTab({
             handleFormChange((current) => ({ ...current, prefix: event.target.value }))
           }
         />
-        <span className="text-muted-foreground text-xs leading-5 font-normal">
-          {t('upstreamPage.drawer.metadata.prefixHint')}
-        </span>
       </label>
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium">{t('credentialsPage.form.websockets')}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {websocketsSupported
-                ? !websocketsAvailable
-                  ? t('credentialsPage.inline.websocketsUnavailable')
-                  : isXaiCredential
-                    ? t('upstreamPage.drawer.metadata.websocketsXaiHint')
-                    : t('credentialsPage.form.websocketsHint')
-                : t('upstreamPage.drawer.metadata.websocketsUnsupported')}
-            </p>
+            {websocketsSupported && websocketsAvailable ? (
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {isXaiCredential
+                  ? t('upstreamPage.drawer.metadata.websocketsXaiHint')
+                  : t('credentialsPage.form.websocketsHint')}
+              </p>
+            ) : !websocketsSupported ? (
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {t('upstreamPage.drawer.metadata.websocketsUnsupported')}
+              </p>
+            ) : null}
           </div>
           {websocketsSupported && websocketsAvailable ? (
             <Switch
@@ -563,12 +557,9 @@ function MetadataTab({
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{t('upstreamPage.drawer.metadata.enableTitle')}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('upstreamPage.drawer.metadata.enableDescription')}
-            </p>
-          </div>
+          <p className="min-w-0 text-sm font-medium">
+            {t('upstreamPage.drawer.metadata.enableTitle')}
+          </p>
           <Switch
             checked={!resource.disabled}
             disabled={mutating}

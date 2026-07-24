@@ -1908,17 +1908,12 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyUnavailableHint:
-            'The current backend did not return the saved Proxy URL. Entering a value replaces the existing setting.',
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values have higher scheduling priority.',
-          prefixHint: 'Rarely used; maintained here instead of a table column.',
           secondarySection: 'Less common',
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
-          enableDescription:
-            'A disabled credential does not serve model requests and can be re-enabled anytime.',
         },
         danger: {
           downloadTitle: 'Download credential JSON',
@@ -2112,7 +2107,6 @@ export const en = {
         saved: 'Saved.',
         websocketsLabel: 'Toggle WebSocket',
         websocketsUnsupported: 'WebSocket is not supported for this provider',
-        websocketsUnavailable: 'The current backend did not return the WebSocket state',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2234,8 +2228,6 @@ export const en = {
         noRequests: 'No requests are currently in flight.',
         loadMore: 'Load more',
         editTitle: 'Concurrency limits',
-        editDescription:
-          'Empty or 0 means unlimited. Model limits use Home canonical model keys; recognized reasoning suffixes share the base model limit. Limit changes never terminate existing requests.',
         totalLimit: 'Credential-wide limit',
         modelLimits: 'Model limits',
         addModel: 'Add model',

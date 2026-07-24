@@ -1907,17 +1907,12 @@ export const ru = {
           danger: 'Опасная зона',
         },
         metadata: {
-          proxyUnavailableHint:
-            'Текущий backend не вернул сохранённый Proxy URL. Введённое значение заменит существующую настройку.',
           priorityPlaceholder: 'например, 10 или -1',
           priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
-          prefixHint: 'Используется редко; редактируется здесь, а не в колонке таблицы.',
           secondarySection: 'Дополнительно',
           websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
           websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
-          enableDescription:
-            'Отключённая запись не обслуживает запросы к моделям и может быть включена снова в любой момент.',
         },
         danger: {
           downloadTitle: 'Скачать JSON учётных данных',
@@ -2112,7 +2107,6 @@ export const ru = {
         saved: 'Сохранено.',
         websocketsLabel: 'Переключить WebSocket',
         websocketsUnsupported: 'WebSocket не поддерживается для этого поставщика',
-        websocketsUnavailable: 'Текущий backend не вернул состояние WebSocket',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2233,8 +2227,6 @@ export const ru = {
         noRequests: 'Сейчас нет запросов в работе.',
         loadMore: 'Загрузить ещё',
         editTitle: 'Лимиты параллельности',
-        editDescription:
-          'Пустое значение или 0 означает отсутствие лимита. Лимиты используют канонические model keys Home; распознанные reasoning suffix используют лимит базовой модели. Изменение лимита не завершает активные запросы.',
         totalLimit: 'Общий лимит credential',
         modelLimits: 'Лимиты моделей',
         addModel: 'Добавить модель',

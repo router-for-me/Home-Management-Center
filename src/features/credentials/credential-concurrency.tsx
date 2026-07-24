@@ -598,9 +598,6 @@ export function CredentialConcurrencyEditor({
         </span>
         <div>
           <h3 className="text-sm font-medium">{t('credentialsPage.concurrency.editTitle')}</h3>
-          <p className="text-muted-foreground mt-1 text-xs leading-5">
-            {t('credentialsPage.concurrency.editDescription')}
-          </p>
         </div>
       </div>
       <label className="mt-4 grid gap-2 text-sm font-medium">

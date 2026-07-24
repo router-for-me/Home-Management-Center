@@ -1834,15 +1834,12 @@ export const zhTW = {
           danger: '危險操作',
         },
         metadata: {
-          proxyUnavailableHint: '目前後端未回傳已儲存的 Proxy URL。輸入新值會取代現有設定。',
           priorityPlaceholder: '例如 10 或 -1',
           priorityHint: '僅支援整數；數值越大，排程優先順序越高。',
-          prefixHint: '不常用;僅在詳情二級維護,不佔列表主欄。',
           secondarySection: '次常用',
           websocketsXaiHint: '適用於 xAI/Grok。開啟後該憑證可參與 WebSocket 傳輸。',
           websocketsUnsupported: '目前供應商不顯示 WS 開關。',
           enableTitle: '啟用憑證',
-          enableDescription: '停用後該憑證不會參與模型請求,可隨時重新啟用。',
         },
         danger: {
           downloadTitle: '下載憑證 JSON',
@@ -2032,7 +2029,6 @@ export const zhTW = {
         saved: '已儲存。',
         websocketsLabel: '切換 WebSocket',
         websocketsUnsupported: '目前供應商不支援 WebSocket 設定',
-        websocketsUnavailable: '目前後端未回傳 WebSocket 狀態',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2143,8 +2139,6 @@ export const zhTW = {
         noRequests: '目前沒有進行中請求。',
         loadMore: '載入更多',
         editTitle: '並發上限',
-        editDescription:
-          '空值或 0 表示不限制；模型上限使用 Home 的規範化模型鍵，已識別的 reasoning 後綴共享基礎模型上限。修改上限不會終止既有請求。',
         totalLimit: '憑證總上限',
         modelLimits: '模型上限',
         addModel: '新增模型',
