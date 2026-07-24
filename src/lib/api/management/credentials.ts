@@ -1,4 +1,4 @@
-import type { AxiosProgressEvent } from 'axios'
+import type { AxiosProgressEvent, AxiosResponse } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
@@ -1153,15 +1153,39 @@ export async function fetchCredentialInFlightDetail(
     invalidCredentialInFlightContract()
   }
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/credentials/in-flight', {
-    params: {
-      credential_id: credentialId,
-      limit: stablePagination ? credentialInFlightPageSize : credentialInFlightPageSize + 1,
-      offset,
-      ...(page.stableSnapshot === true && snapshotCursor === null ? { stable_snapshot: true } : {}),
-      ...(snapshotCursor ? { snapshot_cursor: snapshotCursor } : {}),
-    },
-  })
+  let usesStablePagination = stablePagination
+  let response: AxiosResponse<unknown>
+  try {
+    response = await client.get<unknown>('/credentials/in-flight', {
+      params: {
+        credential_id: credentialId,
+        limit: stablePagination ? credentialInFlightPageSize : credentialInFlightPageSize + 1,
+        offset,
+        ...(page.stableSnapshot === true && snapshotCursor === null
+          ? { stable_snapshot: true }
+          : {}),
+        ...(snapshotCursor ? { snapshot_cursor: snapshotCursor } : {}),
+      },
+    })
+  } catch (error) {
+    const apiError = toManagementApiError(error)
+    if (
+      page.stableSnapshot !== true ||
+      snapshotCursor !== null ||
+      offset !== 0 ||
+      apiError.backendCode !== 'in_flight_snapshot_cursor_store_failed'
+    ) {
+      throw error
+    }
+    response = await client.get<unknown>('/credentials/in-flight', {
+      params: {
+        credential_id: credentialId,
+        limit: credentialInFlightPageSize + 1,
+        offset: 0,
+      },
+    })
+    usesStablePagination = false
+  }
   if (!isRecord(response.data)) invalidCredentialInFlightContract()
   const root = response.data
   const metadata = normalizeCredentialInFlightObservationMetadata(root)
@@ -1175,7 +1199,7 @@ export async function fetchCredentialInFlightDetail(
     invalidCredentialInFlightContract()
   }
 
-  if (stablePagination) {
+  if (usesStablePagination) {
     const total = readNonNegativeInteger(root, 'total')
     const nextOffset = readNullableNonNegativeInteger(root, 'next_offset')
     const responseCursor = readNullableString(root, 'snapshot_cursor')

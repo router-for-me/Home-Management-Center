@@ -111,6 +111,32 @@ type CredentialMetadataLocalError = {
   message: string
 }
 
+export type CredentialMetadataPolicyVersion = number | null | 'unobserved'
+export type CredentialMetadataRefreshMode = 'reset' | 'policy' | 'preserve'
+
+export function getCredentialMetadataRefreshMode({
+  open,
+  credentialId,
+  previousCredentialId,
+  policyVersion,
+  previousPolicyVersion,
+}: {
+  open: boolean
+  credentialId: string
+  previousCredentialId: string
+  policyVersion: number | null
+  previousPolicyVersion: CredentialMetadataPolicyVersion
+}): CredentialMetadataRefreshMode {
+  if (!open || previousCredentialId !== credentialId) return 'reset'
+  if (
+    policyVersion !== null &&
+    (previousPolicyVersion === 'unobserved' || previousPolicyVersion !== policyVersion)
+  ) {
+    return 'policy'
+  }
+  return 'preserve'
+}
+
 export function retainCredentialMetadataErrorAfterPolicyRefresh(
   error: CredentialMetadataLocalError | null,
   credentialId: string,
@@ -261,19 +287,38 @@ function MetadataTab({
   const [localError, setLocalError] = useState<CredentialMetadataLocalError | null>(null)
   const credentialId = getCredentialInFlightId(resource)
   const previousCredentialId = useRef(credentialId)
+  const previousPolicyVersion = useRef<CredentialMetadataPolicyVersion>('unobserved')
 
   useEffect(() => {
+    const policyVersion = concurrencyPolicy === null ? null : concurrencyPolicy.version
+    const refreshMode = getCredentialMetadataRefreshMode({
+      open,
+      credentialId,
+      previousCredentialId: previousCredentialId.current,
+      policyVersion,
+      previousPolicyVersion: previousPolicyVersion.current,
+    })
     const credentialChanged = previousCredentialId.current !== credentialId
     previousCredentialId.current = credentialId
-    if (!open || credentialChanged) {
+    if (
+      !open ||
+      credentialChanged ||
+      policyVersion !== null ||
+      previousPolicyVersion.current === 'unobserved'
+    ) {
+      previousPolicyVersion.current = policyVersion
+    }
+    if (refreshMode === 'reset') {
       setForm(createMetadataForm(resource, concurrencyPolicy))
       setLocalError(null)
       return
     }
-    setForm((current) => applyCredentialConcurrencyPolicyToForm(current, concurrencyPolicy))
-    setLocalError((current) =>
-      retainCredentialMetadataErrorAfterPolicyRefresh(current, credentialId),
-    )
+    if (refreshMode === 'policy') {
+      setForm((current) => applyCredentialConcurrencyPolicyToForm(current, concurrencyPolicy))
+      setLocalError((current) =>
+        retainCredentialMetadataErrorAfterPolicyRefresh(current, credentialId),
+      )
+    }
   }, [concurrencyPolicy, credentialId, open, resource])
 
   const handleFormChange: Dispatch<SetStateAction<CredentialMetadataForm>> = (nextForm) => {

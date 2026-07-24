@@ -2115,7 +2115,7 @@ export const zhCN = {
         limiterLoadFailed: '权威限流状态不可用：{{message}}',
         observationIncomplete: '当前 CPA 快照覆盖不完整，观测到的在途总数可能不完整。',
         detailsTruncated: 'Home 已截断请求明细，但聚合在途总数仍然可用。',
-        paginationLimited: '当前 Home 不支持稳定快照分页，仅显示前 {{count}} 条在途请求。',
+        paginationLimited: '当前视图无法使用稳定快照分页，仅显示前 {{count}} 条在途请求。',
         paginationPinned: '请求分页已固定到同一稳定快照；如需当前数据，请刷新请求列表。',
         paginationExpired: '当前稳定请求快照已过期，请刷新后再加载更多请求。',
         refreshSnapshot: '刷新请求',

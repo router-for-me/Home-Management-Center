@@ -75,6 +75,23 @@ export function shouldResetCredentialInFlightPagination(error: unknown) {
   return hasCredentialBackendCode(error, 'in_flight_snapshot_cursor_expired')
 }
 
+export function shouldRetryCredentialInFlightPagination(failureCount: number, error: unknown) {
+  if (failureCount >= 3 || error === null || typeof error !== 'object') return false
+  const record = error as Record<string, unknown>
+  const backendCode = typeof record.backendCode === 'string' ? record.backendCode : null
+  if (
+    backendCode === 'in_flight_snapshot_cursor_expired' ||
+    backendCode === 'in_flight_snapshot_cursor_store_failed' ||
+    backendCode === 'in_flight_snapshot_cursor_load_failed'
+  ) {
+    return false
+  }
+  const status = typeof record.status === 'number' ? record.status : null
+  if (status !== null && status >= 400 && status < 500) return false
+  if (record.code === 'network') return true
+  return status !== null && status >= 500 && status < 600 && record.retryable === true
+}
+
 export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetail[]) {
   return pages.flatMap((page) => page.requests)
 }
@@ -406,8 +423,7 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
             expectedTotal: lastPage.total,
             expectedSnapshotExpiresAt: lastPage.snapshotExpiresAt,
           },
-    retry: (failureCount, error) =>
-      !shouldResetCredentialInFlightPagination(error) && failureCount < 3,
+    retry: (failureCount, error) => shouldRetryCredentialInFlightPagination(failureCount, error),
     refetchInterval: (currentQuery) => {
       if (!enabled || !credentialInFlight) return false
       const pages = currentQuery.state.data?.pages ?? []

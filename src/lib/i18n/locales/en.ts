@@ -2204,7 +2204,7 @@ export const en = {
         detailsTruncated:
           'Request details were truncated by Home. Aggregate in-flight totals remain available.',
         paginationLimited:
-          'This Home does not support stable snapshot pagination. Only the first {{count}} in-flight requests are shown.',
+          'Stable snapshot pagination is unavailable for this view. Only the first {{count}} in-flight requests are shown.',
         paginationPinned:
           'Request pages are pinned to one stable snapshot. Refresh to load current data.',
         paginationExpired:

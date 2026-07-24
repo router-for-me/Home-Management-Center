@@ -2115,7 +2115,7 @@ export const zhTW = {
         limiterLoadFailed: '權威限流狀態不可用：{{message}}',
         observationIncomplete: '目前 CPA 快照覆蓋不完整，觀測到的進行中總數可能不完整。',
         detailsTruncated: 'Home 已截斷請求明細，但彙總進行中總數仍然可用。',
-        paginationLimited: '目前 Home 不支援穩定快照分頁，僅顯示前 {{count}} 筆進行中請求。',
+        paginationLimited: '目前檢視無法使用穩定快照分頁，僅顯示前 {{count}} 筆進行中請求。',
         paginationPinned: '請求分頁已固定到同一穩定快照；如需目前資料，請重新整理請求清單。',
         paginationExpired: '目前穩定請求快照已過期，請重新整理後再載入更多請求。',
         refreshSnapshot: '重新整理請求',

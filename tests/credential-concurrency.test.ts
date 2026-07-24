@@ -15,10 +15,14 @@ import {
   isValidConcurrencyModelKey,
   parseConcurrencyLimit,
 } from '../src/features/credentials/credential-concurrency'
-import { retainCredentialMetadataErrorAfterPolicyRefresh } from '../src/features/credentials/credential-detail-drawer'
+import {
+  getCredentialMetadataRefreshMode,
+  retainCredentialMetadataErrorAfterPolicyRefresh,
+} from '../src/features/credentials/credential-detail-drawer'
 import {
   flattenCredentialInFlightRequests,
   shouldResetCredentialInFlightPagination,
+  shouldRetryCredentialInFlightPagination,
 } from '../src/features/credentials/use-credential-workbench'
 import {
   type CredentialInFlightDetail,
@@ -49,6 +53,14 @@ function response(config: InternalAxiosRequestConfig, data: unknown, status = 20
     headers: {},
     config,
   }
+}
+
+function axiosResponseError(config: InternalAxiosRequestConfig, status: number, data: unknown) {
+  return Object.assign(new Error(`request failed with status ${status}`), {
+    isAxiosError: true,
+    config,
+    response: response(config, data, status),
+  })
 }
 
 function useResponse(data: unknown) {
@@ -275,6 +287,65 @@ describe('credential concurrency v2 contract', () => {
       requestKind: 'sse',
       startedAt: '2026-07-21T11:59:00Z',
     })
+  })
+
+  test('falls back once to a bounded legacy page when first-page cursor storage fails', async () => {
+    const capturedParams: unknown[] = []
+    const items = Array.from({ length: 51 }, (_, index) => ({
+      request_id: `fallback-request-${index}`,
+      credential_id: 'auth-1',
+      model: 'gpt-5.5',
+      request_kind: 'sse',
+      started_at: '2026-07-21T11:59:00Z',
+      limiter: null,
+    }))
+    const adapter: AxiosAdapter = async (config) => {
+      capturedParams.push(config.params)
+      if (capturedParams.length === 1) {
+        throw axiosResponseError(config, 500, {
+          error: 'in_flight_snapshot_cursor_store_failed',
+          message: 'cursor storage is unavailable',
+        })
+      }
+      return response(config, { ...observationMetadata(), items })
+    }
+    axios.defaults.adapter = adapter
+
+    const detail = await fetchCredentialInFlightDetail(session, 'auth-1', {
+      stableSnapshot: true,
+    })
+    expect(capturedParams).toEqual([
+      { credential_id: 'auth-1', limit: 50, offset: 0, stable_snapshot: true },
+      { credential_id: 'auth-1', limit: 51, offset: 0 },
+    ])
+    expect(detail.requests).toHaveLength(50)
+    expect(detail.paginationLimited).toBeTrue()
+    expect(detail.snapshotCursor).toBeNull()
+    expect(detail.nextOffset).toBeNull()
+  })
+
+  test('does not mix a later cursor load failure with a legacy page', async () => {
+    const capturedParams: unknown[] = []
+    const adapter: AxiosAdapter = async (config) => {
+      capturedParams.push(config.params)
+      throw axiosResponseError(config, 500, {
+        error: 'in_flight_snapshot_cursor_load_failed',
+        message: 'cursor relation is incomplete',
+      })
+    }
+    axios.defaults.adapter = adapter
+
+    await expect(
+      fetchCredentialInFlightDetail(session, 'auth-1', {
+        offset: 50,
+        snapshotCursor: 'stable-cursor',
+        expectedTotal: 75,
+        expectedSnapshotExpiresAt: '2026-07-21T12:02:00Z',
+      }),
+    ).rejects.toThrow('request failed with status 500')
+    expect(capturedParams).toEqual([
+      { credential_id: 'auth-1', limit: 50, offset: 50, snapshot_cursor: 'stable-cursor' },
+    ])
   })
 
   test('uses one immutable snapshot cursor across detail pages', async () => {
@@ -885,6 +956,106 @@ describe('credential concurrency v2 contract', () => {
         backendCode: 'in_flight_snapshot_cursor_load_failed',
       }),
     ).toBeFalse()
+  })
+
+  test('retries only network failures and explicitly retryable server failures', () => {
+    expect(shouldRetryCredentialInFlightPagination(0, { code: 'network' })).toBeTrue()
+    expect(
+      shouldRetryCredentialInFlightPagination(1, {
+        status: 503,
+        code: 'server',
+        retryable: true,
+      }),
+    ).toBeTrue()
+    expect(
+      shouldRetryCredentialInFlightPagination(0, {
+        status: 500,
+        code: 'server',
+        retryable: false,
+      }),
+    ).toBeFalse()
+    expect(
+      shouldRetryCredentialInFlightPagination(0, {
+        status: 500,
+        code: 'server',
+        backendCode: 'in_flight_snapshot_cursor_store_failed',
+        retryable: true,
+      }),
+    ).toBeFalse()
+    expect(
+      shouldRetryCredentialInFlightPagination(0, {
+        status: 409,
+        backendCode: 'in_flight_snapshot_cursor_expired',
+      }),
+    ).toBeFalse()
+    expect(shouldRetryCredentialInFlightPagination(0, { code: 'unknown' })).toBeFalse()
+    expect(shouldRetryCredentialInFlightPagination(3, { code: 'network' })).toBeFalse()
+  })
+
+  test('preserves metadata drafts unless the credential or effective policy version changes', () => {
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: 2,
+        previousPolicyVersion: 2,
+      }),
+    ).toBe('preserve')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: null,
+        previousPolicyVersion: 2,
+      }),
+    ).toBe('preserve')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: 0,
+        previousPolicyVersion: null,
+      }),
+    ).toBe('policy')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: 0,
+        previousPolicyVersion: 'unobserved',
+      }),
+    ).toBe('policy')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: 4,
+        previousPolicyVersion: 3,
+      }),
+    ).toBe('policy')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: true,
+        credentialId: 'auth-2',
+        previousCredentialId: 'auth-1',
+        policyVersion: 1,
+        previousPolicyVersion: 1,
+      }),
+    ).toBe('reset')
+    expect(
+      getCredentialMetadataRefreshMode({
+        open: false,
+        credentialId: 'auth-1',
+        previousCredentialId: 'auth-1',
+        policyVersion: 2,
+        previousPolicyVersion: 2,
+      }),
+    ).toBe('reset')
   })
 
   test('retains version-conflict guidance through policy refresh only for the same credential', () => {
