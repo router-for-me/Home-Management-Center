@@ -461,6 +461,32 @@ describe('UpstreamQuotaCell rendering', () => {
     expect(markup).toContain('+1 more')
   })
 
+  test('localizes the generic Codex usage label and formats 300 minutes as 5 hours', async () => {
+    const i18n = (await import('i18next')).default
+    await i18n.changeLanguage('zh-CN')
+    const usageWindow = createWindow({
+      id: 'codex-usage-5-hour',
+      label: 'usage',
+      scope: 'model',
+      scopeId: 'codex_usage',
+      periodUnit: 'minute',
+      periodValue: 300,
+    })
+    const entry = createQuotaEntry({
+      provider: 'codex',
+      primaryWindows: [usageWindow],
+      windows: [usageWindow],
+    })
+
+    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    await i18n.changeLanguage('en')
+
+    expect(markup).toContain('用量')
+    expect(markup).toContain('5小时')
+    expect(markup).not.toContain('300分钟')
+    expect(markup).not.toContain('>usage<')
+  })
+
   test('surfaces partial collection even when the current quota status is healthy', async () => {
     const i18n = (await import('i18next')).default
     await i18n.changeLanguage('en')

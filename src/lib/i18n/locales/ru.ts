@@ -1865,6 +1865,9 @@ export const ru = {
           no: 'Нет',
         },
         window: {
+          labels: {
+            usage: 'Использование',
+          },
           period: {
             day: 'Ежедневно',
             week: 'Еженедельно',

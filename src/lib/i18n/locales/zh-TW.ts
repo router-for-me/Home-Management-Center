@@ -1792,6 +1792,9 @@ export const zhTW = {
           no: '否',
         },
         window: {
+          labels: {
+            usage: '用量',
+          },
           period: {
             day: '每日',
             week: '每週',

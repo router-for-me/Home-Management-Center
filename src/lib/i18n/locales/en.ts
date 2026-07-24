@@ -1866,6 +1866,9 @@ export const en = {
           no: 'No',
         },
         window: {
+          labels: {
+            usage: 'Usage',
+          },
           period: {
             day: 'Daily',
             week: 'Weekly',
