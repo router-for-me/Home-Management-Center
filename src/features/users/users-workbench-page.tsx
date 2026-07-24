@@ -14,8 +14,6 @@ import {
   CheckCircle2,
   CircleDollarSign,
   Eye,
-  KeyRound,
-  Layers3,
   Loader2,
   Minus,
   Pencil,
@@ -84,6 +82,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import {
   type CredentialBindingCandidate,
@@ -3103,31 +3102,24 @@ export function UsersWorkbenchPage() {
           }
           actionsClassName="w-full lg:w-auto"
         />
-        <div className="flex flex-wrap gap-2 px-4 pt-4">
-          {(['users', 'keys', 'channelGroups', 'modelGroups'] as UsersAccessTab[]).map((tab) => (
-            <Button
-              key={tab}
-              type="button"
-              variant={activeTab === tab ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab === 'users' ? (
-                <UsersRound className="size-4" aria-hidden="true" />
-              ) : tab === 'keys' ? (
-                <KeyRound className="size-4" aria-hidden="true" />
-              ) : tab === 'channelGroups' ? (
-                <ShieldCheck className="size-4" aria-hidden="true" />
-              ) : (
-                <Layers3 className="size-4" aria-hidden="true" />
+        <Tabs
+          value={activeTab}
+          className="min-w-0"
+          onValueChange={(value) => setActiveTab(value as UsersAccessTab)}
+        >
+          <div className="px-4 pt-4">
+            <TabsList aria-label={t('usersPage.workspace.title')}>
+              {(['users', 'keys', 'channelGroups', 'modelGroups'] as UsersAccessTab[]).map(
+                (tab) => (
+                  <TabsTrigger key={tab} value={tab}>
+                    {t(`usersPage.tabs.${tab}`)}
+                  </TabsTrigger>
+                ),
               )}
-              {t(`usersPage.tabs.${tab}`)}
-            </Button>
-          ))}
-        </div>
+            </TabsList>
+          </div>
 
-        <div className="p-4">
-          {activeTab === 'users' ? (
+          <TabsContent value="users" className="p-4">
             <div className="grid gap-3">
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => setSheetMode({ type: 'user-create' })}>
@@ -3180,7 +3172,9 @@ export function UsersWorkbenchPage() {
                 onBalanceOperation={openBalanceOperation}
               />
             </div>
-          ) : activeTab === 'keys' ? (
+          </TabsContent>
+
+          <TabsContent value="keys" className="p-4">
             <div className="grid gap-3">
               <div className="flex justify-end">
                 <Button size="sm" onClick={() => setSheetMode({ type: 'key-create' })}>
@@ -3197,8 +3191,10 @@ export function UsersWorkbenchPage() {
                 onDelete={(key) => setPendingDelete({ type: 'key', key })}
               />
             </div>
-          ) : activeTab === 'channelGroups' ? (
-            accessGroupsAvailable ? (
+          </TabsContent>
+
+          <TabsContent value="channelGroups" className="p-4">
+            {accessGroupsAvailable ? (
               <div className="grid gap-3">
                 <div className="flex justify-end">
                   <Button
@@ -3227,34 +3223,38 @@ export function UsersWorkbenchPage() {
               </div>
             ) : (
               <AccessGroupsUnsupportedState />
-            )
-          ) : accessGroupsAvailable ? (
-            <div className="grid gap-3">
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={() => setSheetMode({ type: 'group-create', kind: 'model' })}
-                >
-                  <Plus className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.newModelScope')}
-                </Button>
+            )}
+          </TabsContent>
+
+          <TabsContent value="modelGroups" className="p-4">
+            {accessGroupsAvailable ? (
+              <div className="grid gap-3">
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    onClick={() => setSheetMode({ type: 'group-create', kind: 'model' })}
+                  >
+                    <Plus className="size-4" aria-hidden="true" />
+                    {t('usersPage.actions.newModelScope')}
+                  </Button>
+                </div>
+                <GroupsTable
+                  kind="model"
+                  groups={filteredModelGroups}
+                  details={modelGroupDetails}
+                  onEditGroup={(group) => setSheetMode({ type: 'group-edit', group })}
+                  onDeleteGroup={(group) => setPendingDelete({ type: 'group', group })}
+                  onAddDetail={(group) =>
+                    setSheetMode({ type: 'detail-create', kind: 'model', groupId: group.numericId })
+                  }
+                  onDeleteDetail={(detail) => setPendingDelete({ type: 'detail', detail })}
+                />
               </div>
-              <GroupsTable
-                kind="model"
-                groups={filteredModelGroups}
-                details={modelGroupDetails}
-                onEditGroup={(group) => setSheetMode({ type: 'group-edit', group })}
-                onDeleteGroup={(group) => setPendingDelete({ type: 'group', group })}
-                onAddDetail={(group) =>
-                  setSheetMode({ type: 'detail-create', kind: 'model', groupId: group.numericId })
-                }
-                onDeleteDetail={(detail) => setPendingDelete({ type: 'detail', detail })}
-              />
-            </div>
-          ) : (
-            <AccessGroupsUnsupportedState />
-          )}
-        </div>
+            ) : (
+              <AccessGroupsUnsupportedState />
+            )}
+          </TabsContent>
+        </Tabs>
       </TableSurface>
 
       <Sheet open={Boolean(sheetMode)} onOpenChange={(open) => !open && closeSheet()}>

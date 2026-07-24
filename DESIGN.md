@@ -127,6 +127,15 @@ Control sizing:
 - Responsive filter layouts should reflow or wrap controls instead of changing their height independently at a breakpoint.
 - Compact table toolbars may opt into the shared responsive compact modifier so every `sm` control in the row grows to 40px on narrow screens and returns to 32px from the `sm` breakpoint onward.
 
+Tabs:
+
+- Peer views use the shared Radix Tabs primitive so tab, tablist, tabpanel, focus movement, and trigger-to-panel relationships stay consistent.
+- Tabs are flat navigation, not primary actions: use a quiet selected surface and a restrained accent indicator instead of filled primary buttons, card shadows, or separate outline buttons.
+- Page-level and table-surface tabs share one visual language. Express hierarchy through placement and surrounding spacing, not a second trigger style.
+- Keep tab lists on one horizontally scrollable line. Triggers use the responsive compact height: 40px on narrow screens and 32px from the `sm` breakpoint onward.
+- Use text labels by default. Add icons only when they materially disambiguate otherwise similar destinations.
+- Mounting inactive panels is a feature-level decision. Use `forceMount` only when leaving a tab must preserve local UI state or an already-mounted workflow.
+
 Shell:
 
 - Left sidebar is the global navigation anchor.
