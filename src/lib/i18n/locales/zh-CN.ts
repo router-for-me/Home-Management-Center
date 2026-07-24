@@ -1704,8 +1704,6 @@ export const zhCN = {
     upstreamPage: {
       header: {
         title: '上游资源',
-        description:
-          '统一管理账号凭证与模型供应商。启用、Proxy URL、WebSocket、优先级在表格内直接改;Prefix 等次常用字段放在详情二级。额度一等列内嵌(含 Kimi / Grok)。',
       },
       tabs: {
         label: '上游资源分区',
@@ -1794,6 +1792,9 @@ export const zhCN = {
           no: '否',
         },
         window: {
+          labels: {
+            usage: '用量',
+          },
           period: {
             day: '每日',
             week: '每周',
@@ -1819,7 +1820,6 @@ export const zhCN = {
         noWindows: '暂无额度窗口',
       },
       quotaChips: {
-        all: '全部额度',
         attention: '需关注',
         ws: '仅 WS',
       },
@@ -1834,15 +1834,12 @@ export const zhCN = {
           danger: '危险操作',
         },
         metadata: {
-          proxyHint: '凭证级代理;留空表示不设置。列表内也可直接改。',
           priorityPlaceholder: '例如 10 或 -1',
-          priorityHint: '仅支持整数;数值越大优先级越高。列表内也可直接改。',
-          prefixHint: '不常用;仅在详情二级维护,不占列表主列。',
+          priorityHint: '仅支持整数；数值越大，调度优先级越高。',
           secondarySection: '次常用',
           websocketsXaiHint: '适用于 xAI/Grok。开启后该凭证可参与 WebSocket 传输。',
           websocketsUnsupported: '当前供应商不展示 WS 开关。',
           enableTitle: '启用凭证',
-          enableDescription: '禁用后该凭证不会参与模型请求,可随时重新启用。',
         },
         danger: {
           downloadTitle: '下载凭证 JSON',
@@ -1874,11 +1871,11 @@ export const zhCN = {
       },
       actions: {
         addCredential: '添加凭证',
-        detail: '详情',
+        detail: '查看',
         quota: '额度',
         models: '模型',
         upload: '上传 JSON',
-        save: '保存 metadata',
+        save: '保存元数据',
         viewQuota: '查看额度',
         viewModels: '查看模型',
         reloadModels: '重新加载',
@@ -1887,10 +1884,11 @@ export const zhCN = {
       },
       filters: {
         status: '状态',
-        source: '来源',
         provider: '模型供应商',
-        allSources: '全部来源',
         allProviders: '全部模型供应商',
+        quickFilters: '快捷筛选',
+        resultCount: '显示 {{visible}} / {{total}} 个凭证',
+        clear: '清除筛选',
       },
       statusFilters: {
         all: '全部凭证',
@@ -2016,24 +2014,23 @@ export const zhCN = {
       },
       list: {
         title: '凭证资源',
-        filterPlaceholder: '筛选凭证',
-        empty: '当前筛选条件下没有凭证。',
+        filterPlaceholder: '搜索凭证',
+        emptyTitle: '暂无凭证',
+        emptyDescription: '添加或导入凭证后，可在此统一管理。',
+        filteredEmptyTitle: '没有匹配的凭证',
+        filteredEmptyDescription: '请调整筛选条件，或清除全部筛选。',
         credential: '凭证 / 账号',
         quota: '额度',
         provider: '模型供应商',
         inFlight: '在途',
         toggleStatus: '切换凭证 {{name}} 的启用状态',
         enabled: '启用',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: '优先级',
         actions: '操作',
       },
       inline: {
         saved: '已保存。',
-        priorityInvalid: '优先级必须是整数。',
-        proxyUrlLabel: '编辑 Proxy URL',
-        priorityLabel: '编辑优先级',
         websocketsLabel: '切换 WebSocket',
         websocketsUnsupported: '当前供应商不支持 WebSocket 配置',
         notApplicable: 'n/a',
@@ -2066,7 +2063,7 @@ export const zhCN = {
       },
       detail: {
         title: '凭证详情',
-        empty: '选择一个凭证以查看 metadata 和操作。',
+        empty: '选择一个凭证以查看元数据和操作。',
         noModels: '该凭证暂无模型。',
         modelsTitle: '可用模型',
         modelsDescription: '按当前凭证向运行时查询可用模型。',
@@ -2095,6 +2092,7 @@ export const zhCN = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: '优先级',
+        priorityInvalid: '优先级必须是整数。',
         websockets: 'WebSocket 支持',
         websocketsHint: '仅适用于 Codex 凭证。开启后，该凭证可参与需要 WebSocket 的 Codex 请求。',
         note: '备注',
@@ -2145,8 +2143,6 @@ export const zhCN = {
         noRequests: '当前没有在途请求。',
         loadMore: '加载更多',
         editTitle: '并发上限',
-        editDescription:
-          '空值或 0 表示不限制；模型上限使用 Home 的规范化模型键，已识别的 reasoning 后缀共享基础模型上限。修改上限不会终止现有请求。',
         totalLimit: '凭证总上限',
         modelLimits: '模型上限',
         addModel: '添加模型',
@@ -2175,7 +2171,8 @@ export const zhCN = {
       },
       toast: {
         downloaded: '凭证已下载。',
-        updated: '凭证 metadata 已更新。',
+        updated: '凭证元数据已更新。',
+        noChanges: '没有需要保存的更改。',
         deleted: '凭证已删除。',
         bulkEnabled: '已启用 {{count}} 个凭证。',
         bulkDisabled: '已禁用 {{count}} 个凭证。',

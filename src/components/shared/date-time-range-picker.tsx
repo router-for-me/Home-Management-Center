@@ -3,6 +3,7 @@ import { useId, useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -238,7 +239,8 @@ export function DateTimeRangePicker({
           variant="outline"
           size="sm"
           className={cn(
-            'min-h-10 w-full justify-start gap-2 px-3 font-normal sm:min-h-8 sm:w-[21rem]',
+            responsiveCompactControlClassName,
+            'w-full justify-start gap-2 px-3 font-normal sm:w-[21rem]',
             !hasValue && 'text-muted-foreground',
             className,
           )}

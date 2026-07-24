@@ -19,6 +19,14 @@ export type CredentialMetadataInput = {
   concurrencyVersion?: number
 }
 
+export type CredentialMetadataPatch = Partial<CredentialMetadataInput>
+
+export type CredentialMetadataAvailability = {
+  prefix: boolean
+  proxyUrl: boolean
+  websockets: boolean
+}
+
 export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai'
 export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
 
@@ -84,6 +92,7 @@ export type CredentialResource = {
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
+  metadataAvailability: CredentialMetadataAvailability
   maxInFlight: number | null
   maxInFlightByModel: Record<string, number>
   concurrencyFieldsValid: boolean
@@ -461,6 +470,16 @@ function readNestedFlexibleBoolean(record: UnknownRecord, rootKey: string, key: 
   return isRecord(nested) ? readFlexibleBoolean(nested, key) : null
 }
 
+function readNestedString(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) ? readString(nested, key) : null
+}
+
+function hasNestedField(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) && hasOwn(nested, key)
+}
+
 function readCredentialWebsockets(record: UnknownRecord) {
   return (
     readFlexibleBoolean(record, 'websockets') ??
@@ -599,9 +618,26 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     path: readString(record, 'path'),
     priority: readNumber(record, 'priority'),
     note: readString(record, 'note'),
-    prefix: readString(record, 'prefix'),
-    proxyUrl: readString(record, 'proxy_url') ?? readString(record, 'proxy-url'),
+    prefix: readString(record, 'prefix') ?? readNestedString(record, 'metadata', 'prefix'),
+    proxyUrl:
+      readString(record, 'proxy_url') ??
+      readString(record, 'proxy-url') ??
+      readNestedString(record, 'metadata', 'proxy_url') ??
+      readNestedString(record, 'metadata', 'proxy-url'),
     websockets: readCredentialWebsockets(record),
+    metadataAvailability: {
+      prefix: hasOwn(record, 'prefix') || hasNestedField(record, 'metadata', 'prefix'),
+      proxyUrl:
+        hasOwn(record, 'proxy_url') ||
+        hasOwn(record, 'proxy-url') ||
+        hasNestedField(record, 'metadata', 'proxy_url') ||
+        hasNestedField(record, 'metadata', 'proxy-url'),
+      websockets:
+        hasOwn(record, 'websockets') ||
+        hasOwn(record, 'websocket') ||
+        hasNestedField(record, 'attributes', 'websockets') ||
+        hasNestedField(record, 'metadata', 'websockets'),
+    },
     maxInFlight:
       maxInFlight.valid && maxInFlight.value && maxInFlight.value > 0 ? maxInFlight.value : null,
     maxInFlightByModel: maxInFlightByModel.valid ? maxInFlightByModel.value : {},
@@ -1040,19 +1076,26 @@ function normalizeCredentialConcurrencyPolicy(
   }
 }
 
-function createFieldsPayload(resource: CredentialResource, input: CredentialMetadataInput) {
+function createFieldsPayload(resource: CredentialResource, input: CredentialMetadataPatch) {
   const payload: UnknownRecord = {
     name: getStatusSelector(resource),
     ...resource.selector,
-    prefix: input.prefix.trim(),
-    proxy_url: input.proxyUrl.trim(),
-    'proxy-url': input.proxyUrl.trim(),
-    note: input.note.trim(),
+  }
+
+  if (typeof input.prefix === 'string') {
+    payload.prefix = input.prefix.trim()
+  }
+  if (typeof input.proxyUrl === 'string') {
+    payload.proxy_url = input.proxyUrl.trim()
+    payload['proxy-url'] = input.proxyUrl.trim()
+  }
+  if (typeof input.note === 'string') {
+    payload.note = input.note.trim()
   }
 
   if (input.priority === null) {
     payload.priority = null
-  } else {
+  } else if (typeof input.priority === 'string') {
     const priority = Number(input.priority)
     if (input.priority.trim() && Number.isFinite(priority)) {
       payload.priority = priority
@@ -1328,7 +1371,7 @@ export async function updateCredentialStatus(
 export async function updateCredentialMetadata(
   session: ManagementSessionInput,
   resource: CredentialResource,
-  input: CredentialMetadataInput,
+  input: CredentialMetadataPatch,
 ) {
   const client = createManagementClient(session)
   await client.patch('/auth-files/fields', createFieldsPayload(resource, input))

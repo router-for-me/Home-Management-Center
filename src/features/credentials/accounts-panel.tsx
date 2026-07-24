@@ -81,15 +81,15 @@ import {
 import {
   getCredentialDisplayName,
   getCredentialProviderLabel,
-  getCredentialSourceLabel,
   getCredentialStatusTone,
 } from '@/features/credentials/credential-display'
 import {
+  filterCredentialResources,
+  hasCredentialFilters,
+} from '@/features/credentials/credential-filters'
+import {
   type InlineMetadataSave,
-  PriorityCell,
-  ProxyUrlCell,
   WebsocketsCell,
-  buildInlineMetadataInput,
 } from '@/features/credentials/credential-inline-cells'
 import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
@@ -97,15 +97,13 @@ import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
-  type UpstreamQuotaView,
   findUpstreamQuotaEntry,
-  isQuotaAttentionEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
 import {
   type CredentialInFlightSummary,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthProvider,
   type CredentialResource,
@@ -208,132 +206,167 @@ function CredentialErrorState({
   )
 }
 
-function AccountsToolbar({
+export function AccountsToolbar({
   resources,
   search,
   statusFilter,
-  sourceFilter,
   providerFilter,
   quotaAvailable,
-  quotaView,
+  attentionOnly,
+  websocketOnly,
+  filteredCount,
   onSearchChange,
   onStatusFilterChange,
-  onSourceFilterChange,
   onProviderFilterChange,
-  onQuotaViewChange,
+  onAttentionOnlyChange,
+  onWebsocketOnlyChange,
+  onClearFilters,
 }: {
   resources: CredentialResource[]
   search: string
   statusFilter: CredentialStatusFilter
-  sourceFilter: string
   providerFilter: string
   quotaAvailable: boolean
-  quotaView: UpstreamQuotaView
+  attentionOnly: boolean
+  websocketOnly: boolean
+  filteredCount: number
   onSearchChange: (search: string) => void
   onStatusFilterChange: (filter: CredentialStatusFilter) => void
-  onSourceFilterChange: (source: string) => void
   onProviderFilterChange: (provider: string) => void
-  onQuotaViewChange: (view: UpstreamQuotaView) => void
+  onAttentionOnlyChange: (attentionOnly: boolean) => void
+  onWebsocketOnlyChange: (websocketOnly: boolean) => void
+  onClearFilters: () => void
 }) {
-  const { t } = useTranslation()
-  const sources = Array.from(new Set(resources.map((resource) => resource.source))).sort()
-  const providers = Array.from(new Set(resources.map((resource) => resource.provider))).sort()
+  const { i18n, t } = useTranslation()
+  const providerCollator = new Intl.Collator(i18n.resolvedLanguage, {
+    sensitivity: 'base',
+    usage: 'sort',
+  })
+  const providers = Array.from(new Set(resources.map((resource) => resource.provider)))
+    .map((provider) => ({
+      id: provider,
+      label: getCredentialProviderLabel(t, provider),
+    }))
+    .sort((left, right) => providerCollator.compare(left.label, right.label))
   const statusFilters: CredentialStatusFilter[] = ['all', 'active', 'disabled', 'unavailable']
+  const activeQuickFilters = [
+    ...(quotaAvailable && attentionOnly ? ['attention'] : []),
+    ...(websocketOnly ? ['ws'] : []),
+  ]
+  const hasActiveFilters = hasCredentialFilters({
+    search,
+    statusFilter,
+    providerFilter,
+    quotaAvailable,
+    attentionOnly,
+    websocketOnly,
+  })
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
-      <div className="relative min-w-0 flex-1 sm:max-w-72">
+    <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center">
+      <div className="relative w-full min-w-0 lg:max-w-80 lg:flex-1">
         <Search
           className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
           aria-hidden="true"
         />
         <Input
-          className="h-8 pl-9"
+          type="search"
+          size="lg"
+          className="pl-9"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t('credentialsPage.list.filterPlaceholder')}
+          aria-label={t('credentialsPage.list.filterPlaceholder')}
         />
       </div>
-      <ToggleGroup
-        type="single"
-        value={statusFilter}
-        className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-        onValueChange={(value) => {
-          if (value) onStatusFilterChange(value as CredentialStatusFilter)
-        }}
-      >
-        {statusFilters.map((filter) => (
-          <ToggleGroupItem
-            key={filter}
-            value={filter}
-            className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
-          >
-            {t(`credentialsPage.statusFilters.${filter}`)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <ToggleGroup
-        type="single"
-        value={providerFilter}
-        className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-        onValueChange={(value) => {
-          if (value) onProviderFilterChange(value)
-        }}
-      >
-        <ToggleGroupItem
-          value="all"
-          className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
+      <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
+        <Select
+          value={statusFilter}
+          onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
-          {t('credentialsPage.filters.allProviders')}
-        </ToggleGroupItem>
-        {providers.map((provider) => (
-          <ToggleGroupItem
-            key={provider}
-            value={provider}
-            className="data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-7 border border-transparent px-2.5 text-xs"
+          <SelectTrigger
+            size="lg"
+            className="w-full sm:w-40"
+            aria-label={t('credentialsPage.filters.status')}
           >
-            {getCredentialProviderLabel(t, provider)}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <Select value={sourceFilter} onValueChange={onSourceFilterChange}>
-        <SelectTrigger className="h-8 w-36" aria-label={t('credentialsPage.filters.source')}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">{t('credentialsPage.filters.allSources')}</SelectItem>
-          {sources.map((source) => (
-            <SelectItem key={source} value={source}>
-              {getCredentialSourceLabel(t, source)}
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {statusFilters.map((filter) => (
+              <SelectItem key={filter} value={filter} className="min-h-11 sm:min-h-10">
+                {t(`credentialsPage.statusFilters.${filter}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={providerFilter} onValueChange={onProviderFilterChange}>
+          <SelectTrigger
+            size="lg"
+            className="w-full sm:w-52"
+            aria-label={t('credentialsPage.filters.provider')}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all" className="min-h-11 sm:min-h-10">
+              {t('credentialsPage.filters.allProviders')}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {quotaAvailable ? (
+            {providers.map((provider) => (
+              <SelectItem key={provider.id} value={provider.id} className="min-h-11 sm:min-h-10">
+                {provider.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
         <ToggleGroup
-          type="single"
-          value={quotaView}
-          className="flex-wrap gap-1 border-0 bg-transparent p-0 shadow-none"
-          onValueChange={(value) => {
-            if (value) onQuotaViewChange(value as UpstreamQuotaView)
+          type="multiple"
+          value={activeQuickFilters}
+          variant="outline"
+          size="lg"
+          className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
+          aria-label={t('credentialsPage.filters.quickFilters')}
+          onValueChange={(values) => {
+            onAttentionOnlyChange(quotaAvailable && values.includes('attention'))
+            onWebsocketOnlyChange(values.includes('ws'))
           }}
         >
-          {(['all', 'attention', 'ws'] as UpstreamQuotaView[]).map((view) => (
+          {quotaAvailable ? (
             <ToggleGroupItem
-              key={view}
-              value={view}
-              className={cn(
-                'h-7 border border-transparent px-2.5 text-xs data-[state=on]:font-semibold',
-                view === 'attention'
-                  ? 'data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning'
-                  : 'data-[state=on]:border-primary/30 data-[state=on]:bg-primary/10 data-[state=on]:text-primary',
-              )}
+              value="attention"
+              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
             >
-              {t(`upstreamPage.quotaChips.${view}`)}
+              {t('upstreamPage.quotaChips.attention')}
             </ToggleGroupItem>
-          ))}
+          ) : null}
+          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
         </ToggleGroup>
-      ) : null}
+
+        <div className="col-span-full flex min-h-10 min-w-0 items-center justify-between gap-2 sm:ml-auto">
+          <p
+            className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
+            role="status"
+            aria-live="polite"
+          >
+            {t('credentialsPage.filters.resultCount', {
+              visible: filteredCount,
+              total: resources.length,
+            })}
+          </p>
+          {hasActiveFilters ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="lg"
+              className="px-2.5"
+              onClick={onClearFilters}
+            >
+              {t('credentialsPage.filters.clear')}
+            </Button>
+          ) : null}
+        </div>
+      </div>
     </div>
   )
 }
@@ -349,6 +382,8 @@ function CredentialList({
   showInFlight,
   inFlightByCredentialId,
   inFlightStatus,
+  emptyState,
+  onClearFilters,
   onDeleteResource,
   onDownloadResource,
   onOpenDrawer,
@@ -367,6 +402,8 @@ function CredentialList({
   showInFlight: boolean
   inFlightByCredentialId: Map<string, CredentialInFlightSummary>
   inFlightStatus: CredentialInFlightCellStatus
+  emptyState: 'empty' | 'filtered-empty'
+  onClearFilters: () => void
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onOpenDrawer: (resource: CredentialResource, tab: CredentialDrawerTab) => void
@@ -382,13 +419,34 @@ function CredentialList({
     !allSelected && resources.some((resource) => selectedResourceIds.has(resource.id))
 
   if (resources.length === 0) {
-    return <TableEmptyState kind="empty" className="m-0" title={t('credentialsPage.list.empty')} />
+    const filtered = emptyState === 'filtered-empty'
+    return (
+      <TableEmptyState
+        kind={emptyState}
+        className="m-0"
+        title={t(
+          filtered ? 'credentialsPage.list.filteredEmptyTitle' : 'credentialsPage.list.emptyTitle',
+        )}
+        description={t(
+          filtered
+            ? 'credentialsPage.list.filteredEmptyDescription'
+            : 'credentialsPage.list.emptyDescription',
+        )}
+        action={
+          filtered ? (
+            <Button type="button" variant="outline" size="lg" onClick={onClearFilters}>
+              {t('credentialsPage.filters.clear')}
+            </Button>
+          ) : undefined
+        }
+      />
+    )
   }
 
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className={cn('table-fixed', showInFlight ? 'min-w-[1570px]' : 'min-w-[1460px]')}
+      className={cn('table-fixed', showInFlight ? 'min-w-[1410px]' : 'min-w-[1300px]')}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -397,9 +455,8 @@ function CredentialList({
         <col className="w-[150px]" />
         <col className="w-[232px]" />
         {showInFlight ? <col className="w-[110px]" /> : null}
-        <col className="w-[200px]" />
         <col className="w-[96px]" />
-        <col className="w-[80px]" />
+        <col className="w-[112px]" />
         <col className="w-[290px]" />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
@@ -417,7 +474,6 @@ function CredentialList({
           <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
           <TableHead>{t('credentialsPage.list.quota')}</TableHead>
           {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
-          <TableHead>{t('credentialsPage.list.proxyUrl')}</TableHead>
           <TableHead>{t('credentialsPage.list.ws')}</TableHead>
           <TableHead>{t('credentialsPage.list.priority')}</TableHead>
           <TableHead className="table-sticky-action-head w-[290px] text-right">
@@ -534,13 +590,18 @@ function CredentialList({
                 </TableCell>
               ) : null}
               <TableCell>
-                <ProxyUrlCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-              </TableCell>
-              <TableCell>
                 <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
               </TableCell>
               <TableCell>
-                <PriorityCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                {resource.priority === null ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t('credentialsPage.status.notSet')}
+                  </span>
+                ) : (
+                  <span className="font-mono text-xs font-medium tabular-nums">
+                    {resource.priority}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="table-sticky-action-cell w-[290px] pl-4 text-right transition-colors">
                 <div className="table-action-cell-content">
@@ -615,10 +676,10 @@ export function AccountsPanel({
   initialCredentialId,
   initialSearch = '',
   onSearchChange,
-  createOpen,
-  onCreateOpenChange,
-  quotaView = 'all',
-  onQuotaViewChange,
+  attentionOnly = false,
+  websocketOnly = false,
+  onAttentionOnlyChange,
+  onWebsocketOnlyChange,
   quotaAvailable = false,
   quotaLoading = false,
   quotaTruncated = false,
@@ -628,10 +689,10 @@ export function AccountsPanel({
   initialCredentialId?: string
   initialSearch?: string
   onSearchChange?: (search: string) => void
-  createOpen?: boolean
-  onCreateOpenChange?: (open: boolean) => void
-  quotaView?: UpstreamQuotaView
-  onQuotaViewChange?: (view: UpstreamQuotaView) => void
+  attentionOnly?: boolean
+  websocketOnly?: boolean
+  onAttentionOnlyChange?: (attentionOnly: boolean) => void
+  onWebsocketOnlyChange?: (websocketOnly: boolean) => void
   quotaAvailable?: boolean
   quotaLoading?: boolean
   quotaTruncated?: boolean
@@ -642,7 +703,6 @@ export function AccountsPanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
-  const [sourceFilter, setSourceFilter] = useState('all')
   const [providerFilter, setProviderFilter] = useState('all')
   const [search, setSearch] = useState(initialSearch)
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null)
@@ -651,17 +711,11 @@ export function AccountsPanel({
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [oauthSessions, setOAuthSessions] = useState<OAuthSessionMap>({})
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
-  const [internalCreateOpen, setInternalCreateOpen] = useState(false)
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
   const autoOpenedCredentialRef = useRef<string | null>(null)
-
-  const createSheetOpen = createOpen ?? internalCreateOpen
-  const setCreateSheetOpen = (open: boolean) => {
-    if (createOpen === undefined) setInternalCreateOpen(open)
-    onCreateOpenChange?.(open)
-  }
 
   const resolvedQuotaMap = quotaMap ?? EMPTY_QUOTA_MAP
   const resources = workbench.snapshot?.resources ?? EMPTY_CREDENTIAL_RESOURCES
@@ -700,37 +754,32 @@ export function AccountsPanel({
     )
     .join(' · ')
   const filteredResources = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase()
-
-    return resources.filter((resource) => {
-      if (statusFilter === 'active' && (resource.disabled || resource.unavailable)) return false
-      if (statusFilter === 'disabled' && !resource.disabled) return false
-      if (statusFilter === 'unavailable' && !resource.unavailable) return false
-      if (sourceFilter !== 'all' && resource.source !== sourceFilter) return false
-      if (providerFilter !== 'all' && resource.provider !== providerFilter) return false
-      if (quotaView === 'attention') {
-        const entry = findUpstreamQuotaEntry(resolvedQuotaMap, resource)
-        if (!entry || !isQuotaAttentionEntry(entry)) return false
-      }
-      if (quotaView === 'ws' && !resource.websockets) return false
-      if (!normalizedSearch) return true
-
-      return [
-        getCredentialDisplayName(resource),
-        resource.name,
-        resource.authIndex,
-        resource.email,
-        resource.account,
-        resource.provider,
-        resource.type,
-        resource.source,
-        resource.note,
-        resource.proxyUrl,
-      ]
-        .filter(Boolean)
-        .some((value) => value?.toLowerCase().includes(normalizedSearch))
+    return filterCredentialResources(resources, resolvedQuotaMap, {
+      search,
+      statusFilter,
+      providerFilter,
+      quotaAvailable,
+      attentionOnly,
+      websocketOnly,
     })
-  }, [providerFilter, quotaView, resolvedQuotaMap, resources, search, sourceFilter, statusFilter])
+  }, [
+    attentionOnly,
+    providerFilter,
+    quotaAvailable,
+    resolvedQuotaMap,
+    resources,
+    search,
+    statusFilter,
+    websocketOnly,
+  ])
+  const hasActiveFilters = hasCredentialFilters({
+    search,
+    statusFilter,
+    providerFilter,
+    quotaAvailable,
+    attentionOnly,
+    websocketOnly,
+  })
   const selectedResource =
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     resources.find((resource) => resource.id === selectedResourceId) ??
@@ -742,9 +791,27 @@ export function AccountsPanel({
     (item) => item.status === 'queued' || item.status === 'uploading',
   )
 
+  const handleClearFilters = () => {
+    setSearch('')
+    setStatusFilter('all')
+    setProviderFilter('all')
+    onSearchChange?.('')
+    onAttentionOnlyChange?.(false)
+    onWebsocketOnlyChange?.(false)
+  }
+
   useEffect(() => {
     setSearch((current) => (current === initialSearch ? current : initialSearch))
   }, [initialSearch])
+
+  useEffect(() => {
+    if (
+      providerFilter !== 'all' &&
+      !resources.some((resource) => resource.provider === providerFilter)
+    ) {
+      setProviderFilter('all')
+    }
+  }, [providerFilter, resources])
 
   useEffect(() => {
     if (
@@ -1042,7 +1109,7 @@ export function AccountsPanel({
     }
   }
 
-  const handleMetadataUpdate = async (input: CredentialMetadataInput) => {
+  const handleMetadataUpdate = async (input: CredentialMetadataPatch) => {
     if (!selectedResource) return
     await workbench.updateMetadata({
       resource: selectedResource,
@@ -1054,7 +1121,7 @@ export function AccountsPanel({
   const handleInlineMetadataSave: InlineMetadataSave = async (resource, patch) => {
     await workbench.updateMetadata({
       resource,
-      input: buildInlineMetadataInput(resource, patch),
+      input: patch,
     })
   }
 
@@ -1133,7 +1200,6 @@ export function AccountsPanel({
           title={t('credentialsPage.list.title')}
           actions={
             <Button
-              variant="outline"
               size="sm"
               disabled={workbench.mutating}
               onClick={() => setCreateSheetOpen(true)}
@@ -1148,18 +1214,20 @@ export function AccountsPanel({
           resources={resources}
           search={search}
           statusFilter={statusFilter}
-          sourceFilter={sourceFilter}
           providerFilter={providerFilter}
           quotaAvailable={quotaAvailable}
-          quotaView={quotaView}
+          attentionOnly={attentionOnly}
+          websocketOnly={websocketOnly}
+          filteredCount={filteredResources.length}
           onSearchChange={(value) => {
             setSearch(value)
             onSearchChange?.(value)
           }}
           onStatusFilterChange={setStatusFilter}
-          onSourceFilterChange={setSourceFilter}
           onProviderFilterChange={setProviderFilter}
-          onQuotaViewChange={(view) => onQuotaViewChange?.(view)}
+          onAttentionOnlyChange={(value) => onAttentionOnlyChange?.(value)}
+          onWebsocketOnlyChange={(value) => onWebsocketOnlyChange?.(value)}
+          onClearFilters={handleClearFilters}
         />
         <div className="p-4">
           {selectedResourceIds.size > 0 ? (
@@ -1226,6 +1294,8 @@ export function AccountsPanel({
             showInFlight={workbench.credentialInFlight || workbench.credentialConcurrencyLimits}
             inFlightByCredentialId={inFlightByCredentialId}
             inFlightStatus={inFlightStatus}
+            emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
+            onClearFilters={handleClearFilters}
             onDeleteResource={(resource) => {
               handleDelete(resource)
             }}

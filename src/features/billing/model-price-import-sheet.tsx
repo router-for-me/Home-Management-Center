@@ -1426,7 +1426,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon-sm"
+                          size="icon"
                           title={t('billingPage.prices.import.moveRuleUp')}
                           disabled={busy || index === 0}
                           onClick={() => moveRule(index, -1)}
@@ -1436,7 +1436,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon-sm"
+                          size="icon"
                           title={t('billingPage.prices.import.moveRuleDown')}
                           disabled={busy || index === policy.rules.length - 1}
                           onClick={() => moveRule(index, 1)}
@@ -1446,7 +1446,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon-sm"
+                          size="icon"
                           title={t('billingPage.prices.import.removeRule')}
                           disabled={busy}
                           onClick={() =>
@@ -1525,7 +1525,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon-sm"
+                          size="icon"
                           title={t('billingPage.prices.import.removeAlias')}
                           disabled={busy}
                           onClick={() =>
@@ -1742,6 +1742,7 @@ export function ModelPriceImportSheet({
             <div className="relative">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
+                size="sm"
                 className="pl-9"
                 value={search}
                 disabled={busy}
@@ -1754,7 +1755,10 @@ export function ModelPriceImportSheet({
               onValueChange={(value) => setStatusFilter(value as StatusFilter)}
               disabled={busy}
             >
-              <SelectTrigger aria-label={t('billingPage.prices.import.statusFilter.label')}>
+              <SelectTrigger
+                size="sm"
+                aria-label={t('billingPage.prices.import.statusFilter.label')}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1936,7 +1940,7 @@ export function ModelPriceImportSheet({
                                   onValueChange={(value) => setMatchOverride(row, value)}
                                   disabled={busy}
                                 >
-                                  <SelectTrigger className="h-8 min-w-[190px] text-xs">
+                                  <SelectTrigger size="sm" className="min-w-[190px] text-xs">
                                     <SelectValue
                                       placeholder={t(
                                         'billingPage.prices.import.resolveMatchPlaceholder',
@@ -2001,7 +2005,8 @@ export function ModelPriceImportSheet({
                         </TableCell>
                         <TableCell className="align-top">
                           <Input
-                            className="h-8 w-24 font-mono text-xs"
+                            size="sm"
+                            className="w-24 font-mono text-xs"
                             type="number"
                             min="0.01"
                             step="0.1"

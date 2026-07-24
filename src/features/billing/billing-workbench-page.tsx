@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
@@ -1247,7 +1249,8 @@ function ModelPricesTab({
                 aria-hidden="true"
               />
               <Input
-                className="min-h-10 pl-9 sm:h-8 sm:min-h-8"
+                size="sm"
+                className={cn(responsiveCompactControlClassName, 'pl-9')}
                 type="search"
                 value={priceSearch}
                 placeholder={t('billingPage.prices.filters.search')}
@@ -1259,7 +1262,7 @@ function ModelPricesTab({
               onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.tier')}
               >
@@ -1278,7 +1281,7 @@ function ModelPricesTab({
               onValueChange={(value) => setSourceFilter(value as typeof sourceFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.source')}
               >
@@ -1296,7 +1299,7 @@ function ModelPricesTab({
               onValueChange={(value) => setStateFilter(value as typeof stateFilter)}
             >
               <SelectTrigger
-                className="min-h-10 w-full sm:h-8 sm:min-h-8 sm:w-40"
+                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
                 size="sm"
                 aria-label={t('billingPage.prices.filters.state')}
               >
@@ -1312,7 +1315,7 @@ function ModelPricesTab({
               type="button"
               variant="outline"
               size="sm"
-              className="min-h-10 justify-center sm:ml-auto sm:min-h-8"
+              className={cn(responsiveCompactControlClassName, 'justify-center sm:ml-auto')}
               disabled={!hasPriceFilters}
               onClick={clearPriceFilters}
             >
@@ -2643,184 +2646,182 @@ export function BillingWorkbenchPage() {
         }
       />
 
-      {activeTab !== 'modelPrices' ? (
-        <div className="bg-card rounded-lg border p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
-            <div className="min-w-0">
-              <Select
-                value={datePreset}
-                disabled={dateFiltersDisabled}
-                onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
-              >
-                <SelectTrigger
-                  aria-describedby={
-                    reportTimezoneContext ? 'billing-report-timezone-context' : undefined
-                  }
+      <Tabs
+        value={activeTab}
+        className="grid gap-5"
+        onValueChange={(value) => setActiveTab(value as BillingTab)}
+      >
+        <TabsList aria-label={t('billingPage.tabs.label')}>
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab} value={tab} className="min-w-32">
+              {t(`billingPage.tabs.${tab}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {activeTab !== 'modelPrices' ? (
+          <div className="bg-card rounded-lg border p-4 shadow-sm">
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
+              <div className="min-w-0">
+                <Select
+                  value={datePreset}
+                  disabled={dateFiltersDisabled}
+                  onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
-                  <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
-                  <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
-                  <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
-                  {reportTimezoneContext ? (
-                    <div
-                      aria-hidden="true"
-                      className="text-muted-foreground mt-1 max-w-64 border-t px-2 pt-2 pb-1 text-xs leading-4 whitespace-normal"
-                    >
-                      {reportTimezoneContext}
-                    </div>
-                  ) : null}
-                </SelectContent>
-              </Select>
-              {reportTimezoneContext ? (
-                <span id="billing-report-timezone-context" className="sr-only">
-                  {reportTimezoneContext}
-                </span>
-              ) : null}
-            </div>
-            <Input
-              type="date"
-              value={filters.from}
-              disabled={dateFiltersDisabled}
-              onChange={(event) => {
-                setDatePreset('custom')
-                updateFilters({ from: event.target.value })
-              }}
-            />
-            <Input
-              type="date"
-              value={filters.to}
-              disabled={dateFiltersDisabled}
-              onChange={(event) => {
-                setDatePreset('custom')
-                updateFilters({ to: event.target.value })
-              }}
-            />
-            <Input
-              value={textFilters.user}
-              placeholder={t('billingPage.filters.user')}
-              onChange={(event) =>
-                setTextFilters((current) => ({ ...current, user: event.target.value }))
-              }
-            />
-            <Input
-              value={textFilters.model}
-              placeholder={t('billingPage.filters.model')}
-              onChange={(event) =>
-                setTextFilters((current) => ({ ...current, model: event.target.value }))
-              }
-            />
-            <div className="relative">
-              <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
+                  <SelectTrigger
+                    aria-describedby={
+                      reportTimezoneContext ? 'billing-report-timezone-context' : undefined
+                    }
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
+                    <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
+                    <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
+                    <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
+                    {reportTimezoneContext ? (
+                      <div
+                        aria-hidden="true"
+                        className="text-muted-foreground mt-1 max-w-64 border-t px-2 pt-2 pb-1 text-xs leading-4 whitespace-normal"
+                      >
+                        {reportTimezoneContext}
+                      </div>
+                    ) : null}
+                  </SelectContent>
+                </Select>
+                {reportTimezoneContext ? (
+                  <span id="billing-report-timezone-context" className="sr-only">
+                    {reportTimezoneContext}
+                  </span>
+                ) : null}
+              </div>
               <Input
-                className="pl-9"
-                value={textFilters.provider}
-                placeholder={t('billingPage.filters.provider')}
+                type="date"
+                value={filters.from}
+                disabled={dateFiltersDisabled}
+                onChange={(event) => {
+                  setDatePreset('custom')
+                  updateFilters({ from: event.target.value })
+                }}
+              />
+              <Input
+                type="date"
+                value={filters.to}
+                disabled={dateFiltersDisabled}
+                onChange={(event) => {
+                  setDatePreset('custom')
+                  updateFilters({ to: event.target.value })
+                }}
+              />
+              <Input
+                value={textFilters.user}
+                placeholder={t('billingPage.filters.user')}
                 onChange={(event) =>
-                  setTextFilters((current) => ({ ...current, provider: event.target.value }))
+                  setTextFilters((current) => ({ ...current, user: event.target.value }))
                 }
               />
-            </div>
-          </div>
-          {!workbench.billingSettingsLoading &&
-          (workbench.billingSettingsError || !workbench.reportTimezone) ? (
-            <div
-              className="text-destructive mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
-              role="alert"
-            >
-              <span>{t('billingPage.filters.reportTimezoneLoadError')}</span>
-              <Button
-                type="button"
-                variant="text"
-                size="sm"
-                className="text-destructive hover:text-destructive h-auto px-1 py-0 text-xs"
-                disabled={workbench.billingSettingsFetching}
-                onClick={() => void workbench.refreshBillingSettings()}
-              >
-                <RefreshCw
-                  className={
-                    workbench.billingSettingsFetching ? 'size-3.5 animate-spin' : 'size-3.5'
+              <Input
+                value={textFilters.model}
+                placeholder={t('billingPage.filters.model')}
+                onChange={(event) =>
+                  setTextFilters((current) => ({ ...current, model: event.target.value }))
+                }
+              />
+              <div className="relative">
+                <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
+                <Input
+                  className="pl-9"
+                  value={textFilters.provider}
+                  placeholder={t('billingPage.filters.provider')}
+                  onChange={(event) =>
+                    setTextFilters((current) => ({ ...current, provider: event.target.value }))
                   }
-                  aria-hidden="true"
                 />
-                {t('billingPage.filters.reportTimezoneRetry')}
-              </Button>
+              </div>
             </div>
+            {!workbench.billingSettingsLoading &&
+            (workbench.billingSettingsError || !workbench.reportTimezone) ? (
+              <div
+                className="text-destructive mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs"
+                role="alert"
+              >
+                <span>{t('billingPage.filters.reportTimezoneLoadError')}</span>
+                <Button
+                  type="button"
+                  variant="text"
+                  size="sm"
+                  className="text-destructive hover:text-destructive h-auto px-1 py-0 text-xs"
+                  disabled={workbench.billingSettingsFetching}
+                  onClick={() => void workbench.refreshBillingSettings()}
+                >
+                  <RefreshCw
+                    className={
+                      workbench.billingSettingsFetching ? 'size-3.5 animate-spin' : 'size-3.5'
+                    }
+                    aria-hidden="true"
+                  />
+                  {t('billingPage.filters.reportTimezoneRetry')}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <TabsContent value="overview">
+          {!workbench.billingSettingsError ? <OverviewTab workbench={workbench} /> : null}
+        </TabsContent>
+        <TabsContent value="charges">
+          {!workbench.billingSettingsError ? (
+            <ChargeRecordsTab
+              workbench={workbench}
+              pagination={chargePagination}
+              onPaginationChange={setChargePagination}
+              onView={(record) => setSheetMode({ type: 'charge-detail', record })}
+            />
           ) : null}
-        </div>
-      ) : null}
-
-      <div
-        className="bg-card grid grid-cols-2 gap-2 rounded-lg border p-1 shadow-sm sm:flex sm:w-fit sm:max-w-full sm:overflow-x-auto"
-        role="tablist"
-        aria-label={t('billingPage.tabs.label')}
-      >
-        {tabs.map((tab) => (
-          <Button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            variant={activeTab === tab ? 'default' : 'ghost'}
-            className="min-h-10 w-full justify-center sm:w-auto sm:min-w-32"
-            onClick={() => setActiveTab(tab)}
-          >
-            {t(`billingPage.tabs.${tab}`)}
-          </Button>
-        ))}
-      </div>
-
-      {activeTab === 'overview' && !workbench.billingSettingsError ? (
-        <OverviewTab workbench={workbench} />
-      ) : null}
-      {activeTab === 'charges' && !workbench.billingSettingsError ? (
-        <ChargeRecordsTab
-          workbench={workbench}
-          pagination={chargePagination}
-          onPaginationChange={setChargePagination}
-          onView={(record) => setSheetMode({ type: 'charge-detail', record })}
-        />
-      ) : null}
-      {activeTab === 'balanceRecords' && !workbench.billingSettingsError ? (
-        <BalanceRecordsTab
-          workbench={workbench}
-          pagination={balancePagination}
-          onPaginationChange={setBalancePagination}
-          onView={(record) => setSheetMode({ type: 'balance-detail', record })}
-        />
-      ) : null}
-      {activeTab === 'modelPrices' ? (
-        <ModelPricesTab
-          workbench={workbench}
-          onCreate={() => setSheetMode({ type: 'model-price-create' })}
-          onImport={() => setSheetMode({ type: 'model-price-import', intent: 'import' })}
-          onRefreshSynced={() =>
-            setSheetMode({
-              type: 'model-price-import',
-              intent: 'refresh-synced',
-              initialOverwriteMode: 'sync',
-              initialTargetFilter: 'synced',
-            })
-          }
-          onEdit={(resource) => setSheetMode({ type: 'model-price-edit', resource })}
-          onToggle={(resource) => {
-            void workbench
-              .updateModelPrice({
-                resource,
-                input: toModelPriceInput(
-                  resource,
-                  !resource.enabled,
-                  (workbench.modelPriceSchemaVersion ?? 0) >= 2,
-                ),
+        </TabsContent>
+        <TabsContent value="balanceRecords">
+          {!workbench.billingSettingsError ? (
+            <BalanceRecordsTab
+              workbench={workbench}
+              pagination={balancePagination}
+              onPaginationChange={setBalancePagination}
+              onView={(record) => setSheetMode({ type: 'balance-detail', record })}
+            />
+          ) : null}
+        </TabsContent>
+        <TabsContent value="modelPrices">
+          <ModelPricesTab
+            workbench={workbench}
+            onCreate={() => setSheetMode({ type: 'model-price-create' })}
+            onImport={() => setSheetMode({ type: 'model-price-import', intent: 'import' })}
+            onRefreshSynced={() =>
+              setSheetMode({
+                type: 'model-price-import',
+                intent: 'refresh-synced',
+                initialOverwriteMode: 'sync',
+                initialTargetFilter: 'synced',
               })
-              .then(() => toast.success(t('billingPage.toast.priceUpdated')))
-              .catch(showMutationError)
-          }}
-          onDelete={(resource) => setPendingDelete({ type: 'model-price', resource })}
-        />
-      ) : null}
+            }
+            onEdit={(resource) => setSheetMode({ type: 'model-price-edit', resource })}
+            onToggle={(resource) => {
+              void workbench
+                .updateModelPrice({
+                  resource,
+                  input: toModelPriceInput(
+                    resource,
+                    !resource.enabled,
+                    (workbench.modelPriceSchemaVersion ?? 0) >= 2,
+                  ),
+                })
+                .then(() => toast.success(t('billingPage.toast.priceUpdated')))
+                .catch(showMutationError)
+            }}
+            onDelete={(resource) => setPendingDelete({ type: 'model-price', resource })}
+          />
+        </TabsContent>
+      </Tabs>
 
       <Sheet
         open={Boolean(sheetMode)}

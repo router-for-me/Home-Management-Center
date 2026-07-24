@@ -1772,8 +1772,6 @@ export const en = {
     upstreamPage: {
       header: {
         title: 'Upstream',
-        description:
-          'Manage account credentials and model providers in one place. Edit enablement, Proxy URL, WebSocket, and priority directly in the table; secondary fields like Prefix live in the detail drawer. Quota is embedded as a first-class column (including Kimi / Grok).',
       },
       tabs: {
         label: 'Upstream sections',
@@ -1868,6 +1866,9 @@ export const en = {
           no: 'No',
         },
         window: {
+          labels: {
+            usage: 'Usage',
+          },
           period: {
             day: 'Daily',
             week: 'Weekly',
@@ -1893,7 +1894,6 @@ export const en = {
         noWindows: 'No quota windows',
       },
       quotaChips: {
-        all: 'All quota',
         attention: 'Attention',
         ws: 'WS only',
       },
@@ -1908,17 +1908,12 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyHint:
-            'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
           priorityPlaceholder: 'e.g. 10 or -1',
-          priorityHint: 'Integers only; higher values win. Editable inline in the table too.',
-          prefixHint: 'Rarely used; maintained here instead of a table column.',
+          priorityHint: 'Integers only; higher values have higher scheduling priority.',
           secondarySection: 'Less common',
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
-          enableDescription:
-            'A disabled credential does not serve model requests and can be re-enabled anytime.',
         },
         danger: {
           downloadTitle: 'Download credential JSON',
@@ -1952,7 +1947,7 @@ export const en = {
       },
       actions: {
         addCredential: 'Add credential',
-        detail: 'Details',
+        detail: 'View',
         quota: 'Quota',
         models: 'Models',
         upload: 'Upload JSON',
@@ -1965,10 +1960,11 @@ export const en = {
       },
       filters: {
         status: 'Status',
-        source: 'Source',
         provider: 'Model provider',
-        allSources: 'All sources',
         allProviders: 'All model providers',
+        quickFilters: 'Quick filters',
+        resultCount: 'Showing {{visible}} of {{total}} credentials',
+        clear: 'Clear filters',
       },
       statusFilters: {
         all: 'All credentials',
@@ -2096,24 +2092,23 @@ export const en = {
       },
       list: {
         title: 'Credential resources',
-        filterPlaceholder: 'Filter credentials',
-        empty: 'No credentials match the current filters.',
+        filterPlaceholder: 'Search credentials',
+        emptyTitle: 'No credentials yet',
+        emptyDescription: 'Add or import a credential to manage it here.',
+        filteredEmptyTitle: 'No matching credentials',
+        filteredEmptyDescription: 'Adjust the current filters or clear them all.',
         credential: 'Credential / account',
         quota: 'Quota',
         provider: 'Model provider',
         inFlight: 'In flight',
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: 'Priority',
         actions: 'Actions',
       },
       inline: {
         saved: 'Saved.',
-        priorityInvalid: 'Priority must be an integer.',
-        proxyUrlLabel: 'Edit Proxy URL',
-        priorityLabel: 'Edit priority',
         websocketsLabel: 'Toggle WebSocket',
         websocketsUnsupported: 'WebSocket is not supported for this provider',
         notApplicable: 'n/a',
@@ -2151,10 +2146,6 @@ export const en = {
         modelsTitle: 'Available models',
         modelsDescription: 'Query the runtime for models available to this credential.',
         modelCount: '{{count}} models loaded.',
-        enableDescription:
-          'This credential is disabled. Enable it to let it participate in model requests again.',
-        disableDescription:
-          'Disable this credential to remove it from model requests. You can re-enable it later.',
         fields: {
           provider: 'Model provider',
           type: 'Type',
@@ -2179,6 +2170,7 @@ export const en = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Priority',
+        priorityInvalid: 'Priority must be an integer.',
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
@@ -2240,8 +2232,6 @@ export const en = {
         noRequests: 'No requests are currently in flight.',
         loadMore: 'Load more',
         editTitle: 'Concurrency limits',
-        editDescription:
-          'Empty or 0 means unlimited. Model limits use Home canonical model keys; recognized reasoning suffixes share the base model limit. Limit changes never terminate existing requests.',
         totalLimit: 'Credential-wide limit',
         modelLimits: 'Model limits',
         addModel: 'Add model',
@@ -2273,6 +2263,7 @@ export const en = {
       toast: {
         downloaded: 'Credential downloaded.',
         updated: 'Credential metadata updated.',
+        noChanges: 'No changes to save.',
         deleted: 'Credential deleted.',
         bulkEnabled: '{{count}} credentials enabled.',
         bulkDisabled: '{{count}} credentials disabled.',

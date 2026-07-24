@@ -1704,8 +1704,6 @@ export const zhTW = {
     upstreamPage: {
       header: {
         title: '上游資源',
-        description:
-          '統一管理帳號憑證與模型供應商。啟用、Proxy URL、WebSocket、優先順序在表格內直接改;Prefix 等次常用欄位放在詳情二級。額度一等欄內嵌(含 Kimi / Grok)。',
       },
       tabs: {
         label: '上游資源分區',
@@ -1794,6 +1792,9 @@ export const zhTW = {
           no: '否',
         },
         window: {
+          labels: {
+            usage: '用量',
+          },
           period: {
             day: '每日',
             week: '每週',
@@ -1819,7 +1820,6 @@ export const zhTW = {
         noWindows: '暫無額度視窗',
       },
       quotaChips: {
-        all: '全部額度',
         attention: '需關注',
         ws: '僅 WS',
       },
@@ -1834,15 +1834,12 @@ export const zhTW = {
           danger: '危險操作',
         },
         metadata: {
-          proxyHint: '憑證級代理;留空表示不設定。列表內也可直接改。',
           priorityPlaceholder: '例如 10 或 -1',
-          priorityHint: '僅支援整數;數值越大優先順序越高。列表內也可直接改。',
-          prefixHint: '不常用;僅在詳情二級維護,不佔列表主欄。',
+          priorityHint: '僅支援整數；數值越大，排程優先順序越高。',
           secondarySection: '次常用',
           websocketsXaiHint: '適用於 xAI/Grok。開啟後該憑證可參與 WebSocket 傳輸。',
           websocketsUnsupported: '目前供應商不顯示 WS 開關。',
           enableTitle: '啟用憑證',
-          enableDescription: '停用後該憑證不會參與模型請求,可隨時重新啟用。',
         },
         danger: {
           downloadTitle: '下載憑證 JSON',
@@ -1874,11 +1871,11 @@ export const zhTW = {
       },
       actions: {
         addCredential: '新增憑證',
-        detail: '詳情',
+        detail: '查看',
         quota: '額度',
         models: '模型',
         upload: '上傳 JSON',
-        save: '儲存 metadata',
+        save: '儲存元資料',
         viewQuota: '查看額度',
         viewModels: '查看模型',
         reloadModels: '重新載入',
@@ -1887,10 +1884,11 @@ export const zhTW = {
       },
       filters: {
         status: '狀態',
-        source: '來源',
         provider: '模型供應商',
-        allSources: '全部來源',
         allProviders: '全部模型供應商',
+        quickFilters: '快速篩選',
+        resultCount: '顯示 {{visible}} / {{total}} 個憑證',
+        clear: '清除篩選',
       },
       statusFilters: {
         all: '全部憑證',
@@ -2016,24 +2014,23 @@ export const zhTW = {
       },
       list: {
         title: '憑證資源',
-        filterPlaceholder: '篩選憑證',
-        empty: '目前篩選條件下沒有憑證。',
+        filterPlaceholder: '搜尋憑證',
+        emptyTitle: '暫無憑證',
+        emptyDescription: '新增或匯入憑證後，可在此統一管理。',
+        filteredEmptyTitle: '沒有符合的憑證',
+        filteredEmptyDescription: '請調整篩選條件，或清除全部篩選。',
         credential: '憑證 / 帳號',
         quota: '額度',
         provider: '模型供應商',
         inFlight: '進行中',
         toggleStatus: '切換憑證 {{name}} 的啟用狀態',
         enabled: '啟用',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: '優先順序',
         actions: '操作',
       },
       inline: {
         saved: '已儲存。',
-        priorityInvalid: '優先順序必須是整數。',
-        proxyUrlLabel: '編輯 Proxy URL',
-        priorityLabel: '編輯優先順序',
         websocketsLabel: '切換 WebSocket',
         websocketsUnsupported: '目前供應商不支援 WebSocket 設定',
         notApplicable: 'n/a',
@@ -2066,7 +2063,7 @@ export const zhTW = {
       },
       detail: {
         title: '憑證詳情',
-        empty: '選擇一個憑證以查看 metadata 和操作。',
+        empty: '選擇一個憑證以查看元資料和操作。',
         noModels: '該憑證暫無模型。',
         modelsTitle: '可用模型',
         modelsDescription: '依目前憑證向執行環境查詢可用模型。',
@@ -2095,6 +2092,7 @@ export const zhTW = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: '優先級',
+        priorityInvalid: '優先級必須是整數。',
         websockets: 'WebSocket 支援',
         websocketsHint: '僅適用於 Codex 憑證。開啟後，該憑證可參與需要 WebSocket 的 Codex 請求。',
         note: '備註',
@@ -2145,8 +2143,6 @@ export const zhTW = {
         noRequests: '目前沒有進行中請求。',
         loadMore: '載入更多',
         editTitle: '並發上限',
-        editDescription:
-          '空值或 0 表示不限制；模型上限使用 Home 的規範化模型鍵，已識別的 reasoning 後綴共享基礎模型上限。修改上限不會終止既有請求。',
         totalLimit: '憑證總上限',
         modelLimits: '模型上限',
         addModel: '新增模型',
@@ -2175,7 +2171,8 @@ export const zhTW = {
       },
       toast: {
         downloaded: '憑證已下載。',
-        updated: '憑證 metadata 已更新。',
+        updated: '憑證元資料已更新。',
+        noChanges: '沒有需要儲存的變更。',
         deleted: '憑證已刪除。',
         bulkEnabled: '已啟用 {{count}} 個憑證。',
         bulkDisabled: '已停用 {{count}} 個憑證。',

@@ -1771,8 +1771,6 @@ export const ru = {
     upstreamPage: {
       header: {
         title: 'Апстримы',
-        description:
-          'Управление учётными данными и поставщиками моделей в одном месте. Включение, Proxy URL, WebSocket и приоритет редактируются прямо в таблице; второстепенные поля, такие как Prefix, находятся в панели деталей. Квота встроена как первоклассная колонка (включая Kimi / Grok).',
       },
       tabs: {
         label: 'Разделы апстримов',
@@ -1867,6 +1865,9 @@ export const ru = {
           no: 'Нет',
         },
         window: {
+          labels: {
+            usage: 'Использование',
+          },
           period: {
             day: 'Ежедневно',
             week: 'Еженедельно',
@@ -1892,7 +1893,6 @@ export const ru = {
         noWindows: 'Нет окон квоты',
       },
       quotaChips: {
-        all: 'Все квоты',
         attention: 'Внимание',
         ws: 'Только WS',
       },
@@ -1907,18 +1907,12 @@ export const ru = {
           danger: 'Опасная зона',
         },
         metadata: {
-          proxyHint:
-            'Прокси на уровне учётных данных; оставьте пустым, чтобы не задавать. Также редактируется в таблице.',
           priorityPlaceholder: 'например, 10 или -1',
-          priorityHint:
-            'Только целые числа; большее значение — выше приоритет. Также редактируется в таблице.',
-          prefixHint: 'Используется редко; редактируется здесь, а не в колонке таблицы.',
+          priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
           secondarySection: 'Дополнительно',
           websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
           websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
-          enableDescription:
-            'Отключённая запись не обслуживает запросы к моделям и может быть включена снова в любой момент.',
         },
         danger: {
           downloadTitle: 'Скачать JSON учётных данных',
@@ -1952,11 +1946,11 @@ export const ru = {
       },
       actions: {
         addCredential: 'Добавить credential',
-        detail: 'Подробно',
+        detail: 'Открыть',
         quota: 'Квота',
         models: 'Модели',
         upload: 'Загрузить JSON',
-        save: 'Сохранить metadata',
+        save: 'Сохранить метаданные',
         viewQuota: 'Открыть квоту',
         viewModels: 'Показать модели',
         reloadModels: 'Обновить',
@@ -1965,10 +1959,11 @@ export const ru = {
       },
       filters: {
         status: 'Статус',
-        source: 'Источник',
         provider: 'Поставщик моделей',
-        allSources: 'Все источники',
         allProviders: 'Все поставщики моделей',
+        quickFilters: 'Быстрые фильтры',
+        resultCount: 'Показано: {{visible}} из {{total}}',
+        clear: 'Сбросить фильтры',
       },
       statusFilters: {
         all: 'Все credentials',
@@ -2097,24 +2092,23 @@ export const ru = {
       },
       list: {
         title: 'Credential resources',
-        filterPlaceholder: 'Фильтр credentials',
-        empty: 'Нет credentials для текущих фильтров.',
+        filterPlaceholder: 'Поиск учётных данных',
+        emptyTitle: 'Учётных данных пока нет',
+        emptyDescription: 'Добавьте или импортируйте учётные данные для управления ими здесь.',
+        filteredEmptyTitle: 'Нет подходящих учётных данных',
+        filteredEmptyDescription: 'Измените условия или сбросьте все фильтры.',
         credential: 'Credential / аккаунт',
         quota: 'Квота',
         provider: 'Поставщик моделей',
         inFlight: 'В работе',
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: 'Приоритет',
         actions: 'Действия',
       },
       inline: {
         saved: 'Сохранено.',
-        priorityInvalid: 'Приоритет должен быть целым числом.',
-        proxyUrlLabel: 'Изменить Proxy URL',
-        priorityLabel: 'Изменить приоритет',
         websocketsLabel: 'Переключить WebSocket',
         websocketsUnsupported: 'WebSocket не поддерживается для этого поставщика',
         notApplicable: 'n/a',
@@ -2147,15 +2141,11 @@ export const ru = {
       },
       detail: {
         title: 'Детали credential',
-        empty: 'Выберите credential, чтобы посмотреть metadata и действия.',
+        empty: 'Выберите учётные данные, чтобы посмотреть метаданные и доступные действия.',
         noModels: 'Для этого credential пока нет моделей.',
         modelsTitle: 'Доступные модели',
         modelsDescription: 'Запросить у runtime модели, доступные для этого credential.',
         modelCount: 'Загружено моделей: {{count}}.',
-        enableDescription:
-          'Этот credential отключен. Включите его, чтобы снова использовать в запросах моделей.',
-        disableDescription:
-          'Отключите credential, чтобы исключить его из запросов моделей. Его можно включить позже.',
         fields: {
           provider: 'Поставщик моделей',
           type: 'Тип',
@@ -2180,6 +2170,7 @@ export const ru = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Приоритет',
+        priorityInvalid: 'Приоритет должен быть целым числом.',
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
@@ -2240,8 +2231,6 @@ export const ru = {
         noRequests: 'Сейчас нет запросов в работе.',
         loadMore: 'Загрузить ещё',
         editTitle: 'Лимиты параллельности',
-        editDescription:
-          'Пустое значение или 0 означает отсутствие лимита. Лимиты используют канонические model keys Home; распознанные reasoning suffix используют лимит базовой модели. Изменение лимита не завершает активные запросы.',
         totalLimit: 'Общий лимит credential',
         modelLimits: 'Лимиты моделей',
         addModel: 'Добавить модель',
@@ -2272,7 +2261,8 @@ export const ru = {
       },
       toast: {
         downloaded: 'Credential скачан.',
-        updated: 'Credential metadata обновлена.',
+        updated: 'Метаданные учётных данных обновлены.',
+        noChanges: 'Нет изменений для сохранения.',
         deleted: 'Credential удален.',
         bulkEnabled: 'Credentials включены: {{count}}.',
         bulkDisabled: 'Credentials отключены: {{count}}.',

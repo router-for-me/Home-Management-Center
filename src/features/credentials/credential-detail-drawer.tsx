@@ -2,6 +2,7 @@ import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 
 
 import { AlertTriangle, CircleGauge, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import {
   DrawerScaffoldBody,
@@ -54,7 +55,7 @@ import {
   type CredentialConcurrencyPolicy,
   type CredentialInFlightObservationMetadata,
   type CredentialInFlightSummary,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialResource,
   matchesCredentialBackendError,
   supportsCredentialWebsockets,
@@ -104,6 +105,38 @@ function createMetadataForm(
     },
     policy,
   )
+}
+
+export function isValidCredentialPriorityDraft(value: string) {
+  const trimmed = value.trim()
+  return trimmed === '' || (/^-?\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)))
+}
+
+export function buildCredentialMetadataPatch(
+  resource: CredentialResource,
+  form: CredentialMetadataForm,
+): CredentialMetadataPatch {
+  const patch: CredentialMetadataPatch = {}
+  const prefix = form.prefix.trim()
+  const proxyUrl = form.proxyUrl.trim()
+  const priority = form.priority.trim()
+  const note = form.note.trim()
+
+  if (prefix !== (resource.prefix ?? '')) patch.prefix = form.prefix
+  if (proxyUrl !== (resource.proxyUrl ?? '')) patch.proxyUrl = form.proxyUrl
+  if (priority !== (resource.priority === null ? '' : String(resource.priority))) {
+    patch.priority = priority === '' ? null : priority
+  }
+  if (note !== (resource.note ?? '')) patch.note = form.note
+  if (
+    supportsCredentialWebsockets(resource) &&
+    resource.metadataAvailability.websockets &&
+    form.websockets !== resource.websockets
+  ) {
+    patch.websockets = form.websockets
+  }
+
+  return patch
 }
 
 type CredentialMetadataLocalError = {
@@ -201,8 +234,18 @@ function OverviewTab({
           ['source', sourceLabel],
           ['account', resource.account ?? resource.email ?? t('credentialsPage.status.notSet')],
           ['authIndex', resource.authIndex ?? t('credentialsPage.status.notAvailable')],
-          ['prefix', resource.prefix ?? t('credentialsPage.status.notSet')],
-          ['proxyUrl', resource.proxyUrl ?? t('credentialsPage.status.notSet')],
+          [
+            'prefix',
+            resource.metadataAvailability.prefix
+              ? (resource.prefix ?? t('credentialsPage.status.notSet'))
+              : t('credentialsPage.status.notAvailable'),
+          ],
+          [
+            'proxyUrl',
+            resource.metadataAvailability.proxyUrl
+              ? (resource.proxyUrl ?? t('credentialsPage.status.notSet'))
+              : t('credentialsPage.status.notAvailable'),
+          ],
           [
             'priority',
             resource.priority === null
@@ -212,9 +255,11 @@ function OverviewTab({
           [
             'websockets',
             websocketsSupported
-              ? resource.websockets
-                ? t('credentialsPage.status.enabled')
-                : t('credentialsPage.status.disabled')
+              ? resource.metadataAvailability.websockets
+                ? resource.websockets
+                  ? t('credentialsPage.status.enabled')
+                  : t('credentialsPage.status.disabled')
+                : t('credentialsPage.status.notAvailable')
               : t('credentialsPage.inline.notApplicable'),
           ],
           ['path', resource.path ?? t('credentialsPage.status.notAvailable')],
@@ -278,7 +323,7 @@ function MetadataTab({
   concurrencyPolicyPending: boolean
   concurrencyPolicyError: string | null
   inFlightSummary: CredentialInFlightSummary | null
-  onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
+  onUpdateMetadata: (input: CredentialMetadataPatch) => Promise<void>
   onToggleStatus: () => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -328,6 +373,7 @@ function MetadataTab({
   }
 
   const websocketsSupported = supportsCredentialWebsockets(resource)
+  const websocketsAvailable = resource.metadataAvailability.websockets
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
   const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
@@ -368,6 +414,9 @@ function MetadataTab({
         }
       }
       const normalizedMaxInFlight = maxInFlight && maxInFlight > 0 ? maxInFlight : null
+      if (!isValidCredentialPriorityDraft(form.priority)) {
+        throw new Error(t('credentialsPage.form.priorityInvalid'))
+      }
       const currentModelLimits = concurrencyPolicy?.maxInFlightByModel ?? {}
       const modelLimitsChanged =
         Object.keys(currentModelLimits).length !== Object.keys(maxInFlightByModel).length ||
@@ -377,12 +426,9 @@ function MetadataTab({
       const concurrencyChanged =
         concurrencyEditable &&
         (normalizedMaxInFlight !== concurrencyPolicy?.maxInFlight || modelLimitsChanged)
-      await onUpdateMetadata({
-        prefix: form.prefix,
-        proxyUrl: form.proxyUrl,
-        priority: form.priority,
-        note: form.note,
-        ...(websocketsSupported ? { websockets: form.websockets } : {}),
+      const metadataPatch = buildCredentialMetadataPatch(resource, form)
+      const input: CredentialMetadataPatch = {
+        ...metadataPatch,
         ...(concurrencyChanged
           ? {
               maxInFlight: normalizedMaxInFlight,
@@ -390,7 +436,12 @@ function MetadataTab({
               concurrencyVersion: concurrencyPolicy?.version,
             }
           : {}),
-      })
+      }
+      if (Object.keys(input).length === 0) {
+        toast.info(t('credentialsPage.toast.noChanges'))
+        return
+      }
+      await onUpdateMetadata(input)
     } catch (error) {
       const versionConflict = matchesCredentialBackendError(
         error,
@@ -421,13 +472,12 @@ function MetadataTab({
           value={form.proxyUrl}
           placeholder="socks5://user:pass@host:port/"
           disabled={mutating}
+          className="font-mono"
+          spellCheck={false}
           onChange={(event) =>
             handleFormChange((current) => ({ ...current, proxyUrl: event.target.value }))
           }
         />
-        <span className="text-muted-foreground text-xs leading-5 font-normal">
-          {t('upstreamPage.drawer.metadata.proxyHint')}
-        </span>
       </label>
       <label className="grid gap-2 text-sm font-medium">
         <span>{t('credentialsPage.form.priority')}</span>
@@ -468,24 +518,25 @@ function MetadataTab({
             handleFormChange((current) => ({ ...current, prefix: event.target.value }))
           }
         />
-        <span className="text-muted-foreground text-xs leading-5 font-normal">
-          {t('upstreamPage.drawer.metadata.prefixHint')}
-        </span>
       </label>
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium">{t('credentialsPage.form.websockets')}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {websocketsSupported
-                ? isXaiCredential
+            {websocketsSupported && websocketsAvailable ? (
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {isXaiCredential
                   ? t('upstreamPage.drawer.metadata.websocketsXaiHint')
-                  : t('credentialsPage.form.websocketsHint')
-                : t('upstreamPage.drawer.metadata.websocketsUnsupported')}
-            </p>
+                  : t('credentialsPage.form.websocketsHint')}
+              </p>
+            ) : !websocketsSupported ? (
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {t('upstreamPage.drawer.metadata.websocketsUnsupported')}
+              </p>
+            ) : null}
           </div>
-          {websocketsSupported ? (
+          {websocketsSupported && websocketsAvailable ? (
             <Switch
               checked={form.websockets}
               disabled={mutating}
@@ -496,7 +547,9 @@ function MetadataTab({
             />
           ) : (
             <span className="border-border bg-muted text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
-              {t('credentialsPage.inline.notApplicable')}
+              {websocketsSupported
+                ? t('credentialsPage.status.notAvailable')
+                : t('credentialsPage.inline.notApplicable')}
             </span>
           )}
         </div>
@@ -504,12 +557,9 @@ function MetadataTab({
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{t('upstreamPage.drawer.metadata.enableTitle')}</p>
-            <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('upstreamPage.drawer.metadata.enableDescription')}
-            </p>
-          </div>
+          <p className="min-w-0 text-sm font-medium">
+            {t('upstreamPage.drawer.metadata.enableTitle')}
+          </p>
           <Switch
             checked={!resource.disabled}
             disabled={mutating}
@@ -1117,7 +1167,7 @@ export function CredentialDetailDrawer({
   concurrencyStale: boolean
   concurrencyErrorMessage: string | null
   onTabChange: (tab: CredentialDrawerTab) => void
-  onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
+  onUpdateMetadata: (input: CredentialMetadataPatch) => Promise<void>
   onToggleStatus: () => Promise<void>
   onFetchModels: () => Promise<void>
   onDownload: () => Promise<void>
