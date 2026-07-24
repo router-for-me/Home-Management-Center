@@ -63,7 +63,9 @@ describe('credential toolbar', () => {
 
     expect(markup).toContain('grid-cols-1')
     expect(markup).toContain('min-[480px]:grid-cols-2')
-    expect(markup).toContain('h-11')
+    expect(markup.match(/data-size="lg"/g)).toHaveLength(7)
+    expect(markup.match(/h-10/g)).toHaveLength(7)
+    expect(markup).not.toContain('h-11')
   })
 
   test('keeps filter and empty-state copy aligned across all supported locales', () => {

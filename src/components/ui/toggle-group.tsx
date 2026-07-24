@@ -3,6 +3,7 @@ import * as React from 'react'
 import { type VariantProps, cva } from 'class-variance-authority'
 import { ToggleGroup as ToggleGroupPrimitive } from 'radix-ui'
 
+import { controlSizeClassNames } from '@/components/ui/control-size'
 import { cn } from '@/lib/utils'
 
 const toggleGroupItemVariants = cva(
@@ -10,9 +11,9 @@ const toggleGroupItemVariants = cva(
   {
     variants: {
       size: {
-        default: 'h-9 px-3',
-        sm: 'h-8 px-2.5 text-xs',
-        lg: 'h-10 px-4',
+        default: `${controlSizeClassNames.default} px-3`,
+        sm: `${controlSizeClassNames.sm} px-2.5 text-xs`,
+        lg: `${controlSizeClassNames.lg} px-4`,
       },
       variant: {
         default: '',
@@ -33,8 +34,8 @@ const ToggleGroupContext = React.createContext<VariantProps<typeof toggleGroupIt
 
 function ToggleGroup({
   className,
-  variant,
-  size,
+  variant = 'default',
+  size = 'default',
   children,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &
@@ -65,14 +66,18 @@ function ToggleGroupItem({
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
   VariantProps<typeof toggleGroupItemVariants>) {
   const context = React.useContext(ToggleGroupContext)
+  const resolvedSize = size ?? context.size ?? 'default'
+  const resolvedVariant = variant ?? context.variant ?? 'default'
 
   return (
     <ToggleGroupPrimitive.Item
       data-slot="toggle-group-item"
+      data-size={resolvedSize}
+      data-variant={resolvedVariant}
       className={cn(
         toggleGroupItemVariants({
-          variant: variant ?? context.variant,
-          size: size ?? context.size,
+          variant: resolvedVariant,
+          size: resolvedSize,
         }),
         className,
       )}

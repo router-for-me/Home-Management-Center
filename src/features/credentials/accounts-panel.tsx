@@ -271,7 +271,8 @@ export function AccountsToolbar({
         />
         <Input
           type="search"
-          className="h-11 pl-9 sm:h-10"
+          size="lg"
+          className="pl-9"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder={t('credentialsPage.list.filterPlaceholder')}
@@ -284,7 +285,8 @@ export function AccountsToolbar({
           onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
           <SelectTrigger
-            className="h-11 w-full sm:h-10 sm:w-40"
+            size="lg"
+            className="w-full sm:w-40"
             aria-label={t('credentialsPage.filters.status')}
           >
             <SelectValue />
@@ -300,7 +302,8 @@ export function AccountsToolbar({
 
         <Select value={providerFilter} onValueChange={onProviderFilterChange}>
           <SelectTrigger
-            className="h-11 w-full sm:h-10 sm:w-52"
+            size="lg"
+            className="w-full sm:w-52"
             aria-label={t('credentialsPage.filters.provider')}
           >
             <SelectValue />
@@ -332,17 +335,15 @@ export function AccountsToolbar({
           {quotaAvailable ? (
             <ToggleGroupItem
               value="attention"
-              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning h-11 sm:h-10"
+              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
             >
               {t('upstreamPage.quotaChips.attention')}
             </ToggleGroupItem>
           ) : null}
-          <ToggleGroupItem value="ws" className="h-11 sm:h-10">
-            {t('upstreamPage.quotaChips.ws')}
-          </ToggleGroupItem>
+          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="col-span-full flex min-h-11 min-w-0 items-center justify-between gap-2 sm:ml-auto sm:min-h-10">
+        <div className="col-span-full flex min-h-10 min-w-0 items-center justify-between gap-2 sm:ml-auto">
           <p
             className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
             role="status"
@@ -357,8 +358,8 @@ export function AccountsToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="h-11 px-2.5 sm:h-10"
+              size="lg"
+              className="px-2.5"
               onClick={onClearFilters}
             >
               {t('credentialsPage.filters.clear')}
@@ -433,12 +434,7 @@ function CredentialList({
         )}
         action={
           filtered ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 sm:h-10"
-              onClick={onClearFilters}
-            >
+            <Button type="button" variant="outline" size="lg" onClick={onClearFilters}>
               {t('credentialsPage.filters.clear')}
             </Button>
           ) : undefined

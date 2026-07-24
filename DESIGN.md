@@ -119,6 +119,13 @@ Flat by default. Elevation should communicate layering, not decoration.
 
 ## Components
 
+Control sizing:
+
+- Shared form controls use one height scale: `sm` is 32px for dense table tools, `default` is 36px for general forms and actions, and `lg` is 40px for prominent or mixed-control filter rows.
+- Input, select trigger, button, and toggle-group item sizes with the same name must resolve to the same visual height.
+- Choose one control size for each horizontal toolbar row. Feature code may set width and spacing, but should not override component height with local `h-*` classes.
+- Responsive filter layouts should reflow or wrap controls instead of changing their height independently at a breakpoint.
+
 Shell:
 
 - Left sidebar is the global navigation anchor.
