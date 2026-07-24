@@ -1819,7 +1819,6 @@ export const zhCN = {
         noWindows: '暂无额度窗口',
       },
       quotaChips: {
-        all: '全部额度',
         attention: '需关注',
         ws: '仅 WS',
       },
@@ -1884,10 +1883,11 @@ export const zhCN = {
       },
       filters: {
         status: '状态',
-        source: '来源',
         provider: '模型供应商',
-        allSources: '全部来源',
         allProviders: '全部模型供应商',
+        quickFilters: '快捷筛选',
+        resultCount: '显示 {{visible}} / {{total}} 个凭证',
+        clear: '清除筛选',
       },
       statusFilters: {
         all: '全部凭证',
@@ -2013,8 +2013,11 @@ export const zhCN = {
       },
       list: {
         title: '凭证资源',
-        filterPlaceholder: '筛选凭证',
-        empty: '当前筛选条件下没有凭证。',
+        filterPlaceholder: '搜索凭证',
+        emptyTitle: '暂无凭证',
+        emptyDescription: '添加或导入凭证后，可在此统一管理。',
+        filteredEmptyTitle: '没有匹配的凭证',
+        filteredEmptyDescription: '请调整筛选条件，或清除全部筛选。',
         credential: '凭证 / 账号',
         quota: '额度',
         provider: '模型供应商',

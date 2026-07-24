@@ -1892,7 +1892,6 @@ export const ru = {
         noWindows: 'Нет окон квоты',
       },
       quotaChips: {
-        all: 'Все квоты',
         attention: 'Внимание',
         ws: 'Только WS',
       },
@@ -1959,10 +1958,11 @@ export const ru = {
       },
       filters: {
         status: 'Статус',
-        source: 'Источник',
         provider: 'Поставщик моделей',
-        allSources: 'Все источники',
         allProviders: 'Все поставщики моделей',
+        quickFilters: 'Быстрые фильтры',
+        resultCount: 'Показано: {{visible}} из {{total}}',
+        clear: 'Сбросить фильтры',
       },
       statusFilters: {
         all: 'Все credentials',
@@ -2091,8 +2091,11 @@ export const ru = {
       },
       list: {
         title: 'Credential resources',
-        filterPlaceholder: 'Фильтр credentials',
-        empty: 'Нет credentials для текущих фильтров.',
+        filterPlaceholder: 'Поиск учётных данных',
+        emptyTitle: 'Учётных данных пока нет',
+        emptyDescription: 'Добавьте или импортируйте учётные данные для управления ими здесь.',
+        filteredEmptyTitle: 'Нет подходящих учётных данных',
+        filteredEmptyDescription: 'Измените условия или сбросьте все фильтры.',
         credential: 'Credential / аккаунт',
         quota: 'Квота',
         provider: 'Поставщик моделей',

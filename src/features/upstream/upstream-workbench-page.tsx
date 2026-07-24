@@ -15,7 +15,6 @@ import {
   type UpstreamProvidersStats,
   UpstreamSummaryCards,
 } from '@/features/upstream/summary-cards'
-import type { UpstreamQuotaView } from '@/features/upstream/upstream-quota-model'
 import type { UpstreamTab } from '@/features/upstream/upstream-route'
 import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
 import { cn } from '@/lib/utils'
@@ -39,7 +38,8 @@ export function UpstreamWorkbenchPage({
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<UpstreamTab>(tab)
   const [accountsCreateOpen, setAccountsCreateOpen] = useState(false)
-  const [quotaView, setQuotaView] = useState<UpstreamQuotaView>('all')
+  const [attentionOnly, setAttentionOnly] = useState(false)
+  const [websocketOnly, setWebsocketOnly] = useState(false)
   const [accountsStats, setAccountsStats] = useState<UpstreamAccountsStats | null>(null)
   const [providersStats, setProvidersStats] = useState<UpstreamProvidersStats | null>(null)
   const [quotaSyncing, setQuotaSyncing] = useState(false)
@@ -95,7 +95,7 @@ export function UpstreamWorkbenchPage({
   }
 
   const handleFilterAttention = () => {
-    setQuotaView('attention')
+    setAttentionOnly(true)
     handleTabChange('accounts')
   }
 
@@ -166,8 +166,10 @@ export function UpstreamWorkbenchPage({
           onSearchChange={onSearchChange}
           createOpen={accountsCreateOpen}
           onCreateOpenChange={setAccountsCreateOpen}
-          quotaView={quotaView}
-          onQuotaViewChange={setQuotaView}
+          attentionOnly={attentionOnly}
+          websocketOnly={websocketOnly}
+          onAttentionOnlyChange={setAttentionOnly}
+          onWebsocketOnlyChange={setWebsocketOnly}
           quotaAvailable={quota.available}
           quotaLoading={quota.isPending || quota.isFetching}
           quotaTruncated={quota.truncated}

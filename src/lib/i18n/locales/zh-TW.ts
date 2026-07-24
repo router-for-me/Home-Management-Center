@@ -1819,7 +1819,6 @@ export const zhTW = {
         noWindows: '暫無額度視窗',
       },
       quotaChips: {
-        all: '全部額度',
         attention: '需關注',
         ws: '僅 WS',
       },
@@ -1884,10 +1883,11 @@ export const zhTW = {
       },
       filters: {
         status: '狀態',
-        source: '來源',
         provider: '模型供應商',
-        allSources: '全部來源',
         allProviders: '全部模型供應商',
+        quickFilters: '快速篩選',
+        resultCount: '顯示 {{visible}} / {{total}} 個憑證',
+        clear: '清除篩選',
       },
       statusFilters: {
         all: '全部憑證',
@@ -2013,8 +2013,11 @@ export const zhTW = {
       },
       list: {
         title: '憑證資源',
-        filterPlaceholder: '篩選憑證',
-        empty: '目前篩選條件下沒有憑證。',
+        filterPlaceholder: '搜尋憑證',
+        emptyTitle: '暫無憑證',
+        emptyDescription: '新增或匯入憑證後，可在此統一管理。',
+        filteredEmptyTitle: '沒有符合的憑證',
+        filteredEmptyDescription: '請調整篩選條件，或清除全部篩選。',
         credential: '憑證 / 帳號',
         quota: '額度',
         provider: '模型供應商',

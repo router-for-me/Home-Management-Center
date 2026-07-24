@@ -1893,7 +1893,6 @@ export const en = {
         noWindows: 'No quota windows',
       },
       quotaChips: {
-        all: 'All quota',
         attention: 'Attention',
         ws: 'WS only',
       },
@@ -1960,10 +1959,11 @@ export const en = {
       },
       filters: {
         status: 'Status',
-        source: 'Source',
         provider: 'Model provider',
-        allSources: 'All sources',
         allProviders: 'All model providers',
+        quickFilters: 'Quick filters',
+        resultCount: 'Showing {{visible}} of {{total}} credentials',
+        clear: 'Clear filters',
       },
       statusFilters: {
         all: 'All credentials',
@@ -2091,8 +2091,11 @@ export const en = {
       },
       list: {
         title: 'Credential resources',
-        filterPlaceholder: 'Filter credentials',
-        empty: 'No credentials match the current filters.',
+        filterPlaceholder: 'Search credentials',
+        emptyTitle: 'No credentials yet',
+        emptyDescription: 'Add or import a credential to manage it here.',
+        filteredEmptyTitle: 'No matching credentials',
+        filteredEmptyDescription: 'Adjust the current filters or clear them all.',
         credential: 'Credential / account',
         quota: 'Quota',
         provider: 'Model provider',
