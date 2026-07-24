@@ -2187,6 +2187,7 @@ export const en = {
       concurrency: {
         current: 'Current',
         observed: 'Observed',
+        observedCompact: '{{count}} observed',
         admitted: 'Admitted',
         limit: 'Limit',
         remaining: 'Available slots',
@@ -2196,10 +2197,19 @@ export const en = {
         modelsSaturated: 'Saturated model limits: {{count}}.',
         stale: 'In-flight data could not be refreshed. Showing the last successful result.',
         summaryLoadFailed: 'Could not load in-flight data: {{message}}',
+        observationLoadFailed: 'Observation data is unavailable: {{message}}',
+        limiterLoadFailed: 'Authoritative limiter state is unavailable: {{message}}',
         observationIncomplete:
           'The current CPA snapshot coverage is incomplete. Observed totals may be partial.',
         detailsTruncated:
           'Request details were truncated by Home. Aggregate in-flight totals remain available.',
+        paginationLimited:
+          'This Home does not support stable snapshot pagination. Only the first {{count}} in-flight requests are shown.',
+        paginationPinned:
+          'Request pages are pinned to one stable snapshot. Refresh to load current data.',
+        paginationExpired:
+          'This stable request snapshot has expired. Refresh before loading more requests.',
+        refreshSnapshot: 'Refresh requests',
         notFullyEnforced:
           'Some observed work is not accounted for by the authoritative limiter yet.',
         enforcementUnknown:

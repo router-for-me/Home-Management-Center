@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react'
 
 import { AlertTriangle, CircleGauge, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +19,7 @@ import {
   CredentialConcurrencyDetail,
   CredentialConcurrencyEditor,
   type CredentialMetadataForm,
+  applyCredentialConcurrencyPolicyToForm,
   canonicalConcurrencyModelKey,
   getCredentialInFlightId,
   isValidConcurrencyModelKey,
@@ -83,22 +84,38 @@ function createMetadataForm(
   resource: CredentialResource | null,
   policy: CredentialConcurrencyPolicy | null = null,
 ): CredentialMetadataForm {
-  const maxInFlight = policy?.maxInFlight ?? resource?.maxInFlight ?? null
-  const maxInFlightByModel = policy?.maxInFlightByModel ?? resource?.maxInFlightByModel ?? {}
-  return {
-    prefix: resource?.prefix ?? '',
-    proxyUrl: resource?.proxyUrl ?? '',
-    priority:
-      resource?.priority === null || resource?.priority === undefined
-        ? ''
-        : String(resource.priority),
-    websockets: resource?.websockets ?? false,
-    note: resource?.note ?? '',
-    maxInFlight: maxInFlight ? String(maxInFlight) : '',
-    maxInFlightByModel: Object.entries(maxInFlightByModel)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([model, limit]) => ({ model, limit: String(limit) })),
-  }
+  const maxInFlight = resource?.maxInFlight ?? null
+  const maxInFlightByModel = resource?.maxInFlightByModel ?? {}
+  return applyCredentialConcurrencyPolicyToForm(
+    {
+      prefix: resource?.prefix ?? '',
+      proxyUrl: resource?.proxyUrl ?? '',
+      priority:
+        resource?.priority === null || resource?.priority === undefined
+          ? ''
+          : String(resource.priority),
+      websockets: resource?.websockets ?? false,
+      note: resource?.note ?? '',
+      maxInFlight: maxInFlight ? String(maxInFlight) : '',
+      maxInFlightByModel: Object.entries(maxInFlightByModel)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([model, limit]) => ({ model, limit: String(limit) })),
+    },
+    policy,
+  )
+}
+
+type CredentialMetadataLocalError = {
+  credentialId: string
+  kind: 'version-conflict' | 'other'
+  message: string
+}
+
+export function retainCredentialMetadataErrorAfterPolicyRefresh(
+  error: CredentialMetadataLocalError | null,
+  credentialId: string,
+) {
+  return error?.kind === 'version-conflict' && error.credentialId === credentialId ? error : null
 }
 
 function DrawerTabStrip({
@@ -216,6 +233,7 @@ function OverviewTab({
 
 function MetadataTab({
   resource,
+  open,
   mutating,
   canEditConcurrency,
   concurrencyPolicy,
@@ -226,6 +244,7 @@ function MetadataTab({
   onToggleStatus,
 }: {
   resource: CredentialResource
+  open: boolean
   mutating: boolean
   canEditConcurrency: boolean
   concurrencyPolicy: CredentialConcurrencyPolicy | null
@@ -239,12 +258,28 @@ function MetadataTab({
   const [form, setForm] = useState<CredentialMetadataForm>(() =>
     createMetadataForm(resource, concurrencyPolicy),
   )
-  const [localError, setLocalError] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<CredentialMetadataLocalError | null>(null)
+  const credentialId = getCredentialInFlightId(resource)
+  const previousCredentialId = useRef(credentialId)
 
   useEffect(() => {
-    setForm(createMetadataForm(resource, concurrencyPolicy))
+    const credentialChanged = previousCredentialId.current !== credentialId
+    previousCredentialId.current = credentialId
+    if (!open || credentialChanged) {
+      setForm(createMetadataForm(resource, concurrencyPolicy))
+      setLocalError(null)
+      return
+    }
+    setForm((current) => applyCredentialConcurrencyPolicyToForm(current, concurrencyPolicy))
+    setLocalError((current) =>
+      retainCredentialMetadataErrorAfterPolicyRefresh(current, credentialId),
+    )
+  }, [concurrencyPolicy, credentialId, open, resource])
+
+  const handleFormChange: Dispatch<SetStateAction<CredentialMetadataForm>> = (nextForm) => {
     setLocalError(null)
-  }, [concurrencyPolicy, resource])
+    setForm(nextForm)
+  }
 
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
@@ -315,13 +350,16 @@ function MetadataTab({
         error && typeof error === 'object' && 'backendCode' in error
           ? String(error.backendCode)
           : null
-      setLocalError(
-        backendCode === 'concurrency_policy_version_conflict'
-          ? t('credentialsPage.concurrency.versionConflict')
-          : error instanceof Error
-            ? error.message
-            : String(error),
-      )
+      setLocalError({
+        credentialId,
+        kind: backendCode === 'concurrency_policy_version_conflict' ? 'version-conflict' : 'other',
+        message:
+          backendCode === 'concurrency_policy_version_conflict'
+            ? t('credentialsPage.concurrency.versionConflict')
+            : error instanceof Error
+              ? error.message
+              : String(error),
+      })
     }
   }
 
@@ -337,7 +375,9 @@ function MetadataTab({
           value={form.proxyUrl}
           placeholder="socks5://user:pass@host:port/"
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, proxyUrl: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, proxyUrl: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.proxyHint')}
@@ -350,7 +390,9 @@ function MetadataTab({
           inputMode="numeric"
           placeholder={t('upstreamPage.drawer.metadata.priorityPlaceholder')}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, priority: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.priorityHint')}
@@ -362,7 +404,9 @@ function MetadataTab({
           className="min-h-24"
           value={form.note}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, note: event.target.value }))
+          }
         />
       </label>
 
@@ -374,7 +418,9 @@ function MetadataTab({
         <Input
           value={form.prefix}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, prefix: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, prefix: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.prefixHint')}
@@ -398,7 +444,7 @@ function MetadataTab({
               checked={form.websockets}
               disabled={mutating}
               onCheckedChange={(checked) =>
-                setForm((current) => ({ ...current, websockets: checked }))
+                handleFormChange((current) => ({ ...current, websockets: checked }))
               }
               aria-label={t('credentialsPage.form.websockets')}
             />
@@ -434,7 +480,7 @@ function MetadataTab({
           form={form}
           summary={inFlightSummary}
           mutating={mutating}
-          onChange={setForm}
+          onChange={handleFormChange}
         />
       ) : canEditConcurrency ? (
         <div
@@ -451,7 +497,7 @@ function MetadataTab({
 
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
+          {localError.message}
         </div>
       ) : null}
     </form>
@@ -827,6 +873,12 @@ function ConcurrencyTab({
 }) {
   const inFlightCredentialId = getCredentialInFlightId(resource)
   const query = useCredentialInFlightDetail(inFlightCredentialId, observationAvailable)
+  const errorMessage = [query.errorMessage, summaryErrorMessage]
+    .filter(
+      (message, index, messages): message is string =>
+        Boolean(message) && messages.indexOf(message) === index,
+    )
+    .join(' · ')
 
   return (
     <CredentialConcurrencyDetail
@@ -837,10 +889,11 @@ function ConcurrencyTab({
       pending={summaryPending || (observationAvailable && query.isPending)}
       fetching={query.isFetching}
       stale={summaryStale || query.isStale}
-      errorMessage={query.errorMessage ?? summaryErrorMessage}
+      errorMessage={errorMessage || null}
       hasNextPage={query.hasNextPage ?? false}
       fetchingNextPage={query.isFetchingNextPage}
       onLoadMore={() => void query.fetchNextPage()}
+      onRefresh={() => void query.refresh()}
     />
   )
 }
@@ -978,6 +1031,7 @@ function DangerTab({
 
 export function CredentialDetailDrawer({
   resource,
+  open,
   tab,
   mutating,
   models,
@@ -998,6 +1052,7 @@ export function CredentialDetailDrawer({
   onDelete,
 }: {
   resource: CredentialResource
+  open: boolean
   tab: CredentialDrawerTab
   mutating: boolean
   models: Array<{
@@ -1050,6 +1105,7 @@ export function CredentialDetailDrawer({
         {tab === 'metadata' ? (
           <MetadataTab
             resource={resource}
+            open={open}
             mutating={mutating}
             canEditConcurrency={canEditConcurrency}
             concurrencyPolicy={concurrencyPolicyQuery.policy}

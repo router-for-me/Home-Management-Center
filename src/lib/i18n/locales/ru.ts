@@ -2188,6 +2188,7 @@ export const ru = {
       concurrency: {
         current: 'Сейчас',
         observed: 'Наблюдается',
+        observedCompact: 'Наблюдается: {{count}}',
         admitted: 'Допущено',
         limit: 'Лимит',
         remaining: 'Свободные слоты',
@@ -2197,10 +2198,19 @@ export const ru = {
         modelsSaturated: 'Исчерпано лимитов моделей: {{count}}.',
         stale: 'Не удалось обновить данные in-flight. Показан последний успешный результат.',
         summaryLoadFailed: 'Не удалось загрузить данные in-flight: {{message}}',
+        observationLoadFailed: 'Данные наблюдения недоступны: {{message}}',
+        limiterLoadFailed: 'Авторитетное состояние limiter недоступно: {{message}}',
         observationIncomplete:
           'Покрытие текущего CPA snapshot неполное. Наблюдаемое число запросов может быть занижено.',
         detailsTruncated:
           'Home сократил список запросов. Агрегированные значения in-flight остаются доступными.',
+        paginationLimited:
+          'Этот Home не поддерживает стабильную snapshot-пагинацию. Показаны только первые {{count}} in-flight запросов.',
+        paginationPinned:
+          'Страницы запросов закреплены за одним стабильным snapshot. Обновите список для получения текущих данных.',
+        paginationExpired:
+          'Срок действия стабильного snapshot запросов истёк. Обновите список перед загрузкой следующих запросов.',
+        refreshSnapshot: 'Обновить запросы',
         notFullyEnforced: 'Часть наблюдаемых запросов пока не учтена авторитетным limiter.',
         enforcementUnknown:
           'Home пока не может подтвердить применение политики ко всем активным жизненным циклам CPA.',

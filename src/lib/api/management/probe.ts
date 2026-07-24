@@ -29,6 +29,7 @@ const capabilityRequests: Record<
     | 'quotaSnapshots'
     | 'quotaSnapshotDetails'
     | 'credentialInFlight'
+    | 'credentialInFlightSnapshotCursor'
     | 'credentialConcurrencyLimits'
     | 'quotaRecollect'
   >,
@@ -103,6 +104,7 @@ const emptyCapabilities: CapabilityMap = {
   userPeriodLimits: false,
   accessGroups: false,
   credentialInFlight: false,
+  credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
 }
 
@@ -239,6 +241,10 @@ export function readDeclaredUsageTokenBreakdownV2Capability(capabilitiesData: un
 
 function readDeclaredCredentialInFlightCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['credential_in_flight_snapshots'])
+}
+
+function readDeclaredCredentialInFlightSnapshotCursorCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['credential_in_flight_snapshot_cursor'])
 }
 
 function readDeclaredCredentialConcurrencyLimitsCapability(configData: unknown) {
@@ -532,6 +538,9 @@ export async function probeManagementRuntime(
   const declaredCredentialInFlight = capabilitiesPayload
     ? readDeclaredCredentialInFlightCapability(capabilitySource)
     : null
+  const declaredCredentialInFlightSnapshotCursor = capabilitiesPayload
+    ? readDeclaredCredentialInFlightSnapshotCursorCapability(capabilitySource)
+    : null
   const declaredCredentialConcurrencyLimits = capabilitiesPayload
     ? readDeclaredCredentialConcurrencyLimitsCapability(capabilitySource)
     : null
@@ -600,6 +609,7 @@ export async function probeManagementRuntime(
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
     accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
     credentialInFlight: declaredCredentialInFlight ?? false,
+    credentialInFlightSnapshotCursor: declaredCredentialInFlightSnapshotCursor ?? false,
     credentialConcurrencyLimits: declaredCredentialConcurrencyLimits ?? false,
   }
 

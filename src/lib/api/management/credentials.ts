@@ -205,7 +205,19 @@ type CredentialInFlightSnapshot = CredentialInFlightObservationMetadata & {
 
 export type CredentialInFlightDetail = CredentialInFlightObservationMetadata & {
   requests: CredentialInFlightRequest[]
+  total: number | null
   nextOffset: number | null
+  snapshotCursor: string | null
+  snapshotExpiresAt: string | null
+  paginationLimited: boolean
+}
+
+export type CredentialInFlightDetailPageRequest = {
+  offset?: number
+  stableSnapshot?: boolean
+  snapshotCursor?: string | null
+  expectedTotal?: number | null
+  expectedSnapshotExpiresAt?: string | null
 }
 
 type CredentialConcurrencySnapshot = {
@@ -317,6 +329,16 @@ function readNullableDateTime(
   if (!hasOwn(record, key)) return { valid: false }
   if (record[key] === null) return { valid: true, value: null }
   const value = readDateTime(record, key)
+  return value ? { valid: true, value } : { valid: false }
+}
+
+function readNullableString(
+  record: UnknownRecord,
+  key: string,
+): { valid: true; value: string | null } | { valid: false } {
+  if (!hasOwn(record, key)) return { valid: false }
+  if (record[key] === null) return { valid: true, value: null }
+  const value = readString(record, key)
   return value ? { valid: true, value } : { valid: false }
 }
 
@@ -1112,14 +1134,32 @@ const credentialInFlightPageSize = 50
 export async function fetchCredentialInFlightDetail(
   session: ManagementSessionInput,
   credentialId: string,
-  offset = 0,
+  page: CredentialInFlightDetailPageRequest = {},
 ): Promise<CredentialInFlightDetail> {
+  const offset = page.offset ?? 0
+  const snapshotCursor = page.snapshotCursor?.trim() || null
+  const expectedTotal = page.expectedTotal ?? null
+  const expectedSnapshotExpiresAt = page.expectedSnapshotExpiresAt?.trim() || null
+  const stablePagination = page.stableSnapshot === true || snapshotCursor !== null
+  if (
+    !Number.isSafeInteger(offset) ||
+    offset < 0 ||
+    (expectedTotal !== null && (!Number.isSafeInteger(expectedTotal) || expectedTotal < 0)) ||
+    (expectedSnapshotExpiresAt !== null &&
+      !Number.isFinite(Date.parse(expectedSnapshotExpiresAt))) ||
+    (snapshotCursor === null && (expectedTotal !== null || expectedSnapshotExpiresAt !== null)) ||
+    (snapshotCursor !== null && (expectedTotal === null || expectedSnapshotExpiresAt === null))
+  ) {
+    invalidCredentialInFlightContract()
+  }
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/credentials/in-flight', {
     params: {
       credential_id: credentialId,
-      limit: credentialInFlightPageSize + 1,
+      limit: stablePagination ? credentialInFlightPageSize : credentialInFlightPageSize + 1,
       offset,
+      ...(page.stableSnapshot === true && snapshotCursor === null ? { stable_snapshot: true } : {}),
+      ...(snapshotCursor ? { snapshot_cursor: snapshotCursor } : {}),
     },
   })
   if (!isRecord(response.data)) invalidCredentialInFlightContract()
@@ -1130,11 +1170,76 @@ export async function fetchCredentialInFlightDetail(
   }
   const requests = root.items.map(normalizeCredentialInFlightRequest)
   if (requests.some((item) => item === null)) invalidCredentialInFlightContract()
-  const hasNextPage = requests.length > credentialInFlightPageSize
+  const normalizedRequests = requests as CredentialInFlightRequest[]
+  if (normalizedRequests.some((request) => request.credentialId !== credentialId)) {
+    invalidCredentialInFlightContract()
+  }
+
+  if (stablePagination) {
+    const total = readNonNegativeInteger(root, 'total')
+    const nextOffset = readNullableNonNegativeInteger(root, 'next_offset')
+    const responseCursor = readNullableString(root, 'snapshot_cursor')
+    const snapshotExpiresAt = readNullableDateTime(root, 'snapshot_expires_at')
+    if (
+      total === null ||
+      !nextOffset.valid ||
+      !responseCursor.valid ||
+      !snapshotExpiresAt.valid ||
+      normalizedRequests.length > credentialInFlightPageSize ||
+      (responseCursor.value === null) !== (snapshotExpiresAt.value === null)
+    ) {
+      invalidCredentialInFlightContract()
+    }
+    const expectedCount = Math.min(credentialInFlightPageSize, Math.max(0, total - offset))
+    const consumed = offset + normalizedRequests.length
+    if (offset > total || normalizedRequests.length !== expectedCount) {
+      invalidCredentialInFlightContract()
+    }
+    if (consumed < total) {
+      if (nextOffset.value !== consumed || responseCursor.value === null) {
+        invalidCredentialInFlightContract()
+      }
+    } else if (nextOffset.value !== null) {
+      invalidCredentialInFlightContract()
+    }
+    if (snapshotCursor !== null && responseCursor.value !== snapshotCursor) {
+      invalidCredentialInFlightContract()
+    }
+    if (expectedTotal !== null && total !== expectedTotal) {
+      invalidCredentialInFlightContract()
+    }
+    if (
+      expectedSnapshotExpiresAt !== null &&
+      snapshotExpiresAt.value !== expectedSnapshotExpiresAt
+    ) {
+      invalidCredentialInFlightContract()
+    }
+    if (snapshotCursor === null && nextOffset.value === null && responseCursor.value !== null) {
+      invalidCredentialInFlightContract()
+    }
+    return {
+      ...metadata,
+      requests: normalizedRequests,
+      total,
+      nextOffset: nextOffset.value,
+      snapshotCursor: responseCursor.value,
+      snapshotExpiresAt: snapshotExpiresAt.value,
+      paginationLimited: false,
+    }
+  }
+
+  if (normalizedRequests.length > credentialInFlightPageSize + 1) {
+    invalidCredentialInFlightContract()
+  }
+  const paginationLimited = normalizedRequests.length > credentialInFlightPageSize
   return {
     ...metadata,
-    requests: (requests as CredentialInFlightRequest[]).slice(0, credentialInFlightPageSize),
-    nextOffset: hasNextPage ? offset + credentialInFlightPageSize : null,
+    requests: normalizedRequests.slice(0, credentialInFlightPageSize),
+    total: null,
+    nextOffset: null,
+    snapshotCursor: null,
+    snapshotExpiresAt: null,
+    paginationLimited,
   }
 }
 

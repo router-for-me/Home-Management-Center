@@ -1,6 +1,9 @@
+import { useEffect, useMemo } from 'react'
+
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type CredentialInFlightDetail,
   type CredentialInFlightRequest,
   type CredentialMetadataInput,
   type CredentialOAuthCallbackInput,
@@ -57,6 +60,23 @@ function credentialConcurrencyPolicyQueryKey(
     connectedAt,
     ...(credentialId ? [credentialId] : []),
   ]
+}
+
+function hasCredentialBackendCode(error: unknown, code: string) {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'backendCode' in error &&
+    String(error.backendCode) === code
+  )
+}
+
+export function shouldResetCredentialInFlightPagination(error: unknown) {
+  return hasCredentialBackendCode(error, 'in_flight_snapshot_cursor_expired')
+}
+
+export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetail[]) {
+  return pages.flatMap((page) => page.requests)
 }
 
 export function useCredentialWorkbench() {
@@ -334,61 +354,94 @@ export function useCredentialWorkbench() {
 }
 
 export function useCredentialInFlightDetail(credentialId: string | null, enabled: boolean) {
+  const queryClient = useQueryClient()
   const { session, connected, connectedAt } = useManagementSession()
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
-  const query = useInfiniteQuery({
-    queryKey: [
+  const credentialInFlightSnapshotCursor = useCapabilityStore(
+    (state) => state.capabilities.credentialInFlightSnapshotCursor,
+  )
+  const queryKey = useMemo(
+    () => [
       'management-credential-in-flight-detail',
       session.baseUrl,
       connectedAt,
       credentialId,
+      credentialInFlightSnapshotCursor,
     ],
+    [connectedAt, credentialId, credentialInFlightSnapshotCursor, session.baseUrl],
+  )
+  const query = useInfiniteQuery({
+    queryKey,
     enabled:
       connected &&
       Boolean(session.managementKey) &&
       credentialInFlight &&
       enabled &&
       Boolean(credentialId),
-    initialPageParam: 0,
+    initialPageParam: {
+      offset: 0,
+      snapshotCursor: null as string | null,
+      expectedTotal: null as number | null,
+      expectedSnapshotExpiresAt: null as string | null,
+    },
     queryFn: async ({ pageParam }) => {
       try {
-        return await fetchCredentialInFlightDetail(session, credentialId ?? '', pageParam)
+        return await fetchCredentialInFlightDetail(session, credentialId ?? '', {
+          offset: pageParam.offset,
+          stableSnapshot: credentialInFlightSnapshotCursor && pageParam.snapshotCursor === null,
+          snapshotCursor: pageParam.snapshotCursor,
+          expectedTotal: pageParam.expectedTotal,
+          expectedSnapshotExpiresAt: pageParam.expectedSnapshotExpiresAt,
+        })
       } catch (error) {
         throw toCredentialApiError(error)
       }
     },
-    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
-    refetchInterval: enabled && credentialInFlight ? 5_000 : false,
+    getNextPageParam: (lastPage) =>
+      lastPage.nextOffset === null
+        ? undefined
+        : {
+            offset: lastPage.nextOffset,
+            snapshotCursor: lastPage.snapshotCursor,
+            expectedTotal: lastPage.total,
+            expectedSnapshotExpiresAt: lastPage.snapshotExpiresAt,
+          },
+    retry: (failureCount, error) =>
+      !shouldResetCredentialInFlightPagination(error) && failureCount < 3,
+    refetchInterval: (currentQuery) => {
+      if (!enabled || !credentialInFlight) return false
+      const pages = currentQuery.state.data?.pages ?? []
+      return pages.some((page) => page.snapshotCursor !== null) ? false : 5_000
+    },
     refetchIntervalInBackground: false,
   })
 
+  const cursorExpired = shouldResetCredentialInFlightPagination(query.error)
+  useEffect(() => {
+    if (!cursorExpired) return
+    void queryClient.resetQueries({ queryKey, exact: true })
+  }, [cursorExpired, queryClient, queryKey])
+
   const pages = query.data?.pages ?? []
   const latestPage = pages.at(-1) ?? null
-  const requests: CredentialInFlightRequest[] = []
-  const seenRequestIds = new Set<string>()
-  for (const page of pages) {
-    for (const request of page.requests) {
-      const requestKey = `${request.credentialId}\u0000${request.requestId}`
-      if (seenRequestIds.has(requestKey)) continue
-      seenRequestIds.add(requestKey)
-      requests.push(request)
-    }
-  }
+  const requests: CredentialInFlightRequest[] = flattenCredentialInFlightRequests(pages)
   return {
     detail:
       pages.length > 0 && latestPage
         ? {
             ...latestPage,
             requests,
+            paginationLimited: pages.some((page) => page.paginationLimited),
           }
         : null,
     isPending: query.isPending,
     isFetching: query.isFetching,
     isFetchingNextPage: query.isFetchingNextPage,
-    isStale: query.isError && query.data !== undefined,
-    errorMessage: query.error?.message ?? null,
+    isStale: !cursorExpired && query.isError && query.data !== undefined,
+    errorMessage: cursorExpired ? null : (query.error?.message ?? null),
     hasNextPage: query.hasNextPage,
     fetchNextPage: query.fetchNextPage,
+    refresh: () => queryClient.resetQueries({ queryKey, exact: true }),
   }
 }
 

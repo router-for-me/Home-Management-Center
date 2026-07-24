@@ -1,7 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
 
 import type { TFunction } from 'i18next'
-import { AlertTriangle, Copy, Loader2, Plus, TimerReset, X } from 'lucide-react'
+import { AlertTriangle, Copy, Loader2, Plus, RefreshCw, TimerReset, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type {
+  CredentialConcurrencyPolicy,
   CredentialInFlightDetail,
   CredentialInFlightObservationMetadata,
   CredentialInFlightSummary,
@@ -34,6 +35,20 @@ export type CredentialMetadataForm = {
   websockets: boolean
   maxInFlight: string
   maxInFlightByModel: Array<{ model: string; limit: string }>
+}
+
+export function applyCredentialConcurrencyPolicyToForm(
+  form: CredentialMetadataForm,
+  policy: CredentialConcurrencyPolicy | null,
+): CredentialMetadataForm {
+  if (!policy) return form
+  return {
+    ...form,
+    maxInFlight: policy.maxInFlight ? String(policy.maxInFlight) : '',
+    maxInFlightByModel: Object.entries(policy.maxInFlightByModel)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([model, limit]) => ({ model, limit: String(limit) })),
+  }
 }
 
 export function getCredentialInFlightId(resource: CredentialResource) {
@@ -117,39 +132,93 @@ async function copyTextToClipboard(value: string) {
   textArea.remove()
 }
 
-export function CredentialInFlightCell({ summary }: { summary: CredentialInFlightSummary | null }) {
+export type CredentialInFlightCellStatus = {
+  observation: CredentialInFlightObservationMetadata | null
+  observationStale: boolean
+  observationErrorMessage: string | null
+  limiterStale: boolean
+  limiterErrorMessage: string | null
+}
+
+export function CredentialInFlightCell({
+  summary,
+  status,
+}: {
+  summary: CredentialInFlightSummary | null
+  status?: CredentialInFlightCellStatus
+}) {
   const { t } = useTranslation()
-  const current = summary?.observedInFlight ?? summary?.admittedInFlight ?? null
-  if (!summary || (current === null && summary.maxInFlight === null)) {
+  const hasLimiter = summary?.admittedInFlight !== null && summary?.admittedInFlight !== undefined
+  const displayValue = hasLimiter
+    ? `${summary.admittedInFlight} / ${summary.maxInFlight ?? '∞'}`
+    : summary?.observedInFlight !== null && summary?.observedInFlight !== undefined
+      ? t('credentialsPage.concurrency.observedCompact', { count: summary.observedInFlight })
+      : null
+  const statusWarnings = [
+    ...(status?.observationErrorMessage
+      ? [
+          t('credentialsPage.concurrency.observationLoadFailed', {
+            message: status.observationErrorMessage,
+          }),
+        ]
+      : []),
+    ...(status?.limiterErrorMessage
+      ? [
+          t('credentialsPage.concurrency.limiterLoadFailed', {
+            message: status.limiterErrorMessage,
+          }),
+        ]
+      : []),
+    ...(status?.observationStale || status?.limiterStale || status?.observation?.stale
+      ? [t('credentialsPage.concurrency.stale')]
+      : []),
+    ...(status?.observation &&
+    (!status.observation.coverageComplete ||
+      !status.observation.aggregatesComplete ||
+      !status.observation.protocolCoverageComplete)
+      ? [t('credentialsPage.concurrency.observationIncomplete')]
+      : []),
+  ]
+  const saturationWarning = summary?.totalSaturated
+    ? t('credentialsPage.concurrency.totalSaturated')
+    : summary && summary.saturatedModelCount > 0
+      ? t('credentialsPage.concurrency.modelsSaturated', {
+          count: summary.saturatedModelCount,
+        })
+      : null
+  const warningMessages = [
+    ...new Set([...statusWarnings, ...(saturationWarning ? [saturationWarning] : [])]),
+  ]
+
+  if (displayValue === null && warningMessages.length === 0) {
     return <span className="text-muted-foreground">—</span>
   }
-  const warning = summary.totalSaturated || summary.saturatedModelCount > 0
-  const warningText = summary.totalSaturated
-    ? t('credentialsPage.concurrency.totalSaturated')
-    : t('credentialsPage.concurrency.modelsSaturated', {
-        count: summary.saturatedModelCount,
-      })
+
   return (
     <div className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
       <span
         className={cn(
-          summary.totalSaturated ? 'text-warning-foreground dark:text-warning font-medium' : null,
+          summary?.totalSaturated ? 'text-warning-foreground dark:text-warning font-medium' : null,
         )}
       >
-        {current ?? '—'} / {summary.maxInFlight ?? '∞'}
+        {displayValue ?? '—'}
       </span>
-      {warning ? (
+      {warningMessages.length > 0 ? (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               type="button"
               className="text-warning-foreground dark:text-warning focus-visible:ring-ring inline-flex size-6 cursor-help items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:outline-none"
-              aria-label={warningText}
+              aria-label={warningMessages.join(' ')}
             >
               <AlertTriangle className="size-3.5" aria-hidden="true" />
             </button>
           </TooltipTrigger>
-          <TooltipContent className="max-w-72 text-left leading-5">{warningText}</TooltipContent>
+          <TooltipContent className="max-w-80 space-y-1 text-left leading-5">
+            {warningMessages.map((message) => (
+              <p key={message}>{message}</p>
+            ))}
+          </TooltipContent>
         </Tooltip>
       ) : null}
     </div>
@@ -168,6 +237,7 @@ export function CredentialConcurrencyDetail({
   hasNextPage,
   fetchingNextPage,
   onLoadMore,
+  onRefresh,
 }: {
   summary: CredentialInFlightSummary | null
   observation: CredentialInFlightObservationMetadata | null
@@ -180,37 +250,61 @@ export function CredentialConcurrencyDetail({
   hasNextPage: boolean
   fetchingNextPage: boolean
   onLoadMore: () => void
+  onRefresh: () => void
 }) {
   const { t, i18n } = useTranslation()
   const [now, setNow] = useState(() => Date.now())
   const requests = detail?.requests ?? []
   const metadata = detail ?? observation
+  const snapshotExpiresAt = detail?.snapshotExpiresAt
+    ? Date.parse(detail.snapshotExpiresAt)
+    : Number.NaN
+  const snapshotExpired = Boolean(
+    detail?.snapshotCursor && Number.isFinite(snapshotExpiresAt) && now >= snapshotExpiresAt,
+  )
   const requestDetailUnavailable =
     observationAvailable && detail === null && (pending || Boolean(errorMessage))
   const warningMessages = [
-    ...(errorMessage
-      ? [t('credentialsPage.concurrency.summaryLoadFailed', { message: errorMessage })]
-      : []),
-    ...(stale || metadata?.stale ? [t('credentialsPage.concurrency.stale')] : []),
-    ...(metadata &&
-    (!metadata.coverageComplete ||
-      !metadata.aggregatesComplete ||
-      !metadata.protocolCoverageComplete)
-      ? [t('credentialsPage.concurrency.observationIncomplete')]
-      : []),
-    ...(metadata?.detailsTruncated ? [t('credentialsPage.concurrency.detailsTruncated')] : []),
-    ...(summary?.fullyEnforced === 'false'
-      ? [t('credentialsPage.concurrency.notFullyEnforced')]
-      : summary?.policyVersion !== null && summary?.fullyEnforced === 'unknown'
-        ? [t('credentialsPage.concurrency.enforcementUnknown')]
+    ...new Set([
+      ...(errorMessage
+        ? [t('credentialsPage.concurrency.summaryLoadFailed', { message: errorMessage })]
         : []),
+      ...(stale || metadata?.stale ? [t('credentialsPage.concurrency.stale')] : []),
+      ...(metadata &&
+      (!metadata.coverageComplete ||
+        !metadata.aggregatesComplete ||
+        !metadata.protocolCoverageComplete)
+        ? [t('credentialsPage.concurrency.observationIncomplete')]
+        : []),
+      ...(metadata?.detailsTruncated ? [t('credentialsPage.concurrency.detailsTruncated')] : []),
+      ...(detail?.paginationLimited
+        ? [
+            t('credentialsPage.concurrency.paginationLimited', {
+              count: detail.requests.length,
+            }),
+          ]
+        : []),
+      ...(snapshotExpired
+        ? [t('credentialsPage.concurrency.paginationExpired')]
+        : detail?.snapshotCursor
+          ? [t('credentialsPage.concurrency.paginationPinned')]
+          : []),
+      ...(observationAvailable && summary?.fullyEnforced === 'false'
+        ? [t('credentialsPage.concurrency.notFullyEnforced')]
+        : observationAvailable &&
+            summary?.policyVersion !== null &&
+            summary?.fullyEnforced === 'unknown'
+          ? [t('credentialsPage.concurrency.enforcementUnknown')]
+          : []),
+    ]),
   ]
+  const hasLimiter = summary?.admittedInFlight !== null && summary?.admittedInFlight !== undefined
 
   useEffect(() => {
-    if (requests.length === 0) return
+    if (requests.length === 0 && !detail?.snapshotExpiresAt) return
     const timer = window.setInterval(() => setNow(Date.now()), 5_000)
     return () => window.clearInterval(timer)
-  }, [requests.length])
+  }, [detail?.snapshotExpiresAt, requests.length])
 
   if (pending && !summary && !detail) {
     return <Skeleton className="h-48 w-full" />
@@ -239,15 +333,19 @@ export function CredentialConcurrencyDetail({
               ],
               [
                 t('credentialsPage.concurrency.limit'),
-                summary.maxInFlight === null
-                  ? t('credentialsPage.concurrency.unlimited')
-                  : String(summary.maxInFlight),
+                hasLimiter
+                  ? summary.maxInFlight === null
+                    ? t('credentialsPage.concurrency.unlimited')
+                    : String(summary.maxInFlight)
+                  : '—',
               ],
               [
                 t('credentialsPage.concurrency.remaining'),
-                summary.remaining === null
-                  ? t('credentialsPage.concurrency.unlimited')
-                  : String(summary.remaining),
+                hasLimiter
+                  ? summary.remaining === null
+                    ? t('credentialsPage.concurrency.unlimited')
+                    : String(summary.remaining)
+                  : '—',
               ],
             ].map(([label, value], index) => (
               <div
@@ -306,7 +404,7 @@ export function CredentialConcurrencyDetail({
                         {model.admittedInFlight ?? '—'}
                       </TableCell>
                       <TableCell className="font-mono text-xs tabular-nums">
-                        {model.maxInFlight ?? '∞'}
+                        {model.admittedInFlight === null ? '—' : (model.maxInFlight ?? '—')}
                       </TableCell>
                       <TableCell className="font-mono text-xs tabular-nums">
                         <span
@@ -316,7 +414,7 @@ export function CredentialConcurrencyDetail({
                               : null,
                           )}
                         >
-                          {model.remaining ?? '∞'}
+                          {model.admittedInFlight === null ? '—' : (model.remaining ?? '—')}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -342,11 +440,21 @@ export function CredentialConcurrencyDetail({
       )}
 
       <section>
-        <div>
-          <h3 className="text-sm font-medium">{t('credentialsPage.concurrency.requestsTitle')}</h3>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {t('credentialsPage.concurrency.requestsDescription')}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-medium">
+              {t('credentialsPage.concurrency.requestsTitle')}
+            </h3>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('credentialsPage.concurrency.requestsDescription')}
+            </p>
+          </div>
+          {observationAvailable ? (
+            <Button type="button" variant="text" size="sm" disabled={fetching} onClick={onRefresh}>
+              <RefreshCw className="size-3.5" aria-hidden="true" />
+              {t('credentialsPage.concurrency.refreshSnapshot')}
+            </Button>
+          ) : null}
         </div>
         {!observationAvailable ? (
           <div className="text-muted-foreground mt-3 rounded-md border px-4 py-6 text-center text-sm">
@@ -380,8 +488,11 @@ export function CredentialConcurrencyDetail({
                   </TableCell>
                 </TableRow>
               ) : requests.length > 0 ? (
-                requests.map((request) => (
-                  <TableRow key={request.requestId} variant="static">
+                requests.map((request, index) => (
+                  <TableRow
+                    key={`${request.requestId}\u0000${request.credentialId}\u0000${request.model}\u0000${request.requestKind}\u0000${request.startedAt}\u0000${index}`}
+                    variant="static"
+                  >
                     <TableCell>
                       <div className="flex min-w-0 items-center gap-1">
                         <span className="truncate font-mono text-xs">{request.requestId}</span>
@@ -430,7 +541,7 @@ export function CredentialConcurrencyDetail({
             </TableBody>
           </Table>
         )}
-        {observationAvailable && hasNextPage ? (
+        {observationAvailable && hasNextPage && !snapshotExpired ? (
           <div className="mt-3 flex justify-center">
             <Button
               type="button"

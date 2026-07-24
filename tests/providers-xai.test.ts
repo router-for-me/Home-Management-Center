@@ -48,6 +48,7 @@ const noCapabilities: CapabilityMap = {
   users: false,
   accessGroups: false,
   credentialInFlight: false,
+  credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
 }
 

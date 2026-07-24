@@ -65,6 +65,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   CredentialInFlightCell,
+  type CredentialInFlightCellStatus,
   getCredentialInFlightId,
 } from '@/features/credentials/credential-concurrency'
 import {
@@ -347,6 +348,7 @@ function CredentialList({
   quotaMap,
   showInFlight,
   inFlightByCredentialId,
+  inFlightStatus,
   onDeleteResource,
   onDownloadResource,
   onOpenDrawer,
@@ -364,6 +366,7 @@ function CredentialList({
   quotaMap: Map<string, UpstreamQuotaEntry>
   showInFlight: boolean
   inFlightByCredentialId: Map<string, CredentialInFlightSummary>
+  inFlightStatus: CredentialInFlightCellStatus
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onOpenDrawer: (resource: CredentialResource, tab: CredentialDrawerTab) => void
@@ -527,7 +530,7 @@ function CredentialList({
               </TableCell>
               {showInFlight ? (
                 <TableCell>
-                  <CredentialInFlightCell summary={inFlightSummary} />
+                  <CredentialInFlightCell summary={inFlightSummary} status={inFlightStatus} />
                 </TableCell>
               ) : null}
               <TableCell>
@@ -680,6 +683,22 @@ export function AccountsPanel({
     }
     return merged
   }, [workbench.concurrencySnapshot, workbench.inFlightSnapshot])
+  const inFlightStatus: CredentialInFlightCellStatus = {
+    observation: workbench.inFlightSnapshot,
+    observationStale: workbench.inFlightStale,
+    observationErrorMessage: workbench.inFlightErrorMessage,
+    limiterStale: workbench.concurrencyStale,
+    limiterErrorMessage: workbench.concurrencyErrorMessage,
+  }
+  const concurrencyErrorMessage = [
+    workbench.inFlightErrorMessage,
+    workbench.concurrencyErrorMessage,
+  ]
+    .filter(
+      (message, index, messages): message is string =>
+        Boolean(message) && messages.indexOf(message) === index,
+    )
+    .join(' · ')
   const filteredResources = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
 
@@ -1206,6 +1225,7 @@ export function AccountsPanel({
             quotaMap={resolvedQuotaMap}
             showInFlight={workbench.credentialInFlight || workbench.credentialConcurrencyLimits}
             inFlightByCredentialId={inFlightByCredentialId}
+            inFlightStatus={inFlightStatus}
             onDeleteResource={(resource) => {
               handleDelete(resource)
             }}
@@ -1235,6 +1255,7 @@ export function AccountsPanel({
           {selectedResource ? (
             <CredentialDetailDrawer
               resource={selectedResource}
+              open={detailSheetOpen}
               tab={drawerTab}
               mutating={workbench.mutating}
               models={workbench.models}
@@ -1253,9 +1274,7 @@ export function AccountsPanel({
                 (workbench.credentialConcurrencyLimits && workbench.concurrencyPending)
               }
               concurrencyStale={workbench.inFlightStale || workbench.concurrencyStale}
-              concurrencyErrorMessage={
-                workbench.inFlightErrorMessage ?? workbench.concurrencyErrorMessage
-              }
+              concurrencyErrorMessage={concurrencyErrorMessage || null}
               onTabChange={setDrawerTab}
               onUpdateMetadata={handleMetadataUpdate}
               onToggleStatus={() => handleToggleStatus(selectedResource)}
