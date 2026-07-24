@@ -214,7 +214,7 @@ export type CredentialInFlightDetail = CredentialInFlightObservationMetadata & {
   paginationLimited: boolean
 }
 
-export type CredentialInFlightDetailPageRequest = {
+type CredentialInFlightDetailPageRequest = {
   offset?: number
   stableSnapshot?: boolean
   snapshotCursor?: string | null

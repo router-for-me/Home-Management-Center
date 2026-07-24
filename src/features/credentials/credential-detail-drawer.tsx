@@ -112,8 +112,8 @@ type CredentialMetadataLocalError = {
   message: string
 }
 
-export type CredentialMetadataPolicyVersion = number | null | 'unobserved'
-export type CredentialMetadataRefreshMode = 'reset' | 'policy' | 'preserve'
+type CredentialMetadataPolicyVersion = number | null | 'unobserved'
+type CredentialMetadataRefreshMode = 'reset' | 'policy' | 'preserve'
 
 export function getCredentialMetadataRefreshMode({
   open,
