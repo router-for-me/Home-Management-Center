@@ -209,6 +209,7 @@ export type CredentialInFlightDetail = CredentialInFlightObservationMetadata & {
   nextOffset: number | null
   snapshotCursor: string | null
   snapshotExpiresAt: string | null
+  snapshotClientExpiresAtMs: number | null
   paginationLimited: boolean
 }
 
@@ -340,6 +341,33 @@ function readNullableString(
   if (record[key] === null) return { valid: true, value: null }
   const value = readString(record, key)
   return value ? { valid: true, value } : { valid: false }
+}
+
+function readAxiosResponseHeader(response: AxiosResponse<unknown>, key: string) {
+  const headers: unknown = response.headers
+  if (!headers || typeof headers !== 'object') return null
+  const headerGetter = (headers as { get?: (name: string) => unknown }).get
+  if (typeof headerGetter === 'function') {
+    const value = headerGetter.call(headers, key)
+    return typeof value === 'string' && value.trim() ? value.trim() : null
+  }
+  const record = headers as Record<string, unknown>
+  const value = record[key] ?? record[key.toLowerCase()]
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function estimateSnapshotClientExpiresAtMs(
+  response: AxiosResponse<unknown>,
+  snapshotExpiresAt: string | null,
+) {
+  if (!snapshotExpiresAt) return null
+  const responseDate = readAxiosResponseHeader(response, 'date')
+  if (!responseDate) return null
+  const serverNowMs = Date.parse(responseDate)
+  const snapshotExpiresAtMs = Date.parse(snapshotExpiresAt)
+  const remainingMs = snapshotExpiresAtMs - serverNowMs
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) return null
+  return Date.now() + remainingMs
 }
 
 function readOptionalNullableNonNegativeInteger(
@@ -1173,6 +1201,7 @@ export async function fetchCredentialInFlightDetail(
       page.stableSnapshot !== true ||
       snapshotCursor !== null ||
       offset !== 0 ||
+      apiError.status !== 500 ||
       apiError.backendCode !== 'in_flight_snapshot_cursor_store_failed'
     ) {
       throw error
@@ -1248,6 +1277,10 @@ export async function fetchCredentialInFlightDetail(
       nextOffset: nextOffset.value,
       snapshotCursor: responseCursor.value,
       snapshotExpiresAt: snapshotExpiresAt.value,
+      snapshotClientExpiresAtMs: estimateSnapshotClientExpiresAtMs(
+        response,
+        snapshotExpiresAt.value,
+      ),
       paginationLimited: false,
     }
   }
@@ -1263,6 +1296,7 @@ export async function fetchCredentialInFlightDetail(
     nextOffset: null,
     snapshotCursor: null,
     snapshotExpiresAt: null,
+    snapshotClientExpiresAtMs: null,
     paginationLimited,
   }
 }

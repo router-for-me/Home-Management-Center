@@ -45,12 +45,17 @@ afterEach(() => {
   axios.defaults.adapter = defaultAxiosAdapter
 })
 
-function response(config: InternalAxiosRequestConfig, data: unknown, status = 200) {
+function response(
+  config: InternalAxiosRequestConfig,
+  data: unknown,
+  status = 200,
+  headers: Record<string, string> = {},
+) {
   return {
     data,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
-    headers: {},
+    headers,
     config,
   }
 }
@@ -109,6 +114,7 @@ function normalizedDetailPage(
     nextOffset: null,
     snapshotCursor: null,
     snapshotExpiresAt: null,
+    snapshotClientExpiresAtMs: null,
     paginationLimited: false,
     ...overrides,
   }
@@ -324,6 +330,25 @@ describe('credential concurrency v2 contract', () => {
     expect(detail.nextOffset).toBeNull()
   })
 
+  test('requires the documented status and code before falling back from stable pagination', async () => {
+    const capturedParams: unknown[] = []
+    const adapter: AxiosAdapter = async (config) => {
+      capturedParams.push(config.params)
+      throw axiosResponseError(config, 409, {
+        error: 'in_flight_snapshot_cursor_store_failed',
+        message: 'mismatched cursor error status',
+      })
+    }
+    axios.defaults.adapter = adapter
+
+    await expect(
+      fetchCredentialInFlightDetail(session, 'auth-1', { stableSnapshot: true }),
+    ).rejects.toThrow('request failed with status 409')
+    expect(capturedParams).toEqual([
+      { credential_id: 'auth-1', limit: 50, offset: 0, stable_snapshot: true },
+    ])
+  })
+
   test('does not mix a later cursor load failure with a legacy page', async () => {
     const capturedParams: unknown[] = []
     const adapter: AxiosAdapter = async (config) => {
@@ -369,29 +394,41 @@ describe('credential concurrency v2 contract', () => {
     const adapter: AxiosAdapter = async (config) => {
       capturedParams.push(config.params)
       if ((config.params as Record<string, unknown>).snapshot_cursor) {
-        return response(config, {
+        return response(
+          config,
+          {
+            ...observationMetadata(),
+            items: secondItems,
+            total: 75,
+            next_offset: null,
+            snapshot_cursor: 'stable-cursor',
+            snapshot_expires_at: '2026-07-21T12:02:00Z',
+          },
+          200,
+          { date: 'Tue, 21 Jul 2026 12:00:00 GMT' },
+        )
+      }
+      return response(
+        config,
+        {
           ...observationMetadata(),
-          items: secondItems,
+          items: firstItems,
           total: 75,
-          next_offset: null,
+          next_offset: 50,
           snapshot_cursor: 'stable-cursor',
           snapshot_expires_at: '2026-07-21T12:02:00Z',
-        })
-      }
-      return response(config, {
-        ...observationMetadata(),
-        items: firstItems,
-        total: 75,
-        next_offset: 50,
-        snapshot_cursor: 'stable-cursor',
-        snapshot_expires_at: '2026-07-21T12:02:00Z',
-      })
+        },
+        200,
+        { date: 'Tue, 21 Jul 2026 12:00:00 GMT' },
+      )
     }
     axios.defaults.adapter = adapter
 
+    const beforeFirstPage = Date.now()
     const firstPage = await fetchCredentialInFlightDetail(session, 'auth-1', {
       stableSnapshot: true,
     })
+    const afterFirstPage = Date.now()
     const secondPage = await fetchCredentialInFlightDetail(session, 'auth-1', {
       offset: firstPage.nextOffset ?? 0,
       snapshotCursor: firstPage.snapshotCursor,
@@ -407,6 +444,8 @@ describe('credential concurrency v2 contract', () => {
     expect(secondPage.requests[0]?.requestId).toBe('snapshot-request-50')
     expect(secondPage.nextOffset).toBeNull()
     expect(secondPage.total).toBe(75)
+    expect(firstPage.snapshotClientExpiresAtMs).toBeGreaterThanOrEqual(beforeFirstPage + 120_000)
+    expect(firstPage.snapshotClientExpiresAtMs).toBeLessThanOrEqual(afterFirstPage + 120_000)
   })
 
   test('rejects incomplete or drifting stable snapshot pages', async () => {
@@ -731,6 +770,7 @@ describe('credential concurrency v2 contract', () => {
         nextOffset: 1,
         snapshotCursor: 'expired-cursor',
         snapshotExpiresAt: '2000-01-01T00:00:00Z',
+        snapshotClientExpiresAtMs: Date.now() - 1,
       },
     )
     const markup = renderToStaticMarkup(
@@ -751,6 +791,47 @@ describe('credential concurrency v2 contract', () => {
     )
     expect(markup).toContain('stable request snapshot has expired')
     expect(markup).not.toContain('Load more')
+  })
+
+  test('keeps load more available when no server-relative cursor deadline is available', async () => {
+    await i18n.changeLanguage('en')
+    const detail = normalizedDetailPage(
+      [
+        {
+          requestId: 'clock-skew-safe-request',
+          credentialId: 'auth-1',
+          model: 'gpt-5.5',
+          requestKind: 'sse',
+          startedAt: '2026-07-21T11:59:00Z',
+        },
+      ],
+      {
+        total: 2,
+        nextOffset: 1,
+        snapshotCursor: 'clock-skew-safe-cursor',
+        snapshotExpiresAt: '2000-01-01T00:00:00Z',
+        snapshotClientExpiresAtMs: null,
+      },
+    )
+    const markup = renderToStaticMarkup(
+      createElement(CredentialConcurrencyDetail, {
+        summary: null,
+        observation: detail,
+        observationAvailable: true,
+        detail,
+        pending: false,
+        fetching: false,
+        stale: false,
+        errorMessage: null,
+        hasNextPage: true,
+        fetchingNextPage: false,
+        onLoadMore: () => undefined,
+        onRefresh: () => undefined,
+      }),
+    )
+    expect(markup).toContain('pinned to one stable snapshot')
+    expect(markup).toContain('Load more')
+    expect(markup).not.toContain('stable request snapshot has expired')
   })
 
   test('renders authoritative admitted counts and never labels observation-only state as unlimited', async () => {
@@ -948,9 +1029,16 @@ describe('credential concurrency v2 contract', () => {
   test('resets cursor pages only for the explicit cursor-expired backend error', () => {
     expect(
       shouldResetCredentialInFlightPagination({
+        status: 409,
         backendCode: 'in_flight_snapshot_cursor_expired',
       }),
     ).toBeTrue()
+    expect(
+      shouldResetCredentialInFlightPagination({
+        status: 500,
+        backendCode: 'in_flight_snapshot_cursor_expired',
+      }),
+    ).toBeFalse()
     expect(
       shouldResetCredentialInFlightPagination({
         backendCode: 'in_flight_snapshot_cursor_load_failed',
@@ -988,6 +1076,14 @@ describe('credential concurrency v2 contract', () => {
         backendCode: 'in_flight_snapshot_cursor_expired',
       }),
     ).toBeFalse()
+    expect(
+      shouldRetryCredentialInFlightPagination(0, {
+        status: 503,
+        code: 'server',
+        backendCode: 'in_flight_snapshot_cursor_expired',
+        retryable: true,
+      }),
+    ).toBeTrue()
     expect(shouldRetryCredentialInFlightPagination(0, { code: 'unknown' })).toBeFalse()
     expect(shouldRetryCredentialInFlightPagination(3, { code: 'network' })).toBeFalse()
   })

@@ -256,11 +256,10 @@ export function CredentialConcurrencyDetail({
   const [now, setNow] = useState(() => Date.now())
   const requests = detail?.requests ?? []
   const metadata = detail ?? observation
-  const snapshotExpiresAt = detail?.snapshotExpiresAt
-    ? Date.parse(detail.snapshotExpiresAt)
-    : Number.NaN
   const snapshotExpired = Boolean(
-    detail?.snapshotCursor && Number.isFinite(snapshotExpiresAt) && now >= snapshotExpiresAt,
+    detail?.snapshotCursor &&
+    detail.snapshotClientExpiresAtMs !== null &&
+    now >= detail.snapshotClientExpiresAtMs,
   )
   const requestDetailUnavailable =
     observationAvailable && detail === null && (pending || Boolean(errorMessage))

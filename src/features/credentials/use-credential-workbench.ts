@@ -62,27 +62,28 @@ function credentialConcurrencyPolicyQueryKey(
   ]
 }
 
-function hasCredentialBackendCode(error: unknown, code: string) {
+function hasCredentialBackendError(error: unknown, status: number, code: string) {
   return (
     error !== null &&
     typeof error === 'object' &&
+    'status' in error &&
+    error.status === status &&
     'backendCode' in error &&
     String(error.backendCode) === code
   )
 }
 
 export function shouldResetCredentialInFlightPagination(error: unknown) {
-  return hasCredentialBackendCode(error, 'in_flight_snapshot_cursor_expired')
+  return hasCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired')
 }
 
 export function shouldRetryCredentialInFlightPagination(failureCount: number, error: unknown) {
   if (failureCount >= 3 || error === null || typeof error !== 'object') return false
   const record = error as Record<string, unknown>
-  const backendCode = typeof record.backendCode === 'string' ? record.backendCode : null
   if (
-    backendCode === 'in_flight_snapshot_cursor_expired' ||
-    backendCode === 'in_flight_snapshot_cursor_store_failed' ||
-    backendCode === 'in_flight_snapshot_cursor_load_failed'
+    hasCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired') ||
+    hasCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_store_failed') ||
+    hasCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_load_failed')
   ) {
     return false
   }
