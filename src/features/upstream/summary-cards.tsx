@@ -34,8 +34,7 @@ function SummaryCard({
     <article
       className={cn(
         'bg-card rounded-lg border p-4 shadow-sm',
-        clickable &&
-          'hover:border-primary/30 hover:bg-accent/35 cursor-pointer transition-colors',
+        clickable && 'hover:border-primary/30 hover:bg-accent/35 cursor-pointer transition-colors',
       )}
       onClick={onClick}
       role={clickable ? 'button' : undefined}

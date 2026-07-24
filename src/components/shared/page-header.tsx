@@ -47,7 +47,9 @@ function PageHeader({
           </div>
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">{actions}</div>
+          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
+            {actions}
+          </div>
         ) : null}
       </div>
     </header>
