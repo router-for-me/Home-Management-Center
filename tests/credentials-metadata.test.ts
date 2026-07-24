@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 
 import {
   type CredentialResource,
+  fetchCredentialSnapshot,
   supportsCredentialWebsockets,
   updateCredentialMetadata,
 } from '../src/lib/api/management/credentials'
@@ -91,6 +92,11 @@ function createCredentialResource(
     prefix: null,
     proxyUrl: null,
     websockets: false,
+    metadataAvailability: {
+      prefix: true,
+      proxyUrl: true,
+      websockets: true,
+    },
     selector: { name: `${provider}-01` },
     raw: {},
     ...overrides,
@@ -111,6 +117,61 @@ describe('supportsCredentialWebsockets', () => {
     expect(supportsCredentialWebsockets({ provider: 'claude', type: 'oauth' })).toBe(false)
     expect(supportsCredentialWebsockets({ provider: 'kimi', type: 'oauth' })).toBe(false)
     expect(supportsCredentialWebsockets({ provider: 'antigravity', type: 'oauth' })).toBe(false)
+  })
+})
+
+describe('fetchCredentialSnapshot metadata projection', () => {
+  test('normalizes editable metadata returned by auth-files', async () => {
+    const { session } = createManagementAdapter((method, pathname) => {
+      if (method === 'GET' && pathname.endsWith('/auth-files')) {
+        return {
+          files: [
+            {
+              id: 'codex-01',
+              name: 'codex-01.json',
+              provider: 'codex',
+              type: 'codex',
+              prefix: 'team-a',
+              proxy_url: 'socks5://127.0.0.1:1080',
+              priority: 10,
+              websockets: true,
+            },
+          ],
+        }
+      }
+      return {}
+    })
+
+    const resource = (await fetchCredentialSnapshot(session)).resources[0]
+    expect(resource).toMatchObject({
+      prefix: 'team-a',
+      proxyUrl: 'socks5://127.0.0.1:1080',
+      priority: 10,
+      websockets: true,
+      metadataAvailability: {
+        prefix: true,
+        proxyUrl: true,
+        websockets: true,
+      },
+    })
+  })
+
+  test('marks metadata omitted by older backends as unavailable', async () => {
+    const { session } = createManagementAdapter((method, pathname) => {
+      if (method === 'GET' && pathname.endsWith('/auth-files')) {
+        return {
+          files: [{ id: 'codex-01', provider: 'codex', type: 'codex' }],
+        }
+      }
+      return {}
+    })
+
+    const resource = (await fetchCredentialSnapshot(session)).resources[0]
+    expect(resource?.metadataAvailability).toEqual({
+      prefix: false,
+      proxyUrl: false,
+      websockets: false,
+    })
   })
 })
 
@@ -168,6 +229,23 @@ describe('updateCredentialMetadata websockets payload', () => {
     )
     expect(patch?.body).toMatchObject({ name: 'gemini-01' })
     expect((patch?.body as Record<string, unknown>).websockets).toBeUndefined()
+  })
+
+  test('does not overwrite unrelated metadata during an inline websocket update', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+
+    await updateCredentialMetadata(session, createCredentialResource('codex'), {
+      websockets: true,
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+    )
+    expect(patch?.body).toMatchObject({ name: 'codex-01', websockets: true })
+    expect(patch?.body).not.toHaveProperty('prefix')
+    expect(patch?.body).not.toHaveProperty('proxy_url')
+    expect(patch?.body).not.toHaveProperty('priority')
+    expect(patch?.body).not.toHaveProperty('note')
   })
 
   test('sends an explicit null to clear priority', async () => {

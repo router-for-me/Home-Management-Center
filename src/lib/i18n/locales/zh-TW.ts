@@ -1705,7 +1705,7 @@ export const zhTW = {
       header: {
         title: '上游資源',
         description:
-          '統一管理帳號憑證與模型供應商。啟用、Proxy URL、WebSocket、優先順序在表格內直接改;Prefix 等次常用欄位放在詳情二級。額度一等欄內嵌(含 Kimi / Grok)。',
+          '統一管理帳號憑證與模型供應商。表格集中呈現啟用狀態、WebSocket、優先順序和額度；Proxy URL、Prefix 等中繼資料在詳情中查看與維護。',
       },
       tabs: {
         label: '上游資源分區',
@@ -1834,9 +1834,9 @@ export const zhTW = {
           danger: '危險操作',
         },
         metadata: {
-          proxyHint: '憑證級代理;留空表示不設定。列表內也可直接改。',
+          proxyUnavailableHint: '目前後端未回傳已儲存的 Proxy URL。輸入新值會取代現有設定。',
           priorityPlaceholder: '例如 10 或 -1',
-          priorityHint: '僅支援整數;數值越大優先順序越高。列表內也可直接改。',
+          priorityHint: '僅支援整數；數值越大，排程優先順序越高。',
           prefixHint: '不常用;僅在詳情二級維護,不佔列表主欄。',
           secondarySection: '次常用',
           websocketsXaiHint: '適用於 xAI/Grok。開啟後該憑證可參與 WebSocket 傳輸。',
@@ -1874,7 +1874,7 @@ export const zhTW = {
       },
       actions: {
         addCredential: '新增憑證',
-        detail: '詳情',
+        detail: '查看',
         quota: '額度',
         models: '模型',
         upload: '上傳 JSON',
@@ -2024,18 +2024,15 @@ export const zhTW = {
         inFlight: '進行中',
         toggleStatus: '切換憑證 {{name}} 的啟用狀態',
         enabled: '啟用',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: '優先順序',
         actions: '操作',
       },
       inline: {
         saved: '已儲存。',
-        priorityInvalid: '優先順序必須是整數。',
-        proxyUrlLabel: '編輯 Proxy URL',
-        priorityLabel: '編輯優先順序',
         websocketsLabel: '切換 WebSocket',
         websocketsUnsupported: '目前供應商不支援 WebSocket 設定',
+        websocketsUnavailable: '目前後端未回傳 WebSocket 狀態',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2095,6 +2092,7 @@ export const zhTW = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: '優先級',
+        priorityInvalid: '優先級必須是整數。',
         websockets: 'WebSocket 支援',
         websocketsHint: '僅適用於 Codex 憑證。開啟後，該憑證可參與需要 WebSocket 的 Codex 請求。',
         note: '備註',
@@ -2176,6 +2174,7 @@ export const zhTW = {
       toast: {
         downloaded: '憑證已下載。',
         updated: '憑證 metadata 已更新。',
+        noChanges: '沒有需要儲存的變更。',
         deleted: '憑證已刪除。',
         bulkEnabled: '已啟用 {{count}} 個憑證。',
         bulkDisabled: '已停用 {{count}} 個憑證。',

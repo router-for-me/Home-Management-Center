@@ -86,10 +86,7 @@ import {
 } from '@/features/credentials/credential-display'
 import {
   type InlineMetadataSave,
-  PriorityCell,
-  ProxyUrlCell,
   WebsocketsCell,
-  buildInlineMetadataInput,
 } from '@/features/credentials/credential-inline-cells'
 import { findCredentialRouteResource } from '@/features/credentials/credential-route'
 import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
@@ -105,7 +102,7 @@ import {
 import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
 import {
   type CredentialInFlightSummary,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthProvider,
   type CredentialResource,
@@ -388,7 +385,7 @@ function CredentialList({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className={cn('table-fixed', showInFlight ? 'min-w-[1570px]' : 'min-w-[1460px]')}
+      className={cn('table-fixed', showInFlight ? 'min-w-[1410px]' : 'min-w-[1300px]')}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -397,9 +394,8 @@ function CredentialList({
         <col className="w-[150px]" />
         <col className="w-[232px]" />
         {showInFlight ? <col className="w-[110px]" /> : null}
-        <col className="w-[200px]" />
         <col className="w-[96px]" />
-        <col className="w-[80px]" />
+        <col className="w-[112px]" />
         <col className="w-[290px]" />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
@@ -417,7 +413,6 @@ function CredentialList({
           <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
           <TableHead>{t('credentialsPage.list.quota')}</TableHead>
           {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
-          <TableHead>{t('credentialsPage.list.proxyUrl')}</TableHead>
           <TableHead>{t('credentialsPage.list.ws')}</TableHead>
           <TableHead>{t('credentialsPage.list.priority')}</TableHead>
           <TableHead className="table-sticky-action-head w-[290px] text-right">
@@ -534,13 +529,18 @@ function CredentialList({
                 </TableCell>
               ) : null}
               <TableCell>
-                <ProxyUrlCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-              </TableCell>
-              <TableCell>
                 <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
               </TableCell>
               <TableCell>
-                <PriorityCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                {resource.priority === null ? (
+                  <span className="text-muted-foreground text-xs">
+                    {t('credentialsPage.status.notSet')}
+                  </span>
+                ) : (
+                  <span className="font-mono text-xs font-medium tabular-nums">
+                    {resource.priority}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="table-sticky-action-cell w-[290px] pl-4 text-right transition-colors">
                 <div className="table-action-cell-content">
@@ -725,7 +725,6 @@ export function AccountsPanel({
         resource.type,
         resource.source,
         resource.note,
-        resource.proxyUrl,
       ]
         .filter(Boolean)
         .some((value) => value?.toLowerCase().includes(normalizedSearch))
@@ -1042,7 +1041,7 @@ export function AccountsPanel({
     }
   }
 
-  const handleMetadataUpdate = async (input: CredentialMetadataInput) => {
+  const handleMetadataUpdate = async (input: CredentialMetadataPatch) => {
     if (!selectedResource) return
     await workbench.updateMetadata({
       resource: selectedResource,
@@ -1054,7 +1053,7 @@ export function AccountsPanel({
   const handleInlineMetadataSave: InlineMetadataSave = async (resource, patch) => {
     await workbench.updateMetadata({
       resource,
-      input: buildInlineMetadataInput(resource, patch),
+      input: patch,
     })
   }
 

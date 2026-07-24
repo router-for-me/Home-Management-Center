@@ -1,153 +1,20 @@
-import { useEffect, useState } from 'react'
-
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import {
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialResource,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
 
 export type InlineMetadataSave = (
   resource: CredentialResource,
-  patch: Partial<CredentialMetadataInput>,
+  patch: CredentialMetadataPatch,
 ) => Promise<void>
-
-export function isValidPriorityDraft(value: string) {
-  const trimmed = value.trim()
-  // Empty input is the explicit "clear priority" signal.
-  return trimmed === '' || /^-?\d+$/.test(trimmed)
-}
-
-export function buildInlineMetadataInput(
-  resource: CredentialResource,
-  patch: Partial<CredentialMetadataInput>,
-): CredentialMetadataInput {
-  return {
-    prefix: resource.prefix ?? '',
-    proxyUrl: resource.proxyUrl ?? '',
-    priority: resource.priority === null ? '' : String(resource.priority),
-    note: resource.note ?? '',
-    websockets: resource.websockets,
-    ...patch,
-  }
-}
 
 function readErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
-}
-
-export function ProxyUrlCell({
-  resource,
-  mutating,
-  onSave,
-}: {
-  resource: CredentialResource
-  mutating: boolean
-  onSave: InlineMetadataSave
-}) {
-  const { t } = useTranslation()
-  const [value, setValue] = useState(resource.proxyUrl ?? '')
-
-  useEffect(() => {
-    setValue(resource.proxyUrl ?? '')
-  }, [resource.proxyUrl])
-
-  const handleSave = async () => {
-    const next = value.trim()
-    if (next === (resource.proxyUrl ?? '')) return
-
-    try {
-      await onSave(resource, { proxyUrl: next })
-      toast.success(t('credentialsPage.inline.saved'))
-    } catch (error) {
-      setValue(resource.proxyUrl ?? '')
-      toast.error(readErrorMessage(error))
-    }
-  }
-
-  return (
-    <Input
-      value={value}
-      disabled={mutating}
-      placeholder="socks5://host:port"
-      aria-label={t('credentialsPage.inline.proxyUrlLabel')}
-      className="h-8 min-w-44 font-mono text-xs"
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => void handleSave()}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          event.currentTarget.blur()
-        }
-        if (event.key === 'Escape') {
-          setValue(resource.proxyUrl ?? '')
-        }
-      }}
-    />
-  )
-}
-
-export function PriorityCell({
-  resource,
-  mutating,
-  onSave,
-}: {
-  resource: CredentialResource
-  mutating: boolean
-  onSave: InlineMetadataSave
-}) {
-  const { t } = useTranslation()
-  const currentPriority = resource.priority === null ? '' : String(resource.priority)
-  const [value, setValue] = useState(currentPriority)
-
-  useEffect(() => {
-    setValue(currentPriority)
-  }, [currentPriority])
-
-  const handleSave = async () => {
-    const next = value.trim()
-    if (next === currentPriority) return
-
-    if (!isValidPriorityDraft(next)) {
-      setValue(currentPriority)
-      toast.error(t('credentialsPage.inline.priorityInvalid'))
-      return
-    }
-
-    try {
-      // Empty clears priority: the adapter sends an explicit null for it.
-      await onSave(resource, { priority: next === '' ? null : next })
-      toast.success(t('credentialsPage.inline.saved'))
-    } catch (error) {
-      setValue(currentPriority)
-      toast.error(readErrorMessage(error))
-    }
-  }
-
-  return (
-    <Input
-      value={value}
-      disabled={mutating}
-      inputMode="numeric"
-      aria-label={t('credentialsPage.inline.priorityLabel')}
-      className="h-8 w-20 text-center font-mono text-xs"
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => void handleSave()}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault()
-          event.currentTarget.blur()
-        }
-        if (event.key === 'Escape') {
-          setValue(currentPriority)
-        }
-      }}
-    />
-  )
 }
 
 export function WebsocketsCell({
@@ -168,6 +35,17 @@ export function WebsocketsCell({
         title={t('credentialsPage.inline.websocketsUnsupported')}
       >
         {t('credentialsPage.inline.notApplicable')}
+      </span>
+    )
+  }
+
+  if (!resource.metadataAvailability.websockets) {
+    return (
+      <span
+        className="text-muted-foreground text-xs"
+        title={t('credentialsPage.inline.websocketsUnavailable')}
+      >
+        {t('credentialsPage.status.notAvailable')}
       </span>
     )
   }

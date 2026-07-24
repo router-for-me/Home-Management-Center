@@ -1773,7 +1773,7 @@ export const en = {
       header: {
         title: 'Upstream',
         description:
-          'Manage account credentials and model providers in one place. Edit enablement, Proxy URL, WebSocket, and priority directly in the table; secondary fields like Prefix live in the detail drawer. Quota is embedded as a first-class column (including Kimi / Grok).',
+          'Manage account credentials and model providers in one place. The table surfaces enablement, WebSocket, priority, and quota; view and maintain metadata such as Proxy URL and Prefix in the detail drawer.',
       },
       tabs: {
         label: 'Upstream sections',
@@ -1908,10 +1908,10 @@ export const en = {
           danger: 'Danger zone',
         },
         metadata: {
-          proxyHint:
-            'Credential-level proxy; leave empty to unset. Editable inline in the table too.',
+          proxyUnavailableHint:
+            'The current backend did not return the saved Proxy URL. Entering a value replaces the existing setting.',
           priorityPlaceholder: 'e.g. 10 or -1',
-          priorityHint: 'Integers only; higher values win. Editable inline in the table too.',
+          priorityHint: 'Integers only; higher values have higher scheduling priority.',
           prefixHint: 'Rarely used; maintained here instead of a table column.',
           secondarySection: 'Less common',
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
@@ -1952,7 +1952,7 @@ export const en = {
       },
       actions: {
         addCredential: 'Add credential',
-        detail: 'Details',
+        detail: 'View',
         quota: 'Quota',
         models: 'Models',
         upload: 'Upload JSON',
@@ -2104,18 +2104,15 @@ export const en = {
         inFlight: 'In flight',
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: 'Priority',
         actions: 'Actions',
       },
       inline: {
         saved: 'Saved.',
-        priorityInvalid: 'Priority must be an integer.',
-        proxyUrlLabel: 'Edit Proxy URL',
-        priorityLabel: 'Edit priority',
         websocketsLabel: 'Toggle WebSocket',
         websocketsUnsupported: 'WebSocket is not supported for this provider',
+        websocketsUnavailable: 'The current backend did not return the WebSocket state',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2151,10 +2148,6 @@ export const en = {
         modelsTitle: 'Available models',
         modelsDescription: 'Query the runtime for models available to this credential.',
         modelCount: '{{count}} models loaded.',
-        enableDescription:
-          'This credential is disabled. Enable it to let it participate in model requests again.',
-        disableDescription:
-          'Disable this credential to remove it from model requests. You can re-enable it later.',
         fields: {
           provider: 'Model provider',
           type: 'Type',
@@ -2179,6 +2172,7 @@ export const en = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Priority',
+        priorityInvalid: 'Priority must be an integer.',
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
@@ -2273,6 +2267,7 @@ export const en = {
       toast: {
         downloaded: 'Credential downloaded.',
         updated: 'Credential metadata updated.',
+        noChanges: 'No changes to save.',
         deleted: 'Credential deleted.',
         bulkEnabled: '{{count}} credentials enabled.',
         bulkDisabled: '{{count}} credentials disabled.',

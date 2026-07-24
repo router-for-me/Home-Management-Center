@@ -2,10 +2,10 @@ import { describe, expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
-  WebsocketsCell,
-  buildInlineMetadataInput,
-  isValidPriorityDraft,
-} from '@/features/credentials/credential-inline-cells'
+  buildCredentialMetadataPatch,
+  isValidCredentialPriorityDraft,
+} from '@/features/credentials/credential-detail-drawer'
+import { WebsocketsCell } from '@/features/credentials/credential-inline-cells'
 import type { CredentialResource } from '@/lib/api/management/credentials'
 import '@/lib/i18n/i18n'
 
@@ -45,32 +45,38 @@ function createCredentialResource(
     prefix: 'team',
     proxyUrl: 'socks5://127.0.0.1:1080',
     websockets: false,
+    metadataAvailability: {
+      prefix: true,
+      proxyUrl: true,
+      websockets: true,
+    },
     selector: { name: `${provider}-01` },
     raw: {},
     ...overrides,
   }
 }
 
-describe('isValidPriorityDraft', () => {
+describe('isValidCredentialPriorityDraft', () => {
   test('accepts integers, empty string (clear), and surrounding whitespace', () => {
-    expect(isValidPriorityDraft('10')).toBe(true)
-    expect(isValidPriorityDraft('0')).toBe(true)
-    expect(isValidPriorityDraft('-1')).toBe(true)
-    expect(isValidPriorityDraft(' 20 ')).toBe(true)
-    expect(isValidPriorityDraft('')).toBe(true)
-    expect(isValidPriorityDraft('   ')).toBe(true)
+    expect(isValidCredentialPriorityDraft('10')).toBe(true)
+    expect(isValidCredentialPriorityDraft('0')).toBe(true)
+    expect(isValidCredentialPriorityDraft('-1')).toBe(true)
+    expect(isValidCredentialPriorityDraft(' 20 ')).toBe(true)
+    expect(isValidCredentialPriorityDraft('')).toBe(true)
+    expect(isValidCredentialPriorityDraft('   ')).toBe(true)
   })
 
   test('rejects non-integers', () => {
-    expect(isValidPriorityDraft('abc')).toBe(false)
-    expect(isValidPriorityDraft('1.5')).toBe(false)
-    expect(isValidPriorityDraft('10px')).toBe(false)
-    expect(isValidPriorityDraft('--1')).toBe(false)
+    expect(isValidCredentialPriorityDraft('abc')).toBe(false)
+    expect(isValidCredentialPriorityDraft('1.5')).toBe(false)
+    expect(isValidCredentialPriorityDraft('10px')).toBe(false)
+    expect(isValidCredentialPriorityDraft('--1')).toBe(false)
+    expect(isValidCredentialPriorityDraft('9007199254740992')).toBe(false)
   })
 })
 
-describe('buildInlineMetadataInput', () => {
-  test('fills unchanged fields from the resource and applies the patch', () => {
+describe('buildCredentialMetadataPatch', () => {
+  test('includes only changed metadata fields', () => {
     const resource = createCredentialResource('codex', {
       prefix: 'team',
       proxyUrl: 'socks5://127.0.0.1:1080',
@@ -79,38 +85,54 @@ describe('buildInlineMetadataInput', () => {
       websockets: true,
     })
 
-    expect(buildInlineMetadataInput(resource, { proxyUrl: '' })).toEqual({
-      prefix: 'team',
-      proxyUrl: '',
-      priority: '10',
-      note: 'primary',
-      websockets: true,
-    })
-
-    expect(buildInlineMetadataInput(resource, { websockets: false })).toEqual({
-      prefix: 'team',
-      proxyUrl: 'socks5://127.0.0.1:1080',
-      priority: '10',
-      note: 'primary',
-      websockets: false,
-    })
+    expect(
+      buildCredentialMetadataPatch(resource, {
+        prefix: 'team',
+        proxyUrl: '',
+        priority: '10',
+        note: 'primary',
+        websockets: false,
+        maxInFlight: '',
+        maxInFlightByModel: [],
+      }),
+    ).toEqual({ proxyUrl: '', websockets: false })
   })
 
-  test('normalizes null fields to empty strings', () => {
-    const resource = createCredentialResource('xai', {
+  test('uses null only when clearing a stored priority', () => {
+    const resource = createCredentialResource('xai', { priority: 5 })
+
+    expect(
+      buildCredentialMetadataPatch(resource, {
+        prefix: 'team',
+        proxyUrl: 'socks5://127.0.0.1:1080',
+        priority: '',
+        note: '',
+        websockets: false,
+        maxInFlight: '',
+        maxInFlightByModel: [],
+      }),
+    ).toMatchObject({ priority: null })
+  })
+
+  test('preserves metadata omitted by an older backend when another field changes', () => {
+    const resource = createCredentialResource('codex', {
       prefix: null,
       proxyUrl: null,
-      priority: null,
-      note: null,
+      websockets: false,
+      metadataAvailability: { prefix: false, proxyUrl: false, websockets: false },
     })
 
-    expect(buildInlineMetadataInput(resource, { priority: '5' })).toEqual({
-      prefix: '',
-      proxyUrl: '',
-      priority: '5',
-      note: '',
-      websockets: false,
-    })
+    expect(
+      buildCredentialMetadataPatch(resource, {
+        prefix: '',
+        proxyUrl: '',
+        priority: '10',
+        note: 'updated note',
+        websockets: true,
+        maxInFlight: '',
+        maxInFlightByModel: [],
+      }),
+    ).toEqual({ note: 'updated note' })
   })
 })
 
@@ -140,5 +162,19 @@ describe('WebsocketsCell', () => {
     )
     expect(markup).not.toContain('role="switch"')
     expect(markup).toContain('n/a')
+  })
+
+  test('does not render a false switch state when the backend omitted websocket metadata', () => {
+    const markup = renderToStaticMarkup(
+      <WebsocketsCell
+        resource={createCredentialResource('codex', {
+          metadataAvailability: { prefix: false, proxyUrl: false, websockets: false },
+        })}
+        mutating={false}
+        onSave={noopSave}
+      />,
+    )
+    expect(markup).not.toContain('role="switch"')
+    expect(markup).toContain('N/A')
   })
 })

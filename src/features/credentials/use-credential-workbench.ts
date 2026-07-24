@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import {
   type CredentialInFlightDetail,
   type CredentialInFlightRequest,
-  type CredentialMetadataInput,
+  type CredentialMetadataPatch,
   type CredentialOAuthCallbackInput,
   type CredentialOAuthStartInput,
   type CredentialResource,
@@ -179,7 +179,7 @@ export function useCredentialWorkbench() {
       input,
     }: {
       resource: CredentialResource
-      input: CredentialMetadataInput
+      input: CredentialMetadataPatch
     }) => {
       try {
         return await updateCredentialMetadata(session, resource, input)

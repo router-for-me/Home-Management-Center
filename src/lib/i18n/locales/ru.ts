@@ -1772,7 +1772,7 @@ export const ru = {
       header: {
         title: 'Апстримы',
         description:
-          'Управление учётными данными и поставщиками моделей в одном месте. Включение, Proxy URL, WebSocket и приоритет редактируются прямо в таблице; второстепенные поля, такие как Prefix, находятся в панели деталей. Квота встроена как первоклассная колонка (включая Kimi / Grok).',
+          'Управляйте учётными данными и поставщиками моделей в одном месте. В таблице показаны состояние, WebSocket, приоритет и квота; Proxy URL, Prefix и другие метаданные доступны в панели деталей.',
       },
       tabs: {
         label: 'Разделы апстримов',
@@ -1907,11 +1907,10 @@ export const ru = {
           danger: 'Опасная зона',
         },
         metadata: {
-          proxyHint:
-            'Прокси на уровне учётных данных; оставьте пустым, чтобы не задавать. Также редактируется в таблице.',
+          proxyUnavailableHint:
+            'Текущий backend не вернул сохранённый Proxy URL. Введённое значение заменит существующую настройку.',
           priorityPlaceholder: 'например, 10 или -1',
-          priorityHint:
-            'Только целые числа; большее значение — выше приоритет. Также редактируется в таблице.',
+          priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
           prefixHint: 'Используется редко; редактируется здесь, а не в колонке таблицы.',
           secondarySection: 'Дополнительно',
           websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
@@ -1952,7 +1951,7 @@ export const ru = {
       },
       actions: {
         addCredential: 'Добавить credential',
-        detail: 'Подробно',
+        detail: 'Открыть',
         quota: 'Квота',
         models: 'Модели',
         upload: 'Загрузить JSON',
@@ -2105,18 +2104,15 @@ export const ru = {
         inFlight: 'В работе',
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
-        proxyUrl: 'Proxy URL',
         ws: 'WS',
         priority: 'Приоритет',
         actions: 'Действия',
       },
       inline: {
         saved: 'Сохранено.',
-        priorityInvalid: 'Приоритет должен быть целым числом.',
-        proxyUrlLabel: 'Изменить Proxy URL',
-        priorityLabel: 'Изменить приоритет',
         websocketsLabel: 'Переключить WebSocket',
         websocketsUnsupported: 'WebSocket не поддерживается для этого поставщика',
+        websocketsUnavailable: 'Текущий backend не вернул состояние WebSocket',
         notApplicable: 'n/a',
       },
       bulk: {
@@ -2152,10 +2148,6 @@ export const ru = {
         modelsTitle: 'Доступные модели',
         modelsDescription: 'Запросить у runtime модели, доступные для этого credential.',
         modelCount: 'Загружено моделей: {{count}}.',
-        enableDescription:
-          'Этот credential отключен. Включите его, чтобы снова использовать в запросах моделей.',
-        disableDescription:
-          'Отключите credential, чтобы исключить его из запросов моделей. Его можно включить позже.',
         fields: {
           provider: 'Поставщик моделей',
           type: 'Тип',
@@ -2180,6 +2172,7 @@ export const ru = {
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         priority: 'Приоритет',
+        priorityInvalid: 'Приоритет должен быть целым числом.',
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
@@ -2273,6 +2266,7 @@ export const ru = {
       toast: {
         downloaded: 'Credential скачан.',
         updated: 'Credential metadata обновлена.',
+        noChanges: 'Нет изменений для сохранения.',
         deleted: 'Credential удален.',
         bulkEnabled: 'Credentials включены: {{count}}.',
         bulkDisabled: 'Credentials отключены: {{count}}.',
