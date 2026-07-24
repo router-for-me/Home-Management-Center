@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react'
 
 import { AlertTriangle, CircleGauge, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -19,8 +19,10 @@ import {
   CredentialConcurrencyDetail,
   CredentialConcurrencyEditor,
   type CredentialMetadataForm,
+  applyCredentialConcurrencyPolicyToForm,
   canonicalConcurrencyModelKey,
   getCredentialInFlightId,
+  isValidConcurrencyModelKey,
   parseConcurrencyLimit,
 } from '@/features/credentials/credential-concurrency'
 import {
@@ -30,7 +32,10 @@ import {
   getCredentialProviderLabel,
   getCredentialSourceLabel,
 } from '@/features/credentials/credential-display'
-import { useCredentialInFlightDetail } from '@/features/credentials/use-credential-workbench'
+import {
+  useCredentialConcurrencyPolicy,
+  useCredentialInFlightDetail,
+} from '@/features/credentials/use-credential-workbench'
 import {
   InlineWindowBar,
   UpstreamQuotaMetaBadge,
@@ -46,9 +51,12 @@ import {
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
+  type CredentialConcurrencyPolicy,
+  type CredentialInFlightObservationMetadata,
   type CredentialInFlightSummary,
   type CredentialMetadataInput,
   type CredentialResource,
+  matchesCredentialBackendError,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
 import type { QuotaCredential, QuotaResetCredits, QuotaWindow } from '@/lib/api/management/quota'
@@ -73,21 +81,68 @@ function visibleDrawerTabs(showConcurrency: boolean): CredentialDrawerTab[] {
   ]
 }
 
-function createMetadataForm(resource: CredentialResource | null): CredentialMetadataForm {
-  return {
-    prefix: resource?.prefix ?? '',
-    proxyUrl: resource?.proxyUrl ?? '',
-    priority:
-      resource?.priority === null || resource?.priority === undefined
-        ? ''
-        : String(resource.priority),
-    websockets: resource?.websockets ?? false,
-    note: resource?.note ?? '',
-    maxInFlight: resource?.maxInFlight ? String(resource.maxInFlight) : '',
-    maxInFlightByModel: Object.entries(resource?.maxInFlightByModel ?? {})
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([model, limit]) => ({ model, limit: String(limit) })),
+function createMetadataForm(
+  resource: CredentialResource | null,
+  policy: CredentialConcurrencyPolicy | null = null,
+): CredentialMetadataForm {
+  const maxInFlight = resource?.maxInFlight ?? null
+  const maxInFlightByModel = resource?.maxInFlightByModel ?? {}
+  return applyCredentialConcurrencyPolicyToForm(
+    {
+      prefix: resource?.prefix ?? '',
+      proxyUrl: resource?.proxyUrl ?? '',
+      priority:
+        resource?.priority === null || resource?.priority === undefined
+          ? ''
+          : String(resource.priority),
+      websockets: resource?.websockets ?? false,
+      note: resource?.note ?? '',
+      maxInFlight: maxInFlight ? String(maxInFlight) : '',
+      maxInFlightByModel: Object.entries(maxInFlightByModel)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([model, limit]) => ({ model, limit: String(limit) })),
+    },
+    policy,
+  )
+}
+
+type CredentialMetadataLocalError = {
+  credentialId: string
+  kind: 'version-conflict' | 'other'
+  message: string
+}
+
+type CredentialMetadataPolicyVersion = number | null | 'unobserved'
+type CredentialMetadataRefreshMode = 'reset' | 'policy' | 'preserve'
+
+export function getCredentialMetadataRefreshMode({
+  open,
+  credentialId,
+  previousCredentialId,
+  policyVersion,
+  previousPolicyVersion,
+}: {
+  open: boolean
+  credentialId: string
+  previousCredentialId: string
+  policyVersion: number | null
+  previousPolicyVersion: CredentialMetadataPolicyVersion
+}): CredentialMetadataRefreshMode {
+  if (!open || previousCredentialId !== credentialId) return 'reset'
+  if (
+    policyVersion !== null &&
+    (previousPolicyVersion === 'unobserved' || previousPolicyVersion !== policyVersion)
+  ) {
+    return 'policy'
   }
+  return 'preserve'
+}
+
+export function retainCredentialMetadataErrorAfterPolicyRefresh(
+  error: CredentialMetadataLocalError | null,
+  credentialId: string,
+) {
+  return error?.kind === 'version-conflict' && error.credentialId === credentialId ? error : null
 }
 
 function DrawerTabStrip({
@@ -205,31 +260,76 @@ function OverviewTab({
 
 function MetadataTab({
   resource,
+  open,
   mutating,
   canEditConcurrency,
+  concurrencyPolicy,
+  concurrencyPolicyPending,
+  concurrencyPolicyError,
   inFlightSummary,
   onUpdateMetadata,
   onToggleStatus,
 }: {
   resource: CredentialResource
+  open: boolean
   mutating: boolean
   canEditConcurrency: boolean
+  concurrencyPolicy: CredentialConcurrencyPolicy | null
+  concurrencyPolicyPending: boolean
+  concurrencyPolicyError: string | null
   inFlightSummary: CredentialInFlightSummary | null
   onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
   onToggleStatus: () => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [form, setForm] = useState<CredentialMetadataForm>(() => createMetadataForm(resource))
-  const [localError, setLocalError] = useState<string | null>(null)
+  const [form, setForm] = useState<CredentialMetadataForm>(() =>
+    createMetadataForm(resource, concurrencyPolicy),
+  )
+  const [localError, setLocalError] = useState<CredentialMetadataLocalError | null>(null)
+  const credentialId = getCredentialInFlightId(resource)
+  const previousCredentialId = useRef(credentialId)
+  const previousPolicyVersion = useRef<CredentialMetadataPolicyVersion>('unobserved')
 
   useEffect(() => {
-    setForm(createMetadataForm(resource))
+    const policyVersion = concurrencyPolicy === null ? null : concurrencyPolicy.version
+    const refreshMode = getCredentialMetadataRefreshMode({
+      open,
+      credentialId,
+      previousCredentialId: previousCredentialId.current,
+      policyVersion,
+      previousPolicyVersion: previousPolicyVersion.current,
+    })
+    const credentialChanged = previousCredentialId.current !== credentialId
+    previousCredentialId.current = credentialId
+    if (
+      !open ||
+      credentialChanged ||
+      policyVersion !== null ||
+      previousPolicyVersion.current === 'unobserved'
+    ) {
+      previousPolicyVersion.current = policyVersion
+    }
+    if (refreshMode === 'reset') {
+      setForm(createMetadataForm(resource, concurrencyPolicy))
+      setLocalError(null)
+      return
+    }
+    if (refreshMode === 'policy') {
+      setForm((current) => applyCredentialConcurrencyPolicyToForm(current, concurrencyPolicy))
+      setLocalError((current) =>
+        retainCredentialMetadataErrorAfterPolicyRefresh(current, credentialId),
+      )
+    }
+  }, [concurrencyPolicy, credentialId, open, resource])
+
+  const handleFormChange: Dispatch<SetStateAction<CredentialMetadataForm>> = (nextForm) => {
     setLocalError(null)
-  }, [resource])
+    setForm(nextForm)
+  }
 
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
-  const concurrencyEditable = canEditConcurrency && resource.concurrencyFieldsValid
+  const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -246,6 +346,9 @@ function MetadataTab({
           const model = canonicalConcurrencyModelKey(row.model)
           const rawLimit = row.limit.trim()
           if (!model && !rawLimit) continue
+          if (!isValidConcurrencyModelKey(row.model)) {
+            throw new Error(t('credentialsPage.concurrency.validation.modelInvalid'))
+          }
           const limit = parseConcurrencyLimit(row.limit)
           if (limit === undefined) {
             if (!model) {
@@ -264,21 +367,45 @@ function MetadataTab({
           maxInFlightByModel[model] = limit
         }
       }
+      const normalizedMaxInFlight = maxInFlight && maxInFlight > 0 ? maxInFlight : null
+      const currentModelLimits = concurrencyPolicy?.maxInFlightByModel ?? {}
+      const modelLimitsChanged =
+        Object.keys(currentModelLimits).length !== Object.keys(maxInFlightByModel).length ||
+        Object.entries(maxInFlightByModel).some(
+          ([model, limit]) => currentModelLimits[model] !== limit,
+        )
+      const concurrencyChanged =
+        concurrencyEditable &&
+        (normalizedMaxInFlight !== concurrencyPolicy?.maxInFlight || modelLimitsChanged)
       await onUpdateMetadata({
         prefix: form.prefix,
         proxyUrl: form.proxyUrl,
         priority: form.priority,
         note: form.note,
         ...(websocketsSupported ? { websockets: form.websockets } : {}),
-        ...(concurrencyEditable
+        ...(concurrencyChanged
           ? {
-              maxInFlight: maxInFlight && maxInFlight > 0 ? maxInFlight : null,
+              maxInFlight: normalizedMaxInFlight,
               maxInFlightByModel,
+              concurrencyVersion: concurrencyPolicy?.version,
             }
           : {}),
       })
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error))
+      const versionConflict = matchesCredentialBackendError(
+        error,
+        409,
+        'concurrency_policy_version_conflict',
+      )
+      setLocalError({
+        credentialId,
+        kind: versionConflict ? 'version-conflict' : 'other',
+        message: versionConflict
+          ? t('credentialsPage.concurrency.versionConflict')
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      })
     }
   }
 
@@ -294,7 +421,9 @@ function MetadataTab({
           value={form.proxyUrl}
           placeholder="socks5://user:pass@host:port/"
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, proxyUrl: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, proxyUrl: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.proxyHint')}
@@ -307,7 +436,9 @@ function MetadataTab({
           inputMode="numeric"
           placeholder={t('upstreamPage.drawer.metadata.priorityPlaceholder')}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, priority: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.priorityHint')}
@@ -319,7 +450,9 @@ function MetadataTab({
           className="min-h-24"
           value={form.note}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, note: event.target.value }))
+          }
         />
       </label>
 
@@ -331,7 +464,9 @@ function MetadataTab({
         <Input
           value={form.prefix}
           disabled={mutating}
-          onChange={(event) => setForm((current) => ({ ...current, prefix: event.target.value }))}
+          onChange={(event) =>
+            handleFormChange((current) => ({ ...current, prefix: event.target.value }))
+          }
         />
         <span className="text-muted-foreground text-xs leading-5 font-normal">
           {t('upstreamPage.drawer.metadata.prefixHint')}
@@ -355,7 +490,7 @@ function MetadataTab({
               checked={form.websockets}
               disabled={mutating}
               onCheckedChange={(checked) =>
-                setForm((current) => ({ ...current, websockets: checked }))
+                handleFormChange((current) => ({ ...current, websockets: checked }))
               }
               aria-label={t('credentialsPage.form.websockets')}
             />
@@ -384,25 +519,31 @@ function MetadataTab({
         </div>
       </div>
 
-      {concurrencyEditable ? (
+      {canEditConcurrency && concurrencyPolicyPending ? (
+        <Skeleton className="h-40 w-full" />
+      ) : concurrencyEditable ? (
         <CredentialConcurrencyEditor
           form={form}
           summary={inFlightSummary}
           mutating={mutating}
-          onChange={setForm}
+          onChange={handleFormChange}
         />
       ) : canEditConcurrency ? (
         <div
           role="alert"
           className="border-warning/35 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-3 py-2 text-sm leading-5"
         >
-          {t('credentialsPage.concurrency.contractInvalid')}
+          {concurrencyPolicyError
+            ? t('credentialsPage.concurrency.policyLoadFailed', {
+                message: concurrencyPolicyError,
+              })
+            : t('credentialsPage.concurrency.contractInvalid')}
         </div>
       ) : null}
 
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
+          {localError.message}
         </div>
       ) : null}
     </form>
@@ -762,24 +903,43 @@ function CredentialQuotaTab({
 function ConcurrencyTab({
   resource,
   summary,
+  observation,
+  observationAvailable,
+  summaryPending,
+  summaryStale,
+  summaryErrorMessage,
 }: {
   resource: CredentialResource
   summary: CredentialInFlightSummary | null
+  observation: CredentialInFlightObservationMetadata | null
+  observationAvailable: boolean
+  summaryPending: boolean
+  summaryStale: boolean
+  summaryErrorMessage: string | null
 }) {
   const inFlightCredentialId = getCredentialInFlightId(resource)
-  const query = useCredentialInFlightDetail(inFlightCredentialId, true)
+  const query = useCredentialInFlightDetail(inFlightCredentialId, observationAvailable)
+  const errorMessage = [query.errorMessage, summaryErrorMessage]
+    .filter(
+      (message, index, messages): message is string =>
+        Boolean(message) && messages.indexOf(message) === index,
+    )
+    .join(' · ')
 
   return (
     <CredentialConcurrencyDetail
       summary={summary}
+      observation={observation}
+      observationAvailable={observationAvailable}
       detail={query.detail}
-      pending={query.isPending}
+      pending={summaryPending || (observationAvailable && query.isPending)}
       fetching={query.isFetching}
-      stale={query.isStale}
-      errorMessage={query.errorMessage}
+      stale={summaryStale || query.isStale}
+      errorMessage={errorMessage || null}
       hasNextPage={query.hasNextPage ?? false}
       fetchingNextPage={query.isFetchingNextPage}
       onLoadMore={() => void query.fetchNextPage()}
+      onRefresh={() => void query.refresh()}
     />
   )
 }
@@ -917,13 +1077,19 @@ function DangerTab({
 
 export function CredentialDetailDrawer({
   resource,
+  open,
   tab,
   mutating,
   models,
   quotaEntry,
   showConcurrency,
+  observationAvailable,
   canEditConcurrency,
   inFlightSummary,
+  inFlightObservation,
+  concurrencyPending,
+  concurrencyStale,
+  concurrencyErrorMessage,
   onTabChange,
   onUpdateMetadata,
   onToggleStatus,
@@ -932,6 +1098,7 @@ export function CredentialDetailDrawer({
   onDelete,
 }: {
   resource: CredentialResource
+  open: boolean
   tab: CredentialDrawerTab
   mutating: boolean
   models: Array<{
@@ -942,8 +1109,13 @@ export function CredentialDetailDrawer({
   }> | null
   quotaEntry: UpstreamQuotaEntry | null
   showConcurrency: boolean
+  observationAvailable: boolean
   canEditConcurrency: boolean
   inFlightSummary: CredentialInFlightSummary | null
+  inFlightObservation: CredentialInFlightObservationMetadata | null
+  concurrencyPending: boolean
+  concurrencyStale: boolean
+  concurrencyErrorMessage: string | null
   onTabChange: (tab: CredentialDrawerTab) => void
   onUpdateMetadata: (input: CredentialMetadataInput) => Promise<void>
   onToggleStatus: () => Promise<void>
@@ -954,6 +1126,10 @@ export function CredentialDetailDrawer({
   const { t } = useTranslation()
   const displayName = getCredentialDisplayName(resource)
   const resourceIdentifier = resource.name ?? resource.authIndex ?? resource.identifier
+  const concurrencyPolicyQuery = useCredentialConcurrencyPolicy(
+    getCredentialInFlightId(resource),
+    canEditConcurrency && tab === 'metadata',
+  )
 
   return (
     <>
@@ -975,8 +1151,12 @@ export function CredentialDetailDrawer({
         {tab === 'metadata' ? (
           <MetadataTab
             resource={resource}
+            open={open}
             mutating={mutating}
             canEditConcurrency={canEditConcurrency}
+            concurrencyPolicy={concurrencyPolicyQuery.policy}
+            concurrencyPolicyPending={concurrencyPolicyQuery.isPending}
+            concurrencyPolicyError={concurrencyPolicyQuery.errorMessage}
             inFlightSummary={inFlightSummary}
             onUpdateMetadata={onUpdateMetadata}
             onToggleStatus={onToggleStatus}
@@ -986,7 +1166,15 @@ export function CredentialDetailDrawer({
           <CredentialQuotaTab resource={resource} quotaEntry={quotaEntry} />
         ) : null}
         {tab === 'concurrency' && showConcurrency ? (
-          <ConcurrencyTab resource={resource} summary={inFlightSummary} />
+          <ConcurrencyTab
+            resource={resource}
+            summary={inFlightSummary}
+            observation={inFlightObservation}
+            observationAvailable={observationAvailable}
+            summaryPending={concurrencyPending}
+            summaryStale={concurrencyStale}
+            summaryErrorMessage={concurrencyErrorMessage}
+          />
         ) : null}
         {tab === 'models' ? (
           <ModelsTab mutating={mutating} models={models} onFetchModels={onFetchModels} />

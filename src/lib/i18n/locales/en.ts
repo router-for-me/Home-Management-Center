@@ -2186,6 +2186,9 @@ export const en = {
       },
       concurrency: {
         current: 'Current',
+        observed: 'Observed',
+        observedCompact: '{{count}} observed',
+        admitted: 'Admitted',
         limit: 'Limit',
         remaining: 'Available slots',
         unlimited: 'Unlimited',
@@ -2194,17 +2197,36 @@ export const en = {
         modelsSaturated: 'Saturated model limits: {{count}}.',
         stale: 'In-flight data could not be refreshed. Showing the last successful result.',
         summaryLoadFailed: 'Could not load in-flight data: {{message}}',
+        observationLoadFailed: 'Observation data is unavailable: {{message}}',
+        limiterLoadFailed: 'Authoritative limiter state is unavailable: {{message}}',
+        observationIncomplete:
+          'The current CPA snapshot coverage is incomplete. Observed totals may be partial.',
+        detailsTruncated:
+          'Request details were truncated by Home. Aggregate in-flight totals remain available.',
+        paginationLimited:
+          'Stable snapshot pagination is unavailable for this view. Only the first {{count}} in-flight requests are shown.',
+        paginationPinned:
+          'Request pages are pinned to one stable snapshot. Refresh to load current data.',
+        paginationExpired:
+          'This stable request snapshot has expired. Refresh before loading more requests.',
+        refreshSnapshot: 'Refresh requests',
+        notFullyEnforced:
+          'Some observed work is not accounted for by the authoritative limiter yet.',
+        enforcementUnknown:
+          'Home cannot currently confirm that this policy is fully enforced across active CPA lifetimes.',
         unavailable: 'In-flight data is unavailable.',
+        observationUnsupported:
+          'In-flight snapshots are not enabled. Authoritative limiter state and policies remain available.',
         modelsTitle: 'Model concurrency',
         modelsDescription:
-          'Counts reflect active Home leases by effective upstream model. Available slots also respect the credential-wide limit.',
+          'Observed counts come from complete CPA snapshots. Admitted counts and available slots come from the authoritative limiter.',
         noModels: 'No model concurrency records.',
         requestsTitle: 'Open requests',
         requestsDescription:
-          'Shows tracked request identity and runtime metadata only, never request payloads. Fail-open dispatches without a lease are not included.',
+          'Shows only request ID, normalized upstream model, request kind, and start time from the latest complete snapshot. CPA identity and request payloads are never exposed.',
         requestId: 'Request ID',
         model: 'Model',
-        cpaNode: 'CPA node',
+        requestKind: 'Kind',
         startedAt: 'Started',
         age: 'Age',
         ageSeconds: '{{count}}s',
@@ -2219,7 +2241,7 @@ export const en = {
         loadMore: 'Load more',
         editTitle: 'Concurrency limits',
         editDescription:
-          'Empty or 0 means unlimited. Model limits match the effective upstream model ID; thinking suffix variants share the base model limit. Limit changes never terminate existing requests. Upgrade every CPA node for dispatch leases before enabling limits.',
+          'Empty or 0 means unlimited. Model limits use Home canonical model keys; recognized reasoning suffixes share the base model limit. Limit changes never terminate existing requests.',
         totalLimit: 'Credential-wide limit',
         modelLimits: 'Model limits',
         addModel: 'Add model',
@@ -2230,12 +2252,16 @@ export const en = {
         removeModelAtIndex: 'Remove model limit row {{index}}',
         noModelLimits: 'No model limits configured.',
         contractInvalid:
-          'Home reports concurrency editing support, but /auth-files returned invalid or missing limit fields. Existing limits will not be changed.',
+          'Home reports concurrency policy support, but the current policy could not be loaded safely. Existing limits will not be changed.',
+        policyLoadFailed: 'Could not load the current concurrency policy: {{message}}',
+        versionConflict:
+          'The concurrency policy changed after it was loaded. Review the refreshed values and save again.',
         lowerLimitWarning:
           'The new limit is below current in-flight usage. Existing requests continue; new dispatches that exceed the limit are blocked until usage falls below it.',
         validation: {
           totalLimit: 'The credential-wide limit must be a non-negative integer.',
           modelRequired: 'Enter a model ID or remove the row.',
+          modelInvalid: 'Enter a valid model ID no longer than 256 UTF-8 bytes.',
           modelLimit: 'The limit for {{model}} must be a non-negative integer.',
           duplicateModel: 'Model {{model}} is configured more than once.',
         },
