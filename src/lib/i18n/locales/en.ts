@@ -4032,6 +4032,12 @@ export const en = {
         title: 'Token usage over time',
         emptyTitle: 'No trend data',
         unavailable: 'No trend data is available for this range.',
+        accessibility: {
+          keyboardInstructions:
+            'Use the Left and Right Arrow keys to inspect each time bucket. Press Home or End to jump to the first or last bucket.',
+          dataTableCaption: 'Token usage trend data',
+          time: 'Time',
+        },
         overlay: {
           requests: 'Requests',
           cost: 'Spend',
