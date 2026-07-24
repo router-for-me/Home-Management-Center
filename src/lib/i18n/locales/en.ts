@@ -1772,8 +1772,6 @@ export const en = {
     upstreamPage: {
       header: {
         title: 'Upstream',
-        description:
-          'Manage account credentials and model providers in one place. The table surfaces enablement, WebSocket, priority, and quota; view and maintain metadata such as Proxy URL and Prefix in the detail drawer.',
       },
       tabs: {
         label: 'Upstream sections',

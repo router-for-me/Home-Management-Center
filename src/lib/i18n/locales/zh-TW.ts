@@ -1704,8 +1704,6 @@ export const zhTW = {
     upstreamPage: {
       header: {
         title: '上游資源',
-        description:
-          '統一管理帳號憑證與模型供應商。表格集中呈現啟用狀態、WebSocket、優先順序和額度；Proxy URL、Prefix 等中繼資料在詳情中查看與維護。',
       },
       tabs: {
         label: '上游資源分區',

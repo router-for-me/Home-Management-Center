@@ -1704,8 +1704,6 @@ export const zhCN = {
     upstreamPage: {
       header: {
         title: '上游资源',
-        description:
-          '统一管理账号凭证与模型供应商。表格集中披露启用状态、WebSocket、优先级和额度；Proxy URL、Prefix 等元数据在详情中查看和维护。',
       },
       tabs: {
         label: '上游资源分区',

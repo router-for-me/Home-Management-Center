@@ -107,7 +107,6 @@ export function UpstreamWorkbenchPage({
     <section className="grid w-full gap-5">
       <PageHeader
         title={t('upstreamPage.header.title')}
-        description={t('upstreamPage.header.description')}
         actions={
           <>
             <Button
