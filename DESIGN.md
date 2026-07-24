@@ -127,6 +127,14 @@ Control sizing:
 - Responsive filter layouts should reflow or wrap controls instead of changing their height independently at a breakpoint.
 - Compact table toolbars may opt into the shared responsive compact modifier so every `sm` control in the row grows to 40px on narrow screens and returns to 32px from the `sm` breakpoint onward.
 
+Action placement and emphasis:
+
+- Place actions at the narrowest scope they affect. `PageHeader` owns page-wide or cross-view actions such as refresh and sync; `TableSurfaceHeader` owns actions for the current resource collection, such as create and import.
+- A single-resource page may keep its primary action in `PageHeader`, but the same action must never be repeated in both the page header and a resource header.
+- Each action group has at most one primary action. In the shared Button API, the primary visual treatment is `variant="default"`; omit the variant when that intent is clear.
+- Use the primary treatment for the safest, most frequent next action in that scope, usually create or add. Refresh, sync, export, replace-all, and other supporting or broader-impact actions use `outline` by default.
+- Destructive actions use the destructive treatment, and an action group does not need a primary button when every available action is secondary or risky.
+
 Tabs:
 
 - Peer views use the shared Radix Tabs primitive so tab, tablist, tabpanel, focus movement, and trigger-to-panel relationships stay consistent.

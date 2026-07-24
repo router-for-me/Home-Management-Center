@@ -676,8 +676,6 @@ export function AccountsPanel({
   initialCredentialId,
   initialSearch = '',
   onSearchChange,
-  createOpen,
-  onCreateOpenChange,
   attentionOnly = false,
   websocketOnly = false,
   onAttentionOnlyChange,
@@ -691,8 +689,6 @@ export function AccountsPanel({
   initialCredentialId?: string
   initialSearch?: string
   onSearchChange?: (search: string) => void
-  createOpen?: boolean
-  onCreateOpenChange?: (open: boolean) => void
   attentionOnly?: boolean
   websocketOnly?: boolean
   onAttentionOnlyChange?: (attentionOnly: boolean) => void
@@ -715,17 +711,11 @@ export function AccountsPanel({
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [oauthSessions, setOAuthSessions] = useState<OAuthSessionMap>({})
   const [oauthStatuses, setOAuthStatuses] = useState<OAuthStatusMap>({})
-  const [internalCreateOpen, setInternalCreateOpen] = useState(false)
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
   const autoOpenedCredentialRef = useRef<string | null>(null)
-
-  const createSheetOpen = createOpen ?? internalCreateOpen
-  const setCreateSheetOpen = (open: boolean) => {
-    if (createOpen === undefined) setInternalCreateOpen(open)
-    onCreateOpenChange?.(open)
-  }
 
   const resolvedQuotaMap = quotaMap ?? EMPTY_QUOTA_MAP
   const resources = workbench.snapshot?.resources ?? EMPTY_CREDENTIAL_RESOURCES
@@ -1210,7 +1200,6 @@ export function AccountsPanel({
           title={t('credentialsPage.list.title')}
           actions={
             <Button
-              variant="outline"
               size="sm"
               disabled={workbench.mutating}
               onClick={() => setCreateSheetOpen(true)}

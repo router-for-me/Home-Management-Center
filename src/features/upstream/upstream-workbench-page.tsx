@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 import { useIsFetching, useQueryClient } from '@tanstack/react-query'
 
-import { Loader2, Plus, RefreshCw } from 'lucide-react'
+import { Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -37,7 +37,6 @@ export function UpstreamWorkbenchPage({
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [activeTab, setActiveTab] = useState<UpstreamTab>(tab)
-  const [accountsCreateOpen, setAccountsCreateOpen] = useState(false)
   const [attentionOnly, setAttentionOnly] = useState(false)
   const [websocketOnly, setWebsocketOnly] = useState(false)
   const [accountsStats, setAccountsStats] = useState<UpstreamAccountsStats | null>(null)
@@ -124,12 +123,6 @@ export function UpstreamWorkbenchPage({
               )}
               {syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}
             </Button>
-            {activeTab === 'accounts' ? (
-              <Button size="sm" onClick={() => setAccountsCreateOpen(true)}>
-                <Plus className="size-4" aria-hidden="true" />
-                {t('credentialsPage.actions.addCredential')}
-              </Button>
-            ) : null}
           </>
         }
       />
@@ -160,8 +153,6 @@ export function UpstreamWorkbenchPage({
             initialCredentialId={initialCredentialId}
             initialSearch={initialSearch}
             onSearchChange={onSearchChange}
-            createOpen={accountsCreateOpen}
-            onCreateOpenChange={setAccountsCreateOpen}
             attentionOnly={attentionOnly}
             websocketOnly={websocketOnly}
             onAttentionOnlyChange={setAttentionOnly}
