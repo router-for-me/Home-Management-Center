@@ -22,6 +22,7 @@ import {
   getCredentialBindingAuthId,
   getCredentialOAuthProviders,
   importVertexCredential,
+  matchesCredentialBackendError,
   startCredentialOAuth,
   submitCredentialOAuthCallback,
   toCredentialApiError,
@@ -62,28 +63,23 @@ function credentialConcurrencyPolicyQueryKey(
   ]
 }
 
-function hasCredentialBackendError(error: unknown, status: number, code: string) {
+export function shouldResetCredentialInFlightPagination(
+  error: unknown,
+  hasAccumulatedCursor: boolean,
+) {
   return (
-    error !== null &&
-    typeof error === 'object' &&
-    'status' in error &&
-    error.status === status &&
-    'backendCode' in error &&
-    String(error.backendCode) === code
+    hasAccumulatedCursor &&
+    matchesCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired')
   )
-}
-
-export function shouldResetCredentialInFlightPagination(error: unknown) {
-  return hasCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired')
 }
 
 export function shouldRetryCredentialInFlightPagination(failureCount: number, error: unknown) {
   if (failureCount >= 3 || error === null || typeof error !== 'object') return false
   const record = error as Record<string, unknown>
   if (
-    hasCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired') ||
-    hasCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_store_failed') ||
-    hasCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_load_failed')
+    matchesCredentialBackendError(error, 409, 'in_flight_snapshot_cursor_expired') ||
+    matchesCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_store_failed') ||
+    matchesCredentialBackendError(error, 500, 'in_flight_snapshot_cursor_load_failed')
   ) {
     return false
   }
@@ -193,11 +189,9 @@ export function useCredentialWorkbench() {
     },
     onSuccess: invalidate,
     onError: (error, { resource }) => {
-      const backendCode =
-        error && typeof error === 'object' && 'backendCode' in error
-          ? String(error.backendCode)
-          : null
-      if (backendCode !== 'concurrency_policy_version_conflict') return
+      if (!matchesCredentialBackendError(error, 409, 'concurrency_policy_version_conflict')) {
+        return
+      }
       void queryClient.invalidateQueries({
         queryKey: credentialConcurrencyPolicyQueryKey(
           session.baseUrl,
@@ -433,13 +427,16 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
     refetchIntervalInBackground: false,
   })
 
-  const cursorExpired = shouldResetCredentialInFlightPagination(query.error)
+  const pages = query.data?.pages ?? []
+  const cursorExpired = shouldResetCredentialInFlightPagination(
+    query.error,
+    pages.some((page) => page.snapshotCursor !== null),
+  )
   useEffect(() => {
     if (!cursorExpired) return
     void queryClient.resetQueries({ queryKey, exact: true })
   }, [cursorExpired, queryClient, queryKey])
 
-  const pages = query.data?.pages ?? []
   const latestPage = pages.at(-1) ?? null
   const requests: CredentialInFlightRequest[] = flattenCredentialInFlightRequests(pages)
   return {

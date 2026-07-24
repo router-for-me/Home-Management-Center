@@ -208,6 +208,7 @@ export type CredentialInFlightDetail = CredentialInFlightObservationMetadata & {
   total: number | null
   nextOffset: number | null
   snapshotCursor: string | null
+  snapshotCursorReadAt: string | null
   snapshotExpiresAt: string | null
   snapshotClientExpiresAtMs: number | null
   paginationLimited: boolean
@@ -343,31 +344,27 @@ function readNullableString(
   return value ? { valid: true, value } : { valid: false }
 }
 
-function readAxiosResponseHeader(response: AxiosResponse<unknown>, key: string) {
-  const headers: unknown = response.headers
-  if (!headers || typeof headers !== 'object') return null
-  const headerGetter = (headers as { get?: (name: string) => unknown }).get
-  if (typeof headerGetter === 'function') {
-    const value = headerGetter.call(headers, key)
-    return typeof value === 'string' && value.trim() ? value.trim() : null
-  }
-  const record = headers as Record<string, unknown>
-  const value = record[key] ?? record[key.toLowerCase()]
-  return typeof value === 'string' && value.trim() ? value.trim() : null
-}
-
 function estimateSnapshotClientExpiresAtMs(
-  response: AxiosResponse<unknown>,
+  snapshotCursorReadAt: string | null,
   snapshotExpiresAt: string | null,
 ) {
-  if (!snapshotExpiresAt) return null
-  const responseDate = readAxiosResponseHeader(response, 'date')
-  if (!responseDate) return null
-  const serverNowMs = Date.parse(responseDate)
+  if (!snapshotCursorReadAt || !snapshotExpiresAt) return null
+  const serverNowMs = Date.parse(snapshotCursorReadAt)
   const snapshotExpiresAtMs = Date.parse(snapshotExpiresAt)
   const remainingMs = snapshotExpiresAtMs - serverNowMs
   if (!Number.isFinite(remainingMs) || remainingMs <= 0) return null
   return Date.now() + remainingMs
+}
+
+export function matchesCredentialBackendError(error: unknown, status: number, backendCode: string) {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'status' in error &&
+    error.status === status &&
+    'backendCode' in error &&
+    String(error.backendCode) === backendCode
+  )
 }
 
 function readOptionalNullableNonNegativeInteger(
@@ -1232,13 +1229,16 @@ export async function fetchCredentialInFlightDetail(
     const total = readNonNegativeInteger(root, 'total')
     const nextOffset = readNullableNonNegativeInteger(root, 'next_offset')
     const responseCursor = readNullableString(root, 'snapshot_cursor')
+    const snapshotCursorReadAt = readNullableDateTime(root, 'snapshot_cursor_read_at')
     const snapshotExpiresAt = readNullableDateTime(root, 'snapshot_expires_at')
     if (
       total === null ||
       !nextOffset.valid ||
       !responseCursor.valid ||
+      !snapshotCursorReadAt.valid ||
       !snapshotExpiresAt.valid ||
       normalizedRequests.length > credentialInFlightPageSize ||
+      (responseCursor.value === null) !== (snapshotCursorReadAt.value === null) ||
       (responseCursor.value === null) !== (snapshotExpiresAt.value === null)
     ) {
       invalidCredentialInFlightContract()
@@ -1276,9 +1276,10 @@ export async function fetchCredentialInFlightDetail(
       total,
       nextOffset: nextOffset.value,
       snapshotCursor: responseCursor.value,
+      snapshotCursorReadAt: snapshotCursorReadAt.value,
       snapshotExpiresAt: snapshotExpiresAt.value,
       snapshotClientExpiresAtMs: estimateSnapshotClientExpiresAtMs(
-        response,
+        snapshotCursorReadAt.value,
         snapshotExpiresAt.value,
       ),
       paginationLimited: false,
@@ -1295,6 +1296,7 @@ export async function fetchCredentialInFlightDetail(
     total: null,
     nextOffset: null,
     snapshotCursor: null,
+    snapshotCursorReadAt: null,
     snapshotExpiresAt: null,
     snapshotClientExpiresAtMs: null,
     paginationLimited,

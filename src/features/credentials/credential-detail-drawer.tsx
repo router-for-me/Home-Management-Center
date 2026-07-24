@@ -56,6 +56,7 @@ import {
   type CredentialInFlightSummary,
   type CredentialMetadataInput,
   type CredentialResource,
+  matchesCredentialBackendError,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
 import type { QuotaCredential, QuotaResetCredits, QuotaWindow } from '@/lib/api/management/quota'
@@ -391,19 +392,19 @@ function MetadataTab({
           : {}),
       })
     } catch (error) {
-      const backendCode =
-        error && typeof error === 'object' && 'backendCode' in error
-          ? String(error.backendCode)
-          : null
+      const versionConflict = matchesCredentialBackendError(
+        error,
+        409,
+        'concurrency_policy_version_conflict',
+      )
       setLocalError({
         credentialId,
-        kind: backendCode === 'concurrency_policy_version_conflict' ? 'version-conflict' : 'other',
-        message:
-          backendCode === 'concurrency_policy_version_conflict'
-            ? t('credentialsPage.concurrency.versionConflict')
-            : error instanceof Error
-              ? error.message
-              : String(error),
+        kind: versionConflict ? 'version-conflict' : 'other',
+        message: versionConflict
+          ? t('credentialsPage.concurrency.versionConflict')
+          : error instanceof Error
+            ? error.message
+            : String(error),
       })
     }
   }

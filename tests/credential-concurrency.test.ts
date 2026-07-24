@@ -32,6 +32,7 @@ import {
   fetchCredentialInFlightDetail,
   fetchCredentialInFlightSummary,
   fetchCredentialSnapshot,
+  matchesCredentialBackendError,
   mergeCredentialConcurrencySummary,
   updateCredentialMetadata,
 } from '../src/lib/api/management/credentials'
@@ -45,17 +46,12 @@ afterEach(() => {
   axios.defaults.adapter = defaultAxiosAdapter
 })
 
-function response(
-  config: InternalAxiosRequestConfig,
-  data: unknown,
-  status = 200,
-  headers: Record<string, string> = {},
-) {
+function response(config: InternalAxiosRequestConfig, data: unknown, status = 200) {
   return {
     data,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
-    headers,
+    headers: {},
     config,
   }
 }
@@ -113,6 +109,7 @@ function normalizedDetailPage(
     total: requests.length,
     nextOffset: null,
     snapshotCursor: null,
+    snapshotCursorReadAt: null,
     snapshotExpiresAt: null,
     snapshotClientExpiresAtMs: null,
     paginationLimited: false,
@@ -394,33 +391,25 @@ describe('credential concurrency v2 contract', () => {
     const adapter: AxiosAdapter = async (config) => {
       capturedParams.push(config.params)
       if ((config.params as Record<string, unknown>).snapshot_cursor) {
-        return response(
-          config,
-          {
-            ...observationMetadata(),
-            items: secondItems,
-            total: 75,
-            next_offset: null,
-            snapshot_cursor: 'stable-cursor',
-            snapshot_expires_at: '2026-07-21T12:02:00Z',
-          },
-          200,
-          { date: 'Tue, 21 Jul 2026 12:00:00 GMT' },
-        )
-      }
-      return response(
-        config,
-        {
+        return response(config, {
           ...observationMetadata(),
-          items: firstItems,
+          items: secondItems,
           total: 75,
-          next_offset: 50,
+          next_offset: null,
           snapshot_cursor: 'stable-cursor',
+          snapshot_cursor_read_at: '2026-07-21T12:00:30Z',
           snapshot_expires_at: '2026-07-21T12:02:00Z',
-        },
-        200,
-        { date: 'Tue, 21 Jul 2026 12:00:00 GMT' },
-      )
+        })
+      }
+      return response(config, {
+        ...observationMetadata(),
+        items: firstItems,
+        total: 75,
+        next_offset: 50,
+        snapshot_cursor: 'stable-cursor',
+        snapshot_cursor_read_at: '2026-07-21T12:00:00Z',
+        snapshot_expires_at: '2026-07-21T12:02:00Z',
+      })
     }
     axios.defaults.adapter = adapter
 
@@ -435,6 +424,7 @@ describe('credential concurrency v2 contract', () => {
       expectedTotal: firstPage.total,
       expectedSnapshotExpiresAt: firstPage.snapshotExpiresAt,
     })
+    const afterSecondPage = Date.now()
 
     expect(capturedParams).toEqual([
       { credential_id: 'auth-1', limit: 50, offset: 0, stable_snapshot: true },
@@ -444,8 +434,12 @@ describe('credential concurrency v2 contract', () => {
     expect(secondPage.requests[0]?.requestId).toBe('snapshot-request-50')
     expect(secondPage.nextOffset).toBeNull()
     expect(secondPage.total).toBe(75)
+    expect(firstPage.snapshotCursorReadAt).toBe('2026-07-21T12:00:00Z')
+    expect(secondPage.snapshotCursorReadAt).toBe('2026-07-21T12:00:30Z')
     expect(firstPage.snapshotClientExpiresAtMs).toBeGreaterThanOrEqual(beforeFirstPage + 120_000)
     expect(firstPage.snapshotClientExpiresAtMs).toBeLessThanOrEqual(afterFirstPage + 120_000)
+    expect(secondPage.snapshotClientExpiresAtMs).toBeGreaterThanOrEqual(afterFirstPage + 90_000)
+    expect(secondPage.snapshotClientExpiresAtMs).toBeLessThanOrEqual(afterSecondPage + 90_000)
   })
 
   test('rejects incomplete or drifting stable snapshot pages', async () => {
@@ -461,8 +455,21 @@ describe('credential concurrency v2 contract', () => {
       ...observationMetadata(),
       items: firstPageItems,
       total: 75,
+      next_offset: 50,
+      snapshot_cursor: 'stable-cursor',
+      snapshot_expires_at: '2026-07-21T12:02:00Z',
+    })
+    await expect(
+      fetchCredentialInFlightDetail(session, 'auth-1', { stableSnapshot: true }),
+    ).rejects.toThrow('invalid credential in-flight response')
+
+    useResponse({
+      ...observationMetadata(),
+      items: firstPageItems,
+      total: 75,
       next_offset: null,
       snapshot_cursor: null,
+      snapshot_cursor_read_at: null,
       snapshot_expires_at: null,
     })
     await expect(
@@ -483,6 +490,7 @@ describe('credential concurrency v2 contract', () => {
       total: 76,
       next_offset: 75,
       snapshot_cursor: 'stable-cursor',
+      snapshot_cursor_read_at: '2026-07-21T12:00:30Z',
       snapshot_expires_at: '2026-07-21T12:02:00Z',
     })
     await expect(
@@ -500,6 +508,7 @@ describe('credential concurrency v2 contract', () => {
       total: 75,
       next_offset: null,
       snapshot_cursor: 'stable-cursor',
+      snapshot_cursor_read_at: '2026-07-21T12:00:30Z',
       snapshot_expires_at: '2026-07-21T12:03:00Z',
     })
     await expect(
@@ -534,11 +543,13 @@ describe('credential concurrency v2 contract', () => {
         total: 2,
         nextOffset: 1,
         snapshotCursor: 'stable-cursor',
+        snapshotCursorReadAt: '2026-07-21T12:00:00Z',
         snapshotExpiresAt: '2026-07-21T12:02:00Z',
       }),
       normalizedDetailPage([repeated[1]!], {
         total: 2,
         snapshotCursor: 'stable-cursor',
+        snapshotCursorReadAt: '2026-07-21T12:00:30Z',
         snapshotExpiresAt: '2026-07-21T12:02:00Z',
       }),
     ])
@@ -769,6 +780,7 @@ describe('credential concurrency v2 contract', () => {
         total: 2,
         nextOffset: 1,
         snapshotCursor: 'expired-cursor',
+        snapshotCursorReadAt: '1999-12-31T23:58:00Z',
         snapshotExpiresAt: '2000-01-01T00:00:00Z',
         snapshotClientExpiresAtMs: Date.now() - 1,
       },
@@ -793,7 +805,7 @@ describe('credential concurrency v2 contract', () => {
     expect(markup).not.toContain('Load more')
   })
 
-  test('keeps load more available when no server-relative cursor deadline is available', async () => {
+  test('keeps load more available when a cursor deadline cannot be safely derived', async () => {
     await i18n.changeLanguage('en')
     const detail = normalizedDetailPage(
       [
@@ -809,6 +821,7 @@ describe('credential concurrency v2 contract', () => {
         total: 2,
         nextOffset: 1,
         snapshotCursor: 'clock-skew-safe-cursor',
+        snapshotCursorReadAt: '2000-01-01T00:00:00Z',
         snapshotExpiresAt: '2000-01-01T00:00:00Z',
         snapshotClientExpiresAtMs: null,
       },
@@ -1028,21 +1041,56 @@ describe('credential concurrency v2 contract', () => {
 
   test('resets cursor pages only for the explicit cursor-expired backend error', () => {
     expect(
-      shouldResetCredentialInFlightPagination({
-        status: 409,
-        backendCode: 'in_flight_snapshot_cursor_expired',
-      }),
+      shouldResetCredentialInFlightPagination(
+        {
+          status: 409,
+          backendCode: 'in_flight_snapshot_cursor_expired',
+        },
+        true,
+      ),
     ).toBeTrue()
     expect(
-      shouldResetCredentialInFlightPagination({
-        status: 500,
-        backendCode: 'in_flight_snapshot_cursor_expired',
-      }),
+      shouldResetCredentialInFlightPagination(
+        {
+          status: 500,
+          backendCode: 'in_flight_snapshot_cursor_expired',
+        },
+        true,
+      ),
     ).toBeFalse()
     expect(
-      shouldResetCredentialInFlightPagination({
-        backendCode: 'in_flight_snapshot_cursor_load_failed',
-      }),
+      shouldResetCredentialInFlightPagination(
+        {
+          backendCode: 'in_flight_snapshot_cursor_load_failed',
+        },
+        true,
+      ),
+    ).toBeFalse()
+    expect(
+      shouldResetCredentialInFlightPagination(
+        {
+          status: 409,
+          backendCode: 'in_flight_snapshot_cursor_expired',
+        },
+        false,
+      ),
+    ).toBeFalse()
+  })
+
+  test('recognizes policy conflicts only from the documented status and code pair', () => {
+    expect(
+      matchesCredentialBackendError(
+        { status: 409, backendCode: 'concurrency_policy_version_conflict' },
+        409,
+        'concurrency_policy_version_conflict',
+      ),
+    ).toBeTrue()
+    expect(
+      matchesCredentialBackendError(
+        { status: 500, backendCode: 'concurrency_policy_version_conflict' },
+        409,
+        'concurrency_policy_version_conflict',
+      ),
     ).toBeFalse()
   })
 
