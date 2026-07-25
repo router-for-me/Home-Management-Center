@@ -4598,10 +4598,8 @@ export const zhCN = {
         form: {
           createTitle: '添加认证规则',
           editTitle: '编辑认证规则',
-          description: '定义请求前缀、请求类型和认证方式。',
           writeOnlyHint: '凭据值仅可写入并由 Home 加密保存，浏览器永远不会读取明文。',
           matchHint: '使用绝对 HTTPS 前缀，不能包含用户名、密码、查询参数或片段。',
-          enabledHint: '停用的规则仍会保留，但不会应用。',
           applyToHint: '全部不选择时，规则会应用于所有请求类型。',
           credentialsRetainedHint: '凭据已配置。秘密字段留空即可保留已保存的值。',
         },

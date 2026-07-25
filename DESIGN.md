@@ -181,6 +181,7 @@ Config workspace:
 Sheets and dialogs:
 
 - Sheets should slide from the side with a clear header, body, and optional footer.
+- When a sheet drills into a secondary task, replace its header in place and keep back navigation at the header start; do not stack a second header inside the body.
 - Leave enough spacing between sheet header actions and the first body control to avoid misclicks.
 - Dialogs and confirm flows need stronger dark-mode contrast than the page background.
 - Destructive confirms should name the object or operation being affected.
