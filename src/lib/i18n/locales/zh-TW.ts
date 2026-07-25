@@ -4598,10 +4598,8 @@ export const zhTW = {
         form: {
           createTitle: '新增認證規則',
           editTitle: '編輯認證規則',
-          description: '定義請求前綴、請求類型和認證方式。',
           writeOnlyHint: '憑證值只能寫入並由 Home 加密保存，瀏覽器永遠不會讀取明文。',
           matchHint: '使用絕對 HTTPS 前綴，不得包含使用者名稱、密碼、查詢參數或片段。',
-          enabledHint: '停用的規則仍會保留，但不會套用。',
           applyToHint: '全部不選擇時，規則會套用到所有請求類型。',
           credentialsRetainedHint: '憑證已設定。秘密欄位留空即可保留已保存的值。',
         },

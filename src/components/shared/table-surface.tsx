@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 
@@ -56,6 +56,10 @@ function TableSurfaceHeader({
   )
 }
 
+function TableSurfaceContent({ className, ...props }: ComponentProps<'div'>) {
+  return <div {...props} data-slot="table-surface-content" className={cn('p-4', className)} />
+}
+
 function TablePaginationStatus({
   text,
   announcementKey,
@@ -94,6 +98,7 @@ function TablePaginationStatus({
 export {
   TablePaginationStatus,
   TableSurface,
+  TableSurfaceContent,
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,

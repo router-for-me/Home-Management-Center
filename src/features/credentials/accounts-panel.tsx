@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import {
   TableSurface,
+  TableSurfaceContent,
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -1249,7 +1250,7 @@ export function AccountsPanel({
           onWebsocketOnlyChange={(value) => onWebsocketOnlyChange?.(value)}
           onClearFilters={handleClearFilters}
         />
-        <div className="p-4">
+        <TableSurfaceContent>
           {selectedResourceIds.size > 0 ? (
             <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
@@ -1337,7 +1338,7 @@ export function AccountsPanel({
               {t('upstreamPage.quota.truncated', { count: upstreamQuotaListLimit })}
             </p>
           ) : null}
-        </div>
+        </TableSurfaceContent>
       </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>

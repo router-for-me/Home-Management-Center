@@ -165,6 +165,7 @@ Dashboard:
 Resource pages:
 
 - Use list/table plus detail sheet patterns for providers, credentials, access keys, usage, call diagnostics, runtime logs, and nodes.
+- Keep resource headers full-width. Place inset resource content in a shared padded layer with its own visual boundary; treat full-bleed layouts as explicit exceptions.
 - Place create/import actions close to the resource header.
 - Put view, edit, and delete actions in explicit operation columns when row actions are not obvious.
 - Use component-library confirmation dialogs for destructive actions.
@@ -181,6 +182,7 @@ Config workspace:
 Sheets and dialogs:
 
 - Sheets should slide from the side with a clear header, body, and optional footer.
+- When a sheet drills into a secondary task, replace its header in place and keep back navigation at the header start; do not stack a second header inside the body.
 - Leave enough spacing between sheet header actions and the first body control to avoid misclicks.
 - Dialogs and confirm flows need stronger dark-mode contrast than the page background.
 - Destructive confirms should name the object or operation being affected.

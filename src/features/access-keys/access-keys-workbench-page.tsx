@@ -22,7 +22,11 @@ import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
-import { TableSurface, TableSurfaceHeader } from '@/components/shared/table-surface'
+import {
+  TableSurface,
+  TableSurfaceContent,
+  TableSurfaceHeader,
+} from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -156,13 +160,13 @@ function AccessKeysLoadingState() {
           }
           actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center"
         />
-        <div className="grid gap-3 p-4">
+        <TableSurfaceContent className="grid gap-3">
           <Skeleton className="h-10 rounded-md" />
           <Skeleton className="h-12 rounded-md" />
           <Skeleton className="h-12 rounded-md" />
           <Skeleton className="h-12 rounded-md" />
           <Skeleton className="h-12 rounded-md" />
-        </div>
+        </TableSurfaceContent>
       </TableSurface>
     </section>
   )
@@ -1043,7 +1047,7 @@ export function AccessKeysWorkbenchPage() {
           }
           actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center"
         />
-        <div className="p-4">
+        <TableSurfaceContent>
           {selectedKeyIds.size > 0 ? (
             <div className="bg-muted/60 mb-3 flex flex-col gap-3 rounded-md border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
               <span className="text-sm font-medium">
@@ -1098,7 +1102,7 @@ export function AccessKeysWorkbenchPage() {
               void handleCopyIdentifier(resource)
             }}
           />
-        </div>
+        </TableSurfaceContent>
       </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>

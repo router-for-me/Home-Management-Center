@@ -41,6 +41,7 @@ import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   TablePaginationStatus,
   TableSurface,
+  TableSurfaceContent,
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -1241,7 +1242,7 @@ function ModelPricesTab({
             </div>
           }
         />
-        <div className="p-4">
+        <TableSurfaceContent>
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <div className="relative w-full sm:w-72 sm:shrink-0">
               <Search
@@ -1466,7 +1467,7 @@ function ModelPricesTab({
               </TableBody>
             </Table>
           )}
-        </div>
+        </TableSurfaceContent>
       </TableSurface>
 
       <Dialog

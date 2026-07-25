@@ -1,18 +1,50 @@
 import type { ComponentProps } from 'react'
 
+import { ChevronLeft } from 'lucide-react'
+
+import { Button } from '@/components/ui/button'
 import { SheetContent, SheetFooter, SheetHeader } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+
+type DrawerScaffoldBackAction = {
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}
+
+type DrawerScaffoldHeaderProps = ComponentProps<typeof SheetHeader> & {
+  back?: DrawerScaffoldBackAction
+}
 
 function DrawerScaffoldContent({ className, ...props }: ComponentProps<typeof SheetContent>) {
   return <SheetContent className={cn('w-full gap-0 overflow-hidden p-0', className)} {...props} />
 }
 
-function DrawerScaffoldHeader({ className, ...props }: ComponentProps<typeof SheetHeader>) {
+function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerScaffoldHeaderProps) {
   return (
     <SheetHeader
       className={cn('bg-popover shrink-0 border-b p-5 shadow-[0_1px_0_var(--border)]', className)}
       {...props}
-    />
+    >
+      {back ? (
+        <div className="flex min-w-0 items-start gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            data-slot="drawer-scaffold-back-button"
+            aria-label={back.label}
+            disabled={back.disabled}
+            onClick={back.onClick}
+          >
+            <ChevronLeft className="size-5" aria-hidden="true" />
+          </Button>
+          <div className="grid min-h-9 min-w-0 flex-1 content-center gap-1.5">{children}</div>
+        </div>
+      ) : (
+        children
+      )}
+    </SheetHeader>
   )
 }
 
