@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 import { AlertTriangle, Info, Loader2, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -26,6 +28,9 @@ import {
   downloadBlob,
   getObservabilityVerdictBadgeClassName,
 } from '@/features/observability/observability-components'
+import { RequestEventsPage } from '@/features/request-events/request-events-page'
+import type { UsageWorkspaceView } from '@/features/usage-observability/usage-route'
+import { UsageWorkspaceShell } from '@/features/usage-observability/usage-workspace-shell'
 import { useUsageObservabilityWorkbench } from '@/features/usage-observability/use-usage-observability-workbench'
 import type { RuntimeMode } from '@/lib/api/management/types'
 import type { CapabilityMap } from '@/lib/api/management/types'
@@ -212,7 +217,13 @@ function UsageObservabilityHeader({
   )
 }
 
-export function UsageObservabilityPage() {
+function UsageOverviewPage({
+  view,
+  onViewChange,
+}: {
+  view: UsageWorkspaceView
+  onViewChange: (view: UsageWorkspaceView) => void
+}) {
   const { t } = useTranslation()
   const workbench = useUsageObservabilityWorkbench()
   const capabilities = workbench.capabilities
@@ -221,19 +232,26 @@ export function UsageObservabilityPage() {
     !capabilities.usageRecords &&
     !capabilities.usageAggregates &&
     !capabilities.oauthUsage
+  const renderState = (content: ReactNode) => (
+    <UsageWorkspaceShell view={view} onViewChange={onViewChange}>
+      {content}
+    </UsageWorkspaceShell>
+  )
 
   if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
-    return <ObservabilityLoadingState />
+    return renderState(<ObservabilityLoadingState />)
   }
-  if (!workbench.connected) return <ObservabilityDisconnectedState copyKey="usagePage" />
-  if (workbench.isPending) return <ObservabilityLoadingState />
+  if (!workbench.connected) {
+    return renderState(<ObservabilityDisconnectedState copyKey="usagePage" />)
+  }
+  if (workbench.isPending) return renderState(<ObservabilityLoadingState />)
   if (workbench.isError || !workbench.snapshot) {
-    return (
+    return renderState(
       <ObservabilityErrorState
         copyKey="usagePage"
         errorMessage={workbench.errorMessage}
         onRetry={workbench.refetch}
-      />
+      />,
     )
   }
 
@@ -270,16 +288,20 @@ export function UsageObservabilityPage() {
   }
 
   return (
-    <section className="grid w-full gap-4">
-      <UsageObservabilityHeader
-        snapshot={snapshot}
-        capabilities={capabilities}
-        runtimeMode={workbench.runtimeMode}
-        manualRefreshing={workbench.manualRefreshing}
-        autoRefresh={workbench.autoRefresh}
-        onRefresh={workbench.refetch}
-      />
-
+    <UsageWorkspaceShell
+      view={view}
+      onViewChange={onViewChange}
+      header={
+        <UsageObservabilityHeader
+          snapshot={snapshot}
+          capabilities={capabilities}
+          runtimeMode={workbench.runtimeMode}
+          manualRefreshing={workbench.manualRefreshing}
+          autoRefresh={workbench.autoRefresh}
+          onRefresh={workbench.refetch}
+        />
+      }
+    >
       <LiveRefreshStatusNotice
         id="usage-auto-refresh-status"
         mode="auto"
@@ -357,23 +379,25 @@ export function UsageObservabilityPage() {
         />
       ) : null}
 
-      <RequestRecordsTable
-        records={snapshot.records}
-        filters={workbench.filters}
-        filterOptions={snapshot.filterOptions}
-        pageSizeOptions={workbench.recordPageSizeOptions}
-        fetching={workbench.isFetching}
-        mutating={workbench.mutating}
-        canExport={capabilities.usageExport}
-        isExporting={workbench.isExportingUsage}
-        unavailable={workbench.isUsageRecordsUnavailable}
-        errorMessage={workbench.usageRecordsErrorMessage}
-        onInspect={(record) => workbench.selectRecord(record.id)}
-        onFilterChange={workbench.updateFilters}
-        onLimitChange={workbench.setRecordLimit}
-        onOffsetChange={workbench.setRecordOffset}
-        onExport={() => void handleExportUsage()}
-      />
+      {!capabilities.requestEvents ? (
+        <RequestRecordsTable
+          records={snapshot.records}
+          filters={workbench.filters}
+          filterOptions={snapshot.filterOptions}
+          pageSizeOptions={workbench.recordPageSizeOptions}
+          fetching={workbench.isFetching}
+          mutating={workbench.mutating}
+          canExport={capabilities.usageExport}
+          isExporting={workbench.isExportingUsage}
+          unavailable={workbench.isUsageRecordsUnavailable}
+          errorMessage={workbench.usageRecordsErrorMessage}
+          onInspect={(record) => workbench.selectRecord(record.id)}
+          onFilterChange={workbench.updateFilters}
+          onLimitChange={workbench.setRecordLimit}
+          onOffsetChange={workbench.setRecordOffset}
+          onExport={() => void handleExportUsage()}
+        />
+      ) : null}
 
       <CredentialUsageTable
         response={workbench.credentialUsage}
@@ -388,20 +412,36 @@ export function UsageObservabilityPage() {
         onOffsetChange={workbench.setCredentialUsageOffset}
       />
 
-      <RequestDetailSheet
-        detail={workbench.selectedRecordDetail}
-        pending={workbench.isRecordDetailPending}
-        error={workbench.recordDetailError}
-        mutating={workbench.mutating}
-        downloadingRequestLogId={workbench.downloadingRequestLogId}
-        isDownloadingRequestLog={workbench.isDownloadingRequestLog}
-        onOpenChange={(open) => {
-          if (!open) workbench.clearSelectedRecord()
-        }}
-        onDownloadRequestLog={(requestId, homeIp, homePort) =>
-          void handleDownloadRequestLog(requestId, homeIp, homePort)
-        }
-      />
-    </section>
+      {!capabilities.requestEvents ? (
+        <RequestDetailSheet
+          detail={workbench.selectedRecordDetail}
+          pending={workbench.isRecordDetailPending}
+          error={workbench.recordDetailError}
+          mutating={workbench.mutating}
+          downloadingRequestLogId={workbench.downloadingRequestLogId}
+          isDownloadingRequestLog={workbench.isDownloadingRequestLog}
+          onOpenChange={(open) => {
+            if (!open) workbench.clearSelectedRecord()
+          }}
+          onDownloadRequestLog={(requestId, homeIp, homePort) =>
+            void handleDownloadRequestLog(requestId, homeIp, homePort)
+          }
+        />
+      ) : null}
+    </UsageWorkspaceShell>
   )
+}
+
+export function UsageObservabilityPage({
+  view,
+  onViewChange,
+}: {
+  view: UsageWorkspaceView
+  onViewChange: (view: UsageWorkspaceView) => void
+}) {
+  if (view === 'requests') {
+    return <RequestEventsPage view={view} onViewChange={onViewChange} />
+  }
+
+  return <UsageOverviewPage view={view} onViewChange={onViewChange} />
 }

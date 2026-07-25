@@ -39,8 +39,7 @@ export const zhCN = {
       billing: '财务与报表',
       config: '系统配置',
       plugins: '插件',
-      usage: '请求用量',
-      requestEvents: '请求事件',
+      usage: '用量与请求',
       diagnostics: '调用诊断',
       logs: '运行日志',
       usageLogs: '观测数据',
@@ -61,8 +60,7 @@ export const zhCN = {
       billing: '计费与报表',
       config: '网关核心设置',
       plugins: '插件商店与节点回报',
-      usage: '用量趋势与成本统计',
-      requestEvents: '请求级事件日志',
+      usage: '用量分析与请求排障',
       diagnostics: '调用健康与请求日志',
       logs: '运行与请求错误日志',
       usageLogs: '用量、诊断、日志',
@@ -2230,7 +2228,7 @@ export const zhCN = {
         empty: '当前筛选条件下没有访问密钥。',
         index: '序号',
         identity: '标识 / 密钥',
-        identifierTooltip: '稳定标识用于关联用量、计费和请求事件中的同一个访问密钥。',
+        identifierTooltip: '稳定标识用于关联用量、计费和请求记录中的同一个访问密钥。',
         identifierUnavailable: '无稳定标识',
         key: '密钥',
         owner: '所属用户',
@@ -3264,6 +3262,11 @@ export const zhCN = {
       },
     },
     usagePage: {
+      tabs: {
+        label: '用量与请求视图',
+        overview: '概览',
+        requests: '请求记录',
+      },
       disconnected: {
         title: '连接管理端运行时',
         description:
@@ -3277,10 +3280,10 @@ export const zhCN = {
       },
       verdict: {
         ready: {
-          title: '请求用量数据已就绪',
+          title: '用量概览已就绪',
           badge: '可分析',
           description:
-            '已加载请求总览、请求明细、聚合排行与执行凭证归因，可用于判断请求量、Token、成本和延迟。',
+            '已加载请求总览、聚合排行与执行凭证归因，可用于判断请求量、Token、成本和延迟。',
         },
         empty: {
           title: '暂无请求用量',
@@ -3354,40 +3357,39 @@ export const zhCN = {
     requestEventsPage: {
       disconnected: {
         title: '连接管理端运行时',
-        description:
-          '请求事件来自 Management API。连接运行时后，才能查看请求级事件、执行节点、凭证、错误和日志关联。',
+        description: '连接运行时后，才能查看具体请求、执行节点、凭证、错误和关联日志。',
         action: '连接运行时',
       },
       error: {
-        title: '无法加载请求事件',
-        description: '请检查管理端地址、management key 和请求事件接口可用性。',
+        title: '无法加载请求记录',
+        description: '请检查连接状态后重试。',
         retry: '重试',
       },
       capabilities: {
-        events: '事件列表',
-        details: '事件详情',
+        events: '请求列表',
+        details: '请求详情',
         export: '导出',
       },
       verdict: {
         ready: {
-          title: '请求事件日志已就绪',
+          title: '请求记录已就绪',
           badge: '可排障',
-          description: '可按请求、模型、节点、凭证、状态和延迟排查请求事件。',
+          description: '可按请求、模型、节点、凭证、状态和延迟定位具体请求。',
         },
         empty: {
-          title: '暂无请求事件',
+          title: '暂无请求记录',
           badge: '暂无数据',
-          description: '请求事件能力已可用，但当前时间范围没有事件。可调整范围或刷新后再查看。',
+          description: '当前时间范围没有请求记录。可调整范围或刷新后再查看。',
         },
         partial: {
-          title: '请求事件部分加载',
+          title: '请求记录部分加载',
           badge: '部分加载',
-          description: '部分请求事件范围加载失败，页面会继续展示已返回的事件事实。',
+          description: '部分请求记录加载失败，页面会继续展示已返回的数据。',
         },
         unsupported: {
-          title: '请求事件不可用',
+          title: '请求记录不可用',
           badge: '不可用',
-          description: '{{mode}} 未提供请求事件接口，页面不会展示推测数据。',
+          description: '{{mode}} 暂不支持请求记录查询。',
         },
       },
       actions: {
@@ -3476,15 +3478,15 @@ export const zhCN = {
         ipNotRecorded: '未记录客户端 IP',
       },
       table: {
-        title: '请求事件',
+        title: '请求记录',
         columnsMenu: '显示列',
         ttft: 'TTFT {{value}}',
-        emptyTitle: '没有匹配的请求事件',
-        emptyDescription: '当前筛选条件下没有事件。可调整时间范围、状态或节点筛选。',
+        emptyTitle: '没有匹配的请求记录',
+        emptyDescription: '当前筛选条件下没有请求记录。可调整时间范围、状态或节点筛选。',
         clearFilters: '清空筛选',
-        errorTitle: '请求事件加载失败',
-        unsupportedTitle: '请求事件接口不可用',
-        unsupportedDescription: '当前运行时未提供 /request-events，等待后端补齐后可使用此页面。',
+        errorTitle: '请求记录加载失败',
+        unsupportedTitle: '请求记录不可用',
+        unsupportedDescription: '当前运行时暂不支持请求记录查询，可返回概览查看可用的用量数据。',
         range: '第 {{start}}-{{end}} 条，共 {{total}} 条',
         pageSize: '每页条数',
         previous: '上一页',
@@ -3506,10 +3508,10 @@ export const zhCN = {
         },
       },
       detail: {
-        title: '请求事件详情',
-        loading: '正在加载事件详情…',
-        errorTitle: '事件详情加载失败',
-        requestLogUnavailable: '此事件没有可下载的请求日志。',
+        title: '请求详情',
+        loading: '正在加载请求详情…',
+        errorTitle: '请求详情加载失败',
+        requestLogUnavailable: '此请求没有可下载的请求日志。',
         tokens: 'Token',
         error: '错误摘要',
         payload: 'Payload 摘要',
@@ -3551,7 +3553,7 @@ export const zhCN = {
         },
       },
       toast: {
-        exportDownloaded: '请求事件已导出。',
+        exportDownloaded: '请求记录已导出。',
         logDownloaded: '请求日志已下载。',
       },
     },
@@ -3752,7 +3754,7 @@ export const zhCN = {
         usageProviderHealth: '供应商健康',
         usageCredentialHealth: '凭证健康',
         usageRealtime: '实时快照',
-        requestEvents: '请求事件',
+        requestEvents: '请求记录',
         requestLogIndex: '请求日志文件',
         logs: '运行日志',
         requestErrorLogs: '错误日志',
