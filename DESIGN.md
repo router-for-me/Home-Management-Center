@@ -165,6 +165,7 @@ Dashboard:
 Resource pages:
 
 - Use list/table plus detail sheet patterns for providers, credentials, access keys, usage, call diagnostics, runtime logs, and nodes.
+- Keep resource headers full-width. Place inset resource content in a shared padded layer with its own visual boundary; treat full-bleed layouts as explicit exceptions.
 - Place create/import actions close to the resource header.
 - Put view, edit, and delete actions in explicit operation columns when row actions are not obvious.
 - Use component-library confirmation dialogs for destructive actions.

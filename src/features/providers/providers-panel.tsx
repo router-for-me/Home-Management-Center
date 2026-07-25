@@ -22,6 +22,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   TableSurface,
+  TableSurfaceContent,
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -2432,7 +2433,7 @@ export function ProvidersPanel({
             </div>
           ) : null}
 
-          <div className="p-4">
+          <TableSurfaceContent>
             <ProviderResourceTable
               resources={activeResources}
               unsupported={activeGroup.issue?.kind === 'unsupported'}
@@ -2442,7 +2443,7 @@ export function ProvidersPanel({
               onEditResource={openEditPanel}
               onViewResource={openDetailPanel}
             />
-          </div>
+          </TableSurfaceContent>
         </TableSurface>
       </div>
 
