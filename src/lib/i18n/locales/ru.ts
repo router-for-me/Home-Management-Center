@@ -1947,8 +1947,6 @@ export const ru = {
       actions: {
         addCredential: 'Добавить credential',
         detail: 'Открыть',
-        quota: 'Квота',
-        models: 'Модели',
         upload: 'Загрузить JSON',
         save: 'Сохранить метаданные',
         viewQuota: 'Открыть квоту',

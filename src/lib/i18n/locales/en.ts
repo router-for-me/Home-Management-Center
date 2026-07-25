@@ -1948,8 +1948,6 @@ export const en = {
       actions: {
         addCredential: 'Add credential',
         detail: 'View',
-        quota: 'Quota',
-        models: 'Models',
         upload: 'Upload JSON',
         save: 'Save metadata',
         viewQuota: 'View quota',

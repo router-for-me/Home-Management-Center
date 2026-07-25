@@ -3,12 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
-  CircleGauge,
   Download,
   Eye,
   FileJson,
   Loader2,
-  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -371,6 +369,72 @@ export function AccountsToolbar({
   )
 }
 
+export function CredentialRowActions({
+  mutating,
+  onDelete,
+  onDownload,
+  onView,
+}: {
+  mutating: boolean
+  onDelete: () => void
+  onDownload: () => void
+  onView: () => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <div className="table-action-cell-content gap-1">
+      <Button
+        type="button"
+        variant="text"
+        size="sm"
+        className="gap-1 px-1"
+        aria-label={t('credentialsPage.actions.detail')}
+        onClick={onView}
+      >
+        <Eye className="size-4" aria-hidden="true" />
+        {t('credentialsPage.actions.detail')}
+      </Button>
+      <Button
+        type="button"
+        variant="text"
+        size="sm"
+        className="gap-1 px-1"
+        disabled={mutating}
+        aria-label={t('credentialsPage.actions.download')}
+        onClick={onDownload}
+      >
+        <Download className="size-4" aria-hidden="true" />
+        {t('credentialsPage.actions.download')}
+      </Button>
+      <Button
+        type="button"
+        variant="destructiveText"
+        size="sm"
+        className="gap-1 px-1"
+        disabled={mutating}
+        aria-label={t('credentialsPage.actions.delete')}
+        onClick={onDelete}
+      >
+        <Trash2 className="size-4" aria-hidden="true" />
+        {t('credentialsPage.actions.delete')}
+      </Button>
+    </div>
+  )
+}
+
+export function getCredentialActionColumnWidth(language?: string) {
+  const normalizedLanguage = language?.toLowerCase() ?? ''
+
+  if (normalizedLanguage.startsWith('zh')) return 224
+  if (normalizedLanguage.startsWith('ru')) return 284
+  return 260
+}
+
+export function getCredentialTableMinWidth(language: string | undefined, showInFlight: boolean) {
+  return (showInFlight ? 1120 : 1010) + getCredentialActionColumnWidth(language)
+}
+
 function CredentialList({
   resources,
   selectedResourceId,
@@ -412,7 +476,9 @@ function CredentialList({
   onToggleAll: () => void
   onToggleStatus: (resource: CredentialResource, disabled: boolean) => void
 }) {
-  const { t } = useTranslation()
+  const { i18n, t } = useTranslation()
+  const language = i18n.resolvedLanguage ?? i18n.language
+  const actionColumnWidth = getCredentialActionColumnWidth(language)
   const allSelected =
     resources.length > 0 && resources.every((resource) => selectedResourceIds.has(resource.id))
   const partiallySelected =
@@ -446,7 +512,8 @@ function CredentialList({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className={cn('table-fixed', showInFlight ? 'min-w-[1410px]' : 'min-w-[1300px]')}
+      className="table-fixed"
+      style={{ minWidth: getCredentialTableMinWidth(language, showInFlight) }}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -457,7 +524,7 @@ function CredentialList({
         {showInFlight ? <col className="w-[110px]" /> : null}
         <col className="w-[96px]" />
         <col className="w-[112px]" />
-        <col className="w-[290px]" />
+        <col style={{ width: actionColumnWidth }} />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
@@ -476,7 +543,10 @@ function CredentialList({
           {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
           <TableHead>{t('credentialsPage.list.ws')}</TableHead>
           <TableHead>{t('credentialsPage.list.priority')}</TableHead>
-          <TableHead className="table-sticky-action-head w-[290px] text-right">
+          <TableHead
+            className="table-sticky-action-head text-right"
+            style={{ width: actionColumnWidth }}
+          >
             {t('credentialsPage.list.actions')}
           </TableHead>
         </TableRow>
@@ -603,66 +673,16 @@ function CredentialList({
                   </span>
                 )}
               </TableCell>
-              <TableCell className="table-sticky-action-cell w-[290px] pl-4 text-right transition-colors">
-                <div className="table-action-cell-content">
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="sm"
-                    className="px-2"
-                    aria-label={t('credentialsPage.actions.detail')}
-                    onClick={() => onOpenDrawer(resource, 'overview')}
-                  >
-                    <Eye className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.actions.detail')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="sm"
-                    className="px-2"
-                    aria-label={t('credentialsPage.actions.quota')}
-                    onClick={() => onOpenDrawer(resource, 'quota')}
-                  >
-                    <CircleGauge className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.actions.quota')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="sm"
-                    className="px-2"
-                    aria-label={t('credentialsPage.actions.models')}
-                    onClick={() => onOpenDrawer(resource, 'models')}
-                  >
-                    <Pencil className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.actions.models')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="sm"
-                    className="px-2"
-                    disabled={mutating}
-                    aria-label={t('credentialsPage.actions.download')}
-                    onClick={() => onDownloadResource(resource)}
-                  >
-                    <Download className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.actions.download')}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructiveText"
-                    size="sm"
-                    className="px-2"
-                    disabled={mutating}
-                    aria-label={t('credentialsPage.actions.delete')}
-                    onClick={() => onDeleteResource(resource)}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    {t('credentialsPage.actions.delete')}
-                  </Button>
-                </div>
+              <TableCell
+                className="table-sticky-action-cell pl-4 text-right transition-colors"
+                style={{ width: actionColumnWidth }}
+              >
+                <CredentialRowActions
+                  mutating={mutating}
+                  onDelete={() => onDeleteResource(resource)}
+                  onDownload={() => onDownloadResource(resource)}
+                  onView={() => onOpenDrawer(resource, 'overview')}
+                />
               </TableCell>
             </TableRow>
           )

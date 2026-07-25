@@ -1872,8 +1872,6 @@ export const zhTW = {
       actions: {
         addCredential: '新增憑證',
         detail: '查看',
-        quota: '額度',
-        models: '模型',
         upload: '上傳 JSON',
         save: '儲存元資料',
         viewQuota: '查看額度',
