@@ -1872,8 +1872,6 @@ export const zhCN = {
       actions: {
         addCredential: '添加凭证',
         detail: '查看',
-        quota: '额度',
-        models: '模型',
         upload: '上传 JSON',
         save: '保存元数据',
         viewQuota: '查看额度',

@@ -134,6 +134,8 @@ Action placement and emphasis:
 - Each action group has at most one primary action. In the shared Button API, the primary visual treatment is `variant="default"`; omit the variant when that intent is clear.
 - Use the primary treatment for the safest, most frequent next action in that scope, usually create or add. Refresh, sync, export, replace-all, and other supporting or broader-impact actions use `outline` by default.
 - Destructive actions use the destructive treatment, and an action group does not need a primary button when every available action is secondary or risky.
+- Expose only independent row-level tasks in resource-table action columns; do not repeat destinations already available in a detail view. Prefer no more than three visible actions, moving lower-frequency actions into an overflow menu when needed.
+- Order safe actions before destructive actions, keep destructive actions last, and keep sticky action columns compact without covering adjacent content.
 
 Tabs:
 
