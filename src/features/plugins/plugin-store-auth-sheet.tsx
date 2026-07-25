@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 
 import {
-  ArrowLeft,
   Eye,
   EyeOff,
   KeyRound,
@@ -16,6 +15,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldHeader,
+} from '@/components/shared/drawer-scaffold'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -27,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { controlSizeClassNames } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -35,13 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -139,7 +139,46 @@ function SecretInput({
   )
 }
 
-function PluginStoreAuthEditor({
+export function PluginStoreAuthHeader({
+  editorTarget,
+  saving,
+  onBack,
+}: {
+  editorTarget: EditorTarget
+  saving: boolean
+  onBack: () => void
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <DrawerScaffoldHeader
+      back={
+        editorTarget
+          ? {
+              label: t('pluginPage.auth.actions.back'),
+              onClick: onBack,
+              disabled: saving,
+            }
+          : undefined
+      }
+    >
+      <SheetTitle className="truncate">
+        {editorTarget
+          ? t(
+              editorTarget === 'new'
+                ? 'pluginPage.auth.form.createTitle'
+                : 'pluginPage.auth.form.editTitle',
+            )
+          : t('pluginPage.auth.title')}
+      </SheetTitle>
+      <SheetDescription className={editorTarget ? 'sr-only' : undefined}>
+        {t('pluginPage.auth.description')}
+      </SheetDescription>
+    </DrawerScaffoldHeader>
+  )
+}
+
+export function PluginStoreAuthEditor({
   target,
   saving,
   onCancel,
@@ -212,22 +251,10 @@ function PluginStoreAuthEditor({
         void handleSubmit()
       }}
     >
-      <div className="flex items-start gap-3 border-b px-4 pb-4">
-        <Button type="button" variant="ghost" size="icon-sm" disabled={saving} onClick={onCancel}>
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          <span className="sr-only">{t('pluginPage.auth.actions.back')}</span>
-        </Button>
-        <div className="min-w-0">
-          <h3 className="font-semibold">
-            {t(currentRule ? 'pluginPage.auth.form.editTitle' : 'pluginPage.auth.form.createTitle')}
-          </h3>
-          <p className="text-muted-foreground mt-1 text-sm leading-6">
-            {t('pluginPage.auth.form.description')}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto px-4 py-5">
+      <DrawerScaffoldBody
+        data-slot="plugin-auth-editor-content"
+        className="grid content-start gap-4"
+      >
         <div className="border-info/30 bg-info/10 text-info rounded-md border p-3 text-sm leading-6">
           <div className="flex items-start gap-2">
             <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -235,7 +262,7 @@ function PluginStoreAuthEditor({
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid items-start gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 sm:col-span-2" htmlFor="plugin-auth-name">
             <span className="text-sm font-medium">{t('pluginPage.auth.fields.name')}</span>
             <Input
@@ -279,13 +306,18 @@ function PluginStoreAuthEditor({
           </label>
 
           <div className="grid gap-1.5">
-            <span className="text-sm font-medium">{t('pluginPage.auth.fields.authType')}</span>
+            <label className="text-sm font-medium" htmlFor="plugin-auth-type">
+              {t('pluginPage.auth.fields.authType')}
+            </label>
             <Select
               value={state.authType}
               disabled={saving}
               onValueChange={(value) => changeAuthType(value as PluginStoreAuthType)}
             >
-              <SelectTrigger aria-label={t('pluginPage.auth.fields.authType')}>
+              <SelectTrigger
+                id="plugin-auth-type"
+                aria-label={t('pluginPage.auth.fields.authType')}
+              >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -298,42 +330,59 @@ function PluginStoreAuthEditor({
             </Select>
           </div>
 
-          <div className="flex min-h-9 items-center justify-between gap-3 rounded-md border px-3 py-2">
-            <label htmlFor="plugin-auth-enabled" className="grid cursor-pointer gap-0.5">
-              <span className="text-sm font-medium">{t('pluginPage.auth.fields.enabled')}</span>
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('pluginPage.auth.form.enabledHint')}
-              </span>
+          <div className="grid gap-1.5">
+            <label className="text-sm font-medium" htmlFor="plugin-auth-enabled">
+              {t('pluginPage.auth.fields.enabled')}
             </label>
-            <Switch
-              id="plugin-auth-enabled"
-              checked={state.enabled}
-              disabled={saving}
-              onCheckedChange={(checked) => update({ enabled: checked })}
-            />
+            <div
+              data-slot="plugin-auth-enabled-control"
+              className={cn(
+                'border-input bg-background dark:bg-input/30 flex items-center justify-between gap-3 rounded-md border px-3 shadow-xs',
+                controlSizeClassNames.default,
+              )}
+            >
+              <span className="text-sm">
+                {t(
+                  state.enabled
+                    ? 'pluginPage.auth.status.enabled'
+                    : 'pluginPage.auth.status.disabled',
+                )}
+              </span>
+              <Switch
+                id="plugin-auth-enabled"
+                checked={state.enabled}
+                disabled={saving}
+                onCheckedChange={(checked) => update({ enabled: checked })}
+              />
+            </div>
           </div>
         </div>
 
-        <fieldset className="grid gap-2">
+        <fieldset>
           <legend className="text-sm font-medium">{t('pluginPage.auth.fields.applyTo')}</legend>
-          <div className="flex flex-wrap gap-2">
-            {pluginStoreAuthScopes.map((scope) => (
-              <label
-                key={scope}
-                className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm"
-              >
-                <Checkbox
-                  checked={state.applyTo.includes(scope)}
-                  disabled={saving}
-                  onCheckedChange={() => toggleScope(scope)}
-                />
-                <span>{t(`pluginPage.auth.scopes.${scope}`)}</span>
-              </label>
-            ))}
+          <div data-slot="plugin-auth-apply-to-control" className="mt-1.5 grid gap-1.5">
+            <div className="flex flex-wrap gap-2">
+              {pluginStoreAuthScopes.map((scope) => (
+                <label
+                  key={scope}
+                  className={cn(
+                    'border-input bg-background flex items-center gap-2 rounded-md border px-3 text-sm',
+                    controlSizeClassNames.default,
+                  )}
+                >
+                  <Checkbox
+                    checked={state.applyTo.includes(scope)}
+                    disabled={saving}
+                    onCheckedChange={() => toggleScope(scope)}
+                  />
+                  <span>{t(`pluginPage.auth.scopes.${scope}`)}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs leading-5">
+              {t('pluginPage.auth.form.applyToHint')}
+            </p>
           </div>
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('pluginPage.auth.form.applyToHint')}
-          </p>
         </fieldset>
 
         {canRetainStoredCredentials ? (
@@ -449,9 +498,9 @@ function PluginStoreAuthEditor({
             {saveError}
           </div>
         ) : null}
-      </div>
+      </DrawerScaffoldBody>
 
-      <div className="bg-popover flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:justify-end">
+      <DrawerScaffoldFooter className="flex-col-reverse">
         <Button type="button" variant="outline" disabled={saving} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -459,7 +508,7 @@ function PluginStoreAuthEditor({
           {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {t(currentRule ? 'pluginPage.auth.actions.save' : 'pluginPage.auth.actions.create')}
         </Button>
-      </div>
+      </DrawerScaffoldFooter>
     </form>
   )
 }
@@ -531,14 +580,15 @@ export function PluginStoreAuthSheet({
   return (
     <>
       <Sheet open={open} onOpenChange={changeOpen}>
-        <SheetContent
-          className="w-full sm:max-w-2xl"
+        <DrawerScaffoldContent
+          className="sm:max-w-2xl"
           showCloseButton={!auth.isSaving && auth.deletingId === null}
         >
-          <SheetHeader className="border-b">
-            <SheetTitle>{t('pluginPage.auth.title')}</SheetTitle>
-            <SheetDescription>{t('pluginPage.auth.description')}</SheetDescription>
-          </SheetHeader>
+          <PluginStoreAuthHeader
+            editorTarget={editorTarget}
+            saving={auth.isSaving}
+            onBack={() => setEditorTarget(null)}
+          />
 
           {editorTarget ? (
             <PluginStoreAuthEditor
@@ -549,7 +599,7 @@ export function PluginStoreAuthSheet({
               onSave={saveRule}
             />
           ) : (
-            <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-4 pb-6">
+            <DrawerScaffoldBody className="grid content-start gap-4 pb-6">
               {auth.isPending ? (
                 <div className="grid gap-3">
                   <Skeleton className="h-24 rounded-md" />
@@ -715,9 +765,9 @@ export function PluginStoreAuthSheet({
                   )}
                 </>
               )}
-            </div>
+            </DrawerScaffoldBody>
           )}
-        </SheetContent>
+        </DrawerScaffoldContent>
       </Sheet>
 
       <AlertDialog

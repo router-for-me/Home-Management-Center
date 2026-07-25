@@ -23,6 +23,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
 import {
   TableSurface,
+  TableSurfaceContent,
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -991,192 +992,199 @@ export function PluginsWorkbenchPage() {
             </div>
           }
         />
-        {noResults ? (
-          <TableEmptyState
-            kind={hasFilters ? 'filtered-empty' : 'empty'}
-            title={t(hasFilters ? 'pluginPage.empty.noMatchesTitle' : 'pluginPage.empty.title')}
-            description={t(
-              hasFilters ? 'pluginPage.empty.noMatchesDescription' : 'pluginPage.empty.description',
-            )}
-            action={
-              hasFilters ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    workbench.setFilter('')
-                    workbench.setStatusFilter('all')
-                    workbench.setSourceFilter('all')
-                  }}
-                >
-                  {t('pluginPage.actions.clearFilters')}
-                </Button>
-              ) : null
-            }
-          />
-        ) : (
-          <Table containerClassName={containedTableContainerClassName}>
-            <TableHeader>
-              <TableRow>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[240px]')}>
-                  {t('pluginPage.columns.plugin')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
-                  {t('pluginPage.columns.source')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[160px]')}>
-                  {t('pluginPage.columns.version')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[220px]')}>
-                  {t('pluginPage.columns.state')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[140px]')}>
-                  {t('pluginPage.columns.auth')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
-                  {t('pluginPage.columns.rollout')}
-                </TableHead>
-                <TableHead className={cn(stickyTableHeaderClassName, 'w-[220px] text-right')}>
-                  {t('pluginPage.columns.actions')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workbench.visiblePlugins.map((plugin) => {
-                const rowKey = workbench.getPluginStateKey(plugin)
-                const isInstalling = workbench.installingKey === rowKey
-                const rowReports = getAllPluginReports(plugin, workbench)
-                const rolloutBadge = getPluginRolloutBadge(plugin, rowReports)
-                const versionText =
-                  plugin.installed && plugin.installedVersion
-                    ? plugin.updateAvailable && plugin.version
-                      ? t('pluginPage.version.updateAvailable', {
-                          from: formatVersion(plugin.installedVersion),
-                          to: formatVersion(plugin.version),
-                        })
-                      : formatVersion(plugin.installedVersion)
-                    : formatVersion(plugin.version)
+        <TableSurfaceContent>
+          {noResults ? (
+            <TableEmptyState
+              className="m-0"
+              kind={hasFilters ? 'filtered-empty' : 'empty'}
+              title={t(hasFilters ? 'pluginPage.empty.noMatchesTitle' : 'pluginPage.empty.title')}
+              description={t(
+                hasFilters
+                  ? 'pluginPage.empty.noMatchesDescription'
+                  : 'pluginPage.empty.description',
+              )}
+              action={
+                hasFilters ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      workbench.setFilter('')
+                      workbench.setStatusFilter('all')
+                      workbench.setSourceFilter('all')
+                    }}
+                  >
+                    {t('pluginPage.actions.clearFilters')}
+                  </Button>
+                ) : null
+              }
+            />
+          ) : (
+            <Table containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[240px]')}>
+                    {t('pluginPage.columns.plugin')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
+                    {t('pluginPage.columns.source')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[160px]')}>
+                    {t('pluginPage.columns.version')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[220px]')}>
+                    {t('pluginPage.columns.state')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[140px]')}>
+                    {t('pluginPage.columns.auth')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
+                    {t('pluginPage.columns.rollout')}
+                  </TableHead>
+                  <TableHead className={cn(stickyTableHeaderClassName, 'w-[220px] text-right')}>
+                    {t('pluginPage.columns.actions')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {workbench.visiblePlugins.map((plugin) => {
+                  const rowKey = workbench.getPluginStateKey(plugin)
+                  const isInstalling = workbench.installingKey === rowKey
+                  const rowReports = getAllPluginReports(plugin, workbench)
+                  const rolloutBadge = getPluginRolloutBadge(plugin, rowReports)
+                  const versionText =
+                    plugin.installed && plugin.installedVersion
+                      ? plugin.updateAvailable && plugin.version
+                        ? t('pluginPage.version.updateAvailable', {
+                            from: formatVersion(plugin.installedVersion),
+                            to: formatVersion(plugin.version),
+                          })
+                        : formatVersion(plugin.installedVersion)
+                      : formatVersion(plugin.version)
 
-                return (
-                  <TableRow key={rowKey} variant="resource">
-                    <TableCell>
-                      <div className="flex min-w-0 items-start gap-3">
-                        <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-md border">
-                          <Package className="size-4" aria-hidden="true" />
+                  return (
+                    <TableRow key={rowKey} variant="resource">
+                      <TableCell>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-md border">
+                            <Package className="size-4" aria-hidden="true" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{getPluginTitle(plugin)}</p>
+                            <p className="text-muted-foreground font-mono text-xs">{plugin.id}</p>
+                            {plugin.description ? (
+                              <p className="text-muted-foreground mt-1 line-clamp-2 max-w-xl text-xs leading-5">
+                                {plugin.description}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{getPluginTitle(plugin)}</p>
-                          <p className="text-muted-foreground font-mono text-xs">{plugin.id}</p>
-                          {plugin.description ? (
-                            <p className="text-muted-foreground mt-1 line-clamp-2 max-w-xl text-xs leading-5">
-                              {plugin.description}
-                            </p>
+                      </TableCell>
+                      <TableCell>
+                        <div className="grid gap-1">
+                          <span>{getPluginSourceLabel(plugin) || '-'}</span>
+                          <span className="text-muted-foreground font-mono text-xs">
+                            {plugin.installType ? getInstallTypeLabel(plugin.installType) : '-'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs">{versionText || '-'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1.5">
+                          {plugin.updateAvailable ? (
+                            <StatusBadge tone="info">{t('pluginPage.badges.update')}</StatusBadge>
+                          ) : null}
+                          <StatusBadge tone={plugin.installed ? 'success' : 'neutral'}>
+                            {plugin.installed
+                              ? t('pluginPage.badges.installed')
+                              : t('pluginPage.badges.notInstalled')}
+                          </StatusBadge>
+                          <StatusBadge tone={getEffectiveTone(plugin)}>
+                            {plugin.effectiveEnabled
+                              ? t('pluginPage.badges.effective')
+                              : t('pluginPage.badges.inactive')}
+                          </StatusBadge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="grid gap-1.5">
+                          <StatusBadge tone={getAuthTone(plugin)}>
+                            {plugin.authRequired
+                              ? t('pluginPage.badges.authMayBeRequired')
+                              : t('pluginPage.badges.authNotRequired')}
+                          </StatusBadge>
+                          {plugin.authRequired ? (
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="xs"
+                              className="h-auto justify-start px-0"
+                              onClick={() => setAuthOpen(true)}
+                            >
+                              {t('pluginPage.actions.manageAuth')}
+                            </Button>
                           ) : null}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="grid gap-1">
-                        <span>{getPluginSourceLabel(plugin) || '-'}</span>
-                        <span className="text-muted-foreground font-mono text-xs">
-                          {plugin.installType ? getInstallTypeLabel(plugin.installType) : '-'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs">{versionText || '-'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
-                        {plugin.updateAvailable ? (
-                          <StatusBadge tone="info">{t('pluginPage.badges.update')}</StatusBadge>
-                        ) : null}
-                        <StatusBadge tone={plugin.installed ? 'success' : 'neutral'}>
-                          {plugin.installed
-                            ? t('pluginPage.badges.installed')
-                            : t('pluginPage.badges.notInstalled')}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge tone={rolloutBadge.tone}>
+                          {t(rolloutBadge.labelKey)}
                         </StatusBadge>
-                        <StatusBadge tone={getEffectiveTone(plugin)}>
-                          {plugin.effectiveEnabled
-                            ? t('pluginPage.badges.effective')
-                            : t('pluginPage.badges.inactive')}
-                        </StatusBadge>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="grid gap-1.5">
-                        <StatusBadge tone={getAuthTone(plugin)}>
-                          {plugin.authRequired
-                            ? t('pluginPage.badges.authMayBeRequired')
-                            : t('pluginPage.badges.authNotRequired')}
-                        </StatusBadge>
-                        {plugin.authRequired ? (
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-2">
                           <Button
-                            type="button"
-                            variant="link"
-                            size="xs"
-                            className="h-auto justify-start px-0"
-                            onClick={() => setAuthOpen(true)}
-                          >
-                            {t('pluginPage.actions.manageAuth')}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge tone={rolloutBadge.tone}>{t(rolloutBadge.labelKey)}</StatusBadge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedPlugin(plugin)}
-                        >
-                          {t('pluginPage.actions.details')}
-                        </Button>
-                        {!plugin.installed || plugin.updateAvailable ? (
-                          <Button
+                            variant="outline"
                             size="sm"
-                            disabled={isPluginInstallActionDisabled(workbench.installingKey)}
-                            onClick={() => {
-                              setInstallTarget(plugin)
-                              setInstallVersion('')
-                              setInstallSourceKey(getPluginSourceKey(plugin))
-                              setInstallError(null)
-                              setTypedConfirmation('')
-                            }}
+                            onClick={() => setSelectedPlugin(plugin)}
                           >
-                            {isInstalling ? (
-                              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                            ) : plugin.updateAvailable ? (
-                              <RefreshCw className="size-4" aria-hidden="true" />
-                            ) : (
-                              <Download className="size-4" aria-hidden="true" />
-                            )}
-                            {plugin.updateAvailable
-                              ? t('pluginPage.actions.update')
-                              : t('pluginPage.actions.install')}
+                            {t('pluginPage.actions.details')}
                           </Button>
-                        ) : null}
-                        {plugin.installed ? (
-                          <Button
-                            variant="destructiveText"
-                            size="sm"
-                            disabled={Boolean(workbench.uninstallingId)}
-                            onClick={() => setUninstallTarget(plugin)}
-                          >
-                            <Trash2 className="size-4" aria-hidden="true" />
-                            {t('pluginPage.actions.uninstall')}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        )}
+                          {!plugin.installed || plugin.updateAvailable ? (
+                            <Button
+                              size="sm"
+                              disabled={isPluginInstallActionDisabled(workbench.installingKey)}
+                              onClick={() => {
+                                setInstallTarget(plugin)
+                                setInstallVersion('')
+                                setInstallSourceKey(getPluginSourceKey(plugin))
+                                setInstallError(null)
+                                setTypedConfirmation('')
+                              }}
+                            >
+                              {isInstalling ? (
+                                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                              ) : plugin.updateAvailable ? (
+                                <RefreshCw className="size-4" aria-hidden="true" />
+                              ) : (
+                                <Download className="size-4" aria-hidden="true" />
+                              )}
+                              {plugin.updateAvailable
+                                ? t('pluginPage.actions.update')
+                                : t('pluginPage.actions.install')}
+                            </Button>
+                          ) : null}
+                          {plugin.installed ? (
+                            <Button
+                              variant="destructiveText"
+                              size="sm"
+                              disabled={Boolean(workbench.uninstallingId)}
+                              onClick={() => setUninstallTarget(plugin)}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              {t('pluginPage.actions.uninstall')}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </TableSurfaceContent>
       </TableSurface>
 
       <PluginDetailSheet

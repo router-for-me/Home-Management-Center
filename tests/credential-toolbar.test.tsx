@@ -3,7 +3,12 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import { AccountsToolbar } from '@/features/credentials/accounts-panel'
+import {
+  AccountsToolbar,
+  CredentialRowActions,
+  getCredentialActionColumnWidth,
+  getCredentialTableMinWidth,
+} from '@/features/credentials/accounts-panel'
 import { en } from '@/lib/i18n/locales/en'
 import { ru } from '@/lib/i18n/locales/ru'
 import { zhCN } from '@/lib/i18n/locales/zh-CN'
@@ -45,6 +50,19 @@ function renderToolbar() {
   )
 }
 
+function renderRowActions() {
+  return renderToStaticMarkup(
+    <I18nextProvider i18n={testI18n}>
+      <CredentialRowActions
+        mutating={false}
+        onDelete={() => undefined}
+        onDownload={() => undefined}
+        onView={() => undefined}
+      />
+    </I18nextProvider>,
+  )
+}
+
 describe('credential toolbar', () => {
   test('uses accessible controls and keeps the two quick filters independently selected', () => {
     const markup = renderToolbar()
@@ -68,13 +86,40 @@ describe('credential toolbar', () => {
     expect(markup).not.toContain('h-11')
   })
 
-  test('keeps filter and empty-state copy aligned across all supported locales', () => {
+  test('orders view, download, and delete without a redundant overflow menu', () => {
+    const markup = renderRowActions()
+    const viewIndex = markup.indexOf('View</button>')
+    const downloadIndex = markup.indexOf('Download</button>')
+    const deleteIndex = markup.indexOf('Delete</button>')
+
+    expect(markup.match(/<button/g)).toHaveLength(3)
+    expect(markup.match(/data-size="sm"/g)).toHaveLength(3)
+    expect(viewIndex).toBeGreaterThan(-1)
+    expect(viewIndex).toBeLessThan(downloadIndex)
+    expect(downloadIndex).toBeLessThan(deleteIndex)
+    expect(markup).toContain('data-variant="destructiveText"')
+    expect(markup).not.toContain('data-size="icon-sm"')
+    expect(markup).not.toContain('More actions')
+  })
+
+  test('sizes the sticky action column for each supported label length', () => {
+    expect(getCredentialActionColumnWidth('zh-CN')).toBe(224)
+    expect(getCredentialActionColumnWidth('zh-TW')).toBe(224)
+    expect(getCredentialActionColumnWidth('en')).toBe(260)
+    expect(getCredentialActionColumnWidth('ru')).toBe(284)
+    expect(getCredentialTableMinWidth('zh-CN', false)).toBe(1234)
+    expect(getCredentialTableMinWidth('zh-CN', true)).toBe(1344)
+  })
+
+  test('keeps credential table copy aligned across all supported locales', () => {
     const locales = [zhCN, zhTW, en, ru]
+    const expectedActionKeys = Object.keys(en.common.credentialsPage.actions).sort()
     const expectedFilterKeys = Object.keys(en.common.credentialsPage.filters).sort()
     const expectedListKeys = Object.keys(en.common.credentialsPage.list).sort()
     const expectedQuickFilterKeys = Object.keys(en.common.upstreamPage.quotaChips).sort()
 
     for (const locale of locales) {
+      expect(Object.keys(locale.common.credentialsPage.actions).sort()).toEqual(expectedActionKeys)
       expect(Object.keys(locale.common.credentialsPage.filters).sort()).toEqual(expectedFilterKeys)
       expect(Object.keys(locale.common.credentialsPage.list).sort()).toEqual(expectedListKeys)
       expect(Object.keys(locale.common.upstreamPage.quotaChips).sort()).toEqual(

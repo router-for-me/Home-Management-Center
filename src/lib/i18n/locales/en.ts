@@ -1948,8 +1948,6 @@ export const en = {
       actions: {
         addCredential: 'Add credential',
         detail: 'View',
-        quota: 'Quota',
-        models: 'Models',
         upload: 'Upload JSON',
         save: 'Save metadata',
         viewQuota: 'View quota',
@@ -4788,12 +4786,10 @@ export const en = {
         form: {
           createTitle: 'Add authentication rule',
           editTitle: 'Edit authentication rule',
-          description: 'Define the request prefix, request kinds, and authentication method.',
           writeOnlyHint:
             'Credential values are write-only and encrypted by Home. They are never returned to this browser.',
           matchHint:
             'Use an absolute HTTPS prefix without a username, password, query, or fragment.',
-          enabledHint: 'Disabled rules remain stored but are not applied.',
           applyToHint: 'Leave every option clear to apply the rule to all request kinds.',
           credentialsRetainedHint:
             'Credentials are already configured. Leave secret fields blank to retain the stored values.',
