@@ -58,7 +58,8 @@ The interface should feel like a serious control plane: clear hierarchy, restrai
 - Model services: provider grouping, model service keys, model reference data, create/edit/delete flows.
 - Account credentials: OAuth and file-backed credentials, metadata, status, import, download, and model availability.
 - Access keys: client-facing keys used by downstream clients.
-- Usage: request records, token and cost trends, aggregate rankings, and credential attribution.
+- Usage & requests: usage overview, request records, token and cost trends, aggregate rankings,
+  credential attribution, and request diagnostics.
 - Call diagnostics: realtime state, request health timelines, health attribution, and request log files.
 - Runtime logs: gateway runtime log records, request error log files, download, and guarded clear flows.
 - System config: visual config sections, change preview, validation, and guarded saving.

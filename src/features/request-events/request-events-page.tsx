@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 
 import {
   CheckCircle2,
@@ -81,6 +81,8 @@ import {
   getObservabilityVerdictBadgeClassName,
 } from '@/features/observability/observability-components'
 import { useRequestEventsWorkbench } from '@/features/request-events/use-request-events-workbench'
+import type { UsageWorkspaceView } from '@/features/usage-observability/usage-route'
+import { UsageWorkspaceShell } from '@/features/usage-observability/usage-workspace-shell'
 import type {
   RequestEvent,
   RequestEventDetail,
@@ -1520,24 +1522,37 @@ function RequestEventsTable({
   )
 }
 
-export function RequestEventsPage() {
+export function RequestEventsPage({
+  view,
+  onViewChange,
+}: {
+  view: UsageWorkspaceView
+  onViewChange: (view: UsageWorkspaceView) => void
+}) {
   const { t } = useTranslation()
   const workbench = useRequestEventsWorkbench()
+  const renderState = (content: ReactNode) => (
+    <UsageWorkspaceShell view={view} onViewChange={onViewChange}>
+      {content}
+    </UsageWorkspaceShell>
+  )
 
   if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
-    return <ObservabilityLoadingState />
+    return renderState(<ObservabilityLoadingState />)
   }
-  if (!workbench.connected) return <ObservabilityDisconnectedState copyKey="requestEventsPage" />
+  if (!workbench.connected) {
+    return renderState(<ObservabilityDisconnectedState copyKey="requestEventsPage" />)
+  }
   if (workbench.isPending && workbench.capabilities.requestEvents) {
-    return <ObservabilityLoadingState />
+    return renderState(<ObservabilityLoadingState />)
   }
   if (workbench.isError && !workbench.events) {
-    return (
+    return renderState(
       <ObservabilityErrorState
         copyKey="requestEventsPage"
         errorMessage={workbench.errorMessage}
         onRetry={workbench.refetch}
-      />
+      />,
     )
   }
 
@@ -1566,18 +1581,22 @@ export function RequestEventsPage() {
   }
 
   return (
-    <section className="grid w-full gap-4">
-      <RequestEventsHeader
-        canRefresh={workbench.canRefresh}
-        capabilities={workbench.capabilities}
-        errorMessage={workbench.errorMessage}
-        isFetching={workbench.isFetching}
-        updatedAt={workbench.eventsUpdatedAt}
-        onRefresh={workbench.refetch}
-        page={workbench.events}
-        runtimeMode={workbench.runtimeMode}
-      />
-
+    <UsageWorkspaceShell
+      view={view}
+      onViewChange={onViewChange}
+      header={
+        <RequestEventsHeader
+          canRefresh={workbench.canRefresh}
+          capabilities={workbench.capabilities}
+          errorMessage={workbench.errorMessage}
+          isFetching={workbench.isFetching}
+          updatedAt={workbench.eventsUpdatedAt}
+          onRefresh={workbench.refetch}
+          page={workbench.events}
+          runtimeMode={workbench.runtimeMode}
+        />
+      }
+    >
       <IssueList
         issues={[
           ...(workbench.errorMessage
@@ -1634,6 +1653,6 @@ export function RequestEventsPage() {
           if (!open) workbench.clearSelectedEvent()
         }}
       />
-    </section>
+    </UsageWorkspaceShell>
   )
 }

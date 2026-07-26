@@ -39,8 +39,7 @@ export const zhTW = {
       billing: '財務與報表',
       config: '系統設定',
       plugins: '外掛',
-      usage: '請求用量',
-      requestEvents: '請求事件',
+      usage: '用量與請求',
       diagnostics: '調用診斷',
       logs: '執行日誌',
       usageLogs: '觀測資料',
@@ -61,8 +60,7 @@ export const zhTW = {
       billing: '計費與報表',
       config: '閘道核心設定',
       plugins: '外掛商店與節點回報',
-      usage: '用量趨勢與成本統計',
-      requestEvents: '請求級事件日誌',
+      usage: '用量分析與請求排障',
       diagnostics: '調用健康與請求日誌',
       logs: '執行與請求錯誤日誌',
       usageLogs: '用量、診斷、日誌',
@@ -2229,7 +2227,7 @@ export const zhTW = {
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
         identity: '識別碼 / 金鑰',
-        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求事件中的同一個存取金鑰。',
+        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求記錄中的同一個存取金鑰。',
         identifierUnavailable: '無穩定識別碼',
         key: '金鑰',
         owner: '所屬使用者',
@@ -3263,6 +3261,11 @@ export const zhTW = {
       },
     },
     usagePage: {
+      tabs: {
+        label: '用量與請求檢視',
+        overview: '概覽',
+        requests: '請求記錄',
+      },
       disconnected: {
         title: '連線管理端執行環境',
         description:
@@ -3276,10 +3279,10 @@ export const zhTW = {
       },
       verdict: {
         ready: {
-          title: '請求用量資料已就緒',
+          title: '用量概覽已就緒',
           badge: '可分析',
           description:
-            '已載入請求總覽、請求明細、聚合排行與執行憑證歸因，可用於判斷請求量、Token、成本和延遲。',
+            '已載入請求總覽、聚合排行與執行憑證歸因，可用於判斷請求量、Token、成本和延遲。',
         },
         empty: {
           title: '暫無請求用量',
@@ -3354,40 +3357,39 @@ export const zhTW = {
     requestEventsPage: {
       disconnected: {
         title: '連線管理端執行環境',
-        description:
-          '請求事件來自 Management API。連線執行環境後，才能查看請求級事件、執行節點、憑證、錯誤和日誌關聯。',
+        description: '連線執行環境後，才能查看具體請求、執行節點、憑證、錯誤和關聯日誌。',
         action: '連線執行環境',
       },
       error: {
-        title: '無法載入請求事件',
-        description: '請檢查管理端位址、management key 和請求事件介面可用性。',
+        title: '無法載入請求記錄',
+        description: '請檢查連線狀態後重試。',
         retry: '重試',
       },
       capabilities: {
-        events: '事件列表',
-        details: '事件詳情',
+        events: '請求列表',
+        details: '請求詳情',
         export: '匯出',
       },
       verdict: {
         ready: {
-          title: '請求事件日誌已就緒',
+          title: '請求記錄已就緒',
           badge: '可排障',
-          description: '可按請求、模型、節點、憑證、狀態和延遲排查請求事件。',
+          description: '可按請求、模型、節點、憑證、狀態和延遲定位具體請求。',
         },
         empty: {
-          title: '暫無請求事件',
+          title: '暫無請求記錄',
           badge: '暫無資料',
-          description: '請求事件能力已可用，但目前時間範圍沒有事件。可調整範圍或重新整理後再查看。',
+          description: '目前時間範圍沒有請求記錄。可調整範圍或重新整理後再查看。',
         },
         partial: {
-          title: '請求事件部分載入',
+          title: '請求記錄部分載入',
           badge: '部分載入',
-          description: '部分請求事件範圍載入失敗，頁面會繼續展示已返回的事件事實。',
+          description: '部分請求記錄載入失敗，頁面會繼續展示已返回的資料。',
         },
         unsupported: {
-          title: '請求事件不可用',
+          title: '請求記錄不可用',
           badge: '不可用',
-          description: '{{mode}} 未提供請求事件介面，頁面不會展示推測資料。',
+          description: '{{mode}} 暫不支援請求記錄查詢。',
         },
       },
       actions: {
@@ -3476,15 +3478,15 @@ export const zhTW = {
         ipNotRecorded: '未記錄用戶端 IP',
       },
       table: {
-        title: '請求事件',
+        title: '請求記錄',
         columnsMenu: '顯示欄位',
         ttft: 'TTFT {{value}}',
-        emptyTitle: '沒有匹配的請求事件',
-        emptyDescription: '目前篩選條件下沒有事件。可調整時間範圍、狀態或節點篩選。',
+        emptyTitle: '沒有匹配的請求記錄',
+        emptyDescription: '目前篩選條件下沒有請求記錄。可調整時間範圍、狀態或節點篩選。',
         clearFilters: '清空篩選',
-        errorTitle: '請求事件載入失敗',
-        unsupportedTitle: '請求事件介面不可用',
-        unsupportedDescription: '目前執行環境未提供 /request-events，等待後端補齊後可使用此頁面。',
+        errorTitle: '請求記錄載入失敗',
+        unsupportedTitle: '請求記錄不可用',
+        unsupportedDescription: '目前執行環境暫不支援請求記錄查詢，可返回概覽查看可用的用量資料。',
         range: '第 {{start}}-{{end}} 條，共 {{total}} 條',
         pageSize: '每頁筆數',
         previous: '上一頁',
@@ -3506,10 +3508,10 @@ export const zhTW = {
         },
       },
       detail: {
-        title: '請求事件詳情',
-        loading: '正在載入事件詳情…',
-        errorTitle: '事件詳情載入失敗',
-        requestLogUnavailable: '此事件沒有可下載的請求日誌。',
+        title: '請求詳情',
+        loading: '正在載入請求詳情…',
+        errorTitle: '請求詳情載入失敗',
+        requestLogUnavailable: '此請求沒有可下載的請求日誌。',
         tokens: 'Token',
         error: '錯誤摘要',
         payload: 'Payload 摘要',
@@ -3551,7 +3553,7 @@ export const zhTW = {
         },
       },
       toast: {
-        exportDownloaded: '請求事件已匯出。',
+        exportDownloaded: '請求記錄已匯出。',
         logDownloaded: '請求日誌已下載。',
       },
     },
@@ -3752,7 +3754,7 @@ export const zhTW = {
         usageProviderHealth: '供應商健康',
         usageCredentialHealth: '憑證健康',
         usageRealtime: '即時快照',
-        requestEvents: '請求事件',
+        requestEvents: '請求記錄',
         requestLogIndex: '請求日誌檔案',
         logs: '執行日誌',
         requestErrorLogs: '錯誤日誌',

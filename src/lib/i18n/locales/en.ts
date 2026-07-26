@@ -39,8 +39,7 @@ export const en = {
       billing: 'Billing & Reports',
       config: 'System config',
       plugins: 'Plugins',
-      usage: 'Usage',
-      requestEvents: 'Request Events',
+      usage: 'Usage & Requests',
       diagnostics: 'Call Diagnostics',
       logs: 'Runtime Logs',
       usageLogs: 'Observability Data',
@@ -61,8 +60,7 @@ export const en = {
       billing: 'Billing and reports',
       config: 'Gateway core settings',
       plugins: 'Plugin store and node reports',
-      usage: 'Usage trends and cost stats',
-      requestEvents: 'Request-level event log',
+      usage: 'Usage analysis and request diagnostics',
       diagnostics: 'Call health and request logs',
       logs: 'Gateway runtime and request error logs',
       usageLogs: 'Usage, diagnostics, logs',
@@ -2325,7 +2323,7 @@ export const en = {
         index: 'No.',
         identity: 'Identifier / key',
         identifierTooltip:
-          'The stable identifier links the same access key across usage, billing, and request events.',
+          'The stable identifier links the same access key across usage, billing, and request records.',
         identifierUnavailable: 'No stable identifier',
         key: 'Key',
         owner: 'Owner',
@@ -3413,6 +3411,11 @@ export const en = {
       },
     },
     usagePage: {
+      tabs: {
+        label: 'Usage and request views',
+        overview: 'Overview',
+        requests: 'Request records',
+      },
       disconnected: {
         title: 'Connect a management runtime',
         description:
@@ -3426,10 +3429,10 @@ export const en = {
       },
       verdict: {
         ready: {
-          title: 'Usage data is ready',
+          title: 'Usage overview is ready',
           badge: 'Analyzable',
           description:
-            'Request overview, request records, aggregate rankings, and execution credential attribution are loaded for assessing requests, tokens, cost, and latency.',
+            'Request overview, aggregate rankings, and execution credential attribution are loaded for assessing requests, tokens, cost, and latency.',
         },
         empty: {
           title: 'No request usage yet',
@@ -3508,44 +3511,41 @@ export const en = {
       disconnected: {
         title: 'Connect a management runtime',
         description:
-          'Request events are loaded from the Management API. Connect a runtime before reviewing request-level events, execution nodes, credentials, errors, and related logs.',
+          'Connect a runtime before reviewing individual requests, execution nodes, credentials, errors, and related logs.',
         action: 'Connect runtime',
       },
       error: {
-        title: 'Request events could not be loaded',
-        description:
-          'Check the management endpoint, management key, and request events API availability.',
+        title: 'Request records could not be loaded',
+        description: 'Check the connection and try again.',
         retry: 'Retry',
       },
       capabilities: {
-        events: 'Event list',
-        details: 'Event details',
+        events: 'Request list',
+        details: 'Request details',
         export: 'Export',
       },
       verdict: {
         ready: {
-          title: 'Request events are ready',
+          title: 'Request records are ready',
           badge: 'Investigable',
           description:
-            'Filter request events by request, model, node, credential, status, and latency.',
+            'Filter individual requests by model, node, credential, status, and latency.',
         },
         empty: {
-          title: 'No request events yet',
+          title: 'No request records yet',
           badge: 'No data',
           description:
-            'Request event capabilities are available, but this time range has no events. Adjust the range or refresh after traffic starts.',
+            'This time range has no request records. Adjust the range or refresh after traffic starts.',
         },
         partial: {
-          title: 'Request events loaded partially',
+          title: 'Request records loaded partially',
           badge: 'Partial',
-          description:
-            'Some request event scopes failed to load. The page continues to show returned event facts.',
+          description: 'Some request records failed to load. Available records remain visible.',
         },
         unsupported: {
-          title: 'Request events are unavailable',
+          title: 'Request records are unavailable',
           badge: 'Unavailable',
-          description:
-            '{{mode}} does not provide request event APIs, so the page will not show inferred data.',
+          description: '{{mode}} does not currently support request record queries.',
         },
       },
       actions: {
@@ -3635,17 +3635,17 @@ export const en = {
         ipNotRecorded: 'Client IP not recorded',
       },
       table: {
-        title: 'Request Events',
+        title: 'Request Records',
         columnsMenu: 'Visible columns',
         ttft: 'TTFT {{value}}',
-        emptyTitle: 'No matching request events',
+        emptyTitle: 'No matching request records',
         emptyDescription:
-          'No events match the current filters. Adjust the time range, status, or node filters.',
+          'No request records match the current filters. Adjust the time range, status, or node filters.',
         clearFilters: 'Clear filters',
-        errorTitle: 'Request events failed to load',
-        unsupportedTitle: 'Request events API unavailable',
+        errorTitle: 'Request records failed to load',
+        unsupportedTitle: 'Request records unavailable',
         unsupportedDescription:
-          'This runtime does not expose /request-events. The page becomes available after the backend adds it.',
+          'This runtime does not currently support request record queries. Return to Overview for the available usage data.',
         range: '{{start}}-{{end}} of {{total}}',
         pageSize: 'Rows per page',
         previous: 'Previous',
@@ -3667,10 +3667,10 @@ export const en = {
         },
       },
       detail: {
-        title: 'Request Event Detail',
-        loading: 'Loading event detail…',
-        errorTitle: 'Event detail failed to load',
-        requestLogUnavailable: 'This event has no downloadable request log.',
+        title: 'Request Details',
+        loading: 'Loading request details…',
+        errorTitle: 'Request details failed to load',
+        requestLogUnavailable: 'This request has no downloadable request log.',
         tokens: 'Tokens',
         error: 'Error summary',
         payload: 'Payload summary',
@@ -3712,7 +3712,7 @@ export const en = {
         },
       },
       toast: {
-        exportDownloaded: 'Request events exported.',
+        exportDownloaded: 'Request records exported.',
         logDownloaded: 'Request log downloaded.',
       },
     },
@@ -3929,7 +3929,7 @@ export const en = {
         usageProviderHealth: 'Provider health',
         usageCredentialHealth: 'Credential health',
         usageRealtime: 'Realtime snapshot',
-        requestEvents: 'Request events',
+        requestEvents: 'Request records',
         requestLogIndex: 'Request log files',
         logs: 'Runtime logs',
         requestErrorLogs: 'Error logs',

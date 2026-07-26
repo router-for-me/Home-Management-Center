@@ -10,11 +10,11 @@ import { normalizeCredentialRouteSearch } from '@/features/credentials/credentia
 import { DashboardConsolePage } from '@/features/dashboard/dashboard-console-page'
 import { LogsWorkbenchPage } from '@/features/logs/logs-workbench-page'
 import { PluginsWorkbenchPage } from '@/features/plugins/plugins-workbench-page'
-import { RequestEventsPage } from '@/features/request-events/request-events-page'
 import { SystemNodesWorkbenchPage } from '@/features/system-nodes/system-nodes-workbench-page'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
 import { UpstreamWorkbenchPage } from '@/features/upstream/upstream-workbench-page'
 import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
+import { normalizeUsageRouteSearch } from '@/features/usage-observability/usage-route'
 import { UsersWorkbenchPage } from '@/features/users/users-workbench-page'
 
 const rootRoute = createRootRoute({
@@ -149,13 +149,31 @@ const pluginsRoute = createRoute({
 const usageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/usage',
-  component: UsageObservabilityPage,
+  validateSearch: normalizeUsageRouteSearch,
+  component: ManagementUsagePage,
 })
+
+function ManagementUsagePage() {
+  const search = usageRoute.useSearch()
+  const navigate = usageRoute.useNavigate()
+
+  return (
+    <UsageObservabilityPage
+      view={search.view}
+      onViewChange={(view) =>
+        void navigate({
+          search: (previous) => ({ ...previous, view }),
+          replace: true,
+        })
+      }
+    />
+  )
+}
 
 const requestEventsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/request-events',
-  component: RequestEventsPage,
+  component: () => <Navigate to="/admin/usage" search={{ view: 'requests' }} replace />,
 })
 
 const diagnosticsRoute = createRoute({
