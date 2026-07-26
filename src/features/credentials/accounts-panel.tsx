@@ -62,11 +62,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import {
-  CredentialInFlightCell,
-  type CredentialInFlightCellStatus,
-  getCredentialInFlightId,
-} from '@/features/credentials/credential-concurrency'
+import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
   type CreateCredentialMode,
   CreateCredentialSheet,
@@ -432,8 +428,8 @@ export function getCredentialActionColumnWidth(language?: string) {
   return 260
 }
 
-export function getCredentialTableMinWidth(language: string | undefined, showInFlight: boolean) {
-  return (showInFlight ? 1120 : 1010) + getCredentialActionColumnWidth(language)
+export function getCredentialTableMinWidth(language: string | undefined) {
+  return 1010 + getCredentialActionColumnWidth(language)
 }
 
 function CredentialList({
@@ -444,9 +440,6 @@ function CredentialList({
   quotaAvailable,
   quotaLoading,
   quotaMap,
-  showInFlight,
-  inFlightByCredentialId,
-  inFlightStatus,
   emptyState,
   onClearFilters,
   onDeleteResource,
@@ -464,9 +457,6 @@ function CredentialList({
   quotaAvailable: boolean
   quotaLoading: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
-  showInFlight: boolean
-  inFlightByCredentialId: Map<string, CredentialInFlightSummary>
-  inFlightStatus: CredentialInFlightCellStatus
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
   onDeleteResource: (resource: CredentialResource) => void
@@ -514,7 +504,7 @@ function CredentialList({
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
       className="table-fixed"
-      style={{ minWidth: getCredentialTableMinWidth(language, showInFlight) }}
+      style={{ minWidth: getCredentialTableMinWidth(language) }}
     >
       <colgroup>
         <col className="w-[44px]" />
@@ -522,7 +512,6 @@ function CredentialList({
         <col className="w-[118px]" />
         <col className="w-[150px]" />
         <col className="w-[232px]" />
-        {showInFlight ? <col className="w-[110px]" /> : null}
         <col className="w-[96px]" />
         <col className="w-[112px]" />
         <col style={{ width: actionColumnWidth }} />
@@ -541,7 +530,6 @@ function CredentialList({
           <TableHead>{t('credentialsPage.list.provider')}</TableHead>
           <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
           <TableHead>{t('credentialsPage.list.quota')}</TableHead>
-          {showInFlight ? <TableHead>{t('credentialsPage.list.inFlight')}</TableHead> : null}
           <TableHead>{t('credentialsPage.list.ws')}</TableHead>
           <TableHead>{t('credentialsPage.list.priority')}</TableHead>
           <TableHead
@@ -557,8 +545,6 @@ function CredentialList({
           const statusTone = getCredentialStatusTone(resource)
           const displayName = getCredentialDisplayName(resource)
           const providerLabel = getCredentialProviderLabel(t, resource.provider)
-          const inFlightSummary =
-            inFlightByCredentialId.get(getCredentialInFlightId(resource)) ?? null
 
           return (
             <TableRow
@@ -655,11 +641,6 @@ function CredentialList({
                   })}
                 />
               </TableCell>
-              {showInFlight ? (
-                <TableCell>
-                  <CredentialInFlightCell summary={inFlightSummary} status={inFlightStatus} />
-                </TableCell>
-              ) : null}
               <TableCell>
                 <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
               </TableCell>
@@ -758,13 +739,6 @@ export function AccountsPanel({
     }
     return merged
   }, [workbench.concurrencySnapshot, workbench.inFlightSnapshot])
-  const inFlightStatus: CredentialInFlightCellStatus = {
-    observation: workbench.inFlightSnapshot,
-    observationStale: workbench.inFlightStale,
-    observationErrorMessage: workbench.inFlightErrorMessage,
-    limiterStale: workbench.concurrencyStale,
-    limiterErrorMessage: workbench.concurrencyErrorMessage,
-  }
   const concurrencyErrorMessage = [
     workbench.inFlightErrorMessage,
     workbench.concurrencyErrorMessage,
@@ -1312,9 +1286,6 @@ export function AccountsPanel({
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
             quotaMap={resolvedQuotaMap}
-            showInFlight={workbench.credentialInFlight || workbench.credentialConcurrencyLimits}
-            inFlightByCredentialId={inFlightByCredentialId}
-            inFlightStatus={inFlightStatus}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
             onDeleteResource={(resource) => {

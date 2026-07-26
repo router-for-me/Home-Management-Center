@@ -1,7 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
 
 import type { TFunction } from 'i18next'
-import { AlertTriangle, Copy, Loader2, Plus, RefreshCw, TimerReset, X } from 'lucide-react'
+import { Copy, Loader2, Plus, RefreshCw, TimerReset, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -16,7 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type {
   CredentialConcurrencyPolicy,
   CredentialInFlightDetail,
@@ -130,99 +129,6 @@ async function copyTextToClipboard(value: string) {
   textArea.select()
   document.execCommand('copy')
   textArea.remove()
-}
-
-export type CredentialInFlightCellStatus = {
-  observation: CredentialInFlightObservationMetadata | null
-  observationStale: boolean
-  observationErrorMessage: string | null
-  limiterStale: boolean
-  limiterErrorMessage: string | null
-}
-
-export function CredentialInFlightCell({
-  summary,
-  status,
-}: {
-  summary: CredentialInFlightSummary | null
-  status?: CredentialInFlightCellStatus
-}) {
-  const { t } = useTranslation()
-  const hasLimiter = summary?.admittedInFlight !== null && summary?.admittedInFlight !== undefined
-  const displayValue = hasLimiter
-    ? `${summary.admittedInFlight} / ${summary.maxInFlight ?? '∞'}`
-    : summary?.observedInFlight !== null && summary?.observedInFlight !== undefined
-      ? t('credentialsPage.concurrency.observedCompact', { count: summary.observedInFlight })
-      : null
-  const statusWarnings = [
-    ...(status?.observationErrorMessage
-      ? [
-          t('credentialsPage.concurrency.observationLoadFailed', {
-            message: status.observationErrorMessage,
-          }),
-        ]
-      : []),
-    ...(status?.limiterErrorMessage
-      ? [
-          t('credentialsPage.concurrency.limiterLoadFailed', {
-            message: status.limiterErrorMessage,
-          }),
-        ]
-      : []),
-    ...(status?.observationStale || status?.limiterStale || status?.observation?.stale
-      ? [t('credentialsPage.concurrency.stale')]
-      : []),
-    ...(status?.observation &&
-    (!status.observation.coverageComplete ||
-      !status.observation.aggregatesComplete ||
-      !status.observation.protocolCoverageComplete)
-      ? [t('credentialsPage.concurrency.observationIncomplete')]
-      : []),
-  ]
-  const saturationWarning = summary?.totalSaturated
-    ? t('credentialsPage.concurrency.totalSaturated')
-    : summary && summary.saturatedModelCount > 0
-      ? t('credentialsPage.concurrency.modelsSaturated', {
-          count: summary.saturatedModelCount,
-        })
-      : null
-  const warningMessages = [
-    ...new Set([...statusWarnings, ...(saturationWarning ? [saturationWarning] : [])]),
-  ]
-
-  if (displayValue === null && warningMessages.length === 0) {
-    return <span className="text-muted-foreground">—</span>
-  }
-
-  return (
-    <div className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
-      <span
-        className={cn(
-          summary?.totalSaturated ? 'text-warning-foreground dark:text-warning font-medium' : null,
-        )}
-      >
-        {displayValue ?? '—'}
-      </span>
-      {warningMessages.length > 0 ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              className="text-warning-foreground dark:text-warning focus-visible:ring-ring inline-flex size-6 cursor-help items-center justify-center rounded-sm focus-visible:ring-2 focus-visible:outline-none"
-              aria-label={warningMessages.join(' ')}
-            >
-              <AlertTriangle className="size-3.5" aria-hidden="true" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-80 space-y-1 text-left leading-5">
-            {warningMessages.map((message) => (
-              <p key={message}>{message}</p>
-            ))}
-          </TooltipContent>
-        </Tooltip>
-      ) : null}
-    </div>
-  )
 }
 
 export function CredentialConcurrencyDetail({
