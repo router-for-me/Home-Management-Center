@@ -2096,7 +2096,6 @@ export const ru = {
         credential: 'Credential / аккаунт',
         quota: 'Квота',
         provider: 'Поставщик моделей',
-        inFlight: 'В работе',
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
         ws: 'WS',
@@ -2175,18 +2174,12 @@ export const ru = {
       concurrency: {
         current: 'Сейчас',
         observed: 'Наблюдается',
-        observedCompact: 'Наблюдается: {{count}}',
         admitted: 'Допущено',
         limit: 'Лимит',
         remaining: 'Свободные слоты',
         unlimited: 'Без ограничений',
-        totalSaturated:
-          'Общий лимит credential исчерпан. Новый запрос переключится на другой credential или получит busy.',
-        modelsSaturated: 'Исчерпано лимитов моделей: {{count}}.',
         stale: 'Не удалось обновить данные in-flight. Показан последний успешный результат.',
         summaryLoadFailed: 'Не удалось загрузить данные in-flight: {{message}}',
-        observationLoadFailed: 'Данные наблюдения недоступны: {{message}}',
-        limiterLoadFailed: 'Авторитетное состояние limiter недоступно: {{message}}',
         observationIncomplete:
           'Покрытие текущего CPA snapshot неполное. Наблюдаемое число запросов может быть занижено.',
         detailsTruncated:

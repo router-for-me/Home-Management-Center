@@ -107,8 +107,7 @@ describe('credential toolbar', () => {
     expect(getCredentialActionColumnWidth('zh-TW')).toBe(224)
     expect(getCredentialActionColumnWidth('en')).toBe(260)
     expect(getCredentialActionColumnWidth('ru')).toBe(284)
-    expect(getCredentialTableMinWidth('zh-CN', false)).toBe(1234)
-    expect(getCredentialTableMinWidth('zh-CN', true)).toBe(1344)
+    expect(getCredentialTableMinWidth('zh-CN')).toBe(1234)
   })
 
   test('keeps credential table copy aligned across all supported locales', () => {
@@ -117,6 +116,8 @@ describe('credential toolbar', () => {
     const expectedFilterKeys = Object.keys(en.common.credentialsPage.filters).sort()
     const expectedListKeys = Object.keys(en.common.credentialsPage.list).sort()
     const expectedQuickFilterKeys = Object.keys(en.common.upstreamPage.quotaChips).sort()
+
+    expect(expectedListKeys).not.toContain('inFlight')
 
     for (const locale of locales) {
       expect(Object.keys(locale.common.credentialsPage.actions).sort()).toEqual(expectedActionKeys)

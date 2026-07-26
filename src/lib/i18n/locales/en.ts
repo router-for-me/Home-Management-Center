@@ -2096,7 +2096,6 @@ export const en = {
         credential: 'Credential / account',
         quota: 'Quota',
         provider: 'Model provider',
-        inFlight: 'In flight',
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
         ws: 'WS',
@@ -2175,18 +2174,12 @@ export const en = {
       concurrency: {
         current: 'Current',
         observed: 'Observed',
-        observedCompact: '{{count}} observed',
         admitted: 'Admitted',
         limit: 'Limit',
         remaining: 'Available slots',
         unlimited: 'Unlimited',
-        totalSaturated:
-          'The credential concurrency limit is full. New work will fall back or return busy.',
-        modelsSaturated: 'Saturated model limits: {{count}}.',
         stale: 'In-flight data could not be refreshed. Showing the last successful result.',
         summaryLoadFailed: 'Could not load in-flight data: {{message}}',
-        observationLoadFailed: 'Observation data is unavailable: {{message}}',
-        limiterLoadFailed: 'Authoritative limiter state is unavailable: {{message}}',
         observationIncomplete:
           'The current CPA snapshot coverage is incomplete. Observed totals may be partial.',
         detailsTruncated:
