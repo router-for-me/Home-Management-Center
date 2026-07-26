@@ -233,6 +233,73 @@ describe('quota snapshot normalization contracts', () => {
     })
   })
 
+  test('preserves backend-separated passive Codex quota families without inference', () => {
+    const snapshot = normalizeQuotaSnapshot({
+      items: [
+        {
+          credential_id: 'credential-codex-passive',
+          provider: 'codex',
+          quota_status: 'healthy',
+          freshness: 'fresh',
+          collection_status: 'partial',
+          source: 'mixed',
+          window_count: 2,
+          primary_windows: [
+            {
+              id: 'codex-1-week',
+              scope: 'account',
+              mode: 'rolling',
+              status: 'healthy',
+              unit: 'percentage',
+              remaining_ratio: 0.42,
+              period_unit: 'week',
+              period_value: 1,
+              source: 'active_probe',
+            },
+            {
+              id: 'codex-bengalfox-1-week',
+              label: 'GPT-5.3-Codex-Spark',
+              scope: 'model',
+              scope_id: 'codex_bengalfox',
+              mode: 'rolling',
+              status: 'healthy',
+              unit: 'percentage',
+              remaining_ratio: 0.98,
+              period_unit: 'week',
+              period_value: 1,
+              source: 'response_header',
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(
+      snapshot.items[0]?.primaryWindows.map((window) => ({
+        id: window.id,
+        scope: window.scope,
+        scopeId: window.scopeId,
+        remainingRatio: window.remainingRatio,
+        source: window.source,
+      })),
+    ).toEqual([
+      {
+        id: 'codex-1-week',
+        scope: 'account',
+        scopeId: null,
+        remainingRatio: 0.42,
+        source: 'active_probe',
+      },
+      {
+        id: 'codex-bengalfox-1-week',
+        scope: 'model',
+        scopeId: 'codex_bengalfox',
+        remainingRatio: 0.98,
+        source: 'response_header',
+      },
+    ])
+  })
+
   test('normalizes the current backend snake-case contract', () => {
     const snapshot = normalizeQuotaSnapshot({
       generated_at: '2026-07-15T05:00:00Z',
