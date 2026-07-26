@@ -1,11 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-
-import { RequestEventsPage } from '@/features/request-events/request-events-page'
+import { Navigate, createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/request-events')({
   component: RequestEventsRoute,
 })
 
 function RequestEventsRoute() {
-  return <RequestEventsPage />
+  return <Navigate to="/admin/usage" search={{ view: 'requests' }} replace />
 }

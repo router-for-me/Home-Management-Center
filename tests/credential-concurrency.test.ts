@@ -5,11 +5,9 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import i18n from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { TooltipProvider } from '../src/components/ui/tooltip'
 import {
   CredentialConcurrencyDetail,
   CredentialConcurrencyEditor,
-  CredentialInFlightCell,
   applyCredentialConcurrencyPolicyToForm,
   canonicalConcurrencyModelKey,
   isValidConcurrencyModelKey,
@@ -701,26 +699,12 @@ describe('credential concurrency v2 contract', () => {
     })
   })
 
-  test('renders list, model, and request concurrency states from the v2 view model', async () => {
+  test('renders model and request concurrency states from the v2 view model', async () => {
     await i18n.changeLanguage('en')
     useResponse({ ...observationMetadata(), items: [observedSummary()] })
     const snapshot = await fetchCredentialInFlightSummary(session)
     const summary = snapshot.items[0] ?? null
     expect(summary).not.toBeNull()
-
-    const cellMarkup = renderToStaticMarkup(
-      createElement(
-        TooltipProvider,
-        null,
-        createElement(CredentialInFlightCell, {
-          summary: summary
-            ? { ...summary, admittedInFlight: 3, maxInFlight: 3, totalSaturated: true }
-            : null,
-        }),
-      ),
-    )
-    expect(cellMarkup).toContain('3 / 3')
-    expect(cellMarkup).toContain('The credential concurrency limit is full')
 
     const detailMarkup = renderToStaticMarkup(
       createElement(CredentialConcurrencyDetail, {
@@ -847,77 +831,8 @@ describe('credential concurrency v2 contract', () => {
     expect(markup).not.toContain('stable request snapshot has expired')
   })
 
-  test('renders authoritative admitted counts and never labels observation-only state as unlimited', async () => {
+  test('does not show an enforcement warning in limiter-only mode', async () => {
     await i18n.changeLanguage('en')
-    const authoritativeMarkup = renderToStaticMarkup(
-      createElement(
-        TooltipProvider,
-        null,
-        createElement(CredentialInFlightCell, {
-          summary: {
-            credentialId: 'auth-1',
-            observedInFlight: 0,
-            admittedInFlight: 1,
-            maxInFlight: 1,
-            remaining: 0,
-            totalSaturated: true,
-            saturatedModelCount: 0,
-            models: [],
-            policyVersion: 1,
-            effectiveAt: '2026-07-21T12:00:00Z',
-            observationBarrierRevision: 1,
-            fullyEnforced: 'true',
-            observed: null,
-          },
-        }),
-      ),
-    )
-    expect(authoritativeMarkup).toContain('1 / 1')
-    expect(authoritativeMarkup).not.toContain('0 / 1')
-
-    useResponse({ ...observationMetadata(), items: [observationOnlySummary()] })
-    const observationOnly = (await fetchCredentialInFlightSummary(session)).items[0] ?? null
-    const observationMarkup = renderToStaticMarkup(
-      createElement(
-        TooltipProvider,
-        null,
-        createElement(CredentialInFlightCell, { summary: observationOnly }),
-      ),
-    )
-    expect(observationMarkup).toContain('3 observed')
-    expect(observationMarkup).not.toContain('∞')
-  })
-
-  test('surfaces partial and failed projections without an enforcement warning in limiter-only mode', async () => {
-    await i18n.changeLanguage('en')
-    const cellMarkup = renderToStaticMarkup(
-      createElement(
-        TooltipProvider,
-        null,
-        createElement(CredentialInFlightCell, {
-          summary: null,
-          status: {
-            observation: {
-              observedAt: '2026-07-21T12:00:00Z',
-              stale: true,
-              coverageComplete: false,
-              aggregatesComplete: false,
-              protocolCoverageComplete: true,
-              minimumProcessedBarrierRevision: 7,
-              detailsTruncated: false,
-            },
-            observationStale: true,
-            observationErrorMessage: 'snapshot read failed',
-            limiterStale: true,
-            limiterErrorMessage: 'counter read failed',
-          },
-        }),
-      ),
-    )
-    expect(cellMarkup).toContain('Observation data is unavailable')
-    expect(cellMarkup).toContain('Authoritative limiter state is unavailable')
-    expect(cellMarkup).toContain('snapshot coverage is incomplete')
-
     useResponse({ items: [{ ...limiterState(), observed: null, fully_enforced: 'unknown' }] })
     const limiterOnly = (await fetchCredentialConcurrencySnapshot(session)).items[0] ?? null
     const detailMarkup = renderToStaticMarkup(
