@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
+import { normalizeBooleanPreference, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 
 async function copyText(value: string) {
@@ -149,7 +151,11 @@ function TechnicalTextViewer({
   preserveLinesLabel: string
   wrapLinesLabel: string
 }) {
-  const [wrapLines, setWrapLines] = useState(true)
+  const [wrapLines, setWrapLines] = useLocalStoragePreference(
+    uiPreferenceKeys.technicalTextWrap,
+    true,
+    normalizeBooleanPreference,
+  )
   const wrapActionLabel = wrapLines ? preserveLinesLabel : wrapLinesLabel
 
   return (
