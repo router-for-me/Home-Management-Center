@@ -116,6 +116,13 @@ import type {
   ModelPriceSource,
 } from '@/lib/api/management/billing-types'
 import type { UserResource } from '@/lib/api/management/users'
+import {
+  formatCreditAmount,
+  formatDetailedCreditAmount,
+  formatModelPrice,
+  formatSignedCreditAmount,
+  formatSignedDetailedCreditAmount,
+} from '@/lib/billing/amount-format'
 import { hasSeparateCacheWriteRate } from '@/lib/billing/cache-write-pricing'
 import { createBillingModelPriceCandidateId } from '@/lib/billing/model-price-candidates'
 import type {
@@ -264,19 +271,6 @@ function formatNumber(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
 }
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(value)
-}
-
-function formatSignedAmount(value: number) {
-  const absolute = formatMoney(Math.abs(value))
-  if (value === 0) return absolute
-  return value > 0 ? `+${absolute}` : `-${absolute}`
-}
-
 function CacheWritePriceValue({
   value,
   t,
@@ -287,7 +281,7 @@ function CacheWritePriceValue({
   className?: string
 }) {
   if (hasSeparateCacheWriteRate(value)) {
-    return <span className={cn('tabular-nums', className)}>{formatMoney(value)}</span>
+    return <span className={cn('tabular-nums', className)}>{formatModelPrice(value)}</span>
   }
 
   return (
@@ -638,25 +632,25 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
         items={[
           {
             label: t('billingPage.overview.metrics.totalChargeAmount'),
-            value: formatMoney(overview.totalChargeAmount),
+            value: formatCreditAmount(overview.totalChargeAmount),
             detail: t('billingPage.overview.metrics.selectedRange'),
             valueClassName: 'text-destructive',
           },
           {
             label: t('billingPage.overview.metrics.totalRechargeAmount'),
-            value: formatMoney(overview.totalRechargeAmount),
+            value: formatCreditAmount(overview.totalRechargeAmount),
             detail: t('billingPage.overview.metrics.selectedRange'),
             valueClassName: 'text-success',
           },
           {
             label: t('billingPage.overview.metrics.totalDeductAmount'),
-            value: formatMoney(overview.totalDeductAmount),
+            value: formatCreditAmount(overview.totalDeductAmount),
             detail: t('billingPage.overview.metrics.selectedRange'),
             valueClassName: 'text-warning-foreground dark:text-warning',
           },
           {
             label: t('billingPage.overview.metrics.totalBalance'),
-            value: formatMoney(overview.totalBalance),
+            value: formatCreditAmount(overview.totalBalance),
             detail: t('billingPage.overview.metrics.currentSnapshot'),
           },
         ]}
@@ -709,7 +703,7 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
                 >
                   <span className="truncate">{point.date}</span>
                   <span className="font-medium tabular-nums">
-                    {formatMoney(point.chargeAmount)}
+                    {formatCreditAmount(point.chargeAmount)}
                   </span>
                   <span className="text-muted-foreground tabular-nums">
                     {t('billingPage.overview.trend.requests', {
@@ -754,7 +748,9 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
                         ) : null}
                         <span className="min-w-0 truncate">{item.label}</span>
                       </span>
-                      <span className="font-medium tabular-nums">{formatMoney(item.amount)}</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCreditAmount(item.amount)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -855,7 +851,7 @@ function ChargeRecordsTab({
                     )}
                   >
                     <div className="inline-flex items-center gap-1">
-                      <span>{formatSignedAmount(-Math.abs(record.amount))}</span>
+                      <span>{formatSignedDetailedCreditAmount(-Math.abs(record.amount))}</span>
                       {unpricedMessage ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -879,7 +875,9 @@ function ChargeRecordsTab({
                       ) : null}
                     </div>
                   </TableCell>
-                  <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {formatCreditAmount(record.balanceAfter)}
+                  </TableCell>
                   <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
                     <Button variant="text" size="sm" onClick={() => onView(record)}>
                       <Eye className="size-4" aria-hidden="true" />
@@ -979,12 +977,16 @@ function BalanceRecordsTab({
                       : 'text-success',
                   )}
                 >
-                  {formatSignedAmount(
+                  {formatSignedCreditAmount(
                     record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount),
                   )}
                 </TableCell>
-                <TableCell className="tabular-nums">{formatMoney(record.balanceBefore)}</TableCell>
-                <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                <TableCell className="tabular-nums">
+                  {formatCreditAmount(record.balanceBefore)}
+                </TableCell>
+                <TableCell className="tabular-nums">
+                  {formatCreditAmount(record.balanceAfter)}
+                </TableCell>
                 <TableCell>{record.operator || t('billingPage.common.na')}</TableCell>
                 <TableCell className="max-w-[260px] truncate">
                   {record.note || t('billingPage.common.na')}
@@ -1402,13 +1404,13 @@ function ModelPricesTab({
                       )}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {formatMoney(resource.inputPricePerMillion)}
+                      {formatModelPrice(resource.inputPricePerMillion)}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {formatMoney(resource.outputPricePerMillion)}
+                      {formatModelPrice(resource.outputPricePerMillion)}
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {formatMoney(resource.cacheReadPricePerMillion)}
+                      {formatModelPrice(resource.cacheReadPricePerMillion)}
                     </TableCell>
                     <TableCell>
                       <CacheWritePriceValue
@@ -1418,7 +1420,7 @@ function ModelPricesTab({
                       />
                     </TableCell>
                     <TableCell className="tabular-nums">
-                      {formatMoney(resource.requestPrice)}
+                      {formatModelPrice(resource.requestPrice)}
                     </TableCell>
                     <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
                     <TableCell>
@@ -1679,9 +1681,21 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
           : t('billingPage.common.no'),
       false,
     ],
-    [t('billingPage.chargeDetail.amount'), formatSignedAmount(-Math.abs(record.amount)), false],
-    [t('billingPage.chargeDetail.balanceBefore'), formatMoney(record.balanceBefore), false],
-    [t('billingPage.chargeDetail.balanceAfter'), formatMoney(record.balanceAfter), false],
+    [
+      t('billingPage.chargeDetail.amount'),
+      formatSignedDetailedCreditAmount(-Math.abs(record.amount)),
+      false,
+    ],
+    [
+      t('billingPage.chargeDetail.balanceBefore'),
+      formatDetailedCreditAmount(record.balanceBefore),
+      false,
+    ],
+    [
+      t('billingPage.chargeDetail.balanceAfter'),
+      formatDetailedCreditAmount(record.balanceAfter),
+      false,
+    ],
     [
       t('billingPage.chargeDetail.createdAt'),
       formatDateTime(record.createdAt, t('billingPage.common.na')),
@@ -1724,13 +1738,13 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground">{t('billingPage.prices.columns.input')}</span>
             <span className="tabular-nums">
-              {formatMoney(record.priceSnapshot.inputPricePerMillion)}
+              {formatModelPrice(record.priceSnapshot.inputPricePerMillion)}
             </span>
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground">{t('billingPage.prices.columns.output')}</span>
             <span className="tabular-nums">
-              {formatMoney(record.priceSnapshot.outputPricePerMillion)}
+              {formatModelPrice(record.priceSnapshot.outputPricePerMillion)}
             </span>
           </div>
           <div className="flex justify-between gap-3">
@@ -1738,7 +1752,7 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
               {t('billingPage.prices.columns.cacheRead')}
             </span>
             <span className="tabular-nums">
-              {formatMoney(record.priceSnapshot.cacheReadPricePerMillion)}
+              {formatModelPrice(record.priceSnapshot.cacheReadPricePerMillion)}
             </span>
           </div>
           <div className="flex justify-between gap-3">
@@ -1753,7 +1767,9 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
           </div>
           <div className="flex justify-between gap-3">
             <span className="text-muted-foreground">{t('billingPage.prices.columns.request')}</span>
-            <span className="tabular-nums">{formatMoney(record.priceSnapshot.requestPrice)}</span>
+            <span className="tabular-nums">
+              {formatModelPrice(record.priceSnapshot.requestPrice)}
+            </span>
           </div>
         </div>
       </div>
@@ -1809,9 +1825,12 @@ function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: U
         ? t('billingPage.balance.types.recharge')
         : t('billingPage.balance.types.deduct'),
     ],
-    [t('billingPage.balanceDetail.amount'), formatSignedAmount(amount)],
-    [t('billingPage.balanceDetail.balanceBefore'), formatMoney(record.balanceBefore)],
-    [t('billingPage.balanceDetail.balanceAfter'), formatMoney(record.balanceAfter)],
+    [t('billingPage.balanceDetail.amount'), formatSignedDetailedCreditAmount(amount)],
+    [
+      t('billingPage.balanceDetail.balanceBefore'),
+      formatDetailedCreditAmount(record.balanceBefore),
+    ],
+    [t('billingPage.balanceDetail.balanceAfter'), formatDetailedCreditAmount(record.balanceAfter)],
     [t('billingPage.balanceDetail.operator'), record.operator || t('billingPage.common.na')],
     [t('billingPage.balanceDetail.note'), record.note || t('billingPage.common.na')],
   ]

@@ -24,6 +24,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { UserBillingFilters, UserBillingPagination } from '@/lib/api/user/billing'
+import { formatCreditAmount, formatSignedDetailedCreditAmount } from '@/lib/billing/amount-format'
 import { createLocalDateRange } from '@/lib/billing/date-range'
 
 import { useUserBillingReport } from './use-user-billing-report'
@@ -49,17 +50,6 @@ function formatDateTime(value: string | null | undefined, fallback: string) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(value)
-}
-
-function formatChargeAmount(value: number) {
-  return `-${formatMoney(Math.abs(value))}`
 }
 
 function MetricTile({ label, value }: { label: string; value: string }) {
@@ -238,15 +228,15 @@ export function UserBillingReport() {
             <div className="grid gap-3 md:grid-cols-3">
               <MetricTile
                 label={t('userWorkspace.billing.metrics.currentBalance')}
-                value={formatMoney(report.overview.currentBalance)}
+                value={formatCreditAmount(report.overview.currentBalance)}
               />
               <MetricTile
                 label={t('userWorkspace.billing.metrics.todaySpend')}
-                value={formatMoney(report.overview.todaySpend)}
+                value={formatCreditAmount(report.overview.todaySpend)}
               />
               <MetricTile
                 label={t('userWorkspace.billing.metrics.monthSpend')}
-                value={formatMoney(report.overview.monthSpend)}
+                value={formatCreditAmount(report.overview.monthSpend)}
               />
             </div>
             <div className="rounded-md border p-3">
@@ -276,7 +266,9 @@ export function UserBillingReport() {
                           count: formatNumber(item.requestCount),
                         })}
                       </span>
-                      <span className="font-medium tabular-nums">{formatMoney(item.amount)}</span>
+                      <span className="font-medium tabular-nums">
+                        {formatCreditAmount(item.amount)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -338,9 +330,11 @@ export function UserBillingReport() {
                     {formatNumber(record.outputTokens)}
                   </TableCell>
                   <TableCell className="text-destructive font-medium tabular-nums">
-                    {formatChargeAmount(record.amount)}
+                    {formatSignedDetailedCreditAmount(-Math.abs(record.amount))}
                   </TableCell>
-                  <TableCell className="tabular-nums">{formatMoney(record.balanceAfter)}</TableCell>
+                  <TableCell className="tabular-nums">
+                    {formatCreditAmount(record.balanceAfter)}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

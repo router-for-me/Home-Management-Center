@@ -113,6 +113,7 @@ import {
   getUserApiFieldErrors,
   userPeriodWindowIds,
 } from '@/lib/api/management/users'
+import { formatCreditAmount, formatSignedCreditAmount } from '@/lib/billing/amount-format'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -329,18 +330,6 @@ function formatOptionalTime(value: string | null, fallback: string) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
-}
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
-  }).format(value)
-}
-
-function formatSignedAmount(value: number) {
-  const absolute = formatMoney(Math.abs(value))
-  return value >= 0 ? `+${absolute}` : `-${absolute}`
 }
 
 function formatBalanceTargetIdentity(target: BalanceOperationTarget) {
@@ -1832,9 +1821,9 @@ function PeriodLimitWindowCard({ window }: { window: UserPeriodWindowStatus }) {
           ) : null}
           <p className="text-xs tabular-nums">
             {t('usersPage.periodLimits.usageSummary', {
-              used: formatMoney(window.used),
-              limit: window.limit !== null ? formatMoney(window.limit) : '—',
-              remaining: window.remaining !== null ? formatMoney(window.remaining) : '—',
+              used: formatCreditAmount(window.used),
+              limit: window.limit !== null ? formatCreditAmount(window.limit) : '—',
+              remaining: window.remaining !== null ? formatCreditAmount(window.remaining) : '—',
             })}
           </p>
           <p className="text-muted-foreground text-xs leading-5 break-words">
@@ -1913,7 +1902,7 @@ function UserDetailContent({
             ['createdAt', formatOptionalTime(user.createdAt, t('usersPage.status.notReturned'))],
             ['updatedAt', formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))],
             ['deletedAt', formatOptionalTime(user.deletedAt, t('usersPage.status.notDeleted'))],
-            ['credits', formatNumber(user.credits)],
+            ['credits', formatCreditAmount(user.credits)],
             ['mfa', user.mfaConfigured ? t('common.enabled') : t('common.disabled')],
             ['passkeyCount', formatNumber(user.passkeyCount)],
           ].map(([key, value]) => (
@@ -2263,7 +2252,7 @@ function UsersTable({
               <TableCell>
                 <StatusBadge deletedAt={user.deletedAt} />
               </TableCell>
-              <TableCell>{formatNumber(user.credits)}</TableCell>
+              <TableCell className="tabular-nums">{formatCreditAmount(user.credits)}</TableCell>
               <TableCell className="w-[120px]">
                 <UserPeriodLimitsTableBadge summary={user.periodLimitsSummary} />
               </TableCell>
@@ -2651,7 +2640,7 @@ function BalanceOperationForm({
                 {t('usersPage.balance.form.currentTotal')}
               </span>
               <span className="min-w-0 text-right font-medium tabular-nums">
-                {formatMoney(currentTotal)}
+                {formatCreditAmount(currentTotal)}
               </span>
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -2666,7 +2655,9 @@ function BalanceOperationForm({
                     : null,
                 )}
               >
-                {nextTotal !== null ? formatMoney(nextTotal) : t('usersPage.balance.common.na')}
+                {nextTotal !== null
+                  ? formatCreditAmount(nextTotal)
+                  : t('usersPage.balance.common.na')}
               </span>
             </div>
           </div>
@@ -3032,14 +3023,14 @@ export function UsersWorkbenchPage() {
         ? t('usersPage.balance.form.targetCount', { count: pendingBalanceTargetCount })
         : ''
   const pendingBalanceSignedAmount = pendingBalanceOperation
-    ? formatSignedAmount(
+    ? formatSignedCreditAmount(
         pendingBalanceOperation.operation === 'deduct'
           ? -Math.abs(pendingBalanceOperation.amount)
           : Math.abs(pendingBalanceOperation.amount),
       )
     : ''
   const pendingBalanceTotalChange = pendingBalanceOperation
-    ? formatSignedAmount(
+    ? formatSignedCreditAmount(
         pendingBalanceOperation.operation === 'deduct'
           ? -Math.abs(pendingBalanceOperation.amount * pendingBalanceTargetCount)
           : Math.abs(pendingBalanceOperation.amount * pendingBalanceTargetCount),
@@ -3546,7 +3537,7 @@ export function UsersWorkbenchPage() {
                     {t('usersPage.balance.confirm.currentTotal')}
                   </span>
                   <span className="min-w-0 text-right font-medium tabular-nums">
-                    {formatMoney(pendingBalanceOperation.currentTotal)}
+                    {formatCreditAmount(pendingBalanceOperation.currentTotal)}
                   </span>
                 </div>
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -3561,7 +3552,7 @@ export function UsersWorkbenchPage() {
                         : null,
                     )}
                   >
-                    {formatMoney(pendingBalanceOperation.nextTotal)}
+                    {formatCreditAmount(pendingBalanceOperation.nextTotal)}
                   </span>
                 </div>
                 <div className="grid gap-1 border-t pt-2">
