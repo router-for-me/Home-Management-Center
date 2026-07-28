@@ -99,6 +99,8 @@ import {
   NewItemsNotice,
 } from '@/features/observability/live-refresh-control'
 import { createTokenUsageChartLayout } from '@/features/observability/token-usage-chart-layout'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
+import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
   RequestErrorLogFile,
@@ -130,6 +132,7 @@ import type {
   UsageTokenBreakdown,
 } from '@/lib/api/management/usage-logs'
 import { formatCreditAmount, formatUsageAmount } from '@/lib/billing/amount-format'
+import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -1224,6 +1227,8 @@ export function UsageKpiStrip({
 }
 
 type UsageTrendOverlayMetric = 'requests' | 'cost'
+const usageTrendOverlayMetrics = ['requests', 'cost'] as const
+const normalizeUsageTrendOverlayMetric = createChoicePreferenceNormalizer(usageTrendOverlayMetrics)
 type TokenSeriesKey =
   | 'uncachedInputTokens'
   | 'cacheReadTokens'
@@ -1783,7 +1788,11 @@ export function UsageTrendPanel({
   tokenAccountingAvailable: boolean
 }) {
   const { t, i18n } = useTranslation()
-  const [overlayMetric, setOverlayMetric] = useState<UsageTrendOverlayMetric>('requests')
+  const [overlayMetric, setOverlayMetric] = useLocalStoragePreference(
+    uiPreferenceKeys.usageTrendOverlayMetric,
+    usageTrendOverlayMetrics[0],
+    normalizeUsageTrendOverlayMetric,
+  )
   const [focusedSeriesKey, setFocusedSeriesKey] = useState<TokenSeriesKey | null>(null)
   const chartData = useMemo(
     () =>
@@ -1819,7 +1828,7 @@ export function UsageTrendPanel({
             if (nextMetric) setOverlayMetric(nextMetric as UsageTrendOverlayMetric)
           }}
         >
-          {(['requests', 'cost'] as UsageTrendOverlayMetric[]).map((metricKey) => (
+          {usageTrendOverlayMetrics.map((metricKey) => (
             <ToggleGroupItem
               key={metricKey}
               value={metricKey}
@@ -2331,12 +2340,14 @@ export function RankingGrid({
   onExpandedChange: (expanded: boolean) => void
 }) {
   const { t } = useTranslation()
-  const [visibleRankingColumns, setVisibleRankingColumns] =
-    useState<RankingColumnKey[]>(defaultRankingColumns)
+  const { isColumnVisible: isRankingColumnVisible, setColumnVisible: setRankingColumnVisible } =
+    usePersistentColumnVisibility({
+      storageKey: uiPreferenceKeys.usageRankingColumns,
+      columns: rankingColumns,
+      defaultVisibleColumns: defaultRankingColumns,
+    })
   if (!overview && !aggregate) return null
   const selectedGroupLabel = t(`usageLogsPage.rankings.groups.${selectedGroup}`)
-  const isRankingColumnVisible = (column: RankingColumnKey) =>
-    visibleRankingColumns.includes(column)
   const visibleRankingColumnConfigs = rankingColumns.filter((column) =>
     isRankingColumnVisible(column.key),
   )
@@ -2347,19 +2358,6 @@ export function RankingGrid({
   const selectableRankingMetricOptions = aggregate
     ? rankingMetricOptions.filter((metric) => aggregate.sortableMetrics.includes(metric))
     : rankingMetricOptions
-  const toggleRankingColumn = (column: RankingColumnKey, checked: boolean) => {
-    const config = rankingColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleRankingColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
-
   const groups: Array<{
     id: keyof UsageOverview['top']
     groupBy: UsageAggregateGroupBy
@@ -2537,7 +2535,7 @@ export function RankingGrid({
                       disabled={column.required}
                       onSelect={(event) => event.preventDefault()}
                       onCheckedChange={(checked) =>
-                        toggleRankingColumn(column.key, Boolean(checked))
+                        setRankingColumnVisible(column.key, Boolean(checked))
                       }
                     >
                       {t(`usageLogsPage.rankings.columns.${column.key}`)}
@@ -3118,15 +3116,17 @@ export function RequestRecordsTable({
   onExport: () => void
 }) {
   const { t, i18n } = useTranslation()
-  const [visibleColumns, setVisibleColumns] =
-    useState<UsageRecordColumnKey[]>(defaultUsageRecordColumns)
+  const { isColumnVisible, setColumnVisible } = usePersistentColumnVisibility({
+    storageKey: uiPreferenceKeys.usageRecordColumns,
+    columns: usageRecordColumns,
+    defaultVisibleColumns: defaultUsageRecordColumns,
+  })
   const rows = records?.items ?? []
   const total = records?.total ?? 0
   const start = total > 0 ? filters.offset + 1 : 0
   const end = Math.min(filters.offset + rows.length, total)
   const canGoPrevious = filters.offset > 0
   const canGoNext = filters.offset + filters.limit < total
-  const isColumnVisible = (column: UsageRecordColumnKey) => visibleColumns.includes(column)
   const visibleColumnConfigs = usageRecordColumns.filter((column) => isColumnVisible(column.key))
   const hasActiveRequestFilters = hasActiveRequestRecordFilters(filters)
   const visibleTableWidth =
@@ -3134,18 +3134,6 @@ export function RequestRecordsTable({
       (width, column) => width + column.width,
       usageRecordActionColumnWidth,
     ) + 16
-  const toggleColumn = (column: UsageRecordColumnKey, checked: boolean) => {
-    const config = usageRecordColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
   const applySort = (sort: UsageFilters['sort']) => {
     onFilterChange({ sort, offset: 0 })
   }
@@ -3194,7 +3182,7 @@ export function RequestRecordsTable({
                     checked={isColumnVisible(column.key)}
                     disabled={column.required}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, Boolean(checked))}
+                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
                   >
                     {t(`usageLogsPage.records.columns.${column.key}`)}
                   </DropdownMenuCheckboxItem>
@@ -3469,6 +3457,9 @@ export function RequestRecordsTable({
 
 type RequestLogSortKey = 'time' | 'size'
 
+const requestLogPageSizeOptions = [20, 50, 100]
+const normalizeRequestLogPageSize = createChoicePreferenceNormalizer(requestLogPageSizeOptions)
+
 function RequestLogSortButton({
   label,
   sortKey,
@@ -3539,7 +3530,11 @@ export function RequestLogIndexTable({
     key: 'time',
     direction: 'desc',
   })
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useLocalStoragePreference(
+    uiPreferenceKeys.requestLogPageSize,
+    requestLogPageSizeOptions[0],
+    normalizeRequestLogPageSize,
+  )
   const [page, setPage] = useState(0)
   const indexItems = index?.items ?? []
 
@@ -3825,7 +3820,7 @@ export function RequestLogIndexTable({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[20, 50, 100].map((option) => (
+                  {requestLogPageSizeOptions.map((option) => (
                     <SelectItem key={option} value={String(option)}>
                       {formatNumber(option)}
                     </SelectItem>
@@ -4568,9 +4563,11 @@ export function CredentialUsageTable({
   onOffsetChange: (offset: number) => void
 }) {
   const { t, i18n } = useTranslation()
-  const [visibleColumns, setVisibleColumns] = useState<CredentialUsageColumnKey[]>(
-    defaultCredentialUsageColumns,
-  )
+  const { isColumnVisible, setColumnVisible } = usePersistentColumnVisibility({
+    storageKey: uiPreferenceKeys.credentialUsageColumns,
+    columns: credentialUsageColumns,
+    defaultVisibleColumns: defaultCredentialUsageColumns,
+  })
   const rows = response?.items ?? []
   const total = response?.total ?? 0
   const limit = response?.limit ?? pageSizeOptions[0] ?? 20
@@ -4580,25 +4577,11 @@ export function CredentialUsageTable({
   const canGoPrevious = offset > 0
   const canGoNext = offset + limit < total
   const controlsDisabled = pending || mutating
-  const isColumnVisible = (column: CredentialUsageColumnKey) => visibleColumns.includes(column)
   const visibleColumnConfigs = credentialUsageColumns.filter((column) =>
     isColumnVisible(column.key),
   )
   const visibleTableWidth =
     visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
-  const toggleColumn = (column: CredentialUsageColumnKey, checked: boolean) => {
-    const config = credentialUsageColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
-
   return (
     <TableSurface className="min-w-0">
       <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-start md:justify-between">
@@ -4626,7 +4609,7 @@ export function CredentialUsageTable({
                     checked={isColumnVisible(column.key)}
                     disabled={column.required}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, Boolean(checked))}
+                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
                   >
                     {t(`usageLogsPage.credentials.columns.${column.key}`)}
                   </DropdownMenuCheckboxItem>

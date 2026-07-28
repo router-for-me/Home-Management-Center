@@ -9,6 +9,7 @@ import {
 import type { StagedRefresh } from '@/features/observability/live-refresh'
 import { useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
+import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import { downloadRequestLogById, toLogsApiError } from '@/lib/api/management/logs'
 import {
   defaultRequestEventFilters,
@@ -25,6 +26,7 @@ import type {
   RequestEventStatusFilter,
   RequestEventsPage,
 } from '@/lib/api/management/request-events'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const requestEventPageSizeOptions = [25, 50, 100, 200]
 const liveRefreshIntervalMs = 5_000
@@ -52,10 +54,10 @@ const requestEventOptionFilterKeys = new Set<keyof RequestEventFilters>([
   'sort',
 ])
 
-function getClearedFilters(): RequestEventFilters {
+function getClearedFilters(limit: number): RequestEventFilters {
   return {
     ...defaultRequestEventFilters,
-    limit: defaultRequestEventFilters.limit,
+    limit,
     offset: 0,
   }
 }
@@ -64,7 +66,11 @@ export function useRequestEventsWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
-  const [filters, setFilters] = useState<RequestEventFilters>(defaultRequestEventFilters)
+  const [filters, setFilters] = usePersistentPagination(
+    uiPreferenceKeys.requestEventPageSize,
+    defaultRequestEventFilters,
+    requestEventPageSizeOptions,
+  )
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [pendingEvents, setPendingEvents] = useState<StagedRefresh<RequestEventsPage> | null>(null)
 
@@ -405,7 +411,7 @@ export function useRequestEventsWorkbench() {
     setStatus,
     clearFilters: () => {
       setPendingEvents(null)
-      setFilters(getClearedFilters())
+      setFilters((currentFilters) => getClearedFilters(currentFilters.limit))
     },
     selectEvent,
     clearSelectedEvent,

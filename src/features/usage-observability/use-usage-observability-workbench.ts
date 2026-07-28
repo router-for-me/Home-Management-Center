@@ -5,6 +5,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { getAdaptiveRefreshInterval } from '@/features/observability/live-refresh'
 import { useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
+import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import { downloadRequestLogById, toLogsApiError } from '@/lib/api/management/logs'
 import {
   type UsageAggregateGroupBy,
@@ -24,6 +25,7 @@ import {
   fetchUsageRuntimeSettings,
   toUsageApiError,
 } from '@/lib/api/management/usage'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const recordPageSizeOptions = [25, 50, 100, 200]
 const credentialUsagePageSizeOptions = [10, 20, 50, 100]
@@ -74,7 +76,11 @@ export function useUsageObservabilityWorkbench() {
     usageRealtime: false,
     requestLogIndex: false,
   }
-  const [filters, setFilters] = useState<UsageFilters>(defaultUsageFilters)
+  const [filters, setFilters] = usePersistentPagination(
+    uiPreferenceKeys.usageRecordPageSize,
+    defaultUsageFilters,
+    recordPageSizeOptions,
+  )
   const [manualRefreshing, setManualRefreshing] = useState(false)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [rankingGroup, setRankingGroup] = useState<UsageAggregateGroupBy>(
@@ -86,8 +92,12 @@ export function useUsageObservabilityWorkbench() {
   const [rankingDetailOpen, setRankingDetailOpen] = useState(false)
   const [rankingExpanded, setRankingExpanded] = useState(false)
   const [credentialUsageSort, setCredentialUsageSortValue] = useState<UsageAggregateSortState>(null)
-  const [credentialUsageLimit, setCredentialUsageLimitValue] = useState(20)
-  const [credentialUsageOffset, setCredentialUsageOffsetValue] = useState(0)
+  const [credentialUsagePagination, setCredentialUsagePagination] = usePersistentPagination(
+    uiPreferenceKeys.credentialUsagePageSize,
+    { limit: 20, offset: 0 },
+    credentialUsagePageSizeOptions,
+  )
+  const { limit: credentialUsageLimit, offset: credentialUsageOffset } = credentialUsagePagination
   const rankingLimit = rankingExpanded ? 50 : 10
   const aggregateFilters = useMemo<UsageFilters>(
     () => ({
@@ -397,7 +407,7 @@ export function useUsageObservabilityWorkbench() {
     const affectsCredentialUsage = filterKeys.some((key) => usageScopeFilterKeys.has(key))
 
     if (affectsCredentialUsage) {
-      setCredentialUsageOffsetValue(0)
+      setCredentialUsagePagination((current) => ({ ...current, offset: 0 }))
     }
 
     setFilters((currentFilters) => ({
@@ -418,12 +428,14 @@ export function useUsageObservabilityWorkbench() {
 
   const setCredentialUsageLimit = (nextLimit: number) => {
     if (!credentialUsagePageSizeOptions.includes(nextLimit)) return
-    setCredentialUsageLimitValue(nextLimit)
-    setCredentialUsageOffsetValue(0)
+    setCredentialUsagePagination({ limit: nextLimit, offset: 0 })
   }
 
   const setCredentialUsageOffset = (nextOffset: number) => {
-    setCredentialUsageOffsetValue(Math.max(0, nextOffset))
+    setCredentialUsagePagination((current) => ({
+      ...current,
+      offset: Math.max(0, nextOffset),
+    }))
   }
 
   const setCredentialUsageSort = (nextMetric: UsageAggregateMetric) => {
@@ -438,7 +450,7 @@ export function useUsageObservabilityWorkbench() {
 
       return null
     })
-    setCredentialUsageOffsetValue(0)
+    setCredentialUsagePagination((current) => ({ ...current, offset: 0 }))
   }
 
   const settingsIssue = toUsageIssue('runtimeSettings', settingsQuery.error)

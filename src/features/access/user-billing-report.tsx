@@ -23,13 +23,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import type { UserBillingFilters, UserBillingPagination } from '@/lib/api/user/billing'
 import { formatCreditAmount, formatSignedDetailedCreditAmount } from '@/lib/billing/amount-format'
 import { createLocalDateRange } from '@/lib/billing/date-range'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 import { useUserBillingReport } from './use-user-billing-report'
 
 const pageSizes = [20, 50, 100] as const
+const defaultPagination: UserBillingPagination = { limit: 20, offset: 0 }
 
 type DateRangePreset = 'today' | '7d' | '30d' | 'custom'
 
@@ -138,7 +141,11 @@ export function UserBillingReport() {
   const { t } = useTranslation()
   const [preset, setPreset] = useState<DateRangePreset>('30d')
   const [filters, setFilters] = useState<UserBillingFilters>(() => createDateRange(29))
-  const [pagination, setPagination] = useState<UserBillingPagination>({ limit: 20, offset: 0 })
+  const [pagination, setPagination] = usePersistentPagination(
+    uiPreferenceKeys.userBillingPageSize,
+    defaultPagination,
+    pageSizes,
+  )
   const report = useUserBillingReport(filters, pagination)
 
   const updateFilters = (patch: Partial<UserBillingFilters>) => {

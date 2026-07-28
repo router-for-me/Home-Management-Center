@@ -105,6 +105,7 @@ import {
   type BillingModelPriceCandidate,
   useBillingWorkbench,
 } from '@/features/billing/use-billing-workbench'
+import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import type {
   BalanceRecord,
   BillingFilters,
@@ -132,6 +133,7 @@ import type {
   ModelPriceImportProgress,
   ModelPriceImportTargetFilter,
 } from '@/lib/billing/model-price-import-types'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -2509,10 +2511,16 @@ export function BillingWorkbenchPage() {
   const [textFilters, setTextFilters] = useState(() => createDefaultBillingTextFilters())
   const [datePreset, setDatePreset] = useState<DateRangePreset>('7d')
   const [activeTab, setActiveTab] = useState<BillingTab>('overview')
-  const [chargePagination, setChargePagination] =
-    useState<BillingPagination>(defaultBillingPagination)
-  const [balancePagination, setBalancePagination] =
-    useState<BillingPagination>(defaultBillingPagination)
+  const [chargePagination, setChargePagination] = usePersistentPagination(
+    uiPreferenceKeys.billingChargePageSize,
+    defaultBillingPagination,
+    billingPageSizes,
+  )
+  const [balancePagination, setBalancePagination] = usePersistentPagination(
+    uiPreferenceKeys.billingBalancePageSize,
+    defaultBillingPagination,
+    billingPageSizes,
+  )
   const [sheetMode, setSheetMode] = useState<SheetMode | null>(null)
   const [modelPriceImportApplying, setModelPriceImportApplying] = useState(false)
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null)
@@ -2554,8 +2562,8 @@ export function BillingWorkbenchPage() {
       toast.info(t('billingPage.filters.reportTimezoneChanged', { timezone }))
     }
     if (previousTimezone !== timezone) {
-      setChargePagination(defaultBillingPagination)
-      setBalancePagination(defaultBillingPagination)
+      setChargePagination((current) => ({ ...current, offset: 0 }))
+      setBalancePagination((current) => ({ ...current, offset: 0 }))
     }
   }, [datePreset, t, workbench.reportTimezone])
 
@@ -2575,8 +2583,8 @@ export function BillingWorkbenchPage() {
         model: textFilters.model,
         provider: textFilters.provider,
       }))
-      setChargePagination(defaultBillingPagination)
-      setBalancePagination(defaultBillingPagination)
+      setChargePagination((current) => ({ ...current, offset: 0 }))
+      setBalancePagination((current) => ({ ...current, offset: 0 }))
     }, 300)
 
     return () => window.clearTimeout(timeout)
@@ -2597,8 +2605,8 @@ export function BillingWorkbenchPage() {
 
   const updateFilters = (patch: Partial<BillingFilters>) => {
     setFilters((current) => ({ ...current, ...patch }))
-    setChargePagination(defaultBillingPagination)
-    setBalancePagination(defaultBillingPagination)
+    setChargePagination((current) => ({ ...current, offset: 0 }))
+    setBalancePagination((current) => ({ ...current, offset: 0 }))
   }
 
   const handlePresetChange = (preset: DateRangePreset) => {
