@@ -63,6 +63,7 @@ Do not start extra development servers when the user already has one running. Th
 - Put TanStack Query queries and mutations in feature hooks.
 - Represent unsupported backend behavior clearly instead of showing placeholder data.
 - Use existing shadcn/ui primitives for dialogs, confirmation flows, sheets, forms, buttons, inputs, dropdowns, and skeletons.
+- Build charts with `src/components/ui/chart.tsx` (Recharts) instead of hand-rolled SVG; when a task touches a remaining hand-written chart, migrate it.
 - Avoid browser-native `alert`, `confirm`, and `prompt` in product UI.
 - Do not add placeholder features that imply backend support the API does not provide.
 - Keep generated route output consistent by running `bun run routes:generate` after route changes.

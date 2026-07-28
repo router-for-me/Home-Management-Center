@@ -3867,8 +3867,7 @@ export const zhCN = {
         emptyTitle: '暂无趋势数据',
         unavailable: '当前范围还没有可展示的趋势。',
         accessibility: {
-          keyboardInstructions:
-            '使用左右方向键逐个查看时间段，按 Home 或 End 跳到首个或最后一个时间段。',
+          keyboardInstructions: '聚焦图表后，使用左右方向键逐个查看时间段。',
           dataTableCaption: 'Token 用量趋势数据',
           time: '时间',
         },

@@ -10,6 +10,7 @@
   "ignore": ["src/env.d.ts"],
   "ignoreIssues": {
     "src/components/ui/button.tsx": ["exports"],
+    "src/components/ui/chart.tsx": ["exports", "types"],
     "src/components/ui/dropdown-menu.tsx": ["exports"],
     "src/components/ui/sheet.tsx": ["exports"],
     "src/components/ui/sidebar.tsx": ["exports"]
@@ -22,7 +23,6 @@
     "input-otp",
     "motion",
     "react-hook-form",
-    "recharts",
     "tw-animate-css",
     "vaul"
   ]

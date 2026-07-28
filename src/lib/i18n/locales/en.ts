@@ -4042,7 +4042,7 @@ export const en = {
         unavailable: 'No trend data is available for this range.',
         accessibility: {
           keyboardInstructions:
-            'Use the Left and Right Arrow keys to inspect each time bucket. Press Home or End to jump to the first or last bucket.',
+            'Focus the chart, then use the Left and Right Arrow keys to inspect each time bucket.',
           dataTableCaption: 'Token usage trend data',
           time: 'Time',
         },
