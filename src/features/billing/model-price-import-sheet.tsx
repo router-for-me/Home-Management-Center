@@ -59,6 +59,7 @@ import type {
   ModelPrice,
   ModelPriceInput,
 } from '@/lib/api/management/billing-types'
+import { formatModelPrice } from '@/lib/billing/amount-format'
 import {
   createDefaultModelPriceImportPreferences,
   readModelPriceImportPreferences,
@@ -137,7 +138,7 @@ const PENDING_APPLY_PREFIX = 'hmc.billing.model-price-import.pending:'
 
 function formatPrice(value: number | null | undefined, locale: string) {
   if (value == null || Number.isNaN(value)) return '—'
-  return new Intl.NumberFormat(locale, { maximumFractionDigits: 6 }).format(value)
+  return formatModelPrice(value, locale)
 }
 
 function formatReason(t: ReturnType<typeof useTranslation>['t'], row: ModelPriceImportPreviewRow) {

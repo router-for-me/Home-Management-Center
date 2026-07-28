@@ -95,6 +95,7 @@ import {
   isRequestEventLatencyRangeValid,
 } from '@/lib/api/management/request-events'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
+import { formatUsageAmount } from '@/lib/billing/amount-format'
 import { cn } from '@/lib/utils'
 
 type RequestEventsVerdict = 'ready' | 'empty' | 'partial' | 'unsupported'
@@ -208,7 +209,7 @@ function formatDuration(value: number | null) {
 function formatAmount(value: number | null, currency?: string | null) {
   if (value === null || !Number.isFinite(value)) return null
   const unit = currency?.trim() || 'credits'
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(value)} ${unit}`
+  return `${formatUsageAmount(value)} ${unit}`
 }
 
 function getRuntimeNodeLabel(event: RequestEvent) {

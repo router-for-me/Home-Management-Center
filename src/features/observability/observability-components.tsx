@@ -129,6 +129,7 @@ import type {
   UsageRecordsPage,
   UsageTokenBreakdown,
 } from '@/lib/api/management/usage-logs'
+import { formatCreditAmount, formatUsageAmount } from '@/lib/billing/amount-format'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -210,24 +211,24 @@ function formatRateNumber(value: number) {
   }).format(value)
 }
 
-function formatAmount(value: number | null) {
+function formatAmount(value: number | null, disclosure: 'summary' | 'precise' = 'precise') {
   if (value === null) return null
-  const absoluteValue = Math.abs(value)
-  const maximumFractionDigits = absoluteValue > 0 && absoluteValue < 1 ? 4 : 2
-  const formattedAmount = new Intl.NumberFormat(getNumberLocale(), {
-    maximumFractionDigits,
-    minimumFractionDigits: 2,
-  }).format(absoluteValue)
-
-  return `${value < 0 ? '-' : ''}${formattedAmount}`
+  return disclosure === 'summary'
+    ? formatCreditAmount(value, getNumberLocale())
+    : formatUsageAmount(value, getNumberLocale())
 }
 
 // Renders an API billing amount with its backend-declared unit.
 // Returns null for a null value so callers can supply their own fallback copy.
-function formatAmountUnit(t: TFunction, value: number | null, currency?: string | null) {
+function formatAmountUnit(
+  t: TFunction,
+  value: number | null,
+  currency?: string | null,
+  disclosure: 'summary' | 'precise' = 'precise',
+) {
   if (value === null) return null
 
-  const amount = formatAmount(value)
+  const amount = formatAmount(value, disclosure)
 
   const normalizedCurrency = currency?.trim().toLowerCase()
   if (!normalizedCurrency || normalizedCurrency === 'credits' || normalizedCurrency === 'points') {
@@ -238,7 +239,8 @@ function formatAmountUnit(t: TFunction, value: number | null, currency?: string 
     return new Intl.NumberFormat(getNumberLocale(), {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: Math.abs(value) > 0 && Math.abs(value) < 1 ? 4 : 2,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: disclosure === 'summary' ? 2 : 6,
     }).format(value)
   }
 
@@ -246,7 +248,7 @@ function formatAmountUnit(t: TFunction, value: number | null, currency?: string 
 }
 
 function formatKpiAmount(t: TFunction, value: number | null, currency?: string | null) {
-  return formatAmountUnit(t, value, currency) ?? '—'
+  return formatAmountUnit(t, value, currency, 'summary') ?? '—'
 }
 
 function formatBillingBasis(value: string | null, t: TFunction) {
@@ -1347,7 +1349,7 @@ function formatOverlayValue(
   currency?: string | null,
 ) {
   if (metric === 'cost') {
-    return formatAmountUnit(t, value, currency) ?? '—'
+    return formatAmountUnit(t, value, currency, 'summary') ?? '—'
   }
 
   return formatCompactNumber(value)
@@ -4740,8 +4742,7 @@ export function CredentialUsageTable({
                       {isColumnVisible('cost') ? (
                         <TableCell className="text-right">
                           <p className="font-medium">
-                            {formatAmountUnit(t, row.totalAmount, row.currency) ??
-                              t('usageLogsPage.status.notAvailable')}
+                            {formatKpiAmount(t, row.totalAmount, row.currency)}
                           </p>
                           <p className="text-muted-foreground flex justify-end text-xs">
                             <MetricDelta delta={row.comparison?.totalAmountDelta} />

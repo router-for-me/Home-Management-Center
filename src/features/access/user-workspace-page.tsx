@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/table'
 import type { UserApiKeyInput, UserApiKeyResource } from '@/lib/api/user/api-keys'
 import type { UserEmailStatus, UserPasskeyResource } from '@/lib/api/user/auth'
+import { formatCreditAmount } from '@/lib/billing/amount-format'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
@@ -986,9 +987,7 @@ export function UserWorkspacePage() {
                 <p className="text-muted-foreground text-xs">
                   {t('userWorkspace.summary.credits')}
                 </p>
-                <p className="mt-2 text-sm font-semibold">
-                  {new Intl.NumberFormat().format(user.credits)}
-                </p>
+                <p className="mt-2 text-sm font-semibold">{formatCreditAmount(user.credits)}</p>
               </div>
               <div className="bg-card rounded-lg border p-4">
                 <p className="text-muted-foreground text-xs">
