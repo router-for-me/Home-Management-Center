@@ -3867,8 +3867,7 @@ export const zhTW = {
         emptyTitle: '暫無趨勢資料',
         unavailable: '目前範圍還沒有可展示的趨勢。',
         accessibility: {
-          keyboardInstructions:
-            '使用左右方向鍵逐一查看時段，按 Home 或 End 跳到第一個或最後一個時段。',
+          keyboardInstructions: '聚焦圖表後，使用左右方向鍵逐一查看時段。',
           dataTableCaption: 'Token 用量趨勢資料',
           time: '時間',
         },
