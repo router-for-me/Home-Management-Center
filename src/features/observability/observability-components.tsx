@@ -134,6 +134,7 @@ import type {
   UsageTokenBreakdown,
 } from '@/lib/api/management/usage-logs'
 import { formatCreditAmount, formatUsageAmount } from '@/lib/billing/amount-format'
+import { formatCompactNumber, formatNumber, getNumberLocale } from '@/lib/number-format'
 import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -153,12 +154,6 @@ type KpiCardData = {
 
 function getDateTimeLocale(i18n: I18nInstance) {
   return i18n.resolvedLanguage ?? i18n.language
-}
-
-function getNumberLocale() {
-  if (typeof document === 'undefined') return undefined
-  const language = document.documentElement.lang?.trim()
-  return language || undefined
 }
 
 export function formatDateTime(value: string | null, i18n: I18nInstance) {
@@ -197,17 +192,6 @@ function formatTimestamp(value: number | null, i18n: I18nInstance) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date)
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat(getNumberLocale(), { maximumFractionDigits: 0 }).format(value)
-}
-
-function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat(getNumberLocale(), {
-    maximumFractionDigits: value >= 1000 ? 1 : 0,
-    notation: value >= 10_000 ? 'compact' : 'standard',
-  }).format(value)
 }
 
 function formatRateNumber(value: number) {

@@ -882,10 +882,10 @@ export const en = {
           scopeSummary: 'Matches {{tier}} at {{band}}; the price applies to the full request.',
           legacyScopeHint:
             'The connected backend has no tier or context-band rule identity. This form will send only flat-price fields.',
-          input: 'Input price per million tokens',
-          output: 'Output price per million tokens',
-          cacheRead: 'Cache read price per million tokens',
-          cacheWrite: 'Cache write price per million tokens',
+          input: 'Input price per 1M tokens',
+          output: 'Output price per 1M tokens',
+          cacheRead: 'Cache read price per 1M tokens',
+          cacheWrite: 'Cache write price per 1M tokens',
           request: 'Per-request price',
           pricing: 'Price rules',
           pricingHint:
@@ -4068,7 +4068,7 @@ export const en = {
         title: 'Cost breakdown',
         totalCost: 'Total cost',
         blendedRate: 'Blended rate',
-        perMillion: '{{value}} / M tokens',
+        perMillion: '{{value}} / 1M tokens',
         itemDetail: '{{tokens}} tokens · {{basis}}',
         itemBasis: 'Billing basis: {{basis}}',
         billingBasis: {
