@@ -883,10 +883,10 @@ export const ru = {
           scopeSummary: 'Совпадение: {{tier}}, {{band}}; цена применяется ко всему запросу.',
           legacyScopeHint:
             'Backend не поддерживает tier и диапазон контекста в идентификаторе правила. Форма отправит только плоские поля цены.',
-          input: 'Цена входа за миллион токенов',
-          output: 'Цена выхода за миллион токенов',
-          cacheRead: 'Цена чтения кэша за миллион токенов',
-          cacheWrite: 'Цена записи кэша за миллион токенов',
+          input: 'Цена входа за 1M токенов',
+          output: 'Цена выхода за 1M токенов',
+          cacheRead: 'Цена чтения кэша за 1M токенов',
+          cacheWrite: 'Цена записи кэша за 1M токенов',
           request: 'Цена за запрос',
           pricing: 'Правила цены',
           pricingHint:
@@ -1066,7 +1066,7 @@ export const ru = {
             existing: 'Существующее правило',
           },
           fields: {
-            serviceTier: 'Уровень сервиса',
+            serviceTier: 'Service tier',
             minInputTokens: 'Начальные токены',
             input: 'Вход',
             output: 'Выход',
@@ -3952,7 +3952,7 @@ export const ru = {
         model: 'Модель',
         credentialType: 'Тип учетных данных',
         homeIp: 'Home-узел',
-        endpoint: 'Эндпоинт',
+        endpoint: 'Endpoint',
         executorType: 'Тип исполнителя',
         statusCode: 'Код статуса',
         requestId: 'Request ID',
@@ -3984,7 +3984,7 @@ export const ru = {
         anyModel: 'Все модели',
         anyCredentialType: 'Все типы учетных данных',
         anyHomeIp: 'Все Home-узлы',
-        anyEndpoint: 'Все эндпоинты',
+        anyEndpoint: 'Все endpoint',
         anyExecutorType: 'Все исполнители',
         anyStatusCode: 'Все коды статуса',
         ranges: {
@@ -4059,7 +4059,7 @@ export const ru = {
         unavailable: 'В текущем диапазоне нет данных тренда.',
         accessibility: {
           keyboardInstructions:
-            'Используйте клавиши со стрелками влево и вправо для просмотра интервалов. Home и End переходят к первому и последнему интервалу.',
+            'Сфокусируйтесь на графике и используйте клавиши со стрелками влево и вправо для просмотра интервалов.',
           dataTableCaption: 'Данные о динамике использования токенов',
           time: 'Время',
         },
@@ -4141,7 +4141,7 @@ export const ru = {
           credential: 'Исполнительные учетные данные',
           provider: 'Провайдер',
           model: 'Модель',
-          endpoint: 'Эндпоинт',
+          endpoint: 'Endpoint',
           home_ip: 'Home-узел',
           executor_type: 'Исполнитель',
           status_code: 'Код статуса',
@@ -4250,7 +4250,7 @@ export const ru = {
           credential: 'Исполнительные учетные данные',
           authIndex: 'Auth Index',
           model: 'Модель',
-          endpoint: 'Эндпоинт',
+          endpoint: 'Endpoint',
           latency: 'Задержка',
           ttft: 'TTFT',
           billing: 'Списанная сумма',

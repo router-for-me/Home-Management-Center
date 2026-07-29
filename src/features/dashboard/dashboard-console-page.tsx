@@ -54,6 +54,7 @@ import {
   CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
   SAME_ORIGIN_MANAGEMENT_BASE_URL,
 } from '@/lib/api/management/client'
+import { formatCompactNumber, formatNumber } from '@/lib/number-format'
 import { cn } from '@/lib/utils'
 import { useSessionStore } from '@/stores/session-store'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -228,17 +229,6 @@ function formatDateTime(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
-}
-
-function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    maximumFractionDigits: value >= 1000 ? 1 : 0,
-    notation: value >= 10_000 ? 'compact' : 'standard',
-  }).format(value)
 }
 
 function formatPercent(value: number) {

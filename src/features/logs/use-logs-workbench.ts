@@ -9,6 +9,7 @@ import {
 import type { StagedRefresh } from '@/features/observability/live-refresh'
 import { useBrowserActivity, useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
+import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import {
   clearRuntimeLogs,
   defaultRuntimeLogFilters,
@@ -24,6 +25,7 @@ import type {
   RuntimeLogFilters,
   RuntimeLogSnapshot,
 } from '@/lib/api/management/logs'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const runtimeLogPageSizeOptions = [50, 100, 200]
 const defaultRuntimeLogPageSize = 50
@@ -37,8 +39,12 @@ export function useLogsWorkbench() {
     useManagementSession()
   const [runtimeLogFilters, setRuntimeLogFiltersState] =
     useState<RuntimeLogFilters>(defaultRuntimeLogFilters)
-  const [runtimeLogLimit, setRuntimeLogLimitState] = useState(defaultRuntimeLogPageSize)
-  const [runtimeLogOffset, setRuntimeLogOffset] = useState(0)
+  const [runtimeLogPagination, setRuntimeLogPagination] = usePersistentPagination(
+    uiPreferenceKeys.runtimeLogPageSize,
+    { limit: defaultRuntimeLogPageSize, offset: 0 },
+    runtimeLogPageSizeOptions,
+  )
+  const { limit: runtimeLogLimit, offset: runtimeLogOffset } = runtimeLogPagination
   const [runtimeLogDetailOpen, setRuntimeLogDetailOpen] = useState(false)
   const [pendingRuntimeLogs, setPendingRuntimeLogs] =
     useState<StagedRefresh<RuntimeLogSnapshot> | null>(null)
@@ -245,8 +251,7 @@ export function useLogsWorkbench() {
 
   const setRuntimeLogLimit = (nextLimit: number) => {
     if (!runtimeLogPageSizeOptions.includes(nextLimit)) return
-    setRuntimeLogLimitState(nextLimit)
-    setRuntimeLogOffset(0)
+    setRuntimeLogPagination({ limit: nextLimit, offset: 0 })
   }
 
   const setRuntimeLogFilters = (nextFilters: Partial<RuntimeLogFilters>) => {
@@ -254,12 +259,12 @@ export function useLogsWorkbench() {
       ...currentFilters,
       ...nextFilters,
     }))
-    setRuntimeLogOffset(0)
+    setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
   }
 
   const clearRuntimeLogFilters = () => {
     setRuntimeLogFiltersState(defaultRuntimeLogFilters)
-    setRuntimeLogOffset(0)
+    setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
   }
 
   const clearLogsMutation = useMutation({
@@ -281,7 +286,7 @@ export function useLogsWorkbench() {
       })
     },
     onSuccess: async () => {
-      setRuntimeLogOffset(0)
+      setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
       queryClient.removeQueries({
         queryKey: ['management-runtime-logs-live', session.baseUrl, connectedAt],
       })
@@ -422,7 +427,10 @@ export function useLogsWorkbench() {
     setRuntimeLogFilters,
     clearRuntimeLogFilters,
     setRuntimeLogOffset: (nextOffset: number) => {
-      setRuntimeLogOffset(Math.max(0, nextOffset))
+      setRuntimeLogPagination((current) => ({
+        ...current,
+        offset: Math.max(0, nextOffset),
+      }))
     },
     mutating,
   }

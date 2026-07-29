@@ -1,13 +1,4 @@
-import {
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactNode,
-  type PointerEvent as ReactPointerEvent,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import type { i18n as I18nInstance, TFunction } from 'i18next'
 import {
@@ -39,6 +30,17 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import {
+  Bar,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Line,
+  XAxis,
+  YAxis,
+  useActiveTooltipLabel,
+  usePlotArea,
+} from 'recharts'
 
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
@@ -57,6 +59,7 @@ import {
   type UsageActivityMatrixBucket,
 } from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
+import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
@@ -98,7 +101,8 @@ import {
   LiveRefreshStatusNotice,
   NewItemsNotice,
 } from '@/features/observability/live-refresh-control'
-import { createTokenUsageChartLayout } from '@/features/observability/token-usage-chart-layout'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
+import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
   RequestErrorLogFile,
@@ -129,6 +133,9 @@ import type {
   UsageRecordsPage,
   UsageTokenBreakdown,
 } from '@/lib/api/management/usage-logs'
+import { formatCreditAmount, formatUsageAmount } from '@/lib/billing/amount-format'
+import { formatCompactNumber, formatNumber, getNumberLocale } from '@/lib/number-format'
+import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -147,12 +154,6 @@ type KpiCardData = {
 
 function getDateTimeLocale(i18n: I18nInstance) {
   return i18n.resolvedLanguage ?? i18n.language
-}
-
-function getNumberLocale() {
-  if (typeof document === 'undefined') return undefined
-  const language = document.documentElement.lang?.trim()
-  return language || undefined
 }
 
 export function formatDateTime(value: string | null, i18n: I18nInstance) {
@@ -193,41 +194,30 @@ function formatTimestamp(value: number | null, i18n: I18nInstance) {
   }).format(date)
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat(getNumberLocale(), { maximumFractionDigits: 0 }).format(value)
-}
-
-function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat(getNumberLocale(), {
-    maximumFractionDigits: value >= 1000 ? 1 : 0,
-    notation: value >= 10_000 ? 'compact' : 'standard',
-  }).format(value)
-}
-
 function formatRateNumber(value: number) {
   return new Intl.NumberFormat(getNumberLocale(), {
     maximumFractionDigits: value < 100 ? 1 : 0,
   }).format(value)
 }
 
-function formatAmount(value: number | null) {
+function formatAmount(value: number | null, disclosure: 'summary' | 'precise' = 'precise') {
   if (value === null) return null
-  const absoluteValue = Math.abs(value)
-  const maximumFractionDigits = absoluteValue > 0 && absoluteValue < 1 ? 4 : 2
-  const formattedAmount = new Intl.NumberFormat(getNumberLocale(), {
-    maximumFractionDigits,
-    minimumFractionDigits: 2,
-  }).format(absoluteValue)
-
-  return `${value < 0 ? '-' : ''}${formattedAmount}`
+  return disclosure === 'summary'
+    ? formatCreditAmount(value, getNumberLocale())
+    : formatUsageAmount(value, getNumberLocale())
 }
 
 // Renders an API billing amount with its backend-declared unit.
 // Returns null for a null value so callers can supply their own fallback copy.
-function formatAmountUnit(t: TFunction, value: number | null, currency?: string | null) {
+function formatAmountUnit(
+  t: TFunction,
+  value: number | null,
+  currency?: string | null,
+  disclosure: 'summary' | 'precise' = 'precise',
+) {
   if (value === null) return null
 
-  const amount = formatAmount(value)
+  const amount = formatAmount(value, disclosure)
 
   const normalizedCurrency = currency?.trim().toLowerCase()
   if (!normalizedCurrency || normalizedCurrency === 'credits' || normalizedCurrency === 'points') {
@@ -238,7 +228,8 @@ function formatAmountUnit(t: TFunction, value: number | null, currency?: string 
     return new Intl.NumberFormat(getNumberLocale(), {
       style: 'currency',
       currency: 'USD',
-      maximumFractionDigits: Math.abs(value) > 0 && Math.abs(value) < 1 ? 4 : 2,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: disclosure === 'summary' ? 2 : 6,
     }).format(value)
   }
 
@@ -246,7 +237,7 @@ function formatAmountUnit(t: TFunction, value: number | null, currency?: string 
 }
 
 function formatKpiAmount(t: TFunction, value: number | null, currency?: string | null) {
-  return formatAmountUnit(t, value, currency) ?? '—'
+  return formatAmountUnit(t, value, currency, 'summary') ?? '—'
 }
 
 function formatBillingBasis(value: string | null, t: TFunction) {
@@ -1222,6 +1213,8 @@ export function UsageKpiStrip({
 }
 
 type UsageTrendOverlayMetric = 'requests' | 'cost'
+const usageTrendOverlayMetrics = ['requests', 'cost'] as const
+const normalizeUsageTrendOverlayMetric = createChoicePreferenceNormalizer(usageTrendOverlayMetrics)
 type TokenSeriesKey =
   | 'uncachedInputTokens'
   | 'cacheReadTokens'
@@ -1347,33 +1340,137 @@ function formatOverlayValue(
   currency?: string | null,
 ) {
   if (metric === 'cost') {
-    return formatAmountUnit(t, value, currency) ?? '—'
+    return formatAmountUnit(t, value, currency, 'summary') ?? '—'
   }
 
   return formatCompactNumber(value)
 }
 
-function getTokenUsageChartSummary(
-  item: TokenUsageChartDatum,
-  overlayMetric: UsageTrendOverlayMetric,
-  t: TFunction,
-  currency?: string | null,
-) {
-  return [
-    item.label,
-    `${t('usageLogsPage.trend.tooltip.total')}: ${formatCompactNumber(item.totalTokens)}`,
-    ...(item.quality === 'inconsistent'
-      ? [t('usageLogsPage.tokenAccounting.inconsistentShort')]
-      : tokenSeries.map(
-          (series) => `${t(series.labelKey)}: ${formatCompactNumber(item[series.key])}`,
-        )),
-    `${t(`usageLogsPage.trend.overlay.${overlayMetric}`)}: ${formatOverlayValue(
-      overlayMetric,
-      item.overlayValue,
-      t,
-      currency,
-    )}`,
-  ]
+const tokenUsageChartConfig = Object.fromEntries(
+  tokenSeries.map((series) => [series.key, { color: series.color }]),
+) satisfies ChartConfig
+
+function TokenUsageChartTooltip({
+  active,
+  payload,
+  overlayMetric,
+  t,
+  currency,
+}: {
+  active?: boolean
+  payload?: ReadonlyArray<{ payload?: TokenUsageChartDatum }>
+  overlayMetric: UsageTrendOverlayMetric
+  t: TFunction
+  currency?: string | null
+}) {
+  const datum = active ? payload?.[0]?.payload : undefined
+
+  if (!datum) return null
+
+  return (
+    <div className="bg-popover text-popover-foreground max-w-[240px] rounded-md border px-3 py-2 text-xs shadow-sm">
+      <p className="font-medium">{datum.label}</p>
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <span className="font-medium">{t('usageLogsPage.trend.tooltip.total')}</span>
+        <span className="font-semibold tabular-nums">{formatCompactNumber(datum.totalTokens)}</span>
+      </div>
+      <p className="text-muted-foreground mt-1.5">
+        {t(`usageLogsPage.trend.overlay.${overlayMetric}`)}:{' '}
+        {formatOverlayValue(overlayMetric, datum.overlayValue, t, currency)}
+      </p>
+      {datum.quality === 'inconsistent' ? (
+        <p className="text-warning-foreground dark:text-warning mt-2 leading-5">
+          {t('usageLogsPage.tokenAccounting.inconsistentShort')}
+        </p>
+      ) : (
+        <>
+          {(['input', 'output'] as const).map((group) => (
+            <div key={group} className="mt-2 border-t pt-2">
+              <div className="mb-1.5 flex items-center justify-between gap-4 font-medium">
+                <span>{t(`usageLogsPage.trend.tooltip.${group}`)}</span>
+                <span className="tabular-nums">
+                  {formatCompactNumber(
+                    group === 'input' ? datum.inputTotalTokens : datum.outputTotalTokens,
+                  )}
+                </span>
+              </div>
+              <div className="grid gap-1">
+                {tokenSeries
+                  .filter((series) => series.group === group)
+                  .map((series) => (
+                    <div key={series.key} className="flex items-center justify-between gap-4">
+                      <span className="inline-flex min-w-0 items-center gap-1.5">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: series.color }}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate">{t(series.labelKey)}</span>
+                      </span>
+                      <span className="font-medium tabular-nums">
+                        {formatCompactNumber(datum[series.key])}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+          {datum.unclassifiedTokens > 0 ? (
+            <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2">
+              <span>{t('usageLogsPage.trend.tokenSeries.unclassified')}</span>
+              <span className="font-medium tabular-nums">
+                {formatCompactNumber(datum.unclassifiedTokens)}
+              </span>
+            </div>
+          ) : null}
+        </>
+      )}
+    </div>
+  )
+}
+
+// Syncs recharts' internal active bucket (pointer and keyboard alike) to
+// component state so bar cells outside the chart context can dim.
+function TokenUsageChartActiveBridge({
+  onActiveIdChange,
+}: {
+  onActiveIdChange: (id: string | null) => void
+}) {
+  const activeLabel = useActiveTooltipLabel()
+  const activeId = activeLabel == null ? null : String(activeLabel)
+
+  useEffect(() => {
+    onActiveIdChange(activeId)
+  }, [activeId, onActiveIdChange])
+
+  return null
+}
+
+// Wraps the overlay <Line> so it can read the plot width and hide per-bucket
+// dots when the buckets are too dense for them.
+function TokenUsageChartOverlayLine({ itemCount }: { itemCount: number }) {
+  const plotArea = usePlotArea()
+  const bandWidth = plotArea && itemCount > 0 ? plotArea.width / itemCount : 0
+  const showAllDots = bandWidth >= 12
+
+  return (
+    <Line
+      yAxisId="overlay"
+      type="linear"
+      dataKey="overlayValue"
+      stroke="var(--foreground)"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      isAnimationActive={false}
+      dot={
+        showAllDots
+          ? { r: 3, fill: 'var(--card)', stroke: 'var(--foreground)', strokeWidth: 2 }
+          : false
+      }
+      activeDot={{ r: 4.5, fill: 'var(--card)', stroke: 'var(--foreground)', strokeWidth: 2.4 }}
+    />
+  )
 }
 
 function TokenUsageChart({
@@ -1389,288 +1486,103 @@ function TokenUsageChart({
   t: TFunction
   currency?: string | null
 }) {
-  const chartRef = useRef<HTMLDivElement>(null)
   const instructionsId = useId()
-  const [chartWidth, setChartWidth] = useState(760)
-  const [chartFocused, setChartFocused] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const width = chartWidth
-  const height = 260
-  const compact = width < 520
-  const margin = {
-    top: 10,
-    right: compact ? 36 : 74,
-    bottom: 42,
-    left: compact ? 48 : 64,
-  }
-  const layout = createTokenUsageChartLayout({
-    width,
-    marginLeft: margin.left,
-    marginRight: margin.right,
-    itemCount: data.length,
-  })
-  const { innerWidth, bandWidth, barWidth, getCenterX: getX } = layout
-  const innerHeight = height - margin.top - margin.bottom
-  const maxTokens = Math.max(...data.map((item) => item.totalTokens), 1)
-  const maxOverlay = Math.max(...data.map((item) => item.overlayValue), 1)
-  const overlayY = (value: number) => margin.top + innerHeight - (value / maxOverlay) * innerHeight
-  const overlayPoints = data.map((item, index) => `${getX(index)},${overlayY(item.overlayValue)}`)
-  const gridTicks = [0, 0.25, 0.5, 0.75, 1]
-  const labelIndexes = [...new Set([0, Math.floor(data.length / 2), data.length - 1])].filter(
-    (index) => index >= 0 && index < data.length,
-  )
   const indexById = useMemo(() => new Map(data.map((item, index) => [item.id, index])), [data])
+  const labelById = useMemo(() => new Map(data.map((item) => [item.id, item.label])), [data])
   const activeIndex = activeId ? (indexById.get(activeId) ?? -1) : -1
-  const activeDatum = activeIndex >= 0 ? data[activeIndex] : null
-  const activeX = activeDatum ? getX(activeIndex) : null
-  const activeSummary = activeDatum
-    ? getTokenUsageChartSummary(activeDatum, overlayMetric, t, currency).join('. ')
-    : ''
-  const showAllOverlayPoints = bandWidth >= 12
-
-  useEffect(() => {
-    const element = chartRef.current
-    if (!element) return
-
-    const updateWidth = () => {
-      const nextWidth = Math.max(320, Math.round(element.getBoundingClientRect().width))
-      setChartWidth((currentWidth) => (currentWidth === nextWidth ? currentWidth : nextWidth))
-    }
-
-    updateWidth()
-
-    if (typeof ResizeObserver === 'undefined') {
-      window.addEventListener('resize', updateWidth)
-      return () => window.removeEventListener('resize', updateWidth)
-    }
-
-    const observer = new ResizeObserver(updateWidth)
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
-  const activateIndex = (index: number) => {
-    const nextIndex = Math.min(data.length - 1, Math.max(0, index))
-    const nextId = data[nextIndex]?.id ?? null
-    setActiveId((currentId) => (currentId === nextId ? currentId : nextId))
-  }
-
-  const activatePointerTarget = (event: ReactPointerEvent<SVGRectElement>) => {
-    const svg = event.currentTarget.ownerSVGElement
-    if (!svg) return
-
-    const bounds = svg.getBoundingClientRect()
-    if (bounds.width <= 0) return
-
-    const pointerX = ((event.clientX - bounds.left) / bounds.width) * width
-    activateIndex(layout.getIndexAtX(pointerX))
-  }
-
-  const handleChartKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    const currentIndex = activeIndex >= 0 ? activeIndex : 0
-    const nextIndex =
-      event.key === 'ArrowLeft'
-        ? currentIndex - 1
-        : event.key === 'ArrowRight'
-          ? currentIndex + 1
-          : event.key === 'Home'
-            ? 0
-            : event.key === 'End'
-              ? data.length - 1
-              : null
-
-    if (nextIndex === null) return
-    event.preventDefault()
-    activateIndex(nextIndex)
-  }
+  const xAxisTicks = [...new Set([0, Math.floor(data.length / 2), data.length - 1])]
+    .filter((index) => index >= 0 && index < data.length)
+    .map((index) => data[index]?.id ?? '')
 
   return (
     <div
-      ref={chartRef}
       role="group"
-      tabIndex={0}
       aria-label={t('usageLogsPage.trend.title')}
       aria-describedby={instructionsId}
-      className="focus-visible:ring-ring focus-visible:ring-offset-card relative w-full min-w-0 rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-      onFocus={() => {
-        setChartFocused(true)
-        if (!activeDatum) activateIndex(0)
-      }}
-      onBlur={(event) => {
-        if (event.currentTarget.contains(event.relatedTarget)) return
-        setChartFocused(false)
-        setActiveId(null)
-      }}
-      onKeyDown={handleChartKeyDown}
-      onPointerLeave={() => {
-        if (!chartFocused) setActiveId(null)
-      }}
+      className="w-full min-w-0"
     >
       <p id={instructionsId} className="sr-only">
         {t('usageLogsPage.trend.accessibility.keyboardInstructions')}
       </p>
-      <svg
-        className="h-[260px] w-full overflow-visible"
-        viewBox={`0 0 ${width} ${height}`}
-        aria-hidden="true"
-        focusable="false"
-        preserveAspectRatio="xMidYMid meet"
+      <ChartContainer
+        config={tokenUsageChartConfig}
+        className="[&_.recharts-wrapper:focus-visible]:ring-ring aspect-auto h-[260px] w-full [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
       >
-        {gridTicks.map((tick) => {
-          const y = margin.top + innerHeight - tick * innerHeight
-          const value = maxTokens * tick
+        <ComposedChart
+          data={data}
+          margin={{ top: 10, right: 12, bottom: 0, left: 4 }}
+          barCategoryGap="21%"
+        >
+          <CartesianGrid vertical={false} strokeDasharray="3 4" />
+          <XAxis
+            dataKey="id"
+            ticks={xAxisTicks}
+            interval={0}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+            tickFormatter={(id: string) => labelById.get(id) ?? ''}
+          />
+          <YAxis
+            yAxisId="tokens"
+            width="auto"
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+            tickFormatter={(value: number) => formatCompactNumber(value)}
+          />
+          <YAxis
+            yAxisId="overlay"
+            orientation="right"
+            width="auto"
+            tickLine={false}
+            axisLine={false}
+            allowDecimals={false}
+            tickFormatter={(value: number) => formatOverlayValue(overlayMetric, value, t, currency)}
+          />
+          <ChartTooltip
+            isAnimationActive={false}
+            content={
+              <TokenUsageChartTooltip overlayMetric={overlayMetric} t={t} currency={currency} />
+            }
+          />
+          {tokenSeries.map((series) => {
+            const focusOpacity = focusedSeriesKey
+              ? focusedSeriesKey === series.key
+                ? 0.95
+                : 0.18
+              : 0.9
 
-          return (
-            <g key={tick}>
-              <line
-                x1={margin.left}
-                x2={margin.left + innerWidth}
-                y1={y}
-                y2={y}
-                stroke="var(--border)"
-                strokeDasharray="3 4"
-              />
-              <text
-                x={margin.left - 10}
-                y={y + 4}
-                textAnchor="end"
-                fill="var(--muted-foreground)"
-                fontSize="11"
+            return (
+              <Bar
+                key={series.key}
+                yAxisId="tokens"
+                stackId="tokens"
+                dataKey={series.key}
+                fill={`var(--color-${series.key})`}
+                maxBarSize={38}
+                isAnimationActive={false}
               >
-                {formatCompactNumber(value)}
-              </text>
-              <text
-                x={margin.left + innerWidth + 10}
-                y={y + 4}
-                fill="var(--muted-foreground)"
-                fontSize="11"
-              >
-                {formatOverlayValue(overlayMetric, maxOverlay * tick, t, currency)}
-              </text>
-            </g>
-          )
-        })}
-
-        {data.map((item, index) => {
-          const x = layout.getBarX(index)
-          let stackY = margin.top + innerHeight
-          const values = tokenSeries
-            .map((series) => ({
-              ...series,
-              value: item[series.key],
-            }))
-            .filter((series) => series.value > 0)
-
-          return (
-            <g key={item.id}>
-              <title>
-                {getTokenUsageChartSummary(item, overlayMetric, t, currency).join('\n')}
-              </title>
-              {values.map((series, seriesIndex) => {
-                const barHeight = (series.value / maxTokens) * innerHeight
-                stackY -= barHeight
-                const bucketIsActive = activeIndex === index
-                const focusOpacity = focusedSeriesKey
-                  ? focusedSeriesKey === series.key
-                    ? 0.95
-                    : 0.18
-                  : 0.9
-
-                return (
-                  <rect
-                    key={series.key}
-                    x={x}
-                    y={stackY}
-                    width={barWidth}
-                    height={Math.max(0, barHeight)}
-                    fill={series.color}
+                {data.map((item, index) => (
+                  <Cell
+                    key={item.id}
                     opacity={
                       activeIndex >= 0
-                        ? bucketIsActive
+                        ? activeIndex === index
                           ? focusOpacity
                           : Math.min(focusOpacity, 0.32)
                         : focusOpacity
                     }
-                    rx={seriesIndex === values.length - 1 ? Math.min(3, barWidth / 2) : 0}
-                    className="pointer-events-none transition-opacity"
                   />
-                )
-              })}
-            </g>
-          )
-        })}
-
-        {activeX !== null ? (
-          <line
-            x1={activeX}
-            x2={activeX}
-            y1={margin.top}
-            y2={margin.top + innerHeight}
-            stroke="var(--ring)"
-            strokeDasharray="4 4"
-            strokeWidth="1.5"
-            vectorEffect="non-scaling-stroke"
-          />
-        ) : null}
-        {overlayPoints.length > 1 ? (
-          <polyline
-            points={overlayPoints.join(' ')}
-            fill="none"
-            stroke="var(--foreground)"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        ) : null}
-        {data.map((item, index) => {
-          const pointIsActive = activeIndex === index
-          if (!showAllOverlayPoints && !pointIsActive) return null
-
-          return (
-            <circle
-              key={`${item.id}:overlay`}
-              cx={getX(index)}
-              cy={overlayY(item.overlayValue)}
-              r={pointIsActive ? 4.5 : 3}
-              fill="var(--card)"
-              stroke="var(--foreground)"
-              strokeWidth={pointIsActive ? 2.4 : 2}
-              className="pointer-events-none"
-              vectorEffect="non-scaling-stroke"
-            />
-          )
-        })}
-        {labelIndexes.map((index) => (
-          <text
-            key={index}
-            x={getX(index)}
-            y={height - 12}
-            textAnchor="middle"
-            fill="var(--muted-foreground)"
-            fontSize="11"
-          >
-            {data[index]?.label}
-          </text>
-        ))}
-        <rect
-          x={margin.left}
-          y={margin.top}
-          width={innerWidth}
-          height={innerHeight}
-          fill="transparent"
-          pointerEvents="all"
-          className="cursor-crosshair"
-          onPointerMove={activatePointerTarget}
-          onPointerDown={(event) => {
-            chartRef.current?.focus({ preventScroll: true })
-            activatePointerTarget(event)
-          }}
-        />
-      </svg>
-      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {chartFocused ? activeSummary : ''}
-      </span>
+                ))}
+              </Bar>
+            )
+          })}
+          <TokenUsageChartOverlayLine itemCount={data.length} />
+          <TokenUsageChartActiveBridge onActiveIdChange={setActiveId} />
+        </ComposedChart>
+      </ChartContainer>
       <table className="sr-only">
         <caption>{t('usageLogsPage.trend.accessibility.dataTableCaption')}</caption>
         <thead>
@@ -1705,70 +1617,6 @@ function TokenUsageChart({
           ))}
         </tbody>
       </table>
-      {activeDatum ? (
-        <div className="bg-popover text-popover-foreground pointer-events-none absolute top-2 right-2 max-w-[240px] rounded-md border px-3 py-2 text-xs shadow-sm">
-          <p className="font-medium">{activeDatum.label}</p>
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <span className="font-medium">{t('usageLogsPage.trend.tooltip.total')}</span>
-            <span className="font-semibold tabular-nums">
-              {formatCompactNumber(activeDatum.totalTokens)}
-            </span>
-          </div>
-          <p className="text-muted-foreground mt-1.5">
-            {t(`usageLogsPage.trend.overlay.${overlayMetric}`)}:{' '}
-            {formatOverlayValue(overlayMetric, activeDatum.overlayValue, t, currency)}
-          </p>
-          {activeDatum.quality === 'inconsistent' ? (
-            <p className="text-warning-foreground dark:text-warning mt-2 leading-5">
-              {t('usageLogsPage.tokenAccounting.inconsistentShort')}
-            </p>
-          ) : (
-            <>
-              {(['input', 'output'] as const).map((group) => (
-                <div key={group} className="mt-2 border-t pt-2">
-                  <div className="mb-1.5 flex items-center justify-between gap-4 font-medium">
-                    <span>{t(`usageLogsPage.trend.tooltip.${group}`)}</span>
-                    <span className="tabular-nums">
-                      {formatCompactNumber(
-                        group === 'input'
-                          ? activeDatum.inputTotalTokens
-                          : activeDatum.outputTotalTokens,
-                      )}
-                    </span>
-                  </div>
-                  <div className="grid gap-1">
-                    {tokenSeries
-                      .filter((series) => series.group === group)
-                      .map((series) => (
-                        <div key={series.key} className="flex items-center justify-between gap-4">
-                          <span className="inline-flex min-w-0 items-center gap-1.5">
-                            <span
-                              className="size-2 shrink-0 rounded-full"
-                              style={{ backgroundColor: series.color }}
-                              aria-hidden="true"
-                            />
-                            <span className="truncate">{t(series.labelKey)}</span>
-                          </span>
-                          <span className="font-medium tabular-nums">
-                            {formatCompactNumber(activeDatum[series.key])}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              ))}
-              {activeDatum.unclassifiedTokens > 0 ? (
-                <div className="mt-2 flex items-center justify-between gap-4 border-t pt-2">
-                  <span>{t('usageLogsPage.trend.tokenSeries.unclassified')}</span>
-                  <span className="font-medium tabular-nums">
-                    {formatCompactNumber(activeDatum.unclassifiedTokens)}
-                  </span>
-                </div>
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -1781,7 +1629,11 @@ export function UsageTrendPanel({
   tokenAccountingAvailable: boolean
 }) {
   const { t, i18n } = useTranslation()
-  const [overlayMetric, setOverlayMetric] = useState<UsageTrendOverlayMetric>('requests')
+  const [overlayMetric, setOverlayMetric] = useLocalStoragePreference(
+    uiPreferenceKeys.usageTrendOverlayMetric,
+    usageTrendOverlayMetrics[0],
+    normalizeUsageTrendOverlayMetric,
+  )
   const [focusedSeriesKey, setFocusedSeriesKey] = useState<TokenSeriesKey | null>(null)
   const chartData = useMemo(
     () =>
@@ -1817,7 +1669,7 @@ export function UsageTrendPanel({
             if (nextMetric) setOverlayMetric(nextMetric as UsageTrendOverlayMetric)
           }}
         >
-          {(['requests', 'cost'] as UsageTrendOverlayMetric[]).map((metricKey) => (
+          {usageTrendOverlayMetrics.map((metricKey) => (
             <ToggleGroupItem
               key={metricKey}
               value={metricKey}
@@ -2329,12 +2181,14 @@ export function RankingGrid({
   onExpandedChange: (expanded: boolean) => void
 }) {
   const { t } = useTranslation()
-  const [visibleRankingColumns, setVisibleRankingColumns] =
-    useState<RankingColumnKey[]>(defaultRankingColumns)
+  const { isColumnVisible: isRankingColumnVisible, setColumnVisible: setRankingColumnVisible } =
+    usePersistentColumnVisibility({
+      storageKey: uiPreferenceKeys.usageRankingColumns,
+      columns: rankingColumns,
+      defaultVisibleColumns: defaultRankingColumns,
+    })
   if (!overview && !aggregate) return null
   const selectedGroupLabel = t(`usageLogsPage.rankings.groups.${selectedGroup}`)
-  const isRankingColumnVisible = (column: RankingColumnKey) =>
-    visibleRankingColumns.includes(column)
   const visibleRankingColumnConfigs = rankingColumns.filter((column) =>
     isRankingColumnVisible(column.key),
   )
@@ -2345,19 +2199,6 @@ export function RankingGrid({
   const selectableRankingMetricOptions = aggregate
     ? rankingMetricOptions.filter((metric) => aggregate.sortableMetrics.includes(metric))
     : rankingMetricOptions
-  const toggleRankingColumn = (column: RankingColumnKey, checked: boolean) => {
-    const config = rankingColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleRankingColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
-
   const groups: Array<{
     id: keyof UsageOverview['top']
     groupBy: UsageAggregateGroupBy
@@ -2535,7 +2376,7 @@ export function RankingGrid({
                       disabled={column.required}
                       onSelect={(event) => event.preventDefault()}
                       onCheckedChange={(checked) =>
-                        toggleRankingColumn(column.key, Boolean(checked))
+                        setRankingColumnVisible(column.key, Boolean(checked))
                       }
                     >
                       {t(`usageLogsPage.rankings.columns.${column.key}`)}
@@ -3116,15 +2957,17 @@ export function RequestRecordsTable({
   onExport: () => void
 }) {
   const { t, i18n } = useTranslation()
-  const [visibleColumns, setVisibleColumns] =
-    useState<UsageRecordColumnKey[]>(defaultUsageRecordColumns)
+  const { isColumnVisible, setColumnVisible } = usePersistentColumnVisibility({
+    storageKey: uiPreferenceKeys.usageRecordColumns,
+    columns: usageRecordColumns,
+    defaultVisibleColumns: defaultUsageRecordColumns,
+  })
   const rows = records?.items ?? []
   const total = records?.total ?? 0
   const start = total > 0 ? filters.offset + 1 : 0
   const end = Math.min(filters.offset + rows.length, total)
   const canGoPrevious = filters.offset > 0
   const canGoNext = filters.offset + filters.limit < total
-  const isColumnVisible = (column: UsageRecordColumnKey) => visibleColumns.includes(column)
   const visibleColumnConfigs = usageRecordColumns.filter((column) => isColumnVisible(column.key))
   const hasActiveRequestFilters = hasActiveRequestRecordFilters(filters)
   const visibleTableWidth =
@@ -3132,18 +2975,6 @@ export function RequestRecordsTable({
       (width, column) => width + column.width,
       usageRecordActionColumnWidth,
     ) + 16
-  const toggleColumn = (column: UsageRecordColumnKey, checked: boolean) => {
-    const config = usageRecordColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
   const applySort = (sort: UsageFilters['sort']) => {
     onFilterChange({ sort, offset: 0 })
   }
@@ -3192,7 +3023,7 @@ export function RequestRecordsTable({
                     checked={isColumnVisible(column.key)}
                     disabled={column.required}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, Boolean(checked))}
+                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
                   >
                     {t(`usageLogsPage.records.columns.${column.key}`)}
                   </DropdownMenuCheckboxItem>
@@ -3467,6 +3298,9 @@ export function RequestRecordsTable({
 
 type RequestLogSortKey = 'time' | 'size'
 
+const requestLogPageSizeOptions = [20, 50, 100]
+const normalizeRequestLogPageSize = createChoicePreferenceNormalizer(requestLogPageSizeOptions)
+
 function RequestLogSortButton({
   label,
   sortKey,
@@ -3537,7 +3371,11 @@ export function RequestLogIndexTable({
     key: 'time',
     direction: 'desc',
   })
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize, setPageSize] = useLocalStoragePreference(
+    uiPreferenceKeys.requestLogPageSize,
+    requestLogPageSizeOptions[0],
+    normalizeRequestLogPageSize,
+  )
   const [page, setPage] = useState(0)
   const indexItems = index?.items ?? []
 
@@ -3823,7 +3661,7 @@ export function RequestLogIndexTable({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {[20, 50, 100].map((option) => (
+                  {requestLogPageSizeOptions.map((option) => (
                     <SelectItem key={option} value={String(option)}>
                       {formatNumber(option)}
                     </SelectItem>
@@ -4566,9 +4404,11 @@ export function CredentialUsageTable({
   onOffsetChange: (offset: number) => void
 }) {
   const { t, i18n } = useTranslation()
-  const [visibleColumns, setVisibleColumns] = useState<CredentialUsageColumnKey[]>(
-    defaultCredentialUsageColumns,
-  )
+  const { isColumnVisible, setColumnVisible } = usePersistentColumnVisibility({
+    storageKey: uiPreferenceKeys.credentialUsageColumns,
+    columns: credentialUsageColumns,
+    defaultVisibleColumns: defaultCredentialUsageColumns,
+  })
   const rows = response?.items ?? []
   const total = response?.total ?? 0
   const limit = response?.limit ?? pageSizeOptions[0] ?? 20
@@ -4578,25 +4418,11 @@ export function CredentialUsageTable({
   const canGoPrevious = offset > 0
   const canGoNext = offset + limit < total
   const controlsDisabled = pending || mutating
-  const isColumnVisible = (column: CredentialUsageColumnKey) => visibleColumns.includes(column)
   const visibleColumnConfigs = credentialUsageColumns.filter((column) =>
     isColumnVisible(column.key),
   )
   const visibleTableWidth =
     visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
-  const toggleColumn = (column: CredentialUsageColumnKey, checked: boolean) => {
-    const config = credentialUsageColumns.find((item) => item.key === column)
-    if (config?.required && !checked) return
-
-    setVisibleColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(column) ? currentColumns : [...currentColumns, column]
-      }
-
-      return currentColumns.filter((item) => item !== column)
-    })
-  }
-
   return (
     <TableSurface className="min-w-0">
       <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-start md:justify-between">
@@ -4624,7 +4450,7 @@ export function CredentialUsageTable({
                     checked={isColumnVisible(column.key)}
                     disabled={column.required}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, Boolean(checked))}
+                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
                   >
                     {t(`usageLogsPage.credentials.columns.${column.key}`)}
                   </DropdownMenuCheckboxItem>
@@ -4740,8 +4566,7 @@ export function CredentialUsageTable({
                       {isColumnVisible('cost') ? (
                         <TableCell className="text-right">
                           <p className="font-medium">
-                            {formatAmountUnit(t, row.totalAmount, row.currency) ??
-                              t('usageLogsPage.status.notAvailable')}
+                            {formatKpiAmount(t, row.totalAmount, row.currency)}
                           </p>
                           <p className="text-muted-foreground flex justify-end text-xs">
                             <MetricDelta delta={row.comparison?.totalAmountDelta} />

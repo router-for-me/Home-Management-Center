@@ -83,6 +83,7 @@ import {
 import { useRequestEventsWorkbench } from '@/features/request-events/use-request-events-workbench'
 import type { UsageWorkspaceView } from '@/features/usage-observability/usage-route'
 import { UsageWorkspaceShell } from '@/features/usage-observability/usage-workspace-shell'
+import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import type {
   RequestEvent,
   RequestEventDetail,
@@ -95,6 +96,9 @@ import {
   isRequestEventLatencyRangeValid,
 } from '@/lib/api/management/request-events'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
+import { formatUsageAmount } from '@/lib/billing/amount-format'
+import { formatCompactNumber, formatNumber } from '@/lib/number-format'
+import { uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 
 type RequestEventsVerdict = 'ready' | 'empty' | 'partial' | 'unsupported'
@@ -188,17 +192,6 @@ const requestEventAdvancedFilterKeys: Array<keyof RequestEventFilters> = [
   'sort',
 ]
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat().format(value)
-}
-
-function formatCompactNumber(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    notation: value >= 10_000 ? 'compact' : 'standard',
-    maximumFractionDigits: 1,
-  }).format(value)
-}
-
 function formatDuration(value: number | null) {
   if (value === null || !Number.isFinite(value)) return null
   if (value < 1000) return `${Math.round(value)} ms`
@@ -208,7 +201,7 @@ function formatDuration(value: number | null) {
 function formatAmount(value: number | null, currency?: string | null) {
   if (value === null || !Number.isFinite(value)) return null
   const unit = currency?.trim() || 'credits'
-  return `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 4 }).format(value)} ${unit}`
+  return `${formatUsageAmount(value)} ${unit}`
 }
 
 function getRuntimeNodeLabel(event: RequestEvent) {
@@ -1110,8 +1103,11 @@ function RequestEventsTable({
 }) {
   const liveRefreshStatusId = 'request-events-live-refresh-status'
   const { t, i18n } = useTranslation()
-  const [visibleColumns, setVisibleColumns] =
-    useState<RequestEventColumnKey[]>(defaultVisibleColumns)
+  const { isColumnVisible, setColumnVisible } = usePersistentColumnVisibility({
+    storageKey: uiPreferenceKeys.requestEventColumns,
+    columns: requestEventColumns,
+    defaultVisibleColumns,
+  })
   const rows = events?.items ?? []
   const total = events?.total ?? 0
   const start = total > 0 ? filters.offset + 1 : 0
@@ -1119,25 +1115,9 @@ function RequestEventsTable({
   const canGoPrevious = filters.offset > 0
   const canGoNext = filters.offset + filters.limit < total
   const activeFilters = hasActiveFilters(filters)
-  const visibleColumnConfigs = requestEventColumns.filter((column) =>
-    visibleColumns.includes(column.key),
-  )
+  const visibleColumnConfigs = requestEventColumns.filter((column) => isColumnVisible(column.key))
   const tableWidth =
     visibleColumnConfigs.reduce((width, column) => width + column.width, actionColumnWidth) + 16
-
-  const toggleColumn = (columnKey: RequestEventColumnKey, checked: boolean) => {
-    const column = requestEventColumns.find((item) => item.key === columnKey)
-    if (column?.required && !checked) return
-
-    setVisibleColumns((currentColumns) => {
-      if (checked) {
-        return currentColumns.includes(columnKey) ? currentColumns : [...currentColumns, columnKey]
-      }
-      return currentColumns.filter((item) => item !== columnKey)
-    })
-  }
-
-  const isColumnVisible = (column: RequestEventColumnKey) => visibleColumns.includes(column)
 
   return (
     <TableSurface className="min-w-0">
@@ -1224,7 +1204,7 @@ function RequestEventsTable({
                     checked={isColumnVisible(column.key)}
                     disabled={column.required}
                     onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => toggleColumn(column.key, Boolean(checked))}
+                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
                   >
                     {t(`requestEventsPage.table.columns.${column.key}`)}
                   </DropdownMenuCheckboxItem>
