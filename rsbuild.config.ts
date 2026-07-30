@@ -42,7 +42,9 @@ export default defineConfig(({ command }) => {
       },
     },
     output: {
-      assetPrefix: './',
+      // Home serves the embedded panel at the root; absolute asset paths stay
+      // correct regardless of the depth of the referencing stylesheet.
+      assetPrefix: '/',
       distPath: {
         js: 'assets/js',
         jsAsync: 'assets/js',
@@ -59,6 +61,9 @@ export default defineConfig(({ command }) => {
       inlineStyles: false,
       legalComments: 'none',
       sourceMap: false,
+      // The embedded backend only serves /assets/* besides the HTML entries,
+      // so the favicon must live under assets/ instead of the dist root.
+      copy: [{ from: './src/assets/brand/favicon.png', to: 'assets/image' }],
     },
     splitChunks: isDev
       ? false
