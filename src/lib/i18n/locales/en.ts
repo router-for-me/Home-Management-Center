@@ -2262,6 +2262,9 @@ export const en = {
         oauthLinkCopied: 'OAuth authorization link copied.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
         oauthCallbackSubmitted: 'OAuth callback submitted.',
+        oauthCompleted: 'OAuth authorization completed.',
+        oauthPollingStopped:
+          'Still waiting for OAuth authorization; automatic checks have stopped.',
         vertexImported: 'Vertex credential imported.',
       },
     },

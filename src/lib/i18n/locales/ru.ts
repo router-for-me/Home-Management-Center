@@ -2261,6 +2261,9 @@ export const ru = {
         oauthLinkCopied: 'Ссылка OAuth авторизации скопирована.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
         oauthCallbackSubmitted: 'OAuth callback отправлен.',
+        oauthCompleted: 'Авторизация OAuth завершена.',
+        oauthPollingStopped:
+          'Авторизация OAuth ещё обрабатывается; автоматическая проверка остановлена.',
         vertexImported: 'Vertex credential импортирован.',
       },
     },

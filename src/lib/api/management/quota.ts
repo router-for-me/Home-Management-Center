@@ -113,7 +113,7 @@ export type QuotaCredential = {
   windows: QuotaWindow[]
 }
 
-export type QuotaSummary = {
+type QuotaSummary = {
   total: number
   healthy: number
   low: number
