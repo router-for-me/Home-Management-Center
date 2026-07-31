@@ -1,5 +1,5 @@
 import type { CredentialResource } from '@/lib/api/management/credentials'
-import type { QuotaCredential, QuotaSummary, QuotaWindow } from '@/lib/api/management/quota'
+import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
 
 export type UpstreamQuotaEntry = QuotaCredential
 
@@ -46,13 +46,6 @@ export function isQuotaAttentionEntry(
     entry.collectionStatus === 'partial' ||
     entry.collectionStatus === 'failed'
   )
-}
-
-export function getUpstreamQuotaAttentionCount(
-  entries: UpstreamQuotaEntry[],
-  globalSummary: Pick<QuotaSummary, 'needsAttention'> | null | undefined,
-) {
-  return globalSummary?.needsAttention ?? entries.filter(isQuotaAttentionEntry).length
 }
 
 function isQuotaCollectionCandidate(entry: UpstreamQuotaEntry) {
@@ -145,6 +138,24 @@ export function findUpstreamQuotaEntry(
   }
 
   return null
+}
+
+/**
+ * Count attention entries through the credential-list join. The backend's
+ * global summary spans every auth record (including provider API keys and
+ * other non-OAuth auths), which the credential list can never display, so the
+ * card must count what the attention filter can actually show.
+ */
+export function countUpstreamQuotaAttentionResources(
+  resources: readonly Pick<CredentialResource, 'authIndex' | 'id' | 'identifier' | 'name'>[],
+  map: Map<string, UpstreamQuotaEntry>,
+) {
+  let count = 0
+  for (const resource of resources) {
+    const entry = findUpstreamQuotaEntry(map, resource)
+    if (entry && isQuotaAttentionEntry(entry)) count += 1
+  }
+  return count
 }
 
 export function resolveUpstreamQuotaCellState({

@@ -6,11 +6,11 @@ import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import {
   type UpstreamQuotaEntry,
   buildUpstreamQuotaJoinMap,
+  countUpstreamQuotaAttentionResources,
   createUpstreamQuotaCollectionBaseline,
   findCurrencyWindow,
   findUpstreamQuotaEntry,
   findXaiOnDemandWindow,
-  getUpstreamQuotaAttentionCount,
   getUpstreamQuotaCollectionProgress,
   groupAntigravityQuotaWindows,
   isQuotaAttentionEntry,
@@ -199,23 +199,52 @@ describe('isQuotaAttentionEntry', () => {
   })
 })
 
-describe('getUpstreamQuotaAttentionCount', () => {
-  test('uses the global backend summary when the loaded page is truncated', () => {
-    const entries = Array.from({ length: 200 }, (_, index) =>
-      createQuotaEntry({ id: `auth-${index}`, status: index < 25 ? 'low' : 'healthy' }),
-    )
-
-    expect(getUpstreamQuotaAttentionCount(entries, { needsAttention: 250 })).toBe(250)
-  })
-
-  test('falls back to loaded entry semantics when no global summary is available', () => {
+describe('countUpstreamQuotaAttentionResources', () => {
+  test('counts only attention entries that join to credential resources', () => {
     const entries = [
-      createQuotaEntry(),
-      createQuotaEntry({ id: 'partial', collectionStatus: 'partial' }),
-      createQuotaEntry({ id: 'stale', freshness: 'stale' }),
+      createQuotaEntry({ id: 'oauth-low', authIndex: 'oauth-low', status: 'low' }),
+      createQuotaEntry({ id: 'oauth-ok', authIndex: 'oauth-ok' }),
+      createQuotaEntry({
+        id: 'key-unsupported',
+        authIndex: 'key-unsupported',
+        status: 'unsupported',
+      }),
+    ]
+    const map = buildUpstreamQuotaJoinMap(entries)
+    const resources = [
+      {
+        authIndex: 'oauth-low',
+        id: 'claude:oauth-low',
+        identifier: 'oauth-low',
+        name: 'oauth-low',
+      },
+      { authIndex: 'oauth-ok', id: 'claude:oauth-ok', identifier: 'oauth-ok', name: 'oauth-ok' },
     ]
 
-    expect(getUpstreamQuotaAttentionCount(entries, null)).toBe(2)
+    expect(countUpstreamQuotaAttentionResources(resources, map)).toBe(1)
+  })
+
+  test('returns zero when attention entries never join the credential list', () => {
+    // Regression: the backend global summary spans non-OAuth auths (provider
+    // API keys, file auth) that /auth-files never displays, so the card count
+    // must come from the same join the attention filter uses.
+    const map = buildUpstreamQuotaJoinMap([
+      createQuotaEntry({ id: 'key-1', authIndex: 'key-1', status: 'unsupported' }),
+      createQuotaEntry({ id: 'key-2', authIndex: 'key-2', status: 'unsupported' }),
+    ])
+    const resources = [
+      { authIndex: 'oauth-ok', id: 'claude:oauth-ok', identifier: 'oauth-ok', name: 'oauth-ok' },
+    ]
+
+    expect(countUpstreamQuotaAttentionResources(resources, map)).toBe(0)
+  })
+
+  test('ignores resources without a quota entry', () => {
+    const resources = [
+      { authIndex: 'oauth-ok', id: 'claude:oauth-ok', identifier: 'oauth-ok', name: 'oauth-ok' },
+    ]
+
+    expect(countUpstreamQuotaAttentionResources(resources, new Map())).toBe(0)
   })
 })
 

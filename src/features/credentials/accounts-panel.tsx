@@ -92,6 +92,7 @@ import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
+  countUpstreamQuotaAttentionResources,
   findUpstreamQuotaEntry,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
@@ -874,8 +875,9 @@ export function AccountsPanel({
       disabled: resources.filter((resource) => resource.disabled).length,
       unavailable: resources.filter((resource) => resource.unavailable).length,
       websockets: resources.filter((resource) => resource.websockets).length,
+      attention: countUpstreamQuotaAttentionResources(resources, resolvedQuotaMap),
     })
-  }, [onStatsChange, resources, workbench.snapshot])
+  }, [onStatsChange, resolvedQuotaMap, resources, workbench.snapshot])
 
   if (workbench.checking) {
     return <CredentialLoadingState />
