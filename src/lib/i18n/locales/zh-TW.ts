@@ -2172,6 +2172,8 @@ export const zhTW = {
         oauthLinkCopied: 'OAuth 授權連結已複製。',
         oauthStatusChecked: 'OAuth 狀態：{{status}}。',
         oauthCallbackSubmitted: 'OAuth callback 已提交。',
+        oauthCompleted: 'OAuth 授權已完成。',
+        oauthPollingStopped: '仍在等待 OAuth 授權，已停止自動查詢，可稍後手動查詢狀態。',
         vertexImported: 'Vertex 憑證已匯入。',
       },
     },
