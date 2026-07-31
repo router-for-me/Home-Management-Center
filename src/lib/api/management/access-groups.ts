@@ -24,6 +24,8 @@ export type AccessGroupDetailResource = {
   kind: AccessGroupKind
   groupId: number
   targetId: string
+  /** Model kind only: bound channel group IDs; empty means the binding inherits the API key scope. */
+  channels: number[]
   deletedAt: string | null
   createdAt: string | null
   updatedAt: string | null
@@ -38,6 +40,8 @@ export type AccessGroupInput = {
 export type AccessGroupDetailInput = {
   groupId: number
   targetId: string
+  /** Model kind only: channel group IDs to bind; omitted or empty keeps the API key scope. */
+  channels?: number[]
 }
 
 type AccessGroupsSnapshot = {
@@ -91,6 +95,19 @@ function readArrayRecords(responseData: unknown, keys: string[]) {
   return []
 }
 
+function readNumberArray(record: UnknownRecord, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    if (Array.isArray(value)) {
+      return value.filter(
+        (item): item is number => typeof item === 'number' && Number.isFinite(item),
+      )
+    }
+  }
+
+  return []
+}
+
 function normalizeGroup(
   kind: AccessGroupKind,
   record: UnknownRecord,
@@ -135,6 +152,7 @@ function normalizeDetail(
     kind,
     groupId,
     targetId,
+    channels: kind === 'model' ? readNumberArray(record, ['channels']) : [],
     deletedAt: readString(record, ['deleted_at', 'deletedAt']),
     createdAt: readString(record, ['created_at', 'createdAt']),
     updatedAt: readString(record, ['updated_at', 'updatedAt']),
@@ -161,9 +179,16 @@ function toGroupPayload(kind: AccessGroupKind, input: AccessGroupInput) {
 }
 
 function toDetailPayload(kind: AccessGroupKind, input: AccessGroupDetailInput) {
-  return kind === 'channel'
-    ? { channel_group_id: input.groupId, auth_id: input.targetId.trim() }
-    : { model_group_id: input.groupId, model_id: input.targetId.trim() }
+  if (kind === 'channel') {
+    return { channel_group_id: input.groupId, auth_id: input.targetId.trim() }
+  }
+
+  return {
+    model_group_id: input.groupId,
+    model_id: input.targetId.trim(),
+    // Empty means "inherit the API key scope"; the backend treats omitted and [] alike.
+    ...(input.channels && input.channels.length > 0 ? { channels: input.channels } : {}),
+  }
 }
 
 export async function fetchAccessGroupsSnapshot(

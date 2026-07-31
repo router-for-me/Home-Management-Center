@@ -26,6 +26,7 @@ export type CapabilityKey =
   | 'users'
   | 'userPeriodLimits'
   | 'accessGroups'
+  | 'modelChannelBindings'
   | 'credentialInFlight'
   | 'credentialInFlightSnapshotCursor'
   | 'credentialConcurrencyLimits'
