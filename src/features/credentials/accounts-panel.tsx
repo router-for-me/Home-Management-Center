@@ -110,6 +110,14 @@ import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
 import {
+  OAUTH_STATUS_POLL_INTERVAL_MS,
+  OAUTH_STATUS_POLL_MAX_ATTEMPTS,
+  OAUTH_STATUS_POLL_MAX_CONSECUTIVE_ERRORS,
+  isCredentialOAuthFailure,
+  isCredentialOAuthSuccess,
+  resolveCredentialOAuthCallbackState,
+} from './credential-oauth-flow'
+import {
   type CredentialUploadItem,
   classifyCredentialUploadError,
   createCredentialUploadItem,
@@ -718,6 +726,19 @@ export function AccountsPanel({
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
   const autoOpenedCredentialRef = useRef<string | null>(null)
+  const oauthPollTokenRef = useRef(0)
+  const oauthFlowCompletingRef = useRef(false)
+
+  // Bump the poll token so any in-flight OAuth status loop exits.
+  const stopOAuthStatusPolling = () => {
+    oauthPollTokenRef.current += 1
+  }
+
+  useEffect(() => {
+    return () => {
+      oauthPollTokenRef.current += 1
+    }
+  }, [])
 
   const resolvedQuotaMap = quotaMap ?? EMPTY_QUOTA_MAP
   const resources = workbench.snapshot?.resources ?? EMPTY_CREDENTIAL_RESOURCES
@@ -968,6 +989,10 @@ export function AccountsPanel({
 
     setCreateSheetOpen(open)
     if (!open) {
+      // Reset the OAuth flow so reopening never shows a stale authorization page.
+      stopOAuthStatusPolling()
+      setOAuthSessions({})
+      setOAuthStatuses({})
       setUploadItems([])
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -1130,7 +1155,66 @@ export function AccountsPanel({
     }
   }
 
+  const handleOAuthFlowComplete = async () => {
+    // A manual status check can resolve after the polling loop already
+    // completed the flow; run the completion only once.
+    if (oauthFlowCompletingRef.current) return
+    oauthFlowCompletingRef.current = true
+
+    try {
+      stopOAuthStatusPolling()
+      // The credential file exists once the backend reports ok, so refresh the
+      // list, close the sheet, and drop the finished flow instead of leaving it
+      // around for the next open.
+      await workbench.refreshCredentials()
+      toast.success(t('credentialsPage.toast.oauthCompleted'))
+      setCreateSheetOpen(false)
+      setOAuthSessions({})
+      setOAuthStatuses({})
+    } finally {
+      oauthFlowCompletingRef.current = false
+    }
+  }
+
+  const pollOAuthStatusUntilSettled = async (provider: CredentialOAuthProvider, state: string) => {
+    const token = ++oauthPollTokenRef.current
+    let consecutiveErrors = 0
+
+    for (let attempt = 0; attempt < OAUTH_STATUS_POLL_MAX_ATTEMPTS; attempt += 1) {
+      try {
+        const result = await workbench.checkOAuthStatus(state)
+        if (token !== oauthPollTokenRef.current) return
+
+        consecutiveErrors = 0
+        setOAuthStatuses((current) => ({ ...current, [provider]: result }))
+        if (isCredentialOAuthSuccess(result.status)) {
+          await handleOAuthFlowComplete()
+          return
+        }
+        if (isCredentialOAuthFailure(result.status)) {
+          toast.error(result.error ?? result.status)
+          return
+        }
+      } catch (error) {
+        if (token !== oauthPollTokenRef.current) return
+
+        // Tolerate transient request failures; only give up after several in a row.
+        consecutiveErrors += 1
+        if (consecutiveErrors >= OAUTH_STATUS_POLL_MAX_CONSECUTIVE_ERRORS) {
+          toast.error(error instanceof Error ? error.message : String(error))
+          return
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, OAUTH_STATUS_POLL_INTERVAL_MS))
+    }
+
+    if (token !== oauthPollTokenRef.current) return
+    toast.info(t('credentialsPage.toast.oauthPollingStopped'))
+  }
+
   const handleStartOAuth = async (provider: CredentialOAuthProvider) => {
+    stopOAuthStatusPolling()
     try {
       const result = await workbench.startOAuth({
         provider,
@@ -1150,6 +1234,10 @@ export function AccountsPanel({
   const handleCheckOAuthStatus = async (provider: CredentialOAuthProvider, state: string) => {
     const result = await workbench.checkOAuthStatus(state)
     setOAuthStatuses((current) => ({ ...current, [provider]: result }))
+    if (isCredentialOAuthSuccess(result.status)) {
+      await handleOAuthFlowComplete()
+      return
+    }
     toast.success(
       t('credentialsPage.toast.oauthStatusChecked', {
         status: t(`credentialsPage.oauth.statuses.${result.status}`, {
@@ -1162,6 +1250,16 @@ export function AccountsPanel({
   const handleSubmitOAuthCallback = async (input: CredentialOAuthCallbackInput) => {
     await workbench.submitOAuthCallback(input)
     toast.success(t('credentialsPage.toast.oauthCallbackSubmitted'))
+
+    // The backend exchanges the code asynchronously; poll the status instead
+    // of making the user click through the manual check.
+    const state = resolveCredentialOAuthCallbackState(input)
+    if (!state) return
+    setOAuthStatuses((current) => ({
+      ...current,
+      [input.provider]: { status: 'wait', error: null },
+    }))
+    void pollOAuthStatusUntilSettled(input.provider, state)
   }
 
   const handleImportVertex = async (input: { file: File; location: string }) => {

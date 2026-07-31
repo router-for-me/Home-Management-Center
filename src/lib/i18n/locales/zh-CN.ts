@@ -2172,6 +2172,8 @@ export const zhCN = {
         oauthLinkCopied: 'OAuth 授权链接已复制。',
         oauthStatusChecked: 'OAuth 状态：{{status}}。',
         oauthCallbackSubmitted: 'OAuth callback 已提交。',
+        oauthCompleted: 'OAuth 授权已完成。',
+        oauthPollingStopped: '仍在等待 OAuth 授权，已停止自动查询，可稍后手动查询状态。',
         vertexImported: 'Vertex 凭证已导入。',
       },
     },
