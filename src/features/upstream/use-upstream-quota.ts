@@ -14,7 +14,6 @@ import {
 import {
   buildUpstreamQuotaJoinMap,
   createUpstreamQuotaCollectionBaseline,
-  getUpstreamQuotaAttentionCount,
   getUpstreamQuotaCollectionProgress,
 } from './upstream-quota-model'
 
@@ -64,7 +63,6 @@ export function useUpstreamQuota() {
 
   const entries = useMemo(() => query.data?.items ?? [], [query.data])
   const map = useMemo(() => buildUpstreamQuotaJoinMap(entries), [entries])
-  const attentionCount = getUpstreamQuotaAttentionCount(entries, query.data?.globalSummary)
   const total = query.data?.total ?? entries.length
   const truncated = total > entries.length
 
@@ -74,7 +72,6 @@ export function useUpstreamQuota() {
     capabilities,
     map,
     entries,
-    attentionCount,
     total,
     truncated,
     isPending: query.isPending,

@@ -131,7 +131,7 @@ export function UpstreamWorkbenchPage({
         accounts={accountsStats}
         providers={providersStats}
         quotaAvailable={quota.available}
-        quotaAttention={quota.attentionCount}
+        quotaAttention={accountsStats?.attention ?? 0}
         onFilterAttention={handleFilterAttention}
       />
 

@@ -8,6 +8,7 @@ export type UpstreamAccountsStats = {
   disabled: number
   unavailable: number
   websockets: number
+  attention: number
 }
 
 export type UpstreamProvidersStats = {
