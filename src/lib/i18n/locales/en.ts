@@ -2645,6 +2645,10 @@ export const en = {
         detailCount: '{{count}} bindings',
         groupId: 'Scope ID: {{id}}',
         noDetails: 'No bindings yet.',
+        detailChannels: 'Credential scope',
+        detailChannelsHint:
+          'With nothing selected, this model binding inherits the credential scope of the client key; selections restrict dispatch to the chosen scopes.',
+        detailChannelsInherit: 'Inherits key scope',
         unsupportedTitle: 'Access scopes are not available',
         unsupportedDescription:
           'This runtime does not expose credential scope or model scope routes. Users and client keys remain visible without inventing scope data.',

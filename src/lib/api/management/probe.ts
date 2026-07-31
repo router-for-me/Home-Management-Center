@@ -32,6 +32,7 @@ const capabilityRequests: Record<
     | 'credentialInFlightSnapshotCursor'
     | 'credentialConcurrencyLimits'
     | 'quotaRecollect'
+    | 'modelChannelBindings'
   >,
   {
     path: string
@@ -103,6 +104,7 @@ const emptyCapabilities: CapabilityMap = {
   users: false,
   userPeriodLimits: false,
   accessGroups: false,
+  modelChannelBindings: false,
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
@@ -354,6 +356,10 @@ function readDeclaredAccessGroupsCapability(configData: unknown) {
   ])
 }
 
+function readDeclaredModelChannelBindingsCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['model_channel_bindings', 'modelChannelBindings'])
+}
+
 async function readCapabilitiesPayload(client: AxiosInstance): Promise<UnknownRecord | null> {
   const response = await client.request<unknown>({
     method: 'GET',
@@ -535,6 +541,9 @@ export async function probeManagementRuntime(
   const declaredAccessGroups = capabilitiesPayload
     ? readDeclaredAccessGroupsCapability(capabilitySource)
     : null
+  const declaredModelChannelBindings = capabilitiesPayload
+    ? readDeclaredModelChannelBindingsCapability(capabilitySource)
+    : null
   const declaredCredentialInFlight = capabilitiesPayload
     ? readDeclaredCredentialInFlightCapability(capabilitySource)
     : null
@@ -608,6 +617,9 @@ export async function probeManagementRuntime(
     logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
     accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
+    // The model-group-details routes predate per-model channel bindings, so an HTTP
+    // status probe cannot detect support; only the declared capability bit can.
+    modelChannelBindings: declaredModelChannelBindings ?? false,
     credentialInFlight: declaredCredentialInFlight ?? false,
     credentialInFlightSnapshotCursor: declaredCredentialInFlightSnapshotCursor ?? false,
     credentialConcurrencyLimits: declaredCredentialConcurrencyLimits ?? false,

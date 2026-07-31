@@ -84,6 +84,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   type CredentialBindingCandidate,
   type ModelBindingCandidate,
@@ -913,12 +914,14 @@ function GroupCheckboxList({
   emptyLabel,
   groups,
   selected,
+  hint,
   onToggle,
 }: {
   label: string
   emptyLabel: string
   groups: AccessGroupResource[]
   selected: number[]
+  hint?: string
   onToggle: (id: number) => void
 }) {
   return (
@@ -944,6 +947,7 @@ function GroupCheckboxList({
           ))}
         </div>
       )}
+      {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </div>
   )
 }
@@ -1436,6 +1440,8 @@ function GroupDetailForm({
   kind,
   groups,
   details,
+  channelGroups,
+  channelBindingsSupported,
   credentialCandidates,
   credentialCandidatesPending,
   credentialCandidatesIssueMessage,
@@ -1454,6 +1460,8 @@ function GroupDetailForm({
   kind: AccessGroupKind
   groups: AccessGroupResource[]
   details: AccessGroupDetailResource[]
+  channelGroups: AccessGroupResource[]
+  channelBindingsSupported: boolean
   credentialCandidates: CredentialBindingCandidate[]
   credentialCandidatesPending: boolean
   credentialCandidatesIssueMessage: string | null
@@ -1467,13 +1475,14 @@ function GroupDetailForm({
   onCancel: () => void
   onRetryCredentialCandidates: () => void
   onRetryModelCandidates: () => void
-  onSubmit: (input: { groupId: number; targetIds: string[] }) => Promise<void>
+  onSubmit: (input: { groupId: number; targetIds: string[]; channels: number[] }) => Promise<void>
 }) {
   const { t } = useTranslation()
   const [groupId, setGroupId] = useState<number | null>(
     initialGroupId ?? groups[0]?.numericId ?? null,
   )
   const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
+  const [selectedChannelGroupIds, setSelectedChannelGroupIds] = useState<number[]>([])
   const [modelSourceFilter, setModelSourceFilter] = useState<ModelSourceFilter>('all')
   const [credentialSearch, setCredentialSearch] = useState('')
   const [modelSearch, setModelSearch] = useState('')
@@ -1611,15 +1620,16 @@ function GroupDetailForm({
     setLocalError(null)
     setGroupId(initialGroupId ?? groups[0]?.numericId ?? null)
     setSelectedTargetIds([])
+    setSelectedChannelGroupIds([])
     setModelSourceFilter('all')
     setCredentialSearch('')
     setModelSearch('')
   }, [groups, initialGroupId])
 
-  const handleGroupChange = (value: string) => {
-    setGroupId(Number(value))
-    setSelectedTargetIds([])
-    setLocalError(null)
+  const toggleChannelGroup = (id: number) => {
+    setSelectedChannelGroupIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    )
   }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1654,33 +1664,26 @@ function GroupDetailForm({
 
     try {
       setLocalError(null)
-      await onSubmit({ groupId, targetIds: normalizedTargetIds })
+      await onSubmit({
+        groupId,
+        targetIds: normalizedTargetIds,
+        channels: kind === 'model' && channelBindingsSupported ? selectedChannelGroupIds : [],
+      })
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
     }
   }
 
+  const selectedGroupName =
+    groups.find((group) => group.numericId === groupId)?.name ??
+    (groupId ? `#${groupId}` : t('usersPage.groups.groupPlaceholder'))
+
   return (
     <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
-        <span>{t('usersPage.groups.group')}</span>
-        <Select
-          value={groupId ? String(groupId) : ''}
-          disabled={mutating || groups.length === 0}
-          onValueChange={handleGroupChange}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder={t('usersPage.groups.groupPlaceholder')} />
-          </SelectTrigger>
-          <SelectContent>
-            {groups.map((group) => (
-              <SelectItem key={group.id} value={String(group.numericId)}>
-                {group.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </label>
+      <div className="grid gap-2">
+        <p className="text-sm font-medium">{t('usersPage.groups.group')}</p>
+        <div className="bg-muted/40 rounded-md border px-3 py-2 text-sm">{selectedGroupName}</div>
+      </div>
       {kind === 'channel' ? (
         <BindingCandidateMultiSelect
           title={t('usersPage.groups.credential')}
@@ -1735,6 +1738,16 @@ function GroupDetailForm({
           onClearError={() => setLocalError(null)}
         />
       )}
+      {kind === 'model' && channelBindingsSupported ? (
+        <GroupCheckboxList
+          label={t('usersPage.groups.detailChannels')}
+          emptyLabel={t('usersPage.groups.channelEmpty')}
+          groups={channelGroups}
+          selected={selectedChannelGroupIds}
+          hint={t('usersPage.groups.detailChannelsHint')}
+          onToggle={toggleChannelGroup}
+        />
+      ) : null}
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
           {localError}
@@ -2400,6 +2413,8 @@ function GroupsTable({
   kind,
   groups,
   details,
+  channelGroups,
+  channelBindingsSupported,
   onEditGroup,
   onDeleteGroup,
   onAddDetail,
@@ -2408,12 +2423,19 @@ function GroupsTable({
   kind: AccessGroupKind
   groups: AccessGroupResource[]
   details: AccessGroupDetailResource[]
+  channelGroups: AccessGroupResource[]
+  channelBindingsSupported: boolean
   onEditGroup: (group: AccessGroupResource) => void
   onDeleteGroup: (group: AccessGroupResource) => void
   onAddDetail: (group: AccessGroupResource) => void
   onDeleteDetail: (detail: AccessGroupDetailResource) => void
 }) {
   const { t } = useTranslation()
+  const showChannels = kind === 'model' && channelBindingsSupported
+  // Fixed proportions keep stacked group cards' tables column-aligned regardless of content.
+  const targetColumnWidth = kind === 'channel' ? 'w-[52%]' : showChannels ? 'w-[40%]' : 'w-[56%]'
+  const timeColumnWidth = kind === 'channel' ? 'w-[28%]' : showChannels ? 'w-[20%]' : 'w-[26%]'
+  const actionsColumnWidth = kind === 'channel' ? 'w-[20%]' : showChannels ? 'w-[14%]' : 'w-[18%]'
 
   if (groups.length === 0) {
     return (
@@ -2451,42 +2473,68 @@ function GroupsTable({
                   {t('usersPage.groups.groupId', { id: group.numericId })}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-1.5 md:justify-end">
-                <Button variant="outline" size="sm" onClick={() => onAddDetail(group)}>
-                  <Plus className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.addBinding')}
-                </Button>
-                <Button
-                  variant="text"
-                  size="sm"
-                  className="px-2"
-                  onClick={() => onEditGroup(group)}
-                >
-                  <Pencil className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.edit')}
-                </Button>
-                <Button
-                  variant="destructiveText"
-                  size="sm"
-                  className="px-2"
-                  onClick={() => onDeleteGroup(group)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.delete')}
-                </Button>
+              <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t('usersPage.actions.addBinding')}
+                      onClick={() => onAddDetail(group)}
+                    >
+                      <Plus className="size-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('usersPage.actions.addBinding')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t('usersPage.actions.edit')}
+                      onClick={() => onEditGroup(group)}
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('usersPage.actions.edit')}</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="destructiveText"
+                      size="icon-sm"
+                      aria-label={t('usersPage.actions.delete')}
+                      onClick={() => onDeleteGroup(group)}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('usersPage.actions.delete')}</TooltipContent>
+                </Tooltip>
               </div>
             </div>
             <div className="overflow-x-auto">
-              <Table className="min-w-[620px]">
+              <Table
+                className={cn('table-fixed', showChannels ? 'min-w-[760px]' : 'min-w-[620px]')}
+              >
                 <TableHeader className="bg-muted/40 text-muted-foreground">
                   <TableRow variant="static">
-                    <TableHead>
+                    <TableHead className={targetColumnWidth}>
                       {kind === 'channel'
                         ? t('usersPage.groups.authId')
                         : t('usersPage.groups.modelId')}
                     </TableHead>
-                    <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-                    <TableHead className="w-[120px] text-right">
+                    {showChannels ? (
+                      <TableHead className="w-[26%]">
+                        {t('usersPage.groups.detailChannels')}
+                      </TableHead>
+                    ) : null}
+                    <TableHead className={timeColumnWidth}>
+                      {t('usersPage.list.updatedAt')}
+                    </TableHead>
+                    <TableHead className={cn('text-right', actionsColumnWidth)}>
                       {t('usersPage.list.actions')}
                     </TableHead>
                   </TableRow>
@@ -2494,30 +2542,57 @@ function GroupsTable({
                 <TableBody>
                   {groupDetails.length === 0 ? (
                     <TableRow variant="static">
-                      <TableCell colSpan={3} className="text-muted-foreground py-8 text-center">
+                      <TableCell
+                        colSpan={showChannels ? 4 : 3}
+                        className="text-muted-foreground py-8 text-center"
+                      >
                         {t('usersPage.groups.noDetails')}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    groupDetails.map((detail) => (
-                      <TableRow key={detail.id} variant="resource">
-                        <TableCell className="font-mono text-xs">{detail.targetId}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatOptionalTime(detail.updatedAt, t('usersPage.status.notReturned'))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="destructiveText"
-                            size="sm"
-                            className="px-2"
-                            onClick={() => onDeleteDetail(detail)}
-                          >
-                            <Trash2 className="size-4" aria-hidden="true" />
-                            {t('usersPage.actions.delete')}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    groupDetails.map((detail) => {
+                      const channelsLabel =
+                        detail.channels.length > 0
+                          ? groupListLabel(
+                              channelGroups,
+                              detail.channels,
+                              t('usersPage.status.notReturned'),
+                            )
+                          : t('usersPage.groups.detailChannelsInherit')
+
+                      return (
+                        <TableRow key={detail.id} variant="resource">
+                          <TableCell className="truncate font-mono text-xs" title={detail.targetId}>
+                            {detail.targetId}
+                          </TableCell>
+                          {showChannels ? (
+                            <TableCell
+                              className="text-muted-foreground truncate"
+                              title={channelsLabel}
+                            >
+                              {channelsLabel}
+                            </TableCell>
+                          ) : null}
+                          <TableCell className="text-muted-foreground truncate">
+                            {formatOptionalTime(
+                              detail.updatedAt,
+                              t('usersPage.status.notReturned'),
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="destructiveText"
+                              size="sm"
+                              className="px-2"
+                              onClick={() => onDeleteDetail(detail)}
+                            >
+                              <Trash2 className="size-4" aria-hidden="true" />
+                              {t('usersPage.actions.delete')}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -3200,6 +3275,8 @@ export function UsersWorkbenchPage() {
                   kind="channel"
                   groups={filteredChannelGroups}
                   details={channelGroupDetails}
+                  channelGroups={channelGroups}
+                  channelBindingsSupported={workbench.capabilities.modelChannelBindings}
                   onEditGroup={(group) => setSheetMode({ type: 'group-edit', group })}
                   onDeleteGroup={(group) => setPendingDelete({ type: 'group', group })}
                   onAddDetail={(group) =>
@@ -3233,6 +3310,8 @@ export function UsersWorkbenchPage() {
                   kind="model"
                   groups={filteredModelGroups}
                   details={modelGroupDetails}
+                  channelGroups={channelGroups}
+                  channelBindingsSupported={workbench.capabilities.modelChannelBindings}
                   onEditGroup={(group) => setSheetMode({ type: 'group-edit', group })}
                   onDeleteGroup={(group) => setPendingDelete({ type: 'group', group })}
                   onAddDetail={(group) =>
@@ -3344,6 +3423,8 @@ export function UsersWorkbenchPage() {
               kind={sheetMode.kind}
               groups={sheetMode.kind === 'channel' ? channelGroups : modelGroups}
               details={sheetMode.kind === 'channel' ? channelGroupDetails : modelGroupDetails}
+              channelGroups={channelGroups}
+              channelBindingsSupported={workbench.capabilities.modelChannelBindings}
               credentialCandidates={workbench.credentialCandidates}
               credentialCandidatesPending={workbench.credentialCandidatesPending}
               credentialCandidatesIssueMessage={workbench.credentialCandidatesIssueMessage}
@@ -3364,6 +3445,7 @@ export function UsersWorkbenchPage() {
                     input: {
                       groupId: input.groupId,
                       targetId: input.targetIds[0],
+                      channels: input.channels,
                     },
                   })
                   toast.success(t('usersPage.toast.bindingCreated'))
@@ -3376,6 +3458,7 @@ export function UsersWorkbenchPage() {
                   inputs: input.targetIds.map((targetId) => ({
                     groupId: input.groupId,
                     targetId,
+                    channels: input.channels,
                   })),
                 })
 

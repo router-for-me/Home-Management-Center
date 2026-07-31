@@ -36,6 +36,7 @@ const emptyCapabilities: CapabilityMap = {
   users: false,
   userPeriodLimits: false,
   accessGroups: false,
+  modelChannelBindings: false,
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
