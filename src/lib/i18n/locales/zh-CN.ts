@@ -2541,6 +2541,10 @@ export const zhCN = {
         detailCount: '{{count}} 个绑定',
         groupId: '范围 ID：{{id}}',
         noDetails: '尚未添加绑定。',
+        detailChannels: '凭证范围',
+        detailChannelsHint:
+          '未选择时，该模型绑定继承客户端密钥的凭证范围；选择后仅在所选凭证范围内调度。',
+        detailChannelsInherit: '继承密钥范围',
         unsupportedTitle: '访问范围接口不可用',
         unsupportedDescription:
           '当前运行时未提供凭证范围或模型范围接口。页面会继续展示用户和客户端密钥，但不会伪造范围数据。',

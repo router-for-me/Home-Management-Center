@@ -2540,6 +2540,10 @@ export const zhTW = {
         detailCount: '{{count}} 個綁定',
         groupId: '範圍 ID：{{id}}',
         noDetails: '尚未新增綁定。',
+        detailChannels: '憑證範圍',
+        detailChannelsHint:
+          '未選擇時，該模型綁定繼承用戶端金鑰的憑證範圍；選擇後僅在所選憑證範圍內調度。',
+        detailChannelsInherit: '繼承金鑰範圍',
         unsupportedTitle: '存取範圍介面不可用',
         unsupportedDescription:
           '目前執行環境未提供憑證範圍或模型範圍介面。頁面會繼續展示使用者和用戶端金鑰，但不會偽造範圍資料。',
