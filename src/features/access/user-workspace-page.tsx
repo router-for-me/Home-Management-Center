@@ -9,6 +9,7 @@ import {
   Copy,
   Edit3,
   KeyRound,
+  LayoutGrid,
   Loader2,
   LogOut,
   Mail,
@@ -956,6 +957,9 @@ export function UserWorkspacePage() {
               <Button asChild variant="outline">
                 <Link to="/user/register">{t('userWorkspace.register')}</Link>
               </Button>
+              <Button asChild variant="text">
+                <Link to="/user/models">{t('userWorkspace.browseModels')}</Link>
+              </Button>
             </div>
           </div>
         ) : (
@@ -971,10 +975,18 @@ export function UserWorkspacePage() {
                     {t('userWorkspace.description')}
                   </p>
                 </div>
-                <Button variant="outline" onClick={() => void handleLogout()}>
-                  <LogOut className="size-4" aria-hidden="true" />
-                  {t('userWorkspace.logout')}
-                </Button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <Link to="/user/models">
+                      <LayoutGrid className="size-4" aria-hidden="true" />
+                      {t('userWorkspace.browseModels')}
+                    </Link>
+                  </Button>
+                  <Button variant="outline" onClick={() => void handleLogout()}>
+                    <LogOut className="size-4" aria-hidden="true" />
+                    {t('userWorkspace.logout')}
+                  </Button>
+                </div>
               </div>
             </div>
 

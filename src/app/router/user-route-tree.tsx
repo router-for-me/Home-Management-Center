@@ -1,6 +1,8 @@
 import { Navigate, Outlet, createRootRoute, createRoute } from '@tanstack/react-router'
 
 import { UserAuthPage } from '@/features/access/user-auth-page'
+import { UserModelCatalogPage } from '@/features/access/user-model-catalog-page'
+import { normalizeUserModelRouteSearch } from '@/features/access/user-model-route'
 import {
   UserForgotPasswordPage,
   UserResetPasswordPage,
@@ -34,6 +36,15 @@ const registerRoute = createRoute({
   component: () => <UserAuthPage mode="register" />,
 })
 
+// Public on purpose: a visitor has to be able to see what is on offer before
+// deciding to hold an account. The page enriches itself when a session exists.
+const modelsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/user/models',
+  component: UserModelCatalogPage,
+  validateSearch: normalizeUserModelRouteSearch,
+})
+
 const workspaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/user/workspace',
@@ -65,5 +76,6 @@ export const userRouteTree = rootRoute.addChildren([
   forgotPasswordRoute,
   resetPasswordRoute,
   verifyEmailRoute,
+  modelsRoute,
   workspaceRoute,
 ])

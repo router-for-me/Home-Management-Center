@@ -147,6 +147,7 @@ export const en = {
         adminConsole: 'Admin console',
         userLogin: 'User sign-in',
         userWorkspace: 'User workspace',
+        models: 'Model catalog',
       },
       hero: {
         title: 'Multi-model access starts with one controlled entry',
@@ -161,6 +162,7 @@ export const en = {
         adminResume: 'Open admin console',
         userPrimary: 'Sign in',
         userWorkspace: 'Open user workspace',
+        browseModels: 'Browse the model catalog',
       },
       providers: {
         title: 'Mainstream models, handled by one gateway',
@@ -356,6 +358,192 @@ export const en = {
         generic: 'The security request could not be completed. Try again.',
       },
     },
+    userModels: {
+      back: 'Back to entry',
+      title: 'Model catalog',
+      description:
+        'Every model this gateway can serve, with the capabilities and modalities this cluster reports for each one.',
+      loading: 'Loading the model catalog',
+      count: 'Showing {{shown}} of {{total}} models',
+      fetchedAt: 'Updated {{time}}',
+      header: {
+        signIn: 'Sign in',
+        workspace: 'User workspace',
+      },
+      actions: {
+        refresh: 'Refresh',
+        retry: 'Try again',
+      },
+      signedOut: {
+        title: 'Pricing and availability are visible after you sign in.',
+        signIn: 'Sign in',
+        register: 'Create account',
+      },
+      accessibleError: {
+        title: 'Your account view could not be loaded',
+        description:
+          'The public catalog is shown without pricing, availability, or key coverage. Reported cause: {{message}}',
+      },
+      access: {
+        noApiKeys: {
+          title: 'No API keys yet',
+          description:
+            'You have no client access keys, so no model is reachable yet. Create a key in the user workspace to start calling models.',
+        },
+        modelGroups: {
+          title: 'Your keys reach part of this catalog',
+          description:
+            'Your {{keys}} key(s) are limited to specific model groups. Models outside those groups are shown for reference and cannot be called with your current keys.',
+        },
+      },
+      unsupported: {
+        title: 'This server does not publish a model catalog',
+        description:
+          'The connected Home instance does not expose the model catalog endpoints. Upgrade the server to browse models here.',
+      },
+      error: {
+        title: 'The model catalog could not be loaded',
+      },
+      empty: {
+        title: 'No models published',
+        description: 'This gateway has not published any model yet.',
+      },
+      filteredEmpty: {
+        title: 'No model matches these filters',
+        description: 'Adjust the search text or clear the filters to see the full catalog again.',
+      },
+      filters: {
+        searchLabel: 'Search models',
+        searchPlaceholder: 'Search by model ID, name, or provider',
+        provider: 'Provider',
+        allProviders: 'All providers',
+        inputModality: 'Input modality',
+        allModalities: 'All input modalities',
+        quickFilters: 'Quick filters',
+        accessibleOnly: 'My keys only',
+        sort: 'Sort',
+        sortName: 'Name (A–Z)',
+        sortPriceAsc: 'Lowest opening price',
+        sortPriceDesc: 'Highest opening price',
+        clear: 'Clear filters',
+        unreportedHidden: 'Models with unreported capabilities are hidden',
+      },
+      value: {
+        unreported: 'Not reported',
+      },
+      status: {
+        supported: 'Supported',
+        unsupported: 'Not supported',
+        unknown: 'Not reported',
+      },
+      spec: {
+        context: 'Context',
+        maxOutput: 'Max output',
+        providers: 'Providers',
+        ownedBy: 'Owned by',
+        version: 'Version',
+        type: 'Type',
+      },
+      modality: {
+        input: 'In',
+        output: 'Out',
+        unreported: 'Modalities not reported',
+        unreportedDetail:
+          'No upstream described the input or output modalities of this model. That is not the same as text-only.',
+      },
+      capability: {
+        tools: {
+          label: 'Tool calling',
+          supported: 'Tools',
+          unsupported: 'No tools',
+          unknown: 'Tools not reported',
+        },
+        structuredOutput: {
+          label: 'Structured output',
+          supported: 'Structured output',
+          unsupported: 'No structured output',
+          unknown: 'Structured output not reported',
+        },
+        reasoning: {
+          label: 'Reasoning',
+          supported: 'Reasoning',
+          unsupported: 'No reasoning',
+          unknown: 'Reasoning not reported',
+          budgetRange: 'Reasoning budget',
+          budgetFlags: 'Budget controls',
+          canDisable: 'Can be disabled',
+          dynamic: 'Dynamic budget',
+        },
+        parameters: 'Supported parameters',
+        generationMethods: 'Generation methods',
+      },
+      card: {
+        copyId: 'Copy model ID',
+        copied: 'Copied {{id}}',
+        copyFailed: 'The model ID could not be copied.',
+        noDescription: 'No description provided.',
+        access: {
+          included: 'Your keys',
+          excluded: 'Outside your keys',
+        },
+      },
+      price: {
+        from: 'From',
+        inSuffix: 'in',
+        outSuffix: 'out / 1M tokens',
+        tiered: '{{rungs}}-step ladder',
+        signedOut: 'Sign in to see pricing',
+        signedOutDetail:
+          'This cluster publishes pricing to signed-in accounts only. Sign in to see the full ladder for this model.',
+        notCovered: 'Not covered by your keys',
+        notCoveredDetail:
+          'This model is outside the model groups your keys can reach, so no price applies to your account yet.',
+        unavailable: 'Pricing unavailable',
+        unpublished: 'Price not published',
+        unpublishedDetail:
+          'This cluster has not published a price for this model. A missing price is not a free price — calls may be rejected or billed under a rule that is not shown here.',
+        ladderNote:
+          'Prices are per 1M tokens and can change by input size. Every rung the cluster published is listed below.',
+        serviceTier: 'Service tier',
+        defaultTier: 'Default',
+        noRungs: 'This tier has no published rung.',
+        rungBase: 'Base rung',
+        rungFrom: 'From {{tokens}} input tokens',
+        input: 'Input',
+        output: 'Output',
+        cacheRead: 'Cache read',
+        cacheWrite: 'Cache write',
+        request: 'Per request',
+      },
+      availability: {
+        signedOut: 'Sign in to see observed availability',
+        notCovered: 'Availability is only observed for models your keys can reach.',
+        unavailable: 'Availability unavailable',
+        rate: 'Success rate',
+        samples: 'Samples',
+        failed: '{{value}} failed',
+        latency: 'Average latency',
+        ttft: 'Average time to first token',
+        throughput: 'Output throughput',
+        lastObserved: 'Last observed',
+        milliseconds: '{{value}} ms',
+        tokensPerSecond: '{{value}} tokens/s',
+        windowNote: 'Observed over the last {{hours}} h, from {{from}} to {{to}}.',
+        insufficient: {
+          title: 'Not enough observations',
+          description:
+            'Only {{samples}} call(s) were recorded in the last {{hours}} h, below the {{minSamples}} needed to report a rate. This is missing evidence, not a report of perfect or poor availability.',
+        },
+      },
+      detail: {
+        specs: 'Specifications',
+        modalities: 'Modalities',
+        capabilities: 'Capabilities',
+        pricing: 'Price ladder',
+        availability: 'Observed availability',
+        close: 'Close model details',
+      },
+    },
     userWorkspace: {
       back: 'Back to entry',
       title: 'User workspace',
@@ -363,6 +551,7 @@ export const en = {
       login: 'Go to login',
       register: 'Create account',
       logout: 'Log out',
+      browseModels: 'Model catalog',
       signedOut: {
         title: 'Sign in to a user account first',
         description:

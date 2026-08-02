@@ -7,6 +7,7 @@ type UserCapabilities = {
   emailRegistration: boolean
   emailVerification: boolean
   passwordRecovery: boolean
+  modelCatalog: boolean
   serverInfo: {
     homeVersion: string | null
     homeCommit: string | null
@@ -40,6 +41,7 @@ function legacyUserCapabilities(): UserCapabilities {
     emailRegistration: false,
     emailVerification: false,
     passwordRecovery: false,
+    modelCatalog: false,
     serverInfo: {
       homeVersion: null,
       homeCommit: null,
@@ -62,6 +64,11 @@ export function normalizeUserCapabilities(value: unknown): UserCapabilities {
     emailRegistration: readBoolean(capabilities, ['email_registration', 'emailRegistration']),
     emailVerification: readBoolean(capabilities, ['email_verification', 'emailVerification']),
     passwordRecovery: readBoolean(capabilities, ['password_recovery', 'passwordRecovery']),
+    // A Home that predates the catalog omits this flag entirely, and readBoolean
+    // reports a missing flag as false. That is the intended reading: the client
+    // hides the catalog rather than calling a route that is not there and having
+    // to tell a 404 apart from an outage.
+    modelCatalog: readBoolean(capabilities, ['model_catalog', 'modelCatalog']),
     serverInfo: {
       homeVersion: readString(serverInfo, ['home_version', 'homeVersion']),
       homeCommit: readString(serverInfo, ['home_commit', 'homeCommit']),
