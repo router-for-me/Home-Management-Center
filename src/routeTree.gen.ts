@@ -14,6 +14,7 @@ import { Route as UserWorkspaceRouteImport } from './routes/user.workspace'
 import { Route as UserVerifyEmailRouteImport } from './routes/user.verify-email'
 import { Route as UserResetPasswordRouteImport } from './routes/user.reset-password'
 import { Route as UserRegisterRouteImport } from './routes/user.register'
+import { Route as UserModelsRouteImport } from './routes/user.models'
 import { Route as UserLoginRouteImport } from './routes/user.login'
 import { Route as UserForgotPasswordRouteImport } from './routes/user.forgot-password'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
@@ -56,6 +57,11 @@ const UserResetPasswordRoute = UserResetPasswordRouteImport.update({
 const UserRegisterRoute = UserRegisterRouteImport.update({
   id: '/user/register',
   path: '/user/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserModelsRoute = UserModelsRouteImport.update({
+  id: '/user/models',
+  path: '/user/models',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserLoginRoute = UserLoginRouteImport.update({
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
+  '/user/models': typeof UserModelsRoute
   '/user/register': typeof UserRegisterRoute
   '/user/reset-password': typeof UserResetPasswordRoute
   '/user/verify-email': typeof UserVerifyEmailRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
+  '/user/models': typeof UserModelsRoute
   '/user/register': typeof UserRegisterRoute
   '/user/reset-password': typeof UserResetPasswordRoute
   '/user/verify-email': typeof UserVerifyEmailRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/user/forgot-password': typeof UserForgotPasswordRoute
   '/user/login': typeof UserLoginRoute
+  '/user/models': typeof UserModelsRoute
   '/user/register': typeof UserRegisterRoute
   '/user/reset-password': typeof UserResetPasswordRoute
   '/user/verify-email': typeof UserVerifyEmailRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/user/forgot-password'
     | '/user/login'
+    | '/user/models'
     | '/user/register'
     | '/user/reset-password'
     | '/user/verify-email'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/user/forgot-password'
     | '/user/login'
+    | '/user/models'
     | '/user/register'
     | '/user/reset-password'
     | '/user/verify-email'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/user/forgot-password'
     | '/user/login'
+    | '/user/models'
     | '/user/register'
     | '/user/reset-password'
     | '/user/verify-email'
@@ -323,6 +335,7 @@ export interface RootRouteChildren {
   AdminUsersRoute: typeof AdminUsersRoute
   UserForgotPasswordRoute: typeof UserForgotPasswordRoute
   UserLoginRoute: typeof UserLoginRoute
+  UserModelsRoute: typeof UserModelsRoute
   UserRegisterRoute: typeof UserRegisterRoute
   UserResetPasswordRoute: typeof UserResetPasswordRoute
   UserVerifyEmailRoute: typeof UserVerifyEmailRoute
@@ -364,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/user/register'
       fullPath: '/user/register'
       preLoaderRoute: typeof UserRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user/models': {
+      id: '/user/models'
+      path: '/user/models'
+      fullPath: '/user/models'
+      preLoaderRoute: typeof UserModelsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/user/login': {
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminUsersRoute: AdminUsersRoute,
   UserForgotPasswordRoute: UserForgotPasswordRoute,
   UserLoginRoute: UserLoginRoute,
+  UserModelsRoute: UserModelsRoute,
   UserRegisterRoute: UserRegisterRoute,
   UserResetPasswordRoute: UserResetPasswordRoute,
   UserVerifyEmailRoute: UserVerifyEmailRoute,
