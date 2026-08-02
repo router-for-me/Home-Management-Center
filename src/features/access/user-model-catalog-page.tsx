@@ -1,12 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 
 import {
   ArrowLeft,
   Braces,
   CircleAlert,
-  LayoutGrid,
+  KeyRound,
   Lightbulb,
   RefreshCcw,
   Search,
@@ -34,11 +34,28 @@ import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { type UserCatalogModel, useUserModelCatalog } from './use-user-model-catalog'
 import { UserModelCard } from './user-model-card'
 import { UserModelDetailSheet } from './user-model-detail-sheet'
-import { collectProviders, formatTimestamp, modelDisplayName } from './user-model-format'
+import {
+  type UserModelSort,
+  collectProviders,
+  compareUserModels,
+  formatTimestamp,
+} from './user-model-format'
+import {
+  type UserModelCapabilityFilter as CapabilityFilter,
+  type UserModelRouteSearch,
+  capabilityFiltersToParam,
+  normalizeCapabilityFilters,
+  normalizeUserModelRouteSearch,
+} from './user-model-route'
 
 const ALL = '__all__'
 
-type CapabilityFilter = 'tools' | 'structuredOutput' | 'reasoning'
+const CATALOG_PATH = '/user/models'
+
+// The one chip in the quick-filter group that narrows by key coverage rather
+// than by capability. It shares the group so the toolbar reads as one row of
+// filters instead of two segmented controls with a seam between them.
+const ACCESSIBLE_CHIP = 'accessible'
 
 function collectInputModalities(models: UserCatalogModel[]) {
   const modalities = new Set<string>()
@@ -75,13 +92,38 @@ function matchesCapabilities(model: UserCatalogModel, capabilities: CapabilityFi
 export function UserModelCatalogPage() {
   const { t, i18n } = useTranslation()
   const catalog = useUserModelCatalog()
-  const [search, setSearch] = useState('')
-  const [provider, setProvider] = useState<string>(ALL)
-  const [inputModality, setInputModality] = useState<string>(ALL)
-  const [capabilities, setCapabilities] = useState<CapabilityFilter[]>([])
-  const [accessibleOnly, setAccessibleOnly] = useState(false)
+  // Anchored to the path rather than to a `Route` object: this page is mounted
+  // by both the generated route tree and the standalone user entry's tree, and
+  // both register it at exactly this path.
+  const navigate = useNavigate({ from: CATALOG_PATH })
+  const routeSearch = useSearch({ from: CATALOG_PATH })
   const [selected, setSelected] = useState<UserCatalogModel | null>(null)
   const triggerRef = useRef<HTMLElement | null>(null)
+
+  const query = routeSearch.q ?? ''
+  const provider = routeSearch.provider ?? ALL
+  const inputModality = routeSearch.modality ?? ALL
+  const capabilities = useMemo(
+    () => normalizeCapabilityFilters(routeSearch.caps),
+    [routeSearch.caps],
+  )
+  const accessibleOnly = routeSearch.mine === true
+  const sort: UserModelSort = routeSearch.sort ?? 'name'
+
+  // The text box keeps its own copy so typing stays responsive and a trailing
+  // space survives; the URL holds the trimmed value it actually filters on.
+  const [searchText, setSearchText] = useState(query)
+  useEffect(() => {
+    setSearchText((current) => (current.trim() === query ? current : query))
+  }, [query])
+
+  const patchSearch = (patch: Partial<UserModelRouteSearch>) => {
+    void navigate({
+      search: (previous: Record<string, unknown>) =>
+        normalizeUserModelRouteSearch({ ...previous, ...patch }),
+      replace: true,
+    })
+  }
 
   const openDetails = (model: UserCatalogModel) => {
     // Remember the control the buyer opened the sheet from so closing it puts
@@ -96,7 +138,7 @@ export function UserModelCatalogPage() {
   const inputModalities = useMemo(() => collectInputModalities(models), [models])
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase()
+    const needle = query.toLowerCase()
 
     return models
       .filter((model) => {
@@ -107,31 +149,46 @@ export function UserModelCatalogPage() {
           if (!model.modalities.input.includes(inputModality)) return false
         }
         if (!matchesCapabilities(model, capabilities)) return false
-        return matchesSearch(model, query)
+        return matchesSearch(model, needle)
       })
-      .sort((left, right) =>
-        modelDisplayName(left).localeCompare(modelDisplayName(right), i18n.language),
-      )
-  }, [models, search, provider, inputModality, capabilities, accessibleOnly, i18n.language])
+      .sort(compareUserModels(sort, i18n.language))
+  }, [models, query, provider, inputModality, capabilities, accessibleOnly, sort, i18n.language])
+
+  const quickFilters = useMemo(
+    () => (accessibleOnly ? [...capabilities, ACCESSIBLE_CHIP] : [...capabilities]),
+    [capabilities, accessibleOnly],
+  )
+
+  const handleQuickFilters = (values: string[]) => {
+    patchSearch({
+      caps: capabilityFiltersToParam(values),
+      mine: values.includes(ACCESSIBLE_CHIP) ? true : undefined,
+    })
+  }
 
   const filtersActive =
-    search.trim().length > 0 ||
+    query.length > 0 ||
     provider !== ALL ||
     inputModality !== ALL ||
     capabilities.length > 0 ||
     accessibleOnly
 
   const clearFilters = () => {
-    setSearch('')
-    setProvider(ALL)
-    setInputModality(ALL)
-    setCapabilities([])
-    setAccessibleOnly(false)
+    setSearchText('')
+    // Sorting is not a filter: a buyer who clears the filters is still shopping
+    // by price, so the chosen order survives.
+    void navigate({
+      search: () => (routeSearch.sort ? { sort: routeSearch.sort } : {}),
+      replace: true,
+    })
   }
 
   return (
     <PublicAccessShell
-      subtitleKey="userModels.shellSubtitle"
+      // The shell subtitle names the product; the page's own h1 names the page.
+      // Pointing both at "Model catalog" printed the same words twice, one above
+      // the other, and told the buyer nothing on the second reading.
+      subtitleKey="embeddedPortal.shellSubtitle"
       headerActions={
         <Button asChild variant="outline" size="sm">
           <a href={authenticated ? embeddedEntryLinks.userWorkspace : embeddedEntryLinks.userLogin}>
@@ -154,11 +211,8 @@ export function UserModelCatalogPage() {
         <div className="bg-card rounded-lg border p-5 shadow-sm md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
-              <span className="bg-primary/10 text-primary flex size-11 items-center justify-center rounded-md">
-                <LayoutGrid className="size-5" aria-hidden="true" />
-              </span>
-              <h1 className="mt-5 text-xl font-semibold">{t('userModels.title')}</h1>
-              <p className="text-muted-foreground mt-2 max-w-[68ch] text-sm leading-6">
+              <h1 className="text-xl font-semibold">{t('userModels.title')}</h1>
+              <p className="text-muted-foreground mt-1.5 max-w-[68ch] text-sm leading-6">
                 {t('userModels.description')}
               </p>
             </div>
@@ -187,12 +241,7 @@ export function UserModelCatalogPage() {
 
         {!authenticated && !catalog.unsupported ? (
           <div className="border-info/25 bg-info/10 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-medium">{t('userModels.signedOut.title')}</p>
-              <p className="text-muted-foreground mt-1 max-w-[68ch] text-sm leading-6">
-                {t('userModels.signedOut.description')}
-              </p>
-            </div>
+            <p className="min-w-0 text-sm font-medium">{t('userModels.signedOut.title')}</p>
             <div className="flex shrink-0 flex-wrap gap-2">
               <Button asChild size="sm">
                 <Link to="/user/login">{t('userModels.signedOut.signIn')}</Link>
@@ -265,15 +314,23 @@ export function UserModelCatalogPage() {
                     aria-hidden="true"
                   />
                   <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    value={searchText}
+                    onChange={(event) => {
+                      setSearchText(event.target.value)
+                      patchSearch({ q: event.target.value })
+                    }}
                     placeholder={t('userModels.filters.searchPlaceholder')}
                     aria-label={t('userModels.filters.searchLabel')}
                     className="pl-9"
                   />
                 </div>
 
-                <Select value={provider} onValueChange={setProvider}>
+                <Select
+                  value={provider}
+                  onValueChange={(value) =>
+                    patchSearch({ provider: value === ALL ? undefined : value })
+                  }
+                >
                   <SelectTrigger
                     className="w-auto min-w-40"
                     aria-label={t('userModels.filters.provider')}
@@ -291,7 +348,12 @@ export function UserModelCatalogPage() {
                 </Select>
 
                 {inputModalities.length > 0 ? (
-                  <Select value={inputModality} onValueChange={setInputModality}>
+                  <Select
+                    value={inputModality}
+                    onValueChange={(value) =>
+                      patchSearch({ modality: value === ALL ? undefined : value })
+                    }
+                  >
                     <SelectTrigger
                       className="w-auto min-w-40"
                       aria-label={t('userModels.filters.inputModality')}
@@ -309,16 +371,47 @@ export function UserModelCatalogPage() {
                   </Select>
                 ) : null}
 
+                {authenticated ? (
+                  <Select
+                    value={sort}
+                    onValueChange={(value) =>
+                      patchSearch({
+                        sort: value === 'name' ? undefined : (value as 'price-asc' | 'price-desc'),
+                      })
+                    }
+                  >
+                    <SelectTrigger
+                      className="w-auto min-w-40"
+                      aria-label={t('userModels.filters.sort')}
+                    >
+                      <SelectValue placeholder={t('userModels.filters.sort')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">{t('userModels.filters.sortName')}</SelectItem>
+                      <SelectItem value="price-asc">
+                        {t('userModels.filters.sortPriceAsc')}
+                      </SelectItem>
+                      <SelectItem value="price-desc">
+                        {t('userModels.filters.sortPriceDesc')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : null}
+
+                {/* One group, no container chrome, item height matched to the
+                    inputs beside it: these are filter chips in the same row as
+                    the other filters, not a segmented control of their own. */}
                 <ToggleGroup
                   type="multiple"
-                  size="sm"
                   variant="outline"
-                  value={capabilities}
-                  onValueChange={(value: string[]) => setCapabilities(value as CapabilityFilter[])}
-                  aria-label={t('userModels.filters.capabilities')}
+                  value={quickFilters}
+                  onValueChange={handleQuickFilters}
+                  aria-label={t('userModels.filters.quickFilters')}
+                  className="flex-wrap gap-1.5 border-0 bg-transparent p-0 shadow-none"
                 >
                   <ToggleGroupItem
                     value="tools"
+                    className="border-input"
                     aria-label={t('userModels.capability.tools.label')}
                   >
                     <Wrench aria-hidden="true" />
@@ -328,6 +421,7 @@ export function UserModelCatalogPage() {
                   </ToggleGroupItem>
                   <ToggleGroupItem
                     value="structuredOutput"
+                    className="border-input"
                     aria-label={t('userModels.capability.structuredOutput.label')}
                   >
                     <Braces aria-hidden="true" />
@@ -337,6 +431,7 @@ export function UserModelCatalogPage() {
                   </ToggleGroupItem>
                   <ToggleGroupItem
                     value="reasoning"
+                    className="border-input"
                     aria-label={t('userModels.capability.reasoning.label')}
                   >
                     <Lightbulb aria-hidden="true" />
@@ -344,24 +439,19 @@ export function UserModelCatalogPage() {
                       {t('userModels.capability.reasoning.label')}
                     </span>
                   </ToggleGroupItem>
-                </ToggleGroup>
-
-                {authenticated ? (
-                  <ToggleGroup
-                    type="multiple"
-                    size="sm"
-                    variant="outline"
-                    value={accessibleOnly ? ['accessible'] : []}
-                    onValueChange={(value: string[]) =>
-                      setAccessibleOnly(value.includes('accessible'))
-                    }
-                    aria-label={t('userModels.filters.accessibleOnly')}
-                  >
-                    <ToggleGroupItem value="accessible">
-                      {t('userModels.filters.accessibleOnly')}
+                  {authenticated ? (
+                    <ToggleGroupItem
+                      value={ACCESSIBLE_CHIP}
+                      className="border-input"
+                      aria-label={t('userModels.filters.accessibleOnly')}
+                    >
+                      <KeyRound aria-hidden="true" />
+                      <span className="hidden sm:inline">
+                        {t('userModels.filters.accessibleOnly')}
+                      </span>
                     </ToggleGroupItem>
-                  </ToggleGroup>
-                ) : null}
+                  ) : null}
+                </ToggleGroup>
 
                 {filtersActive ? (
                   <Button variant="text" size="sm" onClick={clearFilters}>

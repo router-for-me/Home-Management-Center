@@ -359,11 +359,10 @@ export const en = {
       },
     },
     userModels: {
-      shellSubtitle: 'Model catalog',
       back: 'Back to entry',
       title: 'Model catalog',
       description:
-        'Every model this gateway can serve. Signed-in users also see the price ladder their own keys are billed at and the availability observed on this cluster.',
+        'Every model this gateway can serve, with the capabilities and modalities this cluster reports for each one.',
       loading: 'Loading the model catalog',
       count: 'Showing {{shown}} of {{total}} models',
       fetchedAt: 'Updated {{time}}',
@@ -376,9 +375,7 @@ export const en = {
         retry: 'Try again',
       },
       signedOut: {
-        title: 'Pricing and availability need a signed-in account',
-        description:
-          'The catalog below is public. Sign in to see the price ladder your keys are billed at, the observed availability, and which models your keys can reach.',
+        title: 'Pricing and availability are visible after you sign in.',
         signIn: 'Sign in',
         register: 'Create account',
       },
@@ -422,8 +419,12 @@ export const en = {
         allProviders: 'All providers',
         inputModality: 'Input modality',
         allModalities: 'All input modalities',
-        capabilities: 'Capability filters',
+        quickFilters: 'Quick filters',
         accessibleOnly: 'My keys only',
+        sort: 'Sort',
+        sortName: 'Name (A–Z)',
+        sortPriceAsc: 'Lowest opening price',
+        sortPriceDesc: 'Highest opening price',
         clear: 'Clear filters',
         unreportedHidden: 'Models with unreported capabilities are hidden',
       },
@@ -493,7 +494,7 @@ export const en = {
         tiered: '{{rungs}}-step ladder',
         signedOut: 'Sign in to see pricing',
         signedOutDetail:
-          'Pricing is only published to signed-in accounts, because the ladder that applies depends on the keys you hold.',
+          'This cluster publishes pricing to signed-in accounts only. Sign in to see the full ladder for this model.',
         notCovered: 'Not covered by your keys',
         notCoveredDetail:
           'This model is outside the model groups your keys can reach, so no price applies to your account yet.',

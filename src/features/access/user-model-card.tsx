@@ -63,7 +63,11 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
   }
 
   return (
-    <article className="bg-card hover:border-primary/40 focus-within:border-primary/40 flex h-full min-w-0 flex-col rounded-lg border p-4 transition-colors">
+    // The row rhythm is one `gap-3` on the column rather than a `mt-3` on each
+    // child, so the footer's auto margin can only ever *add* to that gap. When
+    // the spacing lived on the children the divider had nothing of its own and
+    // sat flush against the badges on whichever card happened to be tallest.
+    <article className="bg-card hover:border-primary/40 focus-within:border-primary/40 flex h-full min-w-0 flex-col gap-3 rounded-lg border p-4 transition-colors">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 shrink-0">
           {primaryProvider ? (
@@ -108,7 +112,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
         ) : null}
       </div>
 
-      <div className="bg-muted/40 border-border/70 mt-3 flex min-w-0 items-center gap-1 rounded-md border px-2 py-1">
+      <div className="bg-muted/40 border-border/70 flex min-w-0 items-center gap-1 rounded-md border px-2 py-1">
         <code className="min-w-0 flex-1 truncate font-mono text-xs" title={model.id}>
           {model.id}
         </code>
@@ -128,11 +132,11 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
         </Button>
       </div>
 
-      <p className="text-muted-foreground mt-3 line-clamp-2 text-sm leading-6 text-pretty">
+      <p className="text-muted-foreground line-clamp-2 text-sm leading-6 text-pretty">
         {model.description ?? t('userModels.card.noDescription')}
       </p>
 
-      <dl className="text-muted-foreground mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+      <dl className="text-muted-foreground grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <div className="flex min-w-0 items-baseline gap-1.5">
           <dt className="shrink-0">{t('userModels.spec.context')}</dt>
           <dd className="text-foreground min-w-0 truncate font-medium tabular-nums">
@@ -147,7 +151,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
         </div>
       </dl>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {model.modalities.status === 'known' ? (
           <>
             {model.modalities.input.length > 0 ? (

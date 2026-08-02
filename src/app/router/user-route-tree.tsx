@@ -2,6 +2,7 @@ import { Navigate, Outlet, createRootRoute, createRoute } from '@tanstack/react-
 
 import { UserAuthPage } from '@/features/access/user-auth-page'
 import { UserModelCatalogPage } from '@/features/access/user-model-catalog-page'
+import { normalizeUserModelRouteSearch } from '@/features/access/user-model-route'
 import {
   UserForgotPasswordPage,
   UserResetPasswordPage,
@@ -41,6 +42,7 @@ const modelsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/user/models',
   component: UserModelCatalogPage,
+  validateSearch: normalizeUserModelRouteSearch,
 })
 
 const workspaceRoute = createRoute({

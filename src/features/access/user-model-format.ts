@@ -141,6 +141,46 @@ export function pricingEntryPoint(pricing: UserModelPricing | null): PriceEntryP
   }
 }
 
+/** The orders a buyer can put the catalog in. `name` is the default. */
+export type UserModelSort = 'name' | 'price-asc' | 'price-desc'
+
+/**
+ * The number a price sort ranks on: the opening input price of the cheapest
+ * published ladder.
+ *
+ * `null` means this cluster published no readable price. That is not a price of
+ * zero and not a price of infinity, it is a model that cannot be ranked on
+ * price at all, so `compareUserModels` sinks it to the bottom of both
+ * directions rather than letting it pose as the cheapest option on offer.
+ */
+export function modelPriceSortKey(model: UserModel): number | null {
+  return pricingEntryPoint(model.pricing)?.input ?? null
+}
+
+/**
+ * The comparator behind the sort control. Name is always the tie-breaker, so
+ * two models at the same price keep a stable, readable order instead of
+ * whatever order the server happened to list them in.
+ */
+export function compareUserModels(sort: UserModelSort, locale?: string) {
+  return (left: UserModel, right: UserModel) => {
+    if (sort !== 'name') {
+      const leftPrice = modelPriceSortKey(left)
+      const rightPrice = modelPriceSortKey(right)
+
+      if (leftPrice === null || rightPrice === null) {
+        // Unpriced models go last either way; only fall through to the name
+        // tie-break when neither side has a price to compare.
+        if (leftPrice !== rightPrice) return leftPrice === null ? 1 : -1
+      } else if (leftPrice !== rightPrice) {
+        return sort === 'price-asc' ? leftPrice - rightPrice : rightPrice - leftPrice
+      }
+    }
+
+    return modelDisplayName(left).localeCompare(modelDisplayName(right), locale)
+  }
+}
+
 /** Every provider ID mentioned by a catalog, de-duplicated and sorted. */
 export function collectProviders(models: UserModel[]) {
   const providers = new Set<string>()
