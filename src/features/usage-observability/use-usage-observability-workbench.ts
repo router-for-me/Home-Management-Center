@@ -23,6 +23,8 @@ import {
   fetchUsageRecordDetail,
   fetchUsageRecords,
   fetchUsageRuntimeSettings,
+  getUsageOptionFilters,
+  hasActiveUsageDropdownFilter,
   toUsageApiError,
 } from '@/lib/api/management/usage'
 import { uiPreferenceKeys } from '@/lib/ui-preferences'
@@ -125,6 +127,11 @@ export function useUsageObservabilityWorkbench() {
       filters.customTo,
     ],
   )
+
+  // Query keys are compared by value, so this stays cached while the user
+  // switches dropdown filters — those are excluded from the option scope.
+  const optionFilters = getUsageOptionFilters(filters)
+  const dropdownFiltersActive = hasActiveUsageDropdownFilter(filters)
 
   const canQuery = connected && capabilityReady && Boolean(session.managementKey)
   const autoRefreshEligible =
@@ -307,6 +314,47 @@ export function useUsageObservabilityWorkbench() {
       } catch (error) {
         throw toUsageApiError(error)
       }
+    },
+  })
+
+  const filterOptionsQuery = useQuery({
+    queryKey: [
+      'management-usage-filter-options',
+      session.baseUrl,
+      connectedAt,
+      scopedCapabilities.usageOverview,
+      scopedCapabilities.usageRecords,
+      scopedCapabilities.usageTokenBreakdownV2,
+      optionFilters,
+    ],
+    enabled:
+      canQuery &&
+      dropdownFiltersActive &&
+      (scopedCapabilities.usageOverview || scopedCapabilities.usageRecords),
+    placeholderData: keepPreviousData,
+    retry: false,
+    refetchOnReconnect: false,
+    queryFn: async () => {
+      const [overview, records] = await Promise.allSettled([
+        scopedCapabilities.usageOverview
+          ? fetchUsageOverview(session, optionFilters, scopedCapabilities.usageTokenBreakdownV2)
+          : Promise.resolve(null),
+        scopedCapabilities.usageRecords
+          ? fetchUsageRecords(session, optionFilters, scopedCapabilities.usageTokenBreakdownV2)
+          : Promise.resolve(null),
+      ])
+
+      // Falling back to the narrowed lists is better than emptying the
+      // dropdowns, so only a total failure is surfaced as a query error.
+      if (overview.status === 'rejected' && records.status === 'rejected') {
+        throw toUsageApiError(overview.reason)
+      }
+
+      return deriveUsageFilterOptions({
+        overview: overview.status === 'fulfilled' ? overview.value : null,
+        records: records.status === 'fulfilled' ? records.value : null,
+        credentialUsage: null,
+      })
     },
   })
 
@@ -524,11 +572,13 @@ export function useUsageObservabilityWorkbench() {
         apiKeyUsage: [],
         runtimeLogs: null,
         requestErrorLogs: [],
-        filterOptions: deriveUsageFilterOptions({
-          overview: overviewQuery.data ?? null,
-          records: recordsQuery.data ?? null,
-          credentialUsage,
-        }),
+        filterOptions:
+          (dropdownFiltersActive ? filterOptionsQuery.data : null) ??
+          deriveUsageFilterOptions({
+            overview: overviewQuery.data ?? null,
+            records: recordsQuery.data ?? null,
+            credentialUsage,
+          }),
         issues,
       }
     : undefined
@@ -601,6 +651,7 @@ export function useUsageObservabilityWorkbench() {
       if (rankingDetailOpen && scopedCapabilities.usageAggregates) {
         queries.push(rankingQuery.refetch())
       }
+      if (dropdownFiltersActive) queries.push(filterOptionsQuery.refetch())
       void Promise.allSettled(queries).finally(() => setManualRefreshing(false))
     },
     updateFilters,

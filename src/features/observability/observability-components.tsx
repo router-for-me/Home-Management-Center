@@ -535,6 +535,14 @@ function getActiveRuntimeLogSearchField(filters: RuntimeLogFilters): RuntimeLogS
   )
 }
 
+// Option lists are sampled from the loaded window, so a value the user already
+// picked can be missing from a later sample. Keeping it in the list stops the
+// trigger from rendering blank while the filter is still applied.
+function appendSelectedOption<Option extends string>(options: Option[], value: string) {
+  if (!value || value === 'all' || options.includes(value as Option)) return options
+  return [...options, value as Option].sort()
+}
+
 export function UsageFiltersToolbar({
   filters,
   options,
@@ -546,6 +554,11 @@ export function UsageFiltersToolbar({
 }) {
   const { t } = useTranslation()
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const providers = appendSelectedOption(options.providers, filters.provider)
+  const models = appendSelectedOption(options.models, filters.model)
+  const credentialTypes = appendSelectedOption(options.credentialTypes, filters.credentialType)
+  const homeIps = appendSelectedOption(options.homeIps, filters.homeIp)
+  const endpoints = appendSelectedOption(options.endpoints, filters.endpoint)
   const getDefaultCustomRange = () => {
     const to = new Date()
     const from = new Date(to)
@@ -612,7 +625,7 @@ export function UsageFiltersToolbar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('usageLogsPage.filters.anyProvider')}</SelectItem>
-            {options.providers.map((provider) => (
+            {providers.map((provider) => (
               <SelectItem key={provider} value={provider}>
                 {provider}
               </SelectItem>
@@ -629,7 +642,7 @@ export function UsageFiltersToolbar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t('usageLogsPage.filters.anyModel')}</SelectItem>
-            {options.models.map((model) => (
+            {models.map((model) => (
               <SelectItem key={model} value={model}>
                 {model}
               </SelectItem>
@@ -678,7 +691,7 @@ export function UsageFiltersToolbar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('usageLogsPage.filters.anyCredentialType')}</SelectItem>
-              {options.credentialTypes.map((credentialType) => (
+              {credentialTypes.map((credentialType) => (
                 <SelectItem key={credentialType} value={credentialType}>
                   {t(`usageLogsPage.credentialTypes.${credentialType}`)}
                 </SelectItem>
@@ -695,7 +708,7 @@ export function UsageFiltersToolbar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('usageLogsPage.filters.anyHomeIp')}</SelectItem>
-              {options.homeIps.map((homeIp) => (
+              {homeIps.map((homeIp) => (
                 <SelectItem key={homeIp} value={homeIp}>
                   {homeIp}
                 </SelectItem>
@@ -712,7 +725,7 @@ export function UsageFiltersToolbar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('usageLogsPage.filters.anyEndpoint')}</SelectItem>
-              {options.endpoints.map((endpoint) => (
+              {endpoints.map((endpoint) => (
                 <SelectItem key={endpoint} value={endpoint}>
                   {endpoint}
                 </SelectItem>
@@ -2786,6 +2799,7 @@ function RequestRecordFiltersToolbar({
   onChange: (nextFilters: Partial<UsageFilters>) => void
 }) {
   const { t } = useTranslation()
+  const statusCodes = appendSelectedOption(options.statusCodes, filters.statusCode)
 
   const isRangeInvalid = (min: string, max: string) => {
     const minText = String(min ?? '').trim()
@@ -2846,7 +2860,7 @@ function RequestRecordFiltersToolbar({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">{t('usageLogsPage.filters.anyStatusCode')}</SelectItem>
-          {options.statusCodes.map((statusCode) => (
+          {statusCodes.map((statusCode) => (
             <SelectItem key={statusCode} value={statusCode}>
               {statusCode}
             </SelectItem>

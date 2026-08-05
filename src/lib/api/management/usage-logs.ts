@@ -1909,6 +1909,49 @@ export function deriveUsageFilterOptions(input: {
   return deriveFilterOptions(input)
 }
 
+// The dropdown filters are deliberately dropped: the lists derived from this
+// scope feed those same dropdowns, so scoping by them collapses every list to
+// the option already selected and a sibling value can only be reached by
+// clearing the filter first. Typed and range inputs still narrow the lists —
+// they cannot make a dropdown unusable.
+export function getUsageOptionFilters(filters: UsageFilters): UsageFilters {
+  return {
+    ...defaultUsageFilters,
+    range: filters.range,
+    customFrom: filters.customFrom,
+    customTo: filters.customTo,
+    search: filters.search,
+    requestId: filters.requestId,
+    credentialId: filters.credentialId,
+    authIndex: filters.authIndex,
+    user: filters.user,
+    clientKey: filters.clientKey,
+    minLatencyMs: filters.minLatencyMs,
+    maxLatencyMs: filters.maxLatencyMs,
+    minAmount: filters.minAmount,
+    maxAmount: filters.maxAmount,
+    sort: null,
+    limit: 200,
+    offset: 0,
+  }
+}
+
+// Without an active dropdown filter the already loaded data is unnarrowed, so
+// the caller can derive the option lists from it instead of paying for a
+// dedicated request.
+export function hasActiveUsageDropdownFilter(filters: UsageFilters) {
+  return (
+    filters.status !== defaultUsageFilters.status ||
+    filters.provider !== defaultUsageFilters.provider ||
+    filters.model !== defaultUsageFilters.model ||
+    filters.credentialType !== defaultUsageFilters.credentialType ||
+    filters.homeIp !== defaultUsageFilters.homeIp ||
+    filters.endpoint !== defaultUsageFilters.endpoint ||
+    filters.executorType !== defaultUsageFilters.executorType ||
+    filters.statusCode !== defaultUsageFilters.statusCode
+  )
+}
+
 function readContentDispositionFileName(value: unknown): string | null {
   if (typeof value !== 'string') return null
 
