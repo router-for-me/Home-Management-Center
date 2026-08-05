@@ -11,6 +11,15 @@ export const ru = {
       enabled: 'Включено',
       disabled: 'Отключено',
     },
+    emptyValue: {
+      notRecorded: 'Не записано',
+    },
+    caller: {
+      userNotRecorded: 'Пользователь не записан',
+      userNotBound: 'Нет привязки к пользователю',
+      userNotBoundHint:
+        'Этот клиентский ключ доступа не принадлежит учётной записи Home, поэтому в записи нет имени пользователя.',
+    },
     actions: {
       connect: 'Подключить',
       manageConnection: 'Подключение',
@@ -795,7 +804,6 @@ export const ru = {
         disable: 'Отключить',
         enabled: 'Включено',
         disabled: 'Отключено',
-        na: 'Недоступно',
         yes: 'Да',
         no: 'Нет',
         legacy: 'legacy',
@@ -3822,17 +3830,10 @@ export const ru = {
         success: 'Успех',
         failed: 'Ошибка',
         unknown: 'Неизвестно',
-        notRecorded: 'Не записано',
         unknownRequest: 'Неизвестный запрос',
         localHome: 'Локальный Home',
         yes: 'Да',
         no: 'Нет',
-      },
-      caller: {
-        userNotRecorded: 'Пользователь не записан',
-        userNotBound: 'Нет привязки к пользователю',
-        userNotBoundHint:
-          'Этот клиентский ключ доступа не принадлежит учётной записи Home, поэтому у запроса нет имени пользователя.',
       },
       table: {
         title: 'Записи запросов',
@@ -4714,7 +4715,6 @@ export const ru = {
       status: {
         success: 'Успешно',
         failed: 'Ошибка',
-        notAvailable: 'Н/Д',
         unknownRequest: '--',
         localHome: 'Локальный Home',
       },

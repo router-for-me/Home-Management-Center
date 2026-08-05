@@ -11,6 +11,15 @@ export const en = {
       enabled: 'Enabled',
       disabled: 'Disabled',
     },
+    emptyValue: {
+      notRecorded: 'Not recorded',
+    },
+    caller: {
+      userNotRecorded: 'User not recorded',
+      userNotBound: 'No user bound',
+      userNotBoundHint:
+        'This client access key does not belong to a Home user account, so the record carries no username.',
+    },
     actions: {
       connect: 'Connect',
       manageConnection: 'Connection',
@@ -561,7 +570,7 @@ export const en = {
         user: 'Current user',
         credits: 'Credit balance',
         expiresAt: 'Session expires',
-        notAvailable: 'Unavailable',
+        notAvailable: 'N/A',
       },
       billing: {
         title: 'Usage report',
@@ -795,7 +804,6 @@ export const en = {
         disable: 'Disable',
         enabled: 'Enabled',
         disabled: 'Disabled',
-        na: 'Unavailable',
         yes: 'Yes',
         no: 'No',
         legacy: 'legacy',
@@ -3806,17 +3814,10 @@ export const en = {
         success: 'Success',
         failed: 'Failed',
         unknown: 'Unknown',
-        notRecorded: 'Not recorded',
         unknownRequest: 'Unknown request',
         localHome: 'Local Home',
         yes: 'Yes',
         no: 'No',
-      },
-      caller: {
-        userNotRecorded: 'User not recorded',
-        userNotBound: 'No user bound',
-        userNotBoundHint:
-          'This client access key does not belong to a Home user account, so the request carries no username.',
       },
       table: {
         title: 'Request Records',
@@ -4696,7 +4697,6 @@ export const en = {
       status: {
         success: 'Success',
         failed: 'Failed',
-        notAvailable: 'N/A',
         unknownRequest: '--',
         localHome: 'Local Home',
       },

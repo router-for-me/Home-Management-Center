@@ -11,6 +11,14 @@ export const zhCN = {
       enabled: '已启用',
       disabled: '已禁用',
     },
+    emptyValue: {
+      notRecorded: '未记录',
+    },
+    caller: {
+      userNotRecorded: '未记录用户',
+      userNotBound: '未绑定用户',
+      userNotBoundHint: '该客户端访问密钥未归属任何 Home 用户账号,因此这条记录没有用户名。',
+    },
     actions: {
       connect: '连接',
       manageConnection: '连接管理',
@@ -766,7 +774,6 @@ export const zhCN = {
         disable: '停用',
         enabled: '已启用',
         disabled: '已停用',
-        na: '不可用',
         yes: '是',
         no: '否',
         legacy: '旧版',
@@ -3642,16 +3649,10 @@ export const zhCN = {
         success: '成功',
         failed: '失败',
         unknown: '未知',
-        notRecorded: '未记录',
         unknownRequest: '未知请求',
         localHome: '本地 Home',
         yes: '是',
         no: '否',
-      },
-      caller: {
-        userNotRecorded: '未记录用户',
-        userNotBound: '未绑定用户',
-        userNotBoundHint: '该客户端访问密钥未归属任何 Home 用户账号,因此这条请求没有用户名。',
       },
       table: {
         title: '请求记录',
@@ -4509,7 +4510,6 @@ export const zhCN = {
       status: {
         success: '成功',
         failed: '失败',
-        notAvailable: '不可用',
         unknownRequest: '--',
         localHome: '本机',
       },

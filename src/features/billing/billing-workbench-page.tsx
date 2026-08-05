@@ -36,6 +36,7 @@ import {
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
@@ -187,8 +188,8 @@ function formatUnpricedChargeMessage(
   t: ReturnType<typeof useTranslation>['t'],
 ) {
   return t('billingPage.chargeDetail.unpricedDescription', {
-    provider: record.provider || t('billingPage.common.na'),
-    model: record.model || t('billingPage.common.na'),
+    provider: record.provider || emptyValueText,
+    model: record.model || emptyValueText,
   })
 }
 
@@ -327,6 +328,15 @@ export function formatUserReference(
   if (username) return username
   if (userId !== null) return `#${userId}`
   return fallback
+}
+
+// A charge stores a user id and no name, and a null id is not missing data: the
+// key that paid simply belongs to no Home account. `api_key_label` is only set
+// when the key row resolved, which is what tells those two cases apart.
+function renderChargeUser(record: ChargeRecord, users: UserResource[]) {
+  const resolved = formatUserReference(record.username, record.userId, users, '')
+  if (resolved) return resolved
+  return <CallerUser username={null} keyResolved={Boolean(record.apiKeyLabel.trim())} />
 }
 
 async function copyText(value: string) {
@@ -829,23 +839,14 @@ function ChargeRecordsTab({
               const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
               return (
                 <TableRow key={record.id} variant="resource">
-                  <TableCell>
-                    {formatDateTime(record.createdAt, t('billingPage.common.na'))}
-                  </TableCell>
-                  <TableCell>
-                    {formatUserReference(
-                      record.username,
-                      record.userId,
-                      workbench.users,
-                      t('billingPage.common.na'),
-                    )}
-                  </TableCell>
+                  <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
+                  <TableCell>{renderChargeUser(record, workbench.users)}</TableCell>
                   <TableCell className="font-mono text-xs">
-                    {record.apiKeyMasked || record.apiKeyLabel || t('billingPage.common.na')}
+                    {record.apiKeyMasked || record.apiKeyLabel || <EmptyValue />}
                   </TableCell>
-                  <TableCell>{record.provider || t('billingPage.common.na')}</TableCell>
+                  <TableCell>{record.provider || <EmptyValue />}</TableCell>
                   <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                    {record.model || t('billingPage.common.na')}
+                    {record.model || <EmptyValue />}
                   </TableCell>
                   <TableCell className="max-w-[180px] truncate font-mono text-xs">
                     {record.requestId}
@@ -966,15 +967,13 @@ function BalanceRecordsTab({
           <TableBody>
             {workbench.balanceRecords.map((record: BalanceRecord) => (
               <TableRow key={record.id} variant="resource">
-                <TableCell>
-                  {formatDateTime(record.createdAt, t('billingPage.common.na'))}
-                </TableCell>
+                <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
                 <TableCell>
                   {formatUserReference(
                     record.username,
                     record.userId,
                     workbench.users,
-                    t('billingPage.common.na'),
+                    emptyValueText,
                   )}
                 </TableCell>
                 <TableCell>
@@ -1000,9 +999,9 @@ function BalanceRecordsTab({
                 <TableCell className="tabular-nums">
                   {formatCreditAmount(record.balanceAfter)}
                 </TableCell>
-                <TableCell>{record.operator || t('billingPage.common.na')}</TableCell>
+                <TableCell>{record.operator || <EmptyValue />}</TableCell>
                 <TableCell className="max-w-[260px] truncate">
-                  {record.note || t('billingPage.common.na')}
+                  {record.note || <EmptyValue />}
                 </TableCell>
                 <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
                   <div className="table-action-cell-content">
@@ -1446,9 +1445,7 @@ function ModelPricesTab({
                         onToggle={() => onToggle(resource)}
                       />
                     </TableCell>
-                    <TableCell>
-                      {formatDateTime(resource.updatedAt, t('billingPage.common.na'))}
-                    </TableCell>
+                    <TableCell>{formatDateTime(resource.updatedAt, emptyValueText)}</TableCell>
                     <TableCell className="table-sticky-action-cell w-[88px] text-right transition-colors sm:w-[184px]">
                       <div className="table-action-cell-content">
                         <Button
@@ -1660,13 +1657,11 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
   const copy = (value: string) => {
     void copyText(value).then(() => toast.success(t('billingPage.toast.copied')))
   }
-  const rows = [
+  // Typed rather than inferred: one row now renders a component, and without
+  // the annotation the tuple widens enough to let a React element reach copy().
+  const rows: Array<[string, ReactNode, boolean]> = [
     [t('billingPage.chargeDetail.requestId'), record.requestId, true],
-    [
-      t('billingPage.chargeDetail.user'),
-      formatUserReference(record.username, record.userId, users, t('billingPage.common.na')),
-      false,
-    ],
+    [t('billingPage.chargeDetail.user'), renderChargeUser(record, users), false],
     [t('billingPage.chargeDetail.key'), record.apiKeyMasked || record.apiKeyLabel, true],
     [t('billingPage.chargeDetail.provider'), record.provider, false],
     [t('billingPage.chargeDetail.model'), record.model, true],
@@ -1715,7 +1710,7 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
     ],
     [
       t('billingPage.chargeDetail.createdAt'),
-      formatDateTime(record.createdAt, t('billingPage.common.na')),
+      formatDateTime(record.createdAt, emptyValueText),
       false,
     ],
   ] as const
@@ -1736,10 +1731,8 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
           <div key={label} className="grid gap-1 rounded-md border px-3 py-2">
             <span className="text-muted-foreground text-xs">{label}</span>
             <div className="flex min-w-0 items-center justify-between gap-2">
-              <span className="min-w-0 truncate text-sm">
-                {value || t('billingPage.common.na')}
-              </span>
-              {copyable && value ? (
+              <span className="min-w-0 truncate text-sm">{value || <EmptyValue />}</span>
+              {copyable && typeof value === 'string' && value ? (
                 <Button type="button" variant="text" size="icon-xs" onClick={() => copy(value)}>
                   <Copy className="size-3" aria-hidden="true" />
                   <span className="sr-only">{t('billingPage.common.copy')}</span>
@@ -1827,14 +1820,11 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
 function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: UserResource[] }) {
   const { t } = useTranslation()
   const amount = record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount)
-  const rows = [
-    [
-      t('billingPage.balanceDetail.createdAt'),
-      formatDateTime(record.createdAt, t('billingPage.common.na')),
-    ],
+  const rows: Array<[string, ReactNode]> = [
+    [t('billingPage.balanceDetail.createdAt'), formatDateTime(record.createdAt, emptyValueText)],
     [
       t('billingPage.balanceDetail.user'),
-      formatUserReference(record.username, record.userId, users, t('billingPage.common.na')),
+      formatUserReference(record.username, record.userId, users, emptyValueText),
     ],
     [
       t('billingPage.balanceDetail.type'),
@@ -1848,8 +1838,8 @@ function BalanceDetailSheet({ record, users }: { record: BalanceRecord; users: U
       formatDetailedCreditAmount(record.balanceBefore),
     ],
     [t('billingPage.balanceDetail.balanceAfter'), formatDetailedCreditAmount(record.balanceAfter)],
-    [t('billingPage.balanceDetail.operator'), record.operator || t('billingPage.common.na')],
-    [t('billingPage.balanceDetail.note'), record.note || t('billingPage.common.na')],
+    [t('billingPage.balanceDetail.operator'), record.operator || <EmptyValue />],
+    [t('billingPage.balanceDetail.note'), record.note || <EmptyValue />],
   ]
 
   return (

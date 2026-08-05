@@ -11,6 +11,14 @@ export const zhTW = {
       enabled: '已啟用',
       disabled: '已停用',
     },
+    emptyValue: {
+      notRecorded: '未記錄',
+    },
+    caller: {
+      userNotRecorded: '未記錄使用者',
+      userNotBound: '未綁定使用者',
+      userNotBoundHint: '該用戶端存取金鑰未歸屬任何 Home 使用者帳號,因此這筆記錄沒有使用者名稱。',
+    },
     actions: {
       connect: '連線',
       manageConnection: '連線管理',
@@ -767,7 +775,6 @@ export const zhTW = {
         disable: '停用',
         enabled: '已啟用',
         disabled: '已停用',
-        na: '不可用',
         yes: '是',
         no: '否',
         legacy: '舊版',
@@ -3642,16 +3649,10 @@ export const zhTW = {
         success: '成功',
         failed: '失敗',
         unknown: '未知',
-        notRecorded: '未記錄',
         unknownRequest: '未知請求',
         localHome: '本地 Home',
         yes: '是',
         no: '否',
-      },
-      caller: {
-        userNotRecorded: '未記錄使用者',
-        userNotBound: '未綁定使用者',
-        userNotBoundHint: '該用戶端存取金鑰未歸屬任何 Home 使用者帳號,因此這筆請求沒有使用者名稱。',
       },
       table: {
         title: '請求記錄',
@@ -4509,7 +4510,6 @@ export const zhTW = {
       status: {
         success: '成功',
         failed: '失敗',
-        notAvailable: '不可用',
         unknownRequest: '--',
         localHome: '本機',
       },
