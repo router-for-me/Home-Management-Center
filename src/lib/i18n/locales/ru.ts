@@ -11,6 +11,15 @@ export const ru = {
       enabled: 'Включено',
       disabled: 'Отключено',
     },
+    emptyValue: {
+      notRecorded: 'Не записано',
+    },
+    caller: {
+      userNotRecorded: 'Пользователь не записан',
+      userNotBound: 'Нет привязки к пользователю',
+      userNotBoundHint:
+        'Этот клиентский ключ доступа не принадлежит учётной записи Home, поэтому в записи нет имени пользователя.',
+    },
     actions: {
       connect: 'Подключить',
       manageConnection: 'Подключение',
@@ -147,6 +156,7 @@ export const ru = {
         adminConsole: 'Консоль администратора',
         userLogin: 'Вход пользователя',
         userWorkspace: 'Workspace пользователя',
+        models: 'Каталог моделей',
       },
       hero: {
         title: 'Доступ к разным моделям начинается с одной контролируемой точки',
@@ -161,6 +171,7 @@ export const ru = {
         adminResume: 'Открыть консоль администратора',
         userPrimary: 'Войти',
         userWorkspace: 'Открыть workspace пользователя',
+        browseModels: 'Открыть каталог моделей',
       },
       providers: {
         title: 'Основные модели обрабатываются одним gateway',
@@ -355,6 +366,192 @@ export const ru = {
         generic: 'Не удалось выполнить операцию безопасности. Повторите попытку.',
       },
     },
+    userModels: {
+      back: 'Назад к выбору входа',
+      title: 'Каталог моделей',
+      description:
+        'Все модели, которые может обслуживать этот gateway, с возможностями и модальностями, заявленными этим кластером.',
+      loading: 'Загрузка каталога моделей',
+      count: 'Показано {{shown}} из {{total}} моделей',
+      fetchedAt: 'Обновлено {{time}}',
+      header: {
+        signIn: 'Войти',
+        workspace: 'Workspace пользователя',
+      },
+      actions: {
+        refresh: 'Обновить',
+        retry: 'Повторить',
+      },
+      signedOut: {
+        title: 'Цены и доступность видны после входа.',
+        signIn: 'Войти',
+        register: 'Создать аккаунт',
+      },
+      accessibleError: {
+        title: 'Не удалось загрузить данные аккаунта',
+        description:
+          'Сейчас показан только публичный каталог: без цен, доступности и покрытия ключами. Причина: {{message}}',
+      },
+      access: {
+        noApiKeys: {
+          title: 'API-ключи еще не созданы',
+          description:
+            'У аккаунта нет клиентских ключей доступа, поэтому вызвать модели пока нельзя. Создайте ключ в workspace пользователя.',
+        },
+        modelGroups: {
+          title: 'Ключи покрывают только часть каталога',
+          description:
+            'Сейчас {{keys}} ключей ограничены отдельными группами моделей. Модели вне этих групп показаны для справки и недоступны текущим ключам.',
+        },
+      },
+      unsupported: {
+        title: 'Сервер не публикует каталог моделей',
+        description:
+          'Подключенный экземпляр Home не предоставляет интерфейс каталога моделей. После обновления сервера каталог появится здесь.',
+      },
+      error: {
+        title: 'Не удалось загрузить каталог моделей',
+      },
+      empty: {
+        title: 'Модели пока не опубликованы',
+        description: 'Этот gateway еще не опубликовал ни одной модели.',
+      },
+      filteredEmpty: {
+        title: 'Нет моделей под текущие фильтры',
+        description: 'Измените поисковый запрос или сбросьте фильтры, чтобы увидеть весь каталог.',
+      },
+      filters: {
+        searchLabel: 'Поиск моделей',
+        searchPlaceholder: 'Поиск по ID модели, названию или провайдеру',
+        provider: 'Провайдер',
+        allProviders: 'Все провайдеры',
+        inputModality: 'Входная модальность',
+        allModalities: 'Все входные модальности',
+        quickFilters: 'Быстрые фильтры',
+        accessibleOnly: 'Только мои ключи',
+        sort: 'Сортировка',
+        sortName: 'По названию',
+        sortPriceAsc: 'Начальная цена: по возрастанию',
+        sortPriceDesc: 'Начальная цена: по убыванию',
+        clear: 'Сбросить фильтры',
+        unreportedHidden: 'Модели с незаявленными возможностями скрыты',
+      },
+      value: {
+        unreported: 'Не заявлено',
+      },
+      status: {
+        supported: 'Поддерживается',
+        unsupported: 'Не поддерживается',
+        unknown: 'Не заявлено',
+      },
+      spec: {
+        context: 'Длина контекста',
+        maxOutput: 'Максимальный вывод',
+        providers: 'Провайдеры',
+        ownedBy: 'Владелец',
+        version: 'Версия',
+        type: 'Тип',
+      },
+      modality: {
+        input: 'Вход',
+        output: 'Выход',
+        unreported: 'Модальности не заявлены',
+        unreportedDetail:
+          'Ни один upstream не описал входные и выходные модальности этой модели. Это не значит, что она работает только с текстом.',
+      },
+      capability: {
+        tools: {
+          label: 'Вызов инструментов',
+          supported: 'Вызов инструментов',
+          unsupported: 'Без вызова инструментов',
+          unknown: 'Вызов инструментов не заявлен',
+        },
+        structuredOutput: {
+          label: 'Структурированный вывод',
+          supported: 'Структурированный вывод',
+          unsupported: 'Без структурированного вывода',
+          unknown: 'Структурированный вывод не заявлен',
+        },
+        reasoning: {
+          label: 'Рассуждение',
+          supported: 'Рассуждение',
+          unsupported: 'Без рассуждения',
+          unknown: 'Рассуждение не заявлено',
+          budgetRange: 'Бюджет рассуждения',
+          budgetFlags: 'Управление бюджетом',
+          canDisable: 'Можно отключить',
+          dynamic: 'Динамический бюджет',
+        },
+        parameters: 'Поддерживаемые параметры',
+        generationMethods: 'Способы генерации',
+      },
+      card: {
+        copyId: 'Скопировать ID модели',
+        copied: 'Скопировано: {{id}}',
+        copyFailed: 'Не удалось скопировать ID модели.',
+        noDescription: 'Описание не предоставлено.',
+        access: {
+          included: 'Доступна по ключу',
+          excluded: 'Не покрыта ключом',
+        },
+      },
+      price: {
+        from: 'От',
+        inSuffix: 'вход',
+        outSuffix: 'выход / за 1 млн токенов',
+        tiered: 'Ступеней: {{rungs}}',
+        signedOut: 'Цены видны после входа',
+        signedOutDetail:
+          'Этот кластер публикует цены только для вошедших аккаунтов. Войдите, чтобы увидеть полную ценовую лестницу этой модели.',
+        notCovered: 'Ключи не покрывают эту модель',
+        notCoveredDetail:
+          'Модель не входит в группы, доступные вашим ключам, поэтому для текущего аккаунта применимой цены нет.',
+        unavailable: 'Цена сейчас недоступна',
+        unpublished: 'Цена не опубликована',
+        unpublishedDetail:
+          'Кластер не опубликовал цену для этой модели. Отсутствие цены не означает бесплатно: вызов может быть отклонен или тарифицирован по правилам, не показанным здесь.',
+        ladderNote:
+          'Цены указаны за 1 млн токенов и могут меняться с размером входа. Ниже перечислены все опубликованные кластером ступени.',
+        serviceTier: 'Уровень сервиса',
+        defaultTier: 'По умолчанию',
+        noRungs: 'Для этого уровня ценовые ступени не опубликованы.',
+        rungBase: 'Базовая ступень',
+        rungFrom: 'От {{tokens}} входных токенов',
+        input: 'Вход',
+        output: 'Выход',
+        cacheRead: 'Чтение кеша',
+        cacheWrite: 'Запись кеша',
+        request: 'За запрос',
+      },
+      availability: {
+        signedOut: 'Наблюдаемая доступность видна после входа',
+        notCovered: 'Доступность наблюдается только для моделей, доступных вашим ключам.',
+        unavailable: 'Доступность сейчас недоступна',
+        rate: 'Доля успешных',
+        samples: 'Наблюдений',
+        failed: 'Ошибок: {{value}}',
+        latency: 'Средняя задержка',
+        ttft: 'Среднее время до первого токена',
+        throughput: 'Скорость вывода',
+        lastObserved: 'Последнее наблюдение',
+        milliseconds: '{{value}} мс',
+        tokensPerSecond: '{{value}} токенов/с',
+        windowNote: 'Окно наблюдения — последние {{hours}} ч, с {{from}} по {{to}}.',
+        insufficient: {
+          title: 'Недостаточно наблюдений',
+          description:
+            'За последние {{hours}} ч зафиксировано только {{samples}} вызовов, что меньше требуемых {{minSamples}} для расчета доли успешных. Это означает нехватку данных, а не хорошую или плохую доступность.',
+        },
+      },
+      detail: {
+        specs: 'Характеристики',
+        modalities: 'Модальности',
+        capabilities: 'Возможности',
+        pricing: 'Ценовые ступени',
+        availability: 'Наблюдаемая доступность',
+        close: 'Закрыть детали модели',
+      },
+    },
     userWorkspace: {
       back: 'Назад к выбору входа',
       title: 'Workspace пользователя',
@@ -363,6 +560,7 @@ export const ru = {
       login: 'Перейти ко входу',
       register: 'Создать аккаунт',
       logout: 'Выйти',
+      browseModels: 'Каталог моделей',
       signedOut: {
         title: 'Сначала войдите в user account',
         description:
@@ -606,7 +804,6 @@ export const ru = {
         disable: 'Отключить',
         enabled: 'Включено',
         disabled: 'Отключено',
-        na: 'Недоступно',
         yes: 'Да',
         no: 'Нет',
         legacy: 'legacy',
@@ -3579,9 +3776,8 @@ export const ru = {
           search: 'Все поля',
           requestId: 'Request ID',
           user: 'Пользователь',
-          clientKey: 'Клиентский ключ',
-          credentialId: 'Credential',
-          authIndex: 'Auth index',
+          clientKey: 'Клиентский ключ доступа',
+          credentialId: 'Credential / auth index',
         },
         requestIdPlaceholder: 'Request ID',
         customFrom: 'Начало',
@@ -3593,10 +3789,6 @@ export const ru = {
         anyHome: 'Все Home-узлы',
         anyCpa: 'Все CPA-узлы',
         anyStatusCode: 'Все коды статуса',
-        userPlaceholder: 'Пользователь, ID или IP',
-        clientKeyPlaceholder: 'Клиентский ключ или метка',
-        credentialPlaceholder: 'Credential ID или имя',
-        authIndexPlaceholder: 'Auth index',
         minLatencyPlaceholder: 'Мин. задержка ms',
         maxLatencyPlaceholder: 'Макс. задержка ms',
         latencyRange: 'Диапазон задержки',
@@ -3638,17 +3830,10 @@ export const ru = {
         success: 'Успех',
         failed: 'Ошибка',
         unknown: 'Неизвестно',
-        notAvailable: 'Недоступно',
         unknownRequest: 'Неизвестный запрос',
         localHome: 'Локальный Home',
         yes: 'Да',
         no: 'Нет',
-      },
-      caller: {
-        notRecorded: 'Источник вызова не записан',
-        userNotRecorded: 'Пользователь не записан',
-        keyNotRecorded: 'Клиентский ключ не записан',
-        ipNotRecorded: 'IP клиента не записан',
       },
       table: {
         title: 'Записи запросов',
@@ -3671,8 +3856,8 @@ export const ru = {
           event: 'Событие',
           status: 'Статус',
           model: 'Модель',
-          runtime: 'Узлы',
-          client: 'Клиент',
+          runtime: 'Узел Home',
+          client: 'Пользователь',
           credential: 'Учетные данные',
           tokens: 'Токены',
           latency: 'Задержка',
@@ -3706,7 +3891,8 @@ export const ru = {
           endpoint: 'Endpoint',
           home: 'Home-узел',
           cpa: 'CPA-узел',
-          client: 'Клиент',
+          user: 'Пользователь',
+          clientKey: 'Клиентский ключ доступа',
           credential: 'Учетные данные',
           latency: 'Задержка',
           cost: 'Стоимость',
@@ -4529,7 +4715,6 @@ export const ru = {
       status: {
         success: 'Успешно',
         failed: 'Ошибка',
-        notAvailable: 'Н/Д',
         unknownRequest: '--',
         localHome: 'Локальный Home',
       },

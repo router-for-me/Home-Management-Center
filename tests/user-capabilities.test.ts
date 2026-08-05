@@ -17,6 +17,7 @@ describe('user capability discovery', () => {
           email_registration: true,
           email_verification: true,
           password_recovery: false,
+          model_catalog: true,
         },
         server_info: {
           home_version: 'v1.2.3',
@@ -29,6 +30,7 @@ describe('user capability discovery', () => {
       emailRegistration: true,
       emailVerification: true,
       passwordRecovery: false,
+      modelCatalog: true,
       serverInfo: {
         homeVersion: 'v1.2.3',
         homeCommit: 'abcdef0',
@@ -47,6 +49,7 @@ describe('user capability discovery', () => {
       emailRegistration: false,
       emailVerification: false,
       passwordRecovery: false,
+      modelCatalog: false,
       serverInfo: {
         homeVersion: null,
         homeCommit: null,
@@ -86,6 +89,26 @@ describe('user capability discovery', () => {
       emailVerification: false,
       passwordRecovery: true,
     })
+  })
+
+  test('reads a Home that never mentions the model catalog as not offering one', () => {
+    // A Home built before the catalog answers /capabilities without the flag.
+    // Absence has to read as "this server does not serve a catalog", never as a
+    // catalog the client then fails to load.
+    expect(
+      normalizeUserCapabilities({
+        capabilities: {
+          email_registration: true,
+        },
+      }).modelCatalog,
+    ).toBe(false)
+
+    expect(normalizeUserCapabilities({ capabilities: { model_catalog: false } }).modelCatalog).toBe(
+      false,
+    )
+    expect(normalizeUserCapabilities({ capabilities: { modelCatalog: true } }).modelCatalog).toBe(
+      true,
+    )
   })
 })
 

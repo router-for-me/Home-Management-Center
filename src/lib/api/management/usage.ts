@@ -12,6 +12,8 @@ export {
   fetchUsageRecords,
   fetchUsageRuntimeSettings,
   fetchUsageRecordDetail,
+  getUsageOptionFilters,
+  hasActiveUsageDropdownFilter,
   toUsageLogsApiError as toUsageApiError,
 } from '@/lib/api/management/usage-logs'
 export type {

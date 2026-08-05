@@ -121,30 +121,35 @@ Flat by default. Elevation should communicate layering, not decoration.
 
 Control sizing:
 
-- Shared form controls use one height scale: `sm` is 32px for dense table tools, `default` is 36px for general forms and actions, and `lg` is 40px for prominent or mixed-control filter rows.
-- Input, select trigger, button, and toggle-group item sizes with the same name must resolve to the same visual height.
-- Choose one control size for each horizontal toolbar row. Feature code may set width and spacing, but should not override component height with local `h-*` classes.
-- Responsive filter layouts should reflow or wrap controls instead of changing their height independently at a breakpoint.
-- Compact table toolbars may opt into the shared responsive compact modifier so every `sm` control in the row grows to 40px on narrow screens and returns to 32px from the `sm` breakpoint onward.
+- One height scale: `sm` 32px for dense table tools, `default` 36px for forms and actions, `lg` 40px for prominent or mixed filter rows.
+- Input, select trigger, button, and toggle-group items of the same size name resolve to the same height.
+- One control size per toolbar row. Feature code sets width and spacing, never height.
+- Responsive layouts reflow or wrap; they do not change control height at a breakpoint.
+- Compact toolbars may opt into the shared compact modifier: every `sm` control becomes 40px below the `sm` breakpoint.
+
+Overflow in controls:
+
+- Backend values are unbounded, so controls clip rather than grow or wrap; height never depends on data.
+- A displayed value is one line ending in an ellipsis, full string on hover; long ids differ at the tail, where the ellipsis lands.
+- Option lists may grow past their trigger, up to the viewport, so the value is readable where it is chosen; beyond that they truncate too.
 
 Action placement and emphasis:
 
-- Place actions at the narrowest scope they affect. `PageHeader` owns page-wide or cross-view actions such as refresh and sync; `TableSurfaceHeader` owns actions for the current resource collection, such as create and import.
-- A single-resource page may keep its primary action in `PageHeader`, but the same action must never be repeated in both the page header and a resource header.
-- Each action group has at most one primary action. In the shared Button API, the primary visual treatment is `variant="default"`; omit the variant when that intent is clear.
-- Use the primary treatment for the safest, most frequent next action in that scope, usually create or add. Refresh, sync, export, replace-all, and other supporting or broader-impact actions use `outline` by default.
-- Destructive actions use the destructive treatment, and an action group does not need a primary button when every available action is secondary or risky.
-- Expose only independent row-level tasks in resource-table action columns; do not repeat destinations already available in a detail view. Prefer no more than three visible actions, moving lower-frequency actions into an overflow menu when needed.
-- Order safe actions before destructive actions, keep destructive actions last, and keep sticky action columns compact without covering adjacent content.
+- Actions sit at the narrowest scope they affect: `PageHeader` for page-wide ones like refresh, `TableSurfaceHeader` for collection ones like create.
+- A single-resource page may keep its primary action in `PageHeader`, but no action appears in both headers.
+- One primary per group, given to the safest frequent next action, usually create. Refresh, sync, export, and replace-all are `outline`.
+- Destructive actions take the destructive treatment; a group of only secondary or risky actions needs no primary.
+- Row action columns carry independent row-level tasks only, never a destination the detail view already offers; three at most, the rest in an overflow menu.
+- Destructive actions come last, and sticky action columns never cover adjacent content.
 
 Tabs:
 
-- Peer views use the shared Radix Tabs primitive so tab, tablist, tabpanel, focus movement, and trigger-to-panel relationships stay consistent.
-- Tabs are flat navigation, not primary actions: use a quiet selected surface and a restrained accent indicator instead of filled primary buttons, card shadows, or separate outline buttons.
-- Page-level and table-surface tabs share one visual language. Express hierarchy through placement and surrounding spacing, not a second trigger style.
-- Keep tab lists on one horizontally scrollable line. Triggers use the responsive compact height: 40px on narrow screens and 32px from the `sm` breakpoint onward.
-- Use text labels by default. Add icons only when they materially disambiguate otherwise similar destinations.
-- Mounting inactive panels is a feature-level decision. Use `forceMount` only when leaving a tab must preserve local UI state or an already-mounted workflow.
+- Peer views use the shared Radix Tabs primitive, so the tablist, panel, and focus wiring stays consistent.
+- Tabs are flat navigation, not actions: a quiet selected surface and a restrained indicator, never filled buttons, shadows, or outline buttons.
+- Page-level and table-surface tabs share one visual language; express hierarchy through placement and spacing, not a second trigger style.
+- Tab lists stay on one horizontally scrollable line, and triggers use the shared responsive compact height.
+- Text labels by default; add an icon only when it disambiguates otherwise similar destinations.
+- Use `forceMount` only when leaving a tab must preserve local state or an already-running workflow.
 
 Shell:
 

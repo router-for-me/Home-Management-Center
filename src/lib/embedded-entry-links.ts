@@ -4,5 +4,6 @@ export const embeddedEntryLinks = {
   managementConnect: './management.html#/admin/connect',
   userLogin: './user.html#/user/login',
   userRegister: './user.html#/user/register',
+  userModels: './user.html#/user/models',
   userWorkspace: './user.html#/user/workspace',
 } as const

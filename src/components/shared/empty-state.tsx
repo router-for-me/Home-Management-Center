@@ -80,6 +80,8 @@ function EmptyState({
   )
 }
 
+export { EmptyState }
+
 export function TableEmptyState({ className, compact = true, ...props }: EmptyStateProps) {
   return (
     <EmptyState

@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { emptyValueText } from '@/components/shared/empty-value'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import {
   UsageActivityMatrix,
@@ -421,7 +422,7 @@ function RankPreviewList({
                   requests: formatNumber(item.requestCount),
                   tokens:
                     item.totalTokens === null
-                      ? t('usageLogsPage.status.notAvailable')
+                      ? emptyValueText
                       : formatCompactNumber(item.totalTokens),
                 })}
               </p>

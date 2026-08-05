@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
 import { PageHeader } from '@/components/shared/page-header'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
@@ -102,13 +103,11 @@ import { uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 
 type RequestEventsVerdict = 'ready' | 'empty' | 'partial' | 'unsupported'
-type RequestEventSearchField =
-  | 'search'
-  | 'requestId'
-  | 'user'
-  | 'clientKey'
-  | 'credentialId'
-  | 'authIndex'
+// One control, because every one of these is the same act: type a value and let
+// the backend match it. There is deliberately no auth-index entry — the
+// credential filter matches the auth index on top of the credential uuid and
+// id, so a separate option would be a strict subset and one more decision.
+type RequestEventSearchField = 'search' | 'requestId' | 'user' | 'clientKey' | 'credentialId'
 type RequestEventColumnKey =
   | 'time'
   | 'event'
@@ -168,7 +167,6 @@ const requestEventSearchFields: RequestEventSearchField[] = [
   'user',
   'clientKey',
   'credentialId',
-  'authIndex',
   'search',
 ]
 const requestEventSortKeys = [
@@ -244,9 +242,14 @@ function hasActiveFilters(filters: RequestEventFilters) {
 }
 
 function getActiveAdvancedFilterCount(filters: RequestEventFilters) {
-  return requestEventAdvancedFilterKeys.filter(
-    (key) => filters[key] !== defaultRequestEventFilters[key],
-  ).length
+  return requestEventAdvancedFilterKeys.filter((key) => {
+    const value = filters[key]
+    const fallback = defaultRequestEventFilters[key]
+    if (typeof value === 'string' && typeof fallback === 'string') {
+      return value.trim() !== fallback.trim()
+    }
+    return value !== fallback
+  }).length
 }
 
 function getActiveTextFilterCount(filters: RequestEventFilters) {
@@ -835,9 +838,11 @@ function RequestEventDetailSheet({
         <SheetHeader className="min-w-0 border-b p-4">
           <SheetTitle>{t('requestEventsPage.detail.title')}</SheetTitle>
           <SheetDescription className="[overflow-wrap:anywhere] break-words">
-            {event?.timestamp
-              ? (formatDateTime(event.timestamp, i18n) ?? event.timestamp)
-              : t('requestEventsPage.status.notAvailable')}
+            {event?.timestamp ? (
+              (formatDateTime(event.timestamp, i18n) ?? event.timestamp)
+            ) : (
+              <EmptyValue />
+            )}
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4">
@@ -856,7 +861,7 @@ function RequestEventDetailSheet({
             <div className="grid min-w-0 grid-cols-1 gap-4">
               <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.eventType')}>
-                  {event.eventType ?? t('requestEventsPage.status.notAvailable')}
+                  {event.eventType ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.status')}>
                   <RequestEventStatusBadge event={event} />
@@ -877,11 +882,14 @@ function RequestEventDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {event.upstreamRequestId ?? t('requestEventsPage.status.notAvailable')}
+                  {event.upstreamRequestId ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.model')}>
-                  {event.provider ?? t('requestEventsPage.status.notAvailable')} /{' '}
-                  {event.model ?? t('requestEventsPage.status.notAvailable')}
+                  {event.provider || event.model ? (
+                    `${event.provider ?? emptyValueText} / ${event.model ?? emptyValueText}`
+                  ) : (
+                    <EmptyValue />
+                  )}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField
                   className="sm:col-span-2"
@@ -891,32 +899,33 @@ function RequestEventDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {event.endpoint ?? t('requestEventsPage.status.notAvailable')}
+                  {event.endpoint ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.home')}>
                   {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.cpa')}>
-                  {getRuntimeNodeLabel(event) ?? t('requestEventsPage.status.notAvailable')}
+                  {getRuntimeNodeLabel(event) ?? <EmptyValue />}
                 </DiagnosticDetailField>
-                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.client')}>
-                  {event.client?.username ??
-                    event.client?.clientKeyLabel ??
-                    event.client?.clientKeyMasked ??
-                    t('requestEventsPage.status.notAvailable')}
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.user')}>
+                  <CallerUser
+                    username={event.client?.username ?? null}
+                    keyResolved={event.client?.clientKeyId != null}
+                  />
+                </DiagnosticDetailField>
+                <DiagnosticDetailField label={t('requestEventsPage.detail.fields.clientKey')}>
+                  {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.credential')}>
-                  {event.credential?.label ??
-                    event.credential?.authIndex ??
-                    t('requestEventsPage.status.notAvailable')}
+                  {event.credential?.label ?? event.credential?.authIndex ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.latency')}>
-                  {formatDuration(event.performance.latencyMs) ??
-                    t('requestEventsPage.status.notAvailable')}
+                  {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.cost')}>
-                  {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ??
-                    t('requestEventsPage.status.notAvailable')}
+                  {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
+                    <EmptyValue />
+                  )}
                 </DiagnosticDetailField>
               </div>
 
@@ -952,7 +961,7 @@ function RequestEventDetailSheet({
                       event.error.bodyPreview ??
                       event.error.message ??
                       event.error.reason ??
-                      t('requestEventsPage.status.notAvailable')
+                      emptyValueText
                     }
                     copyLabel={copyLabel}
                     copiedLabel={copiedLabel}
@@ -971,26 +980,28 @@ function RequestEventDetailSheet({
                     <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.method')}
                     >
-                      {payloadSummary.method ?? t('requestEventsPage.status.notAvailable')}
+                      {payloadSummary.method ?? <EmptyValue />}
                     </DiagnosticDetailField>
                     <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.stream')}
                     >
-                      {payloadSummary.stream === null
-                        ? t('requestEventsPage.status.notAvailable')
-                        : payloadSummary.stream
-                          ? t('requestEventsPage.status.yes')
-                          : t('requestEventsPage.status.no')}
+                      {payloadSummary.stream === null ? (
+                        <EmptyValue />
+                      ) : payloadSummary.stream ? (
+                        t('requestEventsPage.status.yes')
+                      ) : (
+                        t('requestEventsPage.status.no')
+                      )}
                     </DiagnosticDetailField>
                     <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.messages')}
                     >
-                      {payloadSummary.messageCount ?? t('requestEventsPage.status.notAvailable')}
+                      {payloadSummary.messageCount ?? <EmptyValue />}
                     </DiagnosticDetailField>
                     <DiagnosticDetailField
                       label={t('requestEventsPage.detail.payloadFields.tools')}
                     >
-                      {payloadSummary.toolCount ?? t('requestEventsPage.status.notAvailable')}
+                      {payloadSummary.toolCount ?? <EmptyValue />}
                     </DiagnosticDetailField>
                   </div>
                 </div>
@@ -1262,11 +1273,9 @@ function RequestEventsTable({
                     ) : null}
                     {isColumnVisible('event') ? (
                       <TableCell className="min-w-0">
-                        <p className="truncate font-medium">
-                          {event.eventType ?? t('requestEventsPage.status.notAvailable')}
-                        </p>
+                        <p className="truncate font-medium">{event.eventType ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {event.executorType ?? t('requestEventsPage.status.notAvailable')}
+                          {event.executorType ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
@@ -1274,17 +1283,15 @@ function RequestEventsTable({
                       <TableCell>
                         <RequestEventStatusBadge event={event} />
                         <p className="text-muted-foreground mt-1 text-xs">
-                          {event.statusCode ?? t('requestEventsPage.status.notAvailable')}
+                          {event.statusCode ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('model') ? (
                       <TableCell className="min-w-0">
-                        <p className="truncate font-medium">
-                          {event.model ?? t('requestEventsPage.status.notAvailable')}
-                        </p>
+                        <p className="truncate font-medium">{event.model ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {event.provider ?? t('requestEventsPage.status.notAvailable')}
+                          {event.provider ?? <EmptyValue />}
                           {event.modelAlias ? ` / ${event.modelAlias}` : ''}
                         </p>
                       </TableCell>
@@ -1295,30 +1302,30 @@ function RequestEventsTable({
                           {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
                         </p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {getRuntimeNodeLabel(event) ?? t('requestEventsPage.status.notAvailable')}
+                          {getRuntimeNodeLabel(event) ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('client') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate">
-                          {event.client?.username ?? t('requestEventsPage.status.notAvailable')}
+                          <CallerUser
+                            username={event.client?.username ?? null}
+                            keyResolved={event.client?.clientKeyId != null}
+                          />
                         </p>
                         <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.client?.clientKeyLabel ??
-                            event.client?.clientKeyMasked ??
-                            t('requestEventsPage.status.notAvailable')}
+                          {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
+                            <EmptyValue />
+                          )}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('credential') ? (
                       <TableCell className="min-w-0">
-                        <p className="truncate">
-                          {event.credential?.label ?? t('requestEventsPage.status.notAvailable')}
-                        </p>
+                        <p className="truncate">{event.credential?.label ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.credential?.authIndex ??
-                            t('requestEventsPage.status.notAvailable')}
+                          {event.credential?.authIndex ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
@@ -1336,22 +1343,20 @@ function RequestEventsTable({
                     {isColumnVisible('latency') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
-                          {formatDuration(event.performance.latencyMs) ??
-                            t('requestEventsPage.status.notAvailable')}
+                          {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {t('requestEventsPage.table.ttft', {
-                            value:
-                              formatDuration(event.performance.ttftMs) ??
-                              t('requestEventsPage.status.notAvailable'),
+                            value: formatDuration(event.performance.ttftMs) ?? emptyValueText,
                           })}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('cost') ? (
                       <TableCell className="text-right">
-                        {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ??
-                          t('requestEventsPage.status.notAvailable')}
+                        {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
+                          <EmptyValue />
+                        )}
                       </TableCell>
                     ) : null}
                     {isColumnVisible('request') ? (
@@ -1360,19 +1365,17 @@ function RequestEventsTable({
                           {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
                         </p>
                         <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.upstreamRequestId ?? t('requestEventsPage.status.notAvailable')}
+                          {event.upstreamRequestId ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('error') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate text-xs">
-                          {event.error?.message ??
-                            event.error?.reason ??
-                            t('requestEventsPage.status.notAvailable')}
+                          {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
                         </p>
                         <p className="text-muted-foreground truncate text-xs">
-                          {event.error?.bodyPreview ?? t('requestEventsPage.status.notAvailable')}
+                          {event.error?.bodyPreview ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}

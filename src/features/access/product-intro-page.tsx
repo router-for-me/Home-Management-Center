@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { KeyRound, Network, ShieldCheck, UserRound } from 'lucide-react'
+import { KeyRound, LayoutGrid, Network, ShieldCheck, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -85,6 +85,18 @@ export function ProductIntroPage() {
             variant="outline"
             size="sm"
             className="home-header-action"
+            aria-label={t('embeddedPortal.header.models')}
+          >
+            <a href={embeddedEntryLinks.userModels}>
+              <LayoutGrid className="size-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{t('embeddedPortal.header.models')}</span>
+            </a>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="home-header-action"
             aria-label={
               userAuthenticated
                 ? t('embeddedPortal.header.userWorkspace')
@@ -140,6 +152,13 @@ export function ProductIntroPage() {
               <p className="text-muted-foreground mx-auto mt-4 max-w-3xl text-base leading-7 text-pretty md:text-lg">
                 {t('embeddedPortal.hero.description')}
               </p>
+              <div className="mt-6 flex justify-center">
+                <Button asChild size="lg">
+                  <a href={embeddedEntryLinks.userModels}>
+                    {t('embeddedPortal.hero.browseModels')}
+                  </a>
+                </Button>
+              </div>
             </div>
 
             <div className="home-provider-ecosystem">

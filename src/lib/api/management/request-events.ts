@@ -213,6 +213,30 @@ export const defaultRequestEventFilters: RequestEventFilters = {
   offset: 0,
 }
 
+// The dropdown filters are deliberately dropped: the lists this scope produces
+// feed those same dropdowns, so scoping by them collapses every list to the
+// option already selected and a sibling value can only be reached by clearing
+// the filter first. Typed and range inputs still narrow the lists — they cannot
+// make a dropdown unusable.
+export function getRequestEventOptionFilters(filters: RequestEventFilters): RequestEventFilters {
+  return {
+    ...defaultRequestEventFilters,
+    range: filters.range,
+    customFrom: filters.customFrom,
+    customTo: filters.customTo,
+    search: filters.search,
+    requestId: filters.requestId,
+    credentialId: filters.credentialId,
+    authIndex: filters.authIndex,
+    user: filters.user,
+    clientKey: filters.clientKey,
+    minLatencyMs: filters.minLatencyMs,
+    maxLatencyMs: filters.maxLatencyMs,
+    limit: 200,
+    offset: 0,
+  }
+}
+
 function isNonNegativeIntegerInput(value: string) {
   const trimmed = value.trim()
   return trimmed === '' || /^\d+$/.test(trimmed)
