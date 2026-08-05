@@ -10,7 +10,7 @@ const emptyValueText = '—'
 function EmptyValue({ reason, hint }: { reason?: string; hint?: string }) {
   const { t } = useTranslation()
   const visible = reason ?? emptyValueText
-  const spoken = hint ?? reason ?? t('common.emptyValue.notRecorded')
+  const spoken = hint ?? reason ?? t('emptyValue.notRecorded')
 
   // Muted, not faded: a stated reason is real text and has to clear 4.5:1,
   // and the token already sits far enough below the foreground to read as
@@ -33,15 +33,10 @@ function CallerUser({ username, keyResolved }: { username: string | null; keyRes
 
   if (username) return <>{username}</>
   if (keyResolved) {
-    return (
-      <EmptyValue
-        reason={t('common.caller.userNotBound')}
-        hint={t('common.caller.userNotBoundHint')}
-      />
-    )
+    return <EmptyValue reason={t('caller.userNotBound')} hint={t('caller.userNotBoundHint')} />
   }
 
-  return <EmptyValue reason={t('common.caller.userNotRecorded')} />
+  return <EmptyValue reason={t('caller.userNotRecorded')} />
 }
 
 export { CallerUser, EmptyValue, emptyValueText }
