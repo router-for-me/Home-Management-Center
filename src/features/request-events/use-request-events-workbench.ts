@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -17,6 +17,7 @@ import {
   fetchRequestEventDetail,
   fetchRequestEventFilterOptions,
   fetchRequestEvents,
+  getRequestEventOptionFilters,
   isRequestEventLatencyRangeValid,
   toRequestEventsApiError,
 } from '@/lib/api/management/request-events'
@@ -74,51 +75,9 @@ export function useRequestEventsWorkbench() {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [pendingEvents, setPendingEvents] = useState<StagedRefresh<RequestEventsPage> | null>(null)
 
-  const optionFilters = useMemo<RequestEventFilters>(
-    () => ({
-      ...defaultRequestEventFilters,
-      range: filters.range,
-      customFrom: filters.customFrom,
-      customTo: filters.customTo,
-      search: filters.search,
-      requestId: filters.requestId,
-      eventType: filters.eventType,
-      status: filters.status,
-      statusCode: filters.statusCode,
-      provider: filters.provider,
-      model: filters.model,
-      homeIp: filters.homeIp,
-      cpaNode: filters.cpaNode,
-      credentialId: filters.credentialId,
-      authIndex: filters.authIndex,
-      user: filters.user,
-      clientKey: filters.clientKey,
-      minLatencyMs: filters.minLatencyMs,
-      maxLatencyMs: filters.maxLatencyMs,
-      limit: 200,
-      offset: 0,
-    }),
-    [
-      filters.authIndex,
-      filters.clientKey,
-      filters.cpaNode,
-      filters.credentialId,
-      filters.customFrom,
-      filters.customTo,
-      filters.eventType,
-      filters.homeIp,
-      filters.maxLatencyMs,
-      filters.minLatencyMs,
-      filters.model,
-      filters.provider,
-      filters.range,
-      filters.requestId,
-      filters.search,
-      filters.status,
-      filters.statusCode,
-      filters.user,
-    ],
-  )
+  // Query keys are compared by value, so this stays cached while the user
+  // switches dropdown filters — those are excluded from the option scope.
+  const optionFilters = getRequestEventOptionFilters(filters)
 
   const filtersValid = isRequestEventLatencyRangeValid(filters)
   const requestEventsAvailable =
