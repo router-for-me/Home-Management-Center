@@ -45,6 +45,7 @@ import {
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { EmptyValue, emptyValueText } from '@/components/shared/empty-value'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
@@ -251,7 +252,7 @@ function formatBillingBasis(value: string | null, t: TFunction) {
     return t('usageLogsPage.costBreakdown.billingBasis.current')
   }
 
-  return value?.trim() || t('usageLogsPage.status.notAvailable')
+  return value?.trim() || emptyValueText
 }
 
 function formatPercent(value: number) {
@@ -2510,7 +2511,7 @@ function StatusBadge({ record }: { record: UsageRecord }) {
 
 function CredentialBadge({ credential }: { credential: UsageExecutionCredential | null }) {
   const { t } = useTranslation()
-  if (!credential) return <span>{t('usageLogsPage.status.notAvailable')}</span>
+  if (!credential) return <span>{<EmptyValue />}</span>
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
@@ -2556,18 +2557,13 @@ function UsageProviderLogo({
 }
 
 function RequestModelCell({ record }: { record: UsageRecord }) {
-  const { t } = useTranslation()
-
   return (
     <div className="flex min-w-0 items-start gap-2">
       <UsageProviderLogo values={[record.provider, record.model]} className="mt-0.5" />
       <div className="min-w-0">
-        <p className="truncate font-medium">
-          {record.model ?? t('usageLogsPage.status.notAvailable')}
-        </p>
+        <p className="truncate font-medium">{record.model ?? <EmptyValue />}</p>
         <p className="text-muted-foreground truncate text-xs">
-          {record.provider ?? t('usageLogsPage.status.notAvailable')} ·{' '}
-          {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
+          {record.provider ?? <EmptyValue />} · {record.endpoint ?? <EmptyValue />}
         </p>
       </div>
     </div>
@@ -3116,20 +3112,22 @@ export function RequestRecordsTable({
                         <div className="flex items-center gap-2">
                           <CredentialBadge credential={record.credential} />
                           <span className="min-w-0 truncate text-sm">
-                            {record.credential?.label ?? t('usageLogsPage.status.notAvailable')}
+                            {record.credential?.label ?? <EmptyValue />}
                           </span>
                         </div>
                         <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                          {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
+                          {record.credential?.authIndex ?? <EmptyValue />}
                         </p>
                       </TableCell>
                     ) : null}
                     {isColumnVisible('tokens') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
-                          {record.tokenBreakdown
-                            ? formatCompactNumber(record.tokenBreakdown.totalTokens)
-                            : t('usageLogsPage.status.notAvailable')}
+                          {record.tokenBreakdown ? (
+                            formatCompactNumber(record.tokenBreakdown.totalTokens)
+                          ) : (
+                            <EmptyValue />
+                          )}
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {record.tokenBreakdown?.quality === 'inconsistent'
@@ -3147,14 +3145,11 @@ export function RequestRecordsTable({
                     {isColumnVisible('performance') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
-                          {formatDuration(record.performance.latencyMs) ??
-                            t('usageLogsPage.status.notAvailable')}
+                          {formatDuration(record.performance.latencyMs) ?? <EmptyValue />}
                         </p>
                         <p className="text-muted-foreground text-xs">
                           {t('usageLogsPage.records.ttft', {
-                            value:
-                              formatDuration(record.performance.ttftMs) ??
-                              t('usageLogsPage.status.notAvailable'),
+                            value: formatDuration(record.performance.ttftMs) ?? <EmptyValue />,
                           })}
                         </p>
                       </TableCell>
@@ -3165,7 +3160,7 @@ export function RequestRecordsTable({
                           t,
                           record.billing?.amount ?? null,
                           record.billing?.currency,
-                        ) ?? t('usageLogsPage.status.notAvailable')}
+                        ) ?? <EmptyValue />}
                       </TableCell>
                     ) : null}
                     {isColumnVisible('request') ? (
@@ -3543,24 +3538,24 @@ export function RequestLogIndexTable({
               return (
                 <TableRow key={row.id} variant="resource" className="group">
                   <TableCell className="text-muted-foreground truncate">
-                    {formatDateTime(row.timestamp, i18n) ?? t('usageLogsPage.status.notAvailable')}
+                    {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
                   </TableCell>
                   <TableCell className="min-w-0">
                     <p className="truncate font-mono text-xs">{row.requestId}</p>
                     <p className="text-muted-foreground mt-1 text-xs">
-                      {row.status === 'failed'
-                        ? t('usageLogsPage.status.failed')
-                        : row.status === 'success'
-                          ? t('usageLogsPage.status.success')
-                          : t('usageLogsPage.status.notAvailable')}
+                      {row.status === 'failed' ? (
+                        t('usageLogsPage.status.failed')
+                      ) : row.status === 'success' ? (
+                        t('usageLogsPage.status.success')
+                      ) : (
+                        <EmptyValue />
+                      )}
                     </p>
                   </TableCell>
                   <TableCell className="min-w-0">
-                    <p className="truncate font-medium">
-                      {row.model ?? t('usageLogsPage.status.notAvailable')}
-                    </p>
+                    <p className="truncate font-medium">{row.model ?? <EmptyValue />}</p>
                     <p className="text-muted-foreground truncate text-xs">
-                      {row.provider ?? t('usageLogsPage.status.notAvailable')}
+                      {row.provider ?? <EmptyValue />}
                     </p>
                   </TableCell>
                   <TableCell className="text-muted-foreground truncate">
@@ -3583,11 +3578,13 @@ export function RequestLogIndexTable({
                     ) : null}
                   </TableCell>
                   <TableCell className="text-right">
-                    {row.sizeBytes === null
-                      ? t('usageLogsPage.status.notAvailable')
-                      : t('usageLogsPage.requestLogs.sizeBytes', {
-                          size: formatBytes(row.sizeBytes),
-                        })}
+                    {row.sizeBytes === null ? (
+                      <EmptyValue />
+                    ) : (
+                      t('usageLogsPage.requestLogs.sizeBytes', {
+                        size: formatBytes(row.sizeBytes),
+                      })
+                    )}
                   </TableCell>
                   <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
                     <div className="table-action-cell-content">
@@ -3798,9 +3795,11 @@ function QuotaWindowProgress({ window }: { window: UsageQuotaWindow }) {
           : t('usageLogsPage.credentials.quotaTokens', {
               used: formatCompactNumber(window.usedTokens),
               limit:
-                window.limitTokens === null
-                  ? t('usageLogsPage.status.notAvailable')
-                  : formatCompactNumber(window.limitTokens),
+                window.limitTokens === null ? (
+                  <EmptyValue />
+                ) : (
+                  formatCompactNumber(window.limitTokens)
+                ),
             })}
       </p>
     </div>
@@ -4015,7 +4014,7 @@ export function RequestDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {record.requestId ?? t('usageLogsPage.status.notAvailable')}
+                  {record.requestId ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField
                   label={t('usageLogsPage.detail.fields.usageId')}
@@ -4051,7 +4050,7 @@ export function RequestDetailSheet({
                   {record.client?.clientIp ?? t('usageLogsPage.caller.ipNotRecorded')}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.credential')}>
-                  {record.credential?.label ?? t('usageLogsPage.status.notAvailable')}
+                  {record.credential?.label ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField
                   label={t('usageLogsPage.detail.fields.authIndex')}
@@ -4060,7 +4059,7 @@ export function RequestDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {record.credential?.authIndex ?? t('usageLogsPage.status.notAvailable')}
+                  {record.credential?.authIndex ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.model')}>
                   {record.provider} / {record.model}
@@ -4073,7 +4072,7 @@ export function RequestDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {record.endpoint ?? t('usageLogsPage.status.notAvailable')}
+                  {record.endpoint ?? <EmptyValue />}
                 </DiagnosticDetailField>
               </div>
 
@@ -4084,12 +4083,14 @@ export function RequestDetailSheet({
                   {formatDuration(record.performance.latencyMs)}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.ttft')}>
-                  {formatDuration(record.performance.ttftMs) ??
-                    t('usageLogsPage.status.notAvailable')}
+                  {formatDuration(record.performance.ttftMs) ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.billing')}>
-                  {formatAmountUnit(t, record.billing?.amount ?? null, record.billing?.currency) ??
-                    t('usageLogsPage.status.notAvailable')}
+                  {formatAmountUnit(
+                    t,
+                    record.billing?.amount ?? null,
+                    record.billing?.currency,
+                  ) ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField
                   label={t('usageLogsPage.detail.fields.chargeId')}
@@ -4098,9 +4099,7 @@ export function RequestDetailSheet({
                   copiedLabel={copiedLabel}
                   mono
                 >
-                  {record.billing?.chargeId ??
-                    detail?.related?.chargeId ??
-                    t('usageLogsPage.status.notAvailable')}
+                  {record.billing?.chargeId ?? detail?.related?.chargeId ?? <EmptyValue />}
                 </DiagnosticDetailField>
               </div>
 
@@ -4145,11 +4144,7 @@ export function RequestDetailSheet({
                 <div>
                   <h3 className="text-sm font-medium">{t('usageLogsPage.detail.error')}</h3>
                   <TechnicalTextViewer
-                    content={
-                      record.error.bodyPreview ??
-                      record.error.message ??
-                      t('usageLogsPage.status.notAvailable')
-                    }
+                    content={record.error.bodyPreview ?? record.error.message ?? emptyValueText}
                     copyLabel={copyLabel}
                     copiedLabel={copiedLabel}
                     wrapLinesLabel={wrapLinesLabel}
@@ -4163,20 +4158,22 @@ export function RequestDetailSheet({
                 <h3 className="text-sm font-medium">{t('usageLogsPage.detail.payload')}</h3>
                 <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-4">
                   <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.method')}>
-                    {detail?.payloadSummary?.method ?? t('usageLogsPage.status.notAvailable')}
+                    {detail?.payloadSummary?.method ?? <EmptyValue />}
                   </DiagnosticDetailField>
                   <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.stream')}>
-                    {detail?.payloadSummary?.stream === null
-                      ? t('usageLogsPage.status.notAvailable')
-                      : detail?.payloadSummary?.stream
-                        ? t('common.enabled')
-                        : t('common.disabled')}
+                    {detail?.payloadSummary?.stream === null ? (
+                      <EmptyValue />
+                    ) : detail?.payloadSummary?.stream ? (
+                      t('common.enabled')
+                    ) : (
+                      t('common.disabled')
+                    )}
                   </DiagnosticDetailField>
                   <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.messages')}>
-                    {detail?.payloadSummary?.messageCount ?? t('usageLogsPage.status.notAvailable')}
+                    {detail?.payloadSummary?.messageCount ?? <EmptyValue />}
                   </DiagnosticDetailField>
                   <DiagnosticDetailField label={t('usageLogsPage.detail.payloadFields.tools')}>
-                    {detail?.payloadSummary?.toolCount ?? t('usageLogsPage.status.notAvailable')}
+                    {detail?.payloadSummary?.toolCount ?? <EmptyValue />}
                   </DiagnosticDetailField>
                 </div>
               </div>
@@ -4290,9 +4287,9 @@ function CredentialUsageStatusText({ status }: { status: unknown }) {
   const normalizedStatus = normalizeCredentialStatus(status)
   const statusLabel = normalizedStatus
     ? t(`usageLogsPage.credentials.statuses.${normalizedStatus}`, {
-        defaultValue: formatMetadataValue(status, t('usageLogsPage.status.notAvailable')),
+        defaultValue: formatMetadataValue(status, emptyValueText),
       })
-    : t('usageLogsPage.status.notAvailable')
+    : emptyValueText
 
   return (
     <span className="text-muted-foreground inline-flex min-w-0 items-center gap-1.5 text-xs">
@@ -4525,10 +4522,7 @@ export function CredentialUsageTable({
                       ) : null}
                       {isColumnVisible('provider') ? (
                         <TableCell className="min-w-0">
-                          <ProviderValueCell
-                            provider={provider}
-                            fallback={t('usageLogsPage.status.notAvailable')}
-                          />
+                          <ProviderValueCell provider={provider} fallback={emptyValueText} />
                         </TableCell>
                       ) : null}
                       {isColumnVisible('status') ? (
@@ -4556,9 +4550,11 @@ export function CredentialUsageTable({
                       {isColumnVisible('tokens') ? (
                         <TableCell className="text-right">
                           <p className="font-medium">
-                            {row.tokenBreakdown
-                              ? formatCompactNumber(row.tokenBreakdown.totalTokens)
-                              : t('usageLogsPage.status.notAvailable')}
+                            {row.tokenBreakdown ? (
+                              formatCompactNumber(row.tokenBreakdown.totalTokens)
+                            ) : (
+                              <EmptyValue />
+                            )}
                           </p>
                           <p className="text-muted-foreground flex items-center justify-end gap-1.5 text-xs">
                             {row.tokenBreakdown ? (
@@ -4604,8 +4600,7 @@ export function CredentialUsageTable({
                       ) : null}
                       {isColumnVisible('lastUsed') ? (
                         <TableCell className="text-muted-foreground truncate">
-                          {formatDateTime(row.lastUsedAt, i18n) ??
-                            t('usageLogsPage.status.notAvailable')}
+                          {formatDateTime(row.lastUsedAt, i18n) ?? <EmptyValue />}
                         </TableCell>
                       ) : null}
                     </TableRow>
@@ -4942,13 +4937,11 @@ function UsageHealthMiniTable({
                   </TableCell>
                   <TableCell className="text-right">
                     <p className="font-medium">
-                      {formatDuration(item.p95LatencyMs) ?? t('usageLogsPage.status.notAvailable')}
+                      {formatDuration(item.p95LatencyMs) ?? <EmptyValue />}
                     </p>
                     <p className="text-muted-foreground text-xs">
                       {t('usageLogsPage.health.avgLatency', {
-                        value:
-                          formatDuration(item.avgLatencyMs) ??
-                          t('usageLogsPage.status.notAvailable'),
+                        value: formatDuration(item.avgLatencyMs) ?? <EmptyValue />,
                       })}
                     </p>
                   </TableCell>
@@ -4956,7 +4949,7 @@ function UsageHealthMiniTable({
                     {item.lastErrorAt ? (
                       <>
                         <p className="truncate font-mono text-xs">
-                          {item.lastErrorStatus ?? t('usageLogsPage.status.notAvailable')}
+                          {item.lastErrorStatus ?? <EmptyValue />}
                         </p>
                         <p
                           className="text-muted-foreground truncate text-xs"
@@ -5039,7 +5032,6 @@ export function UsageHealthPanel({
 }
 
 function LogLevelBadge({ level, compact = false }: { level: string | null; compact?: boolean }) {
-  const { t } = useTranslation()
   const normalizedLevel = level?.trim().toLowerCase() ?? ''
   const danger = ['error', 'fatal', 'panic'].includes(normalizedLevel)
   const warning = ['warn', 'warning'].includes(normalizedLevel)
@@ -5059,7 +5051,7 @@ function LogLevelBadge({ level, compact = false }: { level: string | null; compa
               : 'border-border bg-muted/50 text-muted-foreground',
       )}
     >
-      {level || t('usageLogsPage.status.notAvailable')}
+      {level || <EmptyValue />}
     </span>
   )
 }
@@ -5607,9 +5599,11 @@ function RuntimeLogDetailSheet({
         <SheetHeader className="border-b p-4">
           <SheetTitle>{t('usageLogsPage.logs.detail.title')}</SheetTitle>
           <SheetDescription>
-            {record?.timestamp
-              ? (formatDateTime(record.timestamp, i18n) ?? record.timestamp)
-              : t('usageLogsPage.status.notAvailable')}
+            {record?.timestamp ? (
+              (formatDateTime(record.timestamp, i18n) ?? record.timestamp)
+            ) : (
+              <EmptyValue />
+            )}
           </SheetDescription>
         </SheetHeader>
         {record ? (
@@ -5619,7 +5613,7 @@ function RuntimeLogDetailSheet({
                 <LogLevelBadge level={getRuntimeLogLevel(record)} />
               </DetailField>
               <DetailField label={t('usageLogsPage.logs.detail.createdAt')}>
-                {formatDateTime(record.createdAt, i18n) ?? t('usageLogsPage.status.notAvailable')}
+                {formatDateTime(record.createdAt, i18n) ?? <EmptyValue />}
               </DetailField>
               <DetailField label={t('usageLogsPage.logs.columns.request')}>
                 {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
@@ -5629,13 +5623,13 @@ function RuntimeLogDetailSheet({
                   t('usageLogsPage.status.localHome')}
               </DetailField>
               <DetailField label={t('usageLogsPage.logs.columns.clientIp')}>
-                {record.clientIp ?? t('usageLogsPage.status.notAvailable')}
+                {record.clientIp ?? <EmptyValue />}
               </DetailField>
             </div>
             <div className="mt-4">
               <h3 className="text-sm font-medium">{t('usageLogsPage.logs.detail.content')}</h3>
               <pre className="bg-muted/45 text-foreground mt-2 max-h-[52vh] min-h-56 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
-                {record.line || t('usageLogsPage.status.notAvailable')}
+                {record.line || <EmptyValue />}
               </pre>
             </div>
           </div>
@@ -5683,7 +5677,7 @@ function RuntimeLogRow({
   return (
     <TableRow variant="resource" className="group">
       <TableCell className="text-muted-foreground truncate">
-        {formatDateTime(record.timestamp, i18n) ?? t('usageLogsPage.status.notAvailable')}
+        {formatDateTime(record.timestamp, i18n) ?? <EmptyValue />}
       </TableCell>
       <TableCell className="text-muted-foreground truncate font-mono text-xs">
         {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
@@ -5692,7 +5686,7 @@ function RuntimeLogRow({
         <div className="flex w-full min-w-0 items-center gap-2">
           <LogLevelBadge level={level} compact />
           <span className="text-muted-foreground block min-w-0 flex-1 truncate font-mono text-xs">
-            {summary ?? t('usageLogsPage.status.notAvailable')}
+            {summary ?? <EmptyValue />}
           </span>
         </div>
       </TableCell>
@@ -5808,13 +5802,14 @@ export function ErrorLogFilesPanel({
                   <TableRow key={row.name} variant="resource" className="group">
                     <TableCell className="truncate font-mono text-xs">{row.name}</TableCell>
                     <TableCell className="text-muted-foreground truncate">
-                      {formatTimestamp(row.modified, i18n) ??
-                        t('usageLogsPage.status.notAvailable')}
+                      {formatTimestamp(row.modified, i18n) ?? <EmptyValue />}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-right">
-                      {row.size != null
-                        ? t('usageLogsPage.requestLogs.sizeBytes', { size: formatBytes(row.size) })
-                        : t('usageLogsPage.status.notAvailable')}
+                      {row.size != null ? (
+                        t('usageLogsPage.requestLogs.sizeBytes', { size: formatBytes(row.size) })
+                      ) : (
+                        <EmptyValue />
+                      )}
                     </TableCell>
                     <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
                       <div className="table-action-cell-content">

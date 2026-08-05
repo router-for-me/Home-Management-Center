@@ -65,26 +65,19 @@ describe('request events copy', () => {
     }
   })
 
-  // "Unavailable" is the page's word for a capability the backend cannot serve.
+  // "Unavailable" is this page's word for a capability the backend cannot serve.
   // Reusing it for an empty cell put it in every row of a sparse table and left
   // the operator unable to tell sparse data from a degraded backend.
-  test('does not reuse the capability word for empty cells', () => {
+  test('does not keep a page-local word for empty cells', () => {
     for (const [language, locale] of Object.entries(locales)) {
       const status = locale.status as Record<string, string | undefined>
 
-      expect([language, status.notAvailable]).toEqual([language, undefined])
-      expect([language, typeof status.notRecorded]).toEqual([language, 'string'])
-    }
-  })
-
-  test('separates an unbound user from an unrecorded one', () => {
-    for (const [language, locale] of Object.entries(locales)) {
-      const caller = locale.caller as Record<string, string | undefined>
-
-      expect([language, typeof caller.userNotBound]).toEqual([language, 'string'])
-      expect([language, typeof caller.userNotBoundHint]).toEqual([language, 'string'])
-      expect([language, typeof caller.userNotRecorded]).toEqual([language, 'string'])
-      expect([language, caller.userNotBound]).not.toEqual([language, caller.userNotRecorded])
+      expect([language, status.notAvailable, status.notRecorded]).toEqual([
+        language,
+        undefined,
+        undefined,
+      ])
+      expect([language, locale.caller]).toEqual([language, undefined])
     }
   })
 })

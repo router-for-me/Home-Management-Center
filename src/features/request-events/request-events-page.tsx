@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
 import { PageHeader } from '@/components/shared/page-header'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
@@ -216,48 +217,6 @@ function getHomeNodeLabel(event: RequestEvent) {
     return `${event.runtime.homeIp}:${event.runtime.homePort}`
   }
   return event.runtime.homeIp
-}
-
-const emptyValueText = '—'
-
-// A sparse row is the normal case here: most deployments fill a minority of
-// these fields. A dash keeps those rows quiet while the accessible name still
-// says why the cell is empty, and it leaves the word "unavailable" to mean only
-// what it says elsewhere on this page — a capability the backend cannot serve.
-function EmptyValue({ reason, hint }: { reason?: string; hint?: string }) {
-  const { t } = useTranslation()
-  const visible = reason ?? emptyValueText
-  const spoken = hint ?? reason ?? t('requestEventsPage.status.notRecorded')
-
-  // Muted, not faded: a stated reason is real text and has to clear 4.5:1, and
-  // the token already sits far enough below the foreground to read as absence.
-  return (
-    <span className="text-muted-foreground" title={spoken}>
-      <span className="sr-only">{spoken}</span>
-      <span aria-hidden="true">{visible}</span>
-    </span>
-  )
-}
-
-// A resolved client key with no username is a supported setup, not missing
-// data: the access key exists in Home but belongs to no account. Saying that
-// out loud beats a blank, and it is a different fact from a caller Home never
-// recorded at all.
-function CallerUser({ event }: { event: RequestEvent }) {
-  const { t } = useTranslation()
-  const username = event.client?.username
-
-  if (username) return <>{username}</>
-  if (event.client?.clientKeyId !== null && event.client?.clientKeyId !== undefined) {
-    return (
-      <EmptyValue
-        reason={t('requestEventsPage.caller.userNotBound')}
-        hint={t('requestEventsPage.caller.userNotBoundHint')}
-      />
-    )
-  }
-
-  return <EmptyValue reason={t('requestEventsPage.caller.userNotRecorded')} />
 }
 
 function hasActiveFilters(filters: RequestEventFilters) {
@@ -949,7 +908,10 @@ function RequestEventDetailSheet({
                   {getRuntimeNodeLabel(event) ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.user')}>
-                  <CallerUser event={event} />
+                  <CallerUser
+                    username={event.client?.username ?? null}
+                    keyResolved={event.client?.clientKeyId != null}
+                  />
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.clientKey')}>
                   {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? <EmptyValue />}
@@ -1347,7 +1309,10 @@ function RequestEventsTable({
                     {isColumnVisible('client') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate">
-                          <CallerUser event={event} />
+                          <CallerUser
+                            username={event.client?.username ?? null}
+                            keyResolved={event.client?.clientKeyId != null}
+                          />
                         </p>
                         <p className="text-muted-foreground truncate font-mono text-xs">
                           {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
