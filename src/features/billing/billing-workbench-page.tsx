@@ -310,7 +310,11 @@ function formatUserIdentity(user: UserResource) {
   return user.numericId !== null ? `${user.username} (#${user.numericId})` : user.username
 }
 
-function formatUserReference(
+// Charges and balance records carry a user id and no name: `billing_charge` has
+// no username column and the API never sends one, so the name has to come from
+// the users snapshot this page already loads. The record's own username is still
+// preferred in case the API starts sending it.
+export function formatUserReference(
   username: string,
   userId: number | null,
   users: UserResource[],
@@ -828,7 +832,14 @@ function ChargeRecordsTab({
                   <TableCell>
                     {formatDateTime(record.createdAt, t('billingPage.common.na'))}
                   </TableCell>
-                  <TableCell>{record.username || `#${record.userId ?? '-'}`}</TableCell>
+                  <TableCell>
+                    {formatUserReference(
+                      record.username,
+                      record.userId,
+                      workbench.users,
+                      t('billingPage.common.na'),
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">
                     {record.apiKeyMasked || record.apiKeyLabel || t('billingPage.common.na')}
                   </TableCell>
@@ -1642,7 +1653,7 @@ function ModelPricesTab({
   )
 }
 
-function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
+function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: UserResource[] }) {
   const { t } = useTranslation()
   const unpriced = isUnpricedCharge(record)
   const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
@@ -1651,7 +1662,11 @@ function ChargeDetailSheet({ record }: { record: ChargeRecord }) {
   }
   const rows = [
     [t('billingPage.chargeDetail.requestId'), record.requestId, true],
-    [t('billingPage.chargeDetail.user'), record.username || `#${record.userId ?? '-'}`, false],
+    [
+      t('billingPage.chargeDetail.user'),
+      formatUserReference(record.username, record.userId, users, t('billingPage.common.na')),
+      false,
+    ],
     [t('billingPage.chargeDetail.key'), record.apiKeyMasked || record.apiKeyLabel, true],
     [t('billingPage.chargeDetail.provider'), record.provider, false],
     [t('billingPage.chargeDetail.model'), record.model, true],
@@ -2909,7 +2924,7 @@ export function BillingWorkbenchPage() {
                 )}
               </DrawerScaffoldHeader>
               {sheetMode.type === 'charge-detail' ? (
-                <ChargeDetailSheet record={sheetMode.record} />
+                <ChargeDetailSheet record={sheetMode.record} users={workbench.users} />
               ) : null}
               {sheetMode.type === 'balance-detail' ? (
                 <BalanceDetailSheet record={sheetMode.record} users={workbench.users} />
