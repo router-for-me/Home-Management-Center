@@ -52,6 +52,7 @@ import { SelectInputGroup } from '@/components/shared/select-input-group'
 import {
   TablePaginationStatus,
   TableSurface,
+  TableSurfaceContent,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
@@ -3471,146 +3472,151 @@ export function RequestLogIndexTable({
         </div>
       </div>
       {totalRows > 0 ? (
-        <Table containerClassName={containedTableContainerClassName} className="min-w-[1080px]">
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead
-                className="w-[170px]"
-                aria-sort={
-                  sort.key === 'time'
-                    ? sort.direction === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
-              >
-                <RequestLogSortButton
-                  label={t('usageLogsPage.requestLogs.columns.time')}
-                  sortKey="time"
-                  activeKey={sort.key}
-                  direction={sort.direction}
-                  disabled={mutating}
-                  onSort={handleSort}
-                />
-              </TableHead>
-              <TableHead className="w-[250px]">
-                {t('usageLogsPage.requestLogs.columns.request')}
-              </TableHead>
-              <TableHead className="w-[180px]">
-                {t('usageLogsPage.requestLogs.columns.model')}
-              </TableHead>
-              <TableHead className="w-[150px]">
-                {t('usageLogsPage.requestLogs.columns.homeIp')}
-              </TableHead>
-              <TableHead className="w-[170px]">
-                {t('usageLogsPage.requestLogs.columns.file')}
-              </TableHead>
-              <TableHead
-                className="w-[100px] text-right"
-                aria-sort={
-                  sort.key === 'size'
-                    ? sort.direction === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
-              >
-                <RequestLogSortButton
-                  label={t('usageLogsPage.requestLogs.columns.size')}
-                  sortKey="size"
-                  activeKey={sort.key}
-                  direction={sort.direction}
-                  align="right"
-                  disabled={mutating}
-                  onSort={handleSort}
-                />
-              </TableHead>
-              <TableHead className="table-sticky-action-head w-[120px] text-right">
-                {t('usageLogsPage.requestLogs.columns.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => {
-              const downloading =
-                isDownloadingRequestLog && downloadingRequestLogId === row.requestId
+        <TableSurfaceContent>
+          <Table
+            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            className="min-w-[1080px]"
+          >
+            <TableHeader className={stickyTableHeaderClassName}>
+              <TableRow variant="static">
+                <TableHead
+                  className="w-[170px]"
+                  aria-sort={
+                    sort.key === 'time'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <RequestLogSortButton
+                    label={t('usageLogsPage.requestLogs.columns.time')}
+                    sortKey="time"
+                    activeKey={sort.key}
+                    direction={sort.direction}
+                    disabled={mutating}
+                    onSort={handleSort}
+                  />
+                </TableHead>
+                <TableHead className="w-[250px]">
+                  {t('usageLogsPage.requestLogs.columns.request')}
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  {t('usageLogsPage.requestLogs.columns.model')}
+                </TableHead>
+                <TableHead className="w-[150px]">
+                  {t('usageLogsPage.requestLogs.columns.homeIp')}
+                </TableHead>
+                <TableHead className="w-[170px]">
+                  {t('usageLogsPage.requestLogs.columns.file')}
+                </TableHead>
+                <TableHead
+                  className="w-[100px] text-right"
+                  aria-sort={
+                    sort.key === 'size'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <RequestLogSortButton
+                    label={t('usageLogsPage.requestLogs.columns.size')}
+                    sortKey="size"
+                    activeKey={sort.key}
+                    direction={sort.direction}
+                    align="right"
+                    disabled={mutating}
+                    onSort={handleSort}
+                  />
+                </TableHead>
+                <TableHead className="table-sticky-action-head w-[120px] text-right">
+                  {t('usageLogsPage.requestLogs.columns.actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const downloading =
+                  isDownloadingRequestLog && downloadingRequestLogId === row.requestId
 
-              return (
-                <TableRow key={row.id} variant="resource" className="group">
-                  <TableCell className="text-muted-foreground truncate">
-                    {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-mono text-xs">{row.requestId}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {row.status === 'failed' ? (
-                        t('usageLogsPage.status.failed')
-                      ) : row.status === 'success' ? (
-                        t('usageLogsPage.status.success')
-                      ) : (
-                        <EmptyValue />
-                      )}
-                    </p>
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-medium">{row.model ?? <EmptyValue />}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {row.provider ?? <EmptyValue />}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground truncate">
-                    {formatHomeEndpoint(row.homeIp, row.homePort) ??
-                      t('usageLogsPage.status.localHome')}
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-mono text-xs">
-                      {row.fileName ?? t('usageLogsPage.requestLogs.inlineLog')}
-                    </p>
-                    {row.downloadUrl ? (
-                      <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                        {row.downloadUrl}
-                      </p>
-                    ) : null}
-                    {!row.available ? (
+                return (
+                  <TableRow key={row.id} variant="resource" className="group">
+                    <TableCell className="text-muted-foreground truncate">
+                      {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-mono text-xs">{row.requestId}</p>
                       <p className="text-muted-foreground mt-1 text-xs">
-                        {t('usageLogsPage.requestLogs.unavailableFile')}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.sizeBytes === null ? (
-                      <EmptyValue />
-                    ) : (
-                      t('usageLogsPage.requestLogs.sizeBytes', {
-                        size: formatBytes(row.sizeBytes),
-                      })
-                    )}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        disabled={!row.available || mutating}
-                        onClick={() =>
-                          onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
-                        }
-                      >
-                        {downloading ? (
-                          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        {row.status === 'failed' ? (
+                          t('usageLogsPage.status.failed')
+                        ) : row.status === 'success' ? (
+                          t('usageLogsPage.status.success')
                         ) : (
-                          <Download className="size-4" aria-hidden="true" />
+                          <EmptyValue />
                         )}
-                        {t('usageLogsPage.actions.download')}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                      </p>
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-medium">{row.model ?? <EmptyValue />}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {row.provider ?? <EmptyValue />}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground truncate">
+                      {formatHomeEndpoint(row.homeIp, row.homePort) ??
+                        t('usageLogsPage.status.localHome')}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-mono text-xs">
+                        {row.fileName ?? t('usageLogsPage.requestLogs.inlineLog')}
+                      </p>
+                      {row.downloadUrl ? (
+                        <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+                          {row.downloadUrl}
+                        </p>
+                      ) : null}
+                      {!row.available ? (
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {t('usageLogsPage.requestLogs.unavailableFile')}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.sizeBytes === null ? (
+                        <EmptyValue />
+                      ) : (
+                        t('usageLogsPage.requestLogs.sizeBytes', {
+                          size: formatBytes(row.sizeBytes),
+                        })
+                      )}
+                    </TableCell>
+                    <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
+                      <div className="table-action-cell-content">
+                        <Button
+                          type="button"
+                          variant="text"
+                          size="sm"
+                          disabled={!row.available || mutating}
+                          onClick={() =>
+                            onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
+                          }
+                        >
+                          {downloading ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Download className="size-4" aria-hidden="true" />
+                          )}
+                          {t('usageLogsPage.actions.download')}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableSurfaceContent>
       ) : (
         <TableEmptyState
           kind={hasSearch ? 'filtered-empty' : 'empty'}
