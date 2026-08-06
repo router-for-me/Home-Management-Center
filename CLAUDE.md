@@ -97,6 +97,10 @@ Do not translate provider IDs, model IDs, API field names, route paths, config k
 - Take field, field-group and filter-row layout from `@/components/shared/form-layout`; do not write `grid gap-* sm:grid-cols-*` at a call site.
 - Overlays cap their height in `dvh`, not `vh` or a fixed px, or a software keyboard pushes them past the fold. Sheets are full width below 40rem and a capped panel above it. Button groups stack and stretch below 40rem rather than wrap.
 - A dense grid of small targets that cannot reach the 40px floor changes its column count, not its hit-area padding.
+- Build a sheet form from `DrawerScaffoldForm` + `DrawerScaffoldBody` + `DrawerScaffoldFooter`; a plain `<form className="grid">` inside a drawer cannot scroll and hides its submit button on a short viewport.
+- Take table header background from `tableHeaderClassName`; never write `bg-muted/70` or another shade, because the sticky action column paints one opaque value.
+- Bulk action bars use `text` and `destructiveText`, the same family as row actions — not `outline` with a hand-written `text-destructive`.
+- Only render a hover drill-down affordance on a card that is actually navigable.
 - Below 40rem a table keeps only its identity column, its one most telling field, and actions; gate the `col`, `TableHead` and `TableCell` on one `useSecondaryColumns()` value. Three things are all required: hide the columns, drop the table min-width, and switch to `table-fixed` (an auto-layout table ignores a cell max-width and sizes to content). Give the identity column no width so it takes the remainder.
 - Verify a responsive claim by measuring at that width in a browser, not by reasoning about it.
 
