@@ -11,6 +11,8 @@ import {
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   containedTableContainerClassName,
   stickyTableHeaderClassName,
@@ -389,6 +391,11 @@ function ProxyPoolSheet({
 
 export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation()
+  /*
+   * URL, scope, priority, last test and note are all in the edit sheet. The pool's
+   * name and whether it is enabled are what a phone needs to see at a glance.
+   */
+  const showSecondary = useSecondaryColumns()
   const workbench = useProxyPoolsWorkbench(enabled)
   const [sheetMode, setSheetMode] = useState<ProxyPoolSheetMode | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ProxyPoolItem | null>(null)
@@ -459,17 +466,28 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
       ) : null}
       {!workbench.loading && !workbench.errorMessage && workbench.items.length > 0 ? (
         <div className="overflow-hidden rounded-md border">
-          <Table className="min-w-[980px]" containerClassName={containedTableContainerClassName}>
+          <Table
+            className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[980px]')}
+            containerClassName={containedTableContainerClassName}
+          >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead>{t('configPage.proxyPools.columns.name')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.url')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.state')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.scope')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.priority')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.lastTest')}</TableHead>
-                <TableHead>{t('configPage.proxyPools.columns.note')}</TableHead>
-                <TableHead className="table-sticky-action-head w-[256px] text-right">
+                {showSecondary ? (
+                  <TableHead>{t('configPage.proxyPools.columns.url')}</TableHead>
+                ) : null}
+                <TableHead className={showSecondary ? undefined : 'w-24'}>
+                  {t('configPage.proxyPools.columns.state')}
+                </TableHead>
+                {showSecondary ? (
+                  <>
+                    <TableHead>{t('configPage.proxyPools.columns.scope')}</TableHead>
+                    <TableHead>{t('configPage.proxyPools.columns.priority')}</TableHead>
+                    <TableHead>{t('configPage.proxyPools.columns.lastTest')}</TableHead>
+                    <TableHead>{t('configPage.proxyPools.columns.note')}</TableHead>
+                  </>
+                ) : null}
+                <TableHead className="table-sticky-action-head table-action-column-3 text-right">
                   {t('configPage.proxyPools.common.actions')}
                 </TableHead>
               </TableRow>
@@ -478,26 +496,35 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
               {workbench.items.map((resource) => (
                 <TableRow key={resource.id} variant="resource">
                   <TableCell>{resource.name}</TableCell>
-                  <TableCell className="max-w-[280px]">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="min-w-0 truncate font-mono text-xs">
-                        {maskProxyUrl(resource.proxyUrl)}
-                      </span>
-                      {resource.proxyUrl ? (
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="icon-xs"
-                          onClick={() => copy(resource.proxyUrl)}
-                        >
-                          <Copy className="size-3" aria-hidden="true" />
-                          <span className="sr-only">{t('configPage.proxyPools.common.copy')}</span>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
+                  {showSecondary ? (
+                    <TableCell className="max-w-[280px]">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate font-mono text-xs">
+                          {maskProxyUrl(resource.proxyUrl)}
+                        </span>
+                        {resource.proxyUrl ? (
+                          <Button
+                            type="button"
+                            variant="text"
+                            size="icon-xs"
+                            onClick={() => copy(resource.proxyUrl)}
+                          >
+                            <Copy className="size-3" aria-hidden="true" />
+                            <span className="sr-only">
+                              {t('configPage.proxyPools.common.copy')}
+                            </span>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  ) : null}
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'flex min-w-0 gap-2',
+                        showSecondary ? 'items-center' : 'flex-col items-start',
+                      )}
+                    >
                       <ProxyRecordStatusBadge enabled={resource.enabled} />
                       <Switch
                         checked={resource.enabled}
@@ -518,61 +545,57 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
                       />
                     </div>
                   </TableCell>
-                  <TableCell>{t('configPage.proxyPools.scope.global')}</TableCell>
-                  <TableCell className="tabular-nums">{resource.priority}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <ProxyTestResultBadge result={resource.lastTestResult} />
-                      <span className="text-muted-foreground text-xs">
-                        {formatDateTime(
-                          resource.lastTestedAt,
-                          t('configPage.proxyPools.common.na'),
-                        )}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="max-w-[220px] truncate">
-                    {resource.note || t('configPage.proxyPools.common.na')}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[256px] text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="md"
-                        className="px-2"
-                        disabled={workbench.mutating}
-                        onClick={() => {
-                          void workbench
-                            .testProxyPool(resource)
-                            .then(() => toast.success(t('configPage.proxyPools.toast.tested')))
-                            .catch(showMutationError)
-                        }}
-                      >
-                        <RefreshCw className="size-4" aria-hidden="true" />
-                        {t('configPage.proxyPools.actions.test')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="md"
-                        className="px-2"
-                        onClick={() => setSheetMode({ type: 'edit', resource })}
-                      >
-                        <SlidersHorizontal className="size-4" aria-hidden="true" />
-                        {t('configPage.proxyPools.common.edit')}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructiveText"
-                        size="md"
-                        className="px-2"
-                        onClick={() => setPendingDelete(resource)}
-                      >
-                        <Trash2 className="size-4" aria-hidden="true" />
-                        {t('configPage.proxyPools.common.delete')}
-                      </Button>
-                    </div>
+                  {showSecondary ? (
+                    <>
+                      <TableCell>{t('configPage.proxyPools.scope.global')}</TableCell>
+                      <TableCell className="tabular-nums">{resource.priority}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <ProxyTestResultBadge result={resource.lastTestResult} />
+                          <span className="text-muted-foreground text-xs">
+                            {formatDateTime(
+                              resource.lastTestedAt,
+                              t('configPage.proxyPools.common.na'),
+                            )}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate">
+                        {resource.note || t('configPage.proxyPools.common.na')}
+                      </TableCell>
+                    </>
+                  ) : null}
+                  <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
+                    <RowActions
+                      menuLabel={resource.name}
+                      actions={[
+                        {
+                          id: 'test',
+                          label: t('configPage.proxyPools.actions.test'),
+                          icon: RefreshCw,
+                          disabled: workbench.mutating,
+                          onSelect: () => {
+                            void workbench
+                              .testProxyPool(resource)
+                              .then(() => toast.success(t('configPage.proxyPools.toast.tested')))
+                              .catch(showMutationError)
+                          },
+                        },
+                        {
+                          id: 'edit',
+                          label: t('configPage.proxyPools.common.edit'),
+                          icon: SlidersHorizontal,
+                          onSelect: () => setSheetMode({ type: 'edit', resource }),
+                        },
+                        {
+                          id: 'delete',
+                          label: t('configPage.proxyPools.common.delete'),
+                          icon: Trash2,
+                          tone: 'destructive',
+                          onSelect: () => setPendingDelete(resource),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

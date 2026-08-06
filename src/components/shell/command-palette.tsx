@@ -57,7 +57,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       loop
       label={t('commandPalette.label')}
       overlayClassName="bg-overlay fixed inset-0 z-[var(--z-overlay)] backdrop-blur-sm"
-      contentClassName="bg-popover text-popover-foreground fixed top-[15vh] left-1/2 z-[var(--z-overlay)] grid w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 overflow-hidden rounded-lg border p-0 shadow-2xl"
+      /*
+       * `dvh` and not `vh`, and a max-height rather than a fixed one. The palette
+       * used to sit at `top-[15vh]` with a `max-h-[420px]` list: on a phone with the
+       * software keyboard open the visible viewport halves, and 15% of the original
+       * height plus a 420px list put the bottom of the palette 14px past the fold —
+       * with the list full, further. `dvh` tracks the shrunken viewport, and the
+       * offset comes down on small screens because 15% of a phone is not 15% of a
+       * desktop.
+       */
+      contentClassName="bg-popover text-popover-foreground fixed top-[8dvh] left-1/2 z-[var(--z-overlay)] grid max-h-[84dvh] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border p-0 shadow-2xl sm:top-[15dvh] sm:max-h-[70dvh]"
     >
       <DialogPrimitive.Title className="sr-only">{t('commandPalette.label')}</DialogPrimitive.Title>
       <DialogPrimitive.Description className="sr-only">
@@ -73,7 +82,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         </kbd>
       </div>
 
-      <Command.List className="max-h-[420px] overflow-y-auto p-2">
+      {/* The list is the row that flexes: the dialog owns the ceiling now. */}
+      <Command.List className="min-h-0 overflow-y-auto p-2">
         <Command.Empty className="text-muted-foreground px-3 py-8 text-center text-sm">
           {t('commandPalette.empty')}
         </Command.Empty>

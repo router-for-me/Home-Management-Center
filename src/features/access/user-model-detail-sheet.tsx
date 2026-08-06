@@ -4,6 +4,7 @@ import { Boxes, Braces, Copy, Lightbulb, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { formGridClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -68,7 +69,7 @@ function Section({
 }
 
 function SpecList({ children }: { children: ReactNode }) {
-  return <dl className="grid gap-2 sm:grid-cols-2">{children}</dl>
+  return <dl className={formGridClassName}>{children}</dl>
 }
 
 function SpecRow({ label, children }: { label: string; children: ReactNode }) {

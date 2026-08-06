@@ -92,6 +92,13 @@ body {
   --table-resource-row-background: var(--table-resource-row-hover-background);
 }
 
+/*
+ * Layout only. The touch floor these buttons used to be given here now comes from
+ * their control step, which applies the same 2.5rem to every sm/md/lg control in
+ * the app instead of the ones inside this one class. An unlayered rule also
+ * outranks the whole cascade, so leaving a duplicate here would quietly win over
+ * the step it agrees with today and the step it might not agree with tomorrow.
+ */
 .table-action-cell-content {
   display: flex;
   min-width: 0;
@@ -101,8 +108,76 @@ body {
   white-space: nowrap;
 }
 
-@media (pointer: coarse) {
-  .table-action-cell-content [data-slot='button'] {
-    min-height: 2.5rem;
+/*
+ * Reserved width for an action column.
+ *
+ * Eight different widths were in use — 120, 128, 144, 180, 184, 220, 248, 256 —
+ * one per table, each tuned by eye against English. Measured against the labels
+ * they actually render, every three-action column among them was too narrow: the
+ * cell clips or, because it is sticky and opaque, spills leftward over the column
+ * beside it. Russian overran a 248px column by 97px, and English by 54px.
+ *
+ * So the width stops being a per-table guess and becomes two things a table
+ * already knows: how many controls the column holds, and which locale is
+ * rendering. Three counts because the column holds at most three controls, and
+ * the trigger is always narrower than a label, so three labels is the worst case.
+ *
+ * The numbers are measured, not estimated — the widest real label set at each
+ * count, plus the cell's 24px padding, rounded up to the spacing scale. Change a
+ * row-action label and the right move is to re-measure rather than to nudge these.
+ *
+ * Below 40rem none of it applies: the column holds one overflow trigger, so it
+ * reserves that trigger's touch target and the locale stops mattering.
+ */
+:root {
+  --table-action-column-compact: 4.5rem;
+  --table-action-column-wide-1: 10rem;
+  --table-action-column-wide-2: 12.5rem;
+  --table-action-column-wide-3: 20.5rem;
+}
+
+:root:lang(ru) {
+  --table-action-column-wide-2: 15.5rem;
+  --table-action-column-wide-3: 23.5rem;
+}
+
+/* :lang(zh) matches zh-CN and zh-TW both, which is what we want: the two share
+   every action label at the same width. */
+:root:lang(zh) {
+  --table-action-column-wide-1: 8.5rem;
+  --table-action-column-wide-2: 11.5rem;
+  --table-action-column-wide-3: 16rem;
+}
+
+/*
+ * The width each count resolves to at the current viewport. It is a separate
+ * variable from the wide value above, and resolved on :root rather than on the
+ * class, so that the one table sizing its columns in JS can add the action column
+ * into its own min-width without re-deriving which shape is showing. Custom
+ * properties inherit downward only; a <table> cannot read one set on its cell.
+ */
+:root {
+  --table-action-column-1: var(--table-action-column-compact);
+  --table-action-column-2: var(--table-action-column-compact);
+  --table-action-column-3: var(--table-action-column-compact);
+}
+
+@media (width >= 40rem) {
+  :root {
+    --table-action-column-1: var(--table-action-column-wide-1);
+    --table-action-column-2: var(--table-action-column-wide-2);
+    --table-action-column-3: var(--table-action-column-wide-3);
   }
+}
+
+.table-action-column-1 {
+  inline-size: var(--table-action-column-1);
+}
+
+.table-action-column-2 {
+  inline-size: var(--table-action-column-2);
+}
+
+.table-action-column-3 {
+  inline-size: var(--table-action-column-3);
 }

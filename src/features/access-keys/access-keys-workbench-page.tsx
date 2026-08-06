@@ -21,7 +21,10 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TableSurface,
   TableSurfaceContent,
@@ -238,6 +241,12 @@ function AccessKeyList({
   onCopyIdentifier: (resource: AccessKeyResource) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Nine columns is four screens of sideways dragging on a phone. Identity and
+   * status stay because they are what a list is for; owner, both scopes, the
+   * sequence number and the length are all in the detail sheet the eye opens.
+   */
+  const showSecondary = useSecondaryColumns()
   const allSelected =
     resources.length > 0 && resources.every((resource) => selectedKeyIds.has(resource.id))
   const partiallySelected =
@@ -248,7 +257,13 @@ function AccessKeyList({
   }
 
   return (
-    <Table containerClassName="rounded-md border" className="min-w-[1040px]">
+    // Below 40rem: no min-width floor, and fixed layout. Dropping the floor alone
+    // is not enough — an auto-layout table ignores a cell's max-width and sizes the
+    // column to its content, which kept this one 298px wider than the viewport.
+    <Table
+      containerClassName="rounded-md border"
+      className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[952px]')}
+    >
       <TableHeader className="bg-muted/70 text-muted-foreground">
         <TableRow variant="static">
           <TableHead className="w-10">
@@ -258,8 +273,10 @@ function AccessKeyList({
               onCheckedChange={onToggleAll}
             />
           </TableHead>
-          <TableHead className="w-16">{t('accessKeysPage.list.index')}</TableHead>
-          <TableHead className="w-[220px]">
+          {showSecondary ? (
+            <TableHead className="w-16">{t('accessKeysPage.list.index')}</TableHead>
+          ) : null}
+          <TableHead className={showSecondary ? 'w-[220px]' : undefined}>
             <div className="flex items-center gap-1.5">
               <span>{t('accessKeysPage.list.identity')}</span>
               <Tooltip>
@@ -280,12 +297,18 @@ function AccessKeyList({
               </Tooltip>
             </div>
           </TableHead>
-          <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
-          <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
-          <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
-          <TableHead>{t('accessKeysPage.list.length')}</TableHead>
-          <TableHead>{t('accessKeysPage.list.status')}</TableHead>
-          <TableHead className="table-sticky-action-head w-[168px] text-right sm:w-[336px]">
+          {showSecondary ? (
+            <>
+              <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.length')}</TableHead>
+            </>
+          ) : null}
+          <TableHead className={showSecondary ? undefined : 'w-28'}>
+            {t('accessKeysPage.list.status')}
+          </TableHead>
+          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
             {t('accessKeysPage.list.actions')}
           </TableHead>
         </TableRow>
@@ -307,10 +330,12 @@ function AccessKeyList({
                 onClick={(event) => event.stopPropagation()}
               />
             </TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">
-              {formatAccessKeySequence(resource)}
-            </TableCell>
-            <TableCell className="w-[220px] max-w-[220px]">
+            {showSecondary ? (
+              <TableCell className="text-muted-foreground font-mono text-xs">
+                {formatAccessKeySequence(resource)}
+              </TableCell>
+            ) : null}
+            <TableCell className={showSecondary ? 'w-[220px] max-w-[220px]' : 'max-w-0'}>
               <div className="flex min-w-0 items-center gap-1.5">
                 {resource.identifier ? (
                   <span className="min-w-0 truncate font-mono text-xs font-medium">
@@ -343,91 +368,78 @@ function AccessKeyList({
                 {resource.maskedValue}
               </p>
             </TableCell>
-            <TableCell>
-              {userLabel(users, resource.userId) ?? (
-                <span className="text-muted-foreground">{t('accessKeysPage.list.unassigned')}</span>
-              )}
-            </TableCell>
-            <TableCell className="max-w-[220px] truncate">
-              {groupListLabel(
-                channelGroups,
-                resource.channelGroupIds,
-                t('accessKeysPage.list.unrestricted'),
-              )}
-            </TableCell>
-            <TableCell className="max-w-[220px] truncate">
-              {groupListLabel(
-                modelGroups,
-                resource.modelGroupIds,
-                t('accessKeysPage.list.unrestricted'),
-              )}
-            </TableCell>
-            <TableCell>{resource.length}</TableCell>
+            {showSecondary ? (
+              <>
+                <TableCell>
+                  {userLabel(users, resource.userId) ?? (
+                    <span className="text-muted-foreground">
+                      {t('accessKeysPage.list.unassigned')}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {groupListLabel(
+                    channelGroups,
+                    resource.channelGroupIds,
+                    t('accessKeysPage.list.unrestricted'),
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[220px] truncate">
+                  {groupListLabel(
+                    modelGroups,
+                    resource.modelGroupIds,
+                    t('accessKeysPage.list.unrestricted'),
+                  )}
+                </TableCell>
+                <TableCell>{resource.length}</TableCell>
+              </>
+            ) : null}
             <TableCell>
               <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
                 <CheckCircle2 className="size-3" aria-hidden="true" />
                 {t('accessKeysPage.status.accepted')}
               </span>
             </TableCell>
-            <TableCell className="table-sticky-action-cell w-[168px] text-right transition-colors sm:w-[336px]">
-              <div className="table-action-cell-content">
-                <Button
-                  type="button"
-                  variant="text"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('accessKeysPage.actions.view')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onSelectKey(resource)
-                  }}
-                >
-                  <Eye className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t('accessKeysPage.actions.view')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('accessKeysPage.actions.edit')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onEditKey(resource)
-                  }}
-                >
-                  <Pencil className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t('accessKeysPage.actions.edit')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('accessKeysPage.actions.copy')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onCopy(resource)
-                  }}
-                >
-                  <Copy className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t('accessKeysPage.actions.copy')}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructiveText"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('accessKeysPage.actions.delete')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onDeleteKey(resource)
-                  }}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  <span className="hidden sm:inline">{t('accessKeysPage.actions.delete')}</span>
-                </Button>
-              </div>
+            <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
+              {/*
+                Four actions, two inline slots, so the order below is a ranking
+                and not a list. View and edit lead because they are the only ones
+                with no other path from this row: the eye is the only way into the
+                detail sheet, and nothing else opens the editor. Copy is the least
+                exclusive — the identifier cell carries its own copy button and
+                the sheet reveals the value too — and delete is deliberately one
+                deliberate step further away than the two that cannot hurt.
+              */}
+              <RowActions
+                menuLabel={formatAccessKeyIdentity(resource)}
+                actions={[
+                  {
+                    id: 'view',
+                    label: t('accessKeysPage.actions.view'),
+                    icon: Eye,
+                    onSelect: () => onSelectKey(resource),
+                  },
+                  {
+                    id: 'edit',
+                    label: t('accessKeysPage.actions.edit'),
+                    icon: Pencil,
+                    onSelect: () => onEditKey(resource),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('accessKeysPage.actions.delete'),
+                    icon: Trash2,
+                    tone: 'destructive',
+                    onSelect: () => onDeleteKey(resource),
+                  },
+                  {
+                    id: 'copy',
+                    label: t('accessKeysPage.actions.copy'),
+                    icon: Copy,
+                    onSelect: () => onCopy(resource),
+                  },
+                ]}
+              />
             </TableCell>
           </TableRow>
         ))}
@@ -505,7 +517,7 @@ function AccessKeyDetailContent({
     return (
       <div className="p-5">
         <form className="grid gap-4" onSubmit={(event) => void handleCreateOrUpdate(event)}>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('accessKeysPage.form.keyValue')}</span>
             <div className="flex gap-2">
               <Input
@@ -693,7 +705,7 @@ function ReplaceAccessKeysContent({
         <span>{t('accessKeysPage.replace.warning')}</span>
       </div>
       <form className="mt-5 grid gap-4" onSubmit={handleReplace}>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('accessKeysPage.replace.textarea')}</span>
           <Textarea
             className="min-h-72 font-mono text-xs"

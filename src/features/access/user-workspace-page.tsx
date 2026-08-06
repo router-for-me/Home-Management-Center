@@ -25,6 +25,9 @@ import { toast } from 'sonner'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -58,6 +61,7 @@ import type { UserApiKeyInput, UserApiKeyResource } from '@/lib/api/user/api-key
 import type { UserEmailStatus, UserPasskeyResource } from '@/lib/api/user/auth'
 import { formatCreditAmount } from '@/lib/billing/amount-format'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
+import { cn } from '@/lib/utils'
 import { useUserSessionStore } from '@/stores/user-session-store'
 
 import { useUserWorkspace } from './use-user-workspace'
@@ -132,7 +136,7 @@ function ApiKeyForm({
 
   return (
     <form className="grid gap-5 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('userWorkspace.keys.form.key')}</span>
         <Input
           value={keyValue}
@@ -205,14 +209,24 @@ function ApiKeysTable({
     )
   }
 
+  /*
+   * Scope and the update time are both in the edit sheet. Which key a row is
+   * cannot move anywhere, so it is the one a phone keeps.
+   */
+  const showSecondary = useSecondaryColumns()
+
   return (
-    <Table className="min-w-[760px]">
+    <Table className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[760px]')}>
       <TableHeader className="bg-muted/70 text-muted-foreground">
         <TableRow variant="static">
           <TableHead>{t('userWorkspace.keys.table.key')}</TableHead>
-          <TableHead>{t('userWorkspace.keys.table.scope')}</TableHead>
-          <TableHead>{t('userWorkspace.keys.table.updatedAt')}</TableHead>
-          <TableHead className="w-[220px] text-right">
+          {showSecondary ? (
+            <>
+              <TableHead>{t('userWorkspace.keys.table.scope')}</TableHead>
+              <TableHead>{t('userWorkspace.keys.table.updatedAt')}</TableHead>
+            </>
+          ) : null}
+          <TableHead className="table-action-column-3 text-right">
             {t('userWorkspace.keys.table.actions')}
           </TableHead>
         </TableRow>
@@ -223,32 +237,41 @@ function ApiKeysTable({
             <TableCell>
               <span className="font-mono text-xs">{resource.maskedKey}</span>
             </TableCell>
-            <TableCell className="text-muted-foreground max-w-[220px] truncate">
-              {scopeLabel(resource, t('userWorkspace.keys.unrestricted'))}
-            </TableCell>
-            <TableCell className="text-muted-foreground">
-              {formatOptionalTime(resource.updatedAt, t('userWorkspace.summary.notAvailable'))}
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-1.5">
-                <Button variant="text" size="md" className="px-2" onClick={() => onCopy(resource)}>
-                  <Copy className="size-4" aria-hidden="true" />
-                  {t('userWorkspace.keys.actions.copy')}
-                </Button>
-                <Button variant="text" size="md" className="px-2" onClick={() => onEdit(resource)}>
-                  <Edit3 className="size-4" aria-hidden="true" />
-                  {t('userWorkspace.keys.actions.edit')}
-                </Button>
-                <Button
-                  variant="destructiveText"
-                  size="md"
-                  className="px-2"
-                  onClick={() => onDelete(resource)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  {t('userWorkspace.keys.actions.delete')}
-                </Button>
-              </div>
+            {showSecondary ? (
+              <>
+                <TableCell className="text-muted-foreground max-w-[220px] truncate">
+                  {scopeLabel(resource, t('userWorkspace.keys.unrestricted'))}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {formatOptionalTime(resource.updatedAt, t('userWorkspace.summary.notAvailable'))}
+                </TableCell>
+              </>
+            ) : null}
+            <TableCell className="table-action-column-3 text-right">
+              <RowActions
+                menuLabel={resource.maskedKey}
+                actions={[
+                  {
+                    id: 'copy',
+                    label: t('userWorkspace.keys.actions.copy'),
+                    icon: Copy,
+                    onSelect: () => onCopy(resource),
+                  },
+                  {
+                    id: 'edit',
+                    label: t('userWorkspace.keys.actions.edit'),
+                    icon: Edit3,
+                    onSelect: () => onEdit(resource),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('userWorkspace.keys.actions.delete'),
+                    icon: Trash2,
+                    tone: 'destructive',
+                    onSelect: () => onDelete(resource),
+                  },
+                ]}
+              />
             </TableCell>
           </TableRow>
         ))}
@@ -493,7 +516,7 @@ function SecurityPanel({
               {t('userWorkspace.security.password.description')}
             </p>
           </div>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('userWorkspace.security.password.newPassword')}</span>
             <Input
               type="password"
@@ -504,7 +527,7 @@ function SecurityPanel({
               onChange={(event) => setNewPassword(event.target.value)}
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('userWorkspace.security.password.confirmPassword')}</span>
             <Input
               type="password"
@@ -588,7 +611,7 @@ function SecurityPanel({
                   <p className="mt-1 font-mono text-sm break-all">{setup.secret}</p>
                 </div>
               </div>
-              <label className="grid gap-2 text-sm font-medium">
+              <label className={fieldClassName}>
                 <span>{t('userWorkspace.security.totp.code')}</span>
                 <Input
                   value={totpCode}

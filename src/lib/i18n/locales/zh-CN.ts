@@ -25,6 +25,9 @@ export const zhCN = {
       copyFailed: '复制失败',
       customizeColumns: '自定义列',
     },
+    rowActions: {
+      more: '{{target}} 的更多操作',
+    },
     language: {
       switch: '语言',
       simplifiedChinese: '简体中文',
@@ -1523,7 +1526,9 @@ export const zhCN = {
           tokens: 'Token 消耗',
           tokenValue: '{{value}} Token',
           requests: '请求数',
-          pointAria: '{{time}}，Token 消耗 {{tokens}}，请求数 {{requests}}',
+        },
+        accessibility: {
+          keyboardInstructions: '聚焦图表后，使用左右方向键逐个查看时间段。',
         },
       },
       usageActivity: {

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
 import { ManagementEndpointField } from '@/components/session/management-endpoint-field'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -110,7 +111,7 @@ export function AdminConnectPage() {
               />
             ) : null}
 
-            <label className="grid gap-2 text-sm font-medium">
+            <label className={fieldClassName}>
               <span>{t('connectionDialog.managementKey')}</span>
               <Input
                 type="password"

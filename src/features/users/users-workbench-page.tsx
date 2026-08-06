@@ -35,7 +35,10 @@ import {
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TableSurface,
   TableSurfaceHeader,
@@ -679,7 +682,7 @@ function UserForm({
 
   return (
     <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('usersPage.form.username')}</span>
         <Input
           value={username}
@@ -697,7 +700,7 @@ function UserForm({
           <span className="text-destructive text-xs leading-5">{fieldErrorFor('username')}</span>
         ) : null}
       </label>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>
           {mode === 'create' ? t('usersPage.form.password') : t('usersPage.form.passwordOptional')}
         </span>
@@ -709,7 +712,7 @@ function UserForm({
           onChange={(event) => setPassword(event.target.value)}
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('usersPage.form.credits')}</span>
         <Input
           type="number"
@@ -768,7 +771,7 @@ function UserForm({
                   />
                 </div>
                 {draft.enabled ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className={formGridClassName}>
                     <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
                       <span>{t('usersPage.periodLimits.limitLabel')}</span>
                       <Input
@@ -818,7 +821,7 @@ function UserForm({
                   <p className="text-destructive text-xs leading-5">{fieldErrorFor(id)}</p>
                 ) : null}
                 {id === '7d' && draft.enabled && draft.mode === 'calendar' ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className={formGridClassName}>
                     <div className="grid gap-1.5">
                       <span className="text-muted-foreground text-xs font-medium">
                         {t('usersPage.periodLimits.weekResetDay')}
@@ -860,7 +863,7 @@ function UserForm({
               </div>
             )
           })}
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('usersPage.form.timezone')}</span>
             <Input
               value={timezone}
@@ -1027,7 +1030,7 @@ function AccessKeyForm({
 
   return (
     <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('usersPage.keys.keyValue')}</span>
         <Input
           value={value}
@@ -1036,7 +1039,7 @@ function AccessKeyForm({
           onChange={(event) => setValue(event.target.value)}
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('usersPage.keys.owner')}</span>
         <Select
           value={userId === null ? unassignedUserValue : String(userId)}
@@ -1138,7 +1141,7 @@ function GroupForm({
 
   return (
     <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>
           {kind === 'channel' ? t('usersPage.groups.channelName') : t('usersPage.groups.modelName')}
         </span>
@@ -2094,7 +2097,7 @@ function PeriodResetDialog({
         <div className="grid gap-4">
           <div className="grid gap-2">
             <p className="text-sm font-medium">{t('usersPage.periodLimits.reset.windowsLabel')}</p>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className={formGridClassName}>
               {userPeriodWindowIds.map((id) => {
                 const windowStatus = status?.windows.find((window) => window.id === id)
 
@@ -2198,6 +2201,12 @@ function UsersTable({
   onBalanceOperation: (users: UserResource[]) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Credits, period limits, key count, both scopes and the update time are all in
+   * the user drawer. Who the user is and whether the account is active are what a
+   * phone keeps.
+   */
+  const showSecondary = useSecondaryColumns()
   const selectableUsers = users.filter((user) => toBalanceOperationTarget(user) !== null)
   const allSelected =
     selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIds.has(user.id))
@@ -2211,7 +2220,7 @@ function UsersTable({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="min-w-[1220px]"
+      className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1220px]')}
     >
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
@@ -2224,14 +2233,20 @@ function UsersTable({
             />
           </TableHead>
           <TableHead>{t('usersPage.list.user')}</TableHead>
-          <TableHead>{t('usersPage.list.status')}</TableHead>
-          <TableHead>{t('usersPage.list.credits')}</TableHead>
-          <TableHead className="w-[120px]">{t('usersPage.list.periodLimits')}</TableHead>
-          <TableHead>{t('usersPage.list.keys')}</TableHead>
-          <TableHead>{t('usersPage.scopes.credential')}</TableHead>
-          <TableHead>{t('usersPage.scopes.model')}</TableHead>
-          <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
-          <TableHead className="table-sticky-action-head w-[280px] text-right">
+          <TableHead className={showSecondary ? undefined : 'w-28'}>
+            {t('usersPage.list.status')}
+          </TableHead>
+          {showSecondary ? (
+            <>
+              <TableHead>{t('usersPage.list.credits')}</TableHead>
+              <TableHead className="w-[120px]">{t('usersPage.list.periodLimits')}</TableHead>
+              <TableHead>{t('usersPage.list.keys')}</TableHead>
+              <TableHead>{t('usersPage.scopes.credential')}</TableHead>
+              <TableHead>{t('usersPage.scopes.model')}</TableHead>
+              <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
+            </>
+          ) : null}
+          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
             {t('usersPage.list.actions')}
           </TableHead>
         </TableRow>
@@ -2265,54 +2280,68 @@ function UsersTable({
               <TableCell>
                 <StatusBadge deletedAt={user.deletedAt} />
               </TableCell>
-              <TableCell className="tabular-nums">{formatCreditAmount(user.credits)}</TableCell>
-              <TableCell className="w-[120px]">
-                <UserPeriodLimitsTableBadge summary={user.periodLimitsSummary} />
-              </TableCell>
-              <TableCell>{formatNumber(keys.length)}</TableCell>
-              <TableCell className="max-w-[220px] truncate">
-                {groupListLabel(
-                  channelGroups,
-                  credentialScopeIds,
-                  t('usersPage.scopes.unrestricted'),
-                )}
-              </TableCell>
-              <TableCell className="max-w-[220px] truncate">
-                {groupListLabel(modelGroups, modelScopeIds, t('usersPage.scopes.unrestricted'))}
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
-              </TableCell>
-              <TableCell className="table-sticky-action-cell w-[280px] text-right transition-colors">
-                <div className="table-action-cell-content">
-                  <Button variant="text" size="md" className="px-2" onClick={() => onView(user)}>
-                    <Eye className="size-4" aria-hidden="true" />
-                    {t('usersPage.actions.view')}
-                  </Button>
-                  <Button variant="text" size="md" className="px-2" onClick={() => onEdit(user)}>
-                    <Pencil className="size-4" aria-hidden="true" />
-                    {t('usersPage.actions.edit')}
-                  </Button>
-                  <Button
-                    variant="text"
-                    size="md"
-                    className="px-2"
-                    disabled={balanceDisabled}
-                    onClick={() => onBalanceOperation([user])}
-                  >
-                    <CircleDollarSign className="size-4" aria-hidden="true" />
-                    {t('usersPage.balance.actions.balance')}
-                  </Button>
-                  <Button
-                    variant="destructiveText"
-                    size="md"
-                    className="px-2"
-                    onClick={() => onDelete(user)}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    {t('usersPage.actions.delete')}
-                  </Button>
-                </div>
+              {showSecondary ? (
+                <>
+                  <TableCell className="tabular-nums">{formatCreditAmount(user.credits)}</TableCell>
+                  <TableCell className="w-[120px]">
+                    <UserPeriodLimitsTableBadge summary={user.periodLimitsSummary} />
+                  </TableCell>
+                  <TableCell>{formatNumber(keys.length)}</TableCell>
+                  <TableCell className="max-w-[220px] truncate">
+                    {groupListLabel(
+                      channelGroups,
+                      credentialScopeIds,
+                      t('usersPage.scopes.unrestricted'),
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-[220px] truncate">
+                    {groupListLabel(modelGroups, modelScopeIds, t('usersPage.scopes.unrestricted'))}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
+                  </TableCell>
+                </>
+              ) : null}
+              <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
+                {/*
+                  Four actions, two inline slots, so the order below ranks them.
+                  View and edit lead because they are this row's only way into the
+                  detail sheet and the editor. Balance follows them into the menu
+                  without loss — it is the specialised credit operation and it also
+                  has a bulk path in the toolbar — and delete sits behind the same
+                  extra step it does on every other table.
+                */}
+                <RowActions
+                  menuLabel={user.username}
+                  actions={[
+                    {
+                      id: 'view',
+                      label: t('usersPage.actions.view'),
+                      icon: Eye,
+                      onSelect: () => onView(user),
+                    },
+                    {
+                      id: 'edit',
+                      label: t('usersPage.actions.edit'),
+                      icon: Pencil,
+                      onSelect: () => onEdit(user),
+                    },
+                    {
+                      id: 'delete',
+                      label: t('usersPage.actions.delete'),
+                      icon: Trash2,
+                      tone: 'destructive',
+                      onSelect: () => onDelete(user),
+                    },
+                    {
+                      id: 'balance',
+                      label: t('usersPage.balance.actions.balance'),
+                      icon: CircleDollarSign,
+                      disabled: balanceDisabled,
+                      onSelect: () => onBalanceOperation([user]),
+                    },
+                  ]}
+                />
               </TableCell>
             </TableRow>
           )
@@ -2338,6 +2367,11 @@ function AccessKeysTable({
   onDelete: (key: AccessKeyResource) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Owner, both scopes and the length are in the edit sheet. Which key a row is
+   * cannot move there, so it is what survives.
+   */
+  const showSecondaryKeyColumns = useSecondaryColumns()
 
   if (keys.length === 0) {
     return <TableEmptyState kind="empty" className="m-0" title={t('usersPage.keys.empty')} />
@@ -2346,16 +2380,20 @@ function AccessKeysTable({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="min-w-[920px]"
+      className={cn(!showSecondaryKeyColumns && 'table-fixed', 'sm:min-w-[920px]')}
     >
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
           <TableHead>{t('usersPage.keys.key')}</TableHead>
-          <TableHead>{t('usersPage.keys.owner')}</TableHead>
-          <TableHead>{t('usersPage.scopes.credential')}</TableHead>
-          <TableHead>{t('usersPage.scopes.model')}</TableHead>
-          <TableHead>{t('usersPage.keys.length')}</TableHead>
-          <TableHead className="table-sticky-action-head w-[180px] text-right">
+          {showSecondaryKeyColumns ? (
+            <>
+              <TableHead>{t('usersPage.keys.owner')}</TableHead>
+              <TableHead>{t('usersPage.scopes.credential')}</TableHead>
+              <TableHead>{t('usersPage.scopes.model')}</TableHead>
+              <TableHead>{t('usersPage.keys.length')}</TableHead>
+            </>
+          ) : null}
+          <TableHead className="table-sticky-action-head table-action-column-2 text-right">
             {t('usersPage.list.actions')}
           </TableHead>
         </TableRow>
@@ -2369,38 +2407,49 @@ function AccessKeysTable({
                 {t('usersPage.keys.sequence', { index: key.index + 1 })}
               </p>
             </TableCell>
-            <TableCell>
-              {userLabel(users, key.userId) ?? (
-                <span className="text-muted-foreground">{t('usersPage.keys.unassigned')}</span>
-              )}
-            </TableCell>
-            <TableCell className="max-w-[240px] truncate">
-              {groupListLabel(
-                channelGroups,
-                key.channelGroupIds,
-                t('usersPage.scopes.unrestricted'),
-              )}
-            </TableCell>
-            <TableCell className="max-w-[240px] truncate">
-              {groupListLabel(modelGroups, key.modelGroupIds, t('usersPage.scopes.unrestricted'))}
-            </TableCell>
-            <TableCell>{key.length}</TableCell>
-            <TableCell className="table-sticky-action-cell w-[180px] text-right transition-colors">
-              <div className="table-action-cell-content">
-                <Button variant="text" size="md" className="px-2" onClick={() => onEdit(key)}>
-                  <Pencil className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.edit')}
-                </Button>
-                <Button
-                  variant="destructiveText"
-                  size="md"
-                  className="px-2"
-                  onClick={() => onDelete(key)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  {t('usersPage.actions.delete')}
-                </Button>
-              </div>
+            {showSecondaryKeyColumns ? (
+              <>
+                <TableCell>
+                  {userLabel(users, key.userId) ?? (
+                    <span className="text-muted-foreground">{t('usersPage.keys.unassigned')}</span>
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[240px] truncate">
+                  {groupListLabel(
+                    channelGroups,
+                    key.channelGroupIds,
+                    t('usersPage.scopes.unrestricted'),
+                  )}
+                </TableCell>
+                <TableCell className="max-w-[240px] truncate">
+                  {groupListLabel(
+                    modelGroups,
+                    key.modelGroupIds,
+                    t('usersPage.scopes.unrestricted'),
+                  )}
+                </TableCell>
+                <TableCell>{key.length}</TableCell>
+              </>
+            ) : null}
+            <TableCell className="table-sticky-action-cell table-action-column-2 text-right transition-colors">
+              <RowActions
+                menuLabel={key.maskedValue}
+                actions={[
+                  {
+                    id: 'edit',
+                    label: t('usersPage.actions.edit'),
+                    icon: Pencil,
+                    onSelect: () => onEdit(key),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('usersPage.actions.delete'),
+                    icon: Trash2,
+                    tone: 'destructive',
+                    onSelect: () => onDelete(key),
+                  },
+                ]}
+              />
             </TableCell>
           </TableRow>
         ))}
@@ -2773,7 +2822,7 @@ function BalanceOperationForm({
           </div>
         ) : null}
 
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('usersPage.balance.form.amount')}</span>
           <Input
             type="number"
@@ -2800,7 +2849,7 @@ function BalanceOperationForm({
           ) : null}
         </label>
 
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>
             {operation === 'deduct'
               ? t('usersPage.balance.form.noteRequired')

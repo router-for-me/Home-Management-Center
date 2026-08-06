@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { DrawerScaffoldBody, DrawerScaffoldFooter } from '@/components/shared/drawer-scaffold'
+import { formGridClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import {
   AlertDialog,
@@ -1100,7 +1101,7 @@ export function ModelPriceImportSheet({
               {t('billingPage.prices.import.targetsHint')}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={formGridClassName}>
             <label className="grid gap-1.5 text-xs">
               <span className="text-muted-foreground">
                 {t('billingPage.prices.import.providerFilter')}
@@ -1203,7 +1204,7 @@ export function ModelPriceImportSheet({
               {t('billingPage.prices.import.policyHint')}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={formGridClassName}>
             <label className="grid gap-1.5 text-xs">
               <span className="text-muted-foreground">
                 {t('billingPage.prices.import.defaultMultiplier')}

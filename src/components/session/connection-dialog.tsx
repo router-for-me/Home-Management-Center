@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, PlugZap, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { ManagementEndpointField } from '@/components/session/management-endpoint-field'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -125,7 +126,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
             />
           ) : null}
 
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('connectionDialog.managementKey')}</span>
             <Input
               type="password"
