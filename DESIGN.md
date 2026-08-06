@@ -62,7 +62,8 @@ Theme tokens:
 - Use `--overlay` for dialogs, sheets, command palette, and blocking overlays.
 - Avoid hard-coded pure white, pure black, or one-off Tailwind color families when a token exists.
 - `src/styles/theme-tokens.css` owns Slate theme mappings and semantic color variables.
-- `src/styles/effects.css` owns cross-theme loading and motion effects.
+- `src/styles/control-tokens.css` owns the control step ramp, the type roles, and the interaction state layer, including the hover colors every bordered control shares.
+- `src/styles/effects.css` owns cross-theme loading and motion effects. A hover or size rule does not belong here: an unlayered rule outranks every layer, so one written here silently takes precedence over the shared control state.
 - `src/styles/globals.css` stays as the style entrypoint plus minimal global base rules.
 
 Do not introduce broad purple gradients, warm parchment backgrounds, beige/brown themes, decorative bokeh, floating orbs, or gradient text.
@@ -124,7 +125,8 @@ Control sizing:
 - Input, select trigger, button, and toggle-group items of the same size name resolve to the same height, and `size="md"` renders `.control-md` with no table in between.
 - One control size per toolbar row. Feature code sets width and spacing, never height or type; `home-ui/no-control-size-override` fails the build on both.
 - Responsive layouts reflow or wrap; they do not change control height at a breakpoint.
-- Compact toolbars may opt into the shared compact modifier: every `sm` control becomes 40px below the `sm` breakpoint.
+- Touch targets belong to the step, not the caller. `sm`, `md` and `lg` grow to a 40px floor below 40rem or on a coarse pointer, so no toolbar has to remember to opt in and none can forget. `xs` is excluded: it exists for controls inside a badge or a table cell, where a 40px floor would break the row it sits in.
+- The ramp is density-ready — `[data-density='compact']` retargets every step with no component change — but no switch is exposed. Treat it as structure, not a feature to build on.
 
 Overflow in controls:
 
@@ -220,6 +222,8 @@ Do:
 - Keep visible copy in i18n locale files.
 - Use lucide icons consistently and semantically.
 - Use shadcn/ui dialogs, sheets, dropdowns, buttons, inputs, and skeletons before creating custom primitives.
+- Pick a control step and let it carry height, padding, gap, type, radius and icon size together.
+- Let a control's family decide its hover, so the next one has an answer to copy instead of a choice to make.
 - Make unsupported backend behavior explicit and recoverable.
 - Prefer teal/slate restrained emphasis for control-console actions.
 - Preserve layout stability for buttons, toolbars, tables, config fields, and navigation items.
@@ -228,6 +232,8 @@ Don't:
 
 - Do not invent backend routes, fields, metrics, or bulk operations.
 - Do not use browser-native `alert`, `confirm`, or `prompt`.
+- Do not set height, box size or type on a control primitive; change the step instead. Lint fails the build on this.
+- Do not write a `hover:border-*` / `hover:bg-*` pair on a bordered control, and do not add a `transition-*` utility to one.
 - Do not use gradient text, decorative orbs, bokeh, glass cards, or hero metric templates.
 - Do not nest cards inside cards.
 - Do not use pure black sidebars or pure white active navigation blocks.
