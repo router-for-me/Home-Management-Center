@@ -141,6 +141,8 @@ Action placement and emphasis:
 - One primary per group, given to the safest frequent next action, usually create. Refresh, sync, export, and replace-all are `outline`.
 - Destructive actions take the destructive treatment; a group of only secondary or risky actions needs no primary.
 - Row action columns carry independent row-level tasks only, never a destination the detail view already offers.
+- A bulk action bar draws from the same family as a row action column: no surface at rest, destructive in red. It is a set of row actions addressed to several rows, not a toolbar.
+- The table header has one background. A sticky column has to paint an opaque copy of it, and can only match one value.
 - Destructive actions come last, and sticky action columns never cover adjacent content.
 
 Row actions:
@@ -161,6 +163,7 @@ Compact viewport:
 - Where a dense grid of small targets cannot clear the floor, the grid changes shape and the targets do not change padding. Enough targets in a narrow row will not fit at any hit-area size, and hit areas grown into each other just select the neighbour. Fewer columns and more rows is the honest answer.
 - A panel over a phone is the task, not a panel: full width below the boundary, capped to a panel above it. Overlays measure their height against the visible viewport, not the layout one, or a software keyboard pushes them past the fold.
 - A group of buttons stacks and stretches rather than wraps. Wrapping leaves each button its own width, and a column of unequal buttons with ragged space beside them reads as several things instead of one group.
+- The page reserves its scrollbar track. Overlays lock the page while open, and where a scrollbar takes up space, removing it widens the viewport and the layout jumps as the overlay opens.
 - Claims about narrow viewports are measured at that width in a browser. Every number behind these rules came from one.
 
 Charts:
@@ -175,6 +178,7 @@ Forms and filters:
 
 - A field, a field group and a filter row each have one spelling, kept in one place. These drift faster than anything else, because every author writes one and no single version looks wrong.
 - Field groups are one column on a phone. Two half-width fields at that width are two truncated fields.
+- A field offering a fixed set of values shows them. A suggestion list that filters against what is already typed shows one option when the field arrives pre-filled, which reads as the only option there is.
 
 Tabs:
 
@@ -189,7 +193,10 @@ Shell:
 
 - Left sidebar is the global navigation anchor.
 - Sidebar supports grouped navigation, collapsed icon rail, active route indicators, and mobile drawer behavior.
-- Navigation items have stable height, clear icon/title alignment, and enough padding for scanning.
+- Navigation items have stable height, clear icon/title alignment, and enough padding for scanning. A navigation icon starts where the header logo starts; two different insets in one rail read as a mistake.
+- The sidebar header and the workspace header are the same height. They sit side by side and their bottom borders are read as one line.
+- The sidebar is as wide as its widest label needs and no wider. A decorative subtitle is not a reason to widen a rail every page pays for.
+- The product mark is the way out of the console, back to where an identity is chosen. Every authenticated surface needs that door.
 - Top bar contains command entry, theme, language, and global connection management.
 - Keep the connection management action because it provides the global disconnect path.
 
@@ -197,7 +204,8 @@ Dashboard:
 
 - Dashboard is the global overview.
 - Lead with a concise operational verdict: disconnected, connected, ready, needs setup, degraded, or unsupported.
-- Suggested actions respond to health gaps and should not duplicate the sidebar.
+- Suggested actions respond to health gaps and should not duplicate the sidebar. A panel that summarises does not also need a link to the page it summarises.
+- A hover affordance means the thing under it is actionable. Showing one on a card that only reports makes the reader test which cards lie.
 - Provider and credential summaries should become setup-oriented empty states when all counts are zero.
 - Partial API failures should surface as degraded data status.
 
@@ -221,6 +229,7 @@ Config workspace:
 Sheets and dialogs:
 
 - Sheets should slide from the side with a clear header, body, and optional footer.
+- A form filling a sheet is built from the shared scaffold, header and footer fixed and the body the only part that scrolls. A form that sizes to its own content cannot shrink, so a short viewport clips the bottom off and takes the submit button with it — present, and unreachable.
 - When a sheet drills into a secondary task, replace its header in place and keep back navigation at the header start; do not stack a second header inside the body.
 - Leave enough spacing between sheet header actions and the first body control to avoid misclicks.
 - Dialogs and confirm flows need stronger dark-mode contrast than the page background.
