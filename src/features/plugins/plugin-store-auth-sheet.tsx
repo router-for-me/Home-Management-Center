@@ -20,6 +20,7 @@ import {
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -412,7 +413,7 @@ export function PluginStoreAuthEditor({
         ) : null}
 
         {state.authType === 'basic' ? (
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={formGridClassName}>
             <div className="grid gap-1.5">
               <label className="text-sm font-medium" htmlFor="plugin-auth-username">
                 {t('pluginPage.auth.fields.username')}
@@ -451,8 +452,8 @@ export function PluginStoreAuthEditor({
         ) : null}
 
         {state.authType === 'header' ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5" htmlFor="plugin-auth-header-name">
+          <div className={formGridClassName}>
+            <label className={fieldClassName} htmlFor="plugin-auth-header-name">
               <span className="text-sm font-medium">{t('pluginPage.auth.fields.headerName')}</span>
               <Input
                 id="plugin-auth-header-name"

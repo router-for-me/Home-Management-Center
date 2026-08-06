@@ -37,8 +37,11 @@ import {
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
+import { formGridClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TablePaginationStatus,
   TableSurface,
@@ -790,6 +793,11 @@ function ChargeRecordsTab({
   onView: (record: ChargeRecord) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * A ledger row is a time and an amount; every attribution column beside them
+   * is in the record detail. So a phone keeps those two and drops the rest.
+   */
+  const showSecondary = useSecondaryColumns()
 
   if (workbench.chargesLoading) return <Skeleton className="h-[420px] rounded-lg" />
   if (workbench.chargesError) {
@@ -817,21 +825,29 @@ function ChargeRecordsTab({
       ) : (
         <TableSurfaceContent>
           <Table
-            className="min-w-[1160px]"
+            className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1160px]')}
             containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead>{t('billingPage.charges.columns.time')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.user')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.key')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.provider')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.model')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.request')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.tokens')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.amount')}</TableHead>
-                <TableHead>{t('billingPage.charges.columns.balanceAfter')}</TableHead>
-                <TableHead className="table-sticky-action-head w-32 text-right">
+                {showSecondary ? (
+                  <>
+                    <TableHead>{t('billingPage.charges.columns.user')}</TableHead>
+                    <TableHead>{t('billingPage.charges.columns.key')}</TableHead>
+                    <TableHead>{t('billingPage.charges.columns.provider')}</TableHead>
+                    <TableHead>{t('billingPage.charges.columns.model')}</TableHead>
+                    <TableHead>{t('billingPage.charges.columns.request')}</TableHead>
+                    <TableHead>{t('billingPage.charges.columns.tokens')}</TableHead>
+                  </>
+                ) : null}
+                <TableHead className={showSecondary ? undefined : 'w-28'}>
+                  {t('billingPage.charges.columns.amount')}
+                </TableHead>
+                {showSecondary ? (
+                  <TableHead>{t('billingPage.charges.columns.balanceAfter')}</TableHead>
+                ) : null}
+                <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                   {t('billingPage.common.actions')}
                 </TableHead>
               </TableRow>
@@ -843,24 +859,28 @@ function ChargeRecordsTab({
                 return (
                   <TableRow key={record.id} variant="resource">
                     <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
-                    <TableCell>{renderChargeUser(record, workbench.users)}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {record.apiKeyMasked || record.apiKeyLabel || <EmptyValue />}
-                    </TableCell>
-                    <TableCell>{record.provider || <EmptyValue />}</TableCell>
-                    <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                      {record.model || <EmptyValue />}
-                    </TableCell>
-                    <TableCell className="max-w-[180px] truncate font-mono text-xs">
-                      {record.requestId}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {t('billingPage.charges.tokenSummary', {
-                        input: formatNumber(record.inputTokens),
-                        output: formatNumber(record.outputTokens),
-                        cache: formatNumber(record.cacheTokens),
-                      })}
-                    </TableCell>
+                    {showSecondary ? (
+                      <>
+                        <TableCell>{renderChargeUser(record, workbench.users)}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {record.apiKeyMasked || record.apiKeyLabel || <EmptyValue />}
+                        </TableCell>
+                        <TableCell>{record.provider || <EmptyValue />}</TableCell>
+                        <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                          {record.model || <EmptyValue />}
+                        </TableCell>
+                        <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                          {record.requestId}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {t('billingPage.charges.tokenSummary', {
+                            input: formatNumber(record.inputTokens),
+                            output: formatNumber(record.outputTokens),
+                            cache: formatNumber(record.cacheTokens),
+                          })}
+                        </TableCell>
+                      </>
+                    ) : null}
                     <TableCell
                       className={cn(
                         'font-medium tabular-nums',
@@ -895,14 +915,23 @@ function ChargeRecordsTab({
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatCreditAmount(record.balanceAfter)}
-                    </TableCell>
-                    <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                      <Button variant="text" size="md" onClick={() => onView(record)}>
-                        <Eye className="size-4" aria-hidden="true" />
-                        {t('billingPage.common.view')}
-                      </Button>
+                    {showSecondary ? (
+                      <TableCell className="tabular-nums">
+                        {formatCreditAmount(record.balanceAfter)}
+                      </TableCell>
+                    ) : null}
+                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                      <RowActions
+                        menuLabel={formatDateTime(record.createdAt, emptyValueText)}
+                        actions={[
+                          {
+                            id: 'view',
+                            label: t('billingPage.common.view'),
+                            icon: Eye,
+                            onSelect: () => onView(record),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 )
@@ -927,6 +956,11 @@ function BalanceRecordsTab({
   onView: (record: BalanceRecord) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * A ledger row is a time and an amount; every attribution column beside them
+   * is in the record detail. So a phone keeps those two and drops the rest.
+   */
+  const showSecondary = useSecondaryColumns()
 
   if (workbench.balanceRecordsLoading) return <Skeleton className="h-[420px] rounded-lg" />
   if (workbench.balanceRecordsError) {
@@ -957,20 +991,30 @@ function BalanceRecordsTab({
       ) : (
         <TableSurfaceContent>
           <Table
-            className="min-w-[1120px]"
+            className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1120px]')}
             containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead>{t('billingPage.balance.columns.time')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.user')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.type')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.amount')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.before')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.after')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.operator')}</TableHead>
-                <TableHead>{t('billingPage.balance.columns.note')}</TableHead>
-                <TableHead className="table-sticky-action-head w-32 text-right">
+                {showSecondary ? (
+                  <>
+                    <TableHead>{t('billingPage.balance.columns.user')}</TableHead>
+                    <TableHead>{t('billingPage.balance.columns.type')}</TableHead>
+                  </>
+                ) : null}
+                <TableHead className={showSecondary ? undefined : 'w-28'}>
+                  {t('billingPage.balance.columns.amount')}
+                </TableHead>
+                {showSecondary ? (
+                  <>
+                    <TableHead>{t('billingPage.balance.columns.before')}</TableHead>
+                    <TableHead>{t('billingPage.balance.columns.after')}</TableHead>
+                    <TableHead>{t('billingPage.balance.columns.operator')}</TableHead>
+                    <TableHead>{t('billingPage.balance.columns.note')}</TableHead>
+                  </>
+                ) : null}
+                <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                   {t('billingPage.common.actions')}
                 </TableHead>
               </TableRow>
@@ -979,19 +1023,23 @@ function BalanceRecordsTab({
               {workbench.balanceRecords.map((record: BalanceRecord) => (
                 <TableRow key={record.id} variant="resource">
                   <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
-                  <TableCell>
-                    {formatUserReference(
-                      record.username,
-                      record.userId,
-                      workbench.users,
-                      emptyValueText,
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {record.type === 'recharge'
-                      ? t('billingPage.balance.types.recharge')
-                      : t('billingPage.balance.types.deduct')}
-                  </TableCell>
+                  {showSecondary ? (
+                    <>
+                      <TableCell>
+                        {formatUserReference(
+                          record.username,
+                          record.userId,
+                          workbench.users,
+                          emptyValueText,
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {record.type === 'recharge'
+                          ? t('billingPage.balance.types.recharge')
+                          : t('billingPage.balance.types.deduct')}
+                      </TableCell>
+                    </>
+                  ) : null}
                   <TableCell
                     className={cn(
                       'font-medium tabular-nums',
@@ -1004,28 +1052,36 @@ function BalanceRecordsTab({
                       record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount),
                     )}
                   </TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatCreditAmount(record.balanceBefore)}
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatCreditAmount(record.balanceAfter)}
-                  </TableCell>
-                  <TableCell>{record.operator || <EmptyValue />}</TableCell>
-                  <TableCell className="max-w-[260px] truncate">
-                    {record.note || <EmptyValue />}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        variant="text"
-                        size="md"
-                        className="px-2"
-                        onClick={() => onView(record)}
-                      >
-                        <Eye className="size-4" aria-hidden="true" />
-                        {t('billingPage.common.view')}
-                      </Button>
-                    </div>
+                  {showSecondary ? (
+                    <>
+                      <TableCell className="tabular-nums">
+                        {formatCreditAmount(record.balanceBefore)}
+                      </TableCell>
+                      <TableCell className="tabular-nums">
+                        {formatCreditAmount(record.balanceAfter)}
+                      </TableCell>
+                    </>
+                  ) : null}
+                  {showSecondary ? (
+                    <>
+                      <TableCell>{record.operator || <EmptyValue />}</TableCell>
+                      <TableCell className="max-w-[260px] truncate">
+                        {record.note || <EmptyValue />}
+                      </TableCell>
+                    </>
+                  ) : null}
+                  <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                    <RowActions
+                      menuLabel={formatDateTime(record.createdAt, emptyValueText)}
+                      actions={[
+                        {
+                          id: 'view',
+                          label: t('billingPage.common.view'),
+                          icon: Eye,
+                          onSelect: () => onView(record),
+                        },
+                      ]}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -1055,6 +1111,12 @@ function ModelPricesTab({
   onDelete: (resource: ModelPrice) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Nine of the twelve columns are the price breakdown, and every one of them is
+   * in the edit sheet. The model and whether the rule is live are what a phone
+   * needs to find the row worth opening.
+   */
+  const showSecondary = useSecondaryColumns()
   const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
   const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
   const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
@@ -1371,22 +1433,32 @@ function ModelPricesTab({
             >
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
-                  <TableHead className="min-w-[190px]">
-                    {t('billingPage.prices.columns.provider')}
-                  </TableHead>
-                  <TableHead className="min-w-[220px]">
+                  {showSecondary ? (
+                    <TableHead className="min-w-[190px]">
+                      {t('billingPage.prices.columns.provider')}
+                    </TableHead>
+                  ) : null}
+                  <TableHead className={showSecondary ? 'min-w-[220px]' : undefined}>
                     {t('billingPage.prices.columns.model')}
                   </TableHead>
-                  <TableHead>{t('billingPage.prices.columns.scope')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.input')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.output')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.cacheRead')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.cacheWrite')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.request')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.state')}</TableHead>
-                  <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
-                  <TableHead className="table-sticky-action-head w-[88px] text-right sm:w-[184px]">
+                  {showSecondary ? (
+                    <>
+                      <TableHead>{t('billingPage.prices.columns.scope')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.input')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.output')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.cacheRead')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.cacheWrite')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.request')}</TableHead>
+                      <TableHead>{t('billingPage.prices.columns.source')}</TableHead>
+                    </>
+                  ) : null}
+                  <TableHead className={showSecondary ? undefined : 'w-24'}>
+                    {t('billingPage.prices.columns.state')}
+                  </TableHead>
+                  {showSecondary ? (
+                    <TableHead>{t('billingPage.prices.columns.updatedAt')}</TableHead>
+                  ) : null}
+                  <TableHead className="table-sticky-action-head table-action-column-2 text-right">
                     {t('billingPage.common.actions')}
                   </TableHead>
                 </TableRow>
@@ -1394,8 +1466,12 @@ function ModelPricesTab({
               <TableBody>
                 {visibleModelPrices.map((resource) => (
                   <TableRow key={resource.id} variant="resource">
-                    <TableCell className="min-w-[190px]">{resource.provider}</TableCell>
-                    <TableCell className="max-w-[220px] min-w-[220px]">
+                    {showSecondary ? (
+                      <TableCell className="min-w-[190px]">{resource.provider}</TableCell>
+                    ) : null}
+                    <TableCell
+                      className={showSecondary ? 'max-w-[220px] min-w-[220px]' : 'max-w-0'}
+                    >
                       <div className="flex min-w-0 items-center gap-1.5">
                         <span className="min-w-0 truncate font-mono text-xs">{resource.model}</span>
                         {resource.model ? (
@@ -1411,42 +1487,46 @@ function ModelPricesTab({
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[170px]">
-                      {supportsRuleScopes ? (
-                        <div className="grid gap-1 text-xs">
-                          <span className="bg-muted w-fit rounded-md px-2 py-1 font-medium">
-                            {formatServiceTier(resource.serviceTier, t)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {formatContextBand(resource.minInputTokens, t)}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">
-                          {t('billingPage.prices.scope.flatPrice')}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatModelPrice(resource.inputPricePerMillion)}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatModelPrice(resource.outputPricePerMillion)}
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatModelPrice(resource.cacheReadPricePerMillion)}
-                    </TableCell>
-                    <TableCell>
-                      <CacheWritePriceValue
-                        value={resource.cacheWritePricePerMillion}
-                        t={t}
-                        className="whitespace-nowrap"
-                      />
-                    </TableCell>
-                    <TableCell className="tabular-nums">
-                      {formatModelPrice(resource.requestPrice)}
-                    </TableCell>
-                    <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
+                    {showSecondary ? (
+                      <>
+                        <TableCell className="min-w-[170px]">
+                          {supportsRuleScopes ? (
+                            <div className="grid gap-1 text-xs">
+                              <span className="bg-muted w-fit rounded-md px-2 py-1 font-medium">
+                                {formatServiceTier(resource.serviceTier, t)}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {formatContextBand(resource.minInputTokens, t)}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              {t('billingPage.prices.scope.flatPrice')}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatModelPrice(resource.inputPricePerMillion)}
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatModelPrice(resource.outputPricePerMillion)}
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatModelPrice(resource.cacheReadPricePerMillion)}
+                        </TableCell>
+                        <TableCell>
+                          <CacheWritePriceValue
+                            value={resource.cacheWritePricePerMillion}
+                            t={t}
+                            className="whitespace-nowrap"
+                          />
+                        </TableCell>
+                        <TableCell className="tabular-nums">
+                          {formatModelPrice(resource.requestPrice)}
+                        </TableCell>
+                        <TableCell>{t(`billingPage.prices.sources.${resource.source}`)}</TableCell>
+                      </>
+                    ) : null}
                     <TableCell>
                       <StateToggle
                         enabled={resource.enabled}
@@ -1457,34 +1537,34 @@ function ModelPricesTab({
                         onToggle={() => onToggle(resource)}
                       />
                     </TableCell>
-                    <TableCell>{formatDateTime(resource.updatedAt, emptyValueText)}</TableCell>
-                    <TableCell className="table-sticky-action-cell w-[88px] text-right transition-colors sm:w-[184px]">
-                      <div className="table-action-cell-content">
-                        <Button
-                          variant="text"
-                          size="md"
-                          className="px-2"
-                          aria-label={t('billingPage.prices.actions.editExact', {
-                            rule: formatModelPriceIdentity(resource, t),
-                          })}
-                          onClick={() => onEdit(resource)}
-                        >
-                          <Pencil className="size-4" aria-hidden="true" />
-                          <span className="hidden sm:inline">{t('billingPage.common.edit')}</span>
-                        </Button>
-                        <Button
-                          variant="destructiveText"
-                          size="md"
-                          className="px-2"
-                          aria-label={t('billingPage.prices.actions.deleteExact', {
-                            rule: formatModelPriceIdentity(resource, t),
-                          })}
-                          onClick={() => onDelete(resource)}
-                        >
-                          <Trash2 className="size-4" aria-hidden="true" />
-                          <span className="hidden sm:inline">{t('billingPage.common.delete')}</span>
-                        </Button>
-                      </div>
+                    {showSecondary ? (
+                      <TableCell>{formatDateTime(resource.updatedAt, emptyValueText)}</TableCell>
+                    ) : null}
+                    <TableCell className="table-sticky-action-cell table-action-column-2 text-right transition-colors">
+                      <RowActions
+                        menuLabel={formatModelPriceIdentity(resource, t)}
+                        actions={[
+                          {
+                            id: 'edit',
+                            label: t('billingPage.common.edit'),
+                            ariaLabel: t('billingPage.prices.actions.editExact', {
+                              rule: formatModelPriceIdentity(resource, t),
+                            }),
+                            icon: Pencil,
+                            onSelect: () => onEdit(resource),
+                          },
+                          {
+                            id: 'delete',
+                            label: t('billingPage.common.delete'),
+                            ariaLabel: t('billingPage.prices.actions.deleteExact', {
+                              rule: formatModelPriceIdentity(resource, t),
+                            }),
+                            icon: Trash2,
+                            tone: 'destructive',
+                            onSelect: () => onDelete(resource),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -2347,7 +2427,7 @@ function ModelPriceSheet({
                 })}
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={formGridClassName}>
               <CompactField
                 label={t('billingPage.prices.form.serviceTier')}
                 error={fieldErrors.serviceTier}
@@ -2440,7 +2520,7 @@ function ModelPriceSheet({
               {t('billingPage.prices.form.pricingHint')}
             </p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={formGridClassName}>
             {priceFields.map(([key, label]) => (
               <CompactField
                 key={key}

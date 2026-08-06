@@ -20,7 +20,9 @@ const buttonVariants = cva(
           'control-bordered border bg-background shadow-xs dark:border-input dark:bg-input/30',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50',
-        text: 'bg-transparent text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground',
+        // An open menu keeps its trigger emphasised, using the same foreground
+        // move as the hover rather than inventing a second signal for it.
+        text: 'bg-transparent text-muted-foreground shadow-none hover:bg-transparent hover:text-foreground data-[state=open]:text-foreground',
         destructiveText:
           'bg-transparent text-destructive shadow-none hover:bg-transparent hover:text-destructive/85 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40',
         link: 'text-primary underline-offset-4 hover:underline',

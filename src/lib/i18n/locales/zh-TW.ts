@@ -25,6 +25,9 @@ export const zhTW = {
       copyFailed: '複製失敗',
       customizeColumns: '自訂欄位',
     },
+    rowActions: {
+      more: '{{target}} 的更多操作',
+    },
     language: {
       switch: '語言',
       simplifiedChinese: '簡體中文',
@@ -1523,7 +1526,9 @@ export const zhTW = {
           tokens: 'Token 消耗',
           tokenValue: '{{value}} Token',
           requests: '請求數',
-          pointAria: '{{time}}，Token 消耗 {{tokens}}，請求數 {{requests}}',
+        },
+        accessibility: {
+          keyboardInstructions: '聚焦圖表後，使用左右方向鍵逐一查看時段。',
         },
       },
       usageActivity: {

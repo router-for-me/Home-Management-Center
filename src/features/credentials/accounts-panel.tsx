@@ -17,6 +17,8 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TableSurface,
   TableSurfaceContent,
@@ -375,72 +377,13 @@ export function AccountsToolbar({
   )
 }
 
-export function CredentialRowActions({
-  mutating,
-  onDelete,
-  onDownload,
-  onView,
-}: {
-  mutating: boolean
-  onDelete: () => void
-  onDownload: () => void
-  onView: () => void
-}) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="table-action-cell-content gap-1">
-      <Button
-        type="button"
-        variant="text"
-        size="md"
-        className="gap-1 px-1"
-        aria-label={t('credentialsPage.actions.detail')}
-        onClick={onView}
-      >
-        <Eye className="size-4" aria-hidden="true" />
-        {t('credentialsPage.actions.detail')}
-      </Button>
-      <Button
-        type="button"
-        variant="text"
-        size="md"
-        className="gap-1 px-1"
-        disabled={mutating}
-        aria-label={t('credentialsPage.actions.download')}
-        onClick={onDownload}
-      >
-        <Download className="size-4" aria-hidden="true" />
-        {t('credentialsPage.actions.download')}
-      </Button>
-      <Button
-        type="button"
-        variant="destructiveText"
-        size="md"
-        className="gap-1 px-1"
-        disabled={mutating}
-        aria-label={t('credentialsPage.actions.delete')}
-        onClick={onDelete}
-      >
-        <Trash2 className="size-4" aria-hidden="true" />
-        {t('credentialsPage.actions.delete')}
-      </Button>
-    </div>
-  )
-}
-
-export function getCredentialActionColumnWidth(language?: string) {
-  const normalizedLanguage = language?.toLowerCase() ?? ''
-
-  if (normalizedLanguage.startsWith('zh')) return 224
-  if (normalizedLanguage.startsWith('ru')) return 284
-  return 260
-}
-
-export function getCredentialTableMinWidth(language: string | undefined) {
-  return 1010 + getCredentialActionColumnWidth(language)
-}
-
+/*
+ * The action column used to be measured per locale — 224px for Chinese, 260 for
+ * English, 284 for Russian — because three labelled buttons only fit if you know
+ * how long the labels are. A shared reserved width replaces the table: the labels
+ * still differ, but the column no longer has to be tailored to them, and below
+ * 40rem there are no labels in it at all.
+ */
 function CredentialList({
   resources,
   selectedResourceId,
@@ -476,9 +419,13 @@ function CredentialList({
   onToggleAll: () => void
   onToggleStatus: (resource: CredentialResource, disabled: boolean) => void
 }) {
-  const { i18n, t } = useTranslation()
-  const language = i18n.resolvedLanguage ?? i18n.language
-  const actionColumnWidth = getCredentialActionColumnWidth(language)
+  const { t } = useTranslation()
+  /*
+   * Provider, quota, websockets and priority all live in the detail drawer the
+   * eye opens. What cannot move there is which credential a row is and whether it
+   * is currently serving traffic, so those two are what a phone keeps.
+   */
+  const showSecondary = useSecondaryColumns()
   const allSelected =
     resources.length > 0 && resources.every((resource) => selectedResourceIds.has(resource.id))
   const partiallySelected =
@@ -512,18 +459,36 @@ function CredentialList({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="table-fixed"
-      style={{ minWidth: getCredentialTableMinWidth(language) }}
+      className="table-fixed sm:min-w-[1250px]"
     >
+      {/*
+        The identity column is the one given `auto`: in a fixed layout the
+        remaining width lands on it, so the table fits any viewport without a
+        min-width floor and the cell still truncates. Status keeps a fixed width
+        so the two do not split the remainder between them.
+      */}
       <colgroup>
         <col className="w-[44px]" />
-        <col className="w-[250px]" />
-        <col className="w-[118px]" />
-        <col className="w-[150px]" />
-        <col className="w-[232px]" />
-        <col className="w-[96px]" />
-        <col className="w-[112px]" />
-        <col style={{ width: actionColumnWidth }} />
+        <col className={showSecondary ? 'w-[250px]' : undefined} />
+        {showSecondary ? (
+          <>
+            <col className="w-[118px]" />
+            <col className="w-[150px]" />
+          </>
+        ) : (
+          /* Status carries a switch as well as a badge, so it cannot go as narrow
+             as a label. Below 40rem the two stack instead of sitting side by side,
+             which trades a little height for the width the identity column needs. */
+          <col className="w-24" />
+        )}
+        {showSecondary ? (
+          <>
+            <col className="w-[232px]" />
+            <col className="w-[96px]" />
+            <col className="w-[112px]" />
+          </>
+        ) : null}
+        <col className="table-action-column-3" />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
@@ -536,15 +501,16 @@ function CredentialList({
             />
           </TableHead>
           <TableHead>{t('credentialsPage.list.credential')}</TableHead>
-          <TableHead>{t('credentialsPage.list.provider')}</TableHead>
+          {showSecondary ? <TableHead>{t('credentialsPage.list.provider')}</TableHead> : null}
           <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
-          <TableHead>{t('credentialsPage.list.quota')}</TableHead>
-          <TableHead>{t('credentialsPage.list.ws')}</TableHead>
-          <TableHead>{t('credentialsPage.list.priority')}</TableHead>
-          <TableHead
-            className="table-sticky-action-head text-right"
-            style={{ width: actionColumnWidth }}
-          >
+          {showSecondary ? (
+            <>
+              <TableHead>{t('credentialsPage.list.quota')}</TableHead>
+              <TableHead>{t('credentialsPage.list.ws')}</TableHead>
+              <TableHead>{t('credentialsPage.list.priority')}</TableHead>
+            </>
+          ) : null}
+          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
             {t('credentialsPage.list.actions')}
           </TableHead>
         </TableRow>
@@ -590,20 +556,27 @@ function CredentialList({
                   </div>
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="flex flex-col items-start gap-1">
-                  <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-                    {providerLabel}
-                  </span>
-                  {resource.type ? (
-                    <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
-                      {resource.type}
+              {showSecondary ? (
+                <TableCell>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
+                      {providerLabel}
                     </span>
-                  ) : null}
-                </div>
-              </TableCell>
+                    {resource.type ? (
+                      <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
+                        {resource.type}
+                      </span>
+                    ) : null}
+                  </div>
+                </TableCell>
+              ) : null}
               <TableCell>
-                <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    'flex min-w-0 gap-2',
+                    showSecondary ? 'items-center' : 'flex-col items-start',
+                  )}
+                >
                   <Switch
                     checked={!resource.disabled}
                     disabled={mutating}
@@ -640,39 +613,60 @@ function CredentialList({
                   </span>
                 </div>
               </TableCell>
-              <TableCell>
-                <UpstreamQuotaCell
-                  state={resolveUpstreamQuotaCellState({
-                    available: quotaAvailable,
-                    loading: quotaLoading,
-                    map: quotaMap,
-                    resource,
-                  })}
-                />
-              </TableCell>
-              <TableCell>
-                <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-              </TableCell>
-              <TableCell>
-                {resource.priority === null ? (
-                  <span className="text-muted-foreground text-xs">
-                    {t('credentialsPage.status.notSet')}
-                  </span>
-                ) : (
-                  <span className="font-mono text-xs font-medium tabular-nums">
-                    {resource.priority}
-                  </span>
-                )}
-              </TableCell>
-              <TableCell
-                className="table-sticky-action-cell pl-4 text-right transition-colors"
-                style={{ width: actionColumnWidth }}
-              >
-                <CredentialRowActions
-                  mutating={mutating}
-                  onDelete={() => onDeleteResource(resource)}
-                  onDownload={() => onDownloadResource(resource)}
-                  onView={() => onOpenDrawer(resource, 'overview')}
+              {showSecondary ? (
+                <>
+                  <TableCell>
+                    <UpstreamQuotaCell
+                      state={resolveUpstreamQuotaCellState({
+                        available: quotaAvailable,
+                        loading: quotaLoading,
+                        map: quotaMap,
+                        resource,
+                      })}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                  </TableCell>
+                  <TableCell>
+                    {resource.priority === null ? (
+                      <span className="text-muted-foreground text-xs">
+                        {t('credentialsPage.status.notSet')}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs font-medium tabular-nums">
+                        {resource.priority}
+                      </span>
+                    )}
+                  </TableCell>
+                </>
+              ) : null}
+              <TableCell className="table-sticky-action-cell table-action-column-3 pl-4 text-right transition-colors">
+                <RowActions
+                  menuLabel={displayName}
+                  actions={[
+                    {
+                      id: 'detail',
+                      label: t('credentialsPage.actions.detail'),
+                      icon: Eye,
+                      onSelect: () => onOpenDrawer(resource, 'overview'),
+                    },
+                    {
+                      id: 'download',
+                      label: t('credentialsPage.actions.download'),
+                      icon: Download,
+                      disabled: mutating,
+                      onSelect: () => onDownloadResource(resource),
+                    },
+                    {
+                      id: 'delete',
+                      label: t('credentialsPage.actions.delete'),
+                      icon: Trash2,
+                      tone: 'destructive',
+                      disabled: mutating,
+                      onSelect: () => onDeleteResource(resource),
+                    },
+                  ]}
                 />
               </TableCell>
             </TableRow>

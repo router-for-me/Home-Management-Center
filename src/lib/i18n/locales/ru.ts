@@ -26,6 +26,9 @@ export const ru = {
       copyFailed: 'Не удалось скопировать',
       customizeColumns: 'Настроить столбцы',
     },
+    rowActions: {
+      more: 'Другие действия: {{target}}',
+    },
     language: {
       switch: 'Язык',
       simplifiedChinese: 'Китайский упрощенный',
@@ -1585,7 +1588,10 @@ export const ru = {
           tokens: 'Расход токенов',
           tokenValue: '{{value}} токенов',
           requests: 'Запросы',
-          pointAria: '{{time}}, расход токенов {{tokens}}, запросов {{requests}}',
+        },
+        accessibility: {
+          keyboardInstructions:
+            'Сфокусируйтесь на графике и используйте клавиши со стрелками влево и вправо для просмотра интервалов.',
         },
       },
       usageActivity: {

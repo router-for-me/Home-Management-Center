@@ -215,6 +215,11 @@
    * pointer half catches a tablet that is wide but still touched. xs is excluded:
    * it exists for controls inside badges and table cells, where a 40px floor would
    * break the row it sits in.
+   *
+   * This condition answers how big a target has to be. It is not the condition
+   * that decides how a layout is shaped — that one is width alone, at the same
+   * 40rem, and lives in `useIsCompactViewport`. Keeping them apart is what lets a
+   * touched 900px tablet get 40px targets in the wide layout it has room for.
    */
   @media (width < 40rem), (pointer: coarse) {
     .control-sm,
@@ -225,6 +230,22 @@
 
     .control-square:is(.control-sm, .control-md, .control-lg) {
       min-inline-size: var(--control-touch-min);
+    }
+
+    /*
+     * Menu and option rows are targets too, and they are the targets a collapsed
+     * layout leans on hardest: once a row's actions live behind one trigger, the
+     * menu is the only place left to hit them. Their height comes from padding
+     * rather than a step, so the floor is applied to the slot. Doing it here
+     * means every menu in the app clears it, not only the ones a feature
+     * remembered.
+     */
+    [data-slot='dropdown-menu-item'],
+    [data-slot='dropdown-menu-checkbox-item'],
+    [data-slot='dropdown-menu-radio-item'],
+    [data-slot='dropdown-menu-sub-trigger'],
+    [data-slot='select-item'] {
+      min-block-size: var(--control-touch-min);
     }
   }
 }

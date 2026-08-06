@@ -19,7 +19,10 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TableSurface,
   TableSurfaceContent,
@@ -533,6 +536,12 @@ function ProviderResourceTable({
   onViewResource: (resource: ProviderResource) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Base URL, prefix and the model count are all in the detail sheet the eye
+   * opens. The key names the row and status is why anyone scans this table, so
+   * those two are what survives a phone.
+   */
+  const showSecondary = useSecondaryColumns()
 
   if (resources.length === 0) {
     if (unsupported) {
@@ -564,24 +573,32 @@ function ProviderResourceTable({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="min-w-[1080px] table-fixed"
+      className="table-fixed sm:min-w-[1080px]"
     >
       <colgroup>
-        <col className="w-[220px]" />
-        <col className="w-[240px]" />
-        <col className="w-[96px]" />
-        <col className="w-[150px]" />
-        <col className="w-[120px]" />
-        <col className="w-[248px]" />
+        <col className={showSecondary ? 'w-[220px]' : undefined} />
+        {showSecondary ? (
+          <>
+            <col className="w-[240px]" />
+            <col className="w-[96px]" />
+            <col className="w-[150px]" />
+          </>
+        ) : null}
+        <col className={showSecondary ? 'w-[120px]' : 'w-28'} />
+        <col className="table-action-column-3" />
       </colgroup>
       <TableHeader className={stickyTableHeaderClassName}>
         <TableRow variant="static">
           <TableHead>{t('providersPage.table.key')}</TableHead>
-          <TableHead>{t('providersPage.table.baseUrl')}</TableHead>
-          <TableHead>{t('providersPage.table.prefix')}</TableHead>
-          <TableHead>{t('providersPage.table.models')}</TableHead>
+          {showSecondary ? (
+            <>
+              <TableHead>{t('providersPage.table.baseUrl')}</TableHead>
+              <TableHead>{t('providersPage.table.prefix')}</TableHead>
+              <TableHead>{t('providersPage.table.models')}</TableHead>
+            </>
+          ) : null}
           <TableHead>{t('providersPage.table.status')}</TableHead>
-          <TableHead className="table-sticky-action-head w-[248px] text-right">
+          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
             {t('providersPage.table.actions')}
           </TableHead>
         </TableRow>
@@ -601,24 +618,28 @@ function ProviderResourceTable({
                 {resource.apiKeyPreview ?? resource.authIndex ?? resource.identifier}
               </p>
             </TableCell>
-            <TableCell>
-              <p className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
-                {resource.baseUrl ?? t('providersPage.status.notSet')}
-              </p>
-            </TableCell>
-            <TableCell>
-              <span className="rounded-md border px-2 py-1 text-xs">
-                {resource.prefix ?? t('providersPage.status.none')}
-              </span>
-            </TableCell>
-            <TableCell>
-              <span className="text-muted-foreground text-xs">
-                {t('providersPage.table.modelSummary', {
-                  models: resource.modelCount,
-                  headers: resource.headerCount,
-                })}
-              </span>
-            </TableCell>
+            {showSecondary ? (
+              <>
+                <TableCell>
+                  <p className="text-muted-foreground max-w-[220px] truncate font-mono text-xs">
+                    {resource.baseUrl ?? t('providersPage.status.notSet')}
+                  </p>
+                </TableCell>
+                <TableCell>
+                  <span className="rounded-md border px-2 py-1 text-xs">
+                    {resource.prefix ?? t('providersPage.status.none')}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-muted-foreground text-xs">
+                    {t('providersPage.table.modelSummary', {
+                      models: resource.modelCount,
+                      headers: resource.headerCount,
+                    })}
+                  </span>
+                </TableCell>
+              </>
+            ) : null}
             <TableCell>
               <span
                 className={cn(
@@ -638,51 +659,31 @@ function ProviderResourceTable({
                   : t('providersPage.status.active')}
               </span>
             </TableCell>
-            <TableCell className="table-sticky-action-cell w-[248px] text-right transition-colors">
-              <div className="table-action-cell-content">
-                <Button
-                  type="button"
-                  variant="text"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('providersPage.actions.view')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onViewResource(resource)
-                  }}
-                >
-                  <Eye className="size-4" aria-hidden="true" />
-                  {t('providersPage.actions.view')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('providersPage.actions.edit')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onEditResource(resource)
-                  }}
-                >
-                  <Pencil className="size-4" aria-hidden="true" />
-                  {t('providersPage.actions.edit')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructiveText"
-                  size="md"
-                  className="px-2"
-                  aria-label={t('providersPage.actions.delete')}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onDeleteResource(resource)
-                  }}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  {t('providersPage.actions.delete')}
-                </Button>
-              </div>
+            <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
+              <RowActions
+                menuLabel={resource.name ?? resource.identifier}
+                actions={[
+                  {
+                    id: 'view',
+                    label: t('providersPage.actions.view'),
+                    icon: Eye,
+                    onSelect: () => onViewResource(resource),
+                  },
+                  {
+                    id: 'edit',
+                    label: t('providersPage.actions.edit'),
+                    icon: Pencil,
+                    onSelect: () => onEditResource(resource),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('providersPage.actions.delete'),
+                    icon: Trash2,
+                    tone: 'destructive',
+                    onSelect: () => onDeleteResource(resource),
+                  },
+                ]}
+              />
             </TableCell>
           </TableRow>
         ))}
@@ -1483,7 +1484,7 @@ function ProviderFormPanel({
 
       <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
         {descriptor.supportsName ? (
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('providersPage.form.name')}</span>
             <Input
               value={form.name}
@@ -1494,7 +1495,7 @@ function ProviderFormPanel({
         ) : null}
 
         {descriptor.supportsApiKey ? (
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('providersPage.form.apiKey')}</span>
             <Input
               ref={apiKeyInputRef}
@@ -1511,7 +1512,7 @@ function ProviderFormPanel({
           </label>
         ) : null}
 
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('providersPage.form.baseUrl')}</span>
           <Input
             ref={baseUrlInputRef}
@@ -1528,7 +1529,7 @@ function ProviderFormPanel({
         </label>
 
         {descriptor.id !== 'openaiCompatibility' ? (
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('providersPage.form.proxyUrl')}</span>
             <Input
               value={form.proxyUrl}
@@ -1539,7 +1540,7 @@ function ProviderFormPanel({
           </label>
         ) : null}
 
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('providersPage.form.prefix')}</span>
           <Input
             value={form.prefix}
@@ -1548,7 +1549,7 @@ function ProviderFormPanel({
           />
         </label>
 
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('providersPage.form.priority')}</span>
           <Input
             type="number"

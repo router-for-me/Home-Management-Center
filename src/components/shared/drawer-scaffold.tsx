@@ -17,7 +17,9 @@ type DrawerScaffoldHeaderProps = ComponentProps<typeof SheetHeader> & {
 }
 
 function DrawerScaffoldContent({ className, ...props }: ComponentProps<typeof SheetContent>) {
-  return <SheetContent className={cn('w-full gap-0 overflow-hidden p-0', className)} {...props} />
+  // No width here any more: the sheet primitive is full-width below 40rem on its
+  // own, and this override was the only thing making the two disagree.
+  return <SheetContent className={cn('gap-0 overflow-hidden p-0', className)} {...props} />
 }
 
 function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerScaffoldHeaderProps) {

@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react'
 
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
+import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -265,7 +266,7 @@ export function DateTimeRangePicker({
               {clearLabel}
             </Button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className={formGridClassName}>
             {(
               [
                 ['from', fromLabel, formatDateTimeValue(from, fromLabel)],
@@ -314,7 +315,7 @@ export function DateTimeRangePicker({
                 <ChevronRight className="size-4" aria-hidden="true" />
               </Button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className={formGridClassName}>
               <DateTimeRangeCalendarMonth
                 monthDate={visibleMonth}
                 locale={locale}
@@ -333,8 +334,8 @@ export function DateTimeRangePicker({
               />
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5">
+          <div className={formGridClassName}>
+            <label className={fieldClassName}>
               <span className="text-muted-foreground text-xs font-medium">{fromLabel}</span>
               <Input
                 id={fromTimeId}
@@ -345,7 +346,7 @@ export function DateTimeRangePicker({
                 onChange={(event) => updateFrom({ time: event.target.value })}
               />
             </label>
-            <label className="grid gap-1.5">
+            <label className={fieldClassName}>
               <span className="text-muted-foreground text-xs font-medium">{toLabel}</span>
               <Input
                 id={toTimeId}
