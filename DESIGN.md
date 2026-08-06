@@ -87,13 +87,12 @@ Rules:
 - Body prose should stay within 65 to 75 characters when used in explanations.
 - Letter spacing should be normal. Avoid negative tracking.
 
-Recommended hierarchy:
+Type roles:
 
-- Page title: compact semibold around `text-xl`.
-- Section title: `text-base` or `text-sm` semibold depending on density.
-- Field label: `text-sm` medium.
-- Help text, metadata, tags: `text-xs` to `text-sm` muted.
-- Code, route paths, config keys, and model IDs: mono only where literal precision helps.
+- Text takes a role, not a scale step. `text-xs` and `text-sm` said nothing about what a string is; the role does, and it carries its own line height so a 16px leading cannot land in a 20px row.
+- `text-page-title` 20/28 semibold; `text-section-title` 16/24 semibold; `text-body` 14/20; `text-label` 14/20 medium; `text-meta` 12/16; `text-code` 12/16 mono.
+- Control labels come from the control step, not from a role. Never set type on a control.
+- Prose keeps its own leading: a paragraph may run looser than `text-body` where the line length asks for it.
 
 ## Layout
 
@@ -114,16 +113,16 @@ Flat by default. Elevation should communicate layering, not decoration.
 - Cards use borders first, subtle shadows only where separation is necessary.
 - Sticky action bars may use light shadow and backdrop treatment to remain readable while scrolling.
 - Sheets, dialogs, dropdowns, command palette, and popovers use stronger elevation because they sit above the task surface.
-- Hover states should change background, border, or text color, not layout.
+- Hover states change color, never layout. Which colors is not a free choice; see the control families under Interaction states.
 - Avoid glassmorphism, heavy blur, glow, or floating decorative panels.
 
 ## Components
 
 Control sizing:
 
-- One height scale: `sm` 32px for dense table tools, `default` 36px for forms and actions, `lg` 40px for prominent or mixed filter rows.
-- Input, select trigger, button, and toggle-group items of the same size name resolve to the same height.
-- One control size per toolbar row. Feature code sets width and spacing, never height.
+- One height scale, named the same as the tokens: `xs` 24, `sm` 28, `md` 32, `lg` 36, `xl` 40. `md` for dense table tools, `lg` for forms, top bars and ordinary actions, `xl` for a prominent action or a mixed filter row, `xs` and `sm` for controls inside a badge or a table cell.
+- Input, select trigger, button, and toggle-group items of the same size name resolve to the same height, and `size="md"` renders `.control-md` with no table in between.
+- One control size per toolbar row. Feature code sets width and spacing, never height or type; `home-ui/no-control-size-override` fails the build on both.
 - Responsive layouts reflow or wrap; they do not change control height at a breakpoint.
 - Compact toolbars may opt into the shared compact modifier: every `sm` control becomes 40px below the `sm` breakpoint.
 
@@ -192,12 +191,24 @@ Sheets and dialogs:
 - Dialogs and confirm flows need stronger dark-mode contrast than the page background.
 - Destructive confirms should name the object or operation being affected.
 
-States:
+Interaction states:
+
+- A hover means one thing everywhere: this is what you are about to act on. It looks the same on every control in the same family, and a control never invents its own.
+- Controls fall into three families by what their surface is made of, and the family decides the hover:
+  - **Bordered** — the control owns its border: outline buttons, inputs, select triggers, textareas, checkboxes, radios. Border and background both move, through `.control-bordered`. Never write a `hover:border-*` or `hover:bg-*` pair on one of these.
+  - **Filled** — the fill is the control: default, destructive and secondary buttons, a checked box, a switch track. Hover deepens that fill, written where the fill is, because only the control knows what color it is currently filled with.
+  - **Segmented** — a container owns the border and the items are surfaces inside it: tabs, toggle groups. Background only; a second border drawn inside the first reads as noise.
+- Focus is one ring on every primitive: `focus-visible:border-ring`, `focus-visible:ring-ring/50`, `focus-visible:ring-[3px]`. Hover and focus are separate signals and may show at once.
+- Hover is never the only way to identify a control or its value; it adds emphasis to something already legible at rest.
+- `.control-bordered` lives in the utilities layer, not the components layer. A layer beats specificity outright, so from the components layer it lost to every `bg-*` a primitive already set. Anything that must override it needs higher specificity, not a later rule.
+- The class owns the transition too. Do not add a `transition-*` utility to a bordered control: it replaces the property list and silently stops the border and background from animating.
+
+Data states:
 
 - Loading uses skeletons with subtle shimmer.
 - Empty states teach the next action.
 - Error states distinguish unsupported backend behavior, unauthorized request, failed request, and partial data.
-- Disabled controls must not look like primary actions.
+- Disabled controls must not look like primary actions, and take no hover at all.
 - Primary actions must not look disabled.
 
 ## Do's and Don'ts
