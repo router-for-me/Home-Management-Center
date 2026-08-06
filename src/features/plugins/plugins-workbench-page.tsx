@@ -524,7 +524,7 @@ function PluginDetailSheet({
               </StatusBadge>
             </div>
             {plugin.authRequired ? (
-              <Button type="button" variant="outline" size="sm" onClick={onManageAuth}>
+              <Button type="button" variant="outline" size="md" onClick={onManageAuth}>
                 <KeyRound className="size-4" aria-hidden="true" />
                 {t('pluginPage.actions.manageAuth')}
               </Button>
@@ -880,13 +880,13 @@ export function PluginsWorkbenchPage() {
               {operationNoticePlugin ? (
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   onClick={() => setSelectedPlugin(operationNoticePlugin)}
                 >
                   {t('pluginPage.actions.details')}
                 </Button>
               ) : null}
-              <Button variant="outline" size="sm" onClick={workbench.refetch}>
+              <Button variant="outline" size="md" onClick={workbench.refetch}>
                 <RefreshCw className="size-4" aria-hidden="true" />
                 {t('pluginPage.actions.refresh')}
               </Button>
@@ -1136,14 +1136,14 @@ export function PluginsWorkbenchPage() {
                         <div className="flex justify-end gap-2">
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="md"
                             onClick={() => setSelectedPlugin(plugin)}
                           >
                             {t('pluginPage.actions.details')}
                           </Button>
                           {!plugin.installed || plugin.updateAvailable ? (
                             <Button
-                              size="sm"
+                              size="md"
                               disabled={isPluginInstallActionDisabled(workbench.installingKey)}
                               onClick={() => {
                                 setInstallTarget(plugin)
@@ -1168,7 +1168,7 @@ export function PluginsWorkbenchPage() {
                           {plugin.installed ? (
                             <Button
                               variant="destructiveText"
-                              size="sm"
+                              size="md"
                               disabled={Boolean(workbench.uninstallingId)}
                               onClick={() => setUninstallTarget(plugin)}
                             >

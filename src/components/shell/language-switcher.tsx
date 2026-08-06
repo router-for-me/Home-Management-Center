@@ -31,8 +31,8 @@ export function LanguageSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className="bg-card hover:bg-muted h-9 min-w-30 justify-between px-3 text-xs font-medium"
+          size="lg"
+          className="bg-card min-w-30 justify-between font-medium"
           aria-label={t('language.switch')}
         >
           <span className="flex min-w-0 items-center gap-2">

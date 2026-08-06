@@ -32,7 +32,6 @@ import {
 } from '@/components/shared/table-surface'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -158,9 +157,6 @@ const defaultVisibleColumns: RequestEventColumnKey[] = [
 ]
 
 const actionColumnWidth = 112
-const touchControlClassName = responsiveCompactControlClassName
-const touchButtonClassName = responsiveCompactControlClassName
-const touchInputClassName = responsiveCompactControlClassName
 const requestEventFilterGridClassName = 'grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
 const requestEventSearchFields: RequestEventSearchField[] = [
   'requestId',
@@ -462,7 +458,7 @@ function RequestEventsFiltersToolbar({
             onChange({ range: range as RequestEventFilters['range'], offset: 0 })
           }
         >
-          <SelectTrigger className={touchControlClassName} size="sm">
+          <SelectTrigger size="md">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -482,7 +478,7 @@ function RequestEventsFiltersToolbar({
             onChange({ status: status as RequestEventFilters['status'], offset: 0 })
           }
         >
-          <SelectTrigger className={touchControlClassName} size="sm">
+          <SelectTrigger size="md">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -498,7 +494,7 @@ function RequestEventsFiltersToolbar({
           disabled={disabled}
           onValueChange={(provider) => onChange({ provider, offset: 0 })}
         >
-          <SelectTrigger className={touchControlClassName} size="sm">
+          <SelectTrigger size="md">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -515,7 +511,7 @@ function RequestEventsFiltersToolbar({
           disabled={disabled}
           onValueChange={(model) => onChange({ model, offset: 0 })}
         >
-          <SelectTrigger className={touchControlClassName} size="sm">
+          <SelectTrigger size="md">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -531,8 +527,7 @@ function RequestEventsFiltersToolbar({
       {filters.range === 'custom' ? (
         <div className={cn(requestEventFilterGridClassName, 'mt-3 border-t pt-3')}>
           <Input
-            size="sm"
-            className={touchInputClassName}
+            size="md"
             type="datetime-local"
             value={filters.customFrom}
             disabled={disabled}
@@ -540,8 +535,7 @@ function RequestEventsFiltersToolbar({
             onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
           />
           <Input
-            size="sm"
-            className={touchInputClassName}
+            size="md"
             type="datetime-local"
             value={filters.customTo}
             disabled={disabled}
@@ -557,7 +551,7 @@ function RequestEventsFiltersToolbar({
             disabled={disabled}
             onValueChange={(eventType) => onChange({ eventType, offset: 0 })}
           >
-            <SelectTrigger className={touchControlClassName} size="sm">
+            <SelectTrigger size="md">
               <SelectValue placeholder={t('requestEventsPage.filters.eventType')} />
             </SelectTrigger>
             <SelectContent>
@@ -574,7 +568,7 @@ function RequestEventsFiltersToolbar({
             disabled={disabled}
             onValueChange={(homeIp) => onChange({ homeIp, offset: 0 })}
           >
-            <SelectTrigger className={touchControlClassName} size="sm">
+            <SelectTrigger size="md">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -591,7 +585,7 @@ function RequestEventsFiltersToolbar({
             disabled={disabled}
             onValueChange={(cpaNode) => onChange({ cpaNode, offset: 0 })}
           >
-            <SelectTrigger className={touchControlClassName} size="sm">
+            <SelectTrigger size="md">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -608,7 +602,7 @@ function RequestEventsFiltersToolbar({
             disabled={disabled}
             onValueChange={(statusCode) => onChange({ statusCode, offset: 0 })}
           >
-            <SelectTrigger className={touchControlClassName} size="sm">
+            <SelectTrigger size="md">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -627,7 +621,7 @@ function RequestEventsFiltersToolbar({
               onChange({ sort: sort as RequestEventFilters['sort'], offset: 0 })
             }
           >
-            <SelectTrigger className={touchControlClassName} size="sm">
+            <SelectTrigger size="md">
               <SelectValue placeholder={t('requestEventsPage.filters.sort')} />
             </SelectTrigger>
             <SelectContent>
@@ -661,7 +655,7 @@ function RequestEventsFiltersToolbar({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="border-border/80 bg-muted/20 text-muted-foreground hover:border-primary/35 hover:bg-primary/5 hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
+          className="control-bordered border-border/80 bg-muted/20 text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
           aria-label={
             advancedOpen
               ? t('requestEventsPage.filters.hideAdvanced')
@@ -748,7 +742,6 @@ function NumberRangeInputGroup({
   return (
     <div
       className={cn(
-        responsiveCompactControlClassName,
         'border-input bg-background focus-within:ring-ring flex min-w-0 items-center rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
         invalid && 'border-destructive focus-within:ring-destructive/20',
         disabled && 'pointer-events-none opacity-50',
@@ -759,7 +752,7 @@ function NumberRangeInputGroup({
       aria-invalid={invalid || undefined}
     >
       <Input
-        size="sm"
+        size="md"
         className="h-full min-h-0 rounded-r-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
         inputMode="numeric"
@@ -778,7 +771,7 @@ function NumberRangeInputGroup({
         {separatorLabel}
       </span>
       <Input
-        size="sm"
+        size="md"
         className="h-full min-h-0 rounded-l-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
         inputMode="numeric"
@@ -1031,7 +1024,7 @@ function RequestEventDetailSheet({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               disabled={!requestLogAvailable || !requestLog?.requestId || mutating}
               onClick={() =>
                 requestLog?.requestId &&
@@ -1171,8 +1164,7 @@ function RequestEventsTable({
               <Button
                 type="button"
                 variant="text"
-                size="sm"
-                className={touchButtonClassName}
+                size="md"
                 disabled={mutating}
                 onClick={onClearFilters}
               >
@@ -1185,8 +1177,7 @@ function RequestEventsTable({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className={touchButtonClassName}
+              size="md"
               disabled={!canExport || !filtersValid || rows.length === 0 || isExporting || mutating}
               onClick={onExport}
             >
@@ -1201,7 +1192,7 @@ function RequestEventsTable({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className={touchButtonClassName}>
+                <Button type="button" variant="outline" size="md">
                   <Columns3 className="size-4" aria-hidden="true" />
                   {t('actions.customizeColumns')}
                 </Button>
@@ -1387,8 +1378,7 @@ function RequestEventsTable({
                         <Button
                           type="button"
                           variant="text"
-                          size="sm"
-                          className={touchButtonClassName}
+                          size="md"
                           onClick={() => onInspect(event)}
                         >
                           <Eye className="size-4" aria-hidden="true" />
@@ -1411,8 +1401,7 @@ function RequestEventsTable({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className={touchButtonClassName}
+                  size="md"
                   disabled={mutating}
                   onClick={onClearFilters}
                 >
@@ -1459,8 +1448,8 @@ function RequestEventsTable({
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
                 <SelectTrigger
-                  className={cn(touchControlClassName, 'w-24')}
-                  size="sm"
+                  className={cn('w-24')}
+                  size="md"
                   aria-label={t('requestEventsPage.table.pageSize')}
                 >
                   <SelectValue />
@@ -1478,8 +1467,7 @@ function RequestEventsTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={touchButtonClassName}
+                size="md"
                 disabled={!canGoPrevious || mutating}
                 onClick={() => onOffsetChange(Math.max(0, filters.offset - filters.limit))}
               >
@@ -1489,8 +1477,7 @@ function RequestEventsTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={touchButtonClassName}
+                size="md"
                 disabled={!canGoNext || mutating}
                 onClick={() => onOffsetChange(filters.offset + filters.limit)}
               >

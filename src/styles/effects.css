@@ -106,23 +106,6 @@
   pointer-events: none;
 }
 
-.home-header-action {
-  min-width: 2.25rem;
-  border-color: color-mix(in oklch, var(--border) 84%, transparent);
-  background: color-mix(in oklch, var(--card) 72%, transparent);
-  color: var(--foreground);
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
-}
-
-.home-header-action:hover {
-  border-color: color-mix(in oklch, var(--primary) 36%, var(--border));
-  background-color: color-mix(in oklch, var(--primary) 7%, var(--card));
-  color: var(--foreground);
-}
-
 .home-hero-title {
   display: grid;
   justify-items: center;
@@ -546,10 +529,6 @@
 
   .home-capability-card,
   .home-capability-icon {
-    transition: none;
-  }
-
-  .home-header-action {
     transition: none;
   }
 

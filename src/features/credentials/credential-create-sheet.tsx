@@ -240,7 +240,7 @@ function OAuthClosurePanel({
               {t('credentialsPage.oauth.statusNotChecked')}
             </span>
           )}
-          <Button type="submit" variant="outline" size="sm" disabled={mutating}>
+          <Button type="submit" variant="outline" size="md" disabled={mutating}>
             {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
             {t('credentialsPage.oauth.checkStatus')}
           </Button>
@@ -390,11 +390,11 @@ function OAuthAuthorizationLinkPanel({ session }: { session: OAuthSessionSummary
         </p>
       </div>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="outline" size="sm" onClick={() => void handleCopy()}>
+        <Button type="button" variant="outline" size="md" onClick={() => void handleCopy()}>
           <Copy className="size-4" aria-hidden="true" />
           {t('credentialsPage.oauth.copyAuthorizationLink')}
         </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={handleOpen}>
+        <Button type="button" variant="secondary" size="md" onClick={handleOpen}>
           <ExternalLink className="size-4" aria-hidden="true" />
           {t('credentialsPage.oauth.openAuthorizationLink')}
         </Button>
@@ -506,7 +506,7 @@ function CredentialFileDropzone({
         <Button
           type="button"
           variant="text"
-          size="sm"
+          size="md"
           className="justify-self-end"
           disabled={disabled}
           onClick={onClearSelection}
@@ -703,7 +703,7 @@ function OAuthStartPanel({
                 </div>
                 <Button
                   type="button"
-                  size="sm"
+                  size="md"
                   disabled={mutating}
                   onClick={() => void onStartOAuth(provider)}
                 >
@@ -1005,7 +1005,7 @@ export function CreateCredentialSheet({
                   key={item}
                   value={item}
                   disabled={uploadInProgress}
-                  className="data-[state=on]:bg-background data-[state=on]:text-foreground h-auto min-h-9 px-2 text-center whitespace-normal"
+                  className="data-[state=on]:bg-background data-[state=on]:text-foreground min-h-control-lg h-auto px-2 text-center whitespace-normal"
                 >
                   {t(`credentialsPage.create.modes.${item}`)}
                 </ToggleGroupItem>

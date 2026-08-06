@@ -1055,7 +1055,7 @@ export function ModelPriceImportSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={busy}
                 onClick={onRetryCandidates}
               >
@@ -1318,7 +1318,7 @@ export function ModelPriceImportSheet({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="md"
                     className="shrink-0"
                     disabled={busy || !importPreferencesModified}
                     onClick={() => setResetPreferencesOpen(true)}
@@ -1335,7 +1335,7 @@ export function ModelPriceImportSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="md"
                       disabled={busy}
                       onClick={() =>
                         setPolicy((current) => ({
@@ -1427,7 +1427,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-lg"
                           title={t('billingPage.prices.import.moveRuleUp')}
                           disabled={busy || index === 0}
                           onClick={() => moveRule(index, -1)}
@@ -1437,7 +1437,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-lg"
                           title={t('billingPage.prices.import.moveRuleDown')}
                           disabled={busy || index === policy.rules.length - 1}
                           onClick={() => moveRule(index, 1)}
@@ -1447,7 +1447,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-lg"
                           title={t('billingPage.prices.import.removeRule')}
                           disabled={busy}
                           onClick={() =>
@@ -1472,7 +1472,7 @@ export function ModelPriceImportSheet({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="md"
                       disabled={busy}
                       onClick={() =>
                         setPolicy((current) => ({
@@ -1526,7 +1526,7 @@ export function ModelPriceImportSheet({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-lg"
                           title={t('billingPage.prices.import.removeAlias')}
                           disabled={busy}
                           onClick={() =>
@@ -1613,7 +1613,7 @@ export function ModelPriceImportSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={!preview}
                 onClick={exportPreview}
               >
@@ -1623,7 +1623,7 @@ export function ModelPriceImportSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={busy || targets.length === 0}
                 onClick={() =>
                   void (serverEnabled ? requestServerPreview([...selectedKeys]) : loadCatalog())
@@ -1743,7 +1743,7 @@ export function ModelPriceImportSheet({
             <div className="relative">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
               <Input
-                size="sm"
+                size="md"
                 className="pl-9"
                 value={search}
                 disabled={busy}
@@ -1757,7 +1757,7 @@ export function ModelPriceImportSheet({
               disabled={busy}
             >
               <SelectTrigger
-                size="sm"
+                size="md"
                 aria-label={t('billingPage.prices.import.statusFilter.label')}
               >
                 <SelectValue />
@@ -1780,7 +1780,7 @@ export function ModelPriceImportSheet({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               disabled={busy || filteredRows.every((row) => !row.applicable)}
               onClick={() =>
                 setSelectedKeys(
@@ -1797,7 +1797,7 @@ export function ModelPriceImportSheet({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               disabled={busy || selectedKeys.size === 0}
               onClick={() => setSelectedKeys(new Set())}
             >
@@ -1941,7 +1941,7 @@ export function ModelPriceImportSheet({
                                   onValueChange={(value) => setMatchOverride(row, value)}
                                   disabled={busy}
                                 >
-                                  <SelectTrigger size="sm" className="min-w-[190px] text-xs">
+                                  <SelectTrigger size="md" className="min-w-[190px]">
                                     <SelectValue
                                       placeholder={t(
                                         'billingPage.prices.import.resolveMatchPlaceholder',
@@ -1963,7 +1963,7 @@ export function ModelPriceImportSheet({
                                   <Button
                                     type="button"
                                     variant="outline"
-                                    size="sm"
+                                    size="md"
                                     disabled={!override || busy}
                                     onClick={() =>
                                       void requestServerPreview([...selectedKeys, row.key])
@@ -2006,7 +2006,7 @@ export function ModelPriceImportSheet({
                         </TableCell>
                         <TableCell className="align-top">
                           <Input
-                            size="sm"
+                            size="md"
                             className="w-24 font-mono text-xs"
                             type="number"
                             min="0.01"
