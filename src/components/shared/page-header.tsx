@@ -30,7 +30,7 @@ function PageHeader({
           {icon ? <div className="shrink-0">{icon}</div> : null}
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-normal">{title}</h1>
+              <h1 className="text-page-title tracking-normal">{title}</h1>
               {titleMeta}
             </div>
             {description ? (
@@ -39,7 +39,7 @@ function PageHeader({
               </p>
             ) : null}
             {meta ? (
-              <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              <div className="text-muted-foreground text-meta mt-3 flex flex-wrap gap-x-4 gap-y-1">
                 {meta}
               </div>
             ) : null}

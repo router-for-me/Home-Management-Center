@@ -3,7 +3,6 @@ import { useId, useMemo, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
@@ -237,9 +236,8 @@ export function DateTimeRangePicker({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="md"
           className={cn(
-            responsiveCompactControlClassName,
             'w-full justify-start gap-2 px-3 font-normal sm:w-[21rem]',
             !hasValue && 'text-muted-foreground',
             className,
@@ -259,7 +257,7 @@ export function DateTimeRangePicker({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 px-2"
+              className="px-2"
               disabled={!hasValue}
               onClick={() => onChange({ from: '', to: '' })}
             >
@@ -298,7 +296,7 @@ export function DateTimeRangePicker({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2"
+                className="px-2"
                 onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
@@ -310,7 +308,7 @@ export function DateTimeRangePicker({
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2"
+                className="px-2"
                 onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
               >
                 <ChevronRight className="size-4" aria-hidden="true" />

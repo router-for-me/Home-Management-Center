@@ -58,7 +58,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   Dialog,
   DialogContent,
@@ -491,7 +490,7 @@ function PaginationBar({
         >
           <SelectTrigger
             className="w-28"
-            size="sm"
+            size="md"
             aria-label={t('billingPage.pagination.pageSize')}
           >
             <SelectValue />
@@ -506,7 +505,7 @@ function PaginationBar({
         </Select>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset === 0}
           onClick={() => onChange({ ...pagination, offset: getPreviousOffset(pagination) })}
         >
@@ -514,7 +513,7 @@ function PaginationBar({
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset + pagination.limit >= total}
           onClick={() => onChange({ ...pagination, offset: getNextOffset(pagination, total) })}
         >
@@ -816,93 +815,101 @@ function ChargeRecordsTab({
       {workbench.charges.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
-        <Table className="min-w-[1160px]" containerClassName={containedTableContainerClassName}>
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead>{t('billingPage.charges.columns.time')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.user')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.key')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.provider')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.model')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.request')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.tokens')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.amount')}</TableHead>
-              <TableHead>{t('billingPage.charges.columns.balanceAfter')}</TableHead>
-              <TableHead className="table-sticky-action-head w-32 text-right">
-                {t('billingPage.common.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workbench.charges.map((record) => {
-              const unpriced = isUnpricedCharge(record)
-              const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
-              return (
-                <TableRow key={record.id} variant="resource">
-                  <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
-                  <TableCell>{renderChargeUser(record, workbench.users)}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {record.apiKeyMasked || record.apiKeyLabel || <EmptyValue />}
-                  </TableCell>
-                  <TableCell>{record.provider || <EmptyValue />}</TableCell>
-                  <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                    {record.model || <EmptyValue />}
-                  </TableCell>
-                  <TableCell className="max-w-[180px] truncate font-mono text-xs">
-                    {record.requestId}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {t('billingPage.charges.tokenSummary', {
-                      input: formatNumber(record.inputTokens),
-                      output: formatNumber(record.outputTokens),
-                      cache: formatNumber(record.cacheTokens),
-                    })}
-                  </TableCell>
-                  <TableCell
-                    className={cn(
-                      'font-medium tabular-nums',
-                      unpriced ? 'text-warning-foreground dark:text-warning' : 'text-destructive',
-                    )}
-                  >
-                    <div className="inline-flex items-center gap-1">
-                      <span>{formatSignedDetailedCreditAmount(-Math.abs(record.amount))}</span>
-                      {unpricedMessage ? (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="text"
-                              size="icon-xs"
-                              className="text-warning-foreground hover:bg-warning/12 hover:text-warning-foreground focus-visible:ring-warning/30 dark:text-warning dark:hover:text-warning size-5"
-                              aria-label={unpricedMessage}
+        <TableSurfaceContent>
+          <Table
+            className="min-w-[1160px]"
+            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+          >
+            <TableHeader className={stickyTableHeaderClassName}>
+              <TableRow variant="static">
+                <TableHead>{t('billingPage.charges.columns.time')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.user')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.key')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.provider')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.model')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.request')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.tokens')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.amount')}</TableHead>
+                <TableHead>{t('billingPage.charges.columns.balanceAfter')}</TableHead>
+                <TableHead className="table-sticky-action-head w-32 text-right">
+                  {t('billingPage.common.actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workbench.charges.map((record) => {
+                const unpriced = isUnpricedCharge(record)
+                const unpricedMessage = unpriced ? formatUnpricedChargeMessage(record, t) : null
+                return (
+                  <TableRow key={record.id} variant="resource">
+                    <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
+                    <TableCell>{renderChargeUser(record, workbench.users)}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {record.apiKeyMasked || record.apiKeyLabel || <EmptyValue />}
+                    </TableCell>
+                    <TableCell>{record.provider || <EmptyValue />}</TableCell>
+                    <TableCell className="max-w-[220px] truncate font-mono text-xs">
+                      {record.model || <EmptyValue />}
+                    </TableCell>
+                    <TableCell className="max-w-[180px] truncate font-mono text-xs">
+                      {record.requestId}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {t('billingPage.charges.tokenSummary', {
+                        input: formatNumber(record.inputTokens),
+                        output: formatNumber(record.outputTokens),
+                        cache: formatNumber(record.cacheTokens),
+                      })}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        'font-medium tabular-nums',
+                        unpriced ? 'text-warning-foreground dark:text-warning' : 'text-destructive',
+                      )}
+                    >
+                      <div className="inline-flex items-center gap-1">
+                        <span>{formatSignedDetailedCreditAmount(-Math.abs(record.amount))}</span>
+                        {unpricedMessage ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="text"
+                                size="icon-xs"
+                                // 20px because it sits inside a table cell beside the amount, below the 24px
+                                // floor.
+                                // eslint-disable-next-line home-ui/no-control-size-override
+                                className="text-warning-foreground hover:bg-warning/12 hover:text-warning-foreground focus-visible:ring-warning/30 dark:text-warning dark:hover:text-warning size-5"
+                                aria-label={unpricedMessage}
+                              >
+                                <AlertTriangle className="size-3.5" aria-hidden="true" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              className="max-w-80 text-left leading-5 text-wrap break-words"
                             >
-                              <AlertTriangle className="size-3.5" aria-hidden="true" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent
-                            side="top"
-                            className="max-w-80 text-left leading-5 text-wrap break-words"
-                          >
-                            {unpricedMessage}
-                          </TooltipContent>
-                        </Tooltip>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {formatCreditAmount(record.balanceAfter)}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                    <Button variant="text" size="sm" onClick={() => onView(record)}>
-                      <Eye className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.view')}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                              {unpricedMessage}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums">
+                      {formatCreditAmount(record.balanceAfter)}
+                    </TableCell>
+                    <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
+                      <Button variant="text" size="md" onClick={() => onView(record)}>
+                        <Eye className="size-4" aria-hidden="true" />
+                        {t('billingPage.common.view')}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableSurfaceContent>
       )}
     </TableSurface>
   )
@@ -948,78 +955,83 @@ function BalanceRecordsTab({
       {workbench.balanceRecords.length === 0 ? (
         <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (
-        <Table className="min-w-[1120px]" containerClassName={containedTableContainerClassName}>
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead>{t('billingPage.balance.columns.time')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.user')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.type')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.amount')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.before')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.after')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.operator')}</TableHead>
-              <TableHead>{t('billingPage.balance.columns.note')}</TableHead>
-              <TableHead className="table-sticky-action-head w-32 text-right">
-                {t('billingPage.common.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {workbench.balanceRecords.map((record: BalanceRecord) => (
-              <TableRow key={record.id} variant="resource">
-                <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
-                <TableCell>
-                  {formatUserReference(
-                    record.username,
-                    record.userId,
-                    workbench.users,
-                    emptyValueText,
-                  )}
-                </TableCell>
-                <TableCell>
-                  {record.type === 'recharge'
-                    ? t('billingPage.balance.types.recharge')
-                    : t('billingPage.balance.types.deduct')}
-                </TableCell>
-                <TableCell
-                  className={cn(
-                    'font-medium tabular-nums',
-                    record.type === 'deduct'
-                      ? 'text-warning-foreground dark:text-warning'
-                      : 'text-success',
-                  )}
-                >
-                  {formatSignedCreditAmount(
-                    record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount),
-                  )}
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatCreditAmount(record.balanceBefore)}
-                </TableCell>
-                <TableCell className="tabular-nums">
-                  {formatCreditAmount(record.balanceAfter)}
-                </TableCell>
-                <TableCell>{record.operator || <EmptyValue />}</TableCell>
-                <TableCell className="max-w-[260px] truncate">
-                  {record.note || <EmptyValue />}
-                </TableCell>
-                <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                  <div className="table-action-cell-content">
-                    <Button
-                      variant="text"
-                      size="sm"
-                      className="px-2"
-                      onClick={() => onView(record)}
-                    >
-                      <Eye className="size-4" aria-hidden="true" />
-                      {t('billingPage.common.view')}
-                    </Button>
-                  </div>
-                </TableCell>
+        <TableSurfaceContent>
+          <Table
+            className="min-w-[1120px]"
+            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+          >
+            <TableHeader className={stickyTableHeaderClassName}>
+              <TableRow variant="static">
+                <TableHead>{t('billingPage.balance.columns.time')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.user')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.type')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.amount')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.before')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.after')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.operator')}</TableHead>
+                <TableHead>{t('billingPage.balance.columns.note')}</TableHead>
+                <TableHead className="table-sticky-action-head w-32 text-right">
+                  {t('billingPage.common.actions')}
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {workbench.balanceRecords.map((record: BalanceRecord) => (
+                <TableRow key={record.id} variant="resource">
+                  <TableCell>{formatDateTime(record.createdAt, emptyValueText)}</TableCell>
+                  <TableCell>
+                    {formatUserReference(
+                      record.username,
+                      record.userId,
+                      workbench.users,
+                      emptyValueText,
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {record.type === 'recharge'
+                      ? t('billingPage.balance.types.recharge')
+                      : t('billingPage.balance.types.deduct')}
+                  </TableCell>
+                  <TableCell
+                    className={cn(
+                      'font-medium tabular-nums',
+                      record.type === 'deduct'
+                        ? 'text-warning-foreground dark:text-warning'
+                        : 'text-success',
+                    )}
+                  >
+                    {formatSignedCreditAmount(
+                      record.type === 'deduct' ? -Math.abs(record.amount) : Math.abs(record.amount),
+                    )}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {formatCreditAmount(record.balanceBefore)}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {formatCreditAmount(record.balanceAfter)}
+                  </TableCell>
+                  <TableCell>{record.operator || <EmptyValue />}</TableCell>
+                  <TableCell className="max-w-[260px] truncate">
+                    {record.note || <EmptyValue />}
+                  </TableCell>
+                  <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
+                    <div className="table-action-cell-content">
+                      <Button
+                        variant="text"
+                        size="md"
+                        className="px-2"
+                        onClick={() => onView(record)}
+                      >
+                        <Eye className="size-4" aria-hidden="true" />
+                        {t('billingPage.common.view')}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableSurfaceContent>
       )}
     </TableSurface>
   )
@@ -1264,8 +1276,8 @@ function ModelPricesTab({
                 aria-hidden="true"
               />
               <Input
-                size="sm"
-                className={cn(responsiveCompactControlClassName, 'pl-9')}
+                size="md"
+                className={cn('pl-9')}
                 type="search"
                 value={priceSearch}
                 placeholder={t('billingPage.prices.filters.search')}
@@ -1277,8 +1289,8 @@ function ModelPricesTab({
               onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.tier')}
               >
                 <SelectValue />
@@ -1296,8 +1308,8 @@ function ModelPricesTab({
               onValueChange={(value) => setSourceFilter(value as typeof sourceFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.source')}
               >
                 <SelectValue />
@@ -1314,8 +1326,8 @@ function ModelPricesTab({
               onValueChange={(value) => setStateFilter(value as typeof stateFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.state')}
               >
                 <SelectValue />
@@ -1329,8 +1341,8 @@ function ModelPricesTab({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className={cn(responsiveCompactControlClassName, 'justify-center sm:ml-auto')}
+              size="md"
+              className={cn('justify-center sm:ml-auto')}
               disabled={!hasPriceFilters}
               onClick={clearPriceFilters}
             >
@@ -1346,7 +1358,7 @@ function ModelPricesTab({
               kind="filtered-empty"
               title={t('billingPage.prices.filters.empty')}
               action={
-                <Button type="button" variant="outline" size="sm" onClick={clearPriceFilters}>
+                <Button type="button" variant="outline" size="md" onClick={clearPriceFilters}>
                   <RefreshCw className="size-4" aria-hidden="true" />
                   {t('billingPage.prices.filters.clear')}
                 </Button>
@@ -1450,7 +1462,7 @@ function ModelPricesTab({
                       <div className="table-action-cell-content">
                         <Button
                           variant="text"
-                          size="sm"
+                          size="md"
                           className="px-2"
                           aria-label={t('billingPage.prices.actions.editExact', {
                             rule: formatModelPriceIdentity(resource, t),
@@ -1462,7 +1474,7 @@ function ModelPricesTab({
                         </Button>
                         <Button
                           variant="destructiveText"
-                          size="sm"
+                          size="md"
                           className="px-2"
                           aria-label={t('billingPage.prices.actions.deleteExact', {
                             rule: formatModelPriceIdentity(resource, t),
@@ -2215,7 +2227,7 @@ function ModelPriceSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 className="mt-3"
                 disabled={mutating || candidatesFetching}
                 onClick={onRetryCandidates}
@@ -2284,7 +2296,7 @@ function ModelPriceSheet({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     className="w-fit px-0"
                     disabled={mutating}
                     onClick={() => setSelectedCandidateKeys(new Set())}
@@ -2783,7 +2795,7 @@ export function BillingWorkbenchPage() {
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="text-destructive hover:text-destructive h-auto px-1 py-0 text-xs"
                   disabled={workbench.billingSettingsFetching}
                   onClick={() => void workbench.refreshBillingSettings()}

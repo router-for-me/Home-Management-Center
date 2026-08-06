@@ -81,8 +81,11 @@ describe('credential toolbar', () => {
 
     expect(markup).toContain('grid-cols-1')
     expect(markup).toContain('min-[480px]:grid-cols-2')
-    expect(markup.match(/data-size="lg"/g)).toHaveLength(7)
-    expect(markup.match(/h-10/g)).toHaveLength(7)
+    expect(markup.match(/data-size="xl"/g)).toHaveLength(7)
+    // Six of those seven carry the step class: the toggle group root reports the
+    // size but renders no box of its own, its items do. The previous count of
+    // seven matched `min-h-10` on the alignment row by substring, not a control.
+    expect(markup.match(/control-xl/g)).toHaveLength(6)
     expect(markup).not.toContain('h-11')
   })
 
@@ -93,12 +96,12 @@ describe('credential toolbar', () => {
     const deleteIndex = markup.indexOf('Delete</button>')
 
     expect(markup.match(/<button/g)).toHaveLength(3)
-    expect(markup.match(/data-size="sm"/g)).toHaveLength(3)
+    expect(markup.match(/data-size="md"/g)).toHaveLength(3)
     expect(viewIndex).toBeGreaterThan(-1)
     expect(viewIndex).toBeLessThan(downloadIndex)
     expect(downloadIndex).toBeLessThan(deleteIndex)
     expect(markup).toContain('data-variant="destructiveText"')
-    expect(markup).not.toContain('data-size="icon-sm"')
+    expect(markup).not.toContain('data-size="icon-md"')
     expect(markup).not.toContain('More actions')
   })
 

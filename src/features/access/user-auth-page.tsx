@@ -135,7 +135,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
   return (
     <PublicAccessShell>
       <section className="mx-auto grid max-w-xl gap-6">
-        <Button asChild variant="text" size="sm" className="w-fit px-0">
+        <Button asChild variant="text" size="md" className="w-fit px-0">
           <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userAccess.back')}

@@ -267,8 +267,8 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
-      size="icon"
-      className={cn('size-7', className)}
+      size="icon-sm"
+      className={className}
       onClick={(event) => {
         onClick?.(event)
         toggleSidebar()
@@ -325,7 +325,8 @@ function SidebarInput({ className, ...props }: React.ComponentProps<typeof Input
     <Input
       data-slot="sidebar-input"
       data-sidebar="input"
-      className={cn('bg-background h-8 w-full shadow-none', className)}
+      size="md"
+      className={cn('bg-background w-full shadow-none', className)}
       {...props}
     />
   )

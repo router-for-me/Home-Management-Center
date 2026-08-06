@@ -91,7 +91,7 @@ function RecoveryPageFrame({
   return (
     <PublicAccessShell>
       <section className="mx-auto grid max-w-xl gap-6">
-        <Button asChild variant="text" size="sm" className="w-fit px-0">
+        <Button asChild variant="text" size="md" className="w-fit px-0">
           <Link to="/user/login">
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userRecovery.backToLogin')}

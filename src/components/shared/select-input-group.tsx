@@ -2,7 +2,6 @@ import type { ReactNode } from 'react'
 
 import { Search } from 'lucide-react'
 
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -50,11 +49,10 @@ export function SelectInputGroup({
       <Select value={selectValue} disabled={disabled} onValueChange={onSelectValueChange}>
         <SelectTrigger
           className={cn(
-            responsiveCompactControlClassName,
             'w-auto min-w-[7.5rem] shrink-0 rounded-r-none border-r-0 shadow-xs',
             selectClassName,
           )}
-          size="sm"
+          size="md"
           aria-label={selectAriaLabel}
         >
           <SelectValue />
@@ -73,12 +71,8 @@ export function SelectInputGroup({
           aria-hidden="true"
         />
         <Input
-          size="sm"
-          className={cn(
-            responsiveCompactControlClassName,
-            'rounded-l-none pl-9 shadow-xs',
-            inputClassName,
-          )}
+          size="md"
+          className={cn('rounded-l-none pl-9 shadow-xs', inputClassName)}
           value={inputValue}
           disabled={disabled}
           placeholder={inputPlaceholder}

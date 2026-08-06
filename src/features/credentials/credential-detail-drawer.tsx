@@ -203,7 +203,7 @@ function DrawerTabStrip({
           aria-selected={activeTab === tab}
           variant={activeTab === tab ? 'default' : 'ghost'}
           size="sm"
-          className="h-7 px-2.5 text-xs"
+          className="px-2.5"
           onClick={() => onTabChange(tab)}
         >
           {t(`upstreamPage.drawer.tabs.${tab}`)}
@@ -1025,7 +1025,7 @@ function ModelsTab({
           <Button
             type="button"
             variant="secondary"
-            size="sm"
+            size="md"
             disabled={mutating}
             onClick={() => void onFetchModels()}
           >
@@ -1089,7 +1089,7 @@ function DangerTab({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={mutating}
             onClick={() => void onDownload()}
           >
@@ -1111,7 +1111,7 @@ function DangerTab({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             className="text-destructive border-destructive/40 hover:text-destructive"
             disabled={mutating}
             onClick={onDelete}

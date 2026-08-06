@@ -1,0 +1,362 @@
+/*
+ * Control sizing tokens.
+ *
+ * Three layers, on purpose:
+ *   L1  raw custom properties below   - the single source of truth, themeable at runtime
+ *   L2  @theme inline                 - bridges them into Tailwind's utility namespaces
+ *   L3  .control-* classes            - bind every property of one step together
+ *
+ * L3 exists so a caller cannot take a height without the padding, type and radius
+ * that belong to it. Splitting the step into independent utilities is what let
+ * feature code drift in the first place: a control could declare one size and then
+ * override its own height, which is how a 32px toolbar button and a 36px dropdown
+ * ended up on the same row.
+ */
+
+:root {
+  /* 24 / 28 / 32 / 36 / 40.
+     Type only has two values because the product only has two: 12px below md,
+     14px from md up. A 16px control label would read as foreign at this density.
+     Radius is one value across every step, per the shape-consistency rule.
+     Icons step down below md and hold at 16px above it. */
+  --control-h-xs: 1.5rem;
+  --control-px-xs: 0.5rem;
+  --control-gap-xs: 0.25rem;
+  --control-text-xs: 0.75rem;
+  --control-lh-xs: 1rem;
+  --control-icon-xs: 0.75rem;
+  --control-radius-xs: var(--radius-md);
+
+  --control-h-sm: 1.75rem;
+  --control-px-sm: 0.625rem;
+  --control-gap-sm: 0.25rem;
+  --control-text-sm: 0.75rem;
+  --control-lh-sm: 1rem;
+  --control-icon-sm: 0.875rem;
+  --control-radius-sm: var(--radius-md);
+
+  --control-h-md: 2rem;
+  --control-px-md: 0.75rem;
+  --control-gap-md: 0.375rem;
+  --control-text-md: 0.875rem;
+  --control-lh-md: 1.25rem;
+  --control-icon-md: 1rem;
+  --control-radius-md: var(--radius-md);
+
+  --control-h-lg: 2.25rem;
+  --control-px-lg: 0.875rem;
+  --control-gap-lg: 0.5rem;
+  --control-text-lg: 0.875rem;
+  --control-lh-lg: 1.25rem;
+  --control-icon-lg: 1rem;
+  --control-radius-lg: var(--radius-md);
+
+  --control-h-xl: 2.5rem;
+  --control-px-xl: 1rem;
+  --control-gap-xl: 0.5rem;
+  --control-text-xl: 0.875rem;
+  --control-lh-xl: 1.25rem;
+  --control-icon-xl: 1rem;
+  --control-radius-xl: var(--radius-md);
+
+  /* The floor a control grows to where pointing is imprecise. Applied in the
+     media query at the end of this file rather than per control, so no surface
+     has to remember to opt in. */
+  --control-touch-min: 2.5rem;
+}
+
+/*
+ * Density shifts the whole ramp one notch down. Type sizes deliberately do not
+ * shrink: a denser console is still read at the same distance, and dropping to
+ * 11px would trade a real readability floor for four pixels of height.
+ */
+[data-density='compact'] {
+  --control-h-sm: 1.5rem;
+  --control-px-sm: 0.5rem;
+
+  --control-h-md: 1.75rem;
+  --control-px-md: 0.625rem;
+
+  --control-h-lg: 2rem;
+  --control-px-lg: 0.75rem;
+
+  --control-h-xl: 2.25rem;
+  --control-px-xl: 0.875rem;
+}
+
+/*
+ * Tailwind v4 has no --height-* namespace; heights come out of --spacing-*.
+ * `inline` keeps the reference to the custom property instead of resolving it,
+ * which is what lets the density selector above retarget the utilities too.
+ *
+ * One trap this creates: --spacing-* is a single value per name, so it feeds
+ * every spacing utility. `h-control-md` is 32px as intended, but `px-control-md`
+ * is also 32px, not the step's 12px padding. Padding belongs to the .control-*
+ * class below and has no utility of its own on purpose. Use h-/w-/size-/min-w-
+ * from this namespace; never the p-/m-/gap- forms.
+ */
+@theme inline {
+  --spacing-control-xs: var(--control-h-xs);
+  --spacing-control-sm: var(--control-h-sm);
+  --spacing-control-md: var(--control-h-md);
+  --spacing-control-lg: var(--control-h-lg);
+  --spacing-control-xl: var(--control-h-xl);
+
+  --text-control-xs: var(--control-text-xs);
+  --text-control-xs--line-height: var(--control-lh-xs);
+  --text-control-sm: var(--control-text-sm);
+  --text-control-sm--line-height: var(--control-lh-sm);
+  --text-control-md: var(--control-text-md);
+  --text-control-md--line-height: var(--control-lh-md);
+  --text-control-lg: var(--control-text-lg);
+  --text-control-lg--line-height: var(--control-lh-lg);
+  --text-control-xl: var(--control-text-xl);
+  --text-control-xl--line-height: var(--control-lh-xl);
+
+  --radius-control-xs: var(--control-radius-xs);
+  --radius-control-sm: var(--control-radius-sm);
+  --radius-control-md: var(--control-radius-md);
+  --radius-control-lg: var(--control-radius-lg);
+  --radius-control-xl: var(--control-radius-xl);
+}
+
+/*
+ * The step classes live in the components layer so a utility can still win.
+ * Padding is the case that matters: a button that wants wider inline padding
+ * than its step writes `px-4`, and utilities outrank this layer. Height has no
+ * such escape by convention, and the lint rule enforces it.
+ */
+@layer components {
+  /* Metrics only. Display mode belongs to the component: a step is applied to
+     buttons, but also to an <input>, where inline-flex would be wrong. */
+  .control-xs,
+  .control-sm,
+  .control-md,
+  .control-lg,
+  .control-xl {
+    gap: var(--control-gap);
+    block-size: var(--control-h);
+    padding-inline: var(--control-px);
+    border-radius: var(--control-radius);
+    font-size: var(--control-text);
+    line-height: var(--control-lh);
+  }
+
+  /* Icons follow the step unless the call site sized them explicitly. */
+  .control-xs :where(svg:not([class*='size-'])),
+  .control-sm :where(svg:not([class*='size-'])),
+  .control-md :where(svg:not([class*='size-'])),
+  .control-lg :where(svg:not([class*='size-'])),
+  .control-xl :where(svg:not([class*='size-'])) {
+    flex-shrink: 0;
+    inline-size: var(--control-icon);
+    block-size: var(--control-icon);
+  }
+
+  .control-xs {
+    --control-h: var(--control-h-xs);
+    --control-px: var(--control-px-xs);
+    --control-gap: var(--control-gap-xs);
+    --control-text: var(--control-text-xs);
+    --control-lh: var(--control-lh-xs);
+    --control-icon: var(--control-icon-xs);
+    --control-radius: var(--control-radius-xs);
+  }
+
+  .control-sm {
+    --control-h: var(--control-h-sm);
+    --control-px: var(--control-px-sm);
+    --control-gap: var(--control-gap-sm);
+    --control-text: var(--control-text-sm);
+    --control-lh: var(--control-lh-sm);
+    --control-icon: var(--control-icon-sm);
+    --control-radius: var(--control-radius-sm);
+  }
+
+  .control-md {
+    --control-h: var(--control-h-md);
+    --control-px: var(--control-px-md);
+    --control-gap: var(--control-gap-md);
+    --control-text: var(--control-text-md);
+    --control-lh: var(--control-lh-md);
+    --control-icon: var(--control-icon-md);
+    --control-radius: var(--control-radius-md);
+  }
+
+  .control-lg {
+    --control-h: var(--control-h-lg);
+    --control-px: var(--control-px-lg);
+    --control-gap: var(--control-gap-lg);
+    --control-text: var(--control-text-lg);
+    --control-lh: var(--control-lh-lg);
+    --control-icon: var(--control-icon-lg);
+    --control-radius: var(--control-radius-lg);
+  }
+
+  .control-xl {
+    --control-h: var(--control-h-xl);
+    --control-px: var(--control-px-xl);
+    --control-gap: var(--control-gap-xl);
+    --control-text: var(--control-text-xl);
+    --control-lh: var(--control-lh-xl);
+    --control-icon: var(--control-icon-xl);
+    --control-radius: var(--control-radius-xl);
+  }
+
+  /* A square control keeps the step's height on both axes and drops the inline
+     padding, so an icon button lines up with the text controls beside it. */
+  .control-square {
+    inline-size: var(--control-h);
+    padding-inline: 0;
+  }
+
+  /*
+   * Touch floor. The width half matches what the toolbars opt into today; the
+   * pointer half catches a tablet that is wide but still touched. xs is excluded:
+   * it exists for controls inside badges and table cells, where a 40px floor would
+   * break the row it sits in.
+   */
+  @media (width < 40rem), (pointer: coarse) {
+    .control-sm,
+    .control-md,
+    .control-lg {
+      min-block-size: var(--control-touch-min);
+    }
+
+    .control-square:is(.control-sm, .control-md, .control-lg) {
+      min-inline-size: var(--control-touch-min);
+    }
+  }
+}
+
+/*
+ * Typography roles.
+ *
+ * The scale had steps but no roles: `text-xs` is used 622 times and `text-sm`
+ * 503, which told an author nothing about which one a table cell should take.
+ * Every value below is the step that surface already uses, so adopting a role is
+ * a rename and not a resize.
+ *
+ * Line height travels with the size because the pair is what broke: a control
+ * that reached for `text-xs` also took its 16px leading into a row built on 20px.
+ */
+@theme inline {
+  --text-page-title: var(--text-xl);
+  --text-page-title--line-height: 1.75rem;
+  --text-page-title--font-weight: 600;
+
+  --text-section-title: var(--text-base);
+  --text-section-title--line-height: 1.5rem;
+  --text-section-title--font-weight: 600;
+
+  --text-body: var(--text-sm);
+  --text-body--line-height: 1.25rem;
+
+  --text-label: var(--text-sm);
+  --text-label--line-height: 1.25rem;
+  --text-label--font-weight: 500;
+
+  --text-meta: var(--text-xs);
+  --text-meta--line-height: 1rem;
+}
+
+/*
+ * Code is the one role whose defining property is the family, not the size: it
+ * sits at the same 12px as meta. The --text-* namespace cannot carry a family,
+ * so this one is a class.
+ */
+@layer components {
+  .text-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1rem;
+  }
+}
+
+/*
+ * Interaction states.
+ *
+ * Focus was already systematic: every primitive uses the same ring triad. Hover
+ * was not. A bordered control could tint its background, or tint it a different
+ * colour, or do nothing at all, and one feature-local class was the only thing
+ * in the app that moved the border - which is why three buttons in the top bar
+ * lit up on hover and their identical-variant neighbours did not.
+ *
+ * A hover means the same thing on every control: this is what you are about to
+ * act on. So it looks the same on every control that carries a border, and the
+ * border is what carries it, because a background tint alone is easy to miss on
+ * a dense surface.
+ *
+ * Three families, split by what the control's surface is made of:
+ *   bordered   the control owns its border - outline buttons, inputs, select
+ *              triggers, textareas, checkboxes, radios. Border and background
+ *              both move. This class.
+ *   filled     the fill is the control - default, destructive and secondary
+ *              buttons, a checked box, a switch track. Hover deepens that fill,
+ *              written where the fill is, because only the control knows what
+ *              colour it is currently filled with. A neutral tint would erase
+ *              it, so those states override this class from the utility layer.
+ *   segmented  a container owns the border and the items are surfaces inside it
+ *              - tabs, toggle groups. Background only, because a second border
+ *              drawn inside the first one reads as noise.
+ *
+ * The two values below are the ones the home top bar already used. That bar was
+ * the only place in the app that did this correctly, and it is what everything
+ * else is being matched to, so they are carried over unchanged rather than
+ * retuned.
+ */
+:root {
+  --control-hover-border: color-mix(in oklch, var(--primary) 36%, var(--border));
+  --control-hover-bg: color-mix(in oklch, var(--primary) 7%, var(--card));
+}
+
+.dark {
+  --control-hover-border: color-mix(in oklch, var(--primary) 42%, var(--border));
+  --control-hover-bg: color-mix(in oklch, var(--primary) 10%, var(--card));
+}
+
+/*
+ * This block sits in the utilities layer, unlike the size steps above, and the
+ * difference is load-bearing. A layer beats specificity outright, so from the
+ * components layer this rule lost to every `bg-*` and `border-*` a primitive
+ * already set: the border moved on hover, because its resting colour comes from
+ * a base-layer rule, but the background silently did not, because `bg-background`
+ * is a utility. Here the two compete on specificity instead, and `:hover:not(…)`
+ * at (0,3,0) outranks a plain colour utility at (0,1,0) while still yielding to
+ * a state a component sets deliberately, such as a checked box at (0,4,0).
+ */
+@layer utilities {
+  /*
+   * This class owns the timing as well as the colours, and it has to. The
+   * primitives each carried their own `transition-[color,box-shadow]`, which
+   * pinned the animated properties to a list that excluded the two that change
+   * here, so the hover snapped while the outline button eased. The property list
+   * lives in one place now; box-shadow stays in it because that is the focus
+   * ring.
+   *
+   * Duration and easing come from Tailwind's own defaults rather than a
+   * hand-picked pair, so a control that transitions through this class and one
+   * that transitions through `transition-all` move identically.
+   */
+  .control-bordered {
+    transition-property: border-color, background-color, color, box-shadow;
+    transition-duration: var(--default-transition-duration);
+    transition-timing-function: var(--default-transition-timing-function);
+  }
+
+  /* The media guard is what Tailwind's own `hover:` variant compiles to, and it
+     is not optional here: without it a tap on a touch device leaves the control
+     stuck in its hover state until something else is tapped. */
+  @media (hover: hover) {
+    .control-bordered:hover:not(:disabled, [data-disabled], [aria-disabled='true']) {
+      border-color: var(--control-hover-border);
+      background-color: var(--control-hover-bg);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .control-bordered {
+      transition: none;
+    }
+  }
+}

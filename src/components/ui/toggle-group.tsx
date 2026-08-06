@@ -7,13 +7,14 @@ import { controlSizeClassNames } from '@/components/ui/control-size'
 import { cn } from '@/lib/utils'
 
 const toggleGroupItemVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap outline-none transition-[background-color,color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=off]:hover:bg-accent/70 data-[state=off]:hover:text-accent-foreground data-[state=off]:hover:shadow-xs data-[state=on]:bg-primary/10 data-[state=on]:text-primary data-[state=on]:shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap outline-none transition-[background-color,border-color,color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 data-[state=off]:hover:bg-accent/70 data-[state=off]:hover:text-accent-foreground data-[state=off]:hover:shadow-xs data-[state=on]:bg-primary/10 data-[state=on]:text-primary data-[state=on]:shadow-xs [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       size: {
-        default: `${controlSizeClassNames.default} px-3`,
-        sm: `${controlSizeClassNames.sm} px-2.5 text-xs`,
-        lg: `${controlSizeClassNames.lg} px-4`,
+        sm: `${controlSizeClassNames.sm} px-2.5`,
+        md: `${controlSizeClassNames.md} px-2.5`,
+        lg: `${controlSizeClassNames.lg} px-3`,
+        xl: `${controlSizeClassNames.xl} px-4`,
       },
       variant: {
         default: '',
@@ -21,21 +22,21 @@ const toggleGroupItemVariants = cva(
       },
     },
     defaultVariants: {
-      size: 'default',
+      size: 'lg',
       variant: 'default',
     },
   },
 )
 
 const ToggleGroupContext = React.createContext<VariantProps<typeof toggleGroupItemVariants>>({
-  size: 'default',
+  size: 'lg',
   variant: 'default',
 })
 
 function ToggleGroup({
   className,
   variant = 'default',
-  size = 'default',
+  size = 'lg',
   children,
   ...props
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Root> &
@@ -66,7 +67,7 @@ function ToggleGroupItem({
 }: React.ComponentProps<typeof ToggleGroupPrimitive.Item> &
   VariantProps<typeof toggleGroupItemVariants>) {
   const context = React.useContext(ToggleGroupContext)
-  const resolvedSize = size ?? context.size ?? 'default'
+  const resolvedSize = size ?? context.size ?? 'lg'
   const resolvedVariant = variant ?? context.variant ?? 'default'
 
   return (

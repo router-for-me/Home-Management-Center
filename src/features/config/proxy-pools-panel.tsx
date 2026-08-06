@@ -418,7 +418,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={workbench.fetching || workbench.mutating}
             onClick={() => void workbench.refetch()}
           >
@@ -431,7 +431,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
           </Button>
           <Button
             type="button"
-            size="sm"
+            size="md"
             disabled={unsupported || workbench.mutating}
             onClick={() => setSheetMode({ type: 'create' })}
           >
@@ -539,7 +539,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
                       <Button
                         type="button"
                         variant="text"
-                        size="sm"
+                        size="md"
                         className="px-2"
                         disabled={workbench.mutating}
                         onClick={() => {
@@ -555,7 +555,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
                       <Button
                         type="button"
                         variant="text"
-                        size="sm"
+                        size="md"
                         className="px-2"
                         onClick={() => setSheetMode({ type: 'edit', resource })}
                       >
@@ -565,7 +565,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
                       <Button
                         type="button"
                         variant="destructiveText"
-                        size="sm"
+                        size="md"
                         className="px-2"
                         onClick={() => setPendingDelete(resource)}
                       >

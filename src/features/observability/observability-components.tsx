@@ -52,6 +52,7 @@ import { SelectInputGroup } from '@/components/shared/select-input-group'
 import {
   TablePaginationStatus,
   TableSurface,
+  TableSurfaceContent,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
@@ -62,7 +63,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -469,9 +469,6 @@ function SectionHeader({ title, description }: { title: string; description?: st
 }
 
 const usageFilterGridClassName = 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
-const usageTouchControlClassName = responsiveCompactControlClassName
-const usageTouchInputClassName = responsiveCompactControlClassName
-const usageTouchButtonClassName = responsiveCompactControlClassName
 const runtimeLogLevelOptions: RuntimeLogLevelFilter[] = [
   'all',
   'trace',
@@ -597,11 +594,7 @@ export function UsageFiltersToolbar({
           value={filters.range}
           onValueChange={(range) => handleRangeChange(range as UsageFilters['range'])}
         >
-          <SelectTrigger
-            className={usageTouchControlClassName}
-            size="sm"
-            aria-label={t('usageLogsPage.filters.range')}
-          >
+          <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.range')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -617,11 +610,7 @@ export function UsageFiltersToolbar({
           </SelectContent>
         </Select>
         <Select value={filters.provider} onValueChange={(provider) => onChange({ provider })}>
-          <SelectTrigger
-            className={usageTouchControlClassName}
-            size="sm"
-            aria-label={t('usageLogsPage.filters.provider')}
-          >
+          <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.provider')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -634,11 +623,7 @@ export function UsageFiltersToolbar({
           </SelectContent>
         </Select>
         <Select value={filters.model} onValueChange={(model) => onChange({ model })}>
-          <SelectTrigger
-            className={usageTouchControlClassName}
-            size="sm"
-            aria-label={t('usageLogsPage.filters.model')}
-          >
+          <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.model')}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -656,8 +641,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
             <Input
-              size="sm"
-              className={usageTouchInputClassName}
+              size="md"
               type="date"
               value={filters.customFrom}
               onChange={(event) => onChange({ customFrom: event.target.value })}
@@ -666,8 +650,7 @@ export function UsageFiltersToolbar({
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
             <Input
-              size="sm"
-              className={usageTouchInputClassName}
+              size="md"
               type="date"
               value={filters.customTo}
               onChange={(event) => onChange({ customTo: event.target.value })}
@@ -683,11 +666,7 @@ export function UsageFiltersToolbar({
               onChange({ credentialType: credentialType as UsageFilters['credentialType'] })
             }
           >
-            <SelectTrigger
-              className={usageTouchControlClassName}
-              size="sm"
-              aria-label={t('usageLogsPage.filters.credentialType')}
-            >
+            <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.credentialType')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -700,11 +679,7 @@ export function UsageFiltersToolbar({
             </SelectContent>
           </Select>
           <Select value={filters.homeIp} onValueChange={(homeIp) => onChange({ homeIp })}>
-            <SelectTrigger
-              className={usageTouchControlClassName}
-              size="sm"
-              aria-label={t('usageLogsPage.filters.homeIp')}
-            >
+            <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.homeIp')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -717,11 +692,7 @@ export function UsageFiltersToolbar({
             </SelectContent>
           </Select>
           <Select value={filters.endpoint} onValueChange={(endpoint) => onChange({ endpoint })}>
-            <SelectTrigger
-              className={usageTouchControlClassName}
-              size="sm"
-              aria-label={t('usageLogsPage.filters.endpoint')}
-            >
+            <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.endpoint')}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -738,7 +709,7 @@ export function UsageFiltersToolbar({
       <CollapsibleTrigger asChild>
         <button
           type="button"
-          className="border-border/80 bg-muted/20 text-muted-foreground hover:border-primary/35 hover:bg-primary/5 hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
+          className="control-bordered border-border/80 bg-muted/20 text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
           aria-label={
             advancedOpen
               ? t('usageLogsPage.filters.hideAdvanced')
@@ -1677,7 +1648,7 @@ export function UsageTrendPanel({
         <ToggleGroup
           type="single"
           value={overlayMetric}
-          size="sm"
+          size="md"
           className="border-0 bg-transparent p-0 shadow-none"
           onValueChange={(nextMetric) => {
             if (nextMetric) setOverlayMetric(nextMetric as UsageTrendOverlayMetric)
@@ -1687,7 +1658,8 @@ export function UsageTrendPanel({
             <ToggleGroupItem
               key={metricKey}
               value={metricKey}
-              className="data-[state=on]:bg-muted data-[state=on]:text-foreground h-7 rounded-md px-2.5 text-xs data-[state=on]:shadow-none"
+              size="sm"
+              className="data-[state=on]:bg-muted data-[state=on]:text-foreground rounded-md data-[state=on]:shadow-none"
             >
               {t(`usageLogsPage.trend.overlay.${metricKey}`)}
             </ToggleGroupItem>
@@ -2336,7 +2308,7 @@ export function RankingGrid({
                 value={selectedGroup}
                 onValueChange={(group) => onGroupChange(group as UsageAggregateGroupBy)}
               >
-                <SelectTrigger size="sm" aria-label={t('usageLogsPage.rankings.groupBy')}>
+                <SelectTrigger size="md" aria-label={t('usageLogsPage.rankings.groupBy')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2352,7 +2324,7 @@ export function RankingGrid({
                 disabled={selectableRankingMetricOptions.length === 0}
                 onValueChange={(metric) => onMetricChange(metric as UsageAggregateMetric)}
               >
-                <SelectTrigger size="sm" aria-label={t('usageLogsPage.rankings.metric')}>
+                <SelectTrigger size="md" aria-label={t('usageLogsPage.rankings.metric')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2366,7 +2338,7 @@ export function RankingGrid({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={() => onExpandedChange(!expanded)}
               >
                 {expanded
@@ -2375,7 +2347,7 @@ export function RankingGrid({
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" size="sm">
+                  <Button type="button" variant="outline" size="md">
                     <Columns3 className="size-4" aria-hidden="true" />
                     {t('actions.customizeColumns')}
                   </Button>
@@ -2816,8 +2788,8 @@ function RequestRecordFiltersToolbar({
           aria-hidden="true"
         />
         <Input
-          size="sm"
-          className={cn(usageTouchInputClassName, 'pl-9')}
+          size="md"
+          className={cn('pl-9')}
           value={filters.search}
           disabled={disabled}
           placeholder={t('usageLogsPage.filters.searchPlaceholder')}
@@ -2829,11 +2801,7 @@ function RequestRecordFiltersToolbar({
         disabled={disabled}
         onValueChange={(status) => onChange({ status: status as UsageFilters['status'] })}
       >
-        <SelectTrigger
-          className={usageTouchControlClassName}
-          size="sm"
-          aria-label={t('usageLogsPage.filters.status')}
-        >
+        <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.status')}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -2847,11 +2815,7 @@ function RequestRecordFiltersToolbar({
         disabled={disabled}
         onValueChange={(statusCode) => onChange({ statusCode })}
       >
-        <SelectTrigger
-          className={usageTouchControlClassName}
-          size="sm"
-          aria-label={t('usageLogsPage.filters.statusCode')}
-        >
+        <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.statusCode')}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -2866,8 +2830,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
-            size="sm"
-            className={usageTouchInputClassName}
+            size="md"
             type="number"
             inputMode="numeric"
             min={0}
@@ -2879,8 +2842,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minLatencyMs: event.target.value })}
           />
           <Input
-            size="sm"
-            className={usageTouchInputClassName}
+            size="md"
             type="number"
             inputMode="numeric"
             min={0}
@@ -2899,8 +2861,7 @@ function RequestRecordFiltersToolbar({
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
           <Input
-            size="sm"
-            className={usageTouchInputClassName}
+            size="md"
             type="number"
             inputMode="decimal"
             min={0}
@@ -2912,8 +2873,7 @@ function RequestRecordFiltersToolbar({
             onChange={(event) => onChange({ minAmount: event.target.value })}
           />
           <Input
-            size="sm"
-            className={usageTouchInputClassName}
+            size="md"
             type="number"
             inputMode="decimal"
             min={0}
@@ -2998,8 +2958,7 @@ export function RequestRecordsTable({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className={usageTouchButtonClassName}
+              size="md"
               disabled={!canExport || isExporting || mutating}
               onClick={onExport}
             >
@@ -3014,12 +2973,7 @@ export function RequestRecordsTable({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={usageTouchButtonClassName}
-                >
+                <Button type="button" variant="outline" size="md">
                   <Columns3 className="size-4" aria-hidden="true" />
                   {t('actions.customizeColumns')}
                 </Button>
@@ -3182,8 +3136,7 @@ export function RequestRecordsTable({
                         <Button
                           type="button"
                           variant="text"
-                          size="sm"
-                          className={usageTouchButtonClassName}
+                          size="md"
                           onClick={() => onInspect(record)}
                         >
                           <Eye className="size-4" aria-hidden="true" />
@@ -3206,8 +3159,7 @@ export function RequestRecordsTable({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  className={usageTouchButtonClassName}
+                  size="md"
                   disabled={mutating}
                   onClick={() => onFilterChange(getClearedRequestRecordFilters())}
                 >
@@ -3259,8 +3211,8 @@ export function RequestRecordsTable({
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
                 <SelectTrigger
-                  className={cn(usageTouchControlClassName, 'w-24')}
-                  size="sm"
+                  className={cn('w-24')}
+                  size="md"
                   aria-label={t('usageLogsPage.records.pageSize')}
                 >
                   <SelectValue />
@@ -3278,8 +3230,7 @@ export function RequestRecordsTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={!canGoPrevious || mutating}
                 onClick={() => onOffsetChange(Math.max(0, filters.offset - filters.limit))}
               >
@@ -3289,8 +3240,7 @@ export function RequestRecordsTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={!canGoNext || mutating}
                 onClick={() => onOffsetChange(filters.offset + filters.limit)}
               >
@@ -3471,146 +3421,151 @@ export function RequestLogIndexTable({
         </div>
       </div>
       {totalRows > 0 ? (
-        <Table containerClassName={containedTableContainerClassName} className="min-w-[1080px]">
-          <TableHeader className={stickyTableHeaderClassName}>
-            <TableRow variant="static">
-              <TableHead
-                className="w-[170px]"
-                aria-sort={
-                  sort.key === 'time'
-                    ? sort.direction === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
-              >
-                <RequestLogSortButton
-                  label={t('usageLogsPage.requestLogs.columns.time')}
-                  sortKey="time"
-                  activeKey={sort.key}
-                  direction={sort.direction}
-                  disabled={mutating}
-                  onSort={handleSort}
-                />
-              </TableHead>
-              <TableHead className="w-[250px]">
-                {t('usageLogsPage.requestLogs.columns.request')}
-              </TableHead>
-              <TableHead className="w-[180px]">
-                {t('usageLogsPage.requestLogs.columns.model')}
-              </TableHead>
-              <TableHead className="w-[150px]">
-                {t('usageLogsPage.requestLogs.columns.homeIp')}
-              </TableHead>
-              <TableHead className="w-[170px]">
-                {t('usageLogsPage.requestLogs.columns.file')}
-              </TableHead>
-              <TableHead
-                className="w-[100px] text-right"
-                aria-sort={
-                  sort.key === 'size'
-                    ? sort.direction === 'asc'
-                      ? 'ascending'
-                      : 'descending'
-                    : 'none'
-                }
-              >
-                <RequestLogSortButton
-                  label={t('usageLogsPage.requestLogs.columns.size')}
-                  sortKey="size"
-                  activeKey={sort.key}
-                  direction={sort.direction}
-                  align="right"
-                  disabled={mutating}
-                  onSort={handleSort}
-                />
-              </TableHead>
-              <TableHead className="table-sticky-action-head w-[120px] text-right">
-                {t('usageLogsPage.requestLogs.columns.actions')}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => {
-              const downloading =
-                isDownloadingRequestLog && downloadingRequestLogId === row.requestId
+        <TableSurfaceContent>
+          <Table
+            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            className="min-w-[1080px]"
+          >
+            <TableHeader className={stickyTableHeaderClassName}>
+              <TableRow variant="static">
+                <TableHead
+                  className="w-[170px]"
+                  aria-sort={
+                    sort.key === 'time'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <RequestLogSortButton
+                    label={t('usageLogsPage.requestLogs.columns.time')}
+                    sortKey="time"
+                    activeKey={sort.key}
+                    direction={sort.direction}
+                    disabled={mutating}
+                    onSort={handleSort}
+                  />
+                </TableHead>
+                <TableHead className="w-[250px]">
+                  {t('usageLogsPage.requestLogs.columns.request')}
+                </TableHead>
+                <TableHead className="w-[180px]">
+                  {t('usageLogsPage.requestLogs.columns.model')}
+                </TableHead>
+                <TableHead className="w-[150px]">
+                  {t('usageLogsPage.requestLogs.columns.homeIp')}
+                </TableHead>
+                <TableHead className="w-[170px]">
+                  {t('usageLogsPage.requestLogs.columns.file')}
+                </TableHead>
+                <TableHead
+                  className="w-[100px] text-right"
+                  aria-sort={
+                    sort.key === 'size'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : 'none'
+                  }
+                >
+                  <RequestLogSortButton
+                    label={t('usageLogsPage.requestLogs.columns.size')}
+                    sortKey="size"
+                    activeKey={sort.key}
+                    direction={sort.direction}
+                    align="right"
+                    disabled={mutating}
+                    onSort={handleSort}
+                  />
+                </TableHead>
+                <TableHead className="table-sticky-action-head w-[120px] text-right">
+                  {t('usageLogsPage.requestLogs.columns.actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((row) => {
+                const downloading =
+                  isDownloadingRequestLog && downloadingRequestLogId === row.requestId
 
-              return (
-                <TableRow key={row.id} variant="resource" className="group">
-                  <TableCell className="text-muted-foreground truncate">
-                    {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-mono text-xs">{row.requestId}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {row.status === 'failed' ? (
-                        t('usageLogsPage.status.failed')
-                      ) : row.status === 'success' ? (
-                        t('usageLogsPage.status.success')
-                      ) : (
-                        <EmptyValue />
-                      )}
-                    </p>
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-medium">{row.model ?? <EmptyValue />}</p>
-                    <p className="text-muted-foreground truncate text-xs">
-                      {row.provider ?? <EmptyValue />}
-                    </p>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground truncate">
-                    {formatHomeEndpoint(row.homeIp, row.homePort) ??
-                      t('usageLogsPage.status.localHome')}
-                  </TableCell>
-                  <TableCell className="min-w-0">
-                    <p className="truncate font-mono text-xs">
-                      {row.fileName ?? t('usageLogsPage.requestLogs.inlineLog')}
-                    </p>
-                    {row.downloadUrl ? (
-                      <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                        {row.downloadUrl}
-                      </p>
-                    ) : null}
-                    {!row.available ? (
+                return (
+                  <TableRow key={row.id} variant="resource" className="group">
+                    <TableCell className="text-muted-foreground truncate">
+                      {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-mono text-xs">{row.requestId}</p>
                       <p className="text-muted-foreground mt-1 text-xs">
-                        {t('usageLogsPage.requestLogs.unavailableFile')}
-                      </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {row.sizeBytes === null ? (
-                      <EmptyValue />
-                    ) : (
-                      t('usageLogsPage.requestLogs.sizeBytes', {
-                        size: formatBytes(row.sizeBytes),
-                      })
-                    )}
-                  </TableCell>
-                  <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
-                    <div className="table-action-cell-content">
-                      <Button
-                        type="button"
-                        variant="text"
-                        size="sm"
-                        disabled={!row.available || mutating}
-                        onClick={() =>
-                          onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
-                        }
-                      >
-                        {downloading ? (
-                          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                        {row.status === 'failed' ? (
+                          t('usageLogsPage.status.failed')
+                        ) : row.status === 'success' ? (
+                          t('usageLogsPage.status.success')
                         ) : (
-                          <Download className="size-4" aria-hidden="true" />
+                          <EmptyValue />
                         )}
-                        {t('usageLogsPage.actions.download')}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                      </p>
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-medium">{row.model ?? <EmptyValue />}</p>
+                      <p className="text-muted-foreground truncate text-xs">
+                        {row.provider ?? <EmptyValue />}
+                      </p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground truncate">
+                      {formatHomeEndpoint(row.homeIp, row.homePort) ??
+                        t('usageLogsPage.status.localHome')}
+                    </TableCell>
+                    <TableCell className="min-w-0">
+                      <p className="truncate font-mono text-xs">
+                        {row.fileName ?? t('usageLogsPage.requestLogs.inlineLog')}
+                      </p>
+                      {row.downloadUrl ? (
+                        <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+                          {row.downloadUrl}
+                        </p>
+                      ) : null}
+                      {!row.available ? (
+                        <p className="text-muted-foreground mt-1 text-xs">
+                          {t('usageLogsPage.requestLogs.unavailableFile')}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {row.sizeBytes === null ? (
+                        <EmptyValue />
+                      ) : (
+                        t('usageLogsPage.requestLogs.sizeBytes', {
+                          size: formatBytes(row.sizeBytes),
+                        })
+                      )}
+                    </TableCell>
+                    <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
+                      <div className="table-action-cell-content">
+                        <Button
+                          type="button"
+                          variant="text"
+                          size="md"
+                          disabled={!row.available || mutating}
+                          onClick={() =>
+                            onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
+                          }
+                        >
+                          {downloading ? (
+                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Download className="size-4" aria-hidden="true" />
+                          )}
+                          {t('usageLogsPage.actions.download')}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableSurfaceContent>
       ) : (
         <TableEmptyState
           kind={hasSearch ? 'filtered-empty' : 'empty'}
@@ -3625,8 +3580,7 @@ export function RequestLogIndexTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={mutating}
                 onClick={() => {
                   setSearch('')
@@ -3666,7 +3620,7 @@ export function RequestLogIndexTable({
               >
                 <SelectTrigger
                   className="w-24"
-                  size="sm"
+                  size="md"
                   aria-label={t('usageLogsPage.records.pageSize')}
                 >
                   <SelectValue />
@@ -3684,7 +3638,7 @@ export function RequestLogIndexTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={currentPage <= 0 || mutating}
                 onClick={() => setPage((value) => Math.max(0, value - 1))}
               >
@@ -3694,7 +3648,7 @@ export function RequestLogIndexTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={currentPage >= pageCount - 1 || mutating}
                 onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}
               >
@@ -4201,7 +4155,7 @@ export function RequestDetailSheet({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               className="w-full sm:w-auto"
               disabled={!canDownloadRequestLog || mutating}
               onClick={() =>
@@ -4442,12 +4396,7 @@ export function CredentialUsageTable({
           <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={usageTouchButtonClassName}
-                >
+                <Button type="button" variant="outline" size="md">
                   <Columns3 className="size-4" aria-hidden="true" />
                   {t('actions.customizeColumns')}
                 </Button>
@@ -4659,8 +4608,8 @@ export function CredentialUsageTable({
                 onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
               >
                 <SelectTrigger
-                  className={cn(usageTouchControlClassName, 'w-24')}
-                  size="sm"
+                  className={cn('w-24')}
+                  size="md"
                   aria-label={t('usageLogsPage.credentials.pageSize')}
                 >
                   <SelectValue />
@@ -4678,8 +4627,7 @@ export function CredentialUsageTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={!canGoPrevious || controlsDisabled}
                 onClick={() => onOffsetChange(Math.max(0, offset - limit))}
               >
@@ -4689,8 +4637,7 @@ export function CredentialUsageTable({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={!canGoNext || controlsDisabled}
                 onClick={() => onOffsetChange(offset + limit)}
               >
@@ -5125,8 +5072,8 @@ function RuntimeLogFiltersToolbar({
           onValueChange={(level) => onChange({ level: level as RuntimeLogLevelFilter })}
         >
           <SelectTrigger
-            className={cn(usageTouchControlClassName, 'w-full sm:w-40')}
-            size="sm"
+            className={cn('w-full sm:w-40')}
+            size="md"
             aria-label={t('usageLogsPage.logs.filters.level')}
           >
             <SelectValue />
@@ -5171,8 +5118,8 @@ function RuntimeLogFiltersToolbar({
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className={cn(usageTouchButtonClassName, 'justify-center lg:ml-auto lg:shrink-0')}
+        size="md"
+        className={cn('justify-center lg:ml-auto lg:shrink-0')}
         disabled={disabled || !active}
         onClick={() => {
           setSearchField(defaultRuntimeLogSearchField)
@@ -5279,7 +5226,7 @@ export function RuntimeLogViewer({
           />
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             className="lg:shrink-0"
             disabled={!canClear || mutating}
             onClick={onClear}
@@ -5440,8 +5387,7 @@ export function RuntimeLogViewer({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
-                className={usageTouchButtonClassName}
+                size="md"
                 disabled={mutating}
                 onClick={onClearFilters}
               >
@@ -5524,7 +5470,7 @@ function RuntimeLogPagination({
           >
             <SelectTrigger
               className="w-24"
-              size="sm"
+              size="md"
               aria-label={t('usageLogsPage.logs.pagination.pageSize')}
             >
               <SelectValue />
@@ -5542,7 +5488,7 @@ function RuntimeLogPagination({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={!canGoPrevious || mutating}
             onClick={onPrevious}
           >
@@ -5552,7 +5498,7 @@ function RuntimeLogPagination({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={!canGoNext || mutating}
             onClick={onNext}
           >
@@ -5638,7 +5584,7 @@ function RuntimeLogDetailSheet({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={!record?.requestLogAvailable || mutating}
             onClick={() =>
               record?.requestId &&
@@ -5692,7 +5638,7 @@ function RuntimeLogRow({
       </TableCell>
       <TableCell className="table-sticky-action-cell w-36 text-right transition-colors">
         <div className="table-action-cell-content">
-          <Button type="button" variant="text" size="sm" onClick={() => onInspectLog(record)}>
+          <Button type="button" variant="text" size="md" onClick={() => onInspectLog(record)}>
             <Eye className="size-4" aria-hidden="true" />
             {t('usageLogsPage.actions.viewLogDetail')}
           </Button>
@@ -5816,7 +5762,7 @@ export function ErrorLogFilesPanel({
                         <Button
                           type="button"
                           variant="text"
-                          size="sm"
+                          size="md"
                           disabled={mutating}
                           onClick={() => onDownloadErrorLog(row.name)}
                         >

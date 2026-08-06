@@ -566,7 +566,7 @@ function OperationalVerdictPanel({
         <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             disabled={isFetching}
             onClick={onRefresh}
             aria-label={
@@ -589,7 +589,7 @@ function OperationalVerdictPanel({
               ? t('systemNodesPage.actions.syncing')
               : t('systemNodesPage.actions.refresh')}
           </Button>
-          <Button variant="outline" size="sm" onClick={onOpenDiagnostics}>
+          <Button variant="outline" size="md" onClick={onOpenDiagnostics}>
             <TerminalSquare className="size-4" aria-hidden="true" />
             {t('systemNodesPage.actions.openDiagnostics')}
           </Button>
@@ -1349,7 +1349,7 @@ export function SystemNodesWorkbenchPage() {
           </div>
           <Button
             type="button"
-            size="sm"
+            size="md"
             className="lg:shrink-0"
             disabled={workbench.createNodeClientPending}
             onClick={() => void handleAddNode()}

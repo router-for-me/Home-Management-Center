@@ -27,7 +27,7 @@ Treat `src/lib/api/management/` as the frontend integration boundary for backend
 - `src/lib/i18n/`: locale setup and translations.
 - `src/routes/`: TanStack Router route entries.
 - `src/stores/`: Zustand stores.
-- `src/styles/`: global styles, theme tokens, and reusable effects.
+- `src/styles/`: global styles, theme tokens, control tokens, and reusable effects. `control-tokens.css` owns the control step ramp, the type roles, and the shared interaction states.
 
 ## Start Here
 
@@ -63,6 +63,8 @@ Do not start extra development servers when the user already has one running. Th
 - Put TanStack Query queries and mutations in feature hooks.
 - Represent unsupported backend behavior clearly instead of showing placeholder data.
 - Use existing shadcn/ui primitives for dialogs, confirmation flows, sheets, forms, buttons, inputs, dropdowns, and skeletons.
+- Size a control by choosing its step (`xs` `sm` `md` `lg` `xl`), which carries height, padding, gap, type, radius and icon size together. Feature code sets width and spacing, never height or type; `home-ui/no-control-size-override` fails the build on both.
+- Take interaction states from the control's family rather than writing them per call site: a bordered control gets its hover from `.control-bordered`, a filled one deepens its own fill, a segmented one moves background only. Read DESIGN.md Interaction states before adding any `hover:` utility to a control.
 - Build charts with `src/components/ui/chart.tsx` (Recharts) instead of hand-rolled SVG; when a task touches a remaining hand-written chart, migrate it.
 - Avoid browser-native `alert`, `confirm`, and `prompt` in product UI.
 - Do not add placeholder features that imply backend support the API does not provide.
@@ -87,8 +89,9 @@ Do not translate provider IDs, model IDs, API field names, route paths, config k
 - Destructive actions require component-library confirmation UI.
 - Empty, loading, error, unsupported, and partial-data states must be explicit.
 - Button color and variant choices must match semantic meaning.
+- Controls in the same state must look the same across the whole app. One control size per toolbar row, and one hover treatment per control family.
 - Tables should keep stable column widths where changing data could otherwise cause visual jitter.
-- Mobile behavior should use responsive structure, not viewport-scaled typography.
+- Mobile behavior should use responsive structure, not viewport-scaled typography. Touch floors come from the control step and need no per-surface opt-in.
 
 ## Editing Rules
 

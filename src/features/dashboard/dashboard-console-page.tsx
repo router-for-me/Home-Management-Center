@@ -1074,7 +1074,7 @@ export function DashboardConsolePage() {
           </div>
           <Button
             variant="outline"
-            size="sm"
+            size="md"
             className="w-fit self-start lg:shrink-0"
             disabled={overview.isFetching}
             onClick={overview.refetch}
@@ -1146,8 +1146,7 @@ export function DashboardConsolePage() {
                   key={action.id}
                   asChild
                   variant={action.tone === 'warning' ? 'warning' : 'outline'}
-                  size="sm"
-                  className="h-8"
+                  size="md"
                 >
                   <Link to={action.to}>
                     <Icon className="size-3.5" aria-hidden="true" />

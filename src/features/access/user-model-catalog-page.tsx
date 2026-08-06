@@ -190,7 +190,7 @@ export function UserModelCatalogPage() {
       // the other, and told the buyer nothing on the second reading.
       subtitleKey="embeddedPortal.shellSubtitle"
       headerActions={
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="lg">
           <a href={authenticated ? embeddedEntryLinks.userWorkspace : embeddedEntryLinks.userLogin}>
             <UserRound className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">
@@ -201,7 +201,7 @@ export function UserModelCatalogPage() {
       }
     >
       <section className="grid gap-6">
-        <Button asChild variant="text" size="sm" className="w-fit px-0">
+        <Button asChild variant="text" size="md" className="w-fit px-0">
           <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userModels.back')}
@@ -243,10 +243,10 @@ export function UserModelCatalogPage() {
           <div className="border-info/25 bg-info/10 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="min-w-0 text-sm font-medium">{t('userModels.signedOut.title')}</p>
             <div className="flex shrink-0 flex-wrap gap-2">
-              <Button asChild size="sm">
+              <Button asChild size="md">
                 <Link to="/user/login">{t('userModels.signedOut.signIn')}</Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="lg">
                 <Link to="/user/register">{t('userModels.signedOut.register')}</Link>
               </Button>
             </div>
@@ -454,7 +454,7 @@ export function UserModelCatalogPage() {
                 </ToggleGroup>
 
                 {filtersActive ? (
-                  <Button variant="text" size="sm" onClick={clearFilters}>
+                  <Button variant="text" size="md" onClick={clearFilters}>
                     {t('userModels.filters.clear')}
                   </Button>
                 ) : null}

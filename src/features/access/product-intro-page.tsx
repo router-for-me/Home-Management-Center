@@ -29,6 +29,17 @@ type CapabilityItem = {
   icon: LucideIcon
 }
 
+/*
+ * The translucent resting surface this bar wants, and nothing else. It used to
+ * be a CSS class that also declared its own hover, which made it the one place
+ * in the app where a bordered control lit up on hover; that hover is the shared
+ * control state now. Written as utilities rather than a class so the shared
+ * state can still win: an unlayered rule outranks every layer, so a class here
+ * would take the hover back.
+ */
+const headerActionClassName =
+  'min-w-9 border-border/84 bg-card/72 text-foreground dark:border-border/84 dark:bg-card/72'
+
 const providerItems: ProviderItem[] = [
   { label: 'OpenAI', iconSrc: openaiLightIcon, darkIconSrc: openaiDarkIcon },
   { label: 'Claude Code', iconSrc: claudeIcon },
@@ -83,8 +94,8 @@ export function ProductIntroPage() {
           <Button
             asChild
             variant="outline"
-            size="sm"
-            className="home-header-action"
+            size="lg"
+            className={headerActionClassName}
             aria-label={t('embeddedPortal.header.models')}
           >
             <a href={embeddedEntryLinks.userModels}>
@@ -95,8 +106,8 @@ export function ProductIntroPage() {
           <Button
             asChild
             variant="outline"
-            size="sm"
-            className="home-header-action"
+            size="lg"
+            className={headerActionClassName}
             aria-label={
               userAuthenticated
                 ? t('embeddedPortal.header.userWorkspace')
@@ -115,8 +126,8 @@ export function ProductIntroPage() {
           <Button
             asChild
             variant="outline"
-            size="sm"
-            className="home-header-action"
+            size="lg"
+            className={headerActionClassName}
             aria-label={
               managementCanResume
                 ? t('embeddedPortal.header.adminConsole')
@@ -153,7 +164,7 @@ export function ProductIntroPage() {
                 {t('embeddedPortal.hero.description')}
               </p>
               <div className="mt-6 flex justify-center">
-                <Button asChild size="lg">
+                <Button asChild size="xl">
                   <a href={embeddedEntryLinks.userModels}>
                     {t('embeddedPortal.hero.browseModels')}
                   </a>
