@@ -59,10 +59,18 @@ function SheetContent({
         data-slot="sheet-content"
         className={cn(
           'bg-popover text-popover-foreground data-[state=closed]:animate-out data-[state=open]:animate-in fixed z-[var(--z-overlay)] flex flex-col gap-4 shadow-2xl transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          /*
+           * `w-full` below 40rem, not `w-3/4`. Three quarters of a phone is 281px
+           * with 94px of dead overlay beside it — a sheet on a narrow screen is the
+           * task, not a panel over one. Above 40rem it is a panel again, and the
+           * `sm:max-w-sm` cap is what makes it one. The drawer scaffold already
+           * overrode this to `w-full`, so half the app was doing it correctly and
+           * the other half was not.
+           */
           side === 'right' &&
-            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-full border-l sm:max-w-sm',
           side === 'left' &&
-            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm',
+            'data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left inset-y-0 left-0 h-full w-full border-r sm:max-w-sm',
           side === 'top' &&
             'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
           side === 'bottom' &&

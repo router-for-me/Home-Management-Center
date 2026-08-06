@@ -26,6 +26,9 @@ export const en = {
       copyFailed: 'Copy failed',
       customizeColumns: 'Customize columns',
     },
+    rowActions: {
+      more: 'More actions for {{target}}',
+    },
     language: {
       switch: 'Language',
       simplifiedChinese: 'Simplified Chinese',
@@ -77,6 +80,7 @@ export const en = {
     },
     sidebar: {
       controlPlane: 'AI Gateway Management Console',
+      backToEntry: 'Back to the entry page',
       collapse: 'Collapse sidebar',
       expand: 'Expand sidebar',
       openMobile: 'Open navigation',
@@ -1587,7 +1591,10 @@ export const en = {
           tokens: 'Token consumption',
           tokenValue: '{{value}} tokens',
           requests: 'Requests',
-          pointAria: '{{time}}, token consumption {{tokens}}, requests {{requests}}',
+        },
+        accessibility: {
+          keyboardInstructions:
+            'Focus the chart, then use the Left and Right Arrow keys to inspect each time bucket.',
         },
       },
       usageActivity: {

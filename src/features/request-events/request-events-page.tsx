@@ -20,9 +20,12 @@ import { toast } from 'sonner'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
+import { filterGridClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
+import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TablePaginationStatus,
   TableSurface,
@@ -126,12 +129,17 @@ type RequestEventColumn = {
   width: number
   align?: 'right'
   required?: boolean
+  /*
+   * Survives below 40rem. Independent of `required`, which is about what a user may
+   * hide; this is about what still fits.
+   */
+  compact?: boolean
 }
 
 const requestEventColumns: RequestEventColumn[] = [
-  { key: 'time', width: 180, required: true },
+  { key: 'time', width: 180, required: true, compact: true },
   { key: 'event', width: 150 },
-  { key: 'status', width: 130 },
+  { key: 'status', width: 130, compact: true },
   { key: 'model', width: 240 },
   { key: 'runtime', width: 210 },
   { key: 'client', width: 220 },
@@ -156,8 +164,6 @@ const defaultVisibleColumns: RequestEventColumnKey[] = [
   'request',
 ]
 
-const actionColumnWidth = 112
-const requestEventFilterGridClassName = 'grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
 const requestEventSearchFields: RequestEventSearchField[] = [
   'requestId',
   'user',
@@ -432,7 +438,7 @@ function RequestEventsFiltersToolbar({
       onOpenChange={setAdvancedOpen}
       className="bg-card rounded-lg border p-3 shadow-sm"
     >
-      <div className={requestEventFilterGridClassName}>
+      <div className={filterGridClassName}>
         <SelectInputGroup
           selectValue={activeSearchField}
           inputValue={searchValue}
@@ -525,7 +531,7 @@ function RequestEventsFiltersToolbar({
         </Select>
       </div>
       {filters.range === 'custom' ? (
-        <div className={cn(requestEventFilterGridClassName, 'mt-3 border-t pt-3')}>
+        <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
           <Input
             size="md"
             type="datetime-local"
@@ -545,7 +551,7 @@ function RequestEventsFiltersToolbar({
         </div>
       ) : null}
       <CollapsibleContent>
-        <div className={cn(requestEventFilterGridClassName, 'mt-3 border-t pt-3')}>
+        <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
           <Select
             value={filters.eventType}
             disabled={disabled}
@@ -1119,9 +1125,28 @@ function RequestEventsTable({
   const canGoPrevious = filters.offset > 0
   const canGoNext = filters.offset + filters.limit < total
   const activeFilters = hasActiveFilters(filters)
-  const visibleColumnConfigs = requestEventColumns.filter((column) => isColumnVisible(column.key))
-  const tableWidth =
-    visibleColumnConfigs.reduce((width, column) => width + column.width, actionColumnWidth) + 16
+  const showSecondary = useSecondaryColumns()
+  const visibleColumnConfigs = requestEventColumns.filter(
+    (column) => isColumnVisible(column.key) && (showSecondary || column.compact),
+  )
+  /*
+   * The header and the body have to ask the same question. `isColumnVisible` answers
+   * "did the user keep this column", which is what the column menu needs; it is not
+   * the same as "is this column rendered right now", because the compact viewport
+   * drops columns the user never touched. Asking the wrong one in the body left the
+   * header with two columns and the rows with ten.
+   */
+  const renderedColumnKeys = new Set(visibleColumnConfigs.map((column) => column.key))
+  const isColumnRendered = (key: RequestEventColumnKey) => renderedColumnKeys.has(key)
+  /*
+   * This table sizes its columns in JS because the set is user-configurable, and
+   * its own width is the sum of them. The action column is the one part JS should
+   * not add up: its width depends on the locale as well as the viewport, so the
+   * sum stops at the data columns and defers the last term to CSS.
+   */
+  const tableWidth = `calc(${
+    visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
+  }px + var(--table-action-column-1))`
 
   return (
     <TableSurface className="min-w-0">
@@ -1233,23 +1258,26 @@ function RequestEventsTable({
                 'max-h-[min(680px,calc(100vh-250px))] rounded-md border',
               )}
               className="table-fixed"
-              style={{ minWidth: tableWidth }}
+              style={showSecondary ? { minWidth: tableWidth } : undefined}
             >
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
-                  {visibleColumnConfigs.map((column) => (
+                  {visibleColumnConfigs.map((column, index) => (
                     <TableHead
                       key={column.key}
                       className={cn(column.align === 'right' && 'text-right')}
-                      style={{ width: column.width }}
+                      /*
+                        Fixed layout takes the sum of the declared widths, so a
+                        column set that adds up past the viewport still scrolls.
+                        The identity column gives up its width below 40rem and
+                        takes the remainder instead.
+                      */
+                      style={!showSecondary && index === 0 ? undefined : { width: column.width }}
                     >
                       {t(`requestEventsPage.table.columns.${column.key}`)}
                     </TableHead>
                   ))}
-                  <TableHead
-                    className="table-sticky-action-head text-right"
-                    style={{ width: actionColumnWidth }}
-                  >
+                  <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                     {t('requestEventsPage.table.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -1257,12 +1285,12 @@ function RequestEventsTable({
               <TableBody>
                 {rows.map((event) => (
                   <TableRow key={event.id} variant="resource">
-                    {isColumnVisible('time') ? (
+                    {isColumnRendered('time') ? (
                       <TableCell className="text-muted-foreground truncate">
                         {formatDateTime(event.timestamp, i18n) ?? event.timestamp}
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('event') ? (
+                    {isColumnRendered('event') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate font-medium">{event.eventType ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate text-xs">
@@ -1270,7 +1298,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('status') ? (
+                    {isColumnRendered('status') ? (
                       <TableCell>
                         <RequestEventStatusBadge event={event} />
                         <p className="text-muted-foreground mt-1 text-xs">
@@ -1278,7 +1306,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('model') ? (
+                    {isColumnRendered('model') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate font-medium">{event.model ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate text-xs">
@@ -1287,7 +1315,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('runtime') ? (
+                    {isColumnRendered('runtime') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate">
                           {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
@@ -1297,7 +1325,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('client') ? (
+                    {isColumnRendered('client') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate">
                           <CallerUser
@@ -1312,7 +1340,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('credential') ? (
+                    {isColumnRendered('credential') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate">{event.credential?.label ?? <EmptyValue />}</p>
                         <p className="text-muted-foreground truncate font-mono text-xs">
@@ -1320,7 +1348,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('tokens') ? (
+                    {isColumnRendered('tokens') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
                           {formatCompactNumber(event.tokens.totalTokens)}
@@ -1331,7 +1359,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('latency') ? (
+                    {isColumnRendered('latency') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
                           {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
@@ -1343,14 +1371,14 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('cost') ? (
+                    {isColumnRendered('cost') ? (
                       <TableCell className="text-right">
                         {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
                           <EmptyValue />
                         )}
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('request') ? (
+                    {isColumnRendered('request') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate font-mono text-xs">
                           {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
@@ -1360,7 +1388,7 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('error') ? (
+                    {isColumnRendered('error') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate text-xs">
                           {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
@@ -1370,21 +1398,18 @@ function RequestEventsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    <TableCell
-                      className="table-sticky-action-cell text-right transition-colors"
-                      style={{ width: actionColumnWidth }}
-                    >
-                      <div className="table-action-cell-content">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="md"
-                          onClick={() => onInspect(event)}
-                        >
-                          <Eye className="size-4" aria-hidden="true" />
-                          {t('requestEventsPage.actions.viewDetail')}
-                        </Button>
-                      </div>
+                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                      <RowActions
+                        menuLabel={formatDateTime(event.timestamp, i18n) ?? event.timestamp}
+                        actions={[
+                          {
+                            id: 'inspect',
+                            label: t('requestEventsPage.actions.viewDetail'),
+                            icon: Eye,
+                            onSelect: () => onInspect(event),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

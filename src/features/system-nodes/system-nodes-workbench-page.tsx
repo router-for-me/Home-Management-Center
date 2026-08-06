@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -1089,7 +1090,7 @@ function ApiCallTool({
               </SelectContent>
             </Select>
           </div>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('systemNodesPage.apiCall.url')}</span>
             <Input
               value={input.url}
@@ -1099,7 +1100,7 @@ function ApiCallTool({
             />
           </label>
         </div>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('systemNodesPage.apiCall.authIndex')}</span>
           <Input
             value={input.authIndex}
@@ -1110,7 +1111,7 @@ function ApiCallTool({
             }
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('systemNodesPage.apiCall.headers')}</span>
           <Textarea
             className="min-h-28 font-mono text-xs"
@@ -1122,7 +1123,7 @@ function ApiCallTool({
             }
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('systemNodesPage.apiCall.body')}</span>
           <Textarea
             className="min-h-28 font-mono text-xs"

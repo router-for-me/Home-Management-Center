@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import {
   AlertDialog,
@@ -2100,7 +2101,7 @@ function ModelAliasEditor({
                 key={rowIndex}
                 className={cn('grid gap-2 px-3 py-3 lg:items-start', columnsClass)}
               >
-                <label className="grid gap-1.5">
+                <label className={fieldClassName}>
                   <span className="text-muted-foreground text-xs font-medium lg:hidden">
                     {t('configPage.json.columns.channel')}
                   </span>
@@ -2112,7 +2113,7 @@ function ModelAliasEditor({
                     onChange={(event) => updateRow(rowIndex, { channel: event.target.value })}
                   />
                 </label>
-                <label className="grid gap-1.5">
+                <label className={fieldClassName}>
                   <span className="text-muted-foreground text-xs font-medium lg:hidden">
                     {t('configPage.json.columns.name')}
                   </span>
@@ -2126,7 +2127,7 @@ function ModelAliasEditor({
                     }
                   />
                 </label>
-                <label className="grid gap-1.5">
+                <label className={fieldClassName}>
                   <span className="text-muted-foreground text-xs font-medium lg:hidden">
                     {t('configPage.json.columns.alias')}
                   </span>
@@ -2450,7 +2451,7 @@ function PayloadHeaderRows({
             return (
               <div key={index} className="grid gap-1.5">
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                  <label className="grid gap-1.5">
+                  <label className={fieldClassName}>
                     <span className="text-muted-foreground text-xs font-medium sm:sr-only">
                       {t('configPage.payload.headerName')}
                     </span>
@@ -2463,7 +2464,7 @@ function PayloadHeaderRows({
                       onChange={(event) => updateHeader(index, { name: event.target.value })}
                     />
                   </label>
-                  <label className="grid gap-1.5">
+                  <label className={fieldClassName}>
                     <span className="text-muted-foreground text-xs font-medium sm:sr-only">
                       {t('configPage.payload.headerValue')}
                     </span>
@@ -2605,7 +2606,7 @@ function PayloadConditionRows({
             return (
               <div key={index} className="grid gap-1.5">
                 <div className="grid gap-2 lg:grid-cols-[minmax(10rem,0.8fr)_9rem_minmax(12rem,1.2fr)_auto]">
-                  <label className="grid gap-1.5">
+                  <label className={fieldClassName}>
                     <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                       {t('configPage.payload.conditionPath')}
                     </span>
@@ -2618,7 +2619,7 @@ function PayloadConditionRows({
                       onChange={(event) => updateCondition(index, { path: event.target.value })}
                     />
                   </label>
-                  <label className="grid gap-1.5">
+                  <label className={fieldClassName}>
                     <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                       {t('configPage.payload.valueType')}
                     </span>
@@ -2642,7 +2643,7 @@ function PayloadConditionRows({
                     </Select>
                   </label>
                   {condition.valueType === 'json' ? (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.conditionValue')}
                       </span>
@@ -2658,7 +2659,7 @@ function PayloadConditionRows({
                       />
                     </label>
                   ) : condition.valueType === 'boolean' ? (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.conditionValue')}
                       </span>
@@ -2681,7 +2682,7 @@ function PayloadConditionRows({
                       </Select>
                     </label>
                   ) : (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.conditionValue')}
                       </span>
@@ -2780,7 +2781,7 @@ function PayloadPathListRows({
           {paths.map((path, index) => (
             <div key={index} className="grid gap-1.5">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <label className="grid gap-1.5">
+                <label className={fieldClassName}>
                   <span className="text-muted-foreground text-xs font-medium sm:sr-only">
                     {t('configPage.payload.conditionPath')}
                   </span>
@@ -2921,7 +2922,7 @@ function PayloadModelRow({
   return (
     <div className="grid gap-2 rounded-md border p-2 sm:border-0 sm:p-0">
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
-        <label className="grid gap-1.5">
+        <label className={fieldClassName}>
           <span className="text-muted-foreground text-xs font-medium sm:sr-only">
             {t('configPage.payload.modelName')}
           </span>
@@ -2934,7 +2935,7 @@ function PayloadModelRow({
             onChange={(event) => onChange({ name: event.target.value })}
           />
         </label>
-        <label className="grid gap-1.5">
+        <label className={fieldClassName}>
           <span className="text-muted-foreground text-xs font-medium sm:sr-only">
             {t('configPage.payload.protocol')}
           </span>
@@ -3207,7 +3208,7 @@ function PayloadParamRows({
                       : null,
                   )}
                 >
-                  <label className="grid gap-1.5">
+                  <label className={fieldClassName}>
                     <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                       {t('configPage.payload.paramPath')}
                     </span>
@@ -3221,7 +3222,7 @@ function PayloadParamRows({
                     />
                   </label>
                   {rawValues ? null : (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.valueType')}
                       </span>
@@ -3246,7 +3247,7 @@ function PayloadParamRows({
                     </label>
                   )}
                   {param.valueType === 'json' || rawValues ? (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.paramValue')}
                       </span>
@@ -3264,7 +3265,7 @@ function PayloadParamRows({
                       />
                     </label>
                   ) : param.valueType === 'boolean' ? (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.paramValue')}
                       </span>
@@ -3287,7 +3288,7 @@ function PayloadParamRows({
                       </Select>
                     </label>
                   ) : (
-                    <label className="grid gap-1.5">
+                    <label className={fieldClassName}>
                       <span className="text-muted-foreground text-xs font-medium lg:sr-only">
                         {t('configPage.payload.paramValue')}
                       </span>
@@ -3380,7 +3381,7 @@ function PayloadFilterParamRows({
           </div>
           {params.map((param, index) => (
             <div key={index} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-              <label className="grid gap-1.5">
+              <label className={fieldClassName}>
                 <span className="text-muted-foreground text-xs font-medium sm:sr-only">
                   {t('configPage.payload.paramPath')}
                 </span>

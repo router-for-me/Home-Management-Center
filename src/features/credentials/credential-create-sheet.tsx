@@ -16,6 +16,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -214,7 +215,7 @@ function OAuthClosurePanel({
       </div>
 
       <form className="mt-4 grid gap-3" onSubmit={(event) => void handleCheckStatus(event)}>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('credentialsPage.oauth.statusState')}</span>
           <Input
             value={statusState}
@@ -258,13 +259,13 @@ function OAuthClosurePanel({
           onSubmit={(event) => void handleSubmitCallback(event)}
         >
           <div className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)]">
-            <label className="grid gap-2 text-sm font-medium">
+            <label className={fieldClassName}>
               <span>{t('credentialsPage.oauth.callbackProvider')}</span>
               <div className="border-input bg-muted/30 flex h-9 items-center rounded-md border px-3 text-sm">
                 {t(`credentialsPage.oauth.providers.${callbackForm.provider}`)}
               </div>
             </label>
-            <label className="grid gap-2 text-sm font-medium">
+            <label className={fieldClassName}>
               <span>{t('credentialsPage.oauth.callbackState')}</span>
               <Input
                 value={callbackForm.state}
@@ -278,7 +279,7 @@ function OAuthClosurePanel({
               />
             </label>
           </div>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>
               {t(
                 isXaiOAuthProvider(callbackForm.provider)
@@ -301,8 +302,8 @@ function OAuthClosurePanel({
               }
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-2 text-sm font-medium">
+          <div className={formGridClassName}>
+            <label className={fieldClassName}>
               <span>{t('credentialsPage.oauth.authorizationCode')}</span>
               <Input
                 value={callbackForm.code}
@@ -314,7 +315,7 @@ function OAuthClosurePanel({
                 }
               />
             </label>
-            <label className="grid gap-2 text-sm font-medium">
+            <label className={fieldClassName}>
               <span>{t('credentialsPage.oauth.callbackError')}</span>
               <Input
                 value={callbackForm.error}
@@ -614,7 +615,7 @@ function VertexImportPanel({
             </p>
           ) : null}
         </fieldset>
-        <label className="grid gap-2 text-sm font-medium">
+        <label className={fieldClassName}>
           <span>{t('credentialsPage.vertex.location')}</span>
           <Input
             value={location}

@@ -6,6 +6,7 @@ import {
   CircleOff,
   Download,
   ExternalLink,
+  Eye,
   Info,
   KeyRound,
   Loader2,
@@ -21,6 +22,8 @@ import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { PageHeader } from '@/components/shared/page-header'
+import { RowActions } from '@/components/shared/row-actions'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TableSurface,
   TableSurfaceContent,
@@ -692,6 +695,11 @@ export function PluginsWorkbenchPage() {
           getPluginSourceKey(plugin) === operationNotice.sourceKey,
       )
     : null
+  /*
+   * Source, version, auth and rollout are all in the detail sheet. Which plugin a
+   * row is and whether it is installed and serving are what a phone keeps.
+   */
+  const showSecondary = useSecondaryColumns()
   const noResults = workbench.visiblePlugins.length === 0
   const hasFilters =
     workbench.filter.trim() || workbench.statusFilter !== 'all' || workbench.sourceFilter !== 'all'
@@ -1019,28 +1027,51 @@ export function PluginsWorkbenchPage() {
               }
             />
           ) : (
-            <Table containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}>
+            <Table
+              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+              className={cn(!showSecondary && 'table-fixed')}
+            >
               <TableHeader>
                 <TableRow>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[240px]')}>
+                  <TableHead
+                    className={cn(stickyTableHeaderClassName, showSecondary && 'min-w-[240px]')}
+                  >
                     {t('pluginPage.columns.plugin')}
                   </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
-                    {t('pluginPage.columns.source')}
-                  </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[160px]')}>
-                    {t('pluginPage.columns.version')}
-                  </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[220px]')}>
+                  {showSecondary ? (
+                    <>
+                      <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
+                        {t('pluginPage.columns.source')}
+                      </TableHead>
+                      <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[160px]')}>
+                        {t('pluginPage.columns.version')}
+                      </TableHead>
+                    </>
+                  ) : null}
+                  <TableHead
+                    className={cn(
+                      stickyTableHeaderClassName,
+                      showSecondary ? 'min-w-[220px]' : 'w-28',
+                    )}
+                  >
                     {t('pluginPage.columns.state')}
                   </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[140px]')}>
-                    {t('pluginPage.columns.auth')}
-                  </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
-                    {t('pluginPage.columns.rollout')}
-                  </TableHead>
-                  <TableHead className={cn(stickyTableHeaderClassName, 'w-[220px] text-right')}>
+                  {showSecondary ? (
+                    <>
+                      <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[140px]')}>
+                        {t('pluginPage.columns.auth')}
+                      </TableHead>
+                      <TableHead className={cn(stickyTableHeaderClassName, 'min-w-[150px]')}>
+                        {t('pluginPage.columns.rollout')}
+                      </TableHead>
+                    </>
+                  ) : null}
+                  <TableHead
+                    className={cn(
+                      stickyTableHeaderClassName,
+                      'table-sticky-action-head table-action-column-3 text-right',
+                    )}
+                  >
                     {t('pluginPage.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -1079,17 +1110,21 @@ export function PluginsWorkbenchPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="grid gap-1">
-                          <span>{getPluginSourceLabel(plugin) || '-'}</span>
-                          <span className="text-muted-foreground font-mono text-xs">
-                            {plugin.installType ? getInstallTypeLabel(plugin.installType) : '-'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-mono text-xs">{versionText || '-'}</span>
-                      </TableCell>
+                      {showSecondary ? (
+                        <>
+                          <TableCell>
+                            <div className="grid gap-1">
+                              <span>{getPluginSourceLabel(plugin) || '-'}</span>
+                              <span className="text-muted-foreground font-mono text-xs">
+                                {plugin.installType ? getInstallTypeLabel(plugin.installType) : '-'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-mono text-xs">{versionText || '-'}</span>
+                          </TableCell>
+                        </>
+                      ) : null}
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">
                           {plugin.updateAvailable ? (
@@ -1107,76 +1142,79 @@ export function PluginsWorkbenchPage() {
                           </StatusBadge>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="grid gap-1.5">
-                          <StatusBadge tone={getAuthTone(plugin)}>
-                            {plugin.authRequired
-                              ? t('pluginPage.badges.authMayBeRequired')
-                              : t('pluginPage.badges.authNotRequired')}
-                          </StatusBadge>
-                          {plugin.authRequired ? (
-                            <Button
-                              type="button"
-                              variant="link"
-                              size="xs"
-                              className="h-auto justify-start px-0"
-                              onClick={() => setAuthOpen(true)}
-                            >
-                              {t('pluginPage.actions.manageAuth')}
-                            </Button>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge tone={rolloutBadge.tone}>
-                          {t(rolloutBadge.labelKey)}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="md"
-                            onClick={() => setSelectedPlugin(plugin)}
-                          >
-                            {t('pluginPage.actions.details')}
-                          </Button>
-                          {!plugin.installed || plugin.updateAvailable ? (
-                            <Button
-                              size="md"
-                              disabled={isPluginInstallActionDisabled(workbench.installingKey)}
-                              onClick={() => {
+                      {showSecondary ? (
+                        <>
+                          <TableCell>
+                            <div className="grid gap-1.5">
+                              <StatusBadge tone={getAuthTone(plugin)}>
+                                {plugin.authRequired
+                                  ? t('pluginPage.badges.authMayBeRequired')
+                                  : t('pluginPage.badges.authNotRequired')}
+                              </StatusBadge>
+                              {plugin.authRequired ? (
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  size="xs"
+                                  className="h-auto justify-start px-0"
+                                  onClick={() => setAuthOpen(true)}
+                                >
+                                  {t('pluginPage.actions.manageAuth')}
+                                </Button>
+                              ) : null}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge tone={rolloutBadge.tone}>
+                              {t(rolloutBadge.labelKey)}
+                            </StatusBadge>
+                          </TableCell>
+                        </>
+                      ) : null}
+                      <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
+                        {/*
+                          This column was the last one still building its own
+                          buttons: an outline Details next to a filled primary
+                          Install, which gave the page as many primary actions as
+                          it had rows and made one table look unlike every other.
+                          Install keeps its weight through the icon and its
+                          position, not through a fill repeated down the column.
+                        */}
+                        <RowActions
+                          menuLabel={getPluginTitle(plugin)}
+                          actions={[
+                            {
+                              id: 'details',
+                              label: t('pluginPage.actions.details'),
+                              icon: Eye,
+                              onSelect: () => setSelectedPlugin(plugin),
+                            },
+                            (!plugin.installed || plugin.updateAvailable) && {
+                              id: 'install',
+                              label: plugin.updateAvailable
+                                ? t('pluginPage.actions.update')
+                                : t('pluginPage.actions.install'),
+                              icon: plugin.updateAvailable ? RefreshCw : Download,
+                              busy: isInstalling,
+                              disabled: isPluginInstallActionDisabled(workbench.installingKey),
+                              onSelect: () => {
                                 setInstallTarget(plugin)
                                 setInstallVersion('')
                                 setInstallSourceKey(getPluginSourceKey(plugin))
                                 setInstallError(null)
                                 setTypedConfirmation('')
-                              }}
-                            >
-                              {isInstalling ? (
-                                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                              ) : plugin.updateAvailable ? (
-                                <RefreshCw className="size-4" aria-hidden="true" />
-                              ) : (
-                                <Download className="size-4" aria-hidden="true" />
-                              )}
-                              {plugin.updateAvailable
-                                ? t('pluginPage.actions.update')
-                                : t('pluginPage.actions.install')}
-                            </Button>
-                          ) : null}
-                          {plugin.installed ? (
-                            <Button
-                              variant="destructiveText"
-                              size="md"
-                              disabled={Boolean(workbench.uninstallingId)}
-                              onClick={() => setUninstallTarget(plugin)}
-                            >
-                              <Trash2 className="size-4" aria-hidden="true" />
-                              {t('pluginPage.actions.uninstall')}
-                            </Button>
-                          ) : null}
-                        </div>
+                              },
+                            },
+                            plugin.installed && {
+                              id: 'uninstall',
+                              label: t('pluginPage.actions.uninstall'),
+                              icon: Trash2,
+                              tone: 'destructive',
+                              disabled: Boolean(workbench.uninstallingId),
+                              onSelect: () => setUninstallTarget(plugin),
+                            },
+                          ]}
+                        />
                       </TableCell>
                     </TableRow>
                   )

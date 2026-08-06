@@ -3,12 +3,7 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import {
-  AccountsToolbar,
-  CredentialRowActions,
-  getCredentialActionColumnWidth,
-  getCredentialTableMinWidth,
-} from '@/features/credentials/accounts-panel'
+import { AccountsToolbar } from '@/features/credentials/accounts-panel'
 import { en } from '@/lib/i18n/locales/en'
 import { ru } from '@/lib/i18n/locales/ru'
 import { zhCN } from '@/lib/i18n/locales/zh-CN'
@@ -50,19 +45,6 @@ function renderToolbar() {
   )
 }
 
-function renderRowActions() {
-  return renderToStaticMarkup(
-    <I18nextProvider i18n={testI18n}>
-      <CredentialRowActions
-        mutating={false}
-        onDelete={() => undefined}
-        onDownload={() => undefined}
-        onView={() => undefined}
-      />
-    </I18nextProvider>,
-  )
-}
-
 describe('credential toolbar', () => {
   test('uses accessible controls and keeps the two quick filters independently selected', () => {
     const markup = renderToolbar()
@@ -87,30 +69,6 @@ describe('credential toolbar', () => {
     // seven matched `min-h-10` on the alignment row by substring, not a control.
     expect(markup.match(/control-xl/g)).toHaveLength(6)
     expect(markup).not.toContain('h-11')
-  })
-
-  test('orders view, download, and delete without a redundant overflow menu', () => {
-    const markup = renderRowActions()
-    const viewIndex = markup.indexOf('View</button>')
-    const downloadIndex = markup.indexOf('Download</button>')
-    const deleteIndex = markup.indexOf('Delete</button>')
-
-    expect(markup.match(/<button/g)).toHaveLength(3)
-    expect(markup.match(/data-size="md"/g)).toHaveLength(3)
-    expect(viewIndex).toBeGreaterThan(-1)
-    expect(viewIndex).toBeLessThan(downloadIndex)
-    expect(downloadIndex).toBeLessThan(deleteIndex)
-    expect(markup).toContain('data-variant="destructiveText"')
-    expect(markup).not.toContain('data-size="icon-md"')
-    expect(markup).not.toContain('More actions')
-  })
-
-  test('sizes the sticky action column for each supported label length', () => {
-    expect(getCredentialActionColumnWidth('zh-CN')).toBe(224)
-    expect(getCredentialActionColumnWidth('zh-TW')).toBe(224)
-    expect(getCredentialActionColumnWidth('en')).toBe(260)
-    expect(getCredentialActionColumnWidth('ru')).toBe(284)
-    expect(getCredentialTableMinWidth('zh-CN')).toBe(1234)
   })
 
   test('keeps credential table copy aligned across all supported locales', () => {
