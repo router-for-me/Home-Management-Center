@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 
+import { fieldClassName } from '@/components/shared/form-layout'
 import { Input } from '@/components/ui/input'
 import { SAME_ORIGIN_MANAGEMENT_BASE_URL } from '@/lib/api/management/client'
 import { useSessionStore } from '@/stores/session-store'
@@ -28,7 +29,7 @@ export function ManagementEndpointField({
       : 'connectionDialog.detectedRuntime'
 
   return (
-    <label className="grid gap-2 text-sm font-medium">
+    <label className={fieldClassName}>
       <span>{t('connectionDialog.baseUrl')}</span>
       <Input
         value={value}

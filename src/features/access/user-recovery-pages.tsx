@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { fetchUserMe } from '@/lib/api/user/auth'
@@ -217,7 +218,7 @@ export function UserForgotPasswordPage() {
         </div>
       ) : (
         <form className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('userRecovery.forgot.email')}</span>
             <Input
               type="email"
@@ -323,7 +324,7 @@ export function UserResetPasswordPage() {
         </div>
       ) : (
         <form className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('userRecovery.reset.newPassword')}</span>
             <Input
               type="password"
@@ -334,7 +335,7 @@ export function UserResetPasswordPage() {
               onChange={(event) => setNewPassword(event.target.value)}
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium">
+          <label className={fieldClassName}>
             <span>{t('userRecovery.reset.confirmPassword')}</span>
             <Input
               type="password"

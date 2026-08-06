@@ -47,7 +47,14 @@ function PageHeader({
           </div>
         </div>
         {actions ? (
-          <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
+          /*
+           * Below 40rem the actions stack and stretch instead of wrapping. Wrapping
+           * put three Russian labels on three rows at 182 / 163 / 215px — ragged
+           * left-aligned buttons with uneven dead space beside each. A column of
+           * equal full-width buttons is the same height and reads as one group,
+           * which is what the sheet footer already does with its own button pair.
+           */
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center lg:shrink-0 lg:justify-end">
             {actions}
           </div>
         ) : null}

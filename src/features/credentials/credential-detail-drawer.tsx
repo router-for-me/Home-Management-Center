@@ -9,6 +9,7 @@ import {
   DrawerScaffoldFooter,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -466,7 +467,7 @@ function MetadataTab({
       className="grid gap-4"
       onSubmit={(event) => void handleSubmit(event)}
     >
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('credentialsPage.form.proxyUrl')}</span>
         <Input
           value={form.proxyUrl}
@@ -479,7 +480,7 @@ function MetadataTab({
           }
         />
       </label>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('credentialsPage.form.priority')}</span>
         <Input
           value={form.priority}
@@ -494,7 +495,7 @@ function MetadataTab({
           {t('upstreamPage.drawer.metadata.priorityHint')}
         </span>
       </label>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('credentialsPage.form.note')}</span>
         <Textarea
           className="min-h-24"
@@ -509,7 +510,7 @@ function MetadataTab({
       <p className="text-muted-foreground mt-1 text-xs font-semibold tracking-wide uppercase">
         {t('upstreamPage.drawer.metadata.secondarySection')}
       </p>
-      <label className="grid gap-2 text-sm font-medium">
+      <label className={fieldClassName}>
         <span>{t('credentialsPage.form.prefix')}</span>
         <Input
           value={form.prefix}

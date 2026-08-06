@@ -348,11 +348,96 @@ function getPayloadConfigFromPayload(config: ChartConfig, payload: unknown, key:
   return configLabelKey in config ? config[configLabelKey] : config[key]
 }
 
+/*
+ * Axis ticks.
+ *
+ * Recharts centres every tick label on its tick, which is right for the ones in the
+ * middle and wrong for the two on the ends: half of the first label falls left of
+ * the plot area and half of the last one falls right of it, and the surface clips
+ * both. Measured at 1280px with a formatted timestamp, that was 37px cut off the
+ * first label and 29px off the last — on every chart in the app, not one of them.
+ *
+ * Widening the axis margins would also hide it, at the cost of that width on every
+ * viewport, and it would still be a guess about the longest label in the longest
+ * locale. Anchoring the end ticks to their end costs nothing.
+ *
+ * This lives here rather than at a call site because nothing about it is specific to
+ * a chart. The first version was written into the dashboard panel, which fixed one
+ * chart and left the other one clipped.
+ */
+function ChartAxisTick({
+  x,
+  y,
+  payload,
+  index,
+  visibleTicksCount,
+  textAnchor,
+  tickFormatter,
+}: {
+  x?: number
+  y?: number
+  payload?: { value?: number | string }
+  index?: number
+  visibleTicksCount?: number
+  textAnchor?: 'start' | 'middle' | 'end'
+  tickFormatter?: (value: never, index: number) => string
+}) {
+  const tickIndex = index ?? 0
+  const isFirst = tickIndex === 0
+  const isLast = visibleTicksCount !== undefined && tickIndex === visibleTicksCount - 1
+  const value = payload?.value
+  const label = tickFormatter
+    ? tickFormatter(value as never, tickIndex)
+    : value === undefined
+      ? ''
+      : String(value)
+
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={12}
+      /*
+       * A single tick is treated as the first one: it sits at the left edge, so
+       * starting there is what keeps it inside the plot.
+       */
+      textAnchor={isFirst ? 'start' : isLast ? 'end' : (textAnchor ?? 'middle')}
+      /*
+       * Set explicitly, not inherited. Recharts hands every tick its own `fill` of
+       * `#666`, and the container's `fill-muted-foreground` rule only reaches the
+       * default tick markup, so a custom tick that trusts either one ends up off
+       * the theme.
+       */
+      fill="var(--muted-foreground)"
+    >
+      {label}
+    </text>
+  )
+}
+
+/**
+ * `XAxis` with the shared tick treatment and the axis chrome this product uses
+ * everywhere: no tick line, no axis line, one gap size. Pass `tick` to opt out.
+ */
+function ChartXAxis({ tick, ...props }: React.ComponentProps<typeof RechartsPrimitive.XAxis>) {
+  return (
+    <RechartsPrimitive.XAxis
+      tickLine={false}
+      axisLine={false}
+      tickMargin={8}
+      {...props}
+      tick={tick ?? <ChartAxisTick />}
+    />
+  )
+}
+
 export {
+  ChartAxisTick,
   ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
   ChartLegend,
   ChartLegendContent,
   ChartStyle,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartXAxis,
 }

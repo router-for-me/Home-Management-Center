@@ -36,7 +36,6 @@ import {
   Cell,
   ComposedChart,
   Line,
-  XAxis,
   YAxis,
   useActiveTooltipLabel,
   usePlotArea,
@@ -46,9 +45,16 @@ import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { EmptyValue, emptyValueText } from '@/components/shared/empty-value'
+import {
+  filterGridClassName,
+  formGridClassName,
+  narrowFilterGridClassName,
+} from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
+import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
+import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   TablePaginationStatus,
   TableSurface,
@@ -61,7 +67,7 @@ import {
   type UsageActivityMatrixBucket,
 } from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
-import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartXAxis } from '@/components/ui/chart'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
   DropdownMenu,
@@ -468,7 +474,6 @@ function SectionHeader({ title, description }: { title: string; description?: st
   )
 }
 
-const usageFilterGridClassName = 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
 const runtimeLogLevelOptions: RuntimeLogLevelFilter[] = [
   'all',
   'trace',
@@ -589,7 +594,7 @@ export function UsageFiltersToolbar({
       onOpenChange={setAdvancedOpen}
       className="bg-card rounded-lg border p-3 shadow-sm"
     >
-      <div className={usageFilterGridClassName}>
+      <div className={narrowFilterGridClassName}>
         <Select
           value={filters.range}
           onValueChange={(range) => handleRangeChange(range as UsageFilters['range'])}
@@ -637,7 +642,7 @@ export function UsageFiltersToolbar({
         </Select>
       </div>
       {filters.range === 'custom' ? (
-        <div className={cn(usageFilterGridClassName, 'mt-3 border-t pt-3')}>
+        <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
           <label className="grid gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
             <Input
@@ -659,7 +664,7 @@ export function UsageFiltersToolbar({
         </div>
       ) : null}
       <CollapsibleContent>
-        <div className={cn(usageFilterGridClassName, 'mt-3 border-t pt-3')}>
+        <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
           <Select
             value={filters.credentialType}
             onValueChange={(credentialType) =>
@@ -1500,13 +1505,10 @@ function TokenUsageChart({
           barCategoryGap="21%"
         >
           <CartesianGrid vertical={false} strokeDasharray="3 4" />
-          <XAxis
+          <ChartXAxis
             dataKey="id"
             ticks={xAxisTicks}
             interval={0}
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
             tickFormatter={(id: string) => labelById.get(id) ?? ''}
           />
           <YAxis
@@ -2593,9 +2595,15 @@ const usageRecordColumns: Array<{
   width: number
   align?: 'right'
   required?: boolean
+  /*
+   * Survives below 40rem. Independent of `required`, which is about what a user may
+   * hide; this is about what still fits. A record is a time and an outcome, so those
+   * two stay and the rest wait in the detail sheet.
+   */
+  compact?: boolean
 }> = [
-  { key: 'time', width: 156, required: true },
-  { key: 'status', width: 116, required: true },
+  { key: 'time', width: 156, required: true, compact: true },
+  { key: 'status', width: 116, required: true, compact: true },
   { key: 'model', width: 230, required: true },
   { key: 'client', width: 210 },
   { key: 'credential', width: 230 },
@@ -2606,8 +2614,6 @@ const usageRecordColumns: Array<{
 ]
 
 const defaultUsageRecordColumns = usageRecordColumns.map((column) => column.key)
-const usageRecordActionColumnWidth = 116
-const requestRecordFilterGridClassName = 'grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
 const usageRecordColumnSortableFields: Partial<
   Record<UsageRecordColumnKey, UsageRecordSortableField>
 > = {
@@ -2685,6 +2691,7 @@ function UsageRecordTableHead({
   sort,
   sortableFields,
   disabled,
+  fillRemaining,
   onSortChange,
 }: {
   column: (typeof usageRecordColumns)[number]
@@ -2692,6 +2699,12 @@ function UsageRecordTableHead({
   sortableFields: UsageRecordSortableField[]
   disabled: boolean
   onSortChange: (sort: UsageFilters['sort']) => void
+  /*
+   * Fixed layout takes the sum of the declared widths, so a column set that adds up
+   * past the viewport still scrolls. The identity column gives up its width below
+   * 40rem and takes the remainder instead.
+   */
+  fillRemaining?: boolean
 }) {
   const { t } = useTranslation()
   const sortConfig = getUsageRecordSortConfig(column.key, sort, sortableFields)
@@ -2701,7 +2714,7 @@ function UsageRecordTableHead({
     return (
       <TableHead
         className={cn(column.align === 'right' && 'text-right')}
-        style={{ width: column.width }}
+        style={fillRemaining ? undefined : { width: column.width }}
       >
         {label}
       </TableHead>
@@ -2721,7 +2734,7 @@ function UsageRecordTableHead({
     <TableHead
       aria-sort={sortConfig.direction ?? 'none'}
       className={cn(column.align === 'right' && 'text-right')}
-      style={{ width: column.width }}
+      style={fillRemaining ? undefined : { width: column.width }}
     >
       <button
         type="button"
@@ -2781,7 +2794,7 @@ function RequestRecordFiltersToolbar({
   const amountRangeInvalid = isRangeInvalid(filters.minAmount, filters.maxAmount)
 
   return (
-    <div className={requestRecordFilterGridClassName}>
+    <div className={filterGridClassName}>
       <div className="relative min-w-0">
         <Search
           className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
@@ -2938,13 +2951,29 @@ export function RequestRecordsTable({
   const end = Math.min(filters.offset + rows.length, total)
   const canGoPrevious = filters.offset > 0
   const canGoNext = filters.offset + filters.limit < total
-  const visibleColumnConfigs = usageRecordColumns.filter((column) => isColumnVisible(column.key))
+  const showSecondary = useSecondaryColumns()
+  const visibleColumnConfigs = usageRecordColumns.filter(
+    (column) => isColumnVisible(column.key) && (showSecondary || column.compact),
+  )
+  /*
+   * The header and the body have to ask the same question. `isColumnVisible` answers
+   * "did the user keep this column", which is what the column menu needs; it is not
+   * the same as "is this column rendered right now", because the compact viewport
+   * drops columns the user never touched. Asking the wrong one in the body left the
+   * header with two columns and the rows with ten.
+   */
+  const renderedColumnKeys = new Set(visibleColumnConfigs.map((column) => column.key))
+  const isColumnRendered = (key: UsageRecordColumnKey) => renderedColumnKeys.has(key)
   const hasActiveRequestFilters = hasActiveRequestRecordFilters(filters)
-  const visibleTableWidth =
-    visibleColumnConfigs.reduce(
-      (width, column) => width + column.width,
-      usageRecordActionColumnWidth,
-    ) + 16
+  /*
+   * The visible column set is user-configurable, so this table adds its widths up
+   * in JS instead of declaring them as utilities. The action column is the one
+   * term JS should not add: its width depends on the locale as well as the
+   * viewport, so the sum stops at the data columns and CSS supplies the last one.
+   */
+  const visibleTableWidth = `calc(${
+    visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
+  }px + var(--table-action-column-1))`
   const applySort = (sort: UsageFilters['sort']) => {
     onFilterChange({ sort, offset: 0 })
   }
@@ -3016,24 +3045,22 @@ export function RequestRecordsTable({
                 'max-h-[min(660px,calc(100vh-260px))] rounded-md border',
               )}
               className="table-fixed"
-              style={{ minWidth: visibleTableWidth }}
+              style={showSecondary ? { minWidth: visibleTableWidth } : undefined}
             >
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
-                  {visibleColumnConfigs.map((column) => (
+                  {visibleColumnConfigs.map((column, index) => (
                     <UsageRecordTableHead
                       key={column.key}
                       column={column}
                       sort={filters.sort}
                       sortableFields={records.sortableFields}
                       disabled={mutating}
+                      fillRemaining={!showSecondary && index === 0}
                       onSortChange={applySort}
                     />
                   ))}
-                  <TableHead
-                    className="table-sticky-action-head text-right"
-                    style={{ width: usageRecordActionColumnWidth }}
-                  >
+                  <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                     {t('usageLogsPage.records.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -3041,27 +3068,27 @@ export function RequestRecordsTable({
               <TableBody>
                 {rows.map((record) => (
                   <TableRow key={record.id} variant="resource">
-                    {isColumnVisible('time') ? (
+                    {isColumnRendered('time') ? (
                       <TableCell className="text-muted-foreground truncate">
                         {formatDateTime(record.timestamp, i18n) ?? record.timestamp}
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('status') ? (
+                    {isColumnRendered('status') ? (
                       <TableCell>
                         <StatusBadge record={record} />
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('model') ? (
+                    {isColumnRendered('model') ? (
                       <TableCell className="min-w-0">
                         <RequestModelCell record={record} />
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('client') ? (
+                    {isColumnRendered('client') ? (
                       <TableCell className="min-w-0">
                         <UsageCallerCell client={record.client} />
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('credential') ? (
+                    {isColumnRendered('credential') ? (
                       <TableCell className="min-w-0">
                         <div className="flex items-center gap-2">
                           <CredentialBadge credential={record.credential} />
@@ -3074,7 +3101,7 @@ export function RequestRecordsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('tokens') ? (
+                    {isColumnRendered('tokens') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
                           {record.tokenBreakdown ? (
@@ -3096,7 +3123,7 @@ export function RequestRecordsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('performance') ? (
+                    {isColumnRendered('performance') ? (
                       <TableCell className="text-right">
                         <p className="font-medium">
                           {formatDuration(record.performance.latencyMs) ?? <EmptyValue />}
@@ -3108,7 +3135,7 @@ export function RequestRecordsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('cost') ? (
+                    {isColumnRendered('cost') ? (
                       <TableCell className="text-right">
                         {formatAmountUnit(
                           t,
@@ -3117,7 +3144,7 @@ export function RequestRecordsTable({
                         ) ?? <EmptyValue />}
                       </TableCell>
                     ) : null}
-                    {isColumnVisible('request') ? (
+                    {isColumnRendered('request') ? (
                       <TableCell className="min-w-0">
                         <p className="truncate font-mono text-xs">
                           {record.requestId ?? t('usageLogsPage.status.unknownRequest')}
@@ -3128,21 +3155,18 @@ export function RequestRecordsTable({
                         </p>
                       </TableCell>
                     ) : null}
-                    <TableCell
-                      className="table-sticky-action-cell text-right transition-colors"
-                      style={{ width: usageRecordActionColumnWidth }}
-                    >
-                      <div className="table-action-cell-content">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="md"
-                          onClick={() => onInspect(record)}
-                        >
-                          <Eye className="size-4" aria-hidden="true" />
-                          {t('usageLogsPage.actions.viewRecordDetail')}
-                        </Button>
-                      </div>
+                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                      <RowActions
+                        menuLabel={record.requestId ?? t('usageLogsPage.status.unknownRequest')}
+                        actions={[
+                          {
+                            id: 'inspect',
+                            label: t('usageLogsPage.actions.viewRecordDetail'),
+                            icon: Eye,
+                            onSelect: () => onInspect(record),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -3479,7 +3503,7 @@ export function RequestLogIndexTable({
                     onSort={handleSort}
                   />
                 </TableHead>
-                <TableHead className="table-sticky-action-head w-[120px] text-right">
+                <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                   {t('usageLogsPage.requestLogs.columns.actions')}
                 </TableHead>
               </TableRow>
@@ -3540,25 +3564,21 @@ export function RequestLogIndexTable({
                         })
                       )}
                     </TableCell>
-                    <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
-                      <div className="table-action-cell-content">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="md"
-                          disabled={!row.available || mutating}
-                          onClick={() =>
-                            onDownloadRequestLog(row.requestId, row.homeIp, row.homePort)
-                          }
-                        >
-                          {downloading ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Download className="size-4" aria-hidden="true" />
-                          )}
-                          {t('usageLogsPage.actions.download')}
-                        </Button>
-                      </div>
+                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                      <RowActions
+                        menuLabel={row.requestId}
+                        actions={[
+                          {
+                            id: 'download',
+                            label: t('usageLogsPage.actions.download'),
+                            icon: Download,
+                            disabled: !row.available || mutating,
+                            busy: downloading,
+                            onSelect: () =>
+                              onDownloadRequestLog(row.requestId, row.homeIp, row.homePort),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 )
@@ -3801,7 +3821,7 @@ function RequestTokenBreakdown({ record }: { record: UsageRecord }) {
               {t(`usageLogsPage.tokenAccounting.quality.${breakdown.quality}`)}
             </DiagnosticDetailField>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className={formGridClassName}>
             <div className="min-w-0">
               <h4 className="text-muted-foreground text-xs font-semibold">
                 {t('usageLogsPage.detail.tokenGroups.input')}
@@ -5332,7 +5352,7 @@ export function RuntimeLogViewer({
                     {t('usageLogsPage.logs.columns.request')}
                   </TableHead>
                   <TableHead>{t('usageLogsPage.logs.columns.summary')}</TableHead>
-                  <TableHead className="table-sticky-action-head w-36 text-right">
+                  <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                     {t('usageLogsPage.logs.columns.actions')}
                   </TableHead>
                 </TableRow>
@@ -5554,7 +5574,7 @@ function RuntimeLogDetailSheet({
         </SheetHeader>
         {record ? (
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className={formGridClassName}>
               <DetailField label={t('usageLogsPage.logs.columns.level')}>
                 <LogLevelBadge level={getRuntimeLogLevel(record)} />
               </DetailField>
@@ -5636,13 +5656,18 @@ function RuntimeLogRow({
           </span>
         </div>
       </TableCell>
-      <TableCell className="table-sticky-action-cell w-36 text-right transition-colors">
-        <div className="table-action-cell-content">
-          <Button type="button" variant="text" size="md" onClick={() => onInspectLog(record)}>
-            <Eye className="size-4" aria-hidden="true" />
-            {t('usageLogsPage.actions.viewLogDetail')}
-          </Button>
-        </div>
+      <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+        <RowActions
+          menuLabel={record.requestId ?? t('usageLogsPage.status.unknownRequest')}
+          actions={[
+            {
+              id: 'inspect',
+              label: t('usageLogsPage.actions.viewLogDetail'),
+              icon: Eye,
+              onSelect: () => onInspectLog(record),
+            },
+          ]}
+        />
       </TableCell>
     </TableRow>
   )
@@ -5735,7 +5760,7 @@ export function ErrorLogFilesPanel({
                 <TableHead className="w-[80px] text-right">
                   {t('usageLogsPage.errorLogs.columns.size')}
                 </TableHead>
-                <TableHead className="table-sticky-action-head w-[120px] text-right">
+                <TableHead className="table-sticky-action-head table-action-column-1 text-right">
                   {t('usageLogsPage.errorLogs.columns.actions')}
                 </TableHead>
               </TableRow>
@@ -5757,23 +5782,20 @@ export function ErrorLogFilesPanel({
                         <EmptyValue />
                       )}
                     </TableCell>
-                    <TableCell className="table-sticky-action-cell w-[120px] text-right transition-colors">
-                      <div className="table-action-cell-content">
-                        <Button
-                          type="button"
-                          variant="text"
-                          size="md"
-                          disabled={mutating}
-                          onClick={() => onDownloadErrorLog(row.name)}
-                        >
-                          {downloading ? (
-                            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <Download className="size-4" aria-hidden="true" />
-                          )}
-                          {t('usageLogsPage.actions.download')}
-                        </Button>
-                      </div>
+                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                      <RowActions
+                        menuLabel={row.name}
+                        actions={[
+                          {
+                            id: 'download',
+                            label: t('usageLogsPage.actions.download'),
+                            icon: Download,
+                            disabled: mutating,
+                            busy: downloading,
+                            onSelect: () => onDownloadErrorLog(row.name),
+                          },
+                        ]}
+                      />
                     </TableCell>
                   </TableRow>
                 )

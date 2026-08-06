@@ -1,7 +1,8 @@
-import { type FocusEvent, type PointerEvent, useState } from 'react'
+import { useId } from 'react'
 
 import { Link } from '@tanstack/react-router'
 
+import type { TFunction } from 'i18next'
 import {
   Activity,
   AlertTriangle,
@@ -28,6 +29,7 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Area, AreaChart, CartesianGrid, YAxis } from 'recharts'
 
 import { emptyValueText } from '@/components/shared/empty-value'
 import { ProviderLogo } from '@/components/shared/provider-logo'
@@ -36,6 +38,7 @@ import {
   type UsageActivityMatrixBucket,
 } from '@/components/shared/usage-activity-matrix'
 import { Button } from '@/components/ui/button'
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartXAxis } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import type {
   DashboardConfigCheck,
@@ -51,6 +54,7 @@ import type {
   DashboardUsageConsumptionTrendSummary,
 } from '@/features/dashboard/dashboard-model'
 import { useDashboardOverview } from '@/features/dashboard/use-dashboard-overview'
+import { useIsCompactViewport } from '@/hooks/use-compact-viewport'
 import {
   CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT,
   SAME_ORIGIN_MANAGEMENT_BASE_URL,
@@ -153,25 +157,6 @@ function interactiveCardClassName() {
 
 function cornerDrillDownClassName() {
   return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-2 bottom-2 inline-flex size-10 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
-}
-
-function DashboardDrillDownLink({ label, to }: { label: string; to: DashboardLinkTarget }) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        'group/link focus-visible:border-ring focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
-        cornerDrillDownClassName(),
-      )}
-      aria-label={label}
-      title={label}
-    >
-      <Eye
-        className="size-3.5 transition-transform duration-200 group-hover/link:scale-110 group-focus-visible/link:scale-110 motion-reduce:transition-none"
-        aria-hidden="true"
-      />
-    </Link>
-  )
 }
 
 function DashboardDrillDownIndicator() {
@@ -455,7 +440,7 @@ function DashboardUsageInsightPanel({
 
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 shadow-sm">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -474,7 +459,6 @@ function DashboardUsageInsightPanel({
                   })}
             </p>
           </div>
-          <DashboardDrillDownLink to="/admin/usage" label={t('dashboard.keyStatus.action')} />
         </div>
         <RankPreviewList
           items={keyStatus.topClientKeys}
@@ -482,7 +466,7 @@ function DashboardUsageInsightPanel({
         />
       </section>
 
-      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 shadow-sm">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -497,7 +481,6 @@ function DashboardUsageInsightPanel({
                   })}
             </p>
           </div>
-          <DashboardDrillDownLink to="/admin/usage" label={t('dashboard.modelUsage.action')} />
         </div>
         <RankPreviewList
           items={modelUsage.topModels}
@@ -508,78 +491,83 @@ function DashboardUsageInsightPanel({
   )
 }
 
+const usageConsumptionTrendChartConfig = {
+  tokens: { color: 'var(--primary)' },
+} satisfies ChartConfig
+
+function UsageConsumptionTrendTooltip({
+  active,
+  payload,
+  t,
+}: {
+  active?: boolean
+  payload?: ReadonlyArray<{ payload?: DashboardUsageConsumptionTrendSummary['points'][number] }>
+  t: TFunction
+}) {
+  const datum = active ? payload?.[0]?.payload : undefined
+  if (!datum) return null
+
+  return (
+    <div className="bg-popover text-popover-foreground max-w-[240px] rounded-md border px-3 py-2 text-xs shadow-sm">
+      <p className="font-medium">
+        {formatShortDateTime(datum.label.split(' - ')[0] ?? datum.label)}
+      </p>
+      <div className="mt-2 flex items-center justify-between gap-4">
+        <span className="text-muted-foreground">
+          {t('dashboard.usageConsumptionTrend.tooltip.tokens')}
+        </span>
+        <span className="font-medium tabular-nums">
+          {t('dashboard.usageConsumptionTrend.tooltip.tokenValue', {
+            value: formatCompactNumber(datum.tokens),
+          })}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-4">
+        <span className="text-muted-foreground">
+          {t('dashboard.usageConsumptionTrend.tooltip.requests')}
+        </span>
+        <span className="font-medium tabular-nums">{formatNumber(datum.requestCount)}</span>
+      </div>
+    </div>
+  )
+}
+
+/*
+ * This panel used to draw its own SVG: 250 lines of path arithmetic, a hand-placed
+ * tooltip, and one focusable circle per point. It also carried a `min-w-[560px]`
+ * floor, which at 375px left 44.8% of the chart off-screen behind a horizontal
+ * scrollbar — the widest single gap the mobile audit found.
+ *
+ * Recharts removes both problems at once. The container is responsive, so the
+ * chart fits whatever width it is given, and `accessibilityLayer` replaces the
+ * per-point tab stops with one focusable chart the arrow keys walk — 24 tab stops
+ * become 1.
+ */
 function DashboardUsageConsumptionTrendPanel({
   summary,
 }: {
   summary: DashboardUsageConsumptionTrendSummary
 }) {
   const { t } = useTranslation()
-  const [activePointIndex, setActivePointIndex] = useState<number | null>(null)
-  const width = 960
-  const height = 192
-  const margin = { top: 16, right: 18, bottom: 22, left: 18 }
-  const innerWidth = width - margin.left - margin.right
-  const innerHeight = height - margin.top - margin.bottom
-  const tokenValues = summary.points.map((point) => point.tokens)
-  const maxTokens = Math.max(...tokenValues, 1)
-  const getX = (index: number) =>
-    margin.left + (index / Math.max(1, summary.points.length - 1)) * innerWidth
-  const getY = (tokens: number) => margin.top + innerHeight - (tokens / maxTokens) * innerHeight
-  const chartPoints = summary.points.map((point, index) => ({
-    ...point,
-    x: getX(index),
-    y: getY(point.tokens),
-  }))
-  const linePoints = chartPoints.map((point) => `${point.x},${point.y}`)
-  const areaPath =
-    linePoints.length > 0
-      ? `M ${linePoints.join(' L ')} L ${margin.left + innerWidth},${margin.top + innerHeight} L ${
-          margin.left
-        },${margin.top + innerHeight} Z`
-      : ''
-  const labelIndexes = [
-    ...new Set([0, Math.floor(summary.points.length / 2), summary.points.length - 1]),
+  const isCompact = useIsCompactViewport()
+  const trendInstructionsId = useId()
+  const labelById = new Map(summary.points.map((point) => [point.id, point.label]))
+  /*
+   * Three ticks is what the hand-drawn version showed. Two on a phone: the
+   * formatted timestamps run ~100px each, and three of them do not fit 375px
+   * without colliding.
+   */
+  const tickIndexes = [
+    ...new Set(
+      isCompact
+        ? [0, summary.points.length - 1]
+        : [0, Math.floor(summary.points.length / 2), summary.points.length - 1],
+    ),
   ].filter((index) => index >= 0 && index < summary.points.length)
-  const activePoint =
-    activePointIndex === null ? null : (chartPoints[activePointIndex] ?? chartPoints[0])
-  const tooltipWidth = 196
-  const tooltipHeight = 76
-  const tooltipGap = 10
-  const tooltipX = activePoint
-    ? Math.min(
-        Math.max(activePoint.x - tooltipWidth / 2, margin.left),
-        width - margin.right - tooltipWidth,
-      )
-    : 0
-  const tooltipY = activePoint
-    ? activePoint.y > tooltipHeight + tooltipGap + margin.top
-      ? activePoint.y - tooltipHeight - tooltipGap
-      : activePoint.y + tooltipGap
-    : 0
-
-  function updateActivePoint(event: PointerEvent<SVGSVGElement>) {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const pointerX = ((event.clientX - rect.left) / rect.width) * width
-    const clampedX = Math.min(Math.max(pointerX, margin.left), margin.left + innerWidth)
-    const nextIndex = chartPoints.reduce(
-      (nearestIndex, point, index) => {
-        const distance = Math.abs(point.x - clampedX)
-        return distance < nearestIndex.distance ? { index, distance } : nearestIndex
-      },
-      { index: 0, distance: Number.POSITIVE_INFINITY },
-    ).index
-
-    setActivePointIndex(nextIndex)
-  }
-
-  function clearActivePoint(event: FocusEvent<SVGCircleElement>) {
-    if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) {
-      setActivePointIndex(null)
-    }
-  }
+  const xAxisTicks = tickIndexes.map((index) => summary.points[index]?.id ?? '')
 
   return (
-    <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+    <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -598,168 +586,59 @@ function DashboardUsageConsumptionTrendPanel({
             })}
           </p>
         </div>
-        <DashboardDrillDownLink
-          to="/admin/usage"
-          label={t('dashboard.usageConsumptionTrend.action')}
-        />
       </div>
-      <div className="mt-4 min-w-0 overflow-x-auto pb-1">
-        <div className="min-w-[560px]">
-          <div style={{ aspectRatio: `${width} / ${height}` }}>
-            <svg
-              className="block size-full cursor-crosshair overflow-visible"
-              viewBox={`0 0 ${width} ${height}`}
-              preserveAspectRatio="xMidYMid meet"
-              role="img"
-              aria-label={t('dashboard.usageConsumptionTrend.title')}
-              onPointerMove={updateActivePoint}
-              onPointerLeave={() => setActivePointIndex(null)}
-            >
-              {[0, 0.5, 1].map((tick) => {
-                const y = margin.top + innerHeight - tick * innerHeight
-
-                return (
-                  <line
-                    key={tick}
-                    x1={margin.left}
-                    x2={margin.left + innerWidth}
-                    y1={y}
-                    y2={y}
-                    stroke="var(--border)"
-                    strokeDasharray="3 4"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                )
-              })}
-              {areaPath ? (
-                <path
-                  d={areaPath}
-                  fill="var(--primary)"
-                  opacity="0.1"
-                  vectorEffect="non-scaling-stroke"
-                />
-              ) : null}
-              {linePoints.length > 1 ? (
-                <polyline
-                  points={linePoints.join(' ')}
-                  fill="none"
-                  stroke="var(--primary)"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  vectorEffect="non-scaling-stroke"
-                />
-              ) : null}
-              {chartPoints.map((point, index) => (
-                <circle
-                  key={point.id}
-                  cx={point.x}
-                  cy={point.y}
-                  r="3"
-                  fill="var(--card)"
-                  stroke="var(--primary)"
-                  strokeWidth="2"
-                  tabIndex={0}
-                  vectorEffect="non-scaling-stroke"
-                  aria-label={t('dashboard.usageConsumptionTrend.tooltip.pointAria', {
-                    time: formatShortDateTime(point.label.split(' - ')[0] ?? point.label),
-                    tokens: t('dashboard.usageConsumptionTrend.tooltip.tokenValue', {
-                      value: formatCompactNumber(point.tokens),
-                    }),
-                    requests: formatNumber(point.requestCount),
-                  })}
-                  onFocus={() => setActivePointIndex(index)}
-                  onBlur={clearActivePoint}
-                />
-              ))}
-              <rect
-                x={margin.left}
-                y={margin.top}
-                width={innerWidth}
-                height={innerHeight}
-                fill="transparent"
-              />
-              {activePoint ? (
-                <g pointerEvents="none">
-                  <line
-                    x1={activePoint.x}
-                    x2={activePoint.x}
-                    y1={margin.top}
-                    y2={margin.top + innerHeight}
-                    stroke="var(--primary)"
-                    strokeDasharray="4 5"
-                    opacity="0.5"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <line
-                    x1={margin.left}
-                    x2={margin.left + innerWidth}
-                    y1={activePoint.y}
-                    y2={activePoint.y}
-                    stroke="var(--primary)"
-                    strokeDasharray="4 5"
-                    opacity="0.45"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <circle
-                    cx={activePoint.x}
-                    cy={activePoint.y}
-                    r="5"
-                    fill="var(--primary)"
-                    stroke="var(--card)"
-                    strokeWidth="2.5"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <g transform={`translate(${tooltipX} ${tooltipY})`}>
-                    <rect
-                      width={tooltipWidth}
-                      height={tooltipHeight}
-                      rx="8"
-                      fill="var(--card)"
-                      stroke="var(--border)"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    <text x="12" y="21" fill="var(--foreground)" fontSize="12" fontWeight="600">
-                      {formatShortDateTime(activePoint.label.split(' - ')[0] ?? activePoint.label)}
-                    </text>
-                    <text x="12" y="44" fill="var(--muted-foreground)" fontSize="11">
-                      {t('dashboard.usageConsumptionTrend.tooltip.tokens')}
-                    </text>
-                    <text
-                      x={tooltipWidth - 12}
-                      y="44"
-                      textAnchor="end"
-                      fill="var(--foreground)"
-                      fontSize="11"
-                    >
-                      {t('dashboard.usageConsumptionTrend.tooltip.tokenValue', {
-                        value: formatCompactNumber(activePoint.tokens),
-                      })}
-                    </text>
-                    <text x="12" y="62" fill="var(--muted-foreground)" fontSize="11">
-                      {t('dashboard.usageConsumptionTrend.tooltip.requests')}
-                    </text>
-                    <text
-                      x={tooltipWidth - 12}
-                      y="62"
-                      textAnchor="end"
-                      fill="var(--foreground)"
-                      fontSize="11"
-                    >
-                      {formatNumber(activePoint.requestCount)}
-                    </text>
-                  </g>
-                </g>
-              ) : null}
-            </svg>
-          </div>
-          <div className="text-muted-foreground mt-2 flex justify-between gap-3 text-xs">
-            {labelIndexes.map((index) => {
-              const point = summary.points[index]
-              return <span key={point.id}>{formatShortDateTime(point.label.split(' - ')[0])}</span>
-            })}
-          </div>
-        </div>
+      {/*
+        The hand-drawn chart named itself on its `<svg>` and described every point
+        on its own circle. `accessibilityLayer` gives the keyboard back but says
+        nothing about what the chart is or how to walk it, so both are stated here —
+        the same pair the usage trend chart already carries.
+      */}
+      <div
+        role="group"
+        aria-label={t('dashboard.usageConsumptionTrend.title')}
+        aria-describedby={trendInstructionsId}
+        className="min-w-0"
+      >
+        <p id={trendInstructionsId} className="sr-only">
+          {t('dashboard.usageConsumptionTrend.accessibility.keyboardInstructions')}
+        </p>
+        <ChartContainer
+          config={usageConsumptionTrendChartConfig}
+          className="[&_.recharts-wrapper:focus-visible]:ring-ring mt-4 aspect-auto h-[200px] w-full min-w-0 [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
+        >
+          <AreaChart
+            accessibilityLayer
+            data={summary.points}
+            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+          >
+            <CartesianGrid vertical={false} strokeDasharray="3 4" />
+            <ChartXAxis
+              dataKey="id"
+              ticks={xAxisTicks}
+              interval={0}
+              tickFormatter={(id: string) =>
+                formatShortDateTime((labelById.get(id) ?? '').split(' - ')[0] ?? '')
+              }
+            />
+            {/* Hidden, but present: CartesianGrid needs an axis to lay its lines against. */}
+            <YAxis hide domain={[0, 'dataMax']} />
+            <ChartTooltip
+              isAnimationActive={false}
+              content={<UsageConsumptionTrendTooltip t={t} />}
+            />
+            <Area
+              dataKey="tokens"
+              type="monotone"
+              stroke="var(--color-tokens)"
+              strokeWidth={2}
+              fill="var(--color-tokens)"
+              fillOpacity={0.1}
+              isAnimationActive={false}
+              dot={false}
+              activeDot={{ r: 5, strokeWidth: 2.5, stroke: 'var(--card)' }}
+            />
+          </AreaChart>
+        </ChartContainer>
       </div>
     </div>
   )
@@ -810,7 +689,7 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
     })
 
   return (
-    <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 pb-12 shadow-sm">
+    <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -831,10 +710,6 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
             })}
           </p>
         </div>
-        <DashboardDrillDownLink
-          to="/admin/diagnostics"
-          label={t('dashboard.usageActivity.action')}
-        />
       </div>
       <div className="mt-4">
         <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
@@ -1048,7 +923,6 @@ export function DashboardConsolePage() {
       : viewModel.healthSummary.tone === 'info'
         ? Info
         : AlertTriangle
-  const hasConfigAttention = viewModel.configChecks.some((check) => check.tone === 'warning')
 
   return (
     <section className="grid w-full gap-4">
@@ -1197,22 +1071,11 @@ export function DashboardConsolePage() {
       </div>
 
       <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
-        <div
-          className={cn(
-            'group/card bg-card relative flex min-w-0 flex-col rounded-lg border p-4 shadow-sm',
-            !viewModel.allProvidersEmpty && 'pb-12',
-          )}
-        >
+        <div className="group/card bg-card relative flex min-w-0 flex-col rounded-lg border p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-base font-semibold">{t('dashboard.providers.title')}</h2>
             </div>
-            {!viewModel.allProvidersEmpty ? (
-              <DashboardDrillDownLink
-                to="/admin/providers"
-                label={t('dashboard.providers.action')}
-              />
-            ) : null}
           </div>
           {viewModel.allProvidersEmpty ? (
             <div className="bg-muted/20 mt-3 flex min-h-[18rem] flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center xl:flex-1">
@@ -1283,14 +1146,10 @@ export function DashboardConsolePage() {
           <div
             className={cn(
               'group/card bg-card relative flex min-h-0 flex-col rounded-lg border p-4 shadow-sm',
-              hasConfigAttention && 'pb-12',
             )}
           >
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-base font-semibold">{t('dashboard.config.title')}</h2>
-              {hasConfigAttention ? (
-                <DashboardDrillDownLink to="/admin/config" label={t('dashboard.config.action')} />
-              ) : null}
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {viewModel.configChecks.map((check) => {

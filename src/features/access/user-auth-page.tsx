@@ -6,6 +6,7 @@ import { ArrowLeft, CircleAlert, Loader2, LockKeyhole, ShieldCheck, UserRound } 
 import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -169,7 +170,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
             ) : null}
 
             <fieldset className="grid gap-4" disabled={checking} aria-disabled={checking}>
-              <label className="grid gap-2 text-sm font-medium">
+              <label className={fieldClassName}>
                 <span>{t('userAccess.fields.username')}</span>
                 <Input
                   value={username}
@@ -179,7 +180,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 />
               </label>
               {mode === 'register' && capabilities.data?.emailRegistration ? (
-                <label className="grid gap-2 text-sm font-medium">
+                <label className={fieldClassName}>
                   <span>{t('userAccess.fields.emailOptional')}</span>
                   <Input
                     type="email"
@@ -194,7 +195,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 </label>
               ) : null}
               {step !== 'passkey' ? (
-                <label className="grid gap-2 text-sm font-medium">
+                <label className={fieldClassName}>
                   <span className="flex items-center justify-between gap-3">
                     <span>{t('userAccess.fields.password')}</span>
                     {mode === 'login' && step === 'password' ? (
@@ -216,7 +217,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 </label>
               ) : null}
               {mode === 'register' ? (
-                <label className="grid gap-2 text-sm font-medium">
+                <label className={fieldClassName}>
                   <span>{t('userAccess.fields.confirmPassword')}</span>
                   <Input
                     type="password"
@@ -228,7 +229,7 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
                 </label>
               ) : null}
               {mode === 'login' && step === 'totp' ? (
-                <label className="grid gap-2 text-sm font-medium">
+                <label className={fieldClassName}>
                   <span>{t('userAccess.fields.totpCode')}</span>
                   <Input
                     value={totpCode}

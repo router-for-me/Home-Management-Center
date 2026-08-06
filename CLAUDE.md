@@ -65,7 +65,8 @@ Do not start extra development servers when the user already has one running. Th
 - Use existing shadcn/ui primitives for dialogs, confirmation flows, sheets, forms, buttons, inputs, dropdowns, and skeletons.
 - Size a control by choosing its step (`xs` `sm` `md` `lg` `xl`), which carries height, padding, gap, type, radius and icon size together. Feature code sets width and spacing, never height or type; `home-ui/no-control-size-override` fails the build on both.
 - Take interaction states from the control's family rather than writing them per call site: a bordered control gets its hover from `.control-bordered`, a filled one deepens its own fill, a segmented one moves background only. Read DESIGN.md Interaction states before adding any `hover:` utility to a control.
-- Build charts with `src/components/ui/chart.tsx` (Recharts) instead of hand-rolled SVG; when a task touches a remaining hand-written chart, migrate it.
+- Build every table action column with `RowActions`. At most three controls in the column counting the overflow trigger, so four or more actions render two buttons plus a trigger; icon-plus-label `text` buttons only; and the column takes its width from `.table-action-column-{1,2,3}`, never a width utility.
+- Build charts with `src/components/ui/chart.tsx` (Recharts), never hand-rolled SVG. Use `ChartXAxis` rather than a bare `XAxis`; give the container a fixed height and no `min-width`; prefer `accessibilityLayer` over per-point tab stops, and name the chart with `role="group"` plus an `aria-label`. Inline SVG is for decorative `aria-hidden` sparklines only.
 - Avoid browser-native `alert`, `confirm`, and `prompt` in product UI.
 - Do not add placeholder features that imply backend support the API does not provide.
 - Keep generated route output consistent by running `bun run routes:generate` after route changes.
@@ -92,6 +93,16 @@ Do not translate provider IDs, model IDs, API field names, route paths, config k
 - Controls in the same state must look the same across the whole app. One control size per toolbar row, and one hover treatment per control family.
 - Tables should keep stable column widths where changing data could otherwise cause visual jitter.
 - Mobile behavior should use responsive structure, not viewport-scaled typography. Touch floors come from the control step and need no per-surface opt-in.
+- Width decides a layout's shape (`useIsCompactViewport`, 40rem); pointer coarseness decides target size (the control step). Do not conflate them. Below 40rem an action column collapses to a single overflow trigger.
+- Take field, field-group and filter-row layout from `@/components/shared/form-layout`; do not write `grid gap-* sm:grid-cols-*` at a call site.
+- Overlays cap their height in `dvh`, not `vh` or a fixed px, or a software keyboard pushes them past the fold. Sheets are full width below 40rem and a capped panel above it. Button groups stack and stretch below 40rem rather than wrap.
+- A dense grid of small targets that cannot reach the 40px floor changes its column count, not its hit-area padding.
+- Build a sheet form from `DrawerScaffoldForm` + `DrawerScaffoldBody` + `DrawerScaffoldFooter`; a plain `<form className="grid">` inside a drawer cannot scroll and hides its submit button on a short viewport.
+- Take table header background from `tableHeaderClassName`; never write `bg-muted/70` or another shade, because the sticky action column paints one opaque value.
+- Bulk action bars use `text` and `destructiveText`, the same family as row actions — not `outline` with a hand-written `text-destructive`.
+- Only render a hover drill-down affordance on a card that is actually navigable.
+- Below 40rem a table keeps only its identity column, its one most telling field, and actions; gate the `col`, `TableHead` and `TableCell` on one `useSecondaryColumns()` value. Three things are all required: hide the columns, drop the table min-width, and switch to `table-fixed` (an auto-layout table ignores a cell max-width and sizes to content). Give the identity column no width so it takes the remainder.
+- Verify a responsive claim by measuring at that width in a browser, not by reasoning about it.
 
 ## Editing Rules
 

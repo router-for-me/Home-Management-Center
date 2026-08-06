@@ -80,5 +80,6 @@ The interface should feel like a serious control plane: clear hierarchy, restrai
 - Keyboard-reachable controls, dialogs, sheets, command palette, and navigation.
 - Visible focus states and semantic buttons, forms, tables, and status regions.
 - Color must never be the only signal for warning, danger, success, or unsupported backend behavior.
-- Text must not overflow controls in English, Simplified Chinese, Traditional Chinese, or Russian.
+- Text must not overflow controls in English, Simplified Chinese, Traditional Chinese, or Russian, and must not overflow a table cell into the column beside it.
+- The console must be operable on a phone. Operators diagnose from wherever they are, so a narrow screen changes the shape of a surface, never the set of things it can do.
 - Motion should communicate state and remain short, predictable, and non-essential.

@@ -17,7 +17,25 @@ type DrawerScaffoldHeaderProps = ComponentProps<typeof SheetHeader> & {
 }
 
 function DrawerScaffoldContent({ className, ...props }: ComponentProps<typeof SheetContent>) {
-  return <SheetContent className={cn('w-full gap-0 overflow-hidden p-0', className)} {...props} />
+  // No width here any more: the sheet primitive is full-width below 40rem on its
+  // own, and this override was the only thing making the two disagree.
+  return <SheetContent className={cn('gap-0 overflow-hidden p-0', className)} {...props} />
+}
+
+/*
+ * A form filling a drawer.
+ *
+ * The drawer clips what does not fit, and expects exactly one child to be the part
+ * that scrolls. A form written as a plain `grid` is neither: it sizes to its own
+ * content and cannot shrink, so on a short viewport the drawer cut the bottom off
+ * and took the submit button with it — the form was still there, just unreachable.
+ *
+ * Four of the five forms in this app had that shape, which is what makes it a
+ * primitive rather than a rule: `DrawerScaffoldForm` plus a Body and a Footer is
+ * the only arrangement that scrolls, and now it is also the shortest one to write.
+ */
+function DrawerScaffoldForm({ className, ...props }: ComponentProps<'form'>) {
+  return <form className={cn('flex min-h-0 flex-1 flex-col', className)} {...props} />
 }
 
 function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerScaffoldHeaderProps) {
@@ -70,4 +88,10 @@ function DrawerScaffoldFooter({ className, ...props }: ComponentProps<typeof She
   )
 }
 
-export { DrawerScaffoldBody, DrawerScaffoldContent, DrawerScaffoldFooter, DrawerScaffoldHeader }
+export {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldForm,
+  DrawerScaffoldHeader,
+}

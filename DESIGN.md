@@ -64,7 +64,7 @@ Theme tokens:
 - `src/styles/theme-tokens.css` owns Slate theme mappings and semantic color variables.
 - `src/styles/control-tokens.css` owns the control step ramp, the type roles, and the interaction state layer, including the hover colors every bordered control shares.
 - `src/styles/effects.css` owns cross-theme loading and motion effects. A hover or size rule does not belong here: an unlayered rule outranks every layer, so one written here silently takes precedence over the shared control state.
-- `src/styles/globals.css` stays as the style entrypoint plus minimal global base rules.
+- `src/styles/globals.css` is the style entrypoint plus the global base rules, and it owns the table layer: the z-index scale, the sticky action column, and the per-locale action column widths.
 
 Do not introduce broad purple gradients, warm parchment backgrounds, beige/brown themes, decorative bokeh, floating orbs, or gradient text.
 
@@ -140,8 +140,45 @@ Action placement and emphasis:
 - A single-resource page may keep its primary action in `PageHeader`, but no action appears in both headers.
 - One primary per group, given to the safest frequent next action, usually create. Refresh, sync, export, and replace-all are `outline`.
 - Destructive actions take the destructive treatment; a group of only secondary or risky actions needs no primary.
-- Row action columns carry independent row-level tasks only, never a destination the detail view already offers; three at most, the rest in an overflow menu.
+- Row action columns carry independent row-level tasks only, never a destination the detail view already offers.
+- A bulk action bar draws from the same family as a row action column: no surface at rest, destructive in red. It is a set of row actions addressed to several rows, not a toolbar.
+- The table header has one background. A sticky column has to paint an opaque copy of it, and can only match one value.
 - Destructive actions come last, and sticky action columns never cover adjacent content.
+
+Row actions:
+
+- A row's actions are declared, not laid out. The shared row-action component owns the count, the styling, the ordering, and the width; feature code passes the actions in priority order and nothing else.
+- Three controls in the column, and the overflow trigger is one of them. Counting only the labelled ones is what let a column reach four.
+- One treatment for all of them: icon plus label, no surface at rest, destructive in red. A filled or outlined control here would repeat a page's primary action once per row.
+- Destructive comes last in whatever group it renders in, so priority order and reading order stay separate concerns.
+- The reserved width follows the control count and the locale. Label lengths differ enough between Chinese and Russian that one number cannot serve both without either clipping or waste, so the width is measured per locale and never estimated.
+
+Compact viewport:
+
+- One boundary, and two questions behind it that must not be conflated. Width decides a layout's shape. Pointer coarseness decides how big a target is. Answering both with one condition puts a touched tablet into a phone layout it has room to avoid.
+- Compact is a different shape, never a smaller feature set. Everything reachable on a desktop is reachable on a phone.
+- A narrow viewport buys space by collapsing repetition, not by shrinking type or hiding function. An action column becomes one overflow trigger; a single action stays a direct tap, because a menu of one costs a step and saves nothing.
+- A wide table gives up columns rather than access: every row opens a detail view carrying every field, so a dropped column is one tap away. Two survive — which row this is, and the one field that says the most about it, which is status on a resource table and amount on a ledger.
+- Whatever a collapsed layout falls back on inherits the touch floor. Menus carry the weight once a column is behind a trigger, so they are targets on the same terms as controls.
+- Where a dense grid of small targets cannot clear the floor, the grid changes shape and the targets do not change padding. Enough targets in a narrow row will not fit at any hit-area size, and hit areas grown into each other just select the neighbour. Fewer columns and more rows is the honest answer.
+- A panel over a phone is the task, not a panel: full width below the boundary, capped to a panel above it. Overlays measure their height against the visible viewport, not the layout one, or a software keyboard pushes them past the fold.
+- A group of buttons stacks and stretches rather than wraps. Wrapping leaves each button its own width, and a column of unequal buttons with ragged space beside them reads as several things instead of one group.
+- The page reserves its scrollbar track. Overlays lock the page while open, and where a scrollbar takes up space, removing it widens the viewport and the layout jumps as the overlay opens.
+- Claims about narrow viewports are measured at that width in a browser. Every number behind these rules came from one.
+
+Charts:
+
+- Charts come from the shared chart primitive, not from hand-drawn SVG. A hand-drawn chart owes its own scales, its own tooltip and its own keyboard model, and it pays for them in a width fixed before anyone knows the viewport.
+- Height is fixed; width is whatever it is given. An aspect ratio that reads well on a desktop turns a phone chart into a strip.
+- A chart is one focusable thing the arrow keys walk, not a row of focusable points. A tab stop per data point is a keyboard trap with extra steps.
+- Axis ticks thin out on narrow screens. Formatted timestamps do not shrink, so fewer of them is the only way they stop colliding.
+- The first and last tick align to their edge rather than centring on it. A centred label at the end of an axis puts half of itself outside the plot, where it is clipped; widening the margin to hide that pays for the longest label in the longest locale on every viewport, and still guesses.
+
+Forms and filters:
+
+- A field, a field group and a filter row each have one spelling, kept in one place. These drift faster than anything else, because every author writes one and no single version looks wrong.
+- Field groups are one column on a phone. Two half-width fields at that width are two truncated fields.
+- A field offering a fixed set of values shows them. A suggestion list that filters against what is already typed shows one option when the field arrives pre-filled, which reads as the only option there is.
 
 Tabs:
 
@@ -156,7 +193,10 @@ Shell:
 
 - Left sidebar is the global navigation anchor.
 - Sidebar supports grouped navigation, collapsed icon rail, active route indicators, and mobile drawer behavior.
-- Navigation items have stable height, clear icon/title alignment, and enough padding for scanning.
+- Navigation items have stable height, clear icon/title alignment, and enough padding for scanning. A navigation icon starts where the header logo starts; two different insets in one rail read as a mistake.
+- The sidebar header and the workspace header are the same height. They sit side by side and their bottom borders are read as one line.
+- The sidebar is as wide as its widest label needs and no wider. A decorative subtitle is not a reason to widen a rail every page pays for.
+- The product mark is the way out of the console, back to where an identity is chosen. Every authenticated surface needs that door.
 - Top bar contains command entry, theme, language, and global connection management.
 - Keep the connection management action because it provides the global disconnect path.
 
@@ -164,7 +204,8 @@ Dashboard:
 
 - Dashboard is the global overview.
 - Lead with a concise operational verdict: disconnected, connected, ready, needs setup, degraded, or unsupported.
-- Suggested actions respond to health gaps and should not duplicate the sidebar.
+- Suggested actions respond to health gaps and should not duplicate the sidebar. A panel that summarises does not also need a link to the page it summarises.
+- A hover affordance means the thing under it is actionable. Showing one on a card that only reports makes the reader test which cards lie.
 - Provider and credential summaries should become setup-oriented empty states when all counts are zero.
 - Partial API failures should surface as degraded data status.
 
@@ -188,6 +229,7 @@ Config workspace:
 Sheets and dialogs:
 
 - Sheets should slide from the side with a clear header, body, and optional footer.
+- A form filling a sheet is built from the shared scaffold, header and footer fixed and the body the only part that scrolls. A form that sizes to its own content cannot shrink, so a short viewport clips the bottom off and takes the submit button with it — present, and unreachable.
 - When a sheet drills into a secondary task, replace its header in place and keep back navigation at the header start; do not stack a second header inside the body.
 - Leave enough spacing between sheet header actions and the first body control to avoid misclicks.
 - Dialogs and confirm flows need stronger dark-mode contrast than the page background.
@@ -224,6 +266,8 @@ Do:
 - Use shadcn/ui dialogs, sheets, dropdowns, buttons, inputs, and skeletons before creating custom primitives.
 - Pick a control step and let it carry height, padding, gap, type, radius and icon size together.
 - Let a control's family decide its hover, so the next one has an answer to copy instead of a choice to make.
+- Declare a row's actions through the shared component and let it decide the count, the styling and the width.
+- Measure a responsive claim at the width it is about to be made at.
 - Make unsupported backend behavior explicit and recoverable.
 - Prefer teal/slate restrained emphasis for control-console actions.
 - Preserve layout stability for buttons, toolbars, tables, config fields, and navigation items.
@@ -234,6 +278,7 @@ Don't:
 - Do not use browser-native `alert`, `confirm`, or `prompt`.
 - Do not set height, box size or type on a control primitive; change the step instead. Lint fails the build on this.
 - Do not write a `hover:border-*` / `hover:bg-*` pair on a bordered control, and do not add a `transition-*` utility to one.
+- Do not hand-build an action column, put a fourth control in one, or give one an outlined or filled button.
 - Do not use gradient text, decorative orbs, bokeh, glass cards, or hero metric templates.
 - Do not nest cards inside cards.
 - Do not use pure black sidebars or pure white active navigation blocks.
