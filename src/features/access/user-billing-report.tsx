@@ -101,7 +101,7 @@ function PaginationBar({
         >
           <SelectTrigger
             className="w-28"
-            size="sm"
+            size="md"
             aria-label={t('userWorkspace.billing.pagination.pageSize')}
           >
             <SelectValue />
@@ -116,7 +116,7 @@ function PaginationBar({
         </Select>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset === 0}
           onClick={() =>
             onChange({ ...pagination, offset: Math.max(0, pagination.offset - pagination.limit) })
@@ -126,7 +126,7 @@ function PaginationBar({
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset + pagination.limit >= total}
           onClick={() => onChange({ ...pagination, offset: pagination.offset + pagination.limit })}
         >

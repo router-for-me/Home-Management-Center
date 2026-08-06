@@ -1535,8 +1535,7 @@ function SectionNavigation({
               key={section.id}
               type="button"
               variant="outline"
-              size="sm"
-              className="h-8"
+              size="md"
               onClick={() => scrollToSection(section.id)}
             >
               {t(`configPage.sections.${section.id}.shortTitle`)}
@@ -1643,8 +1642,8 @@ function ConfigField({
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+              size="icon-sm"
+              className="absolute top-1/2 right-1 -translate-y-1/2"
               disabled={disabled}
               aria-label={
                 sensitiveVisible
@@ -1742,6 +1741,9 @@ function FieldHelp({ label, description }: { label: string; description: string 
           type="button"
           variant="ghost"
           size="icon-xs"
+          // 20px because it is positioned inside the input it reveals, not laid out
+          // beside it.
+          // eslint-disable-next-line home-ui/no-control-size-override
           className="text-muted-foreground hover:text-foreground size-5"
           aria-label={label}
         >
@@ -1907,7 +1909,7 @@ function ExcludedModelsEditor({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             className="bg-background/70 border-amber-500/35 text-amber-800 hover:bg-amber-500/10 sm:shrink-0 dark:text-amber-200"
             disabled={disabled || !catalog || catalog.loading}
             onClick={catalog?.onRetry}
@@ -2054,7 +2056,7 @@ function ModelAliasEditor({
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="md"
           className="w-fit"
           disabled={disabled}
           onClick={addAlias}
@@ -2161,7 +2163,7 @@ function ModelAliasEditor({
                 <Button
                   type="button"
                   variant="text"
-                  size="default"
+                  size="lg"
                   className="justify-start lg:justify-center"
                   disabled={disabled}
                   onClick={() => removeAlias(rowIndex)}
@@ -2297,8 +2299,8 @@ function PayloadIntentAction({
     <Button
       type="button"
       variant={hasSection ? 'secondary' : 'outline'}
-      size="sm"
-      className="h-auto min-h-9 justify-start whitespace-normal"
+      size="md"
+      className="min-h-control-lg h-auto justify-start whitespace-normal"
       disabled={addDisabled}
       onClick={() => {
         if (hasSection) {
@@ -2477,7 +2479,7 @@ function PayloadHeaderRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="default"
+                    size="lg"
                     disabled={disabled}
                     onClick={() => removeHeader(index)}
                   >
@@ -2700,7 +2702,7 @@ function PayloadConditionRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="default"
+                    size="lg"
                     disabled={disabled}
                     onClick={() => removeCondition(index)}
                   >
@@ -2794,7 +2796,7 @@ function PayloadPathListRows({
                 <Button
                   type="button"
                   variant="text"
-                  size="default"
+                  size="lg"
                   disabled={disabled}
                   onClick={() => removePath(index)}
                 >
@@ -2957,7 +2959,7 @@ function PayloadModelRow({
         <Button
           type="button"
           variant={advancedExpanded ? 'secondary' : 'outline'}
-          size="default"
+          size="lg"
           className="w-full justify-start"
           disabled={disabled}
           onClick={() => setAdvancedExpanded((expanded) => !expanded)}
@@ -2975,7 +2977,7 @@ function PayloadModelRow({
         <Button
           type="button"
           variant="text"
-          size="default"
+          size="lg"
           disabled={disabled || !canRemove}
           onClick={onRemove}
         >
@@ -3302,7 +3304,7 @@ function PayloadParamRows({
                   <Button
                     type="button"
                     variant="text"
-                    size="default"
+                    size="lg"
                     disabled={disabled}
                     onClick={() => removeParam(index)}
                   >
@@ -3394,7 +3396,7 @@ function PayloadFilterParamRows({
               <Button
                 type="button"
                 variant="text"
-                size="default"
+                size="lg"
                 disabled={disabled}
                 onClick={() => removeParam(index)}
               >
@@ -3475,7 +3477,7 @@ function PayloadRuleEditor({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     disabled={disabled || issueCount > 0}
                     onClick={() => duplicateRule(index)}
                   >
@@ -3485,7 +3487,7 @@ function PayloadRuleEditor({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     className="text-destructive hover:text-destructive justify-start"
                     disabled={disabled}
                     onClick={() => onRemoveRule(sectionKey, index)}
@@ -3590,7 +3592,7 @@ function PayloadFilterEditor({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     disabled={disabled || issueCount > 0}
                     onClick={() => duplicateRule(index)}
                   >
@@ -3600,7 +3602,7 @@ function PayloadFilterEditor({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     className="text-destructive hover:text-destructive justify-start"
                     disabled={disabled}
                     onClick={() => onRemoveRule(index)}
@@ -3775,7 +3777,7 @@ function PayloadRulesEditor({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             className="bg-background/70 w-fit border-amber-500/40"
             disabled={disabled}
             onClick={restoreRemovedRule}
@@ -3827,7 +3829,7 @@ function PayloadRulesEditor({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="md"
                     className="w-fit"
                     disabled={disabled || draftCount > 0}
                     onClick={() => addRuleToSection(sectionKey)}
@@ -4016,9 +4018,8 @@ function StructuredWorkspace({
                     <Button
                       key={panel}
                       type="button"
-                      size="sm"
+                      size="md"
                       variant={networkPanel === panel ? 'secondary' : 'ghost'}
-                      className="h-8"
                       onClick={() => setNetworkPanel(panel)}
                     >
                       {t(`configPage.networkPanels.${panel}`)}
@@ -4145,13 +4146,13 @@ function ConfigActionBar({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <Button variant="outline" size="sm" disabled={!dirty} onClick={onOpenChanges}>
+            <Button variant="outline" size="md" disabled={!dirty} onClick={onOpenChanges}>
               <FileDiff className="size-4" aria-hidden="true" />
               {t('configPage.actions.viewChanges')}
             </Button>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               disabled={isFetching || mutating}
               onClick={onReload}
             >
@@ -4162,7 +4163,7 @@ function ConfigActionBar({
               )}
               {t('configPage.actions.reload')}
             </Button>
-            <Button size="sm" disabled={saveDisabled} onClick={onSave}>
+            <Button size="md" disabled={saveDisabled} onClick={onSave}>
               {mutating ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
@@ -4215,7 +4216,7 @@ function ChangeDetailSheet({
                     key={change.key}
                     type="button"
                     variant="ghost"
-                    className="grid h-auto w-full min-w-0 justify-stretch gap-2 rounded-md border px-3 py-2 text-left text-sm whitespace-normal"
+                    className="grid h-auto w-full min-w-0 justify-stretch gap-2 rounded-md border px-3 py-2 text-left whitespace-normal"
                     onClick={() => {
                       onOpenChange(false)
                       onJumpToField(change.key)

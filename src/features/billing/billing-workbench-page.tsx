@@ -58,7 +58,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { responsiveCompactControlClassName } from '@/components/ui/control-size'
 import {
   Dialog,
   DialogContent,
@@ -491,7 +490,7 @@ function PaginationBar({
         >
           <SelectTrigger
             className="w-28"
-            size="sm"
+            size="md"
             aria-label={t('billingPage.pagination.pageSize')}
           >
             <SelectValue />
@@ -506,7 +505,7 @@ function PaginationBar({
         </Select>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset === 0}
           onClick={() => onChange({ ...pagination, offset: getPreviousOffset(pagination) })}
         >
@@ -514,7 +513,7 @@ function PaginationBar({
         </Button>
         <Button
           variant="outline"
-          size="sm"
+          size="md"
           disabled={disabled || pagination.offset + pagination.limit >= total}
           onClick={() => onChange({ ...pagination, offset: getNextOffset(pagination, total) })}
         >
@@ -877,6 +876,9 @@ function ChargeRecordsTab({
                                 type="button"
                                 variant="text"
                                 size="icon-xs"
+                                // 20px because it sits inside a table cell beside the amount, below the 24px
+                                // floor.
+                                // eslint-disable-next-line home-ui/no-control-size-override
                                 className="text-warning-foreground hover:bg-warning/12 hover:text-warning-foreground focus-visible:ring-warning/30 dark:text-warning dark:hover:text-warning size-5"
                                 aria-label={unpricedMessage}
                               >
@@ -897,7 +899,7 @@ function ChargeRecordsTab({
                       {formatCreditAmount(record.balanceAfter)}
                     </TableCell>
                     <TableCell className="table-sticky-action-cell w-32 text-right transition-colors">
-                      <Button variant="text" size="sm" onClick={() => onView(record)}>
+                      <Button variant="text" size="md" onClick={() => onView(record)}>
                         <Eye className="size-4" aria-hidden="true" />
                         {t('billingPage.common.view')}
                       </Button>
@@ -1016,7 +1018,7 @@ function BalanceRecordsTab({
                     <div className="table-action-cell-content">
                       <Button
                         variant="text"
-                        size="sm"
+                        size="md"
                         className="px-2"
                         onClick={() => onView(record)}
                       >
@@ -1274,8 +1276,8 @@ function ModelPricesTab({
                 aria-hidden="true"
               />
               <Input
-                size="sm"
-                className={cn(responsiveCompactControlClassName, 'pl-9')}
+                size="md"
+                className={cn('pl-9')}
                 type="search"
                 value={priceSearch}
                 placeholder={t('billingPage.prices.filters.search')}
@@ -1287,8 +1289,8 @@ function ModelPricesTab({
               onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.tier')}
               >
                 <SelectValue />
@@ -1306,8 +1308,8 @@ function ModelPricesTab({
               onValueChange={(value) => setSourceFilter(value as typeof sourceFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.source')}
               >
                 <SelectValue />
@@ -1324,8 +1326,8 @@ function ModelPricesTab({
               onValueChange={(value) => setStateFilter(value as typeof stateFilter)}
             >
               <SelectTrigger
-                className={cn(responsiveCompactControlClassName, 'w-full sm:w-40')}
-                size="sm"
+                className={cn('w-full sm:w-40')}
+                size="md"
                 aria-label={t('billingPage.prices.filters.state')}
               >
                 <SelectValue />
@@ -1339,8 +1341,8 @@ function ModelPricesTab({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className={cn(responsiveCompactControlClassName, 'justify-center sm:ml-auto')}
+              size="md"
+              className={cn('justify-center sm:ml-auto')}
               disabled={!hasPriceFilters}
               onClick={clearPriceFilters}
             >
@@ -1356,7 +1358,7 @@ function ModelPricesTab({
               kind="filtered-empty"
               title={t('billingPage.prices.filters.empty')}
               action={
-                <Button type="button" variant="outline" size="sm" onClick={clearPriceFilters}>
+                <Button type="button" variant="outline" size="md" onClick={clearPriceFilters}>
                   <RefreshCw className="size-4" aria-hidden="true" />
                   {t('billingPage.prices.filters.clear')}
                 </Button>
@@ -1460,7 +1462,7 @@ function ModelPricesTab({
                       <div className="table-action-cell-content">
                         <Button
                           variant="text"
-                          size="sm"
+                          size="md"
                           className="px-2"
                           aria-label={t('billingPage.prices.actions.editExact', {
                             rule: formatModelPriceIdentity(resource, t),
@@ -1472,7 +1474,7 @@ function ModelPricesTab({
                         </Button>
                         <Button
                           variant="destructiveText"
-                          size="sm"
+                          size="md"
                           className="px-2"
                           aria-label={t('billingPage.prices.actions.deleteExact', {
                             rule: formatModelPriceIdentity(resource, t),
@@ -2225,7 +2227,7 @@ function ModelPriceSheet({
               <Button
                 type="button"
                 variant="outline"
-                size="sm"
+                size="md"
                 className="mt-3"
                 disabled={mutating || candidatesFetching}
                 onClick={onRetryCandidates}
@@ -2294,7 +2296,7 @@ function ModelPriceSheet({
                   <Button
                     type="button"
                     variant="text"
-                    size="sm"
+                    size="md"
                     className="w-fit px-0"
                     disabled={mutating}
                     onClick={() => setSelectedCandidateKeys(new Set())}
@@ -2793,7 +2795,7 @@ export function BillingWorkbenchPage() {
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="text-destructive hover:text-destructive h-auto px-1 py-0 text-xs"
                   disabled={workbench.billingSettingsFetching}
                   onClick={() => void workbench.refreshBillingSettings()}

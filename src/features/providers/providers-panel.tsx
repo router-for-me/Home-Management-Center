@@ -552,7 +552,7 @@ function ProviderResourceTable({
         className="m-0"
         title={t('providersPage.table.empty')}
         action={
-          <Button variant="outline" size="sm" onClick={onCreateResource}>
+          <Button variant="outline" size="md" onClick={onCreateResource}>
             <Plus className="size-4" aria-hidden="true" />
             {t('providersPage.actions.new')}
           </Button>
@@ -643,7 +643,7 @@ function ProviderResourceTable({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('providersPage.actions.view')}
                   onClick={(event) => {
@@ -657,7 +657,7 @@ function ProviderResourceTable({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('providersPage.actions.edit')}
                   onClick={(event) => {
@@ -671,7 +671,7 @@ function ProviderResourceTable({
                 <Button
                   type="button"
                   variant="destructiveText"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('providersPage.actions.delete')}
                   onClick={(event) => {
@@ -802,7 +802,7 @@ function ProviderModelCatalog({
                   {errorMessage}
                 </p>
               </div>
-              <Button variant="outline" size="sm" disabled={loading} onClick={onRetry}>
+              <Button variant="outline" size="md" disabled={loading} onClick={onRetry}>
                 {loading ? (
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
@@ -944,7 +944,7 @@ function ProviderModelCatalogSummary({
                 })
               : t('providersPage.modelCatalog.notLoaded')}
           </span>
-          <Button variant="outline" size="sm" onClick={onOpen}>
+          <Button variant="outline" size="md" onClick={onOpen}>
             <BookOpen className="size-4" aria-hidden="true" />
             {t('providersPage.modelCatalog.openAction')}
           </Button>
@@ -1443,7 +1443,7 @@ function ProviderFormPanel({
               <Button
                 type="button"
                 variant={resource.disabled ? 'secondary' : 'warning'}
-                size="sm"
+                size="md"
                 disabled={mutating}
                 onClick={() => void onToggleStatus(resource, !resource.disabled)}
               >
@@ -1592,7 +1592,7 @@ function ProviderFormPanel({
                   <Button
                     type="button"
                     variant="text"
-                    size="icon-sm"
+                    size="icon-md"
                     className="text-muted-foreground absolute top-1/2 right-1 -translate-y-1/2"
                     disabled={mutating || connectivityState === 'loading'}
                     aria-label={t('providersPage.connectivity.testModel')}
@@ -1751,7 +1751,7 @@ function ProviderFormPanel({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="md"
                       className="sm:shrink-0"
                       disabled={mutating || modelDiscoveryLoading || !canDiscoverModels}
                       aria-describedby={
@@ -1913,14 +1913,14 @@ function ProviderFormPanel({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
+                            size="md"
                             onClick={() => setModelDiscoveryOpen(false)}
                           >
                             {t('providersPage.discovery.close')}
                           </Button>
                           <Button
                             type="button"
-                            size="sm"
+                            size="md"
                             disabled={modelDiscoverySelected.size === 0}
                             onClick={applyDiscoveredModels}
                           >
@@ -1963,7 +1963,7 @@ function ProviderFormPanel({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="icon-lg"
                   className="justify-self-end"
                   disabled={mutating || modelsList.length <= 1}
                   aria-label={t('providersPage.form.removeModel')}
@@ -2014,7 +2014,7 @@ function ProviderFormPanel({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               className="w-fit"
               disabled={mutating}
               onClick={() => updateField('models', [...modelsList, emptyModelEntry()])}
@@ -2086,7 +2086,7 @@ function ProviderFormPanel({
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
+                  size="icon-lg"
                   className="justify-self-end"
                   disabled={mutating || headersList.length <= 1}
                   aria-label={t('providersPage.form.removeHeader')}
@@ -2104,7 +2104,7 @@ function ProviderFormPanel({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               className="w-fit"
               disabled={mutating}
               onClick={() => updateField('headers', [...headersList, emptyHeaderEntry()])}
@@ -2397,7 +2397,7 @@ export function ProvidersPanel({
                     aria-hidden="true"
                   />
                   <Input
-                    size="sm"
+                    size="md"
                     className="pl-9"
                     value={filter}
                     onChange={(event) => setFilter(event.target.value)}
@@ -2405,7 +2405,7 @@ export function ProvidersPanel({
                   />
                 </div>
                 <Button
-                  size="sm"
+                  size="md"
                   disabled={activeGroup.issue?.kind === 'unsupported'}
                   onClick={openCreatePanel}
                 >

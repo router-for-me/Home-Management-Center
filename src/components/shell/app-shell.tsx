@@ -66,9 +66,10 @@ function ConnectionStatusIndicator() {
       <Button
         type="button"
         variant="ghost"
+        size="icon-lg"
         aria-label={buttonLabel}
         className={cn(
-          'mx-auto size-9 rounded-md border p-0',
+          'mx-auto rounded-md border',
           connected
             ? 'border-sidebar-primary/40 bg-sidebar-primary/12 text-sidebar-primary hover:bg-sidebar-primary/18'
             : errored
@@ -96,6 +97,9 @@ function ConnectionStatusIndicator() {
       type="button"
       variant="ghost"
       aria-label={buttonLabel}
+      // a sidebar navigation row, not a toolbar control: it spans the rail and
+      // keeps the 44px nav rhythm, which no control step describes.
+      // eslint-disable-next-line home-ui/no-control-size-override
       className={cn(
         'group/status flex h-11 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md border px-2.5 text-left',
         connected
@@ -163,9 +167,9 @@ function HeaderConnectionButton() {
   return (
     <Button
       variant="outline"
-      size="sm"
+      size="lg"
       className={cn(
-        'hidden h-9 sm:inline-flex',
+        'hidden sm:inline-flex',
         connected
           ? 'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
           : errored
@@ -316,8 +320,8 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex shrink-0 items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="bg-card text-muted-foreground hover:bg-muted hover:text-foreground hidden h-9 min-w-44 justify-between font-normal md:inline-flex"
+              size="lg"
+              className="bg-card text-muted-foreground hidden min-w-44 justify-between font-normal md:inline-flex"
               onClick={openCommandPalette}
             >
               <span className="flex items-center gap-2">

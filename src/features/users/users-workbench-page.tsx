@@ -1336,7 +1336,7 @@ function BindingCandidateMultiSelect({
       ) : errorMessage ? (
         <div className="border-destructive/30 bg-destructive/10 rounded-md border px-3 py-3">
           <p className="text-destructive text-sm">{errorMessage}</p>
-          <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+          <Button type="button" variant="outline" size="md" className="mt-3" onClick={onRetry}>
             <RefreshCw className="size-4" aria-hidden="true" />
             {t('usersPage.actions.retry')}
           </Button>
@@ -1935,7 +1935,7 @@ function UserDetailContent({
           {periodLimitsSupported ? (
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               disabled={mutating || !periodLimits || Boolean(periodLimitsErrorMessage)}
               onClick={onResetPeriodLimits}
             >
@@ -1953,7 +1953,7 @@ function UserDetailContent({
             <p className="text-destructive text-sm">{t('usersPage.periodLimits.loadError')}</p>
             <p className="text-destructive/80 text-xs break-words">{periodLimitsErrorMessage}</p>
             <div>
-              <Button variant="outline" size="sm" onClick={onRetryPeriodLimits}>
+              <Button variant="outline" size="md" onClick={onRetryPeriodLimits}>
                 {t('usersPage.actions.retry')}
               </Button>
             </div>
@@ -2285,17 +2285,17 @@ function UsersTable({
               </TableCell>
               <TableCell className="table-sticky-action-cell w-[280px] text-right transition-colors">
                 <div className="table-action-cell-content">
-                  <Button variant="text" size="sm" className="px-2" onClick={() => onView(user)}>
+                  <Button variant="text" size="md" className="px-2" onClick={() => onView(user)}>
                     <Eye className="size-4" aria-hidden="true" />
                     {t('usersPage.actions.view')}
                   </Button>
-                  <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(user)}>
+                  <Button variant="text" size="md" className="px-2" onClick={() => onEdit(user)}>
                     <Pencil className="size-4" aria-hidden="true" />
                     {t('usersPage.actions.edit')}
                   </Button>
                   <Button
                     variant="text"
-                    size="sm"
+                    size="md"
                     className="px-2"
                     disabled={balanceDisabled}
                     onClick={() => onBalanceOperation([user])}
@@ -2305,7 +2305,7 @@ function UsersTable({
                   </Button>
                   <Button
                     variant="destructiveText"
-                    size="sm"
+                    size="md"
                     className="px-2"
                     onClick={() => onDelete(user)}
                   >
@@ -2387,13 +2387,13 @@ function AccessKeysTable({
             <TableCell>{key.length}</TableCell>
             <TableCell className="table-sticky-action-cell w-[180px] text-right transition-colors">
               <div className="table-action-cell-content">
-                <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(key)}>
+                <Button variant="text" size="md" className="px-2" onClick={() => onEdit(key)}>
                   <Pencil className="size-4" aria-hidden="true" />
                   {t('usersPage.actions.edit')}
                 </Button>
                 <Button
                   variant="destructiveText"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   onClick={() => onDelete(key)}
                 >
@@ -2478,7 +2478,7 @@ function GroupsTable({
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-md"
                       aria-label={t('usersPage.actions.addBinding')}
                       onClick={() => onAddDetail(group)}
                     >
@@ -2491,7 +2491,7 @@ function GroupsTable({
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon-md"
                       aria-label={t('usersPage.actions.edit')}
                       onClick={() => onEditGroup(group)}
                     >
@@ -2504,7 +2504,7 @@ function GroupsTable({
                   <TooltipTrigger asChild>
                     <Button
                       variant="destructiveText"
-                      size="icon-sm"
+                      size="icon-md"
                       aria-label={t('usersPage.actions.delete')}
                       onClick={() => onDeleteGroup(group)}
                     >
@@ -2582,7 +2582,7 @@ function GroupsTable({
                           <TableCell className="text-right">
                             <Button
                               variant="destructiveText"
-                              size="sm"
+                              size="md"
                               className="px-2"
                               onClick={() => onDeleteDetail(detail)}
                             >
@@ -3120,7 +3120,7 @@ export function UsersWorkbenchPage() {
           <>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               disabled={workbench.isFetching}
               onClick={workbench.refetch}
             >
@@ -3188,7 +3188,7 @@ export function UsersWorkbenchPage() {
           <TabsContent value="users" className="p-4">
             <div className="grid gap-3">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => setSheetMode({ type: 'user-create' })}>
+                <Button size="md" onClick={() => setSheetMode({ type: 'user-create' })}>
                   <Plus className="size-4" aria-hidden="true" />
                   {t('usersPage.actions.newUser')}
                 </Button>
@@ -3206,7 +3206,7 @@ export function UsersWorkbenchPage() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       variant="text"
-                      size="sm"
+                      size="md"
                       disabled={workbench.mutating}
                       onClick={() => setSelectedUserIds(new Set())}
                     >
@@ -3214,7 +3214,7 @@ export function UsersWorkbenchPage() {
                     </Button>
                     <Button
                       variant="text"
-                      size="sm"
+                      size="md"
                       disabled={workbench.mutating}
                       onClick={() => openBalanceOperation(selectedUsers)}
                     >
@@ -3243,7 +3243,7 @@ export function UsersWorkbenchPage() {
           <TabsContent value="keys" className="p-4">
             <div className="grid gap-3">
               <div className="flex justify-end">
-                <Button size="sm" onClick={() => setSheetMode({ type: 'key-create' })}>
+                <Button size="md" onClick={() => setSheetMode({ type: 'key-create' })}>
                   <Plus className="size-4" aria-hidden="true" />
                   {t('usersPage.actions.newKey')}
                 </Button>
@@ -3264,7 +3264,7 @@ export function UsersWorkbenchPage() {
               <div className="grid gap-3">
                 <div className="flex justify-end">
                   <Button
-                    size="sm"
+                    size="md"
                     onClick={() => setSheetMode({ type: 'group-create', kind: 'channel' })}
                   >
                     <Plus className="size-4" aria-hidden="true" />
@@ -3299,7 +3299,7 @@ export function UsersWorkbenchPage() {
               <div className="grid gap-3">
                 <div className="flex justify-end">
                   <Button
-                    size="sm"
+                    size="md"
                     onClick={() => setSheetMode({ type: 'group-create', kind: 'model' })}
                   >
                     <Plus className="size-4" aria-hidden="true" />

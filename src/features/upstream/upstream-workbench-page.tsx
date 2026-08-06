@@ -110,7 +110,7 @@ export function UpstreamWorkbenchPage({
           <>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               disabled={syncing}
               onClick={() => void handleSync()}
               aria-label={syncing ? t('upstreamPage.sync.syncing') : t('upstreamPage.sync.action')}

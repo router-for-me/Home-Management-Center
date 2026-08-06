@@ -115,7 +115,7 @@ function SecretInput({
         <Button
           type="button"
           variant="text"
-          size="icon-sm"
+          size="icon-md"
           className="absolute top-1/2 right-1 -translate-y-1/2"
           disabled={disabled}
           aria-label={t(
@@ -338,7 +338,7 @@ export function PluginStoreAuthEditor({
               data-slot="plugin-auth-enabled-control"
               className={cn(
                 'border-input bg-background dark:bg-input/30 flex items-center justify-between gap-3 rounded-md border px-3 shadow-xs',
-                controlSizeClassNames.default,
+                controlSizeClassNames.lg,
               )}
             >
               <span className="text-sm">
@@ -367,7 +367,7 @@ export function PluginStoreAuthEditor({
                   key={scope}
                   className={cn(
                     'border-input bg-background flex items-center gap-2 rounded-md border px-3 text-sm',
-                    controlSizeClassNames.default,
+                    controlSizeClassNames.lg,
                   )}
                 >
                   <Checkbox
@@ -621,7 +621,7 @@ export function PluginStoreAuthSheet({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="md"
                     className="mt-3"
                     disabled={auth.isFetching}
                     onClick={() => void auth.refetch()}
@@ -652,7 +652,7 @@ export function PluginStoreAuthSheet({
                     </div>
                     <Button
                       type="button"
-                      size="sm"
+                      size="md"
                       disabled={auth.loadingRuleId !== null}
                       onClick={createRule}
                     >
@@ -692,7 +692,7 @@ export function PluginStoreAuthSheet({
                               <Button
                                 type="button"
                                 variant="text"
-                                size="sm"
+                                size="md"
                                 disabled={auth.loadingRuleId !== null}
                                 onClick={() => void editRule(rule)}
                               >
@@ -706,7 +706,7 @@ export function PluginStoreAuthSheet({
                               <Button
                                 type="button"
                                 variant="destructiveText"
-                                size="sm"
+                                size="md"
                                 disabled={auth.loadingRuleId !== null}
                                 onClick={() => setDeleteTarget(rule)}
                               >

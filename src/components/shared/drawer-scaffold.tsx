@@ -31,7 +31,7 @@ function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerSca
           <Button
             type="button"
             variant="ghost"
-            size="icon"
+            size="icon-lg"
             data-slot="drawer-scaffold-back-button"
             aria-label={back.label}
             disabled={back.disabled}

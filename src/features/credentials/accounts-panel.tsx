@@ -275,7 +275,7 @@ export function AccountsToolbar({
         />
         <Input
           type="search"
-          size="lg"
+          size="xl"
           className="pl-9"
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -289,7 +289,7 @@ export function AccountsToolbar({
           onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
           <SelectTrigger
-            size="lg"
+            size="xl"
             className="w-full sm:w-40"
             aria-label={t('credentialsPage.filters.status')}
           >
@@ -306,7 +306,7 @@ export function AccountsToolbar({
 
         <Select value={providerFilter} onValueChange={onProviderFilterChange}>
           <SelectTrigger
-            size="lg"
+            size="xl"
             className="w-full sm:w-52"
             aria-label={t('credentialsPage.filters.provider')}
           >
@@ -328,7 +328,7 @@ export function AccountsToolbar({
           type="multiple"
           value={activeQuickFilters}
           variant="outline"
-          size="lg"
+          size="xl"
           className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
           aria-label={t('credentialsPage.filters.quickFilters')}
           onValueChange={(values) => {
@@ -362,7 +362,7 @@ export function AccountsToolbar({
             <Button
               type="button"
               variant="ghost"
-              size="lg"
+              size="xl"
               className="px-2.5"
               onClick={onClearFilters}
             >
@@ -393,7 +393,7 @@ export function CredentialRowActions({
       <Button
         type="button"
         variant="text"
-        size="sm"
+        size="md"
         className="gap-1 px-1"
         aria-label={t('credentialsPage.actions.detail')}
         onClick={onView}
@@ -404,7 +404,7 @@ export function CredentialRowActions({
       <Button
         type="button"
         variant="text"
-        size="sm"
+        size="md"
         className="gap-1 px-1"
         disabled={mutating}
         aria-label={t('credentialsPage.actions.download')}
@@ -416,7 +416,7 @@ export function CredentialRowActions({
       <Button
         type="button"
         variant="destructiveText"
-        size="sm"
+        size="md"
         className="gap-1 px-1"
         disabled={mutating}
         aria-label={t('credentialsPage.actions.delete')}
@@ -500,7 +500,7 @@ function CredentialList({
         )}
         action={
           filtered ? (
-            <Button type="button" variant="outline" size="lg" onClick={onClearFilters}>
+            <Button type="button" variant="outline" size="xl" onClick={onClearFilters}>
               {t('credentialsPage.filters.clear')}
             </Button>
           ) : undefined
@@ -1295,7 +1295,7 @@ export function AccountsPanel({
           title={t('credentialsPage.list.title')}
           actions={
             <Button
-              size="sm"
+              size="md"
               disabled={workbench.mutating}
               onClick={() => setCreateSheetOpen(true)}
             >
@@ -1341,7 +1341,7 @@ export function AccountsPanel({
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="md"
                   disabled={workbench.mutating}
                   onClick={() => setSelectedResourceIds(new Set())}
                 >
@@ -1349,7 +1349,7 @@ export function AccountsPanel({
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   disabled={workbench.mutating || selectedDisabledCount === 0}
                   onClick={() => void handleBulkStatus(false)}
                 >
@@ -1358,7 +1358,7 @@ export function AccountsPanel({
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   disabled={workbench.mutating || selectedEnabledCount === 0}
                   onClick={() => void handleBulkStatus(true)}
                 >
@@ -1367,7 +1367,7 @@ export function AccountsPanel({
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   className="text-destructive hover:text-destructive"
                   disabled={workbench.mutating}
                   onClick={handleBulkDelete}

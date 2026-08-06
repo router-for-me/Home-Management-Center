@@ -355,7 +355,7 @@ export function CredentialConcurrencyDetail({
             </p>
           </div>
           {observationAvailable ? (
-            <Button type="button" variant="text" size="sm" disabled={fetching} onClick={onRefresh}>
+            <Button type="button" variant="text" size="md" disabled={fetching} onClick={onRefresh}>
               <RefreshCw className="size-3.5" aria-hidden="true" />
               {t('credentialsPage.concurrency.refreshSnapshot')}
             </Button>
@@ -404,8 +404,8 @@ export function CredentialConcurrencyDetail({
                         <Button
                           type="button"
                           variant="text"
-                          size="icon"
-                          className="size-7 shrink-0"
+                          size="icon-sm"
+                          className="shrink-0"
                           aria-label={t('credentialsPage.concurrency.copyRequestId')}
                           onClick={() => {
                             void copyTextToClipboard(request.requestId)
@@ -451,7 +451,7 @@ export function CredentialConcurrencyDetail({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               disabled={fetchingNextPage}
               onClick={onLoadMore}
             >
@@ -526,7 +526,7 @@ export function CredentialConcurrencyEditor({
           <Button
             type="button"
             variant="outline"
-            size="sm"
+            size="md"
             disabled={mutating}
             onClick={() =>
               onChange((current) => ({
@@ -577,7 +577,7 @@ export function CredentialConcurrencyEditor({
             <Button
               type="button"
               variant="text"
-              size="icon"
+              size="icon-lg"
               disabled={mutating}
               aria-label={t('credentialsPage.concurrency.removeModelAtIndex', {
                 index: index + 1,

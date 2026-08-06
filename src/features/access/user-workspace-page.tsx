@@ -231,17 +231,17 @@ function ApiKeysTable({
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1.5">
-                <Button variant="text" size="sm" className="px-2" onClick={() => onCopy(resource)}>
+                <Button variant="text" size="md" className="px-2" onClick={() => onCopy(resource)}>
                   <Copy className="size-4" aria-hidden="true" />
                   {t('userWorkspace.keys.actions.copy')}
                 </Button>
-                <Button variant="text" size="sm" className="px-2" onClick={() => onEdit(resource)}>
+                <Button variant="text" size="md" className="px-2" onClick={() => onEdit(resource)}>
                   <Edit3 className="size-4" aria-hidden="true" />
                   {t('userWorkspace.keys.actions.edit')}
                 </Button>
                 <Button
                   variant="destructiveText"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   onClick={() => onDelete(resource)}
                 >
@@ -827,7 +827,7 @@ function SecurityPanel({
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
-                        size="icon"
+                        size="icon-lg"
                         variant="ghost"
                         disabled={passkeyDeleting}
                         aria-label={t('userWorkspace.security.passkey.delete')}
@@ -934,7 +934,7 @@ export function UserWorkspacePage() {
   return (
     <PublicAccessShell>
       <section className="mx-auto grid max-w-5xl gap-6">
-        <Button asChild variant="text" size="sm" className="w-fit px-0">
+        <Button asChild variant="text" size="md" className="w-fit px-0">
           <a href={embeddedEntryLinks.bridge}>
             <ArrowLeft className="size-4" aria-hidden="true" />
             {t('userWorkspace.back')}

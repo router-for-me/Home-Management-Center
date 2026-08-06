@@ -107,7 +107,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon-md"
             aria-label={t('connectionDialog.close')}
             onClick={() => onOpenChange(false)}
           >

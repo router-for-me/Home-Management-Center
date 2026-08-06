@@ -174,7 +174,7 @@ export function NewItemsNotice({
           })}
         </p>
       </div>
-      <Button type="button" variant="outline" size="sm" onClick={onAccept}>
+      <Button type="button" variant="outline" size="md" onClick={onAccept}>
         {t('observabilityRefresh.showNew')}
       </Button>
     </div>

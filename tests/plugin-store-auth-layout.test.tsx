@@ -76,7 +76,7 @@ describe('plugin store authentication editor layout', () => {
     expect(markup).toContain('id="plugin-auth-enabled"')
     expect(markup).not.toContain('plugin-auth-enabled-help')
     expect(markup).not.toContain('Disabled rules remain stored but are not applied.')
-    expect(enabledControlClassName).toContain('h-9')
+    expect(enabledControlClassName).toContain('control-lg')
     expect(enabledControlClassName).toContain('items-center')
     expect(enabledControlClassName).toContain('justify-between')
     expect(applyToControlClassName).toContain('mt-1.5')

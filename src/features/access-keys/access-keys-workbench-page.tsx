@@ -267,8 +267,8 @@ function AccessKeyList({
                   <Button
                     type="button"
                     variant="text"
-                    size="icon-sm"
-                    className="text-muted-foreground hover:text-foreground -my-1 [@media(pointer:coarse)]:size-10"
+                    size="icon-md"
+                    className="text-muted-foreground hover:text-foreground -my-1"
                     aria-label={t('accessKeysPage.list.identifierTooltip')}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
@@ -325,8 +325,8 @@ function AccessKeyList({
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon-sm"
-                    className="-my-1 [@media(pointer:coarse)]:size-10"
+                    size="icon-md"
+                    className="-my-1"
                     aria-label={t('accessKeysPage.actions.copyIdentifier', {
                       identifier: resource.identifier,
                     })}
@@ -374,7 +374,7 @@ function AccessKeyList({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('accessKeysPage.actions.view')}
                   onClick={(event) => {
@@ -388,7 +388,7 @@ function AccessKeyList({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('accessKeysPage.actions.edit')}
                   onClick={(event) => {
@@ -402,7 +402,7 @@ function AccessKeyList({
                 <Button
                   type="button"
                   variant="text"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('accessKeysPage.actions.copy')}
                   onClick={(event) => {
@@ -416,7 +416,7 @@ function AccessKeyList({
                 <Button
                   type="button"
                   variant="destructiveText"
-                  size="sm"
+                  size="md"
                   className="px-2"
                   aria-label={t('accessKeysPage.actions.delete')}
                   onClick={(event) => {
@@ -518,7 +518,7 @@ function AccessKeyDetailContent({
               <Button
                 type="button"
                 variant="outline"
-                size="icon"
+                size="icon-lg"
                 aria-label={
                   showSecret ? t('accessKeysPage.actions.hide') : t('accessKeysPage.actions.reveal')
                 }
@@ -582,7 +582,7 @@ function AccessKeyDetailContent({
           {showSecret ? resource.value : resource.maskedValue}
         </p>
         <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setShowSecret((current) => !current)}>
+          <Button size="md" variant="outline" onClick={() => setShowSecret((current) => !current)}>
             {showSecret ? (
               <EyeOff className="size-4" aria-hidden="true" />
             ) : (
@@ -591,7 +591,7 @@ function AccessKeyDetailContent({
             {showSecret ? t('accessKeysPage.actions.hide') : t('accessKeysPage.actions.reveal')}
           </Button>
           <Button
-            size="sm"
+            size="md"
             variant="outline"
             onClick={() => {
               void onCopy(resource)
@@ -970,7 +970,7 @@ export function AccessKeysWorkbenchPage() {
           <>
             <Button
               variant="outline"
-              size="sm"
+              size="md"
               disabled={workbench.isFetching}
               onClick={workbench.refetch}
               aria-label={
@@ -994,7 +994,7 @@ export function AccessKeysWorkbenchPage() {
                 : t('accessKeysPage.actions.refresh')}
             </Button>
             <Button
-              size="sm"
+              size="md"
               onClick={() => {
                 setSelectedKeyId(null)
                 setDetailMode('create')
@@ -1023,7 +1023,7 @@ export function AccessKeysWorkbenchPage() {
             <>
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 disabled={workbench.mutating}
                 onClick={() => setReplaceSheetOpen(true)}
               >
@@ -1036,7 +1036,7 @@ export function AccessKeysWorkbenchPage() {
                   aria-hidden="true"
                 />
                 <Input
-                  size="sm"
+                  size="md"
                   className="pl-9"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -1056,7 +1056,7 @@ export function AccessKeysWorkbenchPage() {
               <div className="flex flex-wrap gap-2">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="md"
                   disabled={workbench.mutating}
                   onClick={() => setSelectedKeyIds(new Set())}
                 >
@@ -1064,7 +1064,7 @@ export function AccessKeysWorkbenchPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="md"
                   className="text-destructive hover:text-destructive"
                   disabled={workbench.mutating}
                   onClick={handleBulkDelete}

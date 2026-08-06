@@ -29,8 +29,9 @@ describe('shared tabs', () => {
     expect(markup).toContain(`id="${activePanelId}"`)
 
     expect(markup).toContain('overflow-x-auto')
-    expect(markup).toContain('min-h-10')
-    expect(markup).toContain('sm:min-h-8')
+    // The trigger takes a control step; the 40px touch floor rides along with it
+    // instead of being opted into per surface.
+    expect(markup).toContain('control-md')
     expect(markup).toContain('data-[state=active]:bg-primary/8')
     expect(markup).not.toContain('shadow-sm')
     expect(markup).not.toContain('shadow-xs')
