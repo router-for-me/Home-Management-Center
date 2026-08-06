@@ -80,6 +80,7 @@ export const en = {
     },
     sidebar: {
       controlPlane: 'AI Gateway Management Console',
+      backToEntry: 'Back to the entry page',
       collapse: 'Collapse sidebar',
       expand: 'Expand sidebar',
       openMobile: 'Open navigation',

@@ -79,6 +79,7 @@ export const zhCN = {
     },
     sidebar: {
       controlPlane: 'AI Gateway 管理控制台',
+      backToEntry: '返回入口页',
       collapse: '收起侧边栏',
       expand: '展开侧边栏',
       openMobile: '打开导航',

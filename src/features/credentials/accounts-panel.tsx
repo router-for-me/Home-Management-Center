@@ -1334,7 +1334,7 @@ export function AccountsPanel({
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   size="md"
                   disabled={workbench.mutating}
                   onClick={() => setSelectedResourceIds(new Set())}
@@ -1342,7 +1342,7 @@ export function AccountsPanel({
                   {t('credentialsPage.bulk.clearSelection')}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="text"
                   size="md"
                   disabled={workbench.mutating || selectedDisabledCount === 0}
                   onClick={() => void handleBulkStatus(false)}
@@ -1351,7 +1351,7 @@ export function AccountsPanel({
                   {t('credentialsPage.bulk.enableSelected')}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="text"
                   size="md"
                   disabled={workbench.mutating || selectedEnabledCount === 0}
                   onClick={() => void handleBulkStatus(true)}
@@ -1360,9 +1360,8 @@ export function AccountsPanel({
                   {t('credentialsPage.bulk.disableSelected')}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="destructiveText"
                   size="md"
-                  className="text-destructive hover:text-destructive"
                   disabled={workbench.mutating}
                   onClick={handleBulkDelete}
                 >

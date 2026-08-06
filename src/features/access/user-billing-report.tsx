@@ -4,7 +4,7 @@ import { BarChart3, RefreshCcw, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
-import { TablePaginationStatus } from '@/components/shared/table-surface'
+import { TablePaginationStatus, tableHeaderClassName } from '@/components/shared/table-surface'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -309,7 +309,7 @@ export function UserBillingReport() {
           <TableEmptyState kind="empty" title={t('userWorkspace.billing.records.empty')} />
         ) : (
           <Table className="min-w-[820px]">
-            <TableHeader className="bg-muted/70 text-muted-foreground">
+            <TableHeader className={tableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead>{t('userWorkspace.billing.records.columns.time')}</TableHead>
                 <TableHead>{t('userWorkspace.billing.records.columns.provider')}</TableHead>

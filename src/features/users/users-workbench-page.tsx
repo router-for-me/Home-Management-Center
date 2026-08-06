@@ -32,6 +32,7 @@ import {
   DrawerScaffoldBody,
   DrawerScaffoldContent,
   DrawerScaffoldFooter,
+  DrawerScaffoldForm,
   DrawerScaffoldHeader,
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
@@ -44,6 +45,7 @@ import {
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
+  tableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
   AlertDialog,
@@ -594,6 +596,10 @@ function UserForm({
     setWindowDrafts((current) => ({ ...current, [id]: { ...current[id], ...patch } }))
   }
 
+  const timezoneOptions = userPeriodTimezoneSuggestions.includes(timezone)
+    ? userPeriodTimezoneSuggestions
+    : [timezone, ...userPeriodTimezoneSuggestions].filter(Boolean)
+
   const fieldErrorFor = (anchor: UserFormFieldError['anchor']) =>
     fieldErrors.find((fieldError) => fieldError.anchor === anchor)?.message ?? null
 
@@ -681,225 +687,240 @@ function UserForm({
   }
 
   return (
-    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className={fieldClassName}>
-        <span>{t('usersPage.form.username')}</span>
-        <Input
-          value={username}
-          disabled={mutating || mode === 'edit'}
-          placeholder={t('usersPage.form.usernamePlaceholder')}
-          aria-invalid={fieldErrorFor('username') ? true : undefined}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-        {mode === 'edit' ? (
-          <span className="text-muted-foreground text-xs leading-5">
-            {t('usersPage.form.usernameLockedHint')}
+    <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-4">
+        <label className={fieldClassName}>
+          <span>{t('usersPage.form.username')}</span>
+          <Input
+            value={username}
+            disabled={mutating || mode === 'edit'}
+            placeholder={t('usersPage.form.usernamePlaceholder')}
+            aria-invalid={fieldErrorFor('username') ? true : undefined}
+            onChange={(event) => setUsername(event.target.value)}
+          />
+          {mode === 'edit' ? (
+            <span className="text-muted-foreground text-xs leading-5">
+              {t('usersPage.form.usernameLockedHint')}
+            </span>
+          ) : null}
+          {fieldErrorFor('username') ? (
+            <span className="text-destructive text-xs leading-5">{fieldErrorFor('username')}</span>
+          ) : null}
+        </label>
+        <label className={fieldClassName}>
+          <span>
+            {mode === 'create'
+              ? t('usersPage.form.password')
+              : t('usersPage.form.passwordOptional')}
           </span>
-        ) : null}
-        {fieldErrorFor('username') ? (
-          <span className="text-destructive text-xs leading-5">{fieldErrorFor('username')}</span>
-        ) : null}
-      </label>
-      <label className={fieldClassName}>
-        <span>
-          {mode === 'create' ? t('usersPage.form.password') : t('usersPage.form.passwordOptional')}
-        </span>
-        <Input
-          type="password"
-          value={password}
-          disabled={mutating}
-          placeholder={t('usersPage.form.passwordPlaceholder')}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-      </label>
-      <label className={fieldClassName}>
-        <span>{t('usersPage.form.credits')}</span>
-        <Input
-          type="number"
-          min="0"
-          step="0.01"
-          value={credits}
-          disabled={mutating || (periodLimitsSupported && creditsUnlimited)}
-          placeholder={t('usersPage.form.creditsPlaceholder')}
-          onChange={(event) => setCredits(event.target.value)}
-        />
-        <span className="text-muted-foreground text-xs leading-5">
-          {periodLimitsSupported && creditsUnlimited
-            ? t('usersPage.form.creditsUnlimitedCreditsHint')
-            : t('usersPage.form.creditsHint')}
-        </span>
-      </label>
-      {periodLimitsSupported ? (
-        <div className="grid gap-3 rounded-md border p-4">
-          <div className="grid gap-1">
-            <p className="text-sm font-semibold">{t('usersPage.periodLimits.sectionTitle')}</p>
-            <p className="text-muted-foreground text-xs leading-5">
-              {t('usersPage.periodLimits.sectionHint')}
-            </p>
-          </div>
-          <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
+          <Input
+            type="password"
+            value={password}
+            disabled={mutating}
+            placeholder={t('usersPage.form.passwordPlaceholder')}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+        <label className={fieldClassName}>
+          <span>{t('usersPage.form.credits')}</span>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={credits}
+            disabled={mutating || (periodLimitsSupported && creditsUnlimited)}
+            placeholder={t('usersPage.form.creditsPlaceholder')}
+            onChange={(event) => setCredits(event.target.value)}
+          />
+          <span className="text-muted-foreground text-xs leading-5">
+            {periodLimitsSupported && creditsUnlimited
+              ? t('usersPage.form.creditsUnlimitedCreditsHint')
+              : t('usersPage.form.creditsHint')}
+          </span>
+        </label>
+        {periodLimitsSupported ? (
+          <div className="grid gap-3 rounded-md border p-4">
             <div className="grid gap-1">
-              <span className="text-sm font-medium">{t('usersPage.form.creditsUnlimited')}</span>
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('usersPage.form.creditsUnlimitedHint')}
-              </span>
+              <p className="text-sm font-semibold">{t('usersPage.periodLimits.sectionTitle')}</p>
+              <p className="text-muted-foreground text-xs leading-5">
+                {t('usersPage.periodLimits.sectionHint')}
+              </p>
             </div>
-            <Switch
-              checked={creditsUnlimited}
-              disabled={mutating}
-              aria-label={t('usersPage.form.creditsUnlimited')}
-              onCheckedChange={setCreditsUnlimited}
-            />
-          </div>
-          {userPeriodWindowIds.map((id) => {
-            const draft = windowDrafts[id]
-            const limitIsZero = draft.enabled && Number(draft.limit) === 0
-
-            return (
-              <div key={id} className="grid gap-2 rounded-md border px-3 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-medium">
-                    {t(`usersPage.periodLimits.windows.${id}`)}
-                  </span>
-                  <Switch
-                    checked={draft.enabled}
-                    disabled={mutating}
-                    aria-label={t('usersPage.periodLimits.enableWindow', {
-                      window: t(`usersPage.periodLimits.windows.${id}`),
-                    })}
-                    onCheckedChange={(checked) => updateWindowDraft(id, { enabled: checked })}
-                  />
-                </div>
-                {draft.enabled ? (
-                  <div className={formGridClassName}>
-                    <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
-                      <span>{t('usersPage.periodLimits.limitLabel')}</span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={draft.limit}
-                        disabled={mutating}
-                        aria-invalid={fieldErrorFor(id) ? true : undefined}
-                        onChange={(event) => updateWindowDraft(id, { limit: event.target.value })}
-                      />
-                    </label>
-                    <div className="grid gap-1.5">
-                      <span className="text-muted-foreground text-xs font-medium">
-                        {t('usersPage.periodLimits.modeLabel')}
-                      </span>
-                      <Select
-                        value={draft.mode}
-                        disabled={mutating}
-                        onValueChange={(value) =>
-                          updateWindowDraft(id, { mode: value as UserPeriodWindowMode })
-                        }
-                      >
-                        <SelectTrigger
-                          className="w-full"
-                          aria-label={t('usersPage.periodLimits.modeLabel')}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {windowModesFor(id).map((modeOption) => (
-                            <SelectItem key={modeOption} value={modeOption}>
-                              {t(`usersPage.periodLimits.modes.${modeOption}`)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                ) : null}
-                {limitIsZero ? (
-                  <p className="text-warning-foreground dark:text-warning text-xs leading-5">
-                    {t('usersPage.periodLimits.zeroLimitWarning')}
-                  </p>
-                ) : null}
-                {fieldErrorFor(id) ? (
-                  <p className="text-destructive text-xs leading-5">{fieldErrorFor(id)}</p>
-                ) : null}
-                {id === '7d' && draft.enabled && draft.mode === 'calendar' ? (
-                  <div className={formGridClassName}>
-                    <div className="grid gap-1.5">
-                      <span className="text-muted-foreground text-xs font-medium">
-                        {t('usersPage.periodLimits.weekResetDay')}
-                      </span>
-                      <Select
-                        value={weekResetDay}
-                        disabled={mutating}
-                        onValueChange={setWeekResetDay}
-                      >
-                        <SelectTrigger
-                          className="w-full"
-                          aria-label={t('usersPage.periodLimits.weekResetDay')}
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                            <SelectItem key={day} value={String(day)}>
-                              {t(`usersPage.periodLimits.weekDays.${day}`)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
-                      <span>{t('usersPage.periodLimits.weekResetHour')}</span>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="23"
-                        step="1"
-                        value={weekResetHour}
-                        disabled={mutating}
-                        onChange={(event) => setWeekResetHour(event.target.value)}
-                      />
-                    </label>
-                  </div>
-                ) : null}
+            <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
+              <div className="grid gap-1">
+                <span className="text-sm font-medium">{t('usersPage.form.creditsUnlimited')}</span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('usersPage.form.creditsUnlimitedHint')}
+                </span>
               </div>
-            )
-          })}
-          <label className={fieldClassName}>
-            <span>{t('usersPage.form.timezone')}</span>
-            <Input
-              value={timezone}
-              list="user-period-timezone-suggestions"
-              disabled={mutating}
-              placeholder={defaultUserPeriodTimezone}
-              aria-invalid={fieldErrorFor('timezone') ? true : undefined}
-              onChange={(event) => setTimezone(event.target.value)}
-            />
-            {fieldErrorFor('timezone') ? (
-              <span className="text-destructive text-xs leading-5">
-                {fieldErrorFor('timezone')}
-              </span>
-            ) : (
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('usersPage.form.timezoneHint')}
-              </span>
-            )}
-          </label>
-          <datalist id="user-period-timezone-suggestions">
-            {userPeriodTimezoneSuggestions.map((zone) => (
-              <option key={zone} value={zone} />
-            ))}
-          </datalist>
-        </div>
-      ) : (
-        <div className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-xs leading-5">
-          {t('usersPage.periodLimits.unsupportedForm')}
-        </div>
-      )}
-      {localError ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
-        </div>
-      ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Switch
+                checked={creditsUnlimited}
+                disabled={mutating}
+                aria-label={t('usersPage.form.creditsUnlimited')}
+                onCheckedChange={setCreditsUnlimited}
+              />
+            </div>
+            {userPeriodWindowIds.map((id) => {
+              const draft = windowDrafts[id]
+              const limitIsZero = draft.enabled && Number(draft.limit) === 0
+
+              return (
+                <div key={id} className="grid gap-2 rounded-md border px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium">
+                      {t(`usersPage.periodLimits.windows.${id}`)}
+                    </span>
+                    <Switch
+                      checked={draft.enabled}
+                      disabled={mutating}
+                      aria-label={t('usersPage.periodLimits.enableWindow', {
+                        window: t(`usersPage.periodLimits.windows.${id}`),
+                      })}
+                      onCheckedChange={(checked) => updateWindowDraft(id, { enabled: checked })}
+                    />
+                  </div>
+                  {draft.enabled ? (
+                    <div className={formGridClassName}>
+                      <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
+                        <span>{t('usersPage.periodLimits.limitLabel')}</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={draft.limit}
+                          disabled={mutating}
+                          aria-invalid={fieldErrorFor(id) ? true : undefined}
+                          onChange={(event) => updateWindowDraft(id, { limit: event.target.value })}
+                        />
+                      </label>
+                      <div className="grid gap-1.5">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {t('usersPage.periodLimits.modeLabel')}
+                        </span>
+                        <Select
+                          value={draft.mode}
+                          disabled={mutating}
+                          onValueChange={(value) =>
+                            updateWindowDraft(id, { mode: value as UserPeriodWindowMode })
+                          }
+                        >
+                          <SelectTrigger
+                            className="w-full"
+                            aria-label={t('usersPage.periodLimits.modeLabel')}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {windowModesFor(id).map((modeOption) => (
+                              <SelectItem key={modeOption} value={modeOption}>
+                                {t(`usersPage.periodLimits.modes.${modeOption}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ) : null}
+                  {limitIsZero ? (
+                    <p className="text-warning-foreground dark:text-warning text-xs leading-5">
+                      {t('usersPage.periodLimits.zeroLimitWarning')}
+                    </p>
+                  ) : null}
+                  {fieldErrorFor(id) ? (
+                    <p className="text-destructive text-xs leading-5">{fieldErrorFor(id)}</p>
+                  ) : null}
+                  {id === '7d' && draft.enabled && draft.mode === 'calendar' ? (
+                    <div className={formGridClassName}>
+                      <div className="grid gap-1.5">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {t('usersPage.periodLimits.weekResetDay')}
+                        </span>
+                        <Select
+                          value={weekResetDay}
+                          disabled={mutating}
+                          onValueChange={setWeekResetDay}
+                        >
+                          <SelectTrigger
+                            className="w-full"
+                            aria-label={t('usersPage.periodLimits.weekResetDay')}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+                              <SelectItem key={day} value={String(day)}>
+                                {t(`usersPage.periodLimits.weekDays.${day}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <label className="text-muted-foreground grid gap-1.5 text-xs font-medium">
+                        <span>{t('usersPage.periodLimits.weekResetHour')}</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="23"
+                          step="1"
+                          value={weekResetHour}
+                          disabled={mutating}
+                          onChange={(event) => setWeekResetHour(event.target.value)}
+                        />
+                      </label>
+                    </div>
+                  ) : null}
+                </div>
+              )
+            })}
+            {/*
+            A select rather than an input with a datalist. A datalist filters its
+            suggestions against what is already typed, and this field arrives
+            pre-filled, so the list of eight zones showed exactly one — the value
+            already in the box. Nothing was wrong with the data; the control was
+            hiding it. Typing IANA identifiers by hand is also easy to get wrong,
+            and an existing user's zone stays selectable even if it is not one of
+            the suggestions.
+          */}
+            <label className={fieldClassName}>
+              <span>{t('usersPage.form.timezone')}</span>
+              <Select value={timezone} disabled={mutating} onValueChange={setTimezone}>
+                <SelectTrigger
+                  aria-label={t('usersPage.form.timezone')}
+                  aria-invalid={fieldErrorFor('timezone') ? true : undefined}
+                >
+                  <SelectValue placeholder={defaultUserPeriodTimezone} />
+                </SelectTrigger>
+                <SelectContent>
+                  {timezoneOptions.map((zone) => (
+                    <SelectItem key={zone} value={zone}>
+                      {zone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {fieldErrorFor('timezone') ? (
+                <span className="text-destructive text-xs leading-5">
+                  {fieldErrorFor('timezone')}
+                </span>
+              ) : (
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('usersPage.form.timezoneHint')}
+                </span>
+              )}
+            </label>
+          </div>
+        ) : (
+          <div className="text-muted-foreground rounded-md border border-dashed px-3 py-2.5 text-xs leading-5">
+            {t('usersPage.periodLimits.unsupportedForm')}
+          </div>
+        )}
+        {localError ? (
+          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            {localError}
+          </div>
+        ) : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -907,8 +928,8 @@ function UserForm({
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {mode === 'create' ? t('usersPage.actions.create') : t('usersPage.actions.save')}
         </Button>
-      </div>
-    </form>
+      </DrawerScaffoldFooter>
+    </DrawerScaffoldForm>
   )
 }
 
@@ -1029,63 +1050,65 @@ function AccessKeyForm({
   }
 
   return (
-    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className={fieldClassName}>
-        <span>{t('usersPage.keys.keyValue')}</span>
-        <Input
-          value={value}
-          disabled={mutating || mode === 'edit'}
-          className="font-mono text-xs"
-          onChange={(event) => setValue(event.target.value)}
+    <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-4">
+        <label className={fieldClassName}>
+          <span>{t('usersPage.keys.keyValue')}</span>
+          <Input
+            value={value}
+            disabled={mutating || mode === 'edit'}
+            className="font-mono text-xs"
+            onChange={(event) => setValue(event.target.value)}
+          />
+        </label>
+        <label className={fieldClassName}>
+          <span>{t('usersPage.keys.owner')}</span>
+          <Select
+            value={userId === null ? unassignedUserValue : String(userId)}
+            disabled={mutating}
+            onValueChange={(nextValue) =>
+              setUserId(nextValue === unassignedUserValue ? null : Number(nextValue))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={unassignedUserValue}>{t('usersPage.keys.unassigned')}</SelectItem>
+              {users
+                .filter((user) => user.numericId !== null && !user.deletedAt)
+                .map((user) => (
+                  <SelectItem key={user.id} value={String(user.numericId)}>
+                    {user.username}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </label>
+        <GroupCheckboxList
+          label={t('usersPage.scopes.credential')}
+          emptyLabel={t('usersPage.form.noCredentialGroups')}
+          groups={channelGroups}
+          selected={channelGroupIds}
+          onToggle={toggleChannelGroup}
         />
-      </label>
-      <label className={fieldClassName}>
-        <span>{t('usersPage.keys.owner')}</span>
-        <Select
-          value={userId === null ? unassignedUserValue : String(userId)}
-          disabled={mutating}
-          onValueChange={(nextValue) =>
-            setUserId(nextValue === unassignedUserValue ? null : Number(nextValue))
-          }
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={unassignedUserValue}>{t('usersPage.keys.unassigned')}</SelectItem>
-            {users
-              .filter((user) => user.numericId !== null && !user.deletedAt)
-              .map((user) => (
-                <SelectItem key={user.id} value={String(user.numericId)}>
-                  {user.username}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </label>
-      <GroupCheckboxList
-        label={t('usersPage.scopes.credential')}
-        emptyLabel={t('usersPage.form.noCredentialGroups')}
-        groups={channelGroups}
-        selected={channelGroupIds}
-        onToggle={toggleChannelGroup}
-      />
-      <GroupCheckboxList
-        label={t('usersPage.scopes.model')}
-        emptyLabel={t('usersPage.form.noModelGroups')}
-        groups={modelGroups}
-        selected={modelGroupIds}
-        onToggle={toggleModelGroup}
-      />
-      <p className="text-muted-foreground text-sm leading-6">
-        {t('usersPage.keys.emptyScopeHint')}
-      </p>
-      {localError ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
-        </div>
-      ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <GroupCheckboxList
+          label={t('usersPage.scopes.model')}
+          emptyLabel={t('usersPage.form.noModelGroups')}
+          groups={modelGroups}
+          selected={modelGroupIds}
+          onToggle={toggleModelGroup}
+        />
+        <p className="text-muted-foreground text-sm leading-6">
+          {t('usersPage.keys.emptyScopeHint')}
+        </p>
+        {localError ? (
+          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            {localError}
+          </div>
+        ) : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -1093,8 +1116,8 @@ function AccessKeyForm({
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {mode === 'create' ? t('usersPage.actions.createKey') : t('usersPage.actions.save')}
         </Button>
-      </div>
-    </form>
+      </DrawerScaffoldFooter>
+    </DrawerScaffoldForm>
   )
 }
 
@@ -1140,35 +1163,39 @@ function GroupForm({
   }
 
   return (
-    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <label className={fieldClassName}>
-        <span>
-          {kind === 'channel' ? t('usersPage.groups.channelName') : t('usersPage.groups.modelName')}
-        </span>
-        <Input
-          value={name}
-          disabled={mutating}
-          placeholder={kind === 'channel' ? 'team-a' : 'premium-models'}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      <label className="flex items-start gap-2 text-sm">
-        <Checkbox
-          checked={disabled}
-          disabled={mutating}
-          onCheckedChange={(checked) => setDisabled(checked === true)}
-        />
-        <span className="grid gap-1">
-          <span className="font-medium">{t('usersPage.groups.disabled')}</span>
-          <span className="text-muted-foreground">{t('usersPage.groups.disabledHint')}</span>
-        </span>
-      </label>
-      {localError ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
-        </div>
-      ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-4">
+        <label className={fieldClassName}>
+          <span>
+            {kind === 'channel'
+              ? t('usersPage.groups.channelName')
+              : t('usersPage.groups.modelName')}
+          </span>
+          <Input
+            value={name}
+            disabled={mutating}
+            placeholder={kind === 'channel' ? 'team-a' : 'premium-models'}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <Checkbox
+            checked={disabled}
+            disabled={mutating}
+            onCheckedChange={(checked) => setDisabled(checked === true)}
+          />
+          <span className="grid gap-1">
+            <span className="font-medium">{t('usersPage.groups.disabled')}</span>
+            <span className="text-muted-foreground">{t('usersPage.groups.disabledHint')}</span>
+          </span>
+        </label>
+        {localError ? (
+          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            {localError}
+          </div>
+        ) : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -1180,8 +1207,8 @@ function GroupForm({
               ? t('usersPage.actions.createCredentialScope')
               : t('usersPage.actions.createModelScope')}
         </Button>
-      </div>
-    </form>
+      </DrawerScaffoldFooter>
+    </DrawerScaffoldForm>
   )
 }
 
@@ -1682,81 +1709,83 @@ function GroupDetailForm({
     (groupId ? `#${groupId}` : t('usersPage.groups.groupPlaceholder'))
 
   return (
-    <form className="grid gap-4 p-5" onSubmit={(event) => void handleSubmit(event)}>
-      <div className="grid gap-2">
-        <p className="text-sm font-medium">{t('usersPage.groups.group')}</p>
-        <div className="bg-muted/40 rounded-md border px-3 py-2 text-sm">{selectedGroupName}</div>
-      </div>
-      {kind === 'channel' ? (
-        <BindingCandidateMultiSelect
-          title={t('usersPage.groups.credential')}
-          searchValue={credentialSearch}
-          searchPlaceholder={t('usersPage.groups.credentialSearchPlaceholder')}
-          selectedValues={selectedTargetIds}
-          selectedCountLabel={t('usersPage.groups.credentialSelectedCount', {
-            count: selectedTargetIds.length,
-          })}
-          filteredCountLabel={t('usersPage.groups.credentialFilteredCount', {
-            count: filteredCredentialCandidates.length,
-          })}
-          options={credentialOptions}
-          pending={credentialCandidatesPending}
-          issueMessage={credentialCandidatesIssueMessage}
-          errorMessage={credentialCandidatesErrorMessage}
-          emptyMessage={t('usersPage.groups.credentialEmpty')}
-          searchEmptyMessage={t('usersPage.groups.credentialSearchEmpty')}
-          hint={t('usersPage.groups.credentialSelectHint')}
-          mutating={mutating}
-          onSearchChange={setCredentialSearch}
-          onSelectedValuesChange={setSelectedTargetIds}
-          onRetry={onRetryCredentialCandidates}
-          onClearError={() => setLocalError(null)}
-        />
-      ) : (
-        <BindingCandidateMultiSelect
-          title={t('usersPage.groups.model')}
-          searchValue={modelSearch}
-          searchPlaceholder={t('usersPage.groups.modelSearchPlaceholder')}
-          selectedValues={selectedTargetIds}
-          selectedCountLabel={t('usersPage.groups.modelSelectedCount', {
-            count: selectedTargetIds.length,
-          })}
-          filteredCountLabel={t('usersPage.groups.modelFilteredCount', {
-            count: filteredModelCandidates.length,
-          })}
-          options={modelOptions}
-          pending={modelCandidatesPending}
-          issueMessage={modelCandidatesIssueMessage}
-          errorMessage={modelCandidatesErrorMessage}
-          emptyMessage={t('usersPage.groups.modelCandidateEmpty')}
-          searchEmptyMessage={t('usersPage.groups.modelSearchEmpty')}
-          hint={t('usersPage.groups.modelSelectHint')}
-          filters={modelFilterOptions}
-          filterValue={modelSourceFilter}
-          mutating={mutating}
-          onSearchChange={setModelSearch}
-          onSelectedValuesChange={setSelectedTargetIds}
-          onFilterChange={(value) => setModelSourceFilter(value as ModelSourceFilter)}
-          onRetry={onRetryModelCandidates}
-          onClearError={() => setLocalError(null)}
-        />
-      )}
-      {kind === 'model' && channelBindingsSupported ? (
-        <GroupCheckboxList
-          label={t('usersPage.groups.detailChannels')}
-          emptyLabel={t('usersPage.groups.channelEmpty')}
-          groups={channelGroups}
-          selected={selectedChannelGroupIds}
-          hint={t('usersPage.groups.detailChannelsHint')}
-          onToggle={toggleChannelGroup}
-        />
-      ) : null}
-      {localError ? (
-        <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-          {localError}
+    <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+      <DrawerScaffoldBody className="grid gap-4">
+        <div className="grid gap-2">
+          <p className="text-sm font-medium">{t('usersPage.groups.group')}</p>
+          <div className="bg-muted/40 rounded-md border px-3 py-2 text-sm">{selectedGroupName}</div>
         </div>
-      ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        {kind === 'channel' ? (
+          <BindingCandidateMultiSelect
+            title={t('usersPage.groups.credential')}
+            searchValue={credentialSearch}
+            searchPlaceholder={t('usersPage.groups.credentialSearchPlaceholder')}
+            selectedValues={selectedTargetIds}
+            selectedCountLabel={t('usersPage.groups.credentialSelectedCount', {
+              count: selectedTargetIds.length,
+            })}
+            filteredCountLabel={t('usersPage.groups.credentialFilteredCount', {
+              count: filteredCredentialCandidates.length,
+            })}
+            options={credentialOptions}
+            pending={credentialCandidatesPending}
+            issueMessage={credentialCandidatesIssueMessage}
+            errorMessage={credentialCandidatesErrorMessage}
+            emptyMessage={t('usersPage.groups.credentialEmpty')}
+            searchEmptyMessage={t('usersPage.groups.credentialSearchEmpty')}
+            hint={t('usersPage.groups.credentialSelectHint')}
+            mutating={mutating}
+            onSearchChange={setCredentialSearch}
+            onSelectedValuesChange={setSelectedTargetIds}
+            onRetry={onRetryCredentialCandidates}
+            onClearError={() => setLocalError(null)}
+          />
+        ) : (
+          <BindingCandidateMultiSelect
+            title={t('usersPage.groups.model')}
+            searchValue={modelSearch}
+            searchPlaceholder={t('usersPage.groups.modelSearchPlaceholder')}
+            selectedValues={selectedTargetIds}
+            selectedCountLabel={t('usersPage.groups.modelSelectedCount', {
+              count: selectedTargetIds.length,
+            })}
+            filteredCountLabel={t('usersPage.groups.modelFilteredCount', {
+              count: filteredModelCandidates.length,
+            })}
+            options={modelOptions}
+            pending={modelCandidatesPending}
+            issueMessage={modelCandidatesIssueMessage}
+            errorMessage={modelCandidatesErrorMessage}
+            emptyMessage={t('usersPage.groups.modelCandidateEmpty')}
+            searchEmptyMessage={t('usersPage.groups.modelSearchEmpty')}
+            hint={t('usersPage.groups.modelSelectHint')}
+            filters={modelFilterOptions}
+            filterValue={modelSourceFilter}
+            mutating={mutating}
+            onSearchChange={setModelSearch}
+            onSelectedValuesChange={setSelectedTargetIds}
+            onFilterChange={(value) => setModelSourceFilter(value as ModelSourceFilter)}
+            onRetry={onRetryModelCandidates}
+            onClearError={() => setLocalError(null)}
+          />
+        )}
+        {kind === 'model' && channelBindingsSupported ? (
+          <GroupCheckboxList
+            label={t('usersPage.groups.detailChannels')}
+            emptyLabel={t('usersPage.groups.channelEmpty')}
+            groups={channelGroups}
+            selected={selectedChannelGroupIds}
+            hint={t('usersPage.groups.detailChannelsHint')}
+            onToggle={toggleChannelGroup}
+          />
+        ) : null}
+        {localError ? (
+          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+            {localError}
+          </div>
+        ) : null}
+      </DrawerScaffoldBody>
+      <DrawerScaffoldFooter>
         <Button type="button" variant="outline" disabled={mutating} onClick={onCancel}>
           {t('common.cancel')}
         </Button>
@@ -1773,8 +1802,8 @@ function GroupDetailForm({
           {mutating ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
           {t('usersPage.actions.addBinding')}
         </Button>
-      </div>
-    </form>
+      </DrawerScaffoldFooter>
+    </DrawerScaffoldForm>
   )
 }
 
@@ -2568,7 +2597,7 @@ function GroupsTable({
               <Table
                 className={cn('table-fixed', showChannels ? 'min-w-[760px]' : 'min-w-[620px]')}
               >
-                <TableHeader className="bg-muted/40 text-muted-foreground">
+                <TableHeader className={tableHeaderClassName}>
                   <TableRow variant="static">
                     <TableHead className={targetColumnWidth}>
                       {kind === 'channel'

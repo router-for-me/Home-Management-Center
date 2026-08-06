@@ -159,25 +159,6 @@ function cornerDrillDownClassName() {
   return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-2 bottom-2 inline-flex size-10 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
 }
 
-function DashboardDrillDownLink({ label, to }: { label: string; to: DashboardLinkTarget }) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        'group/link focus-visible:border-ring focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
-        cornerDrillDownClassName(),
-      )}
-      aria-label={label}
-      title={label}
-    >
-      <Eye
-        className="size-3.5 transition-transform duration-200 group-hover/link:scale-110 group-focus-visible/link:scale-110 motion-reduce:transition-none"
-        aria-hidden="true"
-      />
-    </Link>
-  )
-}
-
 function DashboardDrillDownIndicator() {
   return (
     <span className={cn('pointer-events-none', cornerDrillDownClassName())} aria-hidden="true">
@@ -459,7 +440,7 @@ function DashboardUsageInsightPanel({
 
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 shadow-sm">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -478,7 +459,6 @@ function DashboardUsageInsightPanel({
                   })}
             </p>
           </div>
-          <DashboardDrillDownLink to="/admin/usage" label={t('dashboard.keyStatus.action')} />
         </div>
         <RankPreviewList
           items={keyStatus.topClientKeys}
@@ -486,7 +466,7 @@ function DashboardUsageInsightPanel({
         />
       </section>
 
-      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+      <section className="group/card bg-card relative min-w-0 rounded-lg border p-4 shadow-sm">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
@@ -501,7 +481,6 @@ function DashboardUsageInsightPanel({
                   })}
             </p>
           </div>
-          <DashboardDrillDownLink to="/admin/usage" label={t('dashboard.modelUsage.action')} />
         </div>
         <RankPreviewList
           items={modelUsage.topModels}
@@ -588,7 +567,7 @@ function DashboardUsageConsumptionTrendPanel({
   const xAxisTicks = tickIndexes.map((index) => summary.points[index]?.id ?? '')
 
   return (
-    <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 pb-12 shadow-sm">
+    <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -607,10 +586,6 @@ function DashboardUsageConsumptionTrendPanel({
             })}
           </p>
         </div>
-        <DashboardDrillDownLink
-          to="/admin/usage"
-          label={t('dashboard.usageConsumptionTrend.action')}
-        />
       </div>
       {/*
         The hand-drawn chart named itself on its `<svg>` and described every point
@@ -714,7 +689,7 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
     })
 
   return (
-    <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 pb-12 shadow-sm">
+    <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
@@ -735,10 +710,6 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
             })}
           </p>
         </div>
-        <DashboardDrillDownLink
-          to="/admin/diagnostics"
-          label={t('dashboard.usageActivity.action')}
-        />
       </div>
       <div className="mt-4">
         <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
@@ -952,7 +923,6 @@ export function DashboardConsolePage() {
       : viewModel.healthSummary.tone === 'info'
         ? Info
         : AlertTriangle
-  const hasConfigAttention = viewModel.configChecks.some((check) => check.tone === 'warning')
 
   return (
     <section className="grid w-full gap-4">
@@ -1101,22 +1071,11 @@ export function DashboardConsolePage() {
       </div>
 
       <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
-        <div
-          className={cn(
-            'group/card bg-card relative flex min-w-0 flex-col rounded-lg border p-4 shadow-sm',
-            !viewModel.allProvidersEmpty && 'pb-12',
-          )}
-        >
+        <div className="group/card bg-card relative flex min-w-0 flex-col rounded-lg border p-4 shadow-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-base font-semibold">{t('dashboard.providers.title')}</h2>
             </div>
-            {!viewModel.allProvidersEmpty ? (
-              <DashboardDrillDownLink
-                to="/admin/providers"
-                label={t('dashboard.providers.action')}
-              />
-            ) : null}
           </div>
           {viewModel.allProvidersEmpty ? (
             <div className="bg-muted/20 mt-3 flex min-h-[18rem] flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center xl:flex-1">
@@ -1187,14 +1146,10 @@ export function DashboardConsolePage() {
           <div
             className={cn(
               'group/card bg-card relative flex min-h-0 flex-col rounded-lg border p-4 shadow-sm',
-              hasConfigAttention && 'pb-12',
             )}
           >
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-base font-semibold">{t('dashboard.config.title')}</h2>
-              {hasConfigAttention ? (
-                <DashboardDrillDownLink to="/admin/config" label={t('dashboard.config.action')} />
-              ) : null}
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {viewModel.configChecks.map((check) => {

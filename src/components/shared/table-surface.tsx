@@ -3,8 +3,13 @@ import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from
 import { cn } from '@/lib/utils'
 
 const containedTableContainerClassName = 'max-h-[min(640px,calc(100vh-280px))] overflow-auto'
-const stickyTableHeaderClassName =
-  'bg-muted text-muted-foreground sticky top-0 z-[var(--z-table-sticky)] shadow-[0_1px_0_var(--border)]'
+/*
+ * One header background, because the sticky action column has to paint an opaque
+ * copy of it and can only match one value. Headers written at 70% and 40% opacity
+ * left that column visibly darker than the row of heads it sits in.
+ */
+const tableHeaderClassName = 'bg-muted text-muted-foreground'
+const stickyTableHeaderClassName = `${tableHeaderClassName} sticky top-0 z-[var(--z-table-sticky)] shadow-[0_1px_0_var(--border)]`
 
 function TableSurface({
   children,
@@ -102,4 +107,5 @@ export {
   TableSurfaceHeader,
   containedTableContainerClassName,
   stickyTableHeaderClassName,
+  tableHeaderClassName,
 }
