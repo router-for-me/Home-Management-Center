@@ -80,6 +80,7 @@ export const ru = {
     },
     sidebar: {
       controlPlane: 'Консоль управления AI Gateway',
+      backToEntry: 'Вернуться на страницу входа',
       collapse: 'Свернуть боковую панель',
       expand: 'Развернуть боковую панель',
       openMobile: 'Открыть навигацию',

@@ -79,6 +79,7 @@ export const zhTW = {
     },
     sidebar: {
       controlPlane: 'AI Gateway 管理控制台',
+      backToEntry: '返回入口頁',
       collapse: '收合側邊欄',
       expand: '展開側邊欄',
       openMobile: '開啟導覽',

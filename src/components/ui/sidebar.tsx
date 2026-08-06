@@ -25,7 +25,13 @@ import { cn } from '@/lib/utils'
 
 const SIDEBAR_COOKIE_NAME = 'sidebar_state'
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = '16rem'
+/*
+ * 14rem, measured rather than chosen: the header's logo, product name and subtitle
+ * need 176px in Chinese, and the longest navigation label needs 122px. 16rem left
+ * 48px of it unused. English and Russian product names overrun either width and
+ * truncate, which they did before too.
+ */
+const SIDEBAR_WIDTH = '14rem'
 const SIDEBAR_WIDTH_MOBILE = '18rem'
 const SIDEBAR_WIDTH_ICON = '3rem'
 const SIDEBAR_KEYBOARD_SHORTCUT = 'b'

@@ -28,6 +28,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
 import { cn } from '@/lib/utils'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -211,10 +212,28 @@ export function AppShell({ children }: AppShellProps) {
     <SidebarProvider>
       <Sidebar collapsible="icon" className="border-sidebar-border text-sidebar-foreground">
         <SidebarHeader className="border-sidebar-border/80 border-b p-0">
-          <div className="flex h-14 items-center gap-3 px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-            <div className="ring-sidebar-primary/25 bg-sidebar-accent flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md ring-1">
+          {/*
+            h-16 matches the workspace header exactly: the two sit side by side and
+            their bottom borders read as one line, which 56 against 64 did not.
+          */}
+          <div className="flex h-16 items-center gap-3 px-4 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+            {/*
+              Only the mark is the link, and the text beside it stays description.
+              The mark is the way back to the entry page, where a different identity
+              is chosen — the user workspace already had that door and the admin
+              console was the only surface you could not leave without editing the
+              URL. What the link cannot do is rename the subtitle: that line says
+              which product this is, and turning it into an action label made the
+              console read as if it were an identity picker.
+            */}
+            <a
+              href={embeddedEntryLinks.bridge}
+              title={t('sidebar.backToEntry')}
+              aria-label={t('sidebar.backToEntry')}
+              className="ring-sidebar-primary/25 bg-sidebar-accent hover:ring-sidebar-primary/60 focus-visible:ring-sidebar-ring flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md ring-1 transition-[box-shadow] outline-none focus-visible:ring-2"
+            >
               <img src={productLogo} alt="" aria-hidden="true" className="size-full object-cover" />
-            </div>
+            </a>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <p className="text-sidebar-foreground truncate text-sm font-semibold">
                 {t('productShortName')}
@@ -255,7 +274,13 @@ export function AppShell({ children }: AppShellProps) {
                           isActive={isActive}
                           tooltip={itemLabel}
                           className={cn(
-                            'group/nav-item relative flex h-11 items-center gap-3 rounded-md px-3.5 text-sm font-medium transition-colors duration-150',
+                            /*
+                              px-2 rather than px-3.5, so the icon starts where the
+                              header logo starts. The group already insets 8px; 14px
+                              on top of that put every navigation icon 6px right of
+                              the logo above them.
+                            */
+                            'group/nav-item relative flex h-11 items-center gap-3 rounded-md px-2 text-sm font-medium transition-colors duration-150',
                             isActive
                               ? '!bg-sidebar-active hover:!bg-sidebar-active-hover data-[active=true]:!bg-sidebar-active !text-sidebar-active-foreground hover:!text-sidebar-active-foreground data-[active=true]:!text-sidebar-active-foreground'
                               : 'hover:!bg-sidebar-accent hover:!text-sidebar-accent-foreground !text-sidebar-foreground data-[active=false]:!text-sidebar-foreground',

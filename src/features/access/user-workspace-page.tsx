@@ -28,6 +28,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
+import { tableHeaderClassName } from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -217,7 +218,7 @@ function ApiKeysTable({
 
   return (
     <Table className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[760px]')}>
-      <TableHeader className="bg-muted/70 text-muted-foreground">
+      <TableHeader className={tableHeaderClassName}>
         <TableRow variant="static">
           <TableHead>{t('userWorkspace.keys.table.key')}</TableHead>
           {showSecondary ? (

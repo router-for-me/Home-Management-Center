@@ -29,6 +29,7 @@ import {
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
+  tableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
   AlertDialog,
@@ -264,7 +265,7 @@ function AccessKeyList({
       containerClassName="rounded-md border"
       className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[952px]')}
     >
-      <TableHeader className="bg-muted/70 text-muted-foreground">
+      <TableHeader className={tableHeaderClassName}>
         <TableRow variant="static">
           <TableHead className="w-10">
             <Checkbox
@@ -1067,7 +1068,7 @@ export function AccessKeysWorkbenchPage() {
               </span>
               <div className="flex flex-wrap gap-2">
                 <Button
-                  variant="ghost"
+                  variant="text"
                   size="md"
                   disabled={workbench.mutating}
                   onClick={() => setSelectedKeyIds(new Set())}
@@ -1075,9 +1076,8 @@ export function AccessKeysWorkbenchPage() {
                   {t('accessKeysPage.bulk.clearSelection')}
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="destructiveText"
                   size="md"
-                  className="text-destructive hover:text-destructive"
                   disabled={workbench.mutating}
                   onClick={handleBulkDelete}
                 >
