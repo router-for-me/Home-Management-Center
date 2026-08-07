@@ -409,9 +409,9 @@ export const zhCN = {
       },
       filters: {
         searchLabel: '搜索模型',
-        searchPlaceholder: '按模型 ID、名称或通道搜索',
-        provider: '接入通道',
-        allProviders: '全部通道',
+        searchPlaceholder: '按模型 ID、名称或供应商搜索',
+        provider: '供应商',
+        allProviders: '全部供应商',
         inputModality: '输入模态',
         allModalities: '全部输入模态',
         quickFilters: '快捷筛选',
@@ -434,7 +434,9 @@ export const zhCN = {
       spec: {
         context: '上下文',
         maxOutput: '最大输出',
-        providers: '接入通道',
+        providers: '供应商',
+        providersHint:
+          '网关实际调用的上游供应商，也是用量与账单记录中的标识；不代表模型的开发厂商。',
         ownedBy: '归属',
         version: '版本',
         type: '类型',

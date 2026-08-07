@@ -47,8 +47,8 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
 
   const locale = i18n.language
   // The brand mark answers "whose model is this", which no field on the payload
-  // reports: `providers[]` names the channel that serves it, so a GLM model
-  // reached through the Codex channel would otherwise wear an OpenAI mark.
+  // reports: `providers[]` names the upstream that serves it, so a GLM model
+  // reached through the `codex` provider would otherwise wear an OpenAI mark.
   const vendorId = resolveModelVendorId(model.id, model.displayName)
   const entryPoint = pricingEntryPoint(model.pricing)
   const contextLength = formatCompactTokens(model.contextLength, locale)
@@ -98,9 +98,11 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
             </button>
           </h3>
           {model.providers.length > 0 ? (
-            // Labelled rather than bare: sitting under the model name next to a
-            // vendor mark, an unlabelled `codex · glm` reads as a list of model
-            // makers, which is the one thing these identifiers are not.
+            // Labelled rather than bare: under the model name and beside a
+            // vendor mark, a loose `codex · glm` reads as a list of makers. The
+            // label is the word usage, billing and the admin providers page
+            // already use for these same identifiers; the detail sheet carries
+            // the line that separates a serving provider from a model maker.
             <p
               className="text-muted-foreground mt-0.5 truncate text-xs"
               title={model.providers.join(', ')}

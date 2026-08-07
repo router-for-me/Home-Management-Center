@@ -426,9 +426,9 @@ export const ru = {
       },
       filters: {
         searchLabel: 'Поиск моделей',
-        searchPlaceholder: 'Поиск по ID модели, названию или каналу',
-        provider: 'Канал доступа',
-        allProviders: 'Все каналы',
+        searchPlaceholder: 'Поиск по ID модели, названию или провайдеру',
+        provider: 'Провайдер',
+        allProviders: 'Все провайдеры',
         inputModality: 'Входная модальность',
         allModalities: 'Все входные модальности',
         quickFilters: 'Быстрые фильтры',
@@ -451,7 +451,9 @@ export const ru = {
       spec: {
         context: 'Длина контекста',
         maxOutput: 'Максимальный вывод',
-        providers: 'Каналы доступа',
+        providers: 'Провайдеры',
+        providersHint:
+          'Вышестоящий провайдер, к которому обращается шлюз, и идентификатор в записях использования и биллинга. Он не указывает создателя модели.',
         ownedBy: 'Владелец',
         version: 'Версия',
         type: 'Тип',

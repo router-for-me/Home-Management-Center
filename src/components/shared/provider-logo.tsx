@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 /**
  * Brand marks, keyed by a resolved brand id.
  *
- * The table serves two different questions — "which channel served this?" and
+ * The table serves two different questions — "which provider served this?" and
  * "who built this model?" — which is why some keys name a product (`codex`,
  * `vertex`, `antigravity`) and others name a company (`openai`, `glm`). The two
  * are resolved by `resolveProviderLogoId` and `resolveModelVendorId`
@@ -78,18 +78,18 @@ const brandMarks: Record<
 }
 
 /**
- * Channel aliases, tried in order.
+ * Provider aliases, tried in order.
  *
- * `providers[]`, `usage.provider` and Billing price rules all name the channel
- * that served a request, and the same channel arrives under several spellings:
- * the canonical registry key (`codex`), the protocol family its executor speaks
- * (`anthropic`), an operator-chosen compatibility name, or this app's own
- * descriptor id. The last one is why `openai-compatibility` and
+ * `providers[]`, `usage.provider` and Billing price rules all name the upstream
+ * provider that served a request, and the same one arrives under several
+ * spellings: the canonical registry key (`codex`), the protocol family its
+ * executor speaks (`anthropic`), an operator-chosen compatibility name, or this
+ * app's own descriptor id. The last one is why `openai-compatibility` and
  * `openaiCompatibility` both have to land on the same mark. Specific entries
- * come before general ones so a `codex` channel is never claimed by the OpenAI
+ * come before general ones so a `codex` provider is never claimed by the OpenAI
  * rule.
  */
-const channelAliases: Array<[brandId: string, matches: RegExp]> = [
+const providerAliases: Array<[brandId: string, matches: RegExp]> = [
   ['antigravity', /antigravity/],
   ['vertex', /vertex/],
   ['codex', /codex/],
@@ -105,7 +105,7 @@ const channelAliases: Array<[brandId: string, matches: RegExp]> = [
  *
  * Nothing in the catalog payload names the company that built a model. A
  * third-party model reaches the registry as a string an operator typed into a
- * first-party channel's `models:` list, so `providers[]` reports `codex` for a
+ * first-party provider's `models:` list, so `providers[]` reports `codex` for a
  * GLM model and `owned_by` reports `anthropic` for a DeepSeek one. The
  * identifier is the only evidence there is.
  *
@@ -135,17 +135,17 @@ function normalizeBrandToken(value: string | null | undefined) {
 }
 
 /**
- * Resolves a channel identifier to a brand id.
+ * Resolves a provider identifier to a brand id.
  *
  * Returns the normalized identifier when no rule matches, so an unrecognized
- * channel still renders a stable two-letter mark instead of vanishing, and
+ * provider still renders a stable two-letter mark instead of vanishing, and
  * `null` only when there was no identifier to resolve.
  */
 export function resolveProviderLogoId(value: string | null | undefined) {
   const normalized = normalizeBrandToken(value)
   if (!normalized) return null
 
-  for (const [brandId, matches] of channelAliases) {
+  for (const [brandId, matches] of providerAliases) {
     if (matches.test(normalized)) return brandId
   }
   if (Object.hasOwn(brandLogos, normalized)) return normalized
@@ -160,9 +160,9 @@ export function resolveProviderLogoId(value: string | null | undefined) {
  * Resolves the company that built a model from the strings the catalog carries.
  *
  * Returns `null` when nothing matches, and callers must render something
- * neutral rather than falling back to the channel logo: a model reached through
- * the Codex channel is not an OpenAI model, and refusing to guess is the whole
- * point of this function.
+ * neutral rather than falling back to the provider logo: a model reached
+ * through the `codex` provider is not an OpenAI model, and refusing to guess is
+ * the whole point of this function.
  */
 export function resolveModelVendorId(...sources: Array<string | null | undefined>) {
   for (const source of sources) {
@@ -196,7 +196,7 @@ export function ProviderLogo({
   className?: string
 }) {
   // Resolution happens here rather than at the call site so every surface that
-  // shows a channel agrees on what `openai-compatibility` looks like.
+  // shows a provider agrees on what `openai-compatibility` looks like.
   const brandId = resolveProviderLogoId(providerId) ?? providerId
   const logo = brandLogos[brandId]
   const [failed, setFailed] = useState(false)

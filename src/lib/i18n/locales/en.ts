@@ -427,9 +427,9 @@ export const en = {
       },
       filters: {
         searchLabel: 'Search models',
-        searchPlaceholder: 'Search by model ID, name, or channel',
-        provider: 'Channel',
-        allProviders: 'All channels',
+        searchPlaceholder: 'Search by model ID, name, or provider',
+        provider: 'Provider',
+        allProviders: 'All providers',
         inputModality: 'Input modality',
         allModalities: 'All input modalities',
         quickFilters: 'Quick filters',
@@ -452,7 +452,9 @@ export const en = {
       spec: {
         context: 'Context',
         maxOutput: 'Max output',
-        providers: 'Channels',
+        providers: 'Providers',
+        providersHint:
+          'The upstream provider the gateway calls, and the identifier on usage and billing records. It does not name the model maker.',
         ownedBy: 'Owned by',
         version: 'Version',
         type: 'Type',

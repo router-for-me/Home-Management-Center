@@ -217,8 +217,8 @@ describe('user model card', () => {
     expect(brandMarkSources(glmViaCodex)).toEqual(brandMarkSources(glmViaCompat))
     expect(brandMarkSources(glmViaCodex)).not.toEqual(brandMarkSources(openaiViaCodex))
 
-    // The channel stays on the card, named as a channel so the two readings of
-    // `codex` cannot be confused for each other.
+    // The serving provider stays on the card and stays labelled, so `codex`
+    // reads as a field value rather than as a second maker beside the mark.
     expect(glmViaCodex).toContain(copy.spec.providers)
     expect(glmViaCodex).toContain('codex')
   })

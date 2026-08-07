@@ -72,11 +72,14 @@ function SpecList({ children }: { children: ReactNode }) {
   return <dl className={formGridClassName}>{children}</dl>
 }
 
-function SpecRow({ label, children }: { label: string; children: ReactNode }) {
+function SpecRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="border-border/60 bg-muted/25 min-w-0 rounded-md border px-3 py-2">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 text-sm [overflow-wrap:anywhere]">{children}</dd>
+      <dd className="mt-0.5 text-sm [overflow-wrap:anywhere]">
+        {children}
+        {hint ? <p className="text-muted-foreground mt-1 text-xs leading-5">{hint}</p> : null}
+      </dd>
     </div>
   )
 }
@@ -423,7 +426,10 @@ export function UserModelDetailSheet({
                   <SpecRow label={t('userModels.spec.maxOutput')}>
                     {formatExactNumber(model.maxOutputTokens, locale) ?? <UnreportedValue />}
                   </SpecRow>
-                  <SpecRow label={t('userModels.spec.providers')}>
+                  <SpecRow
+                    label={t('userModels.spec.providers')}
+                    hint={t('userModels.spec.providersHint')}
+                  >
                     {model.providers.length > 0 ? (
                       <span className="font-mono">{model.providers.join(', ')}</span>
                     ) : (

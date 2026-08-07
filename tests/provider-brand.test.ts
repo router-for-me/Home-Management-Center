@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { resolveModelVendorId, resolveProviderLogoId } from '@/components/shared/provider-logo'
 
 describe('model vendor resolution', () => {
-  test('reads the vendor off the model ID, not off the channel that serves it', () => {
+  test('reads the vendor off the model ID, not off the provider that serves it', () => {
     // The two shapes that made this necessary: a GLM coding plan wired through
     // `codex-api-key` reports `providers: ["codex"]`, and a DeepSeek endpoint
     // wired through `claude-api-key` reports `providers: ["claude"]`. Neither
@@ -35,7 +35,7 @@ describe('model vendor resolution', () => {
   test('answers null rather than guessing when the ID says nothing', () => {
     // An operator alias is the common case, and the honest answer is that this
     // catalog does not know who built the model. Callers render a neutral mark;
-    // falling back to the channel logo is what this whole function replaces.
+    // falling back to the provider logo is what this whole function replaces.
     expect(resolveModelVendorId('my-alias')).toBeNull()
     expect(resolveModelVendorId('internal-model-1')).toBeNull()
     expect(resolveModelVendorId(null)).toBeNull()
@@ -57,8 +57,8 @@ describe('model vendor resolution', () => {
   })
 })
 
-describe('channel logo resolution', () => {
-  test('lands both spellings of the compatibility channel on one mark', () => {
+describe('provider logo resolution', () => {
+  test('lands both spellings of the compatibility provider on one mark', () => {
     // The server emits `openai-compatibility`; this app's own provider
     // descriptors spell it `openaiCompatibility`. Keying a table on one of them
     // left the other rendering a two-letter fallback.
@@ -67,15 +67,15 @@ describe('channel logo resolution', () => {
     expect(resolveProviderLogoId('openai')).toBe('openai')
   })
 
-  test('keeps a channel that is not a vendor as itself', () => {
-    // Codex is a product of OpenAI's, but a `codex` channel row must keep the
-    // Codex mark: the usage and billing pages are reporting on the channel.
+  test('keeps a provider that is not a vendor as itself', () => {
+    // Codex is a product of OpenAI's, but a `codex` provider row must keep the
+    // Codex mark: the usage and billing pages are reporting on the provider.
     expect(resolveProviderLogoId('codex')).toBe('codex')
     expect(resolveProviderLogoId('vertex')).toBe('vertex')
     expect(resolveProviderLogoId('antigravity')).toBe('antigravity')
   })
 
-  test('folds the protocol-family spellings onto their channel', () => {
+  test('folds the protocol-family spellings onto their provider', () => {
     expect(resolveProviderLogoId('anthropic')).toBe('claude')
     expect(resolveProviderLogoId('google')).toBe('gemini')
     expect(resolveProviderLogoId('grok')).toBe('xai')
@@ -94,7 +94,7 @@ describe('channel logo resolution', () => {
     expect(resolveProviderLogoId('glm-4.6')).toBe('glm')
   })
 
-  test('returns an unknown channel unchanged so it still gets a stable mark', () => {
+  test('returns an unknown provider unchanged so it still gets a stable mark', () => {
     expect(resolveProviderLogoId('siliconflow')).toBe('siliconflow')
     expect(resolveProviderLogoId('  SiliconFlow ')).toBe('siliconflow')
     expect(resolveProviderLogoId(null)).toBeNull()
