@@ -51,7 +51,7 @@ import {
   narrowFilterGridClassName,
 } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
-import { ProviderLogo } from '@/components/shared/provider-logo'
+import { ProviderLogo, resolveProviderLogoId } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
@@ -2017,40 +2017,13 @@ function getMetadataString(item: UsageAggregateItem, keys: string[]) {
   return null
 }
 
-function normalizeProviderLogoId(value: string | null) {
-  if (!value) return null
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_.]+/g, '-')
-  if (!normalized) return null
-  if (normalized.includes('codex')) return 'codex'
-  if (normalized.includes('claude') || normalized.includes('anthropic')) return 'claude'
-  if (normalized.includes('gemini') || normalized.includes('google')) return 'gemini'
-  if (normalized.includes('vertex')) return 'vertex'
-  if (normalized.includes('kimi') || normalized.includes('moonshot')) return 'kimi'
-  if (normalized.includes('xai') || normalized.includes('x-ai') || normalized.includes('grok')) {
-    return 'xai'
-  }
-  if (
-    normalized.includes('openai') ||
-    normalized.includes('chatgpt') ||
-    /^gpt[-\w]*/.test(normalized) ||
-    /^o\d[-\w]*/.test(normalized)
-  ) {
-    return 'openaiCompatibility'
-  }
-
-  return normalized
-}
-
 function getRankingProviderLogoId(item: UsageAggregateItem, groupBy: UsageAggregateGroupBy) {
   const provider =
     getMetadataString(item, ['provider', 'provider_id', 'providerId']) ??
     (groupBy === 'provider' ? item.id || item.label : null)
   const fallback = groupBy === 'model' || groupBy === 'provider' ? item.label : null
 
-  return normalizeProviderLogoId(provider) ?? normalizeProviderLogoId(fallback)
+  return resolveProviderLogoId(provider) ?? resolveProviderLogoId(fallback)
 }
 
 function RankingIdentityMarker({
@@ -2497,7 +2470,7 @@ function CredentialBadge({ credential }: { credential: UsageExecutionCredential 
 
 function getUsageProviderLogoId(...values: Array<string | null | undefined>) {
   for (const value of values) {
-    const logoId = normalizeProviderLogoId(value ?? null)
+    const logoId = resolveProviderLogoId(value)
     if (logoId) return logoId
   }
 

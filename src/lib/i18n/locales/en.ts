@@ -453,6 +453,8 @@ export const en = {
         context: 'Context',
         maxOutput: 'Max output',
         providers: 'Providers',
+        providersHint:
+          'The upstream provider the gateway calls, and the identifier on usage and billing records. It does not name the model maker.',
         ownedBy: 'Owned by',
         version: 'Version',
         type: 'Type',
