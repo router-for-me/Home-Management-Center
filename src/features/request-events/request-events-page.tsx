@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
@@ -409,7 +410,6 @@ function RequestEventsFiltersToolbar({
   const homeIps = appendSelectedOption(options?.homeIps ?? [], filters.homeIp)
   const cpaNodes = appendSelectedOption(options?.cpaNodes ?? [], filters.cpaNode)
   const statusCodes = appendSelectedOption(options?.statusCodes ?? [], filters.statusCode)
-  const latencyRangeInvalid = !isRequestEventLatencyRangeValid(filters)
   const activeAdvancedFilterCount = getActiveAdvancedFilterCount(filters)
   const activeSearchField =
     requestEventSearchFields.find((field) => filters[field].trim()) ?? searchField
@@ -425,11 +425,12 @@ function RequestEventsFiltersToolbar({
       }) satisfies SelectInputGroupOption,
   )
 
-  const handleSearchFieldChange = (nextField: string) => {
+  const latencyRangeInvalid = !isRequestEventLatencyRangeValid(filters)
+
+  const handleSearchFieldChange = (nextField: string, carriedValue: string) => {
     const nextSearchField = nextField as RequestEventSearchField
-    const currentValue = getSearchFieldValue(filters, activeSearchField)
     setSearchField(nextSearchField)
-    onChange(getNextSearchFieldPatch(nextSearchField, currentValue))
+    onChange(getNextSearchFieldPatch(nextSearchField, carriedValue))
   }
 
   return (
@@ -453,9 +454,7 @@ function RequestEventsFiltersToolbar({
             field: t(`requestEventsPage.filters.searchFields.${activeSearchField}`),
           })}
           onSelectValueChange={handleSearchFieldChange}
-          onInputValueChange={(value) =>
-            onChange(getNextSearchFieldPatch(activeSearchField, value))
-          }
+          onInputCommit={(value) => onChange(getNextSearchFieldPatch(activeSearchField, value))}
         />
         <Select
           value={filters.range}
@@ -757,7 +756,7 @@ function NumberRangeInputGroup({
       aria-label={label}
       aria-invalid={invalid || undefined}
     >
-      <Input
+      <DebouncedFilterInput
         size="md"
         className="h-full min-h-0 rounded-r-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
@@ -768,7 +767,7 @@ function NumberRangeInputGroup({
         disabled={disabled}
         placeholder={minPlaceholder}
         aria-label={minPlaceholder}
-        onChange={(event) => onMinChange(event.target.value)}
+        onCommit={onMinChange}
       />
       <span
         className="text-muted-foreground bg-muted/45 flex h-full min-w-8 shrink-0 items-center justify-center border-x px-2 text-xs"
@@ -776,7 +775,7 @@ function NumberRangeInputGroup({
       >
         {separatorLabel}
       </span>
-      <Input
+      <DebouncedFilterInput
         size="md"
         className="h-full min-h-0 rounded-l-none border-0 bg-transparent px-3 text-center shadow-none focus-visible:ring-0 sm:h-full"
         type="number"
@@ -787,7 +786,7 @@ function NumberRangeInputGroup({
         disabled={disabled}
         placeholder={maxPlaceholder}
         aria-label={maxPlaceholder}
-        onChange={(event) => onMaxChange(event.target.value)}
+        onCommit={onMaxChange}
       />
     </div>
   )

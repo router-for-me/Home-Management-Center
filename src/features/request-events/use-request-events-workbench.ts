@@ -27,6 +27,7 @@ import type {
   RequestEventStatusFilter,
   RequestEventsPage,
 } from '@/lib/api/management/request-events'
+import { applyFilterPatch } from '@/lib/filter-patch'
 import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const requestEventPageSizeOptions = [25, 50, 100, 200]
@@ -194,10 +195,6 @@ export function useRequestEventsWorkbench() {
   ])
 
   useEffect(() => {
-    setPendingEvents(null)
-  }, [filters])
-
-  useEffect(() => {
     if (!liveRefresh.enabled) setPendingEvents(null)
   }, [liveRefresh.enabled])
 
@@ -286,11 +283,12 @@ export function useRequestEventsWorkbench() {
       (key) => key !== 'offset' && requestEventOptionFilterKeys.has(key),
     )
 
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      ...nextFilters,
-      offset: nextFilters.offset ?? (shouldResetOffset ? 0 : currentFilters.offset),
-    }))
+    setFilters((currentFilters) =>
+      applyFilterPatch(currentFilters, {
+        ...nextFilters,
+        offset: nextFilters.offset ?? (shouldResetOffset ? 0 : currentFilters.offset),
+      }),
+    )
     setPendingEvents(null)
   }
 
@@ -370,7 +368,9 @@ export function useRequestEventsWorkbench() {
     setStatus,
     clearFilters: () => {
       setPendingEvents(null)
-      setFilters((currentFilters) => getClearedFilters(currentFilters.limit))
+      setFilters((currentFilters) =>
+        applyFilterPatch(currentFilters, getClearedFilters(currentFilters.limit)),
+      )
     },
     selectEvent,
     clearSelectedEvent,

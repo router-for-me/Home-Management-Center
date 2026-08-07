@@ -27,6 +27,7 @@ import {
   hasActiveUsageDropdownFilter,
   toUsageApiError,
 } from '@/lib/api/management/usage'
+import { applyFilterPatch } from '@/lib/filter-patch'
 import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const recordPageSizeOptions = [25, 50, 100, 200]
@@ -455,14 +456,14 @@ export function useUsageObservabilityWorkbench() {
     const affectsCredentialUsage = filterKeys.some((key) => usageScopeFilterKeys.has(key))
 
     if (affectsCredentialUsage) {
-      setCredentialUsagePagination((current) => ({ ...current, offset: 0 }))
+      setCredentialUsagePagination((current) =>
+        current.offset === 0 ? current : { ...current, offset: 0 },
+      )
     }
 
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      ...nextFilters,
-      offset: nextFilters.offset ?? 0,
-    }))
+    setFilters((currentFilters) =>
+      applyFilterPatch(currentFilters, { ...nextFilters, offset: nextFilters.offset ?? 0 }),
+    )
   }
 
   const setRecordLimit = (nextLimit: number) => {
