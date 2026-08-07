@@ -426,9 +426,9 @@ export const ru = {
       },
       filters: {
         searchLabel: 'Поиск моделей',
-        searchPlaceholder: 'Поиск по ID модели, названию или провайдеру',
-        provider: 'Провайдер',
-        allProviders: 'Все провайдеры',
+        searchPlaceholder: 'Поиск по ID модели, названию или каналу',
+        provider: 'Канал доступа',
+        allProviders: 'Все каналы',
         inputModality: 'Входная модальность',
         allModalities: 'Все входные модальности',
         quickFilters: 'Быстрые фильтры',
@@ -451,7 +451,7 @@ export const ru = {
       spec: {
         context: 'Длина контекста',
         maxOutput: 'Максимальный вывод',
-        providers: 'Провайдеры',
+        providers: 'Каналы доступа',
         ownedBy: 'Владелец',
         version: 'Версия',
         type: 'Тип',

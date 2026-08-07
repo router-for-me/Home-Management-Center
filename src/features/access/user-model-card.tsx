@@ -4,7 +4,7 @@ import { Boxes, Braces, Check, ChevronRight, Copy, Lightbulb, Wrench } from 'luc
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { ProviderLogo } from '@/components/shared/provider-logo'
+import { ProviderLogo, resolveModelVendorId } from '@/components/shared/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { UserModelCapabilityStatus } from '@/lib/api/user/models'
@@ -46,7 +46,10 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
   const [copied, setCopied] = useState(false)
 
   const locale = i18n.language
-  const primaryProvider = model.providers[0] ?? null
+  // The brand mark answers "whose model is this", which no field on the payload
+  // reports: `providers[]` names the channel that serves it, so a GLM model
+  // reached through the Codex channel would otherwise wear an OpenAI mark.
+  const vendorId = resolveModelVendorId(model.id, model.displayName)
   const entryPoint = pricingEntryPoint(model.pricing)
   const contextLength = formatCompactTokens(model.contextLength, locale)
   const maxOutputTokens = formatCompactTokens(model.maxOutputTokens, locale)
@@ -70,8 +73,8 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
     <article className="bg-card hover:border-primary/40 focus-within:border-primary/40 flex h-full min-w-0 flex-col gap-3 rounded-lg border p-4 transition-colors">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 shrink-0">
-          {primaryProvider ? (
-            <ProviderLogo providerId={primaryProvider} size="lg" />
+          {vendorId ? (
+            <ProviderLogo providerId={vendorId} size="lg" />
           ) : (
             <span className="border-border bg-muted text-muted-foreground flex size-7 items-center justify-center rounded-md border">
               <Boxes className="size-4" aria-hidden="true" />
@@ -95,11 +98,15 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
             </button>
           </h3>
           {model.providers.length > 0 ? (
+            // Labelled rather than bare: sitting under the model name next to a
+            // vendor mark, an unlabelled `codex · glm` reads as a list of model
+            // makers, which is the one thing these identifiers are not.
             <p
               className="text-muted-foreground mt-0.5 truncate text-xs"
               title={model.providers.join(', ')}
             >
-              {model.providers.join(' · ')}
+              {t('userModels.spec.providers')}{' '}
+              <span className="font-mono">{model.providers.join(' · ')}</span>
             </p>
           ) : null}
         </div>

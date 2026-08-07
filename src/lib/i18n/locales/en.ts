@@ -427,9 +427,9 @@ export const en = {
       },
       filters: {
         searchLabel: 'Search models',
-        searchPlaceholder: 'Search by model ID, name, or provider',
-        provider: 'Provider',
-        allProviders: 'All providers',
+        searchPlaceholder: 'Search by model ID, name, or channel',
+        provider: 'Channel',
+        allProviders: 'All channels',
         inputModality: 'Input modality',
         allModalities: 'All input modalities',
         quickFilters: 'Quick filters',
@@ -452,7 +452,7 @@ export const en = {
       spec: {
         context: 'Context',
         maxOutput: 'Max output',
-        providers: 'Providers',
+        providers: 'Channels',
         ownedBy: 'Owned by',
         version: 'Version',
         type: 'Type',

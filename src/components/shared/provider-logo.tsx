@@ -1,28 +1,50 @@
 import { useEffect, useState } from 'react'
 
+import ampLogo from '@/assets/icons/amp.svg'
 import antigravityLogo from '@/assets/icons/antigravity.svg'
 import claudeLogo from '@/assets/icons/claude.svg'
 import codexLogo from '@/assets/icons/codex.svg'
+import deepseekLogo from '@/assets/icons/deepseek.svg'
 import geminiLogo from '@/assets/icons/gemini.svg'
+import glmLogo from '@/assets/icons/glm.svg'
 import grokLogo from '@/assets/icons/grok.svg'
+import iflowLogo from '@/assets/icons/iflow.svg'
 import kimiDarkLogo from '@/assets/icons/kimi-dark.svg'
 import kimiLightLogo from '@/assets/icons/kimi-light.svg'
-import openaiLogo from '@/assets/icons/openai-light.svg'
+import minimaxLogo from '@/assets/icons/minimax.svg'
+import openaiDarkLogo from '@/assets/icons/openai-dark.svg'
+import openaiLightLogo from '@/assets/icons/openai-light.svg'
+import qwenLogo from '@/assets/icons/qwen.svg'
 import vertexLogo from '@/assets/icons/vertex.svg'
 import { cn } from '@/lib/utils'
 
-const providerLogoUrls: Record<string, { src: string; darkSrc?: string; className?: string }> = {
+/**
+ * Brand marks, keyed by a resolved brand id.
+ *
+ * The table serves two different questions — "which channel served this?" and
+ * "who built this model?" — which is why some keys name a product (`codex`,
+ * `vertex`, `antigravity`) and others name a company (`openai`, `glm`). The two
+ * are resolved by `resolveProviderLogoId` and `resolveModelVendorId`
+ * respectively and must not be substituted for one another.
+ */
+const brandLogos: Record<string, { src: string; darkSrc?: string; className?: string }> = {
   gemini: { src: geminiLogo },
   claude: { src: claudeLogo },
   codex: { src: codexLogo },
   vertex: { src: vertexLogo },
   antigravity: { src: antigravityLogo },
   kimi: { src: kimiLightLogo, darkSrc: kimiDarkLogo },
-  openaiCompatibility: { src: openaiLogo, className: 'dark:invert' },
+  openai: { src: openaiLightLogo, darkSrc: openaiDarkLogo },
   xai: { src: grokLogo, className: 'p-0.5 dark:invert' },
+  deepseek: { src: deepseekLogo },
+  glm: { src: glmLogo },
+  qwen: { src: qwenLogo },
+  minimax: { src: minimaxLogo },
+  iflow: { src: iflowLogo },
+  amp: { src: ampLogo },
 }
 
-const providerMarks: Record<
+const brandMarks: Record<
   string,
   {
     label: string
@@ -45,7 +67,7 @@ const providerMarks: Record<
     label: 'V',
     className: 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300',
   },
-  openaiCompatibility: {
+  openai: {
     label: 'AI',
     className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
   },
@@ -53,6 +75,106 @@ const providerMarks: Record<
     label: 'xAI',
     className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
   },
+}
+
+/**
+ * Channel aliases, tried in order.
+ *
+ * `providers[]`, `usage.provider` and Billing price rules all name the channel
+ * that served a request, and the same channel arrives under several spellings:
+ * the canonical registry key (`codex`), the protocol family its executor speaks
+ * (`anthropic`), an operator-chosen compatibility name, or this app's own
+ * descriptor id. The last one is why `openai-compatibility` and
+ * `openaiCompatibility` both have to land on the same mark. Specific entries
+ * come before general ones so a `codex` channel is never claimed by the OpenAI
+ * rule.
+ */
+const channelAliases: Array<[brandId: string, matches: RegExp]> = [
+  ['antigravity', /antigravity/],
+  ['vertex', /vertex/],
+  ['codex', /codex/],
+  ['claude', /claude|anthropic/],
+  ['gemini', /gemini|google/],
+  ['kimi', /kimi|moonshot/],
+  ['xai', /xai|x-ai|grok/],
+  ['openai', /openai|chatgpt|^gpt|^o\d/],
+]
+
+/**
+ * Model-ID vendor rules, tried in order.
+ *
+ * Nothing in the catalog payload names the company that built a model. A
+ * third-party model reaches the registry as a string an operator typed into a
+ * first-party channel's `models:` list, so `providers[]` reports `codex` for a
+ * GLM model and `owned_by` reports `anthropic` for a DeepSeek one. The
+ * identifier is the only evidence there is.
+ *
+ * Rules anchor to a token boundary rather than testing for a bare substring,
+ * which would hand `example-model` to Amp and claim every ID containing `o3`.
+ */
+const vendorRules: Array<[brandId: string, matches: RegExp]> = [
+  ['claude', /(^|[/-])(claude|anthropic)/],
+  ['gemini', /(^|[/-])(gemini|gemma)/],
+  ['deepseek', /(^|[/-])deepseek/],
+  ['glm', /(^|[/-])(glm|chatglm|zhipu|bigmodel)/],
+  ['qwen', /(^|[/-])(qwen|qwq|qvq)/],
+  ['minimax', /(^|[/-])(minimax|abab)/],
+  ['kimi', /(^|[/-])(kimi|moonshot)/],
+  ['xai', /(^|[/-])grok/],
+  ['openai', /(^|[/-])(gpt|chatgpt|openai|codex|o[1-4]([/-]|$))/],
+]
+
+function normalizeBrandToken(value: string | null | undefined) {
+  if (!value) return null
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_.]+/g, '-') || null
+  )
+}
+
+/**
+ * Resolves a channel identifier to a brand id.
+ *
+ * Returns the normalized identifier when no rule matches, so an unrecognized
+ * channel still renders a stable two-letter mark instead of vanishing, and
+ * `null` only when there was no identifier to resolve.
+ */
+export function resolveProviderLogoId(value: string | null | undefined) {
+  const normalized = normalizeBrandToken(value)
+  if (!normalized) return null
+
+  for (const [brandId, matches] of channelAliases) {
+    if (matches.test(normalized)) return brandId
+  }
+  if (Object.hasOwn(brandLogos, normalized)) return normalized
+
+  // Usage reporting groups by model as readily as by provider, so a model ID
+  // reaches this function too. Falling through to the vendor rules puts a
+  // DeepSeek mark on a DeepSeek row rather than the letters "DE".
+  return resolveModelVendorId(normalized) ?? normalized
+}
+
+/**
+ * Resolves the company that built a model from the strings the catalog carries.
+ *
+ * Returns `null` when nothing matches, and callers must render something
+ * neutral rather than falling back to the channel logo: a model reached through
+ * the Codex channel is not an OpenAI model, and refusing to guess is the whole
+ * point of this function.
+ */
+export function resolveModelVendorId(...sources: Array<string | null | undefined>) {
+  for (const source of sources) {
+    const normalized = normalizeBrandToken(source)
+    if (!normalized) continue
+
+    for (const [brandId, matches] of vendorRules) {
+      if (matches.test(normalized)) return brandId
+    }
+  }
+
+  return null
 }
 
 const sizeClassNames = {
@@ -73,7 +195,10 @@ export function ProviderLogo({
   size?: ProviderLogoSize
   className?: string
 }) {
-  const logo = providerLogoUrls[providerId]
+  // Resolution happens here rather than at the call site so every surface that
+  // shows a channel agrees on what `openai-compatibility` looks like.
+  const brandId = resolveProviderLogoId(providerId) ?? providerId
+  const logo = brandLogos[brandId]
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -126,8 +251,8 @@ export function ProviderLogo({
     )
   }
 
-  const mark = providerMarks[providerId] ?? {
-    label: providerId.slice(0, 2).toUpperCase(),
+  const mark = brandMarks[brandId] ?? {
+    label: brandId.slice(0, 2).toUpperCase(),
     className: 'border-border bg-muted text-muted-foreground',
   }
 

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { formGridClassName } from '@/components/shared/form-layout'
-import { ProviderLogo } from '@/components/shared/provider-logo'
+import { ProviderLogo, resolveModelVendorId } from '@/components/shared/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -349,6 +349,10 @@ export function UserModelDetailSheet({
 }: UserModelDetailSheetProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
+  // Same reasoning as the catalog card: the header names the model's maker, and
+  // no field on the payload reports it, so it comes from the identifier or from
+  // nothing at all.
+  const vendorId = model ? resolveModelVendorId(model.id, model.displayName) : null
 
   const handleCopy = async (value: string) => {
     try {
@@ -376,8 +380,8 @@ export function UserModelDetailSheet({
           <>
             <SheetHeader className="border-border/70 border-b">
               <SheetTitle className="flex min-w-0 items-center gap-2">
-                {model.providers[0] ? (
-                  <ProviderLogo providerId={model.providers[0]} size="md" />
+                {vendorId ? (
+                  <ProviderLogo providerId={vendorId} size="md" />
                 ) : (
                   <Boxes className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
                 )}

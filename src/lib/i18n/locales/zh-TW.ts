@@ -410,9 +410,9 @@ export const zhTW = {
       },
       filters: {
         searchLabel: '搜尋模型',
-        searchPlaceholder: '依模型 ID、名稱或供應商搜尋',
-        provider: '供應商',
-        allProviders: '全部供應商',
+        searchPlaceholder: '依模型 ID、名稱或通道搜尋',
+        provider: '接入通道',
+        allProviders: '全部通道',
         inputModality: '輸入模態',
         allModalities: '全部輸入模態',
         quickFilters: '快速篩選',
@@ -435,7 +435,7 @@ export const zhTW = {
       spec: {
         context: '脈絡長度',
         maxOutput: '最大輸出',
-        providers: '供應商',
+        providers: '接入通道',
         ownedBy: '歸屬',
         version: '版本',
         type: '類型',

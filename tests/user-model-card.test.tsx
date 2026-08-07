@@ -59,6 +59,10 @@ function badgeVariants(markup: string) {
   return [...markup.matchAll(/data-slot="badge" data-variant="([^"]+)"/g)].map((match) => match[1])
 }
 
+function brandMarkSources(markup: string) {
+  return [...markup.matchAll(/<img[^>]*src="([^"]*)"/g)].map((match) => match[1])
+}
+
 describe('user model card', () => {
   test('shows the literal model ID with a copy affordance', () => {
     const markup = renderCard(createModel(), false)
@@ -190,6 +194,45 @@ describe('user model card', () => {
     expect(markup).toContain('text image')
     expect(markup).toContain(copy.modality.input)
     expect(markup).not.toContain(copy.modality.unreported)
+  })
+
+  test('marks the card with the model maker rather than the channel serving it', () => {
+    // A GLM coding plan reached through `codex-api-key` publishes
+    // `providers: ["codex"]`, which is a truthful billing identity and a false
+    // brand. The mark has to track the model across both wirings and stay
+    // distinct from a model OpenAI actually built.
+    const glmViaCodex = renderCard(
+      createModel({ id: 'glm-4.6', displayName: 'GLM-4.6', providers: ['codex'] }),
+      false,
+    )
+    const glmViaCompat = renderCard(
+      createModel({ id: 'glm-4.6', displayName: 'GLM-4.6', providers: ['glm'] }),
+      false,
+    )
+    const openaiViaCodex = renderCard(
+      createModel({ id: 'gpt-5-codex', displayName: 'GPT-5 Codex', providers: ['codex'] }),
+      false,
+    )
+
+    expect(brandMarkSources(glmViaCodex)).toEqual(brandMarkSources(glmViaCompat))
+    expect(brandMarkSources(glmViaCodex)).not.toEqual(brandMarkSources(openaiViaCodex))
+
+    // The channel stays on the card, named as a channel so the two readings of
+    // `codex` cannot be confused for each other.
+    expect(glmViaCodex).toContain(copy.spec.providers)
+    expect(glmViaCodex).toContain('codex')
+  })
+
+  test('shows a neutral mark when nothing names the model maker', () => {
+    // An operator alias with no upstream name behind it. Reaching for the
+    // channel logo here is the guess this card refuses to make.
+    const markup = renderCard(
+      createModel({ id: 'house-fast', displayName: null, providers: ['claude'] }),
+      false,
+    )
+
+    expect(brandMarkSources(markup)).toEqual([])
+    expect(markup).toContain('house-fast')
   })
 
   test('falls back to the model ID and says when specs were not reported', () => {
