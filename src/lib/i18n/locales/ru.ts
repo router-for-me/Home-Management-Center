@@ -6,6 +6,7 @@ export const ru = {
     phaseBaseline: 'Базовая версия Phase 0',
     cancel: 'Отмена',
     close: 'Закрыть',
+    routeLoading: 'Загрузка страницы',
     common: {
       cancel: 'Отмена',
       enabled: 'Включено',
