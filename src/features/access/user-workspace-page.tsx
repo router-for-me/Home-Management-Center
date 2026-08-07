@@ -189,6 +189,15 @@ function ApiKeysTable({
   onDelete: (resource: UserApiKeyResource) => void
 }) {
   const { t } = useTranslation()
+  /*
+   * Scope and the update time are both in the edit sheet. Which key a row is
+   * cannot move anywhere, so it is the one a phone keeps.
+   *
+   * Must stay above the loading/empty returns below: this component bails out
+   * on both, so calling the hook further down changed the hook count between
+   * renders.
+   */
+  const showSecondary = useSecondaryColumns()
 
   if (loading) {
     return (
@@ -209,12 +218,6 @@ function ApiKeysTable({
       />
     )
   }
-
-  /*
-   * Scope and the update time are both in the edit sheet. Which key a row is
-   * cannot move anywhere, so it is the one a phone keeps.
-   */
-  const showSecondary = useSecondaryColumns()
 
   return (
     <Table className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[760px]')}>

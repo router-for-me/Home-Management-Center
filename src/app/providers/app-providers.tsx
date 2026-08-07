@@ -5,6 +5,7 @@ import { Toaster } from 'sonner'
 import { ManagementSessionBootstrap } from '@/components/session/management-session-bootstrap'
 import { UserSessionBootstrap } from '@/components/session/user-session-bootstrap'
 import { ThemeProvider } from '@/components/theme-provider'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 type AppProvidersProps = {
   children: ReactNode
@@ -13,8 +14,16 @@ type AppProvidersProps = {
 function BaseAppProviders({ children }: AppProvidersProps) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      {children}
-      <Toaster richColors closeButton position="top-right" visibleToasts={1} gap={12} />
+      {/*
+       * The only other TooltipProvider lives inside the sidebar, so every route
+       * that renders without the app shell - the bridge, the user auth pages,
+       * /admin/connect - crashed as soon as anything below it used a Tooltip.
+       * Nesting is fine: the sidebar's provider still wins for its own subtree.
+       */}
+      <TooltipProvider>
+        {children}
+        <Toaster richColors closeButton position="top-right" visibleToasts={1} gap={12} />
+      </TooltipProvider>
     </ThemeProvider>
   )
 }

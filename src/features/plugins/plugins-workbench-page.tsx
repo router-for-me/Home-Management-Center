@@ -652,6 +652,15 @@ export function PluginsWorkbenchPage() {
   const [uninstallTarget, setUninstallTarget] = useState<PluginStoreEntry | null>(null)
   const [operationNotice, setOperationNotice] = useState<PluginOperationNotice | null>(null)
   const [authOpen, setAuthOpen] = useState(false)
+  /*
+   * Source, version, auth and rollout are all in the detail sheet. Which plugin a
+   * row is and whether it is installed and serving are what a phone keeps.
+   *
+   * Must stay above the disconnected/loading/error returns below: this component
+   * bails out before it has a snapshot, so calling the hook further down changed
+   * the hook count between renders.
+   */
+  const showSecondary = useSecondaryColumns()
 
   const selectedReports = useMemo(
     () => (selectedPlugin ? getAllPluginReports(selectedPlugin, workbench) : []),
@@ -695,11 +704,6 @@ export function PluginsWorkbenchPage() {
           getPluginSourceKey(plugin) === operationNotice.sourceKey,
       )
     : null
-  /*
-   * Source, version, auth and rollout are all in the detail sheet. Which plugin a
-   * row is and whether it is installed and serving are what a phone keeps.
-   */
-  const showSecondary = useSecondaryColumns()
   const noResults = workbench.visiblePlugins.length === 0
   const hasFilters =
     workbench.filter.trim() || workbench.statusFilter !== 'all' || workbench.sourceFilter !== 'all'
