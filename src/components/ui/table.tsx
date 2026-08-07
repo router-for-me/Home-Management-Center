@@ -21,12 +21,17 @@ const tableRowVariants = cva('data-[state=selected]:bg-muted border-b transition
 function Table({
   className,
   containerClassName,
+  containerRef,
   ...props
 }: React.ComponentProps<'table'> & {
   containerClassName?: string
+  // The container is the scroll element, so a virtualised table needs a handle
+  // on it rather than on the <table>.
+  containerRef?: React.Ref<HTMLDivElement>
 }) {
   return (
     <div
+      ref={containerRef}
       data-slot="table-container"
       className={cn(
         'relative w-full touch-pan-x [scrollbar-gutter:stable] overflow-x-auto overscroll-x-contain',

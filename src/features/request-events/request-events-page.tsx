@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useRef, useState } from 'react'
 
 import {
   CheckCircle2,
@@ -34,6 +34,7 @@ import {
   containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
+import { TableSpacerRow, useVirtualTableRows } from '@/components/shared/virtual-table-rows'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -1146,6 +1147,15 @@ function RequestEventsTable({
   const tableWidth = `calc(${
     visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
   }px + var(--table-action-column-1))`
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  // Two stacked lines per cell, both truncated, so every row measures the same.
+  const virtualRows = useVirtualTableRows({
+    rowCount: rows.length,
+    scrollRef: tableContainerRef,
+    estimatedRowHeight: 71,
+  })
+  // The spacers have to span the row, action column included.
+  const tableColumnCount = visibleColumnConfigs.length + 1
 
   return (
     <TableSurface className="min-w-0">
@@ -1252,6 +1262,7 @@ function RequestEventsTable({
         rows.length > 0 ? (
           <div className="px-3 py-3">
             <Table
+              containerRef={tableContainerRef}
               containerClassName={cn(
                 containedTableContainerClassName,
                 'max-h-[min(680px,calc(100vh-250px))] rounded-md border',
@@ -1282,136 +1293,148 @@ function RequestEventsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((event) => (
-                  <TableRow key={event.id} variant="resource">
-                    {isColumnRendered('time') ? (
-                      <TableCell className="text-muted-foreground truncate">
-                        {formatDateTime(event.timestamp, i18n) ?? event.timestamp}
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('event') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate font-medium">{event.eventType ?? <EmptyValue />}</p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {event.executorType ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('status') ? (
-                      <TableCell>
-                        <RequestEventStatusBadge event={event} />
-                        <p className="text-muted-foreground mt-1 text-xs">
-                          {event.statusCode ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('model') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate font-medium">{event.model ?? <EmptyValue />}</p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {event.provider ?? <EmptyValue />}
-                          {event.modelAlias ? ` / ${event.modelAlias}` : ''}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('runtime') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate">
-                          {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
-                        </p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {getRuntimeNodeLabel(event) ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('client') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate">
-                          <CallerUser
-                            username={event.client?.username ?? null}
-                            keyResolved={event.client?.clientKeyId != null}
-                          />
-                        </p>
-                        <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
+                <TableSpacerRow height={virtualRows.paddingTop} colSpan={tableColumnCount} />
+                {virtualRows.items.map(({ index, key }) => {
+                  const event = rows[index]
+                  return (
+                    <TableRow
+                      key={key}
+                      variant="resource"
+                      data-index={index}
+                      ref={virtualRows.measureRow}
+                    >
+                      {isColumnRendered('time') ? (
+                        <TableCell className="text-muted-foreground truncate">
+                          {formatDateTime(event.timestamp, i18n) ?? event.timestamp}
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('event') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate font-medium">
+                            {event.eventType ?? <EmptyValue />}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {event.executorType ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('status') ? (
+                        <TableCell>
+                          <RequestEventStatusBadge event={event} />
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            {event.statusCode ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('model') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate font-medium">{event.model ?? <EmptyValue />}</p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {event.provider ?? <EmptyValue />}
+                            {event.modelAlias ? ` / ${event.modelAlias}` : ''}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('runtime') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate">
+                            {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {getRuntimeNodeLabel(event) ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('client') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate">
+                            <CallerUser
+                              username={event.client?.username ?? null}
+                              keyResolved={event.client?.clientKeyId != null}
+                            />
+                          </p>
+                          <p className="text-muted-foreground truncate font-mono text-xs">
+                            {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
+                              <EmptyValue />
+                            )}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('credential') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate">{event.credential?.label ?? <EmptyValue />}</p>
+                          <p className="text-muted-foreground truncate font-mono text-xs">
+                            {event.credential?.authIndex ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('tokens') ? (
+                        <TableCell className="text-right">
+                          <p className="font-medium">
+                            {formatCompactNumber(event.tokens.totalTokens)}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {formatCompactNumber(event.tokens.inputTokens)} /{' '}
+                            {formatCompactNumber(event.tokens.outputTokens)}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('latency') ? (
+                        <TableCell className="text-right">
+                          <p className="font-medium">
+                            {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            {t('requestEventsPage.table.ttft', {
+                              value: formatDuration(event.performance.ttftMs) ?? emptyValueText,
+                            })}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('cost') ? (
+                        <TableCell className="text-right">
+                          {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
                             <EmptyValue />
                           )}
-                        </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('request') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate font-mono text-xs">
+                            {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
+                          </p>
+                          <p className="text-muted-foreground truncate font-mono text-xs">
+                            {event.upstreamRequestId ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      {isColumnRendered('error') ? (
+                        <TableCell className="min-w-0">
+                          <p className="truncate text-xs">
+                            {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
+                          </p>
+                          <p className="text-muted-foreground truncate text-xs">
+                            {event.error?.bodyPreview ?? <EmptyValue />}
+                          </p>
+                        </TableCell>
+                      ) : null}
+                      <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                        <RowActions
+                          menuLabel={formatDateTime(event.timestamp, i18n) ?? event.timestamp}
+                          actions={[
+                            {
+                              id: 'inspect',
+                              label: t('requestEventsPage.actions.viewDetail'),
+                              icon: Eye,
+                              onSelect: () => onInspect(event),
+                            },
+                          ]}
+                        />
                       </TableCell>
-                    ) : null}
-                    {isColumnRendered('credential') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate">{event.credential?.label ?? <EmptyValue />}</p>
-                        <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.credential?.authIndex ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('tokens') ? (
-                      <TableCell className="text-right">
-                        <p className="font-medium">
-                          {formatCompactNumber(event.tokens.totalTokens)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {formatCompactNumber(event.tokens.inputTokens)} /{' '}
-                          {formatCompactNumber(event.tokens.outputTokens)}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('latency') ? (
-                      <TableCell className="text-right">
-                        <p className="font-medium">
-                          {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {t('requestEventsPage.table.ttft', {
-                            value: formatDuration(event.performance.ttftMs) ?? emptyValueText,
-                          })}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('cost') ? (
-                      <TableCell className="text-right">
-                        {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
-                          <EmptyValue />
-                        )}
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('request') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate font-mono text-xs">
-                          {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
-                        </p>
-                        <p className="text-muted-foreground truncate font-mono text-xs">
-                          {event.upstreamRequestId ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    {isColumnRendered('error') ? (
-                      <TableCell className="min-w-0">
-                        <p className="truncate text-xs">
-                          {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
-                        </p>
-                        <p className="text-muted-foreground truncate text-xs">
-                          {event.error?.bodyPreview ?? <EmptyValue />}
-                        </p>
-                      </TableCell>
-                    ) : null}
-                    <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
-                      <RowActions
-                        menuLabel={formatDateTime(event.timestamp, i18n) ?? event.timestamp}
-                        actions={[
-                          {
-                            id: 'inspect',
-                            label: t('requestEventsPage.actions.viewDetail'),
-                            icon: Eye,
-                            onSelect: () => onInspect(event),
-                          },
-                        ]}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  )
+                })}
+                <TableSpacerRow height={virtualRows.paddingBottom} colSpan={tableColumnCount} />
               </TableBody>
             </Table>
           </div>
