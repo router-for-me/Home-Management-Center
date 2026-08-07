@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useDebouncedFilterValue } from '@/hooks/use-debounced-filter-value'
 import { cn } from '@/lib/utils'
 
 export type SelectInputGroupOption = {
@@ -17,6 +18,13 @@ export type SelectInputGroupOption = {
   label: ReactNode
 }
 
+/**
+ * The search box behind this group drives a query key, so the draft lives here
+ * rather than in the toolbar: a keystroke re-renders this control alone, and
+ * the filter only moves once the user stops typing. Switching the field hands
+ * the pending draft to the caller instead of committing it to the field being
+ * left, so a mid-search switch costs one filter change rather than two.
+ */
 export function SelectInputGroup({
   selectValue,
   inputValue,
@@ -29,7 +37,7 @@ export function SelectInputGroup({
   selectClassName,
   inputClassName,
   onSelectValueChange,
-  onInputValueChange,
+  onInputCommit,
 }: {
   selectValue: string
   inputValue: string
@@ -41,12 +49,18 @@ export function SelectInputGroup({
   className?: string
   selectClassName?: string
   inputClassName?: string
-  onSelectValueChange: (value: string) => void
-  onInputValueChange: (value: string) => void
+  onSelectValueChange: (value: string, carriedInputValue: string) => void
+  onInputCommit: (value: string) => void
 }) {
+  const draft = useDebouncedFilterValue({ value: inputValue, onCommit: onInputCommit })
+
   return (
     <div className={cn('flex w-full min-w-0 sm:w-[22rem]', className)}>
-      <Select value={selectValue} disabled={disabled} onValueChange={onSelectValueChange}>
+      <Select
+        value={selectValue}
+        disabled={disabled}
+        onValueChange={(value) => onSelectValueChange(value, draft.detach())}
+      >
         <SelectTrigger
           className={cn(
             'w-auto min-w-[7.5rem] shrink-0 rounded-r-none border-r-0 shadow-xs',
@@ -73,11 +87,16 @@ export function SelectInputGroup({
         <Input
           size="md"
           className={cn('rounded-l-none pl-9 shadow-xs', inputClassName)}
-          value={inputValue}
+          value={draft.value}
           disabled={disabled}
           placeholder={inputPlaceholder}
           aria-label={inputAriaLabel}
-          onChange={(event) => onInputValueChange(event.target.value)}
+          onChange={(event) => draft.onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== 'Enter') return
+            event.preventDefault()
+            draft.flush()
+          }}
         />
       </div>
     </div>

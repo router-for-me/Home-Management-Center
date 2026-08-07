@@ -42,6 +42,7 @@ import {
 } from 'recharts'
 
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
+import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { EmptyValue, emptyValueText } from '@/components/shared/empty-value'
@@ -2773,13 +2774,13 @@ function RequestRecordFiltersToolbar({
           className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
           aria-hidden="true"
         />
-        <Input
+        <DebouncedFilterInput
           size="md"
           className={cn('pl-9')}
           value={filters.search}
           disabled={disabled}
           placeholder={t('usageLogsPage.filters.searchPlaceholder')}
-          onChange={(event) => onChange({ search: event.target.value })}
+          onCommit={(search) => onChange({ search })}
         />
       </div>
       <Select
@@ -2815,7 +2816,7 @@ function RequestRecordFiltersToolbar({
       </Select>
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
-          <Input
+          <DebouncedFilterInput
             size="md"
             type="number"
             inputMode="numeric"
@@ -2825,9 +2826,9 @@ function RequestRecordFiltersToolbar({
             aria-invalid={latencyRangeInvalid || undefined}
             placeholder={t('usageLogsPage.filters.minLatencyPlaceholder')}
             aria-label={t('usageLogsPage.filters.minLatencyMs')}
-            onChange={(event) => onChange({ minLatencyMs: event.target.value })}
+            onCommit={(minLatencyMs) => onChange({ minLatencyMs })}
           />
-          <Input
+          <DebouncedFilterInput
             size="md"
             type="number"
             inputMode="numeric"
@@ -2837,7 +2838,7 @@ function RequestRecordFiltersToolbar({
             aria-invalid={latencyRangeInvalid || undefined}
             placeholder={t('usageLogsPage.filters.maxLatencyPlaceholder')}
             aria-label={t('usageLogsPage.filters.maxLatencyMs')}
-            onChange={(event) => onChange({ maxLatencyMs: event.target.value })}
+            onCommit={(maxLatencyMs) => onChange({ maxLatencyMs })}
           />
         </div>
         {latencyRangeInvalid ? (
@@ -2846,7 +2847,7 @@ function RequestRecordFiltersToolbar({
       </div>
       <div className="min-w-0">
         <div className="grid grid-cols-2 gap-2">
-          <Input
+          <DebouncedFilterInput
             size="md"
             type="number"
             inputMode="decimal"
@@ -2856,9 +2857,9 @@ function RequestRecordFiltersToolbar({
             aria-invalid={amountRangeInvalid || undefined}
             placeholder={t('usageLogsPage.filters.minAmountPlaceholder')}
             aria-label={t('usageLogsPage.filters.minAmount')}
-            onChange={(event) => onChange({ minAmount: event.target.value })}
+            onCommit={(minAmount) => onChange({ minAmount })}
           />
-          <Input
+          <DebouncedFilterInput
             size="md"
             type="number"
             inputMode="decimal"
@@ -2868,7 +2869,7 @@ function RequestRecordFiltersToolbar({
             aria-invalid={amountRangeInvalid || undefined}
             placeholder={t('usageLogsPage.filters.maxAmountPlaceholder')}
             aria-label={t('usageLogsPage.filters.maxAmount')}
-            onChange={(event) => onChange({ maxAmount: event.target.value })}
+            onCommit={(maxAmount) => onChange({ maxAmount })}
           />
         </div>
         {amountRangeInvalid ? (
@@ -5039,20 +5040,13 @@ function RuntimeLogFiltersToolbar({
     filters.requestId,
   ])
 
-  const handleSearchFieldChange = (value: string) => {
+  const handleSearchFieldChange = (value: string, carriedValue: string) => {
     if (!runtimeLogSearchFieldOptions.includes(value as RuntimeLogSearchField)) return
     const nextField = value as RuntimeLogSearchField
     setSearchField(nextField)
     onChange({
       ...clearSearchFields,
-      [nextField]: searchValue,
-    })
-  }
-
-  const handleSearchValueChange = (value: string) => {
-    onChange({
-      ...clearSearchFields,
-      [searchField]: value,
+      [nextField]: carriedValue,
     })
   }
 
@@ -5092,7 +5086,7 @@ function RuntimeLogFiltersToolbar({
             field: t(`usageLogsPage.logs.filters.searchFields.${searchField}`),
           })}
           onSelectValueChange={handleSearchFieldChange}
-          onInputValueChange={handleSearchValueChange}
+          onInputCommit={(value) => onChange({ ...clearSearchFields, [searchField]: value })}
         />
         <DateTimeRangePicker
           from={filters.after}
