@@ -171,16 +171,6 @@ type ModelPriceDraft = Omit<ModelPriceInput, ModelPriceNumberField | 'serviceTie
   serviceTier: string
 }
 
-function toProviderLogoId(provider: string) {
-  const normalized = provider.trim().toLowerCase()
-  if (normalized === 'openai' || normalized === 'openai-compatibility') {
-    return 'openaiCompatibility'
-  }
-  if (normalized === 'anthropic') return 'claude'
-  if (normalized === 'google') return 'gemini'
-  return provider
-}
-
 function isUnpricedCharge(record: ChargeRecord) {
   return record.matchedPriceRule?.trim().toLowerCase() === 'default:zero'
 }
@@ -759,10 +749,7 @@ function OverviewTab({ workbench }: { workbench: ReturnType<typeof useBillingWor
                     >
                       <span className="flex min-w-0 items-center gap-2">
                         {key === 'topProviders' ? (
-                          <ProviderLogo
-                            providerId={toProviderLogoId(item.id || item.label)}
-                            size="sm"
-                          />
+                          <ProviderLogo providerId={item.id || item.label} size="sm" />
                         ) : null}
                         <span className="min-w-0 truncate">{item.label}</span>
                       </span>
@@ -2258,10 +2245,7 @@ function ModelPriceSheet({
                             }))
                           }}
                         >
-                          <ProviderLogo
-                            providerId={toProviderLogoId(candidate.provider)}
-                            size="sm"
-                          />
+                          <ProviderLogo providerId={candidate.provider} size="sm" />
                           <span className="grid min-w-0 gap-0.5">
                             <span className="min-w-0 truncate font-medium">{candidate.label}</span>
                             <span className="text-muted-foreground grid min-w-0 gap-1 text-xs leading-5 sm:grid-cols-[minmax(0,1fr)_auto]">
@@ -2343,10 +2327,7 @@ function ModelPriceSheet({
               )}
             >
               {representativeCandidate ? (
-                <ProviderLogo
-                  providerId={toProviderLogoId(representativeCandidate.provider)}
-                  size="sm"
-                />
+                <ProviderLogo providerId={representativeCandidate.provider} size="sm" />
               ) : (
                 <PackageCheck className="size-4" aria-hidden="true" />
               )}
@@ -2368,7 +2349,7 @@ function ModelPriceSheet({
                         key={createModelPriceCandidateValue(candidate.provider, candidate.model)}
                         className="bg-background text-muted-foreground inline-flex max-w-full items-center gap-1 rounded border px-2 py-1 text-xs"
                       >
-                        <ProviderLogo providerId={toProviderLogoId(candidate.provider)} size="xs" />
+                        <ProviderLogo providerId={candidate.provider} size="xs" />
                         <span className="min-w-0 truncate">{candidate.model}</span>
                       </span>
                     ))}

@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { formGridClassName } from '@/components/shared/form-layout'
-import { ProviderLogo } from '@/components/shared/provider-logo'
+import { ProviderLogo, resolveModelVendorId } from '@/components/shared/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -72,11 +72,14 @@ function SpecList({ children }: { children: ReactNode }) {
   return <dl className={formGridClassName}>{children}</dl>
 }
 
-function SpecRow({ label, children }: { label: string; children: ReactNode }) {
+function SpecRow({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <div className="border-border/60 bg-muted/25 min-w-0 rounded-md border px-3 py-2">
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 text-sm [overflow-wrap:anywhere]">{children}</dd>
+      <dd className="mt-0.5 text-sm [overflow-wrap:anywhere]">
+        {children}
+        {hint ? <p className="text-muted-foreground mt-1 text-xs leading-5">{hint}</p> : null}
+      </dd>
     </div>
   )
 }
@@ -349,6 +352,10 @@ export function UserModelDetailSheet({
 }: UserModelDetailSheetProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
+  // Same reasoning as the catalog card: the header names the model's maker, and
+  // no field on the payload reports it, so it comes from the identifier or from
+  // nothing at all.
+  const vendorId = model ? resolveModelVendorId(model.id, model.displayName) : null
 
   const handleCopy = async (value: string) => {
     try {
@@ -376,8 +383,8 @@ export function UserModelDetailSheet({
           <>
             <SheetHeader className="border-border/70 border-b">
               <SheetTitle className="flex min-w-0 items-center gap-2">
-                {model.providers[0] ? (
-                  <ProviderLogo providerId={model.providers[0]} size="md" />
+                {vendorId ? (
+                  <ProviderLogo providerId={vendorId} size="md" />
                 ) : (
                   <Boxes className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
                 )}
@@ -419,7 +426,10 @@ export function UserModelDetailSheet({
                   <SpecRow label={t('userModels.spec.maxOutput')}>
                     {formatExactNumber(model.maxOutputTokens, locale) ?? <UnreportedValue />}
                   </SpecRow>
-                  <SpecRow label={t('userModels.spec.providers')}>
+                  <SpecRow
+                    label={t('userModels.spec.providers')}
+                    hint={t('userModels.spec.providersHint')}
+                  >
                     {model.providers.length > 0 ? (
                       <span className="font-mono">{model.providers.join(', ')}</span>
                     ) : (

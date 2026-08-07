@@ -436,6 +436,8 @@ export const zhTW = {
         context: '脈絡長度',
         maxOutput: '最大輸出',
         providers: '供應商',
+        providersHint:
+          '閘道實際呼叫的上游供應商，也是用量與帳單記錄中的識別碼；不代表模型的開發廠商。',
         ownedBy: '歸屬',
         version: '版本',
         type: '類型',

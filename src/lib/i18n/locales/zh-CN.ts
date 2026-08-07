@@ -435,6 +435,8 @@ export const zhCN = {
         context: '上下文',
         maxOutput: '最大输出',
         providers: '供应商',
+        providersHint:
+          '网关实际调用的上游供应商，也是用量与账单记录中的标识；不代表模型的开发厂商。',
         ownedBy: '归属',
         version: '版本',
         type: '类型',

@@ -25,6 +25,7 @@ import type {
   RuntimeLogFilters,
   RuntimeLogSnapshot,
 } from '@/lib/api/management/logs'
+import { applyFilterPatch } from '@/lib/filter-patch'
 import { uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const runtimeLogPageSizeOptions = [50, 100, 200]
@@ -255,16 +256,19 @@ export function useLogsWorkbench() {
   }
 
   const setRuntimeLogFilters = (nextFilters: Partial<RuntimeLogFilters>) => {
-    setRuntimeLogFiltersState((currentFilters) => ({
-      ...currentFilters,
-      ...nextFilters,
-    }))
-    setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
+    setRuntimeLogFiltersState((currentFilters) => applyFilterPatch(currentFilters, nextFilters))
+    setRuntimeLogPagination((current) =>
+      current.offset === 0 ? current : { ...current, offset: 0 },
+    )
   }
 
   const clearRuntimeLogFilters = () => {
-    setRuntimeLogFiltersState(defaultRuntimeLogFilters)
-    setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
+    setRuntimeLogFiltersState((currentFilters) =>
+      applyFilterPatch(currentFilters, defaultRuntimeLogFilters),
+    )
+    setRuntimeLogPagination((current) =>
+      current.offset === 0 ? current : { ...current, offset: 0 },
+    )
   }
 
   const clearLogsMutation = useMutation({
