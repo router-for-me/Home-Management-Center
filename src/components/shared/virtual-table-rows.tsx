@@ -1,4 +1,4 @@
-import type { RefObject } from 'react'
+import { type RefObject, useLayoutEffect, useRef } from 'react'
 
 import { useVirtualizer } from '@tanstack/react-virtual'
 
@@ -40,6 +40,13 @@ type VirtualTableRowsOptions = {
    */
   estimatedRowHeight: number
   overscan?: number
+  /**
+   * Scrolls back to the top whenever this value changes. A new filter or page is
+   * a different list, and both of these tables keep their previous rows on
+   * screen while the next ones arrive, so nothing else would move the scroll
+   * position off a row that no longer exists.
+   */
+  resetKey?: unknown
 }
 
 export function useVirtualTableRows({
@@ -47,6 +54,7 @@ export function useVirtualTableRows({
   scrollRef,
   estimatedRowHeight,
   overscan = 8,
+  resetKey,
 }: VirtualTableRowsOptions) {
   const virtualizer = useVirtualizer({
     count: rowCount,
@@ -54,6 +62,13 @@ export function useVirtualTableRows({
     estimateSize: () => estimatedRowHeight,
     overscan,
   })
+
+  const lastResetKey = useRef(resetKey)
+  useLayoutEffect(() => {
+    if (Object.is(lastResetKey.current, resetKey)) return
+    lastResetKey.current = resetKey
+    virtualizer.scrollToOffset(0)
+  }, [resetKey, virtualizer])
 
   const items = virtualizer.getVirtualItems()
   const totalSize = virtualizer.getTotalSize()

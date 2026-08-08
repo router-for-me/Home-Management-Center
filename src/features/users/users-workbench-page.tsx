@@ -2278,6 +2278,9 @@ function UsersTable({
     rowCount: users.length,
     scrollRef: tableContainerRef,
     estimatedRowHeight: 57,
+    // This list is filtered on the client, so it shrinks under the reader
+    // without the table ever unmounting.
+    resetKey: users,
   })
   const userTableColumnCount = (showSecondary ? 9 : 3) + 1
 
@@ -2299,9 +2302,14 @@ function UsersTable({
        */
       className="table-fixed"
       style={showSecondary ? { minWidth: userTableWidth } : undefined}
+      /*
+        The rows outside the window are not in the DOM, so the table has to
+        state how many there really are; the head counts as row one.
+      */
+      aria-rowcount={users.length + 1}
     >
       <TableHeader className={stickyTableHeaderClassName}>
-        <TableRow variant="static">
+        <TableRow variant="static" aria-rowindex={1}>
           {/*
             Declared widths are for the wide shape only. Below 40rem the
             identity column takes whatever the others leave, so widening the
@@ -2371,6 +2379,7 @@ function UsersTable({
               variant="resource"
               className="group"
               data-index={index}
+              aria-rowindex={index + 2}
               ref={virtualRows.measureRow}
             >
               <TableCell>

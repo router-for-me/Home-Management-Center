@@ -1153,6 +1153,11 @@ function RequestEventsTable({
     rowCount: rows.length,
     scrollRef: tableContainerRef,
     estimatedRowHeight: 71,
+    // The query keeps the previous page on screen while the next one loads, so
+    // a new filter or offset would otherwise leave the reader parked on a row
+    // that is no longer in the result. `filters` keeps its identity through a
+    // no-op patch, so this does not fire on every keystroke.
+    resetKey: filters,
   })
   // The spacers have to span the row, action column included.
   const tableColumnCount = visibleColumnConfigs.length + 1
@@ -1269,9 +1274,14 @@ function RequestEventsTable({
               )}
               className="table-fixed"
               style={showSecondary ? { minWidth: tableWidth } : undefined}
+              /*
+                The rows outside the window are not in the DOM, so the table has
+                to state how many there really are; the head counts as row one.
+              */
+              aria-rowcount={rows.length + 1}
             >
               <TableHeader className={stickyTableHeaderClassName}>
-                <TableRow variant="static">
+                <TableRow variant="static" aria-rowindex={1}>
                   {visibleColumnConfigs.map((column, index) => (
                     <TableHead
                       key={column.key}
@@ -1301,6 +1311,7 @@ function RequestEventsTable({
                       key={key}
                       variant="resource"
                       data-index={index}
+                      aria-rowindex={index + 2}
                       ref={virtualRows.measureRow}
                     >
                       {isColumnRendered('time') ? (
