@@ -66,11 +66,24 @@ function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerSca
   )
 }
 
+/*
+ * `content-start` is what keeps the fields the size they asked to be.
+ *
+ * `flex-1` is here so the body can scroll, and it also makes the body taller
+ * than its content whenever the form is short. A grid distributes that slack
+ * across its rows by default — `align-content` resolves to `stretch` — and the
+ * fields are grids too, so each one split its share again between its label and
+ * its control. A form with four fields in a 1230px drawer put 75px of nothing
+ * between every label and the control it names.
+ *
+ * A call site that genuinely wants its content centred can still say so;
+ * `content-center` overrides this the same way any later class does.
+ */
 function DrawerScaffoldBody({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
       data-slot="drawer-scaffold-body"
-      className={cn('min-h-0 flex-1 overflow-y-auto p-5', className)}
+      className={cn('min-h-0 flex-1 content-start overflow-y-auto p-5', className)}
       {...props}
     />
   )
