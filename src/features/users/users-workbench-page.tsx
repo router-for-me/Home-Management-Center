@@ -5,6 +5,7 @@ import {
   type SetStateAction,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -47,6 +48,7 @@ import {
   stickyTableHeaderClassName,
   tableHeaderClassName,
 } from '@/components/shared/table-surface'
+import { TableSpacerRow, useVirtualTableRows } from '@/components/shared/virtual-table-rows'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -2204,6 +2206,34 @@ function PeriodResetDialog({
   )
 }
 
+/*
+ * Declared column widths, so a virtualised window cannot resize the table.
+ * Each value is the widest the auto layout resolved to across zh-CN, zh-TW, en
+ * and ru at 1440px, rounded up: sizing to one locale would have truncated the
+ * others - Russian needs 200px for the credential scope where Chinese needs 97,
+ * and Chinese needs 197px for the timestamp where the others need 161.
+ *
+ * The action column is deliberately absent. Its width already depends on the
+ * locale through --table-action-column-3, so the sum below stops at the data
+ * columns and defers the last term to CSS, the same way the request table does.
+ */
+const userColumnWidths = {
+  select: 44,
+  user: 140,
+  status: 115,
+  credits: 90,
+  periodLimits: 125,
+  keys: 120,
+  credentialScope: 205,
+  modelScope: 150,
+  updatedAt: 200,
+} as const
+
+const userTableWidth = `calc(${Object.values(userColumnWidths).reduce(
+  (total, width) => total + width,
+  0,
+)}px + var(--table-action-column-3))`
+
 function UsersTable({
   users,
   accessKeys,
@@ -2241,6 +2271,18 @@ function UsersTable({
     selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIds.has(user.id))
   const partiallySelected =
     !allSelected && selectableUsers.some((user) => selectedUserIds.has(user.id))
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  // Every row is one line of identity over one line of detail, so they measure
+  // the same; the virtualiser still re-measures what it mounts.
+  const virtualRows = useVirtualTableRows({
+    rowCount: users.length,
+    scrollRef: tableContainerRef,
+    estimatedRowHeight: 57,
+    // This list is filtered on the client, so it shrinks under the reader
+    // without the table ever unmounting.
+    resetKey: users,
+  })
+  const userTableColumnCount = (showSecondary ? 9 : 3) + 1
 
   if (users.length === 0) {
     return <TableEmptyState kind="empty" className="m-0" title={t('usersPage.list.empty')} />
@@ -2248,12 +2290,35 @@ function UsersTable({
 
   return (
     <Table
+      containerRef={tableContainerRef}
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1220px]')}
+      /*
+       * Fixed at every width, not just below 40rem. Virtualised rows mean the
+       * layout only ever sees a window of the page, and an auto layout sizes its
+       * columns to whatever that window happens to hold - measured at 3px of
+       * drift on the user column between the first and the middle of a page.
+       * Declared widths make the column set independent of which rows are
+       * mounted, which is what the stable-width rule asks for anyway.
+       */
+      className="table-fixed"
+      style={showSecondary ? { minWidth: userTableWidth } : undefined}
+      /*
+        The rows outside the window are not in the DOM, so the table has to
+        state how many there really are; the head counts as row one.
+      */
+      aria-rowcount={users.length + 1}
     >
       <TableHeader className={stickyTableHeaderClassName}>
-        <TableRow variant="static">
-          <TableHead className="w-10">
+        <TableRow variant="static" aria-rowindex={1}>
+          {/*
+            Declared widths are for the wide shape only. Below 40rem the
+            identity column takes whatever the others leave, so widening the
+            checkbox here would come straight out of it.
+          */}
+          <TableHead
+            className={showSecondary ? undefined : 'w-10'}
+            style={showSecondary ? { width: userColumnWidths.select } : undefined}
+          >
             <Checkbox
               checked={partiallySelected ? 'indeterminate' : allSelected}
               disabled={selectableUsers.length === 0}
@@ -2261,18 +2326,36 @@ function UsersTable({
               onCheckedChange={onToggleAll}
             />
           </TableHead>
-          <TableHead>{t('usersPage.list.user')}</TableHead>
-          <TableHead className={showSecondary ? undefined : 'w-28'}>
+          {/* Below 40rem the identity column takes the remainder instead. */}
+          <TableHead style={showSecondary ? { width: userColumnWidths.user } : undefined}>
+            {t('usersPage.list.user')}
+          </TableHead>
+          <TableHead
+            className={showSecondary ? undefined : 'w-28'}
+            style={showSecondary ? { width: userColumnWidths.status } : undefined}
+          >
             {t('usersPage.list.status')}
           </TableHead>
           {showSecondary ? (
             <>
-              <TableHead>{t('usersPage.list.credits')}</TableHead>
-              <TableHead className="w-[120px]">{t('usersPage.list.periodLimits')}</TableHead>
-              <TableHead>{t('usersPage.list.keys')}</TableHead>
-              <TableHead>{t('usersPage.scopes.credential')}</TableHead>
-              <TableHead>{t('usersPage.scopes.model')}</TableHead>
-              <TableHead>{t('usersPage.list.updatedAt')}</TableHead>
+              <TableHead style={{ width: userColumnWidths.credits }}>
+                {t('usersPage.list.credits')}
+              </TableHead>
+              <TableHead style={{ width: userColumnWidths.periodLimits }}>
+                {t('usersPage.list.periodLimits')}
+              </TableHead>
+              <TableHead style={{ width: userColumnWidths.keys }}>
+                {t('usersPage.list.keys')}
+              </TableHead>
+              <TableHead style={{ width: userColumnWidths.credentialScope }}>
+                {t('usersPage.scopes.credential')}
+              </TableHead>
+              <TableHead style={{ width: userColumnWidths.modelScope }}>
+                {t('usersPage.scopes.model')}
+              </TableHead>
+              <TableHead style={{ width: userColumnWidths.updatedAt }}>
+                {t('usersPage.list.updatedAt')}
+              </TableHead>
             </>
           ) : null}
           <TableHead className="table-sticky-action-head table-action-column-3 text-right">
@@ -2281,7 +2364,9 @@ function UsersTable({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {users.map((user) => {
+        <TableSpacerRow height={virtualRows.paddingTop} colSpan={userTableColumnCount} />
+        {virtualRows.items.map(({ index }) => {
+          const user = users[index]
           const keys = getUserKeys(accessKeys, user)
           const credentialScopeIds = getUnion(keys.map((key) => key.channelGroupIds))
           const modelScopeIds = getUnion(keys.map((key) => key.modelGroupIds))
@@ -2289,7 +2374,14 @@ function UsersTable({
           const balanceDisabled = !balanceTarget
 
           return (
-            <TableRow key={user.id} variant="resource" className="group">
+            <TableRow
+              key={user.id}
+              variant="resource"
+              className="group"
+              data-index={index}
+              aria-rowindex={index + 2}
+              ref={virtualRows.measureRow}
+            >
               <TableCell>
                 <Checkbox
                   checked={selectedUserIds.has(user.id)}
@@ -2375,6 +2467,7 @@ function UsersTable({
             </TableRow>
           )
         })}
+        <TableSpacerRow height={virtualRows.paddingBottom} colSpan={userTableColumnCount} />
       </TableBody>
     </Table>
   )

@@ -5,8 +5,25 @@ import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui'
 
 import { cn } from '@/lib/utils'
 
-function DropdownMenu({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+function DropdownMenu({
+  modal = false,
+  ...props
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
+  /*
+   * Non-modal by default. A modal menu makes Radix set pointer-events: none on
+   * <body> while it is open and remove it on close. pointer-events inherits, so
+   * each of those writes invalidates style for the entire document: on the
+   * request and usage tables, opening and closing one menu cost 133 ms of main
+   * thread against 58 ms with the rows taken out of layout, and the gap grew
+   * with the row count. Menus in this console do not need a focus trap or a
+   * scroll lock; pass modal to opt back in where one does.
+   *
+   * The trade: an outside click now dismisses the menu and also reaches
+   * whatever sits under the pointer, instead of being swallowed. Row actions
+   * stay behind their own trigger, so the worst case is a navigation the user
+   * was already aiming at.
+   */
+  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" modal={modal} {...props} />
 }
 
 function DropdownMenuPortal({

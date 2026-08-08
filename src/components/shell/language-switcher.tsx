@@ -10,6 +10,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { loadLanguageBundle } from '@/lib/i18n/i18n'
 import { type AppLanguage, LANGUAGE_OPTIONS, persistLanguage } from '@/lib/i18n/languages'
 
 export function LanguageSwitcher() {
@@ -23,7 +24,9 @@ export function LanguageSwitcher() {
 
   const handleLanguageChange = (language: AppLanguage) => {
     persistLanguage(language)
-    void i18n.changeLanguage(language)
+    // The bundle has to be registered before the switch, or the UI renders raw
+    // keys until the chunk lands.
+    void loadLanguageBundle(language).then(() => i18n.changeLanguage(language))
   }
 
   return (

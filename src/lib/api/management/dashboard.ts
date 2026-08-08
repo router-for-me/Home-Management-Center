@@ -263,18 +263,16 @@ export async function fetchManagementDashboardSnapshot(
   runtimeMode: RuntimeMode = 'unknown',
 ): Promise<DashboardSnapshot> {
   const client = createManagementClient(session)
-  const configResponse = await client.get<unknown>('/config')
-  const config = toRecord(configResponse.data)
   const issues: DashboardRequestIssue[] = []
-  const fallbackClientKeys = readStringArray(config, 'api-keys')
   const providerDescriptors =
     runtimeMode === 'cpa'
       ? dashboardProviderDescriptors.filter((descriptor) => descriptor.id !== 'xai')
       : dashboardProviderDescriptors
 
   const [
+    configResponse,
     latestVersion,
-    clientKeys,
+    optionalClientKeys,
     authFiles,
     availableModels,
     providers,
@@ -282,6 +280,10 @@ export async function fetchManagementDashboardSnapshot(
     nodes,
     usageOverview,
   ] = await Promise.all([
+    // Awaited on its own this cost the dashboard a whole round trip before any
+    // of the requests below could start, and the only thing the rest of this
+    // function needed from it was a fallback that is almost never read.
+    client.get<unknown>('/config'),
     readOptional(
       issues,
       'latestVersion',
@@ -298,7 +300,7 @@ export async function fetchManagementDashboardSnapshot(
         const response = await client.get<unknown>('/api-keys')
         return readStringArray(response.data, 'api-keys')
       },
-      fallbackClientKeys,
+      null,
     ),
     readOptional(
       issues,
@@ -373,6 +375,11 @@ export async function fetchManagementDashboardSnapshot(
       : nodes
   const nodeTopology =
     topology ?? (capabilities.nodes ? createNodesTopologySummary(fallbackNodes) : null)
+
+  const config = toRecord(configResponse.data)
+  // Older Home builds list the client keys inside /config; the dedicated
+  // endpoint is authoritative when it answers.
+  const clientKeys = optionalClientKeys ?? readStringArray(config, 'api-keys')
 
   return {
     fetchedAt: new Date().toISOString(),
