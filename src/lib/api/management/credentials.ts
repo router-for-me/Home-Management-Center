@@ -14,12 +14,22 @@ export type CredentialMetadataInput = {
   priority: string | null
   note: string
   websockets?: boolean
+  disableCooling?: boolean
   maxInFlight?: number | null
   maxInFlightByModel?: Record<string, number>
   concurrencyVersion?: number
 }
 
 export type CredentialMetadataPatch = Partial<CredentialMetadataInput>
+
+type CredentialCooldownResetResult = {
+  status: string
+  credentialId: string | null
+  scope: string
+  model: string | null
+  cleared: boolean
+  clearedModels: string[]
+}
 
 export type CredentialMetadataAvailability = {
   prefix: boolean
@@ -92,6 +102,7 @@ export type CredentialResource = {
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
+  disableCooling: boolean
   metadataAvailability: CredentialMetadataAvailability
   maxInFlight: number | null
   maxInFlightByModel: Record<string, number>
@@ -490,6 +501,19 @@ function readCredentialWebsockets(record: UnknownRecord) {
   )
 }
 
+// The serializer emits `disable-cooling` only when the override is set, so an
+// absent field means cooling stays enabled. The override is true-only on the
+// backend; we read both spellings plus nested metadata for forward safety.
+function readCredentialDisableCooling(record: UnknownRecord) {
+  return (
+    readFlexibleBoolean(record, 'disable-cooling') ??
+    readFlexibleBoolean(record, 'disable_cooling') ??
+    readNestedFlexibleBoolean(record, 'metadata', 'disable-cooling') ??
+    readNestedFlexibleBoolean(record, 'metadata', 'disable_cooling') ??
+    false
+  )
+}
+
 function isAbsoluteUrl(value: string) {
   try {
     new URL(value)
@@ -625,6 +649,7 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
       readNestedString(record, 'metadata', 'proxy_url') ??
       readNestedString(record, 'metadata', 'proxy-url'),
     websockets: readCredentialWebsockets(record),
+    disableCooling: readCredentialDisableCooling(record),
     metadataAvailability: {
       prefix: hasOwn(record, 'prefix') || hasNestedField(record, 'metadata', 'prefix'),
       proxyUrl:
@@ -1106,6 +1131,13 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     payload.websockets = input.websockets
   }
 
+  // Home reads the cooling override from the `disable_cooling` auth metadata key
+  // (the arbitrary-nested-path channel of /auth-files/fields); the override is
+  // true-only, so writing false clears it and re-enables central cooldown.
+  if (typeof input.disableCooling === 'boolean') {
+    payload.disable_cooling = input.disableCooling
+  }
+
   if (input.maxInFlight !== undefined) {
     payload.max_in_flight = input.maxInFlight
   }
@@ -1375,6 +1407,43 @@ export async function updateCredentialMetadata(
 ) {
   const client = createManagementClient(session)
   await client.patch('/auth-files/fields', createFieldsPayload(resource, input))
+}
+
+// The cooldown route is keyed by the stable Home auth UUID (`id`), not the
+// display selector; return null when the record carries no canonical id so the
+// caller can hide the action rather than call the route with a name.
+export function getCredentialCooldownId(resource: CredentialResource): string | null {
+  const selectorId = resource.selector.id
+  if (typeof selectorId === 'string' && selectorId.trim()) return selectorId
+  return readString(resource.raw, 'id') ?? null
+}
+
+export async function clearCredentialCooldown(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+): Promise<CredentialCooldownResetResult> {
+  const credentialId = getCredentialCooldownId(resource)
+  if (!credentialId) {
+    throw new Error('missing_credential_id')
+  }
+
+  const client = createManagementClient(session)
+  const response = await client.delete<unknown>(
+    `/credentials/${encodeURIComponent(credentialId)}/cooldown`,
+  )
+  const data = isRecord(response.data) ? response.data : {}
+  const clearedModels = Array.isArray(data.cleared_models)
+    ? data.cleared_models.filter((value): value is string => typeof value === 'string')
+    : []
+
+  return {
+    status: readString(data, 'status') ?? 'ok',
+    credentialId: readString(data, 'credential_id') ?? credentialId,
+    scope: readString(data, 'scope') ?? 'all',
+    model: readString(data, 'model') ?? null,
+    cleared: readBoolean(data, 'cleared'),
+    clearedModels,
+  }
 }
 
 export async function deleteCredentialResource(

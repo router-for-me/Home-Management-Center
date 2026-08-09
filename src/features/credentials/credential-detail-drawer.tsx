@@ -98,6 +98,7 @@ function createMetadataForm(
           ? ''
           : String(resource.priority),
       websockets: resource?.websockets ?? false,
+      disableCooling: resource?.disableCooling ?? false,
       note: resource?.note ?? '',
       maxInFlight: maxInFlight ? String(maxInFlight) : '',
       maxInFlightByModel: Object.entries(maxInFlightByModel)
@@ -135,6 +136,11 @@ export function buildCredentialMetadataPatch(
     form.websockets !== resource.websockets
   ) {
     patch.websockets = form.websockets
+  }
+  // Cooling has no availability gate: an absent `disable-cooling` field means the
+  // override is unset, i.e. cooling stays enabled, so the toggle is always live.
+  if (form.disableCooling !== resource.disableCooling) {
+    patch.disableCooling = form.disableCooling
   }
 
   return patch
@@ -262,6 +268,12 @@ function OverviewTab({
                   : t('credentialsPage.status.disabled')
                 : t('credentialsPage.status.notAvailable')
               : t('credentialsPage.inline.notApplicable'),
+          ],
+          [
+            'cooling',
+            resource.disableCooling
+              ? t('credentialsPage.status.disabled')
+              : t('credentialsPage.status.enabled'),
           ],
           ['path', resource.path ?? t('credentialsPage.status.notAvailable')],
           [
@@ -553,6 +565,25 @@ function MetadataTab({
                 : t('credentialsPage.inline.notApplicable')}
             </span>
           )}
+        </div>
+      </div>
+
+      <div className="bg-muted/35 rounded-md border px-3 py-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{t('credentialsPage.form.disableCooling')}</p>
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {t('credentialsPage.form.disableCoolingHint')}
+            </p>
+          </div>
+          <Switch
+            checked={form.disableCooling}
+            disabled={mutating}
+            onCheckedChange={(checked) =>
+              handleFormChange((current) => ({ ...current, disableCooling: checked }))
+            }
+            aria-label={t('credentialsPage.form.disableCooling')}
+          />
         </div>
       </div>
 
