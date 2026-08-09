@@ -1,4 +1,4 @@
-import { type FormEvent, type ReactNode, useState } from 'react'
+import { type FormEvent, type ReactNode, useEffect, useState } from 'react'
 
 import {
   AlertTriangle,
@@ -17,6 +17,13 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldForm,
+  DrawerScaffoldHeader,
+} from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
@@ -998,15 +1005,54 @@ function NodeEnrollmentSheet({
   open,
   onOpenChange,
   enrollment,
+  pending,
+  onGenerate,
   onCopyJwt,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   enrollment: CertificateClientEnrollment | null
+  pending: boolean
+  onGenerate: (nodeName: string | null) => Promise<void>
   onCopyJwt: (homeJwt: string) => Promise<void>
 }) {
   const { t } = useTranslation()
+  const [nameDraft, setNameDraft] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  // Each open starts a fresh enrollment: clear the name draft, its validation
+  // message, and the copied flag so nothing leaks in from the previous run.
+  useEffect(() => {
+    if (open) {
+      setNameDraft('')
+      setValidationError(null)
+      setCopied(false)
+    }
+  }, [open])
+
+  const describeError = (kind: 'tooLong' | 'invalidChars') =>
+    kind === 'tooLong'
+      ? t('systemNodesPage.nodes.rename.tooLong', { max: CPA_NODE_NAME_MAX_LENGTH })
+      : t('systemNodesPage.nodes.rename.invalidChars')
+
+  const handleNameChange = (next: string) => {
+    setNameDraft(next)
+    const result = validateCpaNodeNameDraft(next)
+    setValidationError(result.ok ? null : describeError(result.error))
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const result = validateCpaNodeNameDraft(nameDraft)
+    if (!result.ok) {
+      setValidationError(describeError(result.error))
+      return
+    }
+    // The page handler owns the success/error toasts and never rethrows; on
+    // failure the sheet just stays in input mode so the name can be corrected.
+    await onGenerate(result.name)
+  }
 
   const handleCopy = async () => {
     if (!enrollment?.homeJwt) return
@@ -1017,40 +1063,89 @@ function NodeEnrollmentSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full gap-0 overflow-hidden sm:max-w-xl">
-        <SheetHeader className="border-b p-5 shadow-[0_1px_0_var(--border)]">
+      <DrawerScaffoldContent className="sm:max-w-xl">
+        <DrawerScaffoldHeader>
           <SheetTitle>{t('systemNodesPage.nodes.enrollment.title')}</SheetTitle>
-          <SheetDescription>{t('systemNodesPage.nodes.enrollment.description')}</SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-col gap-4 overflow-y-auto p-5">
-          {enrollment?.id ? (
-            <div className="grid gap-2">
-              <p className="text-muted-foreground text-xs font-medium">
-                {t('systemNodesPage.nodes.enrollment.clientId')}
-              </p>
-              <p className="font-mono text-sm break-all">{enrollment.id}</p>
-            </div>
-          ) : null}
-          <div className="grid gap-2">
-            <p className="text-muted-foreground text-xs font-medium">
-              {t('systemNodesPage.nodes.enrollment.jwtLabel')}
-            </p>
-            <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-all whitespace-pre-wrap">
-              {enrollment?.homeJwt ?? ''}
-            </pre>
-          </div>
-          <Button type="button" className="w-full sm:w-auto" onClick={() => void handleCopy()}>
-            {copied ? (
-              <ClipboardCheck className="size-4" aria-hidden="true" />
-            ) : (
-              <Copy className="size-4" aria-hidden="true" />
-            )}
-            {copied
-              ? t('systemNodesPage.nodes.enrollment.copied')
-              : t('systemNodesPage.nodes.enrollment.copyJwt')}
-          </Button>
-        </div>
-      </SheetContent>
+          <SheetDescription>
+            {enrollment
+              ? t('systemNodesPage.nodes.enrollment.description')
+              : t('systemNodesPage.nodes.enrollment.nameStepDescription')}
+          </SheetDescription>
+        </DrawerScaffoldHeader>
+        {enrollment ? (
+          <>
+            <DrawerScaffoldBody className="grid gap-4">
+              {enrollment.id ? (
+                <div className="grid gap-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t('systemNodesPage.nodes.enrollment.clientId')}
+                  </p>
+                  <p className="font-mono text-sm break-all">{enrollment.id}</p>
+                </div>
+              ) : null}
+              {enrollment.nodeName ? (
+                <div className="grid gap-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    {t('systemNodesPage.nodes.rename.label')}
+                  </p>
+                  <p className="text-sm break-all">{enrollment.nodeName}</p>
+                </div>
+              ) : null}
+              <div className="grid gap-2">
+                <p className="text-muted-foreground text-xs font-medium">
+                  {t('systemNodesPage.nodes.enrollment.jwtLabel')}
+                </p>
+                <pre className="bg-muted/50 max-h-64 overflow-auto rounded-md border p-3 font-mono text-xs leading-5 break-all whitespace-pre-wrap">
+                  {enrollment.homeJwt}
+                </pre>
+              </div>
+            </DrawerScaffoldBody>
+            <DrawerScaffoldFooter>
+              <Button type="button" onClick={() => void handleCopy()}>
+                {copied ? (
+                  <ClipboardCheck className="size-4" aria-hidden="true" />
+                ) : (
+                  <Copy className="size-4" aria-hidden="true" />
+                )}
+                {copied
+                  ? t('systemNodesPage.nodes.enrollment.copied')
+                  : t('systemNodesPage.nodes.enrollment.copyJwt')}
+              </Button>
+            </DrawerScaffoldFooter>
+          </>
+        ) : (
+          <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+            <DrawerScaffoldBody className="grid gap-4">
+              <label className={fieldClassName}>
+                <span>{t('systemNodesPage.nodes.rename.label')}</span>
+                <Input
+                  value={nameDraft}
+                  autoFocus
+                  disabled={pending}
+                  placeholder={t('systemNodesPage.nodes.rename.placeholder')}
+                  onChange={(event) => handleNameChange(event.target.value)}
+                />
+                <span className="text-muted-foreground text-xs leading-5 font-normal">
+                  {t('systemNodesPage.nodes.enrollment.nameHint', {
+                    max: CPA_NODE_NAME_MAX_LENGTH,
+                  })}
+                </span>
+              </label>
+              {validationError ? (
+                <p className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+                  {validationError}
+                </p>
+              ) : null}
+            </DrawerScaffoldBody>
+            <DrawerScaffoldFooter>
+              <Button type="submit" disabled={pending || validationError !== null}>
+                {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+                {t('systemNodesPage.nodes.enrollment.generate')}
+              </Button>
+            </DrawerScaffoldFooter>
+          </DrawerScaffoldForm>
+        )}
+      </DrawerScaffoldContent>
     </Sheet>
   )
 }
@@ -1431,15 +1526,24 @@ export function SystemNodesWorkbenchPage() {
     toast.success(t('systemNodesPage.toast.apiCallComplete'))
   }
 
-  const handleAddNode = async () => {
+  const handleAddNode = () => {
+    // Opening is instant now: the sheet starts in input mode so the operator can
+    // name the node before the single POST that mints (and binds) the JWT.
+    setNodeEnrollment(null)
+    setNodeEnrollmentSheetOpen(true)
+  }
+
+  const handleGenerateNode = async (nodeName: string | null) => {
     try {
-      const enrollment = await workbench.createNodeClient()
+      const enrollment = await workbench.createNodeClient(nodeName)
       setNodeEnrollment(enrollment)
-      setNodeEnrollmentSheetOpen(true)
       toast.success(t('systemNodesPage.toast.nodeClientCreated'))
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      toast.error(message)
+      if (readNodeRenameErrorCode(error) === 'cpa_node_name_invalid') {
+        toast.error(t('systemNodesPage.nodes.rename.invalidChars'))
+      } else {
+        toast.error(error instanceof Error ? error.message : String(error))
+      }
     }
   }
 
@@ -1565,18 +1669,8 @@ export function SystemNodesWorkbenchPage() {
             </div>
             <p className="text-muted-foreground mt-1 text-xs leading-5">{nodesSummaryDetail}</p>
           </div>
-          <Button
-            type="button"
-            size="md"
-            className="lg:shrink-0"
-            disabled={workbench.createNodeClientPending}
-            onClick={() => void handleAddNode()}
-          >
-            {workbench.createNodeClientPending ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : (
-              <Plus className="size-4" aria-hidden="true" />
-            )}
+          <Button type="button" size="md" className="lg:shrink-0" onClick={handleAddNode}>
+            <Plus className="size-4" aria-hidden="true" />
             {t('systemNodesPage.nodes.addNode')}
           </Button>
         </div>
@@ -1615,6 +1709,8 @@ export function SystemNodesWorkbenchPage() {
         open={nodeEnrollmentSheetOpen}
         onOpenChange={setNodeEnrollmentSheetOpen}
         enrollment={nodeEnrollment}
+        pending={workbench.createNodeClientPending}
+        onGenerate={handleGenerateNode}
         onCopyJwt={handleCopyNodeJwt}
       />
 

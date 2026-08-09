@@ -2308,6 +2308,7 @@ export const en = {
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
         ws: 'WS',
+        cooling: 'Cooling',
         priority: 'Priority',
         actions: 'Actions',
       },
@@ -4889,6 +4890,10 @@ export const en = {
           title: 'Node enrollment token',
           description:
             'Configure the credential on the node you want to enroll. Store it securely; closing this panel does not revoke the token.',
+          nameStepDescription:
+            'Name this node so you can identify it later, then generate its credential.',
+          nameHint: 'Optional. Up to {{max}} characters. You can rename the node later.',
+          generate: 'Generate credential',
           clientId: 'Client ID',
           jwtLabel: 'Credential',
           copyJwt: 'Copy credential',

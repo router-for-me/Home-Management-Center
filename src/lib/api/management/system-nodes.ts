@@ -169,6 +169,7 @@ export type ApiCallResult = {
 export type CertificateClientEnrollment = {
   id: string
   homeJwt: string
+  nodeName: string | null
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -659,9 +660,14 @@ export async function fetchSystemNodePluginReports(
 
 export async function createCertificateClient(
   session: ManagementSessionInput,
+  nodeName?: string | null,
 ): Promise<CertificateClientEnrollment> {
   const client = createManagementClient(session)
-  const response = await client.post<unknown>('/certificates/clients')
+  // Only send a body when a name is supplied: the backend treats no body / {} /
+  // null as the legacy unnamed enrollment, and rejects any field other than
+  // node_name. A non-empty string binds the name when the JWT is minted.
+  const body = nodeName ? { node_name: nodeName } : undefined
+  const response = await client.post<unknown>('/certificates/clients', body)
   const record = toRecord(response.data)
   const homeJwt = readString(record, 'home_jwt')
   const id = readString(record, 'id')
@@ -673,6 +679,7 @@ export async function createCertificateClient(
   return {
     id: id ?? '',
     homeJwt,
+    nodeName: readString(record, 'node_name') ?? null,
   }
 }
 
