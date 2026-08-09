@@ -4885,9 +4885,8 @@ export const ru = {
           nodeName: 'Имя узла CPA',
         },
         rename: {
-          action: 'Переименовать',
-          setAction: 'Задать имя',
           ariaLabel: 'Переименовать узел CPA {{name}}',
+          setAriaLabel: 'Задать имя для узла CPA {{name}}',
           title: 'Переименовать узел CPA',
           description:
             'Задайте узлу CPA понятное имя. Имена используются только как метки в консоли и не обязаны быть уникальными.',

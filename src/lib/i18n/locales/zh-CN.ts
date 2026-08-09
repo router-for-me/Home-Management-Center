@@ -4673,9 +4673,8 @@ export const zhCN = {
           nodeName: 'CPA 节点名称',
         },
         rename: {
-          action: '重命名',
-          setAction: '设置名称',
           ariaLabel: '重命名 CPA 节点 {{name}}',
+          setAriaLabel: '为 CPA 节点 {{name}} 设置名称',
           title: '重命名 CPA 节点',
           description: '为该 CPA 节点设置便于识别的名称。名称仅用于控制台展示，无需唯一。',
           label: '节点名称',

@@ -4673,9 +4673,8 @@ export const zhTW = {
           nodeName: 'CPA 節點名稱',
         },
         rename: {
-          action: '重新命名',
-          setAction: '設定名稱',
           ariaLabel: '重新命名 CPA 節點 {{name}}',
+          setAriaLabel: '為 CPA 節點 {{name}} 設定名稱',
           title: '重新命名 CPA 節點',
           description: '為該 CPA 節點設定便於辨識的名稱。名稱僅用於主控台顯示，無需唯一。',
           label: '節點名稱',

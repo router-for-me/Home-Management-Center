@@ -4864,9 +4864,8 @@ export const en = {
           nodeName: 'CPA node name',
         },
         rename: {
-          action: 'Rename',
-          setAction: 'Set name',
           ariaLabel: 'Rename CPA node {{name}}',
+          setAriaLabel: 'Set name for CPA node {{name}}',
           title: 'Rename CPA node',
           description:
             'Give this CPA node a recognizable name. Names are console labels only and do not need to be unique.',

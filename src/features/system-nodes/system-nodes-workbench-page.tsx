@@ -761,6 +761,22 @@ function CpaNodeRow({
           <p className={cn('truncate text-sm', hasName ? 'font-medium' : 'font-mono')}>
             {identityLabel}
           </p>
+          {canRename ? (
+            <Button
+              type="button"
+              variant="text"
+              size="icon-xs"
+              className="hover:text-primary focus-visible:text-primary"
+              onClick={() => onRename(node)}
+              aria-label={
+                hasName
+                  ? t('systemNodesPage.nodes.rename.ariaLabel', { name: identityLabel })
+                  : t('systemNodesPage.nodes.rename.setAriaLabel', { name: identityLabel })
+              }
+            >
+              <Pencil aria-hidden="true" />
+            </Button>
+          ) : null}
           <StatusBadge tone={getNodeHealthTone(node)}>{healthLabel}</StatusBadge>
         </div>
         {hasName ? (
@@ -785,25 +801,10 @@ function CpaNodeRow({
           value={String(node.clientCount ?? 0)}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end lg:justify-self-end">
+      <div className="flex items-center lg:justify-self-end">
         <StatusBadge tone={getPluginReportTone(node)}>
           {t(`systemNodesPage.nodes.pluginStates.${node.pluginReportState}`)}
         </StatusBadge>
-        {canRename ? (
-          <Button
-            type="button"
-            variant="text"
-            size="sm"
-            className="px-2"
-            onClick={() => onRename(node)}
-            aria-label={t('systemNodesPage.nodes.rename.ariaLabel', { name: identityLabel })}
-          >
-            <Pencil className="size-4" aria-hidden="true" />
-            {hasName
-              ? t('systemNodesPage.nodes.rename.action')
-              : t('systemNodesPage.nodes.rename.setAction')}
-          </Button>
-        ) : null}
       </div>
     </div>
   )
