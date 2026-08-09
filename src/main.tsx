@@ -8,6 +8,7 @@ import { createRoot } from 'react-dom/client'
 
 import { AppProviders } from '@/app/providers/app-providers'
 import { initI18n } from '@/lib/i18n/i18n'
+import { shellScrollToTopSelectors } from '@/lib/shell-scroll'
 import { routeTree } from '@/routeTree.gen'
 import '@/styles/globals.css'
 
@@ -28,6 +29,9 @@ const router = createRouter({
   },
   defaultPreload: 'intent',
   scrollRestoration: true,
+  // The shells scroll an inner <main>, not the window; a fresh navigation has
+  // to rewind that container the way the window is rewound.
+  scrollToTopSelectors: shellScrollToTopSelectors,
 })
 
 declare module '@tanstack/react-router' {

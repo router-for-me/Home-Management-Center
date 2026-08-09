@@ -10,19 +10,11 @@
   }
 
   /*
-   * Reserve the scrollbar's track whether or not it is showing.
-   *
-   * Every overlay in this app locks the page while it is open, which removes the
-   * page's scrollbar. Where that scrollbar takes up space — a narrow desktop
-   * window rather than a phone, which uses an overlay one — removing it widens the
-   * viewport, and the content jumps sideways as a select opens and settles back as
-   * it closes. Keeping the track means the width never depends on whether an
-   * overlay is open. Table containers already did this locally; the page needs it
-   * for the same reason.
+   * No scrollbar-gutter on <html>: the document layer never scrolls. Each
+   * shell is one viewport tall and scrolls its <main>, which carries the
+   * gutter instead — see AppShell and PublicAccessShell. Reserving a track
+   * here would spend a scrollbar's width on a scrollbar that cannot appear.
    */
-  html {
-    scrollbar-gutter: stable;
-  }
 }
 
 :where(button:not(:disabled), [role='button']:not([aria-disabled='true'])) {

@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 
 import { RoutePending } from '@/components/shell/route-pending'
+import { shellScrollToTopSelectors } from '@/lib/shell-scroll'
 
 type RouterShellProps = {
   children: ReactNode
@@ -63,6 +64,9 @@ export function EmbeddedRouterApp<TRouteTree extends AnyRoute>({
       // cold link still needs something on screen.
       defaultPendingComponent: RoutePending,
       scrollRestoration: true,
+      // The shells scroll an inner <main>, not the window; a fresh navigation
+      // has to rewind that container the way the window is rewound.
+      scrollToTopSelectors: shellScrollToTopSelectors,
     }),
   )
 

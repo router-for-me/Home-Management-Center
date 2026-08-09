@@ -29,6 +29,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { embeddedEntryLinks } from '@/lib/embedded-entry-links'
+import { appShellScrollRestorationId } from '@/lib/shell-scroll'
 import { cn } from '@/lib/utils'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -209,7 +210,17 @@ export function AppShell({ children }: AppShellProps) {
     navigationItems.find((item) => pathname.startsWith(item.to)) ?? navigationItems[0]
 
   return (
-    <SidebarProvider>
+    /*
+      One viewport tall, and the document never scrolls — <main> below is the
+      scroll container. Radix locks the page while any modal overlay is open
+      (Select, Dialog, Sheet have no modal switch), and its compensation for
+      the document scrollbar it hides is what #142 reported: whether the
+      hidden scrollbar's track is released differs by platform, so one
+      platform or the other watched the page change width on every open.
+      With no document scrollbar the measured gap is 0, the compensation a
+      no-op, and the lock never touches an inner scroll container.
+    */
+    <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
       <Sidebar collapsible="icon" className="border-sidebar-border text-sidebar-foreground">
         <SidebarHeader className="border-sidebar-border/80 border-b p-0">
           {/*
@@ -362,7 +373,18 @@ export function AppShell({ children }: AppShellProps) {
             <HeaderConnectionButton />
           </div>
         </header>
-        <main className="min-w-0 flex-1 overflow-x-clip p-4 md:p-6">{children}</main>
+        {/*
+          scrollbar-gutter moved here from <html> along with the scrollbar
+          itself, so a short page and a long page put content at the same x.
+          The restoration id opts this container into the router's scroll
+          handling; scrollToTopSelectors resets it on fresh navigations.
+        */}
+        <main
+          data-scroll-restoration-id={appShellScrollRestorationId}
+          className="min-h-0 min-w-0 flex-1 [scrollbar-gutter:stable] overflow-x-clip overflow-y-auto p-4 md:p-6"
+        >
+          {children}
+        </main>
       </SidebarInset>
       <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
       <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
