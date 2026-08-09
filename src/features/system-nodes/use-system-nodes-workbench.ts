@@ -127,12 +127,18 @@ export function useSystemNodesWorkbench() {
   })
 
   const createNodeClientMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (nodeName?: string | null) => {
       try {
-        return await createCertificateClient(session)
+        return await createCertificateClient(session, nodeName)
       } catch (error) {
+        // Decorate so the caller can localize cpa_node_name_invalid from the
+        // optional node_name bound at POST /certificates/clients.
         throw toSystemNodesApiError(error)
       }
+    },
+    onSuccess: () => {
+      // A named enrollment should show its name in the topology immediately.
+      void queryClient.invalidateQueries({ queryKey })
     },
   })
 

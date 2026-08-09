@@ -86,6 +86,7 @@ import {
   hasCredentialFilters,
 } from '@/features/credentials/credential-filters'
 import {
+  CoolingCell,
   type InlineMetadataSave,
   WebsocketsCell,
 } from '@/features/credentials/credential-inline-cells'
@@ -466,7 +467,7 @@ function CredentialList({
   return (
     <Table
       containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="table-fixed sm:min-w-[1250px]"
+      className="table-fixed sm:min-w-[1350px]"
     >
       {/*
         The identity column is the one given `auto`: in a fixed layout the
@@ -492,6 +493,7 @@ function CredentialList({
           <>
             <col className="w-[232px]" />
             <col className="w-[96px]" />
+            <col className="w-[96px]" />
             <col className="w-[112px]" />
           </>
         ) : null}
@@ -514,6 +516,7 @@ function CredentialList({
             <>
               <TableHead>{t('credentialsPage.list.quota')}</TableHead>
               <TableHead>{t('credentialsPage.list.ws')}</TableHead>
+              <TableHead>{t('credentialsPage.list.cooling')}</TableHead>
               <TableHead>{t('credentialsPage.list.priority')}</TableHead>
             </>
           ) : null}
@@ -634,6 +637,9 @@ function CredentialList({
                   </TableCell>
                   <TableCell>
                     <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                  </TableCell>
+                  <TableCell>
+                    <CoolingCell resource={resource} mutating={mutating} onSave={onSaveInline} />
                   </TableCell>
                   <TableCell>
                     {resource.priority === null ? (
