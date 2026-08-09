@@ -7,6 +7,7 @@ import {
   Copy,
   Info,
   Loader2,
+  Pencil,
   Play,
   Plus,
   RefreshCw,
@@ -20,6 +21,14 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -699,20 +708,64 @@ function ConfigSummaryPanel({ config }: { config: SystemConfigSummary | null }) 
   )
 }
 
-function CpaNodeRow({ node }: { node: SystemNodeResource }) {
+const CPA_NODE_NAME_MAX_LENGTH = 128
+
+type CpaNodeNameValidation =
+  | { ok: true; name: string | null }
+  | { ok: false; error: 'tooLong' | 'invalidChars' }
+
+// Mirror the backend contract for `PATCH /nodes/:id`: trim, treat empty as a
+// clear (null), cap at 128 Unicode code points, and reject control characters.
+function validateCpaNodeNameDraft(value: string): CpaNodeNameValidation {
+  const trimmed = value.trim()
+  if (trimmed === '') return { ok: true, name: null }
+  if (Array.from(trimmed).length > CPA_NODE_NAME_MAX_LENGTH) {
+    return { ok: false, error: 'tooLong' }
+  }
+  if (/\p{Cc}/u.test(trimmed)) return { ok: false, error: 'invalidChars' }
+  return { ok: true, name: trimmed }
+}
+
+// The rename mutation preserves the backend code via toManagementApiError; read
+// it locally instead of importing the credentials-module error matcher.
+function readNodeRenameErrorCode(error: unknown): string | null {
+  if (error !== null && typeof error === 'object' && 'backendCode' in error) {
+    const code = (error as { backendCode?: unknown }).backendCode
+    if (typeof code === 'string') return code
+  }
+  return null
+}
+
+function CpaNodeRow({
+  node,
+  onRename,
+}: {
+  node: SystemNodeResource
+  onRename: (node: SystemNodeResource) => void
+}) {
   const { t } = useTranslation()
   const healthLabel = t(`systemNodesPage.healthStates.${node.health}`)
+  const hasName = node.nodeName !== null && node.nodeName !== ''
+  const canRename = node.nodeId !== null && node.nodeNameSupported
+  const identityLabel = node.nodeName ?? node.ip
 
   return (
     <div className="grid gap-3 border-t px-3 py-3 lg:grid-cols-[minmax(120px,0.65fr)_minmax(0,2.6fr)_auto] lg:items-start">
       <div className="min-w-0">
         <p className="text-muted-foreground text-xs font-medium">
-          {t('systemNodesPage.nodes.fields.cpaIp')}
+          {hasName
+            ? t('systemNodesPage.nodes.fields.nodeName')
+            : t('systemNodesPage.nodes.fields.cpaIp')}
         </p>
         <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-          <p className="truncate font-mono text-sm">{node.ip}</p>
+          <p className={cn('truncate text-sm', hasName ? 'font-medium' : 'font-mono')}>
+            {identityLabel}
+          </p>
           <StatusBadge tone={getNodeHealthTone(node)}>{healthLabel}</StatusBadge>
         </div>
+        {hasName ? (
+          <p className="text-muted-foreground mt-1 truncate font-mono text-xs">{node.ip}</p>
+        ) : null}
       </div>
       <div className="grid min-w-0 gap-x-4 gap-y-2 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1.6fr)_minmax(160px,1fr)_minmax(160px,1fr)_minmax(72px,0.45fr)]">
         <NodeDetail
@@ -732,14 +785,37 @@ function CpaNodeRow({ node }: { node: SystemNodeResource }) {
           value={String(node.clientCount ?? 0)}
         />
       </div>
-      <StatusBadge tone={getPluginReportTone(node)} className="lg:justify-self-end">
-        {t(`systemNodesPage.nodes.pluginStates.${node.pluginReportState}`)}
-      </StatusBadge>
+      <div className="flex flex-wrap items-center gap-2 lg:flex-col lg:items-end lg:justify-self-end">
+        <StatusBadge tone={getPluginReportTone(node)}>
+          {t(`systemNodesPage.nodes.pluginStates.${node.pluginReportState}`)}
+        </StatusBadge>
+        {canRename ? (
+          <Button
+            type="button"
+            variant="text"
+            size="sm"
+            className="px-2"
+            onClick={() => onRename(node)}
+            aria-label={t('systemNodesPage.nodes.rename.ariaLabel', { name: identityLabel })}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            {hasName
+              ? t('systemNodesPage.nodes.rename.action')
+              : t('systemNodesPage.nodes.rename.setAction')}
+          </Button>
+        ) : null}
+      </div>
     </div>
   )
 }
 
-function HomeTopologyGroupSection({ group }: { group: HomeTopologyGroup }) {
+function HomeTopologyGroupSection({
+  group,
+  onRenameNode,
+}: {
+  group: HomeTopologyGroup
+  onRenameNode: (node: SystemNodeResource) => void
+}) {
   const { t } = useTranslation()
   const isUnknownHome = !group.home && !group.homeIp
   const role = group.home?.role ?? 'unknown'
@@ -816,7 +892,9 @@ function HomeTopologyGroupSection({ group }: { group: HomeTopologyGroup }) {
       </div>
       <div className="bg-muted/20">
         {group.nodes.length > 0 ? (
-          group.nodes.map((node) => <CpaNodeRow key={node.id} node={node} />)
+          group.nodes.map((node) => (
+            <CpaNodeRow key={node.id} node={node} onRename={onRenameNode} />
+          ))
         ) : (
           <div className="border-t px-3 py-3">
             <TableEmptyState
@@ -835,10 +913,12 @@ function HomeTopologyPanel({
   groups,
   available,
   runtimeLabel,
+  onRenameNode,
 }: {
   groups: HomeTopologyGroup[]
   available: boolean
   runtimeLabel: string
+  onRenameNode: (node: SystemNodeResource) => void
 }) {
   const { t } = useTranslation()
 
@@ -877,7 +957,7 @@ function HomeTopologyPanel({
         </StatusBadge>
       </div>
       {groups.map((group) => (
-        <HomeTopologyGroupSection key={group.id} group={group} />
+        <HomeTopologyGroupSection key={group.id} group={group} onRenameNode={onRenameNode} />
       ))}
     </div>
   )
@@ -971,6 +1051,114 @@ function NodeEnrollmentSheet({
         </div>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function CpaNodeRenameForm({
+  node,
+  pending,
+  onCancel,
+  onSubmit,
+}: {
+  node: SystemNodeResource
+  pending: boolean
+  onCancel: () => void
+  onSubmit: (nodeId: string, nodeName: string | null) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const [value, setValue] = useState(node.nodeName ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  const describeError = (kind: 'tooLong' | 'invalidChars') =>
+    kind === 'tooLong'
+      ? t('systemNodesPage.nodes.rename.tooLong', { max: CPA_NODE_NAME_MAX_LENGTH })
+      : t('systemNodesPage.nodes.rename.invalidChars')
+
+  const handleChange = (next: string) => {
+    setValue(next)
+    const result = validateCpaNodeNameDraft(next)
+    setError(result.ok ? null : describeError(result.error))
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!node.nodeId) return
+    const result = validateCpaNodeNameDraft(value)
+    if (!result.ok) {
+      setError(describeError(result.error))
+      return
+    }
+    // The page handler owns success/error toasts and closes the dialog on
+    // success; it never rethrows, so an awaited failure just keeps this open.
+    await onSubmit(node.nodeId, result.name)
+  }
+
+  return (
+    <form className="grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
+      <label className={fieldClassName}>
+        <span>{t('systemNodesPage.nodes.rename.label')}</span>
+        <Input
+          value={value}
+          autoFocus
+          disabled={pending}
+          placeholder={t('systemNodesPage.nodes.rename.placeholder')}
+          onChange={(event) => handleChange(event.target.value)}
+        />
+        <span className="text-muted-foreground text-xs leading-5 font-normal">
+          {t('systemNodesPage.nodes.rename.hint', { max: CPA_NODE_NAME_MAX_LENGTH })}
+        </span>
+      </label>
+      {error ? (
+        <p className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+          {error}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button type="submit" disabled={pending || error !== null}>
+          {pending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+          {t('systemNodesPage.nodes.rename.save')}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
+}
+
+function CpaNodeRenameDialog({
+  node,
+  open,
+  pending,
+  onOpenChange,
+  onSubmit,
+}: {
+  node: SystemNodeResource | null
+  open: boolean
+  pending: boolean
+  onOpenChange: (open: boolean) => void
+  onSubmit: (nodeId: string, nodeName: string | null) => Promise<void>
+}) {
+  const { t } = useTranslation()
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent closeLabel={t('common.close')}>
+        <DialogHeader>
+          <DialogTitle>{t('systemNodesPage.nodes.rename.title')}</DialogTitle>
+          <DialogDescription>{t('systemNodesPage.nodes.rename.description')}</DialogDescription>
+        </DialogHeader>
+        {node ? (
+          <CpaNodeRenameForm
+            key={node.id}
+            node={node}
+            pending={pending}
+            onCancel={() => onOpenChange(false)}
+            onSubmit={onSubmit}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -1172,6 +1360,8 @@ export function SystemNodesWorkbenchPage() {
   const [apiCallSheetOpen, setApiCallSheetOpen] = useState(false)
   const [nodeEnrollmentSheetOpen, setNodeEnrollmentSheetOpen] = useState(false)
   const [nodeEnrollment, setNodeEnrollment] = useState<CertificateClientEnrollment | null>(null)
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
+  const [renameTarget, setRenameTarget] = useState<SystemNodeResource | null>(null)
 
   if (workbench.checking || (workbench.connected && !workbench.capabilityReady)) {
     return <SystemNodesLoadingState />
@@ -1255,6 +1445,32 @@ export function SystemNodesWorkbenchPage() {
   const handleCopyNodeJwt = async (homeJwt: string) => {
     await copyTextToClipboard(homeJwt)
     toast.success(t('systemNodesPage.toast.nodeJwtCopied'))
+  }
+
+  const handleOpenRename = (node: SystemNodeResource) => {
+    setRenameTarget(node)
+    setRenameDialogOpen(true)
+  }
+
+  const handleRenameNode = async (nodeId: string, nodeName: string | null) => {
+    try {
+      await workbench.renameNode({ nodeId, nodeName })
+      toast.success(
+        nodeName
+          ? t('systemNodesPage.toast.nodeRenamed')
+          : t('systemNodesPage.toast.nodeNameCleared'),
+      )
+      setRenameDialogOpen(false)
+    } catch (error) {
+      const code = readNodeRenameErrorCode(error)
+      if (code === 'cpa_node_name_invalid') {
+        toast.error(t('systemNodesPage.nodes.rename.invalidChars'))
+      } else if (code === 'cpa_node_not_found') {
+        toast.error(t('systemNodesPage.nodes.rename.notFound'))
+      } else {
+        toast.error(error instanceof Error ? error.message : String(error))
+      }
+    }
   }
 
   return (
@@ -1368,6 +1584,7 @@ export function SystemNodesWorkbenchPage() {
             groups={topologyGroups}
             available={topologyAvailable}
             runtimeLabel={t(`runtimeMode.${workbench.runtimeMode}`)}
+            onRenameNode={handleOpenRename}
           />
         </div>
       </div>
@@ -1398,6 +1615,14 @@ export function SystemNodesWorkbenchPage() {
         onOpenChange={setNodeEnrollmentSheetOpen}
         enrollment={nodeEnrollment}
         onCopyJwt={handleCopyNodeJwt}
+      />
+
+      <CpaNodeRenameDialog
+        node={renameTarget}
+        open={renameDialogOpen}
+        pending={workbench.renameNodePending}
+        onOpenChange={setRenameDialogOpen}
+        onSubmit={handleRenameNode}
       />
     </section>
   )

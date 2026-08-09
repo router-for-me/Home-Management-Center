@@ -2159,6 +2159,8 @@ export const en = {
         viewModels: 'View models',
         reloadModels: 'Reload',
         download: 'Download',
+        clearCooldown: 'Clear cooldown',
+        clearCooldownFor: 'Clear cooldown for {{name}}',
         delete: 'Delete',
       },
       filters: {
@@ -2358,6 +2360,7 @@ export const en = {
           size: 'Size',
           priority: 'Priority',
           websockets: 'WebSocket',
+          cooling: 'Cooling',
           success: 'Success',
           failed: 'Failed',
           updatedAt: 'Updated',
@@ -2376,6 +2379,8 @@ export const en = {
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
+        disableCooling: 'Disable cooling',
+        disableCoolingHint: 'Exclude this credential from quota cooldown scheduling.',
         note: 'Note',
       },
       concurrency: {
@@ -2465,6 +2470,10 @@ export const en = {
         bulkDisabled: '{{count}} credentials disabled.',
         bulkDeleted: '{{count}} credentials deleted.',
         statusUpdated: 'Credential status updated.',
+        cooldownCleared: 'Cooldown cleared.',
+        cooldownNotActive: 'No active cooldown to clear.',
+        cooldownResetUnavailable: 'Cooldown reset is unavailable on this runtime.',
+        cooldownCredentialMissing: 'This credential no longer exists.',
         oauthStarted: 'OAuth authorization link generated.',
         oauthLinkCopied: 'OAuth authorization link copied.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
@@ -4852,6 +4861,22 @@ export const en = {
           cpaCount: 'CPA count',
           healthyCpa: 'Healthy CPA',
           health: 'Health',
+          nodeName: 'CPA node name',
+        },
+        rename: {
+          action: 'Rename',
+          setAction: 'Set name',
+          ariaLabel: 'Rename CPA node {{name}}',
+          title: 'Rename CPA node',
+          description:
+            'Give this CPA node a recognizable name. Names are console labels only and do not need to be unique.',
+          label: 'Node name',
+          placeholder: 'e.g. us-east-gateway',
+          hint: 'Up to {{max}} characters. Leave empty to clear the name.',
+          tooLong: 'Use at most {{max}} characters.',
+          invalidChars: 'Remove control characters from the name.',
+          notFound: 'This CPA node is no longer connected.',
+          save: 'Save name',
         },
         pluginStates: {
           not_required: 'Not required',
@@ -4936,6 +4961,8 @@ export const en = {
         apiCallComplete: 'Diagnostic request completed.',
         nodeClientCreated: 'Node client created.',
         nodeJwtCopied: 'Credential copied to clipboard.',
+        nodeRenamed: 'Node name updated.',
+        nodeNameCleared: 'Node name cleared.',
       },
     },
     pluginPage: {

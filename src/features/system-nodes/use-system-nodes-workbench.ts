@@ -1,10 +1,11 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   type ApiCallInput,
   type SystemNodesSnapshot,
   createCertificateClient,
   fetchSystemNodesSnapshot,
+  renameCpaNode,
   runManagementApiCall,
   toSystemNodesApiError,
 } from '@/lib/api/management/system-nodes'
@@ -94,6 +95,7 @@ export function useSystemNodesWorkbench() {
     serverInfo,
     probedAt,
   } = useManagementSession()
+  const queryClient = useQueryClient()
   const queryKey = [
     'management-system-nodes',
     session.baseUrl,
@@ -134,6 +136,21 @@ export function useSystemNodesWorkbench() {
     },
   })
 
+  const renameNodeMutation = useMutation({
+    mutationFn: async (input: { nodeId: string; nodeName: string | null }) => {
+      try {
+        return await renameCpaNode(session, input.nodeId, input.nodeName)
+      } catch (error) {
+        // Throw a decorated Error so the caller can localize the backend code
+        // (cpa_node_name_invalid / cpa_node_not_found) from PATCH /nodes.
+        throw toSystemNodesApiError(error)
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
   return {
     connected,
     checking,
@@ -158,5 +175,7 @@ export function useSystemNodesWorkbench() {
     apiCallPending: apiCallMutation.isPending,
     createNodeClient: createNodeClientMutation.mutateAsync,
     createNodeClientPending: createNodeClientMutation.isPending,
+    renameNode: renameNodeMutation.mutateAsync,
+    renameNodePending: renameNodeMutation.isPending,
   }
 }

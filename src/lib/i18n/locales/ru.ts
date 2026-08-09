@@ -2158,6 +2158,8 @@ export const ru = {
         viewModels: 'Показать модели',
         reloadModels: 'Обновить',
         download: 'Скачать',
+        clearCooldown: 'Сбросить охлаждение',
+        clearCooldownFor: 'Сбросить охлаждение для {{name}}',
         delete: 'Удалить',
       },
       filters: {
@@ -2358,6 +2360,7 @@ export const ru = {
           size: 'Размер',
           priority: 'Приоритет',
           websockets: 'WebSocket',
+          cooling: 'Охлаждение',
           success: 'Успешно',
           failed: 'Ошибки',
           updatedAt: 'Обновлено',
@@ -2376,6 +2379,8 @@ export const ru = {
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
+        disableCooling: 'Отключить охлаждение',
+        disableCoolingHint: 'Исключить эти учётные данные из планирования охлаждения квот.',
         note: 'Заметка',
       },
       concurrency: {
@@ -2464,6 +2469,10 @@ export const ru = {
         bulkDisabled: 'Credentials отключены: {{count}}.',
         bulkDeleted: 'Credentials удалены: {{count}}.',
         statusUpdated: 'Credential status обновлен.',
+        cooldownCleared: 'Охлаждение сброшено.',
+        cooldownNotActive: 'Нет активного охлаждения для сброса.',
+        cooldownResetUnavailable: 'Сброс охлаждения недоступен в этой среде выполнения.',
+        cooldownCredentialMissing: 'Эти учётные данные больше не существуют.',
         oauthStarted: 'Ссылка OAuth авторизации создана.',
         oauthLinkCopied: 'Ссылка OAuth авторизации скопирована.',
         oauthStatusChecked: 'OAuth status: {{status}}.',
@@ -4873,6 +4882,22 @@ export const ru = {
           cpaCount: 'CPA-узлы',
           healthyCpa: 'Здоровые CPA',
           health: 'Состояние',
+          nodeName: 'Имя узла CPA',
+        },
+        rename: {
+          action: 'Переименовать',
+          setAction: 'Задать имя',
+          ariaLabel: 'Переименовать узел CPA {{name}}',
+          title: 'Переименовать узел CPA',
+          description:
+            'Задайте узлу CPA понятное имя. Имена используются только как метки в консоли и не обязаны быть уникальными.',
+          label: 'Имя узла',
+          placeholder: 'например, us-east-gateway',
+          hint: 'До {{max}} символов. Оставьте пустым, чтобы очистить имя.',
+          tooLong: 'Используйте не более {{max}} символов.',
+          invalidChars: 'Удалите управляющие символы из имени.',
+          notFound: 'Этот узел CPA больше не подключён.',
+          save: 'Сохранить имя',
         },
         pluginStates: {
           not_required: 'Не требуется',
@@ -4958,6 +4983,8 @@ export const ru = {
         apiCallComplete: 'Диагностический запрос завершен.',
         nodeClientCreated: 'Клиент узла создан.',
         nodeJwtCopied: 'Учётные данные скопированы в буфер обмена.',
+        nodeRenamed: 'Имя узла обновлено.',
+        nodeNameCleared: 'Имя узла очищено.',
       },
     },
     pluginPage: {

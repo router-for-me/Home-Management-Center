@@ -31,6 +31,7 @@ const capabilityRequests: Record<
     | 'credentialInFlight'
     | 'credentialInFlightSnapshotCursor'
     | 'credentialConcurrencyLimits'
+    | 'credentialCooldownReset'
     | 'quotaRecollect'
     | 'modelChannelBindings'
   >,
@@ -108,6 +109,7 @@ const emptyCapabilities: CapabilityMap = {
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
+  credentialCooldownReset: false,
 }
 
 type ProbedCapabilityKey = keyof typeof capabilityRequests
@@ -251,6 +253,10 @@ function readDeclaredCredentialInFlightSnapshotCursorCapability(configData: unkn
 
 function readDeclaredCredentialConcurrencyLimitsCapability(configData: unknown) {
   return readDeclaredCapabilityValue(configData, ['credential_concurrency_limits_v2'])
+}
+
+function readDeclaredCredentialCooldownResetCapability(configData: unknown) {
+  return readDeclaredCapabilityValue(configData, ['credential_cooldown_reset'])
 }
 
 function readDeclaredRequestEventsCapability(configData: unknown) {
@@ -553,6 +559,9 @@ export async function probeManagementRuntime(
   const declaredCredentialConcurrencyLimits = capabilitiesPayload
     ? readDeclaredCredentialConcurrencyLimitsCapability(capabilitySource)
     : null
+  const declaredCredentialCooldownReset = capabilitiesPayload
+    ? readDeclaredCredentialCooldownResetCapability(capabilitySource)
+    : null
 
   const capabilityKeysToProbe: ProbedCapabilityKey[] = capabilitiesPayload
     ? [
@@ -623,6 +632,7 @@ export async function probeManagementRuntime(
     credentialInFlight: declaredCredentialInFlight ?? false,
     credentialInFlightSnapshotCursor: declaredCredentialInFlightSnapshotCursor ?? false,
     credentialConcurrencyLimits: declaredCredentialConcurrencyLimits ?? false,
+    credentialCooldownReset: declaredCredentialCooldownReset ?? false,
   }
 
   return {

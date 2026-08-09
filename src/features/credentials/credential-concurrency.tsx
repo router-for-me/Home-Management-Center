@@ -32,6 +32,7 @@ export type CredentialMetadataForm = {
   priority: string
   note: string
   websockets: boolean
+  disableCooling: boolean
   maxInFlight: string
   maxInFlightByModel: Array<{ model: string; limit: string }>
 }
