@@ -2221,6 +2221,7 @@ export const zhTW = {
         toggleStatus: '切換憑證 {{name}} 的啟用狀態',
         enabled: '啟用',
         ws: 'WS',
+        cooling: '冷卻',
         priority: '優先順序',
         actions: '操作',
       },
@@ -4696,6 +4697,9 @@ export const zhTW = {
         enrollment: {
           title: '節點接入憑證',
           description: '將憑證設定到待接入節點後即可建立連線。請妥善保存，關閉後需重新建立。',
+          nameStepDescription: '為該節點設定一個便於識別的名稱，然後產生憑證。',
+          nameHint: '選填。最多 {{max}} 個字元。之後也可以重新命名該節點。',
+          generate: '產生憑證',
           clientId: '用戶端 ID',
           jwtLabel: '憑證',
           copyJwt: '複製憑證',

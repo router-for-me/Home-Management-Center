@@ -73,3 +73,41 @@ export function WebsocketsCell({
     </div>
   )
 }
+
+export function CoolingCell({
+  resource,
+  mutating,
+  onSave,
+}: {
+  resource: CredentialResource
+  mutating: boolean
+  onSave: InlineMetadataSave
+}) {
+  const { t } = useTranslation()
+
+  const handleToggle = async (checked: boolean) => {
+    try {
+      await onSave(resource, { disableCooling: checked })
+      toast.success(t('credentialsPage.inline.saved'))
+    } catch (error) {
+      toast.error(readErrorMessage(error))
+    }
+  }
+
+  // Cooling is universal (no metadataAvailability gate) so there is no unsupported
+  // branch. The switch keeps the drawer's polarity — on = "Disable cooling" — so the
+  // same credential shows the same position on both surfaces. That polarity is why
+  // there is no adjacent enabled/disabled text: a switch that reads on while a label
+  // reads "Disabled" would look self-contradictory. The header plus the tooltip carry
+  // the meaning instead.
+  return (
+    <Switch
+      checked={resource.disableCooling}
+      disabled={mutating}
+      aria-label={t('credentialsPage.form.disableCooling')}
+      title={t('credentialsPage.form.disableCoolingHint')}
+      onCheckedChange={(checked) => void handleToggle(checked)}
+      onClick={(event) => event.stopPropagation()}
+    />
+  )
+}

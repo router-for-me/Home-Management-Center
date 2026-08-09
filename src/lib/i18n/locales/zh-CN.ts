@@ -2221,6 +2221,7 @@ export const zhCN = {
         toggleStatus: '切换凭证 {{name}} 的启用状态',
         enabled: '启用',
         ws: 'WS',
+        cooling: '冷却',
         priority: '优先级',
         actions: '操作',
       },
@@ -4696,6 +4697,9 @@ export const zhCN = {
         enrollment: {
           title: '节点接入凭证',
           description: '将凭证配置到待接入节点后即可建立连接。请妥善保存，关闭后需重新创建。',
+          nameStepDescription: '为该节点设置一个便于识别的名称，然后生成凭证。',
+          nameHint: '可选。最多 {{max}} 个字符。之后也可以重命名该节点。',
+          generate: '生成凭证',
           clientId: '客户端 ID',
           jwtLabel: '凭证',
           copyJwt: '复制凭证',
