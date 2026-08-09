@@ -6,6 +6,7 @@ export const en = {
     phaseBaseline: 'Phase 0 application baseline',
     cancel: 'Cancel',
     close: 'Close',
+    routeLoading: 'Loading page',
     common: {
       cancel: 'Cancel',
       enabled: 'Enabled',

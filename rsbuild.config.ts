@@ -68,7 +68,34 @@ export default defineConfig(({ command }) => {
     splitChunks: isDev
       ? false
       : {
-          preset: 'single-vendor',
+          // Not `single-vendor`: folding every dependency into one chunk made
+          // all three entries load the union of what any of them needed, and
+          // the panel ships inside a versioned backend release, so the
+          // cross-build cache reuse that preset optimises for never pays off.
+          // Letting Rspack split by usage costs ~190 KB more on disk and saves
+          // 47-106 KB gzipped on every entry.
+          preset: 'default',
+          // Charting and YAML are only reachable from lazy routes, but a
+          // node_modules group with `chunks: 'all'` would still hoist them into
+          // an initial chunk. Pinning them to async keeps them out of the
+          // entries: charts serve the dashboard and observability workbenches,
+          // YAML only the config workbench.
+          cacheGroups: {
+            charts: {
+              test: /[\\/]node_modules[\\/](recharts|victory-vendor|d3-[^\\/]+|decimal\.js-light)[\\/]/,
+              name: 'charts',
+              chunks: 'async',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            yaml: {
+              test: /[\\/]node_modules[\\/]yaml[\\/]/,
+              name: 'yaml',
+              chunks: 'async',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+          },
         },
     source: {
       entry: {

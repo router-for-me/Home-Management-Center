@@ -6,6 +6,7 @@ export const zhCN = {
     phaseBaseline: 'Phase 0 应用基线',
     cancel: '取消',
     close: '关闭',
+    routeLoading: '正在加载页面',
     common: {
       cancel: '取消',
       enabled: '已启用',

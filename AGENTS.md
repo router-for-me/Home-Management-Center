@@ -102,6 +102,8 @@ Do not translate provider IDs, model IDs, API field names, route paths, config k
 - Bulk action bars use `text` and `destructiveText`, the same family as row actions — not `outline` with a hand-written `text-destructive`.
 - Only render a hover drill-down affordance on a card that is actually navigable.
 - Below 40rem a table keeps only its identity column, its one most telling field, and actions; gate the `col`, `TableHead` and `TableCell` on one `useSecondaryColumns()` value. Three things are all required: hide the columns, drop the table min-width, and switch to `table-fixed` (an auto-layout table ignores a cell max-width and sizes to content). Give the identity column no width so it takes the remainder.
+- A table that holds a full page of records renders only the rows its viewport shows, through `useVirtualTableRows` and `TableSpacerRow`. What a long table costs is document size, not rendering, and CSS containment does not reduce it.
+- Virtualising needs `table-fixed` at every width and a width declared per column, taken from the widest locale. Keep the native `<table>`; the CSS-grid rewrite only buys variable row heights and drops the column system.
 - Verify a responsive claim by measuring at that width in a browser, not by reasoning about it.
 
 ## Editing Rules

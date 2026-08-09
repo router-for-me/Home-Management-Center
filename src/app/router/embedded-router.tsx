@@ -9,6 +9,9 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 
+import { RoutePending } from '@/components/shell/route-pending'
+import { shellScrollToTopSelectors } from '@/lib/shell-scroll'
+
 type RouterShellProps = {
   children: ReactNode
 }
@@ -56,7 +59,14 @@ export function EmbeddedRouterApp<TRouteTree extends AnyRoute>({
         queryClient,
       },
       defaultPreload: 'intent',
+      // Route components are code-split, so a navigation can wait on a chunk.
+      // 'intent' preloading hides that on hover, but a direct hash change or a
+      // cold link still needs something on screen.
+      defaultPendingComponent: RoutePending,
       scrollRestoration: true,
+      // The shells scroll an inner <main>, not the window; a fresh navigation
+      // has to rewind that container the way the window is rewound.
+      scrollToTopSelectors: shellScrollToTopSelectors,
     }),
   )
 

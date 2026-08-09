@@ -1,21 +1,75 @@
-import { Navigate, Outlet, createRootRoute, createRoute } from '@tanstack/react-router'
+import { Suspense } from 'react'
 
+import {
+  Navigate,
+  Outlet,
+  createRootRoute,
+  createRoute,
+  lazyRouteComponent,
+} from '@tanstack/react-router'
+
+import { RoutePending } from '@/components/shell/route-pending'
 import { RouteShell } from '@/components/shell/route-shell'
-import { AccessKeysWorkbenchPage } from '@/features/access-keys/access-keys-workbench-page'
-import { AdminConnectPage } from '@/features/access/admin-connect-page'
-import { BillingWorkbenchPage } from '@/features/billing/billing-workbench-page'
-import { CallDiagnosticsPage } from '@/features/call-diagnostics/call-diagnostics-page'
-import { ConfigWorkbenchPage } from '@/features/config/config-workbench-page'
 import { normalizeCredentialRouteSearch } from '@/features/credentials/credential-route'
-import { DashboardConsolePage } from '@/features/dashboard/dashboard-console-page'
-import { LogsWorkbenchPage } from '@/features/logs/logs-workbench-page'
-import { PluginsWorkbenchPage } from '@/features/plugins/plugins-workbench-page'
-import { SystemNodesWorkbenchPage } from '@/features/system-nodes/system-nodes-workbench-page'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
-import { UpstreamWorkbenchPage } from '@/features/upstream/upstream-workbench-page'
-import { UsageObservabilityPage } from '@/features/usage-observability/usage-observability-page'
 import { normalizeUsageRouteSearch } from '@/features/usage-observability/usage-route'
-import { UsersWorkbenchPage } from '@/features/users/users-workbench-page'
+
+// Every workbench is its own chunk. Loaded statically they all landed in the
+// management entry, so opening the dashboard also downloaded billing, config
+// and the plugin store. Search normalizers stay static: validateSearch runs
+// while the route tree is built, before any chunk could be fetched.
+const AccessKeysWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/access-keys/access-keys-workbench-page'),
+  'AccessKeysWorkbenchPage',
+)
+const AdminConnectPage = lazyRouteComponent(
+  () => import('@/features/access/admin-connect-page'),
+  'AdminConnectPage',
+)
+const BillingWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/billing/billing-workbench-page'),
+  'BillingWorkbenchPage',
+)
+const CallDiagnosticsPage = lazyRouteComponent(
+  () => import('@/features/call-diagnostics/call-diagnostics-page'),
+  'CallDiagnosticsPage',
+)
+const ConfigWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/config/config-workbench-page'),
+  'ConfigWorkbenchPage',
+)
+const DashboardConsolePage = lazyRouteComponent(
+  () => import('@/features/dashboard/dashboard-console-page'),
+  'DashboardConsolePage',
+)
+const LogsWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/logs/logs-workbench-page'),
+  'LogsWorkbenchPage',
+)
+const PluginsWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/plugins/plugins-workbench-page'),
+  'PluginsWorkbenchPage',
+)
+const SystemNodesWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/system-nodes/system-nodes-workbench-page'),
+  'SystemNodesWorkbenchPage',
+)
+const UsersWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/users/users-workbench-page'),
+  'UsersWorkbenchPage',
+)
+
+// These two routes read their own search params, so the route component stays
+// local and the page underneath is what gets split. Their loaders warm the
+// chunk so defaultPreload: 'intent' still prefetches on hover.
+const UpstreamWorkbenchPage = lazyRouteComponent(
+  () => import('@/features/upstream/upstream-workbench-page'),
+  'UpstreamWorkbenchPage',
+)
+const UsageObservabilityPage = lazyRouteComponent(
+  () => import('@/features/usage-observability/usage-observability-page'),
+  'UsageObservabilityPage',
+)
 
 const rootRoute = createRootRoute({
   component: ManagementRootRoute,
@@ -51,6 +105,7 @@ const upstreamRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/upstream',
   validateSearch: normalizeUpstreamRouteSearch,
+  loader: () => import('@/features/upstream/upstream-workbench-page'),
   component: ManagementUpstreamPage,
 })
 
@@ -58,23 +113,29 @@ function ManagementUpstreamPage() {
   const search = upstreamRoute.useSearch()
   const navigate = upstreamRoute.useNavigate()
   return (
-    <UpstreamWorkbenchPage
-      tab={search.tab}
-      initialCredentialId={search.credential}
-      initialSearch={search.q}
-      onTabChange={(tab) =>
-        void navigate({
-          search: (previous) => ({ ...previous, tab }),
-          replace: true,
-        })
-      }
-      onSearchChange={(q) =>
-        void navigate({
-          search: (previous) => ({ ...previous, credential: undefined, q: q.trim() || undefined }),
-          replace: true,
-        })
-      }
-    />
+    <Suspense fallback={<RoutePending />}>
+      <UpstreamWorkbenchPage
+        tab={search.tab}
+        initialCredentialId={search.credential}
+        initialSearch={search.q}
+        onTabChange={(tab) =>
+          void navigate({
+            search: (previous) => ({ ...previous, tab }),
+            replace: true,
+          })
+        }
+        onSearchChange={(q) =>
+          void navigate({
+            search: (previous) => ({
+              ...previous,
+              credential: undefined,
+              q: q.trim() || undefined,
+            }),
+            replace: true,
+          })
+        }
+      />
+    </Suspense>
   )
 }
 
@@ -150,6 +211,7 @@ const usageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/usage',
   validateSearch: normalizeUsageRouteSearch,
+  loader: () => import('@/features/usage-observability/usage-observability-page'),
   component: ManagementUsagePage,
 })
 
@@ -158,15 +220,17 @@ function ManagementUsagePage() {
   const navigate = usageRoute.useNavigate()
 
   return (
-    <UsageObservabilityPage
-      view={search.view}
-      onViewChange={(view) =>
-        void navigate({
-          search: (previous) => ({ ...previous, view }),
-          replace: true,
-        })
-      }
-    />
+    <Suspense fallback={<RoutePending />}>
+      <UsageObservabilityPage
+        view={search.view}
+        onViewChange={(view) =>
+          void navigate({
+            search: (previous) => ({ ...previous, view }),
+            replace: true,
+          })
+        }
+      />
+    </Suspense>
   )
 }
 

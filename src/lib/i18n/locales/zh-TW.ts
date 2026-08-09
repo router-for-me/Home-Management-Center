@@ -6,6 +6,7 @@ export const zhTW = {
     phaseBaseline: 'Phase 0 應用基線',
     cancel: '取消',
     close: '關閉',
+    routeLoading: '正在載入頁面',
     common: {
       cancel: '取消',
       enabled: '已啟用',

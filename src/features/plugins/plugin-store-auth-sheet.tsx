@@ -600,7 +600,7 @@ export function PluginStoreAuthSheet({
               onSave={saveRule}
             />
           ) : (
-            <DrawerScaffoldBody className="grid content-start gap-4 pb-6">
+            <DrawerScaffoldBody className="grid gap-4 pb-6">
               {auth.isPending ? (
                 <div className="grid gap-3">
                   <Skeleton className="h-24 rounded-md" />
