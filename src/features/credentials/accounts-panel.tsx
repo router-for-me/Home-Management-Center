@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  TimerReset,
   Trash2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -106,6 +107,8 @@ import {
   type CredentialOAuthProvider,
   type CredentialResource,
   type CredentialStatusFilter,
+  getCredentialCooldownId,
+  matchesCredentialBackendError,
   mergeCredentialConcurrencySummary,
 } from '@/lib/api/management/credentials'
 import { downloadBlob } from '@/lib/download'
@@ -389,11 +392,13 @@ function CredentialList({
   selectedResourceId,
   selectedResourceIds,
   mutating,
+  cooldownResetSupported,
   quotaAvailable,
   quotaLoading,
   quotaMap,
   emptyState,
   onClearFilters,
+  onClearCooldown,
   onDeleteResource,
   onDownloadResource,
   onOpenDrawer,
@@ -406,11 +411,13 @@ function CredentialList({
   selectedResourceId: string | null
   selectedResourceIds: Set<string>
   mutating: boolean
+  cooldownResetSupported: boolean
   quotaAvailable: boolean
   quotaLoading: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
+  onClearCooldown: (resource: CredentialResource) => void
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onOpenDrawer: (resource: CredentialResource, tab: CredentialDrawerTab) => void
@@ -658,6 +665,18 @@ function CredentialList({
                       disabled: mutating,
                       onSelect: () => onDownloadResource(resource),
                     },
+                    cooldownResetSupported && getCredentialCooldownId(resource) !== null
+                      ? {
+                          id: 'clear-cooldown',
+                          label: t('credentialsPage.actions.clearCooldown'),
+                          ariaLabel: t('credentialsPage.actions.clearCooldownFor', {
+                            name: displayName,
+                          }),
+                          icon: TimerReset,
+                          disabled: mutating,
+                          onSelect: () => onClearCooldown(resource),
+                        }
+                      : null,
                     {
                       id: 'delete',
                       label: t('credentialsPage.actions.delete'),
@@ -1002,6 +1021,27 @@ export function AccountsPanel({
       downloadBlob(result.blob, result.fileName)
       toast.success(t('credentialsPage.toast.downloaded'))
     } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleClearCooldown = async (resource: CredentialResource) => {
+    try {
+      const result = await workbench.clearCooldown(resource)
+      toast[result.cleared ? 'success' : 'info'](
+        result.cleared
+          ? t('credentialsPage.toast.cooldownCleared')
+          : t('credentialsPage.toast.cooldownNotActive'),
+      )
+    } catch (error) {
+      if (matchesCredentialBackendError(error, 503, 'cooldown_reset_unavailable')) {
+        toast.error(t('credentialsPage.toast.cooldownResetUnavailable'))
+        return
+      }
+      if (matchesCredentialBackendError(error, 404, 'credential_not_found')) {
+        toast.error(t('credentialsPage.toast.cooldownCredentialMissing'))
+        return
+      }
       toast.error(error instanceof Error ? error.message : String(error))
     }
   }
@@ -1376,11 +1416,13 @@ export function AccountsPanel({
             selectedResourceId={selectedResourceId}
             selectedResourceIds={selectedResourceIds}
             mutating={workbench.mutating}
+            cooldownResetSupported={workbench.credentialCooldownReset}
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
             quotaMap={resolvedQuotaMap}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
+            onClearCooldown={(resource) => void handleClearCooldown(resource)}
             onDeleteResource={(resource) => {
               handleDelete(resource)
             }}

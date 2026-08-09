@@ -10,6 +10,7 @@ import {
   type CredentialOAuthStartInput,
   type CredentialResource,
   type VertexImportInput,
+  clearCredentialCooldown,
   deleteCredentialResource,
   downloadCredentialResource,
   fetchCredentialConcurrencyPolicy,
@@ -100,6 +101,9 @@ export function useCredentialWorkbench() {
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
   const credentialConcurrencyLimits = useCapabilityStore(
     (state) => state.capabilities.credentialConcurrencyLimits,
+  )
+  const credentialCooldownReset = useCapabilityStore(
+    (state) => state.capabilities.credentialCooldownReset,
   )
   const queryKey = ['management-credentials', session.baseUrl, connectedAt]
 
@@ -200,6 +204,17 @@ export function useCredentialWorkbench() {
         ),
       })
     },
+  })
+
+  const clearCooldownMutation = useMutation({
+    mutationFn: async (resource: CredentialResource) => {
+      try {
+        return await clearCredentialCooldown(session, resource)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    onSuccess: invalidate,
   })
 
   const deleteMutation = useMutation({
@@ -310,6 +325,7 @@ export function useCredentialWorkbench() {
     checking,
     credentialInFlight,
     credentialConcurrencyLimits,
+    credentialCooldownReset,
     oauthProviders: getCredentialOAuthProviders(runtimeMode),
     snapshot: query.data,
     isPending: query.isPending,
@@ -329,6 +345,7 @@ export function useCredentialWorkbench() {
     },
     updateStatus: statusMutation.mutateAsync,
     updateMetadata: metadataMutation.mutateAsync,
+    clearCooldown: clearCooldownMutation.mutateAsync,
     deleteCredential: deleteMutation.mutateAsync,
     bulkUpdateStatus: bulkStatusMutation.mutateAsync,
     bulkDeleteCredentials: bulkDeleteMutation.mutateAsync,
@@ -350,9 +367,11 @@ export function useCredentialWorkbench() {
     oauthResult: oauthMutation.data ?? null,
     oauthStatus: oauthStatusMutation.data ?? null,
     vertexImportResult: vertexImportMutation.data ?? null,
+    clearCooldownPending: clearCooldownMutation.isPending,
     mutating:
       statusMutation.isPending ||
       metadataMutation.isPending ||
+      clearCooldownMutation.isPending ||
       deleteMutation.isPending ||
       bulkStatusMutation.isPending ||
       bulkDeleteMutation.isPending ||

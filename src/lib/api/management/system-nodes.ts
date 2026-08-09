@@ -10,6 +10,10 @@ export type SystemNodeResource = {
   id: string
   ip: string
   nodeId: string | null
+  nodeName: string | null
+  // Whether the runtime reports a `node_name` field at all; there is no
+  // capability bit for named nodes, so rename is feature-detected per record.
+  nodeNameSupported: boolean
   homeId: string | null
   homeIp: string | null
   homePort: number | null
@@ -363,6 +367,8 @@ function normalizeNodes(responseData: unknown): SystemNodeResource[] {
       id: `${homeKey}/${nodeKey}`,
       ip,
       nodeId,
+      nodeName: readString(record, 'node_name'),
+      nodeNameSupported: Object.hasOwn(record, 'node_name'),
       homeId,
       homeIp,
       homePort,
@@ -456,6 +462,8 @@ function normalizeTopologyCpas(responseData: unknown): SystemNodeResource[] {
       id: `${homeKey}/${nodeKey}`,
       ip,
       nodeId,
+      nodeName: readString(record, 'node_name'),
+      nodeNameSupported: Object.hasOwn(record, 'node_name'),
       homeId,
       homeIp,
       homePort,
@@ -668,6 +676,32 @@ export async function createCertificateClient(
   }
 }
 
+type CpaNodeRenameResult = {
+  nodeId: string | null
+  nodeName: string | null
+}
+
+// The name is keyed by the client certificate ID (`nodeId`). A trimmed non-empty
+// string sets the name; null clears it. The backend also trims and enforces the
+// 128-Unicode-character, no-control-character limit, so the caller should
+// pre-validate to surface a field error without a round trip.
+export async function renameCpaNode(
+  session: ManagementSessionInput,
+  nodeId: string,
+  nodeName: string | null,
+): Promise<CpaNodeRenameResult> {
+  const client = createManagementClient(session)
+  const response = await client.patch<unknown>(`/nodes/${encodeURIComponent(nodeId)}`, {
+    node_name: nodeName,
+  })
+  const record = toRecord(response.data)
+
+  return {
+    nodeId: readString(record, 'node_id') ?? nodeId,
+    nodeName: readString(record, 'node_name'),
+  }
+}
+
 export async function runManagementApiCall(
   session: ManagementSessionInput,
   input: ApiCallInput,
@@ -694,5 +728,13 @@ export async function runManagementApiCall(
 
 export function toSystemNodesApiError(error: unknown) {
   const apiError = toManagementApiError(error)
-  return new Error(apiError.message, { cause: error })
+  // Decorate the Error with the backend fields (status/backendCode/…) so callers
+  // can localize a specific failure, e.g. cpa_node_name_invalid from PATCH /nodes.
+  return Object.assign(new Error(apiError.message, { cause: error }), {
+    status: apiError.status,
+    code: apiError.code,
+    backendCode: apiError.backendCode,
+    retryable: apiError.retryable,
+    fieldErrors: apiError.fieldErrors,
+  })
 }

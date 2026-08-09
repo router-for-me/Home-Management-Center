@@ -40,6 +40,7 @@ const emptyCapabilities: CapabilityMap = {
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
+  credentialCooldownReset: false,
 }
 
 type CapabilityStatus = 'idle' | 'probing' | 'ready' | 'error'
