@@ -169,10 +169,6 @@ export const zhCN = {
         titleLine2Accent: '可控入口',
         titleLine2Suffix: '开始',
         description: '一个入口、一套规则，把模型适配、凭证分发和用量归属留给网关。',
-        adminPrimary: '进入管理控制台',
-        adminResume: '进入管理控制台',
-        userPrimary: '用户登录',
-        userWorkspace: '进入用户工作台',
         browseModels: '浏览模型目录',
       },
       providers: {

@@ -172,10 +172,6 @@ export const ru = {
         titleLine2Suffix: '',
         description:
           'Одна точка входа и единый набор правил, а адаптацию моделей, распределение учетных данных и учет использования берет на себя AI-gateway.',
-        adminPrimary: 'Открыть консоль администратора',
-        adminResume: 'Открыть консоль администратора',
-        userPrimary: 'Войти',
-        userWorkspace: 'Открыть workspace пользователя',
         browseModels: 'Открыть каталог моделей',
       },
       providers: {

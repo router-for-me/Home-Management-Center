@@ -172,10 +172,6 @@ export const en = {
         titleLine2Suffix: '',
         description:
           'One entry and one rule set, with model adaptation, credential distribution, and usage attribution handled by the gateway.',
-        adminPrimary: 'Open admin console',
-        adminResume: 'Open admin console',
-        userPrimary: 'Sign in',
-        userWorkspace: 'Open user workspace',
         browseModels: 'Browse the model catalog',
       },
       providers: {

@@ -169,10 +169,6 @@ export const zhTW = {
         titleLine2Accent: '可控入口',
         titleLine2Suffix: '開始',
         description: '一個入口、一套規則，把模型適配、憑證分發和用量歸屬留給閘道。',
-        adminPrimary: '進入管理控制台',
-        adminResume: '進入管理控制台',
-        userPrimary: '使用者登入',
-        userWorkspace: '進入使用者工作台',
         browseModels: '瀏覽模型目錄',
       },
       providers: {
