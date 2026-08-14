@@ -1,10 +1,6 @@
 export const en = {
   common: {
-    productName: 'Home Center',
     productShortName: 'Home Center',
-    productSubtitle: 'Commercial console',
-    phaseBaseline: 'Phase 0 application baseline',
-    cancel: 'Cancel',
     close: 'Close',
     routeLoading: 'Loading page',
     common: {
@@ -22,7 +18,6 @@ export const en = {
         'This client access key does not belong to a Home user account, so the record carries no username.',
     },
     actions: {
-      connect: 'Connect',
       manageConnection: 'Connection',
       copyFailed: 'Copy failed',
       customizeColumns: 'Customize columns',
@@ -32,10 +27,6 @@ export const en = {
     },
     language: {
       switch: 'Language',
-      simplifiedChinese: 'Simplified Chinese',
-      traditionalChinese: 'Traditional Chinese',
-      english: 'English',
-      russian: 'Russian',
     },
     theme: {
       switch: 'Switch theme',
@@ -55,7 +46,6 @@ export const en = {
       usage: 'Usage & Requests',
       diagnostics: 'Call Diagnostics',
       logs: 'Runtime Logs',
-      usageLogs: 'Observability Data',
       systemNodes: 'System Info',
     },
     navigationGroups: {
@@ -76,7 +66,6 @@ export const en = {
       usage: 'Usage analysis and request diagnostics',
       diagnostics: 'Call health and request logs',
       logs: 'Gateway runtime and request error logs',
-      usageLogs: 'Usage, diagnostics, logs',
       systemNodes: 'Runtime and diagnostics',
     },
     sidebar: {
@@ -85,16 +74,11 @@ export const en = {
       collapse: 'Collapse sidebar',
       expand: 'Expand sidebar',
       openMobile: 'Open navigation',
-      closeMobile: 'Close navigation',
       connectionStatus: {
         connected: 'Connected',
         disconnected: 'Not connected',
         error: 'Connection failed',
         checking: 'Checking…',
-        hint: 'Configure endpoint and management key',
-        errorHint: 'Check endpoint and management key',
-        runtime: 'Mode',
-        endpoint: 'Endpoint',
         connectedAction: 'Manage {{mode}} connection',
         disconnectedAction: 'Open connection management',
         errorAction: 'Review connection settings',
@@ -164,22 +148,15 @@ export const en = {
         models: 'Model catalog',
       },
       hero: {
-        title: 'Multi-model access starts with one controlled entry',
         titleLine1: 'Multi-model access',
-        titleLine2: 'starts with one controlled entry',
         titleLine2Prefix: 'starts with one ',
         titleLine2Accent: 'controlled entry',
         titleLine2Suffix: '',
         description:
           'One entry and one rule set, with model adaptation, credential distribution, and usage attribution handled by the gateway.',
-        adminPrimary: 'Open admin console',
-        adminResume: 'Open admin console',
-        userPrimary: 'Sign in',
-        userWorkspace: 'Open user workspace',
         browseModels: 'Browse the model catalog',
       },
       providers: {
-        title: 'Mainstream models, handled by one gateway',
         gateway: 'AI gateway',
         moreLabel: 'More models',
         ariaLabel: 'Mainstream model provider icons',
@@ -223,29 +200,6 @@ export const en = {
     },
     accessPortal: {
       shellSubtitle: 'Access entry',
-      eyebrow: 'Session entry',
-      title: 'Open Home Console',
-      description:
-        'Choose the workspace for the current session. Administrators connect the Management API; user accounts maintain only their own keys and security.',
-      admin: {
-        title: 'Admin session',
-        description:
-          'Connect the Management API to manage runtime config, model services, credential pools, users, and access scopes.',
-        available: 'Management key required',
-        connected: 'Connected',
-        action: 'Connect admin runtime',
-        resume: 'Open admin console',
-      },
-      user: {
-        title: 'User session',
-        description:
-          'Sign in to maintain personal client access keys, credit status, and account security.',
-        available: 'Account login',
-        authenticated: 'Signed in',
-        login: 'Sign in',
-        workspace: 'Open user workspace',
-        register: 'Create account',
-      },
     },
     adminAccess: {
       back: 'Back to entry',
@@ -289,7 +243,6 @@ export const en = {
       passkey: {
         description:
           'This account requires Passkey login. Complete the browser or system prompt to continue.',
-        pending: 'This account requires Passkey login.',
         action: 'Use Passkey',
       },
       validation: {
@@ -806,9 +759,6 @@ export const en = {
         delete: 'Delete',
         save: 'Save',
         copy: 'Copy',
-        copied: 'Copied',
-        enable: 'Enable',
-        disable: 'Disable',
         enabled: 'Enabled',
         disabled: 'Disabled',
         yes: 'Yes',
@@ -1012,8 +962,6 @@ export const en = {
           provider: 'Model provider',
           model: 'Model ID',
           scope: 'Rule scope',
-          serviceTier: 'Tier',
-          minInputTokens: 'Context lower bound',
           input: 'Input price',
           output: 'Output price',
           cacheRead: 'Cache read',
@@ -1116,14 +1064,9 @@ export const en = {
           custom: 'Custom lower bound',
         },
         validation: {
-          providerRequired: 'Provide a model provider.',
           modelRequired: 'Select a model provider and model ID.',
           priceInvalid: 'Prices must be numbers greater than or equal to 0.',
           minInputTokensInvalid: 'Enter a non-negative safe whole number.',
-        },
-        modelScopes: {
-          available: 'Runtime available',
-          static: 'Static catalog',
         },
 
         import: {
@@ -1137,43 +1080,24 @@ export const en = {
           reloadCandidates: 'Reload candidates',
           candidateFailedEmpty:
             'Candidate models could not be loaded. Reload candidates or check the Management API response.',
-          candidateIssueEmpty:
-            'Candidate model data is partial and no preview rows are available. Reload candidates before applying.',
-          catalogTitle: 'models.dev catalog',
-          catalogPending: 'Catalog not loaded yet.',
           catalogReady: 'Loaded {{count}} models at {{time}}.',
           catalogFailed: 'Failed to load models.dev catalog.',
-          reloadCatalog: 'Reload catalog',
           serverPreviewBadge: 'Server preview',
           legacyPreviewBadge: 'Compatibility preview',
-          serverPreviewLoading: 'Requesting a server-validated preview…',
-          serverPreviewReady: 'Server validated {{count}} rows at {{time}}.',
           serverPreviewFailed: 'The server preview could not be generated.',
           refreshServerPreview: 'Refresh preview',
-          retryServerPreview: 'Retry preview',
-          previewMetadata: 'Preview {{id}} · expires {{expires}} · atomic {{atomic}}',
-          sourceMetadata:
-            'models.dev snapshot {{version}} · {{url}} · fetched {{time}} · {{count}} models',
-          previewNoExpiry: 'not declared',
-          atomicYes: 'yes',
-          atomicNo: 'no',
           legacyPreviewWarning:
             'This backend does not provide server preview or transactional apply. Matching and writes use the compatibility path and cannot protect against concurrent price changes.',
-          nonAtomicWarning:
-            'The server reports that this apply is not atomic. A failure can leave part of the selected rows applied; review the operation result before retrying.',
           serverIssuesTitle: 'Server validation notes',
           previewInvalid: {
             expired: 'This server preview has expired. Refresh it before applying.',
             stale:
               'The pricing policy changed after this preview was generated. Refresh the preview before applying.',
-            conflict:
-              'Price rules changed after this preview was generated. Refresh to review the latest conflicts.',
           },
           policyTitle: 'Price generation policy',
           policyHint:
             'Multipliers convert official unit prices into Home absolute prices. This import writes only the service tier=* and min input tokens=0 base rule. Models with additional pricing dimensions are blocked to prevent incomplete prices.',
           defaultMultiplier: 'Default multiplier',
-          familyMultiplier: '{{family}} multiplier',
           overwriteMode: 'Existing rule handling',
           overwriteMissing: 'Create missing only',
           overwriteSync: 'Create missing + update source=sync',
@@ -1182,7 +1106,6 @@ export const en = {
           overwriteWarning:
             'This mode can overwrite {{count}} existing manual or default rules. Selected rows will require a second confirmation.',
           advancedPolicy: 'Advanced pricing policy',
-          resetPreferences: 'Reset saved preferences',
           showAdvancedPolicy: 'Expand advanced price generation',
           hideAdvancedPolicy: 'Collapse advanced price generation',
           modifiedBadge: 'Modified',
@@ -1238,8 +1161,6 @@ export const en = {
           includeZeroCost: 'Allow zero official prices',
           previewTitle: 'Preview and confirm',
           previewHint: 'Selected {{selected}} / selectable {{selectable}} / total {{total}}',
-          summaryTitle: 'Apply summary',
-          summarySelected: '{{count}} selected',
           summaryCreates: 'Create',
           summaryUpdatesSync: 'Update sync',
           summaryOverwrites: 'Overwrite',
@@ -1252,7 +1173,6 @@ export const en = {
           exportPreview: 'Export preview',
           searchPlaceholder: 'Search Home provider, model, or models.dev match',
           resolveMatchPlaceholder: 'Choose models.dev match',
-          resolveMatchAria: 'Choose the models.dev match for {{model}}',
           applyMatchOverride: 'Rebuild preview',
           loadingPreview: 'Loading preview…',
           emptyPreview: 'No candidate models to preview.',
@@ -1279,7 +1199,6 @@ export const en = {
             request: 'Request',
             source: 'Source',
             enabled: 'State',
-            note: 'Note',
           },
           status: {
             matched: 'Matched',
@@ -1378,8 +1297,6 @@ export const en = {
               description:
                 'The server rejected the expired preview. Refresh it before applying again.',
             },
-            operationId: 'Operation {{id}}',
-            idempotencyKey: 'Idempotency key {{id}}',
             status: 'Result',
             message: 'Message',
             rowStatus: {
@@ -1410,12 +1327,8 @@ export const en = {
             title: 'The previous apply result is unconfirmed',
             description:
               'The request for {{count}} rules may already have been processed. Do not create a new preview; retry the exact request with the same idempotency key to retrieve its single result.',
-            preview: 'Preview',
-            startedAt: 'First submitted',
-            idempotencyKey: 'Idempotency key',
             retry: 'Safely retry original request',
             discard: 'Discard recovery record',
-            lastError: 'Most recent request failed: {{error}}',
             unknownError: 'The frontend cannot confirm whether the backend completed this apply.',
             storageFailed:
               'The browser could not save a recovery record, so the apply was not sent. Check session storage permissions.',
@@ -1433,7 +1346,6 @@ export const en = {
       },
       toast: {
         copied: 'Copied.',
-        priceCreated: 'Model price created.',
         pricesCreated: '{{count}} model prices created.',
         priceUpdated: 'Model price updated.',
         deleted: 'Deleted.',
@@ -1493,10 +1405,6 @@ export const en = {
         },
       },
       header: {
-        eyebrow: 'Home overview',
-        title: 'Server runtime overview',
-        description:
-          'Check whether the connected gateway can serve model requests and review the runtime state of client keys, model services, and account credentials.',
         refresh: 'Sync data',
         syncing: 'Syncing',
         runtime: 'Connected server: {{mode}}',
@@ -1576,20 +1484,17 @@ export const en = {
         summary: '{{active}} active · {{quiet}} quiet · {{total}} total',
         unavailable: 'No key calls in this time range.',
         emptyTop: 'No key ranking yet.',
-        action: 'View key usage',
       },
       modelUsage: {
         title: 'Model usage distribution',
         summary: '{{count}} models were used in this time range',
         unavailable: 'No model calls in this time range.',
         emptyTop: 'No model ranking yet.',
-        action: 'View usage',
       },
       usageConsumptionTrend: {
         title: 'Overall consumption trend',
         description: 'Token consumption over the current usage time range.',
         summary: '{{buckets}} intervals · {{tokens}} tokens total',
-        action: 'View request usage',
         tooltip: {
           tokens: 'Token consumption',
           tokenValue: '{{value}} tokens',
@@ -1605,7 +1510,6 @@ export const en = {
         description: 'Request activity, success rate, and failures across the complete time range.',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
-        action: 'View diagnostics',
         range: '{{from}}–{{to}} · {{interval}}',
         matrixLabel: 'Request health activity matrix',
         bucketTitle: '{{label}}: {{requests}} requests · {{successRate}} success',
@@ -1623,34 +1527,8 @@ export const en = {
           unknown: 'Unknown',
         },
       },
-      quickActions: {
-        title: 'Shortcuts',
-        description: 'Open common management pages.',
-        providers: {
-          title: 'Model services',
-          description: 'Review model service keys and disabled entries.',
-        },
-        credentials: {
-          title: 'Account credentials',
-          description: 'Check OAuth and file-backed account state.',
-        },
-        accessKeys: {
-          title: 'Key management',
-          description: 'Manage keys used by clients to call the server API.',
-        },
-        config: {
-          title: 'System config',
-          description: 'Adjust routing, logging, and runtime settings.',
-        },
-        systemNodes: {
-          title: 'System Info',
-          description: 'Review versions, connection status, nodes, and diagnostics.',
-        },
-      },
       providers: {
         title: 'Model service access',
-        description: 'Review total, available, and disabled keys for each model service type.',
-        action: 'Manage services',
         emptyTitle: 'No model services configured',
         emptyDescription:
           'No model service keys are configured yet. Add a model service before the gateway can forward requests upstream.',
@@ -1673,8 +1551,6 @@ export const en = {
       },
       config: {
         title: 'Key switches',
-        description: 'Settings that affect logging, usage tracking, and request routing.',
-        action: 'Fix config',
       },
       configChecks: {
         requestLog: 'Request log',
@@ -1682,10 +1558,6 @@ export const en = {
         fileLogging: 'File logging',
         debug: 'Debug mode',
         routing: 'Routing strategy',
-      },
-      capabilities: {
-        title: 'Available features',
-        description: 'Management features supported by the connected service.',
       },
       capabilityNames: {
         nodes: 'Node topology',
@@ -1697,8 +1569,6 @@ export const en = {
       },
       credentials: {
         title: 'Account credential sources',
-        description:
-          'Account records grouped by how they are stored, including OAuth login and credential files.',
         empty: 'No account credential records yet.',
       },
       credentialSourceNames: {
@@ -1710,7 +1580,6 @@ export const en = {
       issues: {
         title: 'Data loading status',
         description: 'Shows whether dashboard data and runtime capabilities are fully available.',
-        empty: 'Dashboard data loaded completely.',
         requestFailed: 'Request failed: {{status}}',
         unavailableCapability: 'Not provided by this runtime',
       },
@@ -1947,7 +1816,6 @@ export const en = {
       },
       connectivity: {
         testModel: 'Test model',
-        testModelPlaceholder: 'Uses the first custom model when empty',
         testModelSearchPlaceholder: 'Search a model name or enter a model ID',
         testModelAutoOption: 'Auto: use the first custom model',
         testModelSearchEmpty: 'No matching models. You can still enter a model ID.',
@@ -2067,8 +1935,6 @@ export const en = {
         },
         common: {
           notAvailable: 'Not available',
-          yes: 'Yes',
-          no: 'No',
         },
         window: {
           labels: {
@@ -2153,9 +2019,7 @@ export const en = {
       actions: {
         addCredential: 'Add credential',
         detail: 'View',
-        upload: 'Upload JSON',
         save: 'Save metadata',
-        viewQuota: 'View quota',
         viewModels: 'View models',
         reloadModels: 'Reload',
         download: 'Download',
@@ -2188,10 +2052,7 @@ export const en = {
         },
       },
       oauth: {
-        title: 'OAuth login',
         startLogin: 'Generate authorization link',
-        showAdvanced: 'Show advanced options',
-        hideAdvanced: 'Hide advanced options',
         authorizationLinkTitle: 'Authorization link generated',
         authorizationLinkDescription:
           'Copy the link into the right browser or account profile before authorizing. Open it here only when this browser is the intended account environment.',
@@ -2385,7 +2246,6 @@ export const en = {
         note: 'Note',
       },
       concurrency: {
-        current: 'Current',
         observed: 'Observed',
         admitted: 'Admitted',
         limit: 'Limit',
@@ -2440,7 +2300,6 @@ export const en = {
         modelPlaceholder: 'Model ID',
         modelInputLabel: 'Model ID for row {{index}}',
         modelLimitInputLabel: 'Concurrency limit for model row {{index}}',
-        removeModel: 'Remove model limit',
         removeModelAtIndex: 'Remove model limit row {{index}}',
         noModelLimits: 'No model limits configured.',
         contractInvalid:
@@ -2503,13 +2362,8 @@ export const en = {
           'Reading client access keys and related ownership metadata from the Management API.',
       },
       header: {
-        eyebrow: 'Client access control',
         title: 'Client access keys',
-        description:
-          'Manage the keys that clients use to call the server API. These are separate from model service keys.',
         total: '{{count}} keys configured',
-        accepted: 'Accepted by proxy runtime',
-        updatedAt: 'Last synced: {{time}}',
       },
       actions: {
         refresh: 'Sync data',
@@ -2521,7 +2375,8 @@ export const en = {
         edit: 'Edit',
         delete: 'Delete',
         copy: 'Copy',
-        copyIdentifier: 'Copy identifier {{identifier}}',
+        copyKey: 'Copy key {{key}}',
+        copyIdentifier: 'Copy identifier',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
@@ -2534,11 +2389,10 @@ export const en = {
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
-        identity: 'Identifier / key',
+        identity: 'Name / key',
         identifierTooltip:
-          'The stable identifier links the same access key across usage, billing, and request records.',
+          'The display name is an editable label and does not affect authentication. The stable identifier (api-key-N) survives renames and key rotations, and links the same key across usage, billing, and request records.',
         identifierUnavailable: 'No stable identifier',
-        key: 'Key',
         owner: 'Owner',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2547,7 +2401,6 @@ export const en = {
         length: 'Length',
         status: 'Status',
         actions: 'Actions',
-        prefixSuffix: '{{prefix}}…{{suffix}}',
       },
       status: {
         accepted: 'Accepted',
@@ -2565,7 +2418,9 @@ export const en = {
         title: 'Key detail',
         empty: 'Select a key or create a new one.',
         secret: 'Secret value',
+        noName: 'No display name',
         fields: {
+          name: 'Display name',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',
@@ -2576,16 +2431,19 @@ export const en = {
       },
       form: {
         createEyebrow: 'Create access key',
-        editEyebrow: 'Edit access key',
         createTitle: 'New downstream key',
         editTitle: 'Update downstream key',
         keyValue: 'Key value',
+        displayName: 'Display name',
+        displayNamePlaceholder: 'e.g. Production key',
+        displayNameHint:
+          'Optional, up to {{max}} characters. Renaming does not change the key value, owner, or scopes.',
         validation: {
           required: 'Key value is required.',
+          displayNameTooLong: 'The display name must not exceed {{max}} characters.',
         },
       },
       replace: {
-        eyebrow: 'Full replacement',
         title: 'Replace all access keys',
         description:
           'This uses PUT /api-keys and replaces the entire downstream key list. Enter one key per line.',
@@ -2632,22 +2490,13 @@ export const en = {
           'Reading users, client key ownership, credential scopes, and model scopes from the Management API.',
       },
       header: {
-        eyebrow: 'Users and access',
         title: 'Users & Access',
-        description:
-          'Manage users, client key ownership, credential scopes, and model scopes from the Home Management API.',
-        total: '{{count}} users',
         users: '{{count}} users',
-        activeUsers: '{{count}} active users',
-        keys: '{{count}} client keys',
-        assignedKeys: '{{count}} assigned keys',
         unassignedKeys: '{{count}} unassigned keys',
-        updatedAt: 'Last synced: {{time}}',
       },
       actions: {
         refresh: 'Sync data',
         syncing: 'Syncing',
-        new: 'New user',
         newUser: 'New user',
         newKey: 'New key',
         newCredentialScope: 'New credential scope',
@@ -2666,14 +2515,10 @@ export const en = {
       status: {
         active: 'Active',
         deleted: 'Deleted',
-        notAvailable: 'Not available',
         notReturned: 'Not returned',
         notDeleted: 'Not deleted',
       },
       list: {
-        title: 'Users',
-        description: 'Review users, client key ownership, and assigned access scopes.',
-        filterPlaceholder: 'Filter users or keys',
         empty: 'No users match the current filter.',
         user: 'User',
         status: 'Status',
@@ -2703,7 +2548,6 @@ export const en = {
           'Unlimited mode is on: the stored balance is preserved but not enforced.',
         timezone: 'Timezone',
         timezoneHint: 'IANA timezone used by calendar windows.',
-        noGroups: 'No selectable scopes have been created yet.',
         noCredentialGroups: 'No credential scopes have been created yet.',
         noModelGroups: 'No model scopes have been created yet.',
         validation: {
@@ -2902,19 +2746,13 @@ export const en = {
             'Operations are submitted one user at a time, and each user receives a separate balance record.',
         },
         form: {
-          user: 'User',
-          userPlaceholder: 'Select user',
           target: 'Target',
           targetCount: '{{count}} users',
           operation: 'Operation type',
-          current: 'Current balance',
-          after: 'Balance after',
           currentTotal: 'Current balance total',
           afterTotal: 'Balance total after',
           batchHint:
             'The same amount and note will be used for each user, with separate records on the backend.',
-          negativeHint:
-            'The balance will become negative. Home allows negative balances, but confirm this is intended.',
           negativeTargetHint:
             '{{count}} users will have negative balances after this deduction. Home allows negative balances, but confirm this is intended.',
           amount: 'Amount',
@@ -2925,7 +2763,6 @@ export const en = {
         },
         validation: {
           targetRequired: 'Select at least one operable user.',
-          userRequired: 'Select a user.',
           amountRequired: 'Amount must be greater than 0.',
           noteRequired: 'Deduction requires a note.',
         },
@@ -2942,11 +2779,8 @@ export const en = {
             'Requests will be submitted for each selected user. Confirm the user count, per-user amount, and balance totals.',
           user: 'User',
           users: 'Users',
-          amount: 'Amount change',
           amountPerUser: 'Amount per user',
           totalAmount: 'Total change',
-          current: 'Current balance',
-          after: 'Balance after',
           currentTotal: 'Current balance total',
           afterTotal: 'Balance total after',
           note: 'Note',
@@ -2963,7 +2797,6 @@ export const en = {
       },
       detail: {
         title: 'User detail',
-        empty: 'Select a user to inspect details.',
         passwordStored: 'Password stored',
         userId: 'User ID: {{id}}',
         sections: {
@@ -3070,7 +2903,6 @@ export const en = {
       },
       status: {
         clean: 'No unsaved changes',
-        unsaved: 'Unsaved changes',
         visualChangeCount: '{{count}} visual changes',
         enabled: 'Enabled',
         disabled: 'Disabled',
@@ -3381,7 +3213,6 @@ export const en = {
         anyProtocol: 'Any protocol',
         advancedMatchers: 'Advanced matchers',
         hideAdvancedMatchers: 'Hide advanced',
-        advancedMatcherCount: '{{count}} items',
         advancedMatchersSummary:
           'Further narrow model matching by source protocol, headers, or payload conditions.',
         fromProtocol: 'Source protocol',
@@ -3536,27 +3367,14 @@ export const en = {
         unsupportedStructure:
           'This config contains a structure that is not supported by the visual editor.',
         emptyRows: 'No rules configured.',
-        addProvider: 'Add provider',
-        addChannel: 'Add channel',
         addAlias: 'Add alias',
-        addMapping: 'Add mapping',
-        addUpstreamKey: 'Add upstream key',
-        removeChannel: 'Remove channel',
-        channelRuleCount: '{{count}} rules',
         columns: {
-          provider: 'Model provider',
-          models: 'Model IDs',
           channel: 'Channel',
           name: 'Upstream model',
           alias: 'Client alias',
           fork: 'Fork',
           forceMapping: 'force-mapping',
-          from: 'Requested model',
-          to: 'Upstream model',
-          regex: 'Regex',
           actions: 'Actions',
-          upstreamApiKey: 'Upstream API key',
-          clientKeys: 'Client keys',
         },
         columnDescriptions: {
           channel: 'Auth channel key, such as claude, gemini, or codex.',
@@ -3565,29 +3383,14 @@ export const en = {
           fork: 'Advanced option. The API only defines this as fork alias behavior; leave it off unless you need it.',
           forceMapping:
             'When enabled, response model fields are written back as the mapped upstream model name.',
-          from: 'Amp model name in the client request. When Regex is enabled, this is treated as a regular expression.',
-          to: 'Target upstream model name after a match.',
-          regex:
-            'Off matches the full model name. On treats the requested model as a regular expression.',
-        },
-        modelMappings: {
-          description:
-            'Rewrite Amp CLI upstream models by requested model. Enable Regex only when pattern matching is needed.',
         },
         placeholders: {
-          provider: 'claude',
-          models: 'claude-opus-4.5, claude-sonnet-4',
           channel: 'claude',
           name: 'claude-sonnet-4',
           alias: 'sonnet',
-          from: 'claude-opus-4.5',
-          to: 'claude-sonnet-4',
-          upstreamApiKey: 'upstream-key',
-          clientKeys: 'client-key-1, client-key-2',
         },
       },
       oauthExcluded: {
-        title: 'OAuth model disable list',
         channelLabel: 'Auth channel',
         reloadModels: 'Reload models',
         searchPlaceholder: 'Search model ID, name, or owner',
@@ -3687,17 +3490,9 @@ export const en = {
         auto: 'Auto refresh',
       },
       status: {
-        running: {
-          live: 'Live refresh active',
-          auto: 'Auto refresh active',
-        },
         paused: {
           live: 'Live refresh paused',
           auto: 'Auto refresh paused',
-        },
-        off: {
-          live: 'Live refresh off',
-          auto: 'Auto refresh off',
         },
         unavailable: {
           live: 'Live refresh unavailable',
@@ -3783,7 +3578,6 @@ export const en = {
           clientKey: 'Client access key',
           credentialId: 'Credential / auth index',
         },
-        requestIdPlaceholder: 'Request ID',
         customFrom: 'Start time',
         customTo: 'End time',
         eventType: 'Event type',
@@ -4029,16 +3823,12 @@ export const en = {
         retry: 'Retry',
       },
       header: {
-        title: 'Observability Data',
-        description:
-          'Review request usage, call diagnostics, runtime logs, and downloadable log files.',
         runtime: 'Runtime: {{mode}}',
         updatedAt: 'Last synced: {{time}}',
       },
       actions: {
         refresh: 'Sync data',
         syncing: 'Syncing',
-        exportCsv: 'Export CSV',
         exportFilteredCsv: 'Export',
         exportUnsupported: 'Export unavailable',
         clearLogs: 'Clear logs',
@@ -4051,7 +3841,6 @@ export const en = {
         usageOverview: 'Usage overview',
         usageRecords: 'Usage records',
         usageAggregates: 'Aggregates',
-        usageExport: 'Export',
         usageProviderHealth: 'Provider health',
         usageCredentialHealth: 'Credential health',
         usageRealtime: 'Realtime',
@@ -4076,49 +3865,6 @@ export const en = {
           complete: 'Complete',
           unclassified: 'Unclassified',
           inconsistent: 'Inconsistent',
-        },
-      },
-      unavailable: {
-        title: 'This runtime does not expose observability routes',
-        description:
-          '{{mode}} does not expose usage, diagnostics, or runtime log routes. The page keeps capability state visible without inventing missing data.',
-      },
-      verdict: {
-        ready: {
-          title: 'Observability data is ready',
-          badge: 'Operational',
-          description:
-            'The runtime returned usage, diagnostics, or log capabilities for request-level analysis and investigation.',
-        },
-        disabled: {
-          title: 'Usage statistics are disabled',
-          badge: 'Disabled',
-          description:
-            'The runtime exposes usage routes, but usage-statistics-enabled is disabled in config. Enable it before expecting persistent request usage aggregation.',
-        },
-        partial: {
-          title: 'Usage data synced partially',
-          badge: 'Partial',
-          description:
-            'The page continues to show loaded usage facts. Review the failed scopes before making a full assessment.',
-        },
-        legacy: {
-          title: 'Only legacy API key usage is available',
-          badge: 'Legacy scope',
-          description:
-            '{{mode}} only returned the older API key usage route. Tokens, cost, latency, and execution credential attribution are not shown as usage facts.',
-        },
-        logsOnly: {
-          title: 'Only log routes are available',
-          badge: 'Logs only',
-          description:
-            '{{mode}} did not return structured usage routes. Use runtime logs and error files for investigation.',
-        },
-        unsupported: {
-          title: 'This runtime does not expose usage routes',
-          badge: 'Unsupported',
-          description:
-            '{{mode}} does not expose usage, diagnostics, or runtime log routes. Capability state remains visible until backend observability APIs are added.',
         },
       },
       issues: {
@@ -4149,26 +3895,14 @@ export const en = {
         credentialType: 'Credential type',
         homeIp: 'Home node',
         endpoint: 'Endpoint',
-        executorType: 'Executor type',
         statusCode: 'Status code',
-        requestId: 'Request ID',
-        user: 'User',
-        clientKey: 'Client key',
-        credentialId: 'Credential ID',
-        authIndex: 'Auth index',
         minLatencyMs: 'Min latency',
         maxLatencyMs: 'Max latency',
         minAmount: 'Min spend',
         maxAmount: 'Max spend',
-        sort: 'Sort',
         advanced: 'Advanced filters',
         hideAdvanced: 'Hide advanced filters',
         searchPlaceholder: 'Search request / user / model',
-        requestIdPlaceholder: 'Request ID',
-        userPlaceholder: 'User, user ID, or IP',
-        clientKeyPlaceholder: 'Client key or label',
-        credentialIdPlaceholder: 'Credential ID or name',
-        authIndexPlaceholder: 'Auth index',
         minLatencyPlaceholder: 'Min latency ms',
         maxLatencyPlaceholder: 'Max latency ms',
         minAmountPlaceholder: 'Min spend',
@@ -4181,7 +3915,6 @@ export const en = {
         anyCredentialType: 'All credential types',
         anyHomeIp: 'All Home nodes',
         anyEndpoint: 'All endpoints',
-        anyExecutorType: 'All executors',
         anyStatusCode: 'All status codes',
         ranges: {
           last4h: 'Last 4 hours',
@@ -4302,15 +4035,10 @@ export const en = {
       rankings: {
         users: 'User ranking',
         clientKeys: 'Client key ranking',
-        credentials: 'Credential ranking',
         models: 'Model ranking',
-        providers: 'Provider ranking',
-        errors: 'Error ranking',
-        topN: 'Top 5',
         viewDetail: 'View all',
         viewDetailLabel: 'View full ranking',
         hideDetail: 'Hide',
-        drilldownTitle: 'Aggregate drill-down',
         drawerTitle: '{{group}} ranking details',
         drawerDescription:
           'Review the full ranking for the current filters, with spend, request, cost-efficiency, and quality metrics.',
@@ -4384,7 +4112,6 @@ export const en = {
       },
       requestLogs: {
         title: 'Request log files',
-        range: '{{start}}-{{end}} of {{total}}',
         searchPlaceholder: 'Search request ID, model, provider, or file',
         emptyTitle: 'No request log files',
         emptyDescription: 'No request logs match the current search.',
@@ -4521,7 +4248,6 @@ export const en = {
           window: 'Window',
         },
         quotaModes: {
-          current: 'Current',
           estimated: 'Estimated',
         },
         statuses: {
@@ -4602,34 +4328,6 @@ export const en = {
           unknown: 'Unknown',
         },
       },
-      summary: {
-        keys: 'Usage keys',
-        keysDetail: '{{count}} recent request windows',
-        requests: 'Request count',
-        requestsDetail: '{{success}} success / {{failed}} failed',
-        logs: 'Runtime logs',
-        logsDetail: '{{count}} error log files',
-      },
-      usage: {
-        title: 'API key usage',
-        description:
-          'Groups successful and failed requests by model provider, upstream Base URL, and API key.',
-        unavailableTitle: 'API key usage is unavailable',
-        unavailable: 'The API key usage route is not exposed.',
-        emptyTitle: 'No API key usage',
-        empty: 'No API key usage records in this range.',
-        provider: 'Model provider',
-        baseUrl: 'Base URL',
-        key: 'Key',
-        success: 'Success',
-        failed: 'Failed',
-        recentWindows: 'Recent windows',
-      },
-      operations: {
-        title: 'Logs and investigation tools',
-        description:
-          'Runtime logs and error logs help investigate request flow, runtime state, and failed responses.',
-      },
       logs: {
         title: 'Runtime logs',
         unavailableTitle: 'Runtime logs are unavailable',
@@ -4650,14 +4348,10 @@ export const en = {
           request: 'Request ID',
           homeIp: 'Home node',
           clientIp: 'Client IP',
-          line: 'Log line',
           summary: 'Summary',
           actions: 'Actions',
         },
         filters: {
-          homeIp: 'Home IP',
-          clientIp: 'Client IP',
-          requestId: 'Request ID',
           level: 'Log level',
           searchBy: 'Search by',
           searchPlaceholder: 'Enter {{field}}',
@@ -4668,9 +4362,6 @@ export const en = {
           after: 'Start time',
           before: 'End time',
           clear: 'Clear filters',
-          homeIpPlaceholder: 'Home IP',
-          clientIpPlaceholder: 'Client IP',
-          requestIdPlaceholder: 'Request ID',
           searchFields: {
             requestId: 'Request ID',
             homeIp: 'Home IP',
@@ -4705,7 +4396,6 @@ export const en = {
         unavailable: 'The error log file route is not exposed.',
         emptyTitle: 'No error log files',
         empty: 'No error log files in this range.',
-        meta: '{{size}} bytes · {{time}}',
         searchPlaceholder: 'Search log file name, press Enter',
         columns: {
           name: 'Log',
@@ -4745,7 +4435,6 @@ export const en = {
         retry: 'Retry',
       },
       header: {
-        title: 'Runtime & Diagnostics',
         runtime: 'Runtime: {{mode}}',
         probedAt: 'Capabilities checked {{time}}',
         updatedAt: 'Last synced: {{time}}',
@@ -4781,7 +4470,6 @@ export const en = {
             'Key diagnostic routes did not return usable data. Check the Management API, management key, and runtime diagnostic capabilities.',
         },
         facts: {
-          config: 'Config summary: {{status}}',
           version: 'Version info: {{status}}',
           nodes: 'Node records: {{count}}',
           nodesCluster: 'Node records: {{count}} CPA / {{homeCount}} Home',
@@ -4810,9 +4498,6 @@ export const en = {
       status: {
         enabled: 'Enabled',
         disabled: 'Disabled',
-        connected: 'Connected',
-        healthy: 'Healthy',
-        unhealthy: 'Unhealthy',
         partial: 'Partial data',
         notAvailable: 'N/A',
         unknown: 'Unknown',
@@ -4837,13 +4522,8 @@ export const en = {
         title: 'Home / CPA topology',
         addNode: 'Add node',
         unavailable: 'The current {{runtime}} runtime does not expose the node query route.',
-        empty: 'No node connection records yet.',
         emptySupported: 'The node route is available, but there are no connection records yet.',
-        homeSectionTitle: 'Home nodes',
         homeRecordsStatus: '{{count}} Home',
-        homeUnsupported: 'No first-class Home node list yet.',
-        cpaSectionTitle: 'CPA nodes grouped by Home',
-        cpaGroupStatus: '{{count}} Home groups',
         cpaRecordsStatus: '{{count}} CPA',
         noCpaInHome: 'This Home has no CPA connection records yet.',
         unknownHome: 'Unknown Home',
@@ -4854,14 +4534,11 @@ export const en = {
           homeRole: 'Home role',
           cpaIp: 'CPA node IP',
           nodeId: 'CPA node ID',
-          servingHome: 'Serving Home',
           connectedTime: 'Connected time',
           connectedSince: 'Connected since',
           lastSeen: 'Last seen',
           clientCount: 'Clients',
           cpaCount: 'CPA count',
-          healthyCpa: 'Healthy CPA',
-          health: 'Health',
           nodeName: 'CPA node name',
         },
         rename: {
@@ -4937,7 +4614,6 @@ export const en = {
         version: 'Version',
         latestVersion: 'Latest: {{version}}',
         endpoint: 'Endpoint',
-        endpointDetail: 'Current management address',
         masterHome: 'Master: {{home}}',
         homes: 'Home',
         homesHealthy: '{{healthy}} / {{total}} healthy',
@@ -4948,8 +4624,6 @@ export const en = {
         attention: 'Attention',
         attentionDetail: 'Topology needs review',
         attentionClear: 'No attention items',
-        nodes: 'Nodes',
-        nodesAvailable: 'Node route is available',
         nodesEmpty: 'Node route is available, no connection records yet',
         nodesConnected: '{{count}} nodes returned',
         nodesClusterConnected: '{{cpaCount}} CPA nodes across {{homeCount}} Home nodes',
@@ -4958,8 +4632,6 @@ export const en = {
         config: 'Config',
         configAvailable: 'Summary loaded',
         configUnavailable: 'Summary unavailable',
-        apiCall: 'API diagnostics',
-        apiCallDetail: 'Use /api-call to verify upstream connectivity',
       },
       toast: {
         apiCallComplete: 'Diagnostic request completed.',
@@ -5307,66 +4979,6 @@ export const en = {
         globalDisabled: 'Plugins are globally disabled, so the installed plugin is not active yet.',
         reportPending: 'Plugin config changed, but node report status is still pending.',
         deletePending: 'Delete task was created, but node reports have not fully converged yet.',
-      },
-    },
-    placeholder: {
-      phase: 'Phase 0 scaffold',
-      dashboard: {
-        title: 'Dashboard',
-        description:
-          'The commercial console homepage will aggregate runtime status, provider coverage, credentials, access keys, nodes, and version signals.',
-        itemOne:
-          'Read GET /config, GET /latest-version, GET /auth-files, provider GET routes, and GET /nodes when available.',
-        itemTwo: 'Render capability-aware overview states for CPA, Home runtime, and Home cluster.',
-      },
-      providers: {
-        title: 'Providers',
-        description:
-          'Provider keys will be managed as a workbench with provider grouping, tables, drawers, model definitions, and adapter-normalized identifiers.',
-        itemOne: 'Cover Gemini, Claude, Codex, Vertex, and OpenAI-compatible provider routes.',
-        itemTwo:
-          'Normalize auth-index, auth_index, id, uuid, disabled, and per-provider field differences through adapters.',
-      },
-      credentials: {
-        title: 'Credentials',
-        description:
-          'OAuth and file-backed credentials will be handled as a resource workspace with status toggles, metadata editing, downloads, uploads, and OAuth handoff.',
-        itemOne:
-          'Use GET /auth-files plus status, fields, upload, download, models, OAuth, and Vertex import routes.',
-        itemTwo:
-          'Handle file, memory, and db sources without assuming local file paths in cluster mode.',
-      },
-      accessKeys: {
-        title: 'Access Keys',
-        description:
-          'Client-facing API keys will be managed separately from upstream provider keys, with masked display and focused create, edit, delete flows.',
-        itemOne: 'Use GET, POST, PUT, PATCH, and DELETE /api-keys.',
-        itemTwo: 'Do not assume server-side metadata beyond the documented key array.',
-      },
-      config: {
-        title: 'Config',
-        description:
-          'Configuration uses a single visual workspace for supported runtime settings, with guarded save and reload flows.',
-        itemOne:
-          'Use GET /config, simple leaf routes, and adapter-contained config snapshot updates only where no leaf route exists.',
-        itemTwo: 'Keep the product UI on the single visual editing path.',
-      },
-      usageLogs: {
-        title: 'Observability Data',
-        description:
-          'Usage, call diagnostics, and runtime log pages will degrade cleanly when Home cluster does not expose the corresponding routes.',
-        itemOne:
-          'Use GET /api-key-usage, GET /logs, DELETE /logs, and request error log routes when available.',
-        itemTwo:
-          'Render unavailable states instead of treating missing cluster routes as page failures.',
-      },
-      systemNodes: {
-        title: 'System Info',
-        description:
-          'System information will expose runtime version, connection status, node connectivity, selected diagnostics, and guarded management API tools.',
-        itemOne:
-          'Use GET /nodes, GET /latest-version, GET /config, leaf routes, and guarded POST /api-call.',
-        itemTwo: 'Only expose high-privilege diagnostic calls with explicit UI warnings.',
       },
     },
   },

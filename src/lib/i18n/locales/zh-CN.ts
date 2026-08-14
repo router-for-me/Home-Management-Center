@@ -1,10 +1,6 @@
 export const zhCN = {
   common: {
-    productName: 'Home Center',
     productShortName: 'Home Center',
-    productSubtitle: '商业化控制台',
-    phaseBaseline: 'Phase 0 应用基线',
-    cancel: '取消',
     close: '关闭',
     routeLoading: '正在加载页面',
     common: {
@@ -21,7 +17,6 @@ export const zhCN = {
       userNotBoundHint: '该客户端访问密钥未归属任何 Home 用户账号,因此这条记录没有用户名。',
     },
     actions: {
-      connect: '连接',
       manageConnection: '连接管理',
       copyFailed: '复制失败',
       customizeColumns: '自定义列',
@@ -31,10 +26,6 @@ export const zhCN = {
     },
     language: {
       switch: '语言',
-      simplifiedChinese: '简体中文',
-      traditionalChinese: '繁体中文',
-      english: '英文',
-      russian: '俄语',
     },
     theme: {
       switch: '切换主题',
@@ -54,7 +45,6 @@ export const zhCN = {
       usage: '用量与请求',
       diagnostics: '调用诊断',
       logs: '运行日志',
-      usageLogs: '观测数据',
       systemNodes: '系统信息',
     },
     navigationGroups: {
@@ -75,7 +65,6 @@ export const zhCN = {
       usage: '用量分析与请求排障',
       diagnostics: '调用健康与请求日志',
       logs: '运行与请求错误日志',
-      usageLogs: '用量、诊断、日志',
       systemNodes: '运行与诊断信息',
     },
     sidebar: {
@@ -84,16 +73,11 @@ export const zhCN = {
       collapse: '收起侧边栏',
       expand: '展开侧边栏',
       openMobile: '打开导航',
-      closeMobile: '关闭导航',
       connectionStatus: {
         connected: '已连接',
         disconnected: '未连接',
         error: '连接失败',
         checking: '检测中…',
-        hint: '配置服务地址和 management key',
-        errorHint: '检查服务地址和 management key',
-        runtime: '模式',
-        endpoint: 'Endpoint',
         connectedAction: '管理 {{mode}} 连接',
         disconnectedAction: '打开连接管理',
         errorAction: '检查连接配置',
@@ -162,21 +146,14 @@ export const zhCN = {
         models: '模型目录',
       },
       hero: {
-        title: '多模型访问，从一个可控入口开始',
         titleLine1: '多模型访问',
-        titleLine2: '从一个可控入口开始',
         titleLine2Prefix: '从一个',
         titleLine2Accent: '可控入口',
         titleLine2Suffix: '开始',
         description: '一个入口、一套规则，把模型适配、凭证分发和用量归属留给网关。',
-        adminPrimary: '进入管理控制台',
-        adminResume: '进入管理控制台',
-        userPrimary: '用户登录',
-        userWorkspace: '进入用户工作台',
         browseModels: '浏览模型目录',
       },
       providers: {
-        title: '主流模型，由同一个网关处理',
         gateway: 'AI 网关',
         moreLabel: '更多模型',
         ariaLabel: '主流模型提供商图标',
@@ -217,27 +194,6 @@ export const zhCN = {
     },
     accessPortal: {
       shellSubtitle: '访问入口',
-      eyebrow: '会话入口',
-      title: '进入 Home 控制台',
-      description:
-        '根据会话类型进入对应工作区。管理员连接 Management API；用户账号只维护自己的访问密钥和安全设置。',
-      admin: {
-        title: '管理会话',
-        description: '连接 Management API 后管理运行时配置、模型服务、凭证池、用户与访问范围。',
-        available: '需要 management key',
-        connected: '已连接',
-        action: '连接管理端',
-        resume: '进入管理控制台',
-      },
-      user: {
-        title: '用户会话',
-        description: '登录 Home 用户账号，维护个人客户端访问密钥、点数状态和账号安全。',
-        available: '账号登录',
-        authenticated: '已登录',
-        login: '登录',
-        workspace: '进入用户工作台',
-        register: '注册账号',
-      },
     },
     adminAccess: {
       back: '返回入口选择',
@@ -280,7 +236,6 @@ export const zhCN = {
       },
       passkey: {
         description: '此账号需要使用 Passkey 登录。请使用浏览器或系统提示完成验证。',
-        pending: '此账号需要 Passkey 登录。',
         action: '使用 Passkey 登录',
       },
       validation: {
@@ -776,9 +731,6 @@ export const zhCN = {
         delete: '删除',
         save: '保存',
         copy: '复制',
-        copied: '已复制',
-        enable: '启用',
-        disable: '停用',
         enabled: '已启用',
         disabled: '已停用',
         yes: '是',
@@ -974,8 +926,6 @@ export const zhCN = {
           provider: '模型供应商',
           model: '模型 ID',
           scope: '规则范围',
-          serviceTier: 'Tier',
-          minInputTokens: '上下文下界',
           input: '输入价格',
           output: '输出价格',
           cacheRead: '缓存读取',
@@ -1072,14 +1022,9 @@ export const zhCN = {
           custom: '自定义下界',
         },
         validation: {
-          providerRequired: '必须提供模型供应商。',
           modelRequired: '必须选择模型供应商和模型 ID。',
           priceInvalid: '价格必须是大于或等于 0 的数字。',
           minInputTokensInvalid: '请输入非负且安全的整数。',
-        },
-        modelScopes: {
-          available: '运行时可用',
-          static: '静态目录',
         },
 
         import: {
@@ -1092,40 +1037,23 @@ export const zhCN = {
           reloadCandidates: '重新加载候选模型',
           candidateFailedEmpty:
             '候选模型无法加载。请重新加载候选模型，或检查 Management API 响应。',
-          candidateIssueEmpty: '候选模型数据不完整，当前没有可预览行。应用前请先重新加载候选模型。',
-          catalogTitle: 'models.dev 目录',
-          catalogPending: '目录尚未加载。',
           catalogReady: '已加载 {{count}} 个模型（{{time}}）。',
           catalogFailed: '加载 models.dev 目录失败。',
-          reloadCatalog: '重新加载目录',
           serverPreviewBadge: '服务端预览',
           legacyPreviewBadge: '兼容预览',
-          serverPreviewLoading: '正在请求服务端校验预览…',
-          serverPreviewReady: '服务端已于 {{time}} 校验 {{count}} 行。',
           serverPreviewFailed: '无法生成服务端预览。',
           refreshServerPreview: '刷新预览',
-          retryServerPreview: '重试预览',
-          previewMetadata: '预览 {{id}} · 过期时间 {{expires}} · 原子执行 {{atomic}}',
-          sourceMetadata:
-            'models.dev 快照 {{version}} · {{url}} · 抓取时间 {{time}} · {{count}} 个模型',
-          previewNoExpiry: '未声明',
-          atomicYes: '是',
-          atomicNo: '否',
           legacyPreviewWarning:
             '当前后端不提供服务端预览和事务应用。匹配与写入使用兼容路径，无法防止并发价格变更。',
-          nonAtomicWarning:
-            '服务端声明本次应用不是原子操作。失败时可能只有部分行生效，请先核对操作结果再重试。',
           serverIssuesTitle: '服务端校验提示',
           previewInvalid: {
             expired: '服务端预览已过期，请刷新后再应用。',
             stale: '生成预览后定价策略发生了变化，请刷新预览后再应用。',
-            conflict: '生成预览后价格规则发生了变化，请刷新并重新检查冲突。',
           },
           policyTitle: '价格生成策略',
           policyHint:
             '倍率会把官方单价转换成 Home 绝对价格。当前导入仅写入 service tier=*、min input tokens=0 的基础规则；包含额外计价维度的模型会被阻止，避免写入不完整价格。',
           defaultMultiplier: '默认倍率',
-          familyMultiplier: '{{family}} 倍率',
           overwriteMode: '已有规则处理',
           overwriteMissing: '只创建缺失规则',
           overwriteSync: '创建缺失 + 更新 source=sync',
@@ -1134,7 +1062,6 @@ export const zhCN = {
           overwriteWarning:
             '该模式可能覆盖 {{count}} 条手动或默认规则。选中相关行后会要求二次确认。',
           advancedPolicy: '高级定价策略',
-          resetPreferences: '重置已保存偏好',
           showAdvancedPolicy: '展开高级价格生成策略',
           hideAdvancedPolicy: '收起高级价格生成策略',
           modifiedBadge: '已修改',
@@ -1188,8 +1115,6 @@ export const zhCN = {
           includeZeroCost: '允许官方价为 0',
           previewTitle: '预览并确认',
           previewHint: '已选 {{selected}} / 可选 {{selectable}} / 总计 {{total}}',
-          summaryTitle: '应用摘要',
-          summarySelected: '已选 {{count}} 条',
           summaryCreates: '创建',
           summaryUpdatesSync: '更新 sync',
           summaryOverwrites: '覆盖',
@@ -1201,7 +1126,6 @@ export const zhCN = {
           exportPreview: '导出预览',
           searchPlaceholder: '搜索 Home provider、model 或 models.dev 匹配',
           resolveMatchPlaceholder: '选择 models.dev 匹配',
-          resolveMatchAria: '为 {{model}} 选择 models.dev 匹配',
           applyMatchOverride: '重新生成预览',
           loadingPreview: '正在加载预览…',
           emptyPreview: '没有可预览的候选模型。',
@@ -1228,7 +1152,6 @@ export const zhCN = {
             request: '请求',
             source: '来源',
             enabled: '状态',
-            note: '备注',
           },
           status: {
             matched: '已匹配',
@@ -1317,8 +1240,6 @@ export const zhCN = {
               title: '预览已过期',
               description: '服务端拒绝了过期预览，请刷新后再应用。',
             },
-            operationId: '操作 {{id}}',
-            idempotencyKey: '幂等键 {{id}}',
             status: '结果',
             message: '信息',
             rowStatus: {
@@ -1349,12 +1270,8 @@ export const zhCN = {
             title: '上次应用结果尚未确认',
             description:
               '针对 {{count}} 条规则的请求可能已经由后端处理。不要创建新预览；请使用相同幂等键安全重试以取得唯一结果。',
-            preview: '预览',
-            startedAt: '首次提交',
-            idempotencyKey: '幂等键',
             retry: '安全重试原请求',
             discard: '放弃恢复记录',
-            lastError: '最近一次请求失败：{{error}}',
             unknownError: '无法确认后端是否已经完成本次应用。',
             storageFailed: '浏览器无法保存恢复记录，因此本次应用未发送。请检查会话存储权限。',
             discardTitle: '放弃未确认的应用记录？',
@@ -1370,7 +1287,6 @@ export const zhCN = {
       },
       toast: {
         copied: '已复制。',
-        priceCreated: '模型价格已创建。',
         pricesCreated: '已创建 {{count}} 条模型价格。',
         priceUpdated: '模型价格已更新。',
         deleted: '已删除。',
@@ -1429,10 +1345,6 @@ export const zhCN = {
         },
       },
       header: {
-        eyebrow: '首页总览',
-        title: '服务运行概览',
-        description:
-          '查看当前连接的网关是否可处理模型请求，以及客户端密钥、模型服务和账号凭证的运行状态。',
         refresh: '同步数据',
         syncing: '同步中',
         runtime: '已连接服务端：{{mode}}',
@@ -1512,20 +1424,17 @@ export const zhCN = {
         summary: '{{active}} 个活跃 · {{quiet}} 个静默 · 共 {{total}} 个',
         unavailable: '当前时间段暂无密钥调用。',
         emptyTop: '暂无密钥排行。',
-        action: '查看密钥用量',
       },
       modelUsage: {
         title: '模型使用分布',
         summary: '{{count}} 个模型在当前时间段有调用',
         unavailable: '当前时间段暂无模型调用。',
         emptyTop: '暂无模型排行。',
-        action: '查看用量',
       },
       usageConsumptionTrend: {
         title: '整体消耗趋势',
         description: '按当前用量时间段展示 Token 消耗变化。',
         summary: '{{buckets}} 个时段 · 总消耗 {{tokens}} Token',
-        action: '查看请求用量',
         tooltip: {
           tokens: 'Token 消耗',
           tokenValue: '{{value}} Token',
@@ -1540,7 +1449,6 @@ export const zhCN = {
         description: '按完整时间范围展示请求活跃度、成功率和失败分布。',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
-        action: '查看调用诊断',
         range: '{{from}}–{{to}} · {{interval}}',
         matrixLabel: '请求健康度时间点阵',
         bucketTitle: '{{label}}：{{requests}} 次请求 · {{successRate}} 成功率',
@@ -1558,34 +1466,8 @@ export const zhCN = {
           unknown: '未知',
         },
       },
-      quickActions: {
-        title: '常用入口',
-        description: '快速进入常用管理页面。',
-        providers: {
-          title: '模型服务',
-          description: '查看各类模型服务密钥和禁用项。',
-        },
-        credentials: {
-          title: '账号凭证',
-          description: '查看 OAuth 和文件凭证状态。',
-        },
-        accessKeys: {
-          title: '密钥管理',
-          description: '管理客户端调用服务端接口使用的密钥。',
-        },
-        config: {
-          title: '系统配置',
-          description: '调整路由、日志和运行时设置。',
-        },
-        systemNodes: {
-          title: '系统信息',
-          description: '查看版本、连接状态、节点和诊断入口。',
-        },
-      },
       providers: {
         title: '模型服务接入',
-        description: '查看各类模型服务的密钥总数、可用数量和已禁用数量。',
-        action: '管理模型服务',
         emptyTitle: '尚未配置模型服务',
         emptyDescription: '当前还没有模型服务密钥。添加模型服务后，网关才能把请求转发到上游模型。',
         emptySupportedProviders: '支持 Gemini、Claude、Codex、xAI、Vertex、OpenAI 兼容服务。',
@@ -1605,8 +1487,6 @@ export const zhCN = {
       },
       config: {
         title: '关键开关',
-        description: '影响日志记录、用量统计和请求路由的配置。',
-        action: '处理配置',
       },
       configChecks: {
         requestLog: '请求日志',
@@ -1614,10 +1494,6 @@ export const zhCN = {
         fileLogging: '文件日志',
         debug: 'Debug 模式',
         routing: '路由策略',
-      },
-      capabilities: {
-        title: '可用功能',
-        description: '当前连接的服务支持哪些管理功能。',
       },
       capabilityNames: {
         nodes: '节点拓扑',
@@ -1629,7 +1505,6 @@ export const zhCN = {
       },
       credentials: {
         title: '账号凭证来源',
-        description: '按凭证保存方式统计账号记录，包括 OAuth 登录和文件凭证。',
         empty: '当前还没有账号凭证记录。',
       },
       credentialSourceNames: {
@@ -1641,7 +1516,6 @@ export const zhCN = {
       issues: {
         title: '数据加载状态',
         description: '显示首页数据和运行时能力是否完整可用。',
-        empty: '首页数据已完整加载。',
         requestFailed: '请求失败：{{status}}',
         unavailableCapability: '当前运行时未提供',
       },
@@ -1871,7 +1745,6 @@ export const zhCN = {
       },
       connectivity: {
         testModel: '测试模型',
-        testModelPlaceholder: '留空则使用第一个自定义模型',
         testModelSearchPlaceholder: '搜索模型名，或直接输入模型 ID',
         testModelAutoOption: '自动：使用第一个自定义模型',
         testModelSearchEmpty: '没有匹配模型，仍可直接输入模型 ID。',
@@ -1984,8 +1857,6 @@ export const zhCN = {
         },
         common: {
           notAvailable: '暂无',
-          yes: '是',
-          no: '否',
         },
         window: {
           labels: {
@@ -2068,9 +1939,7 @@ export const zhCN = {
       actions: {
         addCredential: '添加凭证',
         detail: '查看',
-        upload: '上传 JSON',
         save: '保存元数据',
-        viewQuota: '查看额度',
         viewModels: '查看模型',
         reloadModels: '重新加载',
         download: '下载',
@@ -2102,10 +1971,7 @@ export const zhCN = {
         },
       },
       oauth: {
-        title: 'OAuth 登录',
         startLogin: '生成授权链接',
-        showAdvanced: '显示高级选项',
-        hideAdvanced: '收起高级选项',
         authorizationLinkTitle: '授权链接已生成',
         authorizationLinkDescription:
           '先复制链接到合适的浏览器或账号环境中完成授权。只有确认要使用当前浏览器时，再手动打开链接。',
@@ -2297,7 +2163,6 @@ export const zhCN = {
         note: '备注',
       },
       concurrency: {
-        current: '当前',
         observed: '观测在途',
         admitted: '已准入',
         limit: '上限',
@@ -2343,7 +2208,6 @@ export const zhCN = {
         modelPlaceholder: '模型 ID',
         modelInputLabel: '第 {{index}} 行模型 ID',
         modelLimitInputLabel: '第 {{index}} 行模型并发上限',
-        removeModel: '移除模型上限',
         removeModelAtIndex: '移除第 {{index}} 行模型上限',
         noModelLimits: '未配置模型上限。',
         contractInvalid: 'Home 已声明支持并发策略，但当前策略无法被安全读取。现有上限不会被修改。',
@@ -2402,12 +2266,8 @@ export const zhCN = {
         description: '正在从 Management API 读取客户端访问密钥及相关归属信息。',
       },
       header: {
-        eyebrow: '客户端访问控制',
         title: '客户端访问密钥',
-        description: '管理客户端调用服务端接口时使用的访问密钥。它们独立于模型服务密钥，不要混用。',
         total: '已配置 {{count}} 个密钥',
-        accepted: '由服务端接受',
-        updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步数据',
@@ -2419,7 +2279,8 @@ export const zhCN = {
         edit: '编辑',
         delete: '删除',
         copy: '复制',
-        copyIdentifier: '复制标识 {{identifier}}',
+        copyKey: '复制密钥 {{key}}',
+        copyIdentifier: '复制标识',
         reveal: '显示',
         hide: '隐藏',
         generate: '生成密钥',
@@ -2431,10 +2292,10 @@ export const zhCN = {
         filterPlaceholder: '筛选密钥',
         empty: '当前筛选条件下没有访问密钥。',
         index: '序号',
-        identity: '标识 / 密钥',
-        identifierTooltip: '稳定标识用于关联用量、计费和请求记录中的同一个访问密钥。',
+        identity: '名称 / 密钥',
+        identifierTooltip:
+          '名称仅用于识别，可随时修改，不影响鉴权；稳定标识（api-key-N）在改名和轮换后保持不变，用于在用量、计费、请求记录中关联同一密钥。',
         identifierUnavailable: '无稳定标识',
-        key: '密钥',
         owner: '所属用户',
         credentialScope: '凭证范围',
         modelScope: '模型范围',
@@ -2443,7 +2304,6 @@ export const zhCN = {
         length: '长度',
         status: '状态',
         actions: '操作',
-        prefixSuffix: '{{prefix}}…{{suffix}}',
       },
       status: {
         accepted: '已接受',
@@ -2461,7 +2321,9 @@ export const zhCN = {
         title: '密钥详情',
         empty: '选择一个密钥，或创建新密钥。',
         secret: '密钥值',
+        noName: '未设置展示名称',
         fields: {
+          name: '展示名称',
           prefix: '前缀',
           suffix: '后缀',
           length: '长度',
@@ -2472,16 +2334,18 @@ export const zhCN = {
       },
       form: {
         createEyebrow: '创建访问密钥',
-        editEyebrow: '编辑访问密钥',
         createTitle: '新的客户端访问密钥',
         editTitle: '更新客户端访问密钥',
         keyValue: '密钥值',
+        displayName: '展示名称',
+        displayNamePlaceholder: '例如：生产环境密钥',
+        displayNameHint: '可选，最多 {{max}} 个字符。重命名不会更改密钥值、所属用户或访问范围。',
         validation: {
           required: '必须填写密钥值。',
+          displayNameTooLong: '展示名称不能超过 {{max}} 个字符。',
         },
       },
       replace: {
-        eyebrow: '完整替换',
         title: '替换全部访问密钥',
         description: '这里使用 PUT /api-keys，会替换整个客户端访问密钥列表。每行输入一个密钥。',
         warning:
@@ -2525,22 +2389,13 @@ export const zhCN = {
         description: '正在从 Management API 读取用户、客户端密钥归属、凭证范围和模型范围。',
       },
       header: {
-        eyebrow: '用户与访问',
         title: '用户与访问',
-        description:
-          '管理用户、客户端密钥归属、凭证范围和模型范围，保持 Home 基础多用户闭环清晰可控。',
-        total: '共 {{count}} 个用户',
         users: '{{count}} 个用户',
-        activeUsers: '{{count}} 个活跃用户',
-        keys: '{{count}} 个客户端密钥',
-        assignedKeys: '{{count}} 个已分配密钥',
         unassignedKeys: '{{count}} 个未分配密钥',
-        updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步数据',
         syncing: '同步中',
-        new: '新建用户',
         newUser: '新建用户',
         newKey: '新建密钥',
         newCredentialScope: '新建凭证范围',
@@ -2559,14 +2414,10 @@ export const zhCN = {
       status: {
         active: '活跃',
         deleted: '已删除',
-        notAvailable: '不可用',
         notReturned: '未返回',
         notDeleted: '未删除',
       },
       list: {
-        title: '用户列表',
-        description: '查看用户、客户端密钥归属和已分配的访问范围。',
-        filterPlaceholder: '筛选用户或密钥',
         empty: '当前筛选条件下没有用户。',
         user: '用户',
         status: '状态',
@@ -2594,7 +2445,6 @@ export const zhCN = {
         creditsUnlimitedCreditsHint: '不限量模式已开启：余额会被保留但不参与校验。',
         timezone: '时区',
         timezoneHint: '日历（calendar）窗口使用的 IANA 时区。',
-        noGroups: '尚未创建可选范围。',
         noCredentialGroups: '尚未创建凭证范围。',
         noModelGroups: '尚未创建模型范围。',
         validation: {
@@ -2787,17 +2637,12 @@ export const zhCN = {
           batchDescription: '对已选用户逐个提交操作，每个用户都会生成独立余额流水。',
         },
         form: {
-          user: '用户',
-          userPlaceholder: '选择用户',
           target: '操作对象',
           targetCount: '{{count}} 个用户',
           operation: '操作类型',
-          current: '当前余额',
-          after: '操作后余额',
           currentTotal: '当前余额合计',
           afterTotal: '操作后余额合计',
           batchHint: '批量操作使用同一金额和备注，后端会按用户分别记录。',
-          negativeHint: '扣减后余额会变为负数。Home 允许负数余额，但请确认这是预期操作。',
           negativeTargetHint:
             '本次扣减后将有 {{count}} 个用户余额为负数。Home 允许负数余额，但请确认这是预期操作。',
           amount: '金额',
@@ -2808,7 +2653,6 @@ export const zhCN = {
         },
         validation: {
           targetRequired: '必须选择至少一个可操作用户。',
-          userRequired: '必须选择一个用户。',
           amountRequired: '金额必须大于 0。',
           noteRequired: '扣减必须填写备注。',
         },
@@ -2822,11 +2666,8 @@ export const zhCN = {
           batchDescription: '将对已选用户逐个提交请求。请确认用户数量、单人金额和余额合计。',
           user: '用户',
           users: '用户数量',
-          amount: '金额变化',
           amountPerUser: '单人金额',
           totalAmount: '总变化',
-          current: '当前余额',
-          after: '操作后余额',
           currentTotal: '当前余额合计',
           afterTotal: '操作后余额合计',
           note: '备注',
@@ -2843,7 +2684,6 @@ export const zhCN = {
       },
       detail: {
         title: '用户详情',
-        empty: '选择一个用户查看详情。',
         passwordStored: '已设置密码',
         userId: '用户 ID：{{id}}',
         sections: {
@@ -2943,7 +2783,6 @@ export const zhCN = {
       },
       status: {
         clean: '无未保存修改',
-        unsaved: '有未保存修改',
         visualChangeCount: '{{count}} 项可视化变更',
         enabled: '已启用',
         disabled: '已关闭',
@@ -3237,7 +3076,6 @@ export const zhCN = {
         anyProtocol: '任意协议',
         advancedMatchers: '高级匹配条件',
         hideAdvancedMatchers: '收起高级条件',
-        advancedMatcherCount: '{{count}} 项',
         advancedMatchersSummary: '按来源协议、Header 或 payload 条件进一步限定模型匹配。',
         fromProtocol: '来源协议',
         fromProtocolHelp: '请求被转换前的协议；留空表示不限制来源协议。',
@@ -3383,27 +3221,14 @@ export const zhCN = {
         remove: '移除',
         unsupportedStructure: '当前配置包含暂不支持可视化编辑的结构。',
         emptyRows: '当前没有规则。',
-        addProvider: '添加供应商',
-        addChannel: '添加 Channel',
         addAlias: '添加别名',
-        addMapping: '添加映射',
-        addUpstreamKey: '添加上游密钥',
-        removeChannel: '移除通道',
-        channelRuleCount: '{{count}} 条规则',
         columns: {
-          provider: '模型供应商',
-          models: '模型 ID',
           channel: 'Channel',
           name: '上游模型名',
           alias: '客户端别名',
           fork: 'Fork',
           forceMapping: 'force-mapping',
-          from: '请求模型',
-          to: '上游模型',
-          regex: 'Regex',
           actions: '操作',
-          upstreamApiKey: '上游 API key',
-          clientKeys: '客户端密钥',
         },
         columnDescriptions: {
           channel: '认证通道 key，例如 claude、gemini、codex。',
@@ -3411,27 +3236,14 @@ export const zhCN = {
           alias: '客户端请求时可使用的模型别名。',
           fork: '高级选项。API 文档仅定义为 fork alias 行为；不确定时保持关闭。',
           forceMapping: '开启后响应中的 model 字段回写为映射后的上游模型名。',
-          from: '客户端请求中的 Amp 模型名。启用 Regex 后按正则表达式匹配。',
-          to: '匹配后转发到上游的目标模型名。',
-          regex: '关闭时按完整模型名匹配；开启时将请求模型作为正则表达式处理。',
-        },
-        modelMappings: {
-          description: '按请求模型改写 Amp CLI 的上游模型。Regex 只在需要模式匹配时启用。',
         },
         placeholders: {
-          provider: 'claude',
-          models: 'claude-opus-4.5, claude-sonnet-4',
           channel: 'claude',
           name: 'claude-sonnet-4',
           alias: 'sonnet',
-          from: 'claude-opus-4.5',
-          to: 'claude-sonnet-4',
-          upstreamApiKey: 'upstream-key',
-          clientKeys: 'client-key-1, client-key-2',
         },
       },
       oauthExcluded: {
-        title: 'OAuth 模型禁用',
         channelLabel: '认证通道',
         reloadModels: '重新加载模型',
         searchPlaceholder: '搜索模型 ID、名称或 owner',
@@ -3525,17 +3337,9 @@ export const zhCN = {
         auto: '自动刷新',
       },
       status: {
-        running: {
-          live: '实时刷新中',
-          auto: '自动刷新中',
-        },
         paused: {
           live: '实时已暂停',
           auto: '自动刷新已暂停',
-        },
-        off: {
-          live: '实时已关闭',
-          auto: '自动刷新已关闭',
         },
         unavailable: {
           live: '实时刷新不可用',
@@ -3618,7 +3422,6 @@ export const zhCN = {
           clientKey: '客户端访问密钥',
           credentialId: '凭证 / Auth Index',
         },
-        requestIdPlaceholder: 'Request ID',
         customFrom: '开始时间',
         customTo: '结束时间',
         eventType: '事件类型',
@@ -3850,15 +3653,12 @@ export const zhCN = {
         retry: '重试',
       },
       header: {
-        title: '观测数据',
-        description: '查看请求用量、调用诊断、运行日志和可下载的日志文件。',
         runtime: '运行时：{{mode}}',
         updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步数据',
         syncing: '同步中',
-        exportCsv: '导出 CSV',
         exportFilteredCsv: '导出',
         exportUnsupported: '暂不支持导出',
         clearLogs: '清空日志',
@@ -3871,7 +3671,6 @@ export const zhCN = {
         usageOverview: '用量总览',
         usageRecords: '请求明细',
         usageAggregates: '聚合排行',
-        usageExport: '导出',
         usageProviderHealth: '供应商健康',
         usageCredentialHealth: '凭证健康',
         usageRealtime: '实时快照',
@@ -3895,46 +3694,6 @@ export const zhCN = {
           complete: '完整',
           unclassified: '未分类',
           inconsistent: '不一致',
-        },
-      },
-      unavailable: {
-        title: '当前运行时不提供观测接口',
-        description:
-          '{{mode}} 未暴露用量、诊断或运行日志接口。页面会保留能力状态，但不会伪造缺失数据。',
-      },
-      verdict: {
-        ready: {
-          title: '观测数据可用',
-          badge: '可排障',
-          description: '运行时已返回用量、诊断或日志能力，可进行请求级分析与排障。',
-        },
-        disabled: {
-          title: '用量统计未启用',
-          badge: '未启用',
-          description:
-            '当前运行时已开放用量接口，但配置中的 usage-statistics-enabled 为关闭状态。启用后才能持续聚合请求用量。',
-        },
-        partial: {
-          title: '用量数据部分同步失败',
-          badge: '部分失败',
-          description: '页面会继续展示已加载的用量事实，请先查看失败范围再做完整判断。',
-        },
-        legacy: {
-          title: '仅可使用旧版 API Key 用量',
-          badge: '旧版口径',
-          description:
-            '{{mode}} 只返回旧版 API key usage。tokens、cost、latency 和执行凭证归因不会被展示为用量事实。',
-        },
-        logsOnly: {
-          title: '仅可使用运行日志接口',
-          badge: '仅日志',
-          description: '{{mode}} 未返回结构化用量接口，请使用运行日志和错误文件进行排查。',
-        },
-        unsupported: {
-          title: '当前运行时不提供用量路由',
-          badge: '不支持',
-          description:
-            '{{mode}} 未开放用量、诊断或运行日志相关接口。页面保留能力状态，等待后端补齐观测接口。',
         },
       },
       issues: {
@@ -3965,26 +3724,14 @@ export const zhCN = {
         credentialType: '凭证类型',
         homeIp: 'Home 节点',
         endpoint: 'Endpoint',
-        executorType: '执行器类型',
         statusCode: '状态码',
-        requestId: 'Request ID',
-        user: '用户',
-        clientKey: '客户端密钥',
-        credentialId: '凭证 ID',
-        authIndex: 'Auth Index',
         minLatencyMs: '最低延迟',
         maxLatencyMs: '最高延迟',
         minAmount: '最低消费',
         maxAmount: '最高消费',
-        sort: '排序',
         advanced: '高级筛选',
         hideAdvanced: '收起高级筛选',
         searchPlaceholder: '搜索请求 / 用户 / 模型',
-        requestIdPlaceholder: 'Request ID',
-        userPlaceholder: '用户、用户 ID 或 IP',
-        clientKeyPlaceholder: '客户端密钥或标签',
-        credentialIdPlaceholder: '凭证 ID 或名称',
-        authIndexPlaceholder: 'Auth Index',
         minLatencyPlaceholder: '最低延迟 ms',
         maxLatencyPlaceholder: '最高延迟 ms',
         minAmountPlaceholder: '最低消费',
@@ -3997,7 +3744,6 @@ export const zhCN = {
         anyCredentialType: '全部凭证类型',
         anyHomeIp: '全部 Home 节点',
         anyEndpoint: '全部 Endpoint',
-        anyExecutorType: '全部执行器',
         anyStatusCode: '全部状态码',
         ranges: {
           last4h: '最近 4 小时',
@@ -4117,15 +3863,10 @@ export const zhCN = {
       rankings: {
         users: '用户排行榜',
         clientKeys: '客户端密钥排行榜',
-        credentials: '执行凭证排行榜',
         models: '模型排行榜',
-        providers: '供应商排行榜',
-        errors: '错误排行榜',
-        topN: '前 5 名',
         viewDetail: '查看全部',
         viewDetailLabel: '查看完整排行',
         hideDetail: '收起',
-        drilldownTitle: '聚合排行明细',
         drawerTitle: '{{group}}排行明细',
         drawerDescription: '按当前筛选查看完整排行，表格展示消费、请求、成本效率与质量指标。',
         groupBy: '排行维度',
@@ -4198,7 +3939,6 @@ export const zhCN = {
       },
       requestLogs: {
         title: '请求日志文件',
-        range: '{{start}}-{{end}} / 共 {{total}}',
         searchPlaceholder: '搜索 Request ID、模型、供应商或文件名',
         emptyTitle: '暂无请求日志文件',
         emptyDescription: '当前搜索没有匹配的请求日志。',
@@ -4335,7 +4075,6 @@ export const zhCN = {
           window: '窗口',
         },
         quotaModes: {
-          current: '当前',
           estimated: '估算',
         },
         statuses: {
@@ -4416,32 +4155,6 @@ export const zhCN = {
           unknown: '未知',
         },
       },
-      summary: {
-        keys: '用量密钥',
-        keysDetail: '{{count}} 个最近请求窗口',
-        requests: '请求计数',
-        requestsDetail: '{{success}} 成功 / {{failed}} 失败',
-        logs: '运行日志',
-        logsDetail: '{{count}} 个错误日志文件',
-      },
-      usage: {
-        title: 'API Key 用量',
-        description: '按模型供应商、上游 Base URL 和 API key 汇总成功与失败请求数。',
-        unavailableTitle: '此运行时不提供 API Key 用量',
-        unavailable: 'API Key 用量接口未开放。',
-        emptyTitle: '暂无 API Key 用量',
-        empty: '当前范围没有 API Key 用量记录。',
-        provider: '模型供应商',
-        baseUrl: 'Base URL',
-        key: '密钥',
-        success: '成功',
-        failed: '失败',
-        recentWindows: '最近窗口',
-      },
-      operations: {
-        title: '日志与排查工具',
-        description: '运行日志和错误日志用于排查请求链路、运行状态和异常响应。',
-      },
       logs: {
         title: '运行日志',
         unavailableTitle: '此运行时不提供运行日志',
@@ -4462,14 +4175,10 @@ export const zhCN = {
           request: 'Request ID',
           homeIp: 'Home 节点',
           clientIp: 'Client IP',
-          line: '日志内容',
           summary: '日志摘要',
           actions: '操作',
         },
         filters: {
-          homeIp: 'Home IP',
-          clientIp: 'Client IP',
-          requestId: 'Request ID',
           level: '日志级别',
           searchBy: '搜索维度',
           searchPlaceholder: '输入{{field}}',
@@ -4480,9 +4189,6 @@ export const zhCN = {
           after: '开始时间',
           before: '结束时间',
           clear: '清除筛选',
-          homeIpPlaceholder: 'Home IP',
-          clientIpPlaceholder: 'Client IP',
-          requestIdPlaceholder: 'Request ID',
           searchFields: {
             requestId: 'Request ID',
             homeIp: 'Home IP',
@@ -4517,7 +4223,6 @@ export const zhCN = {
         unavailable: '错误日志文件接口未开放。',
         emptyTitle: '暂无错误日志文件',
         empty: '当前没有错误日志文件。',
-        meta: '{{size}} 字节 · {{time}}',
         searchPlaceholder: '搜索日志文件名，按 Enter',
         columns: {
           name: '日志',
@@ -4557,7 +4262,6 @@ export const zhCN = {
         retry: '重试',
       },
       header: {
-        title: '运行与诊断信息',
         runtime: '运行时：{{mode}}',
         probedAt: '能力检测：{{time}}',
         updatedAt: '最近同步：{{time}}',
@@ -4590,7 +4294,6 @@ export const zhCN = {
             '关键诊断接口未能返回可用数据。请检查 Management API、management key 和运行时诊断能力。',
         },
         facts: {
-          config: '配置摘要：{{status}}',
           version: '版本信息：{{status}}',
           nodes: '节点记录：{{count}}',
           nodesCluster: '节点记录：{{count}} 个 CPA / {{homeCount}} 个 Home',
@@ -4619,9 +4322,6 @@ export const zhCN = {
       status: {
         enabled: '已启用',
         disabled: '未启用',
-        connected: '已连接',
-        healthy: '健康',
-        unhealthy: '异常',
         partial: '部分数据',
         notAvailable: '不可用',
         unknown: '未知',
@@ -4646,13 +4346,8 @@ export const zhCN = {
         title: 'Home / CPA 拓扑',
         addNode: '添加节点',
         unavailable: '当前 {{runtime}} 运行时未开放节点查询接口。',
-        empty: '暂无节点连接记录。',
         emptySupported: '节点接口可用，暂无连接记录。',
-        homeSectionTitle: 'Home 节点',
         homeRecordsStatus: '{{count}} 个 Home',
-        homeUnsupported: '暂无独立 Home 节点列表。',
-        cpaSectionTitle: 'CPA 节点按 Home 分组',
-        cpaGroupStatus: '{{count}} 个 Home 分组',
         cpaRecordsStatus: '{{count}} 个 CPA',
         noCpaInHome: '该 Home 暂无 CPA 连接记录。',
         unknownHome: '未知 Home',
@@ -4663,14 +4358,11 @@ export const zhCN = {
           homeRole: 'Home 角色',
           cpaIp: 'CPA 节点 IP',
           nodeId: 'CPA 节点 ID',
-          servingHome: '服务 Home',
           connectedTime: '连接时间',
           connectedSince: '最早连接',
           lastSeen: '最后上报',
           clientCount: '客户端数',
           cpaCount: 'CPA 数',
-          healthyCpa: '健康 CPA',
-          health: '健康状态',
           nodeName: 'CPA 节点名称',
         },
         rename: {
@@ -4742,7 +4434,6 @@ export const zhCN = {
         version: '版本',
         latestVersion: '最新：{{version}}',
         endpoint: '管理端',
-        endpointDetail: '当前连接地址',
         masterHome: 'Master：{{home}}',
         homes: 'Home 节点',
         homesHealthy: '{{healthy}} / {{total}} 健康',
@@ -4753,8 +4444,6 @@ export const zhCN = {
         attention: '注意项',
         attentionDetail: '存在拓扑异常',
         attentionClear: '暂无注意项',
-        nodes: '节点',
-        nodesAvailable: '节点接口可用',
         nodesEmpty: '节点接口可用，暂无连接记录',
         nodesConnected: '已返回 {{count}} 个节点',
         nodesClusterConnected: '{{cpaCount}} 个 CPA 节点，分布在 {{homeCount}} 个 Home 节点下',
@@ -4763,8 +4452,6 @@ export const zhCN = {
         config: '配置',
         configAvailable: '摘要已读取',
         configUnavailable: '摘要不可用',
-        apiCall: 'API 诊断',
-        apiCallDetail: '可通过 /api-call 验证上游连通性',
       },
       toast: {
         apiCallComplete: '诊断请求已完成。',
@@ -5089,62 +4776,6 @@ export const zhCN = {
         globalDisabled: '全局插件已禁用，因此已安装插件暂未激活。',
         reportPending: '插件配置已变更，但节点回报状态仍在等待。',
         deletePending: '删除任务已创建，但节点回报尚未完全收敛。',
-      },
-    },
-    placeholder: {
-      phase: 'Phase 0 脚手架',
-      dashboard: {
-        title: '仪表盘',
-        description:
-          '商业化控制台首页将聚合运行状态、Provider 覆盖、凭证、访问密钥、节点和版本信号。',
-        itemOne:
-          '读取 GET /config、GET /latest-version、GET /auth-files、Provider GET 路由，并在可用时读取 GET /nodes。',
-        itemTwo: '为 CPA、Home 运行时和 Home 集群渲染基于 capability 的总览状态。',
-      },
-      providers: {
-        title: '供应商',
-        description:
-          'Provider key 将以工作台方式管理，包含 Provider 分组、表格、抽屉、模型定义和 adapter 统一后的标识符。',
-        itemOne: '覆盖 Gemini、Claude、Codex、Vertex 和 OpenAI-compatible Provider 路由。',
-        itemTwo:
-          '通过 adapter 统一 auth-index、auth_index、id、uuid、disabled 和不同 Provider 的字段差异。',
-      },
-      credentials: {
-        title: '凭证',
-        description:
-          'OAuth 和 file-backed credentials 将以资源工作台处理，包含状态切换、metadata 编辑、下载、上传和 OAuth handoff。',
-        itemOne:
-          '使用 GET /auth-files 以及 status、fields、upload、download、models、OAuth 和 Vertex import 路由。',
-        itemTwo: '处理 file、memory 和 db 来源，cluster 模式下不假设存在本地文件路径。',
-      },
-      accessKeys: {
-        title: '访问密钥',
-        description:
-          '下游客户端 API key 将独立于上游 Provider key 管理，支持掩码展示和聚焦的新建、编辑、删除流程。',
-        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
-        itemTwo: '不要假设服务端会返回文档之外的 key metadata。',
-      },
-      config: {
-        title: '配置',
-        description: '配置页只提供一个可视化工作台，用于已支持运行时设置的编辑、校验和保存。',
-        itemOne: '使用 GET /config、简单 leaf routes，以及 adapter 内部必要的配置快照更新。',
-        itemTwo: '产品 UI 只保留可视化编辑入口。',
-      },
-      usageLogs: {
-        title: '观测数据',
-        description:
-          '用量、调用诊断和运行日志页将作为 capability-aware 分析页，在 Home cluster 不暴露对应路由时平滑降级。',
-        itemOne:
-          '在可用时使用 GET /api-key-usage、GET /logs、DELETE /logs 和 request error log 路由。',
-        itemTwo: '渲染不可用状态，而不是把 cluster 缺失路由当成页面失败。',
-      },
-      systemNodes: {
-        title: '系统信息',
-        description:
-          '系统信息页将展示运行版本、连接状态、节点连通性、部分诊断能力，以及受保护的 Management API 工具。',
-        itemOne:
-          '使用 GET /nodes、GET /latest-version、GET /config、leaf routes 和受保护的 POST /api-call。',
-        itemTwo: '高权限诊断调用只在有明确 UI 警示时暴露。',
       },
     },
   },

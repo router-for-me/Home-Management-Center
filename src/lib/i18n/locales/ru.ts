@@ -1,10 +1,6 @@
 export const ru = {
   common: {
-    productName: 'Home Center',
     productShortName: 'Home Center',
-    productSubtitle: 'Коммерческая консоль',
-    phaseBaseline: 'Базовая версия Phase 0',
-    cancel: 'Отмена',
     close: 'Закрыть',
     routeLoading: 'Загрузка страницы',
     common: {
@@ -22,7 +18,6 @@ export const ru = {
         'Этот клиентский ключ доступа не принадлежит учётной записи Home, поэтому в записи нет имени пользователя.',
     },
     actions: {
-      connect: 'Подключить',
       manageConnection: 'Подключение',
       copyFailed: 'Не удалось скопировать',
       customizeColumns: 'Настроить столбцы',
@@ -32,10 +27,6 @@ export const ru = {
     },
     language: {
       switch: 'Язык',
-      simplifiedChinese: 'Китайский упрощенный',
-      traditionalChinese: 'Китайский традиционный',
-      english: 'Английский',
-      russian: 'Русский',
     },
     theme: {
       switch: 'Переключить тему',
@@ -55,7 +46,6 @@ export const ru = {
       usage: 'Использование и запросы',
       diagnostics: 'Диагностика вызовов',
       logs: 'Runtime logs',
-      usageLogs: 'Данные наблюдаемости',
       systemNodes: 'Сведения о системе',
     },
     navigationGroups: {
@@ -76,7 +66,6 @@ export const ru = {
       usage: 'Анализ использования и диагностика запросов',
       diagnostics: 'Состояние вызовов и журналы запросов',
       logs: 'Gateway runtime и request error logs',
-      usageLogs: 'Usage, диагностика, logs',
       systemNodes: 'Runtime и диагностика',
     },
     sidebar: {
@@ -85,16 +74,11 @@ export const ru = {
       collapse: 'Свернуть боковую панель',
       expand: 'Развернуть боковую панель',
       openMobile: 'Открыть навигацию',
-      closeMobile: 'Закрыть навигацию',
       connectionStatus: {
         connected: 'Подключено',
         disconnected: 'Нет подключения',
         error: 'Сбой подключения',
         checking: 'Проверка…',
-        hint: 'Настройте endpoint и management key',
-        errorHint: 'Проверьте endpoint и management key',
-        runtime: 'Режим',
-        endpoint: 'Endpoint',
         connectedAction: 'Настроить подключение {{mode}}',
         disconnectedAction: 'Открыть управление подключением',
         errorAction: 'Проверить настройки подключения',
@@ -164,22 +148,15 @@ export const ru = {
         models: 'Каталог моделей',
       },
       hero: {
-        title: 'Доступ к разным моделям начинается с одной контролируемой точки',
         titleLine1: 'Доступ к разным моделям',
-        titleLine2: 'из одной контролируемой точки',
         titleLine2Prefix: 'из одной ',
         titleLine2Accent: 'контролируемой точки',
         titleLine2Suffix: '',
         description:
           'Одна точка входа и единый набор правил, а адаптацию моделей, распределение учетных данных и учет использования берет на себя AI-gateway.',
-        adminPrimary: 'Открыть консоль администратора',
-        adminResume: 'Открыть консоль администратора',
-        userPrimary: 'Войти',
-        userWorkspace: 'Открыть workspace пользователя',
         browseModels: 'Открыть каталог моделей',
       },
       providers: {
-        title: 'Основные модели обрабатываются одним gateway',
         gateway: 'AI-gateway',
         moreLabel: 'Другие модели',
         ariaLabel: 'Иконки основных провайдеров моделей',
@@ -223,29 +200,6 @@ export const ru = {
     },
     accessPortal: {
       shellSubtitle: 'Точка входа',
-      eyebrow: 'Вход в сессию',
-      title: 'Открыть Home Console',
-      description:
-        'Выберите рабочую область для текущей сессии. Администраторы подключают Management API; пользовательские аккаунты управляют только своими ключами и безопасностью.',
-      admin: {
-        title: 'Сессия администратора',
-        description:
-          'Подключите Management API для управления runtime config, модельными сервисами, пулом учетных данных, пользователями и областями доступа.',
-        available: 'Нужен management key',
-        connected: 'Подключено',
-        action: 'Подключить admin runtime',
-        resume: 'Открыть admin console',
-      },
-      user: {
-        title: 'Сессия пользователя',
-        description:
-          'Войдите, чтобы управлять личными клиентскими ключами, балансом credits и безопасностью аккаунта.',
-        available: 'Вход в аккаунт',
-        authenticated: 'Выполнен вход',
-        login: 'Войти',
-        workspace: 'Открыть workspace пользователя',
-        register: 'Создать аккаунт',
-      },
     },
     adminAccess: {
       back: 'Назад к выбору входа',
@@ -289,7 +243,6 @@ export const ru = {
       },
       passkey: {
         description: 'Для этого аккаунта требуется Passkey. Завершите browser или system prompt.',
-        pending: 'Для этого аккаунта требуется Passkey.',
         action: 'Использовать Passkey',
       },
       validation: {
@@ -806,9 +759,6 @@ export const ru = {
         delete: 'Удалить',
         save: 'Сохранить',
         copy: 'Копировать',
-        copied: 'Скопировано',
-        enable: 'Включить',
-        disable: 'Отключить',
         enabled: 'Включено',
         disabled: 'Отключено',
         yes: 'Да',
@@ -1012,8 +962,6 @@ export const ru = {
           provider: 'Провайдер модели',
           model: 'ID модели',
           scope: 'Область правила',
-          serviceTier: 'Tier',
-          minInputTokens: 'Нижняя граница контекста',
           input: 'Цена входных токенов',
           output: 'Цена выходных токенов',
           cacheRead: 'Чтение кэша',
@@ -1117,14 +1065,9 @@ export const ru = {
           custom: 'Своя нижняя граница',
         },
         validation: {
-          providerRequired: 'Укажите провайдера модели.',
           modelRequired: 'Выберите провайдера модели и ID модели.',
           priceInvalid: 'Цены должны быть числами больше или равными 0.',
           minInputTokensInvalid: 'Введите безопасное неотрицательное целое число.',
-        },
-        modelScopes: {
-          available: 'Доступно в runtime',
-          static: 'Статический каталог',
         },
 
         import: {
@@ -1138,42 +1081,23 @@ export const ru = {
           reloadCandidates: 'Перезагрузить кандидатов',
           candidateFailedEmpty:
             'Модели-кандидаты не загружены. Перезагрузите кандидатов или проверьте ответ Management API.',
-          candidateIssueEmpty:
-            'Данные моделей-кандидатов неполные, строк предпросмотра нет. Перезагрузите кандидатов перед применением.',
-          catalogTitle: 'Каталог models.dev',
-          catalogPending: 'Каталог еще не загружен.',
           catalogReady: 'Загружено моделей: {{count}} ({{time}}).',
           catalogFailed: 'Не удалось загрузить каталог models.dev.',
-          reloadCatalog: 'Перезагрузить каталог',
           serverPreviewBadge: 'Предпросмотр сервера',
           legacyPreviewBadge: 'Режим совместимости',
-          serverPreviewLoading: 'Сервер проверяет предпросмотр…',
-          serverPreviewReady: 'Сервер проверил строк: {{count}} ({{time}}).',
           serverPreviewFailed: 'Не удалось создать серверный предпросмотр.',
           refreshServerPreview: 'Обновить предпросмотр',
-          retryServerPreview: 'Повторить предпросмотр',
-          previewMetadata: 'Предпросмотр {{id}} · истекает {{expires}} · атомарно {{atomic}}',
-          sourceMetadata:
-            'Снимок models.dev {{version}} · {{url}} · получен {{time}} · моделей: {{count}}',
-          previewNoExpiry: 'не указано',
-          atomicYes: 'да',
-          atomicNo: 'нет',
           legacyPreviewWarning:
             'Backend не предоставляет серверный предпросмотр и транзакционное применение. Режим совместимости не защищает от одновременного изменения цен.',
-          nonAtomicWarning:
-            'Сервер сообщает, что применение не атомарно. При ошибке часть строк может сохраниться; проверьте результат перед повтором.',
           serverIssuesTitle: 'Замечания проверки сервера',
           previewInvalid: {
             expired: 'Серверный предпросмотр истек. Обновите его перед применением.',
             stale: 'Политика цен изменилась после создания предпросмотра. Обновите его.',
-            conflict:
-              'Правила цен изменились после создания предпросмотра. Обновите данные и проверьте конфликты.',
           },
           policyTitle: 'Политика формирования цен',
           policyHint:
             'Множители преобразуют официальные цены в абсолютные цены Home. Импорт записывает только базовое правило service tier=* и min input tokens=0. Модели с дополнительными измерениями цены блокируются, чтобы не записывать неполную цену.',
           defaultMultiplier: 'Множитель по умолчанию',
-          familyMultiplier: 'Множитель {{family}}',
           overwriteMode: 'Обработка существующих правил',
           overwriteMissing: 'Только создать отсутствующие',
           overwriteSync: 'Создать отсутствующие + обновить source=sync',
@@ -1182,7 +1106,6 @@ export const ru = {
           overwriteWarning:
             'Этот режим может перезаписать ручные или default-правила: {{count}}. Для выбранных строк потребуется повторное подтверждение.',
           advancedPolicy: 'Расширенная политика цен',
-          resetPreferences: 'Сбросить сохраненные настройки',
           showAdvancedPolicy: 'Развернуть расширенное формирование цен',
           hideAdvancedPolicy: 'Свернуть расширенное формирование цен',
           modifiedBadge: 'Изменено',
@@ -1238,8 +1161,6 @@ export const ru = {
           includeZeroCost: 'Разрешить нулевые официальные цены',
           previewTitle: 'Предпросмотр и подтверждение',
           previewHint: 'Выбрано {{selected}} / доступно {{selectable}} / всего {{total}}',
-          summaryTitle: 'Итог применения',
-          summarySelected: 'Выбрано: {{count}}',
           summaryCreates: 'Создать',
           summaryUpdatesSync: 'Обновить sync',
           summaryOverwrites: 'Перезаписать',
@@ -1252,7 +1173,6 @@ export const ru = {
           exportPreview: 'Экспорт предпросмотра',
           searchPlaceholder: 'Провайдер, модель или models.dev',
           resolveMatchPlaceholder: 'Выберите совпадение models.dev',
-          resolveMatchAria: 'Выберите совпадение models.dev для {{model}}',
           applyMatchOverride: 'Пересоздать предпросмотр',
           loadingPreview: 'Загрузка предпросмотра…',
           emptyPreview: 'Нет моделей для предпросмотра.',
@@ -1279,7 +1199,6 @@ export const ru = {
             request: 'Запрос',
             source: 'Источник',
             enabled: 'Состояние',
-            note: 'Примечание',
           },
           status: {
             matched: 'Совпадение',
@@ -1376,8 +1295,6 @@ export const ru = {
               title: 'Предпросмотр истек',
               description: 'Сервер отклонил истекший предпросмотр. Обновите его.',
             },
-            operationId: 'Операция {{id}}',
-            idempotencyKey: 'Ключ идемпотентности {{id}}',
             status: 'Результат',
             message: 'Сообщение',
             rowStatus: {
@@ -1408,12 +1325,8 @@ export const ru = {
             title: 'Результат предыдущего применения не подтвержден',
             description:
               'Запрос для {{count}} правил мог быть уже обработан. Не создавайте новый предпросмотр; безопасно повторите исходный запрос с тем же ключом идемпотентности.',
-            preview: 'Предпросмотр',
-            startedAt: 'Первая отправка',
-            idempotencyKey: 'Ключ идемпотентности',
             retry: 'Безопасно повторить исходный запрос',
             discard: 'Удалить запись восстановления',
-            lastError: 'Последний запрос завершился ошибкой: {{error}}',
             unknownError: 'Невозможно подтвердить, завершил ли сервер это применение.',
             storageFailed:
               'Браузер не смог сохранить запись восстановления, поэтому запрос не был отправлен. Проверьте доступ к session storage.',
@@ -1431,7 +1344,6 @@ export const ru = {
       },
       toast: {
         copied: 'Скопировано.',
-        priceCreated: 'Цена модели создана.',
         pricesCreated: 'Создано цен моделей: {{count}}.',
         priceUpdated: 'Цена модели обновлена.',
         deleted: 'Удалено.',
@@ -1491,10 +1403,6 @@ export const ru = {
         },
       },
       header: {
-        eyebrow: 'Обзор',
-        title: 'Обзор серверной части',
-        description:
-          'Проверьте, может ли подключенный gateway обслуживать модельные запросы, а также состояние клиентских ключей, модельных сервисов и учетных данных.',
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
         runtime: 'Подключенный сервер: {{mode}}',
@@ -1574,20 +1482,17 @@ export const ru = {
         summary: 'Активных: {{active}} · тихих: {{quiet}} · всего: {{total}}',
         unavailable: 'В этом периоде нет вызовов по ключам.',
         emptyTop: 'Рейтинга ключей пока нет.',
-        action: 'Смотреть usage ключей',
       },
       modelUsage: {
         title: 'Распределение моделей',
         summary: 'Моделей с вызовами за период: {{count}}',
         unavailable: 'В этом периоде нет вызовов моделей.',
         emptyTop: 'Рейтинга моделей пока нет.',
-        action: 'Смотреть usage',
       },
       usageConsumptionTrend: {
         title: 'Общий тренд потребления',
         description: 'Потребление токенов за текущий период usage.',
         summary: '{{buckets}} интервалов · всего {{tokens}} токенов',
-        action: 'Смотреть usage запросов',
         tooltip: {
           tokens: 'Расход токенов',
           tokenValue: '{{value}} токенов',
@@ -1603,7 +1508,6 @@ export const ru = {
         description: 'Активность, доля успеха и отказы за весь выбранный временной диапазон.',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
-        action: 'Смотреть диагностику',
         range: '{{from}}–{{to}} · {{interval}}',
         matrixLabel: 'Матрица состояния запросов',
         bucketTitle: '{{label}}: запросов {{requests}} · успех {{successRate}}',
@@ -1621,35 +1525,8 @@ export const ru = {
           unknown: 'Неизвестно',
         },
       },
-      quickActions: {
-        title: 'Быстрые переходы',
-        description: 'Открыть часто используемые страницы управления.',
-        providers: {
-          title: 'Модельные сервисы',
-          description: 'Проверить ключи модельных сервисов и отключенные записи.',
-        },
-        credentials: {
-          title: 'Учетные данные',
-          description: 'Проверить состояние OAuth и file-backed аккаунтов.',
-        },
-        accessKeys: {
-          title: 'Управление ключами',
-          description: 'Управлять ключами, которыми клиенты вызывают серверный API.',
-        },
-        config: {
-          title: 'Системная конфигурация',
-          description: 'Настроить маршрутизацию, журналы и runtime-параметры.',
-        },
-        systemNodes: {
-          title: 'Сведения о системе',
-          description: 'Проверить версии, состояние подключения, узлы и диагностику.',
-        },
-      },
       providers: {
         title: 'Подключение модельных сервисов',
-        description:
-          'Проверьте общее, доступное и отключенное количество ключей для каждого типа модельного сервиса.',
-        action: 'Управлять сервисами',
         emptyTitle: 'Модельные сервисы не настроены',
         emptyDescription:
           'Модельные ключи пока не настроены. Добавьте модельный сервис, чтобы шлюз мог перенаправлять запросы upstream.',
@@ -1672,8 +1549,6 @@ export const ru = {
       },
       config: {
         title: 'Ключевые переключатели',
-        description: 'Настройки, влияющие на журналы, статистику использования и маршрутизацию.',
-        action: 'Исправить конфиг',
       },
       configChecks: {
         requestLog: 'Журнал запросов',
@@ -1681,10 +1556,6 @@ export const ru = {
         fileLogging: 'Файловые журналы',
         debug: 'Debug режим',
         routing: 'Стратегия маршрутизации',
-      },
-      capabilities: {
-        title: 'Доступные функции',
-        description: 'Функции управления, поддерживаемые подключенным сервисом.',
       },
       capabilityNames: {
         nodes: 'Топология узлов',
@@ -1696,8 +1567,6 @@ export const ru = {
       },
       credentials: {
         title: 'Источники учетных данных',
-        description:
-          'Записи аккаунтов, сгруппированные по способу хранения, включая OAuth-вход и файлы учетных данных.',
         empty: 'Записей учетных данных аккаунтов пока нет.',
       },
       credentialSourceNames: {
@@ -1709,7 +1578,6 @@ export const ru = {
       issues: {
         title: 'Состояние загрузки данных',
         description: 'Показывает, полностью ли доступны данные панели и возможности runtime.',
-        empty: 'Данные панели загружены полностью.',
         requestFailed: 'Запрос не выполнен: {{status}}',
         unavailableCapability: 'Не предоставляется этим runtime',
       },
@@ -1946,7 +1814,6 @@ export const ru = {
       },
       connectivity: {
         testModel: 'Тестовая модель',
-        testModelPlaceholder: 'Если пусто, используется первая custom model',
         testModelSearchPlaceholder: 'Найдите модель или введите model ID',
         testModelAutoOption: 'Авто: использовать первую custom model',
         testModelSearchEmpty: 'Совпадений нет. Можно ввести model ID вручную.',
@@ -2066,8 +1933,6 @@ export const ru = {
         },
         common: {
           notAvailable: 'Нет данных',
-          yes: 'Да',
-          no: 'Нет',
         },
         window: {
           labels: {
@@ -2152,9 +2017,7 @@ export const ru = {
       actions: {
         addCredential: 'Добавить credential',
         detail: 'Открыть',
-        upload: 'Загрузить JSON',
         save: 'Сохранить метаданные',
-        viewQuota: 'Открыть квоту',
         viewModels: 'Показать модели',
         reloadModels: 'Обновить',
         download: 'Скачать',
@@ -2187,10 +2050,7 @@ export const ru = {
         },
       },
       oauth: {
-        title: 'OAuth вход',
         startLogin: 'Создать ссылку авторизации',
-        showAdvanced: 'Показать дополнительные опции',
-        hideAdvanced: 'Скрыть дополнительные опции',
         authorizationLinkTitle: 'Ссылка авторизации создана',
         authorizationLinkDescription:
           'Сначала скопируйте ссылку в нужный браузер или профиль аккаунта. Открывайте ее здесь только если этот браузер подходит для авторизации.',
@@ -2385,7 +2245,6 @@ export const ru = {
         note: 'Заметка',
       },
       concurrency: {
-        current: 'Сейчас',
         observed: 'Наблюдается',
         admitted: 'Допущено',
         limit: 'Лимит',
@@ -2439,7 +2298,6 @@ export const ru = {
         modelPlaceholder: 'Model ID',
         modelInputLabel: 'Model ID в строке {{index}}',
         modelLimitInputLabel: 'Лимит параллельности в строке модели {{index}}',
-        removeModel: 'Удалить лимит модели',
         removeModelAtIndex: 'Удалить строку лимита модели {{index}}',
         noModelLimits: 'Лимиты моделей не настроены.',
         contractInvalid:
@@ -2502,13 +2360,8 @@ export const ru = {
           'Читаем из Management API клиентские ключи доступа и связанные данные владельцев.',
       },
       header: {
-        eyebrow: 'Контроль клиентского доступа',
         title: 'Клиентские ключи доступа',
-        description:
-          'Управляйте ключами, которыми клиенты вызывают серверный API. Они отделены от ключей модельных сервисов.',
         total: 'Настроено ключей: {{count}}',
-        accepted: 'Принимаются proxy runtime',
-        updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
         refresh: 'Синхронизировать',
@@ -2520,7 +2373,8 @@ export const ru = {
         edit: 'Изменить',
         delete: 'Удалить',
         copy: 'Копировать',
-        copyIdentifier: 'Копировать идентификатор {{identifier}}',
+        copyKey: 'Копировать ключ {{key}}',
+        copyIdentifier: 'Копировать идентификатор',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',
@@ -2533,11 +2387,10 @@ export const ru = {
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',
-        identity: 'Идентификатор / ключ',
+        identity: 'Имя / ключ',
         identifierTooltip:
-          'Стабильный идентификатор связывает один access key в использовании, биллинге и записях запросов.',
+          'Отображаемое имя — редактируемая метка, не влияющая на аутентификацию. Стабильный идентификатор (api-key-N) не меняется при переименовании и ротации и связывает один и тот же ключ в использовании, биллинге и записях запросов.',
         identifierUnavailable: 'Нет стабильного идентификатора',
-        key: 'Key',
         owner: 'Владелец',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2546,7 +2399,6 @@ export const ru = {
         length: 'Длина',
         status: 'Статус',
         actions: 'Действия',
-        prefixSuffix: '{{prefix}}…{{suffix}}',
       },
       status: {
         accepted: 'Accepted',
@@ -2564,7 +2416,9 @@ export const ru = {
         title: 'Детали key',
         empty: 'Выберите key или создайте новый.',
         secret: 'Secret value',
+        noName: 'Без отображаемого имени',
         fields: {
+          name: 'Отображаемое имя',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',
@@ -2575,16 +2429,19 @@ export const ru = {
       },
       form: {
         createEyebrow: 'Создать access key',
-        editEyebrow: 'Изменить access key',
         createTitle: 'Новый downstream key',
         editTitle: 'Обновить downstream key',
         keyValue: 'Key value',
+        displayName: 'Отображаемое имя',
+        displayNamePlaceholder: 'например, Production key',
+        displayNameHint:
+          'Необязательно, до {{max}} символов. Переименование не меняет значение ключа, владельца или области доступа.',
         validation: {
           required: 'Key value обязателен.',
+          displayNameTooLong: 'Отображаемое имя не должно превышать {{max}} символов.',
         },
       },
       replace: {
-        eyebrow: 'Полная замена',
         title: 'Заменить все access keys',
         description:
           'Использует PUT /api-keys и заменяет весь список downstream keys. Один key на строку.',
@@ -2631,22 +2488,13 @@ export const ru = {
           'Читаем из Management API пользователей, владельцев клиентских ключей, credential scopes и model scopes.',
       },
       header: {
-        eyebrow: 'Пользователи и доступ',
         title: 'Пользователи и доступ',
-        description:
-          'Управляйте пользователями, владельцами клиентских ключей, областями учетных данных и областями моделей через Home Management API.',
-        total: 'Пользователей: {{count}}',
         users: 'Пользователей: {{count}}',
-        activeUsers: 'Активных пользователей: {{count}}',
-        keys: 'Клиентских ключей: {{count}}',
-        assignedKeys: 'Назначенных ключей: {{count}}',
         unassignedKeys: 'Неназначенных ключей: {{count}}',
-        updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
-        new: 'Новый пользователь',
         newUser: 'Новый пользователь',
         newKey: 'Новый ключ',
         newCredentialScope: 'Новая область учетных данных',
@@ -2665,15 +2513,10 @@ export const ru = {
       status: {
         active: 'Активен',
         deleted: 'Удален',
-        notAvailable: 'Недоступно',
         notReturned: 'Не возвращено',
         notDeleted: 'Не удален',
       },
       list: {
-        title: 'Пользователи',
-        description:
-          'Проверяйте пользователей, владельцев клиентских ключей и назначенные области доступа.',
-        filterPlaceholder: 'Фильтр по пользователям или ключам',
         empty: 'Нет пользователей для текущего фильтра.',
         user: 'Пользователь',
         status: 'Статус',
@@ -2704,7 +2547,6 @@ export const ru = {
           'Безлимитный режим включён: баланс сохраняется, но не проверяется.',
         timezone: 'Часовой пояс',
         timezoneHint: 'Часовой пояс IANA для календарных окон.',
-        noGroups: 'Пока нет доступных областей.',
         noCredentialGroups: 'Области учетных данных еще не созданы.',
         noModelGroups: 'Области моделей еще не созданы.',
         validation: {
@@ -2905,19 +2747,13 @@ export const ru = {
             'Операции отправляются по одному пользователю, и для каждого создается отдельная запись баланса.',
         },
         form: {
-          user: 'Пользователь',
-          userPlaceholder: 'Выберите пользователя',
           target: 'Объект операции',
           targetCount: 'Пользователей: {{count}}',
           operation: 'Тип операции',
-          current: 'Текущий баланс',
-          after: 'Баланс после',
           currentTotal: 'Текущий баланс всего',
           afterTotal: 'Баланс после всего',
           batchHint:
             'Одна сумма и одно примечание будут применены к каждому пользователю; backend запишет их отдельно.',
-          negativeHint:
-            'Баланс станет отрицательным. Home допускает отрицательный баланс, но подтвердите, что это ожидаемо.',
           negativeTargetHint:
             'После списания отрицательный баланс будет у {{count}} пользователей. Home допускает отрицательный баланс, но подтвердите, что это ожидаемо.',
           amount: 'Сумма',
@@ -2928,7 +2764,6 @@ export const ru = {
         },
         validation: {
           targetRequired: 'Выберите хотя бы одного доступного пользователя.',
-          userRequired: 'Выберите пользователя.',
           amountRequired: 'Сумма должна быть больше 0.',
           noteRequired: 'Для списания нужно примечание.',
         },
@@ -2945,11 +2780,8 @@ export const ru = {
             'Запросы будут отправлены для каждого выбранного пользователя. Проверьте количество пользователей, сумму на пользователя и итоговые балансы.',
           user: 'Пользователь',
           users: 'Пользователи',
-          amount: 'Изменение суммы',
           amountPerUser: 'Сумма на пользователя',
           totalAmount: 'Общее изменение',
-          current: 'Текущий баланс',
-          after: 'Баланс после',
           currentTotal: 'Текущий баланс всего',
           afterTotal: 'Баланс после всего',
           note: 'Примечание',
@@ -2966,7 +2798,6 @@ export const ru = {
       },
       detail: {
         title: 'Детали пользователя',
-        empty: 'Выберите пользователя для просмотра деталей.',
         passwordStored: 'Пароль сохранен',
         userId: 'ID пользователя: {{id}}',
         sections: {
@@ -3077,7 +2908,6 @@ export const ru = {
       },
       status: {
         clean: 'Нет несохраненных изменений',
-        unsaved: 'Есть несохраненные изменения',
         visualChangeCount: 'Визуальных изменений: {{count}}',
         enabled: 'Включено',
         disabled: 'Выключено',
@@ -3391,7 +3221,6 @@ export const ru = {
         anyProtocol: 'Любой protocol',
         advancedMatchers: 'Расширенные условия',
         hideAdvancedMatchers: 'Скрыть расширенные',
-        advancedMatcherCount: '{{count}} поз.',
         advancedMatchersSummary:
           'Уточняют model matching по source protocol, Header или условиям payload.',
         fromProtocol: 'Source protocol',
@@ -3551,27 +3380,14 @@ export const ru = {
         unsupportedStructure:
           'Эта config содержит структуру, которую visual editor пока не поддерживает.',
         emptyRows: 'Правила не настроены.',
-        addProvider: 'Добавить provider',
-        addChannel: 'Добавить channel',
         addAlias: 'Добавить alias',
-        addMapping: 'Добавить mapping',
-        addUpstreamKey: 'Добавить upstream key',
-        removeChannel: 'Удалить channel',
-        channelRuleCount: 'Правил: {{count}}',
         columns: {
-          provider: 'Model provider',
-          models: 'Model IDs',
           channel: 'Channel',
           name: 'Upstream model',
           alias: 'Client alias',
           fork: 'Fork',
           forceMapping: 'force-mapping',
-          from: 'Requested model',
-          to: 'Upstream model',
-          regex: 'Regex',
           actions: 'Действия',
-          upstreamApiKey: 'Upstream API key',
-          clientKeys: 'Client keys',
         },
         columnDescriptions: {
           channel: 'Auth channel key, например claude, gemini или codex.',
@@ -3580,29 +3396,14 @@ export const ru = {
           fork: 'Advanced option. API определяет это только как fork alias behavior; оставьте выключенным, если не нужно.',
           forceMapping:
             'Если включено, response model field записывается как mapped upstream model name.',
-          from: 'Amp model name в client request. При включенном Regex обрабатывается как regular expression.',
-          to: 'Target upstream model name после совпадения.',
-          regex:
-            'Выключено: точное имя модели. Включено: requested model обрабатывается как regular expression.',
-        },
-        modelMappings: {
-          description:
-            'Переписывайте upstream models для Amp CLI по requested model. Включайте Regex только когда нужен pattern matching.',
         },
         placeholders: {
-          provider: 'claude',
-          models: 'claude-opus-4.5, claude-sonnet-4',
           channel: 'claude',
           name: 'claude-sonnet-4',
           alias: 'sonnet',
-          from: 'claude-opus-4.5',
-          to: 'claude-sonnet-4',
-          upstreamApiKey: 'upstream-key',
-          clientKeys: 'client-key-1, client-key-2',
         },
       },
       oauthExcluded: {
-        title: 'OAuth model disable list',
         channelLabel: 'Auth channel',
         reloadModels: 'Перезагрузить модели',
         searchPlaceholder: 'Искать model ID, name или owner',
@@ -3702,17 +3503,9 @@ export const ru = {
         auto: 'Автообновление',
       },
       status: {
-        running: {
-          live: 'Live-обновление активно',
-          auto: 'Автообновление активно',
-        },
         paused: {
           live: 'Live-обновление приостановлено',
           auto: 'Автообновление приостановлено',
-        },
-        off: {
-          live: 'Live-обновление выключено',
-          auto: 'Автообновление выключено',
         },
         unavailable: {
           live: 'Live-обновление недоступно',
@@ -3799,7 +3592,6 @@ export const ru = {
           clientKey: 'Клиентский ключ доступа',
           credentialId: 'Credential / auth index',
         },
-        requestIdPlaceholder: 'Request ID',
         customFrom: 'Начало',
         customTo: 'Конец',
         eventType: 'Тип события',
@@ -4045,16 +3837,12 @@ export const ru = {
         retry: 'Повторить',
       },
       header: {
-        title: 'Данные наблюдаемости',
-        description:
-          'Просмотр использования запросов, диагностики вызовов, журналов runtime и скачиваемых файлов журналов.',
         runtime: 'Среда выполнения: {{mode}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
       },
       actions: {
         refresh: 'Синхронизировать',
         syncing: 'Синхронизация',
-        exportCsv: 'Экспорт CSV',
         exportFilteredCsv: 'Экспорт',
         exportUnsupported: 'Экспорт недоступен',
         clearLogs: 'Очистить журналы',
@@ -4067,7 +3855,6 @@ export const ru = {
         usageOverview: 'Сводка использования',
         usageRecords: 'Записи использования',
         usageAggregates: 'Агрегаты',
-        usageExport: 'Экспорт',
         usageProviderHealth: 'Состояние провайдеров',
         usageCredentialHealth: 'Состояние учетных данных',
         usageRealtime: 'Реальное время',
@@ -4093,49 +3880,6 @@ export const ru = {
           complete: 'Полная',
           unclassified: 'Без классификации',
           inconsistent: 'Противоречивая',
-        },
-      },
-      unavailable: {
-        title: 'Этот runtime не предоставляет маршруты наблюдаемости',
-        description:
-          '{{mode}} не предоставляет маршруты использования, диагностики или журналов runtime. Страница показывает состояние возможностей без выдуманных данных.',
-      },
-      verdict: {
-        ready: {
-          title: 'Данные наблюдаемости готовы',
-          badge: 'Для диагностики',
-          description:
-            'Runtime вернул возможности использования, диагностики или журналов для анализа и расследования на уровне запроса.',
-        },
-        disabled: {
-          title: 'Статистика использования отключена',
-          badge: 'Отключено',
-          description:
-            'Runtime предоставляет маршруты использования, но usage-statistics-enabled отключен в config. Включите его для постоянной агрегации использования запросов.',
-        },
-        partial: {
-          title: 'Данные использования синхронизированы частично',
-          badge: 'Частично',
-          description:
-            'Страница продолжит показывать загруженные факты использования. Проверьте сбойные области перед полной оценкой.',
-        },
-        legacy: {
-          title: 'Доступно только старое использование API-ключей',
-          badge: 'Старый режим',
-          description:
-            '{{mode}} вернул только старый маршрут использования API-ключей. Токены, расход, задержка и атрибуция исполнительных учетных данных не показываются как факты использования.',
-        },
-        logsOnly: {
-          title: 'Доступны только маршруты журналов',
-          badge: 'Только журналы',
-          description:
-            '{{mode}} не вернул структурированные маршруты использования. Используйте журналы runtime и файлы ошибок для расследования.',
-        },
-        unsupported: {
-          title: 'Этот runtime не поддерживает маршруты использования',
-          badge: 'Не поддерживается',
-          description:
-            '{{mode}} не открывает маршруты использования, диагностики или журналов runtime. Состояние возможностей остается видимым до появления backend API наблюдаемости.',
         },
       },
       issues: {
@@ -4166,26 +3910,14 @@ export const ru = {
         credentialType: 'Тип учетных данных',
         homeIp: 'Home-узел',
         endpoint: 'Endpoint',
-        executorType: 'Тип исполнителя',
         statusCode: 'Код статуса',
-        requestId: 'Request ID',
-        user: 'Пользователь',
-        clientKey: 'Клиентский ключ',
-        credentialId: 'Credential ID',
-        authIndex: 'Auth Index',
         minLatencyMs: 'Мин. задержка',
         maxLatencyMs: 'Макс. задержка',
         minAmount: 'Мин. расход',
         maxAmount: 'Макс. расход',
-        sort: 'Сортировка',
         advanced: 'Расширенные фильтры',
         hideAdvanced: 'Скрыть расширенные фильтры',
         searchPlaceholder: 'Запрос / пользователь / модель',
-        requestIdPlaceholder: 'Request ID',
-        userPlaceholder: 'Пользователь, user ID или IP',
-        clientKeyPlaceholder: 'Клиентский ключ или метка',
-        credentialIdPlaceholder: 'Credential ID или имя',
-        authIndexPlaceholder: 'Auth Index',
         minLatencyPlaceholder: 'Мин. задержка ms',
         maxLatencyPlaceholder: 'Макс. задержка ms',
         minAmountPlaceholder: 'Мин. расход',
@@ -4198,7 +3930,6 @@ export const ru = {
         anyCredentialType: 'Все типы учетных данных',
         anyHomeIp: 'Все Home-узлы',
         anyEndpoint: 'Все endpoint',
-        anyExecutorType: 'Все исполнители',
         anyStatusCode: 'Все коды статуса',
         ranges: {
           last4h: 'Последние 4 часа',
@@ -4319,15 +4050,10 @@ export const ru = {
       rankings: {
         users: 'Рейтинг пользователей',
         clientKeys: 'Рейтинг клиентских ключей',
-        credentials: 'Рейтинг учетных данных',
         models: 'Рейтинг моделей',
-        providers: 'Рейтинг провайдеров',
-        errors: 'Рейтинг ошибок',
-        topN: 'Топ-5',
         viewDetail: 'Все',
         viewDetailLabel: 'Посмотреть весь рейтинг',
         hideDetail: 'Скрыть',
-        drilldownTitle: 'Детализация агрегированного рейтинга',
         drawerTitle: 'Детали рейтинга: {{group}}',
         drawerDescription:
           'Просмотрите полный рейтинг для текущих фильтров: расходы, запросы, эффективность затрат и качество.',
@@ -4401,7 +4127,6 @@ export const ru = {
       },
       requestLogs: {
         title: 'Файлы журналов запросов',
-        range: '{{start}}-{{end}} из {{total}}',
         searchPlaceholder: 'Поиск по Request ID, модели, провайдеру или файлу',
         emptyTitle: 'Нет файлов журналов запросов',
         emptyDescription: 'Нет журналов запросов для текущего поиска.',
@@ -4538,7 +4263,6 @@ export const ru = {
           window: 'Окно',
         },
         quotaModes: {
-          current: 'Текущее',
           estimated: 'Оценка',
         },
         statuses: {
@@ -4619,34 +4343,6 @@ export const ru = {
           unknown: 'Неизвестно',
         },
       },
-      summary: {
-        keys: 'Ключи использования',
-        keysDetail: 'Окон недавних запросов: {{count}}',
-        requests: 'Запросов',
-        requestsDetail: '{{success}} успешно / {{failed}} с ошибкой',
-        logs: 'Журналы runtime',
-        logsDetail: 'Файлов журналов ошибок: {{count}}',
-      },
-      usage: {
-        title: 'Использование API-ключей',
-        description:
-          'Группирует успешные и ошибочные запросы по провайдеру модели, upstream Base URL и API-ключу.',
-        unavailableTitle: 'Использование API-ключей недоступно',
-        unavailable: 'Маршрут использования API-ключей не открыт.',
-        emptyTitle: 'Нет использования API-ключей',
-        empty: 'В текущем диапазоне нет записей использования API-ключей.',
-        provider: 'Провайдер модели',
-        baseUrl: 'Base URL',
-        key: 'Ключ',
-        success: 'Успешно',
-        failed: 'Ошибки',
-        recentWindows: 'Недавние окна',
-      },
-      operations: {
-        title: 'Журналы и инструменты расследования',
-        description:
-          'Журналы runtime и журналы ошибок помогают разбирать цепочку запроса, состояние runtime и ошибочные ответы.',
-      },
       logs: {
         title: 'Журналы runtime',
         unavailableTitle: 'Журналы runtime недоступны',
@@ -4667,14 +4363,10 @@ export const ru = {
           request: 'Request ID',
           homeIp: 'Home-узел',
           clientIp: 'Client IP',
-          line: 'Строка журнала',
           summary: 'Сводка',
           actions: 'Действия',
         },
         filters: {
-          homeIp: 'Home IP',
-          clientIp: 'Client IP',
-          requestId: 'Request ID',
           level: 'Уровень журнала',
           searchBy: 'Искать по',
           searchPlaceholder: 'Введите {{field}}',
@@ -4685,9 +4377,6 @@ export const ru = {
           after: 'Начало',
           before: 'Окончание',
           clear: 'Сбросить фильтры',
-          homeIpPlaceholder: 'Home IP',
-          clientIpPlaceholder: 'Client IP',
-          requestIdPlaceholder: 'Request ID',
           searchFields: {
             requestId: 'Request ID',
             homeIp: 'Home IP',
@@ -4723,7 +4412,6 @@ export const ru = {
         unavailable: 'Маршрут файлов журналов ошибок не открыт.',
         emptyTitle: 'Нет файлов журналов ошибок',
         empty: 'В текущем диапазоне нет файлов журналов ошибок.',
-        meta: '{{size}} байт · {{time}}',
         searchPlaceholder: 'Искать имя файла журнала, нажмите Enter',
         columns: {
           name: 'Журнал',
@@ -4766,7 +4454,6 @@ export const ru = {
         retry: 'Повторить',
       },
       header: {
-        title: 'Среда выполнения и диагностика',
         runtime: 'Среда выполнения: {{mode}}',
         probedAt: 'Возможности проверены: {{time}}',
         updatedAt: 'Последняя синхронизация: {{time}}',
@@ -4802,7 +4489,6 @@ export const ru = {
             'Ключевые диагностические маршруты не вернули пригодные данные. Проверьте Management API, management key и диагностические возможности среды выполнения.',
         },
         facts: {
-          config: 'Сводка конфигурации: {{status}}',
           version: 'Информация о версии: {{status}}',
           nodes: 'Записи узлов: {{count}}',
           nodesCluster: 'Записи узлов: CPA {{count}} / Home {{homeCount}}',
@@ -4831,9 +4517,6 @@ export const ru = {
       status: {
         enabled: 'Включено',
         disabled: 'Отключено',
-        connected: 'Подключено',
-        healthy: 'Здоров',
-        unhealthy: 'Сбой',
         partial: 'Частичные данные',
         notAvailable: 'Н/Д',
         unknown: 'Неизвестно',
@@ -4858,13 +4541,8 @@ export const ru = {
         title: 'Топология Home / CPA',
         addNode: 'Добавить узел',
         unavailable: 'Текущий runtime {{runtime}} не предоставляет маршрут запроса узлов.',
-        empty: 'Записей подключений узлов пока нет.',
         emptySupported: 'Маршрут узлов доступен, но записей подключений пока нет.',
-        homeSectionTitle: 'Узлы Home',
         homeRecordsStatus: 'Home: {{count}}',
-        homeUnsupported: 'Отдельного списка узлов Home пока нет.',
-        cpaSectionTitle: 'CPA-узлы по Home',
-        cpaGroupStatus: 'Групп Home: {{count}}',
         cpaRecordsStatus: 'CPA: {{count}}',
         noCpaInHome: 'У этого Home пока нет записей подключений CPA.',
         unknownHome: 'Неизвестный Home',
@@ -4875,14 +4553,11 @@ export const ru = {
           homeRole: 'Роль Home',
           cpaIp: 'IP CPA-узла',
           nodeId: 'ID CPA-узла',
-          servingHome: 'Home узла',
           connectedTime: 'Время подключения',
           connectedSince: 'Подключен с',
           lastSeen: 'Последний сигнал',
           clientCount: 'Клиенты',
           cpaCount: 'CPA-узлы',
-          healthyCpa: 'Здоровые CPA',
-          health: 'Состояние',
           nodeName: 'Имя узла CPA',
         },
         rename: {
@@ -4959,7 +4634,6 @@ export const ru = {
         version: 'Версия',
         latestVersion: 'Последняя: {{version}}',
         endpoint: 'Адрес',
-        endpointDetail: 'Текущий management-адрес',
         masterHome: 'Master: {{home}}',
         homes: 'Home',
         homesHealthy: 'Здоровы: {{healthy}} / {{total}}',
@@ -4970,8 +4644,6 @@ export const ru = {
         attention: 'Требует внимания',
         attentionDetail: 'Проверьте топологию',
         attentionClear: 'Нет замечаний',
-        nodes: 'Узлы',
-        nodesAvailable: 'Маршрут узлов доступен',
         nodesEmpty: 'Маршрут узлов доступен, записей подключений пока нет',
         nodesConnected: 'Возвращено узлов: {{count}}',
         nodesClusterConnected: 'CPA: {{cpaCount}}, Home: {{homeCount}}',
@@ -4980,8 +4652,6 @@ export const ru = {
         config: 'Конфиг',
         configAvailable: 'Сводка загружена',
         configUnavailable: 'Сводка недоступна',
-        apiCall: 'API диагностика',
-        apiCallDetail: 'Используйте /api-call для проверки связи с вышестоящим сервисом',
       },
       toast: {
         apiCallComplete: 'Диагностический запрос завершен.',
@@ -5332,69 +5002,6 @@ export const ru = {
           'Плагины глобально отключены, поэтому установленный плагин пока не активен.',
         reportPending: 'Конфигурация плагина изменилась, но статус отчета узла еще ожидается.',
         deletePending: 'Delete task создана, но отчеты узлов еще не полностью сошлись.',
-      },
-    },
-    placeholder: {
-      phase: 'Каркас Phase 0',
-      dashboard: {
-        title: 'Панель',
-        description:
-          'Главная страница коммерческой консоли будет объединять состояние runtime, покрытие провайдеров, учетные данные, ключи доступа, узлы и версии.',
-        itemOne:
-          'Читать GET /config, GET /latest-version, GET /auth-files, GET-маршруты провайдеров и GET /nodes, если доступно.',
-        itemTwo:
-          'Показывать обзор состояния с учетом capability для CPA, Home runtime и Home cluster.',
-      },
-      providers: {
-        title: 'Провайдеры',
-        description:
-          'Ключи провайдеров будут управляться как рабочая область с группировкой, таблицами, панелями редактирования, определениями моделей и нормализованными идентификаторами.',
-        itemOne: 'Покрыть маршруты Gemini, Claude, Codex, Vertex и OpenAI-compatible провайдеров.',
-        itemTwo:
-          'Нормализовать auth-index, auth_index, id, uuid, disabled и различия полей через adapters.',
-      },
-      credentials: {
-        title: 'Учетные данные',
-        description:
-          'OAuth и file-backed credentials будут управляться как ресурсная рабочая область со статусами, редактированием metadata, загрузкой, выгрузкой и OAuth handoff.',
-        itemOne:
-          'Использовать GET /auth-files, а также маршруты status, fields, upload, download, models, OAuth и Vertex import.',
-        itemTwo:
-          'Обрабатывать источники file, memory и db без предположения о локальных путях в cluster режиме.',
-      },
-      accessKeys: {
-        title: 'Ключи доступа',
-        description:
-          'Клиентские API keys будут управляться отдельно от ключей upstream providers, с маскированным отображением и отдельными сценариями создания, редактирования и удаления.',
-        itemOne: 'Использовать GET, POST, PUT, PATCH и DELETE /api-keys.',
-        itemTwo:
-          'Не предполагать server-side metadata за пределами документированного массива ключей.',
-      },
-      config: {
-        title: 'Конфигурация',
-        description:
-          'Конфигурация использует одну визуальную рабочую область для редактирования, проверки и сохранения поддерживаемых runtime-настроек.',
-        itemOne:
-          'Использовать GET /config, простые leaf routes и только необходимые adapter-contained обновления config snapshot.',
-        itemTwo: 'В product UI оставлять только один визуальный путь редактирования.',
-      },
-      usageLogs: {
-        title: 'Данные наблюдаемости',
-        description:
-          'Usage, call diagnostics и runtime log pages корректно деградируют, если Home cluster не предоставляет соответствующие routes.',
-        itemOne:
-          'Использовать GET /api-key-usage, GET /logs, DELETE /logs и request error log routes, если доступно.',
-        itemTwo:
-          'Показывать состояние недоступности вместо ошибки страницы при отсутствующих cluster routes.',
-      },
-      systemNodes: {
-        title: 'Сведения о системе',
-        description:
-          'Страница сведений о системе покажет версию runtime, состояние подключения, подключение узлов, выбранную диагностику и защищенные инструменты Management API.',
-        itemOne:
-          'Использовать GET /nodes, GET /latest-version, GET /config, leaf routes и защищенный POST /api-call.',
-        itemTwo:
-          'Показывать высокопривилегированные диагностические вызовы только с явным предупреждением.',
       },
     },
   },

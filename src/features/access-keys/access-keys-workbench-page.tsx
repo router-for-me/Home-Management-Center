@@ -64,14 +64,19 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAccessKeyWorkbench } from '@/features/access-keys/use-access-key-workbench'
 import type { AccessGroupResource } from '@/lib/api/management/access-groups'
-import type { AccessKeyResource } from '@/lib/api/management/access-keys'
+import {
+  ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+  type AccessKeyResource,
+  type AccessKeysSnapshot,
+} from '@/lib/api/management/access-keys'
 import type { UserResource } from '@/lib/api/management/users'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
 type DetailMode = 'detail' | 'edit' | 'create'
+type AccessKeyFormValues = { value: string; displayName?: string | null }
 type PendingAccessKeyConfirmation =
-  | { type: 'replace'; values: string[] }
+  | { type: 'replace'; values: string[]; snapshot: AccessKeysSnapshot }
   | { type: 'delete'; resource: AccessKeyResource }
   | { type: 'bulkDelete'; resources: AccessKeyResource[] }
 
@@ -88,9 +93,11 @@ function formatAccessKeySequence(resource: AccessKeyResource) {
 }
 
 function formatAccessKeyIdentity(resource: AccessKeyResource) {
-  return resource.identifier
+  const identity = resource.identifier
     ? `${resource.identifier} · ${resource.maskedValue}`
     : resource.maskedValue
+
+  return resource.displayName ? `${resource.displayName} · ${identity}` : identity
 }
 
 function groupLabel(groups: AccessGroupResource[], id: number) {
@@ -337,37 +344,40 @@ function AccessKeyList({
               </TableCell>
             ) : null}
             <TableCell className={showSecondary ? 'w-[220px] max-w-[220px]' : 'max-w-0'}>
-              <div className="flex min-w-0 items-center gap-1.5">
-                {resource.identifier ? (
-                  <span className="min-w-0 truncate font-mono text-xs font-medium">
-                    {resource.identifier}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground min-w-0 truncate text-xs">
-                    {t('accessKeysPage.list.identifierUnavailable')}
-                  </span>
-                )}
-                {resource.identifier ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-md"
-                    className="-my-1"
-                    aria-label={t('accessKeysPage.actions.copyIdentifier', {
-                      identifier: resource.identifier,
-                    })}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onCopyIdentifier(resource)
-                    }}
-                  >
-                    <Copy className="size-3.5" aria-hidden="true" />
-                  </Button>
-                ) : null}
+              {resource.displayName ? (
+                <p className="truncate text-sm font-medium">{resource.displayName}</p>
+              ) : null}
+              {resource.identifier ? (
+                <p className="truncate font-mono text-xs font-medium">{resource.identifier}</p>
+              ) : (
+                <p className="text-muted-foreground truncate text-xs">
+                  {t('accessKeysPage.list.identifierUnavailable')}
+                </p>
+              )}
+              {/*
+                The copy button sits on the masked value and copies the full
+                key string: pasting the key into a client is the frequent
+                intent, and a button beside the identifier reads as copying
+                the key while yielding a string that fails authentication.
+              */}
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                <p className="text-muted-foreground min-w-0 truncate font-mono text-xs">
+                  {resource.maskedValue}
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-md"
+                  className="-my-1"
+                  aria-label={t('accessKeysPage.actions.copyKey', { key: resource.maskedValue })}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCopy(resource)
+                  }}
+                >
+                  <Copy className="size-3.5" aria-hidden="true" />
+                </Button>
               </div>
-              <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                {resource.maskedValue}
-              </p>
             </TableCell>
             {showSecondary ? (
               <>
@@ -403,13 +413,12 @@ function AccessKeyList({
             </TableCell>
             <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
               {/*
-                Four actions, two inline slots, so the order below is a ranking
-                and not a list. View and edit lead because they are the only ones
-                with no other path from this row: the eye is the only way into the
-                detail sheet, and nothing else opens the editor. Copy is the least
-                exclusive — the identifier cell carries its own copy button and
-                the sheet reveals the value too — and delete is deliberately one
-                deliberate step further away than the two that cannot hurt.
+                Two inline slots, so the order below is a ranking and not a
+                list. View and edit lead because this row is their only entry
+                point. Copying the key value lives beside the masked value it
+                copies, so the menu only keeps the low-frequency identifier
+                copy for cross-referencing usage and billing records, with
+                delete last and one deliberate step away.
               */}
               <RowActions
                 menuLabel={formatAccessKeyIdentity(resource)}
@@ -426,18 +435,22 @@ function AccessKeyList({
                     icon: Pencil,
                     onSelect: () => onEditKey(resource),
                   },
+                  ...(resource.identifier
+                    ? [
+                        {
+                          id: 'copy-identifier',
+                          label: t('accessKeysPage.actions.copyIdentifier'),
+                          icon: Copy,
+                          onSelect: () => onCopyIdentifier(resource),
+                        },
+                      ]
+                    : []),
                   {
                     id: 'delete',
                     label: t('accessKeysPage.actions.delete'),
                     icon: Trash2,
-                    tone: 'destructive',
+                    tone: 'destructive' as const,
                     onSelect: () => onDeleteKey(resource),
-                  },
-                  {
-                    id: 'copy',
-                    label: t('accessKeysPage.actions.copy'),
-                    icon: Copy,
-                    onSelect: () => onCopy(resource),
                   },
                 ]}
               />
@@ -455,6 +468,7 @@ function AccessKeyDetailContent({
   users,
   channelGroups,
   modelGroups,
+  supportsDisplayNames,
   mutating,
   onModeChange,
   onCancel,
@@ -468,23 +482,26 @@ function AccessKeyDetailContent({
   users: UserResource[]
   channelGroups: AccessGroupResource[]
   modelGroups: AccessGroupResource[]
+  supportsDisplayNames: boolean
   mutating: boolean
   onModeChange: (mode: DetailMode) => void
   onCancel: () => void
-  onCreate: (value: string) => Promise<void>
-  onUpdate: (value: string) => Promise<void>
+  onCreate: (input: AccessKeyFormValues) => Promise<void>
+  onUpdate: (input: AccessKeyFormValues) => Promise<void>
   onDelete: () => void
   onCopy: (resource: AccessKeyResource) => Promise<void>
 }) {
   const { t } = useTranslation()
   const [showSecret, setShowSecret] = useState(false)
   const [keyValue, setKeyValue] = useState('')
+  const [displayNameValue, setDisplayNameValue] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setShowSecret(false)
     setLocalError(null)
     setKeyValue(mode === 'edit' && resource ? resource.value : '')
+    setDisplayNameValue(mode === 'edit' && resource ? (resource.displayName ?? '') : '')
   }, [mode, resource])
 
   const validateKey = (value: string) => {
@@ -502,12 +519,30 @@ function AccessKeyDetailContent({
     const trimmed = validateKey(keyValue)
     if (!trimmed) return
 
+    const trimmedDisplayName = displayNameValue.trim()
+    // The backend limit counts Unicode code points, not UTF-16 units.
+    if (
+      supportsDisplayNames &&
+      Array.from(trimmedDisplayName).length > ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH
+    ) {
+      setLocalError(
+        t('accessKeysPage.form.validation.displayNameTooLong', {
+          max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+        }),
+      )
+      return
+    }
+
     try {
       setLocalError(null)
+      const input: AccessKeyFormValues = {
+        value: trimmed,
+        displayName: supportsDisplayNames ? trimmedDisplayName || null : undefined,
+      }
       if (mode === 'create') {
-        await onCreate(trimmed)
+        await onCreate(input)
       } else {
-        await onUpdate(trimmed)
+        await onUpdate(input)
       }
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : String(error))
@@ -518,6 +553,22 @@ function AccessKeyDetailContent({
     return (
       <div className="p-5">
         <form className="grid gap-4" onSubmit={(event) => void handleCreateOrUpdate(event)}>
+          {supportsDisplayNames ? (
+            <label className={fieldClassName}>
+              <span>{t('accessKeysPage.form.displayName')}</span>
+              <Input
+                value={displayNameValue}
+                disabled={mutating}
+                placeholder={t('accessKeysPage.form.displayNamePlaceholder')}
+                onChange={(event) => setDisplayNameValue(event.target.value)}
+              />
+              <span className="text-muted-foreground text-xs">
+                {t('accessKeysPage.form.displayNameHint', {
+                  max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+                })}
+              </span>
+            </label>
+          ) : null}
           <label className={fieldClassName}>
             <span>{t('accessKeysPage.form.keyValue')}</span>
             <div className="flex gap-2">
@@ -618,6 +669,9 @@ function AccessKeyDetailContent({
 
       <dl className="mt-5 grid gap-3 text-sm">
         {[
+          ...(supportsDisplayNames
+            ? [['name', resource.displayName ?? t('accessKeysPage.detail.noName')]]
+            : []),
           ['owner', userLabel(users, resource.userId) ?? t('accessKeysPage.list.unassigned')],
           [
             'credentialScope',
@@ -746,6 +800,7 @@ export function AccessKeysWorkbenchPage() {
   const [detailMode, setDetailMode] = useState<DetailMode>('detail')
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [replaceSheetOpen, setReplaceSheetOpen] = useState(false)
+  const [replaceSnapshot, setReplaceSnapshot] = useState<AccessKeysSnapshot | null>(null)
   const [confirmation, setConfirmation] = useState<PendingAccessKeyConfirmation | null>(null)
 
   const resources = workbench.snapshot?.resources ?? []
@@ -761,6 +816,7 @@ export function AccessKeysWorkbenchPage() {
         resource.value,
         resource.maskedValue,
         resource.identifier ?? '',
+        resource.displayName ?? '',
         resource.prefix,
         resource.suffix,
         String(resource.index),
@@ -831,26 +887,38 @@ export function AccessKeysWorkbenchPage() {
     }
   }
 
-  const handleCreate = async (value: string) => {
-    await workbench.createKey(value)
+  const handleCreate = async ({ value, displayName }: AccessKeyFormValues) => {
+    await workbench.createKey({ value, displayName })
     toast.success(t('accessKeysPage.toast.created'))
     setDetailMode('detail')
     setSelectedKeyId(null)
     setDetailSheetOpen(false)
   }
 
-  const handleUpdate = async (value: string) => {
+  const handleUpdate = async ({ value, displayName }: AccessKeyFormValues) => {
     if (!selectedResource) return
+    const valueChanged = value !== selectedResource.value
+    const displayNameChanged =
+      displayName !== undefined && displayName !== selectedResource.displayName
+    if (!valueChanged && !displayNameChanged) {
+      setDetailMode('detail')
+      return
+    }
     await workbench.updateKey({
       resource: selectedResource,
-      value,
+      input: {
+        ...(valueChanged ? { value } : {}),
+        ...(displayNameChanged ? { displayName } : {}),
+      },
     })
     toast.success(t('accessKeysPage.toast.updated'))
     setDetailMode('detail')
   }
 
   const handleReplace = (values: string[]) => {
-    setConfirmation({ type: 'replace', values })
+    const snapshot = replaceSnapshot
+    if (!snapshot) return
+    setConfirmation({ type: 'replace', values, snapshot })
   }
 
   const handleDelete = (resource = selectedResource) => {
@@ -902,38 +970,46 @@ export function AccessKeysWorkbenchPage() {
     const currentConfirmation = confirmation
     if (!currentConfirmation) return
 
-    if (currentConfirmation.type === 'replace') {
-      await workbench.replaceKeys(currentConfirmation.values)
-      toast.success(t('accessKeysPage.toast.replaced'))
+    try {
+      if (currentConfirmation.type === 'replace') {
+        await workbench.replaceKeys({
+          values: currentConfirmation.values,
+          snapshot: currentConfirmation.snapshot,
+        })
+        toast.success(t('accessKeysPage.toast.replaced'))
+        setSelectedKeyId(null)
+        setDetailMode('detail')
+        setReplaceSheetOpen(false)
+        setReplaceSnapshot(null)
+        setDetailSheetOpen(false)
+        setConfirmation(null)
+        return
+      }
+
+      if (currentConfirmation.type === 'delete') {
+        await workbench.deleteKey(currentConfirmation.resource)
+        toast.success(t('accessKeysPage.toast.deleted'))
+        if (selectedKeyId === currentConfirmation.resource.id) {
+          setSelectedKeyId(null)
+          setDetailSheetOpen(false)
+        }
+        setDetailMode('detail')
+        setConfirmation(null)
+        return
+      }
+
+      await workbench.bulkDeleteKeys(currentConfirmation.resources)
+      toast.success(
+        t('accessKeysPage.toast.bulkDeleted', { count: currentConfirmation.resources.length }),
+      )
+      setSelectedKeyIds(new Set())
       setSelectedKeyId(null)
       setDetailMode('detail')
-      setReplaceSheetOpen(false)
       setDetailSheetOpen(false)
       setConfirmation(null)
-      return
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
     }
-
-    if (currentConfirmation.type === 'delete') {
-      await workbench.deleteKey(currentConfirmation.resource)
-      toast.success(t('accessKeysPage.toast.deleted'))
-      if (selectedKeyId === currentConfirmation.resource.id) {
-        setSelectedKeyId(null)
-        setDetailSheetOpen(false)
-      }
-      setDetailMode('detail')
-      setConfirmation(null)
-      return
-    }
-
-    await workbench.bulkDeleteKeys(currentConfirmation.resources)
-    toast.success(
-      t('accessKeysPage.toast.bulkDeleted', { count: currentConfirmation.resources.length }),
-    )
-    setSelectedKeyIds(new Set())
-    setSelectedKeyId(null)
-    setDetailMode('detail')
-    setDetailSheetOpen(false)
-    setConfirmation(null)
   }
 
   const detailSheetTitle =
@@ -1038,7 +1114,10 @@ export function AccessKeysWorkbenchPage() {
                 variant="outline"
                 size="md"
                 disabled={workbench.mutating}
-                onClick={() => setReplaceSheetOpen(true)}
+                onClick={() => {
+                  setReplaceSnapshot(workbench.snapshot ?? null)
+                  setReplaceSheetOpen(true)
+                }}
               >
                 <Save className="size-4" aria-hidden="true" />
                 {t('accessKeysPage.actions.replace')}
@@ -1129,6 +1208,7 @@ export function AccessKeysWorkbenchPage() {
             users={users}
             channelGroups={channelGroups}
             modelGroups={modelGroups}
+            supportsDisplayNames={workbench.snapshot?.supportsDisplayNames ?? false}
             mutating={workbench.mutating}
             onModeChange={setDetailMode}
             onCancel={() => {
@@ -1147,16 +1227,25 @@ export function AccessKeysWorkbenchPage() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={replaceSheetOpen} onOpenChange={setReplaceSheetOpen}>
+      <Sheet
+        open={replaceSheetOpen}
+        onOpenChange={(open) => {
+          setReplaceSheetOpen(open)
+          if (!open) setReplaceSnapshot(null)
+        }}
+      >
         <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-xl">
           <SheetHeader className="border-b p-5">
             <SheetTitle>{t('accessKeysPage.replace.title')}</SheetTitle>
             <SheetDescription>{t('accessKeysPage.replace.description')}</SheetDescription>
           </SheetHeader>
           <ReplaceAccessKeysContent
-            resources={resources}
+            resources={replaceSnapshot?.resources ?? resources}
             mutating={workbench.mutating}
-            onCancel={() => setReplaceSheetOpen(false)}
+            onCancel={() => {
+              setReplaceSheetOpen(false)
+              setReplaceSnapshot(null)
+            }}
             onReplace={handleReplace}
           />
         </SheetContent>

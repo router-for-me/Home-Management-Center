@@ -1,10 +1,6 @@
 export const zhTW = {
   common: {
-    productName: 'Home Center',
     productShortName: 'Home Center',
-    productSubtitle: '商業化控制台',
-    phaseBaseline: 'Phase 0 應用基線',
-    cancel: '取消',
     close: '關閉',
     routeLoading: '正在載入頁面',
     common: {
@@ -21,7 +17,6 @@ export const zhTW = {
       userNotBoundHint: '該用戶端存取金鑰未歸屬任何 Home 使用者帳號,因此這筆記錄沒有使用者名稱。',
     },
     actions: {
-      connect: '連線',
       manageConnection: '連線管理',
       copyFailed: '複製失敗',
       customizeColumns: '自訂欄位',
@@ -31,10 +26,6 @@ export const zhTW = {
     },
     language: {
       switch: '語言',
-      simplifiedChinese: '簡體中文',
-      traditionalChinese: '繁體中文',
-      english: '英文',
-      russian: '俄文',
     },
     theme: {
       switch: '切換主題',
@@ -54,7 +45,6 @@ export const zhTW = {
       usage: '用量與請求',
       diagnostics: '調用診斷',
       logs: '執行日誌',
-      usageLogs: '觀測資料',
       systemNodes: '系統資訊',
     },
     navigationGroups: {
@@ -75,7 +65,6 @@ export const zhTW = {
       usage: '用量分析與請求排障',
       diagnostics: '調用健康與請求日誌',
       logs: '執行與請求錯誤日誌',
-      usageLogs: '用量、診斷、日誌',
       systemNodes: '執行與診斷資訊',
     },
     sidebar: {
@@ -84,16 +73,11 @@ export const zhTW = {
       collapse: '收合側邊欄',
       expand: '展開側邊欄',
       openMobile: '開啟導覽',
-      closeMobile: '關閉導覽',
       connectionStatus: {
         connected: '已連線',
         disconnected: '未連線',
         error: '連線失敗',
         checking: '檢測中…',
-        hint: '設定服務位址和 management key',
-        errorHint: '檢查服務位址和 management key',
-        runtime: '模式',
-        endpoint: 'Endpoint',
         connectedAction: '管理 {{mode}} 連線',
         disconnectedAction: '開啟連線管理',
         errorAction: '檢查連線設定',
@@ -162,21 +146,14 @@ export const zhTW = {
         models: '模型目錄',
       },
       hero: {
-        title: '多模型存取，從一個可控入口開始',
         titleLine1: '多模型存取',
-        titleLine2: '從一個可控入口開始',
         titleLine2Prefix: '從一個',
         titleLine2Accent: '可控入口',
         titleLine2Suffix: '開始',
         description: '一個入口、一套規則，把模型適配、憑證分發和用量歸屬留給閘道。',
-        adminPrimary: '進入管理控制台',
-        adminResume: '進入管理控制台',
-        userPrimary: '使用者登入',
-        userWorkspace: '進入使用者工作台',
         browseModels: '瀏覽模型目錄',
       },
       providers: {
-        title: '主流模型，由同一個閘道處理',
         gateway: 'AI 閘道',
         moreLabel: '更多模型',
         ariaLabel: '主流模型供應商圖示',
@@ -217,27 +194,6 @@ export const zhTW = {
     },
     accessPortal: {
       shellSubtitle: '存取入口',
-      eyebrow: '工作階段入口',
-      title: '進入 Home 控制台',
-      description:
-        '依工作階段類型進入對應工作區。管理員連線 Management API；使用者帳號只維護自己的存取金鑰和安全設定。',
-      admin: {
-        title: '管理工作階段',
-        description: '連線 Management API 後管理執行環境設定、模型服務、憑證池、使用者與存取範圍。',
-        available: '需要 management key',
-        connected: '已連線',
-        action: '連線管理端',
-        resume: '進入管理控制台',
-      },
-      user: {
-        title: '使用者工作階段',
-        description: '登入 Home 使用者帳號，維護個人用戶端存取金鑰、點數狀態和帳號安全。',
-        available: '帳號登入',
-        authenticated: '已登入',
-        login: '登入',
-        workspace: '進入使用者工作台',
-        register: '註冊帳號',
-      },
     },
     adminAccess: {
       back: '返回入口選擇',
@@ -280,7 +236,6 @@ export const zhTW = {
       },
       passkey: {
         description: '此帳號需要使用 Passkey 登入。請使用瀏覽器或系統提示完成驗證。',
-        pending: '此帳號需要 Passkey 登入。',
         action: '使用 Passkey 登入',
       },
       validation: {
@@ -777,9 +732,6 @@ export const zhTW = {
         delete: '刪除',
         save: '儲存',
         copy: '複製',
-        copied: '已複製',
-        enable: '啟用',
-        disable: '停用',
         enabled: '已啟用',
         disabled: '已停用',
         yes: '是',
@@ -974,8 +926,6 @@ export const zhTW = {
           provider: '模型供應商',
           model: '模型 ID',
           scope: '規則範圍',
-          serviceTier: 'Tier',
-          minInputTokens: '上下文下限',
           input: '輸入價格',
           output: '輸出價格',
           cacheRead: '快取讀取',
@@ -1072,14 +1022,9 @@ export const zhTW = {
           custom: '自訂下限',
         },
         validation: {
-          providerRequired: '必須提供模型供應商。',
           modelRequired: '必須選擇模型供應商和模型 ID。',
           priceInvalid: '價格必須是大於或等於 0 的數字。',
           minInputTokensInvalid: '請輸入非負且安全的整數。',
-        },
-        modelScopes: {
-          available: '執行時可用',
-          static: '靜態目錄',
         },
 
         import: {
@@ -1092,40 +1037,23 @@ export const zhTW = {
           reloadCandidates: '重新載入候選模型',
           candidateFailedEmpty:
             '候選模型無法載入。請重新載入候選模型，或檢查 Management API 回應。',
-          candidateIssueEmpty: '候選模型資料不完整，目前沒有可預覽列。套用前請先重新載入候選模型。',
-          catalogTitle: 'models.dev 目錄',
-          catalogPending: '目錄尚未載入。',
           catalogReady: '已載入 {{count}} 個模型（{{time}}）。',
           catalogFailed: '載入 models.dev 目錄失敗。',
-          reloadCatalog: '重新載入目錄',
           serverPreviewBadge: '服務端預覽',
           legacyPreviewBadge: '相容預覽',
-          serverPreviewLoading: '正在請求服務端校驗預覽…',
-          serverPreviewReady: '服務端已於 {{time}} 校驗 {{count}} 列。',
           serverPreviewFailed: '無法產生服務端預覽。',
           refreshServerPreview: '重新整理預覽',
-          retryServerPreview: '重試預覽',
-          previewMetadata: '預覽 {{id}} · 到期時間 {{expires}} · 原子執行 {{atomic}}',
-          sourceMetadata:
-            'models.dev 快照 {{version}} · {{url}} · 擷取時間 {{time}} · {{count}} 個模型',
-          previewNoExpiry: '未宣告',
-          atomicYes: '是',
-          atomicNo: '否',
           legacyPreviewWarning:
             '目前後端不提供服務端預覽和交易套用。匹配與寫入使用相容路徑，無法防止並行價格變更。',
-          nonAtomicWarning:
-            '服務端宣告本次套用不是原子操作。失敗時可能只有部分列生效，請先核對操作結果再重試。',
           serverIssuesTitle: '服務端校驗提示',
           previewInvalid: {
             expired: '服務端預覽已到期，請重新整理後再套用。',
             stale: '產生預覽後定價策略發生了變更，請重新整理預覽後再套用。',
-            conflict: '產生預覽後價格規則發生了變更，請重新整理並重新檢查衝突。',
           },
           policyTitle: '價格生成策略',
           policyHint:
             '倍率會把官方單價轉換成 Home 絕對價格。目前匯入僅寫入 service tier=*、min input tokens=0 的基礎規則；包含額外計價維度的模型會被阻止，避免寫入不完整價格。',
           defaultMultiplier: '預設倍率',
-          familyMultiplier: '{{family}} 倍率',
           overwriteMode: '既有規則處理',
           overwriteMissing: '只建立缺失規則',
           overwriteSync: '建立缺失 + 更新 source=sync',
@@ -1134,7 +1062,6 @@ export const zhTW = {
           overwriteWarning:
             '該模式可能覆蓋 {{count}} 條手動或預設規則。選中相關列後會要求二次確認。',
           advancedPolicy: '進階定價策略',
-          resetPreferences: '重設已儲存偏好',
           showAdvancedPolicy: '展開進階價格生成策略',
           hideAdvancedPolicy: '收合進階價格生成策略',
           modifiedBadge: '已修改',
@@ -1188,8 +1115,6 @@ export const zhTW = {
           includeZeroCost: '允許官方價為 0',
           previewTitle: '預覽並確認',
           previewHint: '已選 {{selected}} / 可選 {{selectable}} / 總計 {{total}}',
-          summaryTitle: '套用摘要',
-          summarySelected: '已選 {{count}} 條',
           summaryCreates: '建立',
           summaryUpdatesSync: '更新 sync',
           summaryOverwrites: '覆蓋',
@@ -1201,7 +1126,6 @@ export const zhTW = {
           exportPreview: '匯出預覽',
           searchPlaceholder: '搜尋 Home provider、model 或 models.dev 匹配',
           resolveMatchPlaceholder: '選擇 models.dev 匹配',
-          resolveMatchAria: '為 {{model}} 選擇 models.dev 匹配',
           applyMatchOverride: '重新產生預覽',
           loadingPreview: '正在載入預覽…',
           emptyPreview: '沒有可預覽的候選模型。',
@@ -1228,7 +1152,6 @@ export const zhTW = {
             request: '請求',
             source: '來源',
             enabled: '狀態',
-            note: '備註',
           },
           status: {
             matched: '已匹配',
@@ -1317,8 +1240,6 @@ export const zhTW = {
               title: '預覽已到期',
               description: '服務端拒絕了到期預覽，請重新整理後再套用。',
             },
-            operationId: '操作 {{id}}',
-            idempotencyKey: '冪等鍵 {{id}}',
             status: '結果',
             message: '資訊',
             rowStatus: {
@@ -1349,12 +1270,8 @@ export const zhTW = {
             title: '上次套用結果尚未確認',
             description:
               '針對 {{count}} 條規則的請求可能已由後端處理。請勿建立新預覽；請使用相同冪等鍵安全重試以取得唯一結果。',
-            preview: '預覽',
-            startedAt: '首次提交',
-            idempotencyKey: '冪等鍵',
             retry: '安全重試原請求',
             discard: '放棄復原記錄',
-            lastError: '最近一次請求失敗：{{error}}',
             unknownError: '無法確認後端是否已完成本次套用。',
             storageFailed: '瀏覽器無法儲存復原記錄，因此本次套用未送出。請檢查工作階段儲存權限。',
             discardTitle: '放棄尚未確認的套用記錄？',
@@ -1370,7 +1287,6 @@ export const zhTW = {
       },
       toast: {
         copied: '已複製。',
-        priceCreated: '模型價格已建立。',
         pricesCreated: '已建立 {{count}} 條模型價格。',
         priceUpdated: '模型價格已更新。',
         deleted: '已刪除。',
@@ -1429,10 +1345,6 @@ export const zhTW = {
         },
       },
       header: {
-        eyebrow: '首頁總覽',
-        title: '服務端執行概覽',
-        description:
-          '查看目前連線的閘道是否可處理模型請求，以及用戶端金鑰、模型服務和帳號憑證的執行狀態。',
         refresh: '同步資料',
         syncing: '同步中',
         runtime: '已連線服務端：{{mode}}',
@@ -1512,20 +1424,17 @@ export const zhTW = {
         summary: '{{active}} 個活躍 · {{quiet}} 個靜默 · 共 {{total}} 個',
         unavailable: '目前時間段暫無金鑰呼叫。',
         emptyTop: '暫無金鑰排行。',
-        action: '查看金鑰用量',
       },
       modelUsage: {
         title: '模型使用分布',
         summary: '{{count}} 個模型在目前時間段有呼叫',
         unavailable: '目前時間段暫無模型呼叫。',
         emptyTop: '暫無模型排行。',
-        action: '查看用量',
       },
       usageConsumptionTrend: {
         title: '整體消耗趨勢',
         description: '按目前用量時間段展示 Token 消耗變化。',
         summary: '{{buckets}} 個時段 · 總消耗 {{tokens}} Token',
-        action: '查看請求用量',
         tooltip: {
           tokens: 'Token 消耗',
           tokenValue: '{{value}} Token',
@@ -1540,7 +1449,6 @@ export const zhTW = {
         description: '按完整時間範圍展示請求活躍度、成功率和失敗分布。',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
-        action: '查看呼叫診斷',
         range: '{{from}}–{{to}} · {{interval}}',
         matrixLabel: '請求健康度時間點陣',
         bucketTitle: '{{label}}：{{requests}} 次請求 · {{successRate}} 成功率',
@@ -1558,34 +1466,8 @@ export const zhTW = {
           unknown: '未知',
         },
       },
-      quickActions: {
-        title: '常用入口',
-        description: '快速進入常用管理頁面。',
-        providers: {
-          title: '模型服務',
-          description: '查看各類模型服務金鑰和停用項。',
-        },
-        credentials: {
-          title: '帳號憑證',
-          description: '檢查 OAuth 和檔案憑證狀態。',
-        },
-        accessKeys: {
-          title: '金鑰管理',
-          description: '管理用戶端呼叫服務端介面使用的金鑰。',
-        },
-        config: {
-          title: '系統設定',
-          description: '調整路由、日誌和執行設定。',
-        },
-        systemNodes: {
-          title: '系統資訊',
-          description: '查看版本、連線狀態、節點和診斷入口。',
-        },
-      },
       providers: {
         title: '模型服務接入',
-        description: '查看各類模型服務的金鑰總數、可用數量和已停用數量。',
-        action: '管理模型服務',
         emptyTitle: '尚未設定模型服務',
         emptyDescription: '目前還沒有模型服務金鑰。新增模型服務後，閘道才能把請求轉發到上游模型。',
         emptySupportedProviders: '支援 Gemini、Claude、Codex、xAI、Vertex、OpenAI 相容服務。',
@@ -1605,8 +1487,6 @@ export const zhTW = {
       },
       config: {
         title: '關鍵開關',
-        description: '影響日誌記錄、用量統計和請求路由的設定。',
-        action: '處理設定',
       },
       configChecks: {
         requestLog: '請求日誌',
@@ -1614,10 +1494,6 @@ export const zhTW = {
         fileLogging: '檔案日誌',
         debug: 'Debug 模式',
         routing: '路由策略',
-      },
-      capabilities: {
-        title: '可用功能',
-        description: '目前連線的服務支援哪些管理功能。',
       },
       capabilityNames: {
         nodes: '節點拓撲',
@@ -1629,7 +1505,6 @@ export const zhTW = {
       },
       credentials: {
         title: '帳號憑證來源',
-        description: '按憑證保存方式統計帳號記錄，包括 OAuth 登入和檔案憑證。',
         empty: '目前還沒有帳號憑證記錄。',
       },
       credentialSourceNames: {
@@ -1641,7 +1516,6 @@ export const zhTW = {
       issues: {
         title: '資料載入狀態',
         description: '顯示首頁資料和執行環境能力是否完整可用。',
-        empty: '首頁資料已完整載入。',
         requestFailed: '請求失敗：{{status}}',
         unavailableCapability: '目前執行環境未提供',
       },
@@ -1871,7 +1745,6 @@ export const zhTW = {
       },
       connectivity: {
         testModel: '測試模型',
-        testModelPlaceholder: '留空則使用第一個自訂模型',
         testModelSearchPlaceholder: '搜尋模型名，或直接輸入模型 ID',
         testModelAutoOption: '自動：使用第一個自訂模型',
         testModelSearchEmpty: '沒有符合的模型，仍可直接輸入模型 ID。',
@@ -1984,8 +1857,6 @@ export const zhTW = {
         },
         common: {
           notAvailable: '暫無',
-          yes: '是',
-          no: '否',
         },
         window: {
           labels: {
@@ -2068,9 +1939,7 @@ export const zhTW = {
       actions: {
         addCredential: '新增憑證',
         detail: '查看',
-        upload: '上傳 JSON',
         save: '儲存元資料',
-        viewQuota: '查看額度',
         viewModels: '查看模型',
         reloadModels: '重新載入',
         download: '下載',
@@ -2102,10 +1971,7 @@ export const zhTW = {
         },
       },
       oauth: {
-        title: 'OAuth 登入',
         startLogin: '生成授權連結',
-        showAdvanced: '顯示進階選項',
-        hideAdvanced: '收起進階選項',
         authorizationLinkTitle: '授權連結已生成',
         authorizationLinkDescription:
           '先複製連結到合適的瀏覽器或帳號環境中完成授權。只有確認要使用目前瀏覽器時，再手動開啟連結。',
@@ -2297,7 +2163,6 @@ export const zhTW = {
         note: '備註',
       },
       concurrency: {
-        current: '目前',
         observed: '觀測進行中',
         admitted: '已准入',
         limit: '上限',
@@ -2343,7 +2208,6 @@ export const zhTW = {
         modelPlaceholder: '模型 ID',
         modelInputLabel: '第 {{index}} 列模型 ID',
         modelLimitInputLabel: '第 {{index}} 列模型並發上限',
-        removeModel: '移除模型上限',
         removeModelAtIndex: '移除第 {{index}} 列模型上限',
         noModelLimits: '未設定模型上限。',
         contractInvalid: 'Home 已宣告支援並發策略，但目前策略無法被安全讀取。既有上限不會被修改。',
@@ -2401,12 +2265,8 @@ export const zhTW = {
         description: '正在從 Management API 讀取用戶端存取金鑰及相關歸屬資訊。',
       },
       header: {
-        eyebrow: '用戶端存取控制',
         title: '用戶端存取金鑰',
-        description: '管理用戶端呼叫服務端介面時使用的存取金鑰。它們獨立於模型服務金鑰，不要混用。',
         total: '已設定 {{count}} 個金鑰',
-        accepted: '由 proxy 執行環境接受',
-        updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步資料',
@@ -2418,7 +2278,8 @@ export const zhTW = {
         edit: '編輯',
         delete: '刪除',
         copy: '複製',
-        copyIdentifier: '複製識別碼 {{identifier}}',
+        copyKey: '複製金鑰 {{key}}',
+        copyIdentifier: '複製識別碼',
         reveal: '顯示',
         hide: '隱藏',
         generate: '產生金鑰',
@@ -2430,10 +2291,10 @@ export const zhTW = {
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
-        identity: '識別碼 / 金鑰',
-        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求記錄中的同一個存取金鑰。',
+        identity: '名稱 / 金鑰',
+        identifierTooltip:
+          '名稱僅用於識別，可隨時修改，不影響鑑權；穩定識別碼（api-key-N）在改名和輪換後保持不變，用於在用量、計費、請求記錄中關聯同一金鑰。',
         identifierUnavailable: '無穩定識別碼',
-        key: '金鑰',
         owner: '所屬使用者',
         credentialScope: '憑證範圍',
         modelScope: '模型範圍',
@@ -2442,7 +2303,6 @@ export const zhTW = {
         length: '長度',
         status: '狀態',
         actions: '操作',
-        prefixSuffix: '{{prefix}}…{{suffix}}',
       },
       status: {
         accepted: '已接受',
@@ -2460,7 +2320,9 @@ export const zhTW = {
         title: '金鑰詳情',
         empty: '選擇一個金鑰，或建立新金鑰。',
         secret: '金鑰值',
+        noName: '未設定顯示名稱',
         fields: {
+          name: '顯示名稱',
           prefix: '前綴',
           suffix: '後綴',
           length: '長度',
@@ -2471,16 +2333,19 @@ export const zhTW = {
       },
       form: {
         createEyebrow: '建立存取金鑰',
-        editEyebrow: '編輯存取金鑰',
         createTitle: '新的用戶端存取金鑰',
         editTitle: '更新用戶端存取金鑰',
         keyValue: '金鑰值',
+        displayName: '顯示名稱',
+        displayNamePlaceholder: '例如：正式環境金鑰',
+        displayNameHint:
+          '選填，最多 {{max}} 個字元。重新命名不會變更金鑰值、所屬使用者或存取範圍。',
         validation: {
           required: '必須填寫金鑰值。',
+          displayNameTooLong: '顯示名稱不能超過 {{max}} 個字元。',
         },
       },
       replace: {
-        eyebrow: '完整替換',
         title: '替換全部存取金鑰',
         description: '這裡使用 PUT /api-keys，會替換整個用戶端存取金鑰列表。每行輸入一個金鑰。',
         warning:
@@ -2524,22 +2389,13 @@ export const zhTW = {
         description: '正在從 Management API 讀取使用者、用戶端金鑰歸屬、憑證範圍和模型範圍。',
       },
       header: {
-        eyebrow: '使用者與存取',
         title: '使用者與存取',
-        description:
-          '管理使用者、用戶端金鑰歸屬、憑證範圍和模型範圍，讓 Home 基礎多使用者閉環保持清晰可控。',
-        total: '共 {{count}} 個使用者',
         users: '{{count}} 個使用者',
-        activeUsers: '{{count}} 個活躍使用者',
-        keys: '{{count}} 個用戶端金鑰',
-        assignedKeys: '{{count}} 個已分配金鑰',
         unassignedKeys: '{{count}} 個未分配金鑰',
-        updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步資料',
         syncing: '同步中',
-        new: '新建使用者',
         newUser: '新增使用者',
         newKey: '新增金鑰',
         newCredentialScope: '新增憑證範圍',
@@ -2558,14 +2414,10 @@ export const zhTW = {
       status: {
         active: '活躍',
         deleted: '已刪除',
-        notAvailable: '不可用',
         notReturned: '未返回',
         notDeleted: '未刪除',
       },
       list: {
-        title: '使用者列表',
-        description: '查看使用者、用戶端金鑰歸屬和已分配的存取範圍。',
-        filterPlaceholder: '篩選使用者或金鑰',
         empty: '目前篩選條件下沒有使用者。',
         user: '使用者',
         status: '狀態',
@@ -2593,7 +2445,6 @@ export const zhTW = {
         creditsUnlimitedCreditsHint: '不限量模式已開啟：餘額會被保留但不參與校驗。',
         timezone: '時區',
         timezoneHint: '日曆（calendar）窗口使用的 IANA 時區。',
-        noGroups: '尚未建立可選範圍。',
         noCredentialGroups: '尚未建立憑證範圍。',
         noModelGroups: '尚未建立模型範圍。',
         validation: {
@@ -2786,17 +2637,12 @@ export const zhTW = {
           batchDescription: '對已選使用者逐個提交操作，每個使用者都會生成獨立餘額流水。',
         },
         form: {
-          user: '使用者',
-          userPlaceholder: '選擇使用者',
           target: '操作對象',
           targetCount: '{{count}} 個使用者',
           operation: '操作類型',
-          current: '目前餘額',
-          after: '操作後餘額',
           currentTotal: '目前餘額合計',
           afterTotal: '操作後餘額合計',
           batchHint: '批量操作使用同一金額和備註，後端會按使用者分別記錄。',
-          negativeHint: '扣減後餘額會變為負數。Home 允許負數餘額，但請確認這是預期操作。',
           negativeTargetHint:
             '本次扣減後將有 {{count}} 個使用者餘額為負數。Home 允許負數餘額，但請確認這是預期操作。',
           amount: '金額',
@@ -2807,7 +2653,6 @@ export const zhTW = {
         },
         validation: {
           targetRequired: '必須選擇至少一個可操作使用者。',
-          userRequired: '必須選擇一個使用者。',
           amountRequired: '金額必須大於 0。',
           noteRequired: '扣減必須填寫備註。',
         },
@@ -2821,11 +2666,8 @@ export const zhTW = {
           batchDescription: '將對已選使用者逐個提交請求。請確認使用者數量、單人金額和餘額合計。',
           user: '使用者',
           users: '使用者數量',
-          amount: '金額變化',
           amountPerUser: '單人金額',
           totalAmount: '總變化',
-          current: '目前餘額',
-          after: '操作後餘額',
           currentTotal: '目前餘額合計',
           afterTotal: '操作後餘額合計',
           note: '備註',
@@ -2842,7 +2684,6 @@ export const zhTW = {
       },
       detail: {
         title: '使用者詳情',
-        empty: '選擇一個使用者查看詳情。',
         passwordStored: '已設定密碼',
         userId: '使用者 ID：{{id}}',
         sections: {
@@ -2942,7 +2783,6 @@ export const zhTW = {
       },
       status: {
         clean: '無未儲存修改',
-        unsaved: '有未儲存修改',
         visualChangeCount: '{{count}} 項視覺化變更',
         enabled: '已啟用',
         disabled: '已關閉',
@@ -3236,7 +3076,6 @@ export const zhTW = {
         anyProtocol: '任意協議',
         advancedMatchers: '進階匹配條件',
         hideAdvancedMatchers: '收起進階條件',
-        advancedMatcherCount: '{{count}} 項',
         advancedMatchersSummary: '按來源協議、Header 或 payload 條件進一步限定模型匹配。',
         fromProtocol: '來源協議',
         fromProtocolHelp: '請求被轉換前的協議；留空表示不限制來源協議。',
@@ -3382,27 +3221,14 @@ export const zhTW = {
         remove: '移除',
         unsupportedStructure: '目前設定包含暫不支援視覺化編輯的結構。',
         emptyRows: '目前沒有規則。',
-        addProvider: '新增供應商',
-        addChannel: '新增 Channel',
         addAlias: '新增別名',
-        addMapping: '新增映射',
-        addUpstreamKey: '新增上游金鑰',
-        removeChannel: '移除通道',
-        channelRuleCount: '{{count}} 條規則',
         columns: {
-          provider: '模型供應商',
-          models: '模型 ID',
           channel: 'Channel',
           name: '上游模型名',
           alias: '用戶端別名',
           fork: 'Fork',
           forceMapping: 'force-mapping',
-          from: '請求模型',
-          to: '上游模型',
-          regex: 'Regex',
           actions: '操作',
-          upstreamApiKey: '上游 API key',
-          clientKeys: '用戶端金鑰',
         },
         columnDescriptions: {
           channel: '認證通道 key，例如 claude、gemini、codex。',
@@ -3410,27 +3236,14 @@ export const zhTW = {
           alias: '用戶端請求時可使用的模型別名。',
           fork: '進階選項。API 文件僅定義為 fork alias 行為；不確定時保持關閉。',
           forceMapping: '開啟後回應中的 model 欄位會回寫為映射後的上游模型名。',
-          from: '用戶端請求中的 Amp 模型名。啟用 Regex 後按正則表達式匹配。',
-          to: '匹配後轉發到上游的目標模型名。',
-          regex: '關閉時按完整模型名匹配；開啟時將請求模型作為正則表達式處理。',
-        },
-        modelMappings: {
-          description: '按請求模型改寫 Amp CLI 的上游模型。Regex 只在需要模式匹配時啟用。',
         },
         placeholders: {
-          provider: 'claude',
-          models: 'claude-opus-4.5, claude-sonnet-4',
           channel: 'claude',
           name: 'claude-sonnet-4',
           alias: 'sonnet',
-          from: 'claude-opus-4.5',
-          to: 'claude-sonnet-4',
-          upstreamApiKey: 'upstream-key',
-          clientKeys: 'client-key-1, client-key-2',
         },
       },
       oauthExcluded: {
-        title: 'OAuth 模型停用',
         channelLabel: '認證通道',
         reloadModels: '重新載入模型',
         searchPlaceholder: '搜尋模型 ID、名稱或 owner',
@@ -3525,17 +3338,9 @@ export const zhTW = {
         auto: '自動重新整理',
       },
       status: {
-        running: {
-          live: '即時重新整理中',
-          auto: '自動重新整理中',
-        },
         paused: {
           live: '即時重新整理已暫停',
           auto: '自動重新整理已暫停',
-        },
-        off: {
-          live: '即時重新整理已關閉',
-          auto: '自動重新整理已關閉',
         },
         unavailable: {
           live: '即時重新整理不可用',
@@ -3618,7 +3423,6 @@ export const zhTW = {
           clientKey: '用戶端存取金鑰',
           credentialId: '憑證 / Auth Index',
         },
-        requestIdPlaceholder: 'Request ID',
         customFrom: '開始時間',
         customTo: '結束時間',
         eventType: '事件類型',
@@ -3850,15 +3654,12 @@ export const zhTW = {
         retry: '重試',
       },
       header: {
-        title: '觀測資料',
-        description: '查看請求用量、調用診斷、執行日誌和可下載的日誌檔案。',
         runtime: '執行環境：{{mode}}',
         updatedAt: '最近同步：{{time}}',
       },
       actions: {
         refresh: '同步資料',
         syncing: '同步中',
-        exportCsv: '匯出 CSV',
         exportFilteredCsv: '匯出',
         exportUnsupported: '暫不支援匯出',
         clearLogs: '清空日誌',
@@ -3871,7 +3672,6 @@ export const zhTW = {
         usageOverview: '用量總覽',
         usageRecords: '請求明細',
         usageAggregates: '聚合排行',
-        usageExport: '匯出',
         usageProviderHealth: '供應商健康',
         usageCredentialHealth: '憑證健康',
         usageRealtime: '即時快照',
@@ -3895,46 +3695,6 @@ export const zhTW = {
           complete: '完整',
           unclassified: '未分類',
           inconsistent: '不一致',
-        },
-      },
-      unavailable: {
-        title: '目前執行環境不提供觀測介面',
-        description:
-          '{{mode}} 未暴露用量、診斷或執行日誌介面。頁面會保留能力狀態，但不會虛構缺失資料。',
-      },
-      verdict: {
-        ready: {
-          title: '觀測資料可用',
-          badge: '可排障',
-          description: '執行環境已回傳用量、診斷或日誌能力，可進行請求級分析與排障。',
-        },
-        disabled: {
-          title: '用量統計未啟用',
-          badge: '未啟用',
-          description:
-            '目前執行環境已開放用量介面，但設定中的 usage-statistics-enabled 為關閉狀態。啟用後才能持續聚合請求用量。',
-        },
-        partial: {
-          title: '用量資料部分同步失敗',
-          badge: '部分失敗',
-          description: '頁面會繼續展示已載入的用量事實，請先查看失敗範圍再做完整判斷。',
-        },
-        legacy: {
-          title: '僅可使用舊版 API Key 用量',
-          badge: '舊版口徑',
-          description:
-            '{{mode}} 只回傳舊版 API key usage。tokens、cost、latency 和執行憑證歸因不會被展示為用量事實。',
-        },
-        logsOnly: {
-          title: '僅可使用執行日誌介面',
-          badge: '僅日誌',
-          description: '{{mode}} 未回傳結構化用量介面，請使用執行日誌和錯誤檔案進行排查。',
-        },
-        unsupported: {
-          title: '目前執行環境不支援用量分析',
-          badge: '不支援',
-          description:
-            '{{mode}} 未開放用量、診斷或執行日誌相關介面。頁面保留能力狀態，等待後端補齊觀測介面。',
         },
       },
       issues: {
@@ -3965,26 +3725,14 @@ export const zhTW = {
         credentialType: '憑證類型',
         homeIp: 'Home 節點',
         endpoint: 'Endpoint',
-        executorType: '執行器類型',
         statusCode: '狀態碼',
-        requestId: 'Request ID',
-        user: '使用者',
-        clientKey: '用戶端金鑰',
-        credentialId: '憑證 ID',
-        authIndex: 'Auth Index',
         minLatencyMs: '最低延遲',
         maxLatencyMs: '最高延遲',
         minAmount: '最低消費',
         maxAmount: '最高消費',
-        sort: '排序',
         advanced: '進階篩選',
         hideAdvanced: '收起進階篩選',
         searchPlaceholder: '搜尋請求 / 使用者 / 模型',
-        requestIdPlaceholder: 'Request ID',
-        userPlaceholder: '使用者、使用者 ID 或 IP',
-        clientKeyPlaceholder: '用戶端金鑰或標籤',
-        credentialIdPlaceholder: '憑證 ID 或名稱',
-        authIndexPlaceholder: 'Auth Index',
         minLatencyPlaceholder: '最低延遲 ms',
         maxLatencyPlaceholder: '最高延遲 ms',
         minAmountPlaceholder: '最低消費',
@@ -3997,7 +3745,6 @@ export const zhTW = {
         anyCredentialType: '全部憑證類型',
         anyHomeIp: '全部 Home 節點',
         anyEndpoint: '全部 Endpoint',
-        anyExecutorType: '全部執行器',
         anyStatusCode: '全部狀態碼',
         ranges: {
           last4h: '最近 4 小時',
@@ -4117,15 +3864,10 @@ export const zhTW = {
       rankings: {
         users: '使用者排行榜',
         clientKeys: '用戶端金鑰排行榜',
-        credentials: '執行憑證排行榜',
         models: '模型排行榜',
-        providers: '供應商排行榜',
-        errors: '錯誤排行榜',
-        topN: '前 5 名',
         viewDetail: '查看全部',
         viewDetailLabel: '查看完整排行',
         hideDetail: '收起',
-        drilldownTitle: '聚合排行明細',
         drawerTitle: '{{group}}排行明細',
         drawerDescription: '依目前篩選查看完整排行，表格展示消費、請求、成本效率與品質指標。',
         groupBy: '排行維度',
@@ -4198,7 +3940,6 @@ export const zhTW = {
       },
       requestLogs: {
         title: '請求日誌檔案',
-        range: '{{start}}-{{end}} / 共 {{total}}',
         searchPlaceholder: '搜尋 Request ID、模型、供應商或檔名',
         emptyTitle: '暫無請求日誌檔案',
         emptyDescription: '目前搜尋沒有匹配的請求日誌。',
@@ -4335,7 +4076,6 @@ export const zhTW = {
           window: '視窗',
         },
         quotaModes: {
-          current: '目前',
           estimated: '估算',
         },
         statuses: {
@@ -4416,32 +4156,6 @@ export const zhTW = {
           unknown: '未知',
         },
       },
-      summary: {
-        keys: '用量金鑰',
-        keysDetail: '{{count}} 個最近請求視窗',
-        requests: '請求計數',
-        requestsDetail: '{{success}} 成功 / {{failed}} 失敗',
-        logs: '執行日誌',
-        logsDetail: '{{count}} 個錯誤日誌檔案',
-      },
-      usage: {
-        title: 'API Key 用量',
-        description: '按模型供應商、上游 Base URL 和 API key 彙總成功與失敗請求數。',
-        unavailableTitle: '此執行環境不提供 API Key 用量',
-        unavailable: 'API Key 用量介面未開放。',
-        emptyTitle: '暫無 API Key 用量',
-        empty: '目前範圍沒有 API Key 用量記錄。',
-        provider: '模型供應商',
-        baseUrl: 'Base URL',
-        key: '金鑰',
-        success: '成功',
-        failed: '失敗',
-        recentWindows: '最近視窗',
-      },
-      operations: {
-        title: '日誌與排查工具',
-        description: '執行日誌和錯誤日誌用於排查請求鏈路、執行狀態和異常回應。',
-      },
       logs: {
         title: '執行日誌',
         unavailableTitle: '此執行環境不提供執行日誌',
@@ -4462,14 +4176,10 @@ export const zhTW = {
           request: 'Request ID',
           homeIp: 'Home 節點',
           clientIp: 'Client IP',
-          line: '日誌內容',
           summary: '日誌摘要',
           actions: '操作',
         },
         filters: {
-          homeIp: 'Home IP',
-          clientIp: 'Client IP',
-          requestId: 'Request ID',
           level: '日誌級別',
           searchBy: '搜尋維度',
           searchPlaceholder: '輸入{{field}}',
@@ -4480,9 +4190,6 @@ export const zhTW = {
           after: '開始時間',
           before: '結束時間',
           clear: '清除篩選',
-          homeIpPlaceholder: 'Home IP',
-          clientIpPlaceholder: 'Client IP',
-          requestIdPlaceholder: 'Request ID',
           searchFields: {
             requestId: 'Request ID',
             homeIp: 'Home IP',
@@ -4517,7 +4224,6 @@ export const zhTW = {
         unavailable: '錯誤日誌檔案介面未開放。',
         emptyTitle: '暫無錯誤日誌檔案',
         empty: '目前沒有錯誤日誌檔案。',
-        meta: '{{size}} 位元組 · {{time}}',
         searchPlaceholder: '搜尋日誌檔名，按 Enter',
         columns: {
           name: '日誌',
@@ -4557,7 +4263,6 @@ export const zhTW = {
         retry: '重試',
       },
       header: {
-        title: '執行與診斷資訊',
         runtime: '執行環境：{{mode}}',
         probedAt: '能力檢測：{{time}}',
         updatedAt: '最近同步：{{time}}',
@@ -4590,7 +4295,6 @@ export const zhTW = {
             '關鍵診斷介面未能回傳可用資料。請檢查 Management API、management key 和執行環境診斷能力。',
         },
         facts: {
-          config: '設定摘要：{{status}}',
           version: '版本資訊：{{status}}',
           nodes: '節點記錄：{{count}}',
           nodesCluster: '節點記錄：{{count}} 個 CPA / {{homeCount}} 個 Home',
@@ -4619,9 +4323,6 @@ export const zhTW = {
       status: {
         enabled: '已啟用',
         disabled: '未啟用',
-        connected: '已連線',
-        healthy: '健康',
-        unhealthy: '異常',
         partial: '部分資料',
         notAvailable: '不可用',
         unknown: '未知',
@@ -4646,13 +4347,8 @@ export const zhTW = {
         title: 'Home / CPA 拓撲',
         addNode: '新增節點',
         unavailable: '目前 {{runtime}} 執行環境未開放節點查詢介面。',
-        empty: '暫無節點連線記錄。',
         emptySupported: '節點介面可用，暫無連線記錄。',
-        homeSectionTitle: 'Home 節點',
         homeRecordsStatus: '{{count}} 個 Home',
-        homeUnsupported: '暫無獨立 Home 節點列表。',
-        cpaSectionTitle: 'CPA 節點按 Home 分組',
-        cpaGroupStatus: '{{count}} 個 Home 分組',
         cpaRecordsStatus: '{{count}} 個 CPA',
         noCpaInHome: '該 Home 暫無 CPA 連線記錄。',
         unknownHome: '未知 Home',
@@ -4663,14 +4359,11 @@ export const zhTW = {
           homeRole: 'Home 角色',
           cpaIp: 'CPA 節點 IP',
           nodeId: 'CPA 節點 ID',
-          servingHome: '服務 Home',
           connectedTime: '連線時間',
           connectedSince: '最早連線',
           lastSeen: '最後回報',
           clientCount: '用戶端數',
           cpaCount: 'CPA 數',
-          healthyCpa: '健康 CPA',
-          health: '健康狀態',
           nodeName: 'CPA 節點名稱',
         },
         rename: {
@@ -4742,7 +4435,6 @@ export const zhTW = {
         version: '版本',
         latestVersion: '最新：{{version}}',
         endpoint: '管理端',
-        endpointDetail: '目前連線位址',
         masterHome: 'Master：{{home}}',
         homes: 'Home 節點',
         homesHealthy: '{{healthy}} / {{total}} 健康',
@@ -4753,8 +4445,6 @@ export const zhTW = {
         attention: '注意項',
         attentionDetail: '存在拓撲異常',
         attentionClear: '暫無注意項',
-        nodes: '節點',
-        nodesAvailable: '節點介面可用',
         nodesEmpty: '節點介面可用，暫無連線記錄',
         nodesConnected: '已回傳 {{count}} 個節點',
         nodesClusterConnected: '{{cpaCount}} 個 CPA 節點，分布在 {{homeCount}} 個 Home 節點下',
@@ -4763,8 +4453,6 @@ export const zhTW = {
         config: '設定',
         configAvailable: '摘要已讀取',
         configUnavailable: '摘要不可用',
-        apiCall: 'API 診斷',
-        apiCallDetail: '可透過 /api-call 驗證上游連通性',
       },
       toast: {
         apiCallComplete: '診斷請求已完成。',
@@ -5089,62 +4777,6 @@ export const zhTW = {
         globalDisabled: '全域外掛已停用，因此已安裝外掛暫未啟用。',
         reportPending: '外掛設定已變更，但節點回報狀態仍在等待。',
         deletePending: '刪除任務已建立，但節點回報尚未完全收斂。',
-      },
-    },
-    placeholder: {
-      phase: 'Phase 0 腳手架',
-      dashboard: {
-        title: '儀表板',
-        description:
-          '商業化控制台首頁將彙整執行狀態、Provider 覆蓋、憑證、存取金鑰、節點和版本訊號。',
-        itemOne:
-          '讀取 GET /config、GET /latest-version、GET /auth-files、Provider GET 路由，並在可用時讀取 GET /nodes。',
-        itemTwo: '為 CPA、Home 執行環境和 Home 叢集呈現基於 capability 的總覽狀態。',
-      },
-      providers: {
-        title: '供應商',
-        description:
-          'Provider key 將以工作台方式管理，包含 Provider 分組、表格、抽屜、模型定義和 adapter 統一後的識別符。',
-        itemOne: '覆蓋 Gemini、Claude、Codex、Vertex 和 OpenAI-compatible Provider 路由。',
-        itemTwo:
-          '透過 adapter 統一 auth-index、auth_index、id、uuid、disabled 和不同 Provider 的欄位差異。',
-      },
-      credentials: {
-        title: '憑證',
-        description:
-          'OAuth 和 file-backed credentials 將以資源工作台處理，包含狀態切換、metadata 編輯、下載、上傳和 OAuth handoff。',
-        itemOne:
-          '使用 GET /auth-files 以及 status、fields、upload、download、models、OAuth 和 Vertex import 路由。',
-        itemTwo: '處理 file、memory 和 db 來源，cluster 模式下不假設存在本機檔案路徑。',
-      },
-      accessKeys: {
-        title: '存取金鑰',
-        description:
-          '下游用戶端 API key 將獨立於上游 Provider key 管理，支援遮罩顯示和聚焦的新建、編輯、刪除流程。',
-        itemOne: '使用 GET、POST、PUT、PATCH 和 DELETE /api-keys。',
-        itemTwo: '不要假設服務端會回傳文件之外的 key metadata。',
-      },
-      config: {
-        title: '設定',
-        description: '設定頁只提供一個視覺化工作台，用於已支援執行設定的編輯、校驗和儲存。',
-        itemOne: '使用 GET /config、簡單 leaf routes，以及 adapter 內部必要的設定快照更新。',
-        itemTwo: '產品 UI 只保留視覺化編輯入口。',
-      },
-      usageLogs: {
-        title: '觀測資料',
-        description:
-          '用量、調用診斷和執行日誌頁將作為 capability-aware 分析頁，在 Home cluster 不暴露對應路由時平滑降級。',
-        itemOne:
-          '在可用時使用 GET /api-key-usage、GET /logs、DELETE /logs 和 request error log 路由。',
-        itemTwo: '呈現不可用狀態，而不是把 cluster 缺失路由當成頁面失敗。',
-      },
-      systemNodes: {
-        title: '系統資訊',
-        description:
-          '系統資訊頁將展示執行版本、連線狀態、節點連通性、部分診斷能力，以及受保護的 Management API 工具。',
-        itemOne:
-          '使用 GET /nodes、GET /latest-version、GET /config、leaf routes 和受保護的 POST /api-call。',
-        itemTwo: '高權限診斷呼叫只在有明確 UI 警示時暴露。',
       },
     },
   },
