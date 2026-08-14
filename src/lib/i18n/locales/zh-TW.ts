@@ -2418,7 +2418,8 @@ export const zhTW = {
         edit: '編輯',
         delete: '刪除',
         copy: '複製',
-        copyIdentifier: '複製識別碼 {{identifier}}',
+        copyKey: '複製金鑰 {{key}}',
+        copyIdentifier: '複製識別碼',
         reveal: '顯示',
         hide: '隱藏',
         generate: '產生金鑰',
@@ -2430,8 +2431,9 @@ export const zhTW = {
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',
-        identity: '識別碼 / 金鑰',
-        identifierTooltip: '穩定識別碼用於關聯用量、計費和請求記錄中的同一個存取金鑰。',
+        identity: '名稱 / 金鑰',
+        identifierTooltip:
+          '名稱僅用於識別，可隨時修改，不影響鑑權；穩定識別碼（api-key-N）在改名和輪換後保持不變，用於在用量、計費、請求記錄中關聯同一金鑰。',
         identifierUnavailable: '無穩定識別碼',
         key: '金鑰',
         owner: '所屬使用者',
@@ -2460,7 +2462,9 @@ export const zhTW = {
         title: '金鑰詳情',
         empty: '選擇一個金鑰，或建立新金鑰。',
         secret: '金鑰值',
+        noName: '未設定顯示名稱',
         fields: {
+          name: '顯示名稱',
           prefix: '前綴',
           suffix: '後綴',
           length: '長度',
@@ -2475,8 +2479,13 @@ export const zhTW = {
         createTitle: '新的用戶端存取金鑰',
         editTitle: '更新用戶端存取金鑰',
         keyValue: '金鑰值',
+        displayName: '顯示名稱',
+        displayNamePlaceholder: '例如：正式環境金鑰',
+        displayNameHint:
+          '選填，最多 {{max}} 個字元。重新命名不會變更金鑰值、所屬使用者或存取範圍。',
         validation: {
           required: '必須填寫金鑰值。',
+          displayNameTooLong: '顯示名稱不能超過 {{max}} 個字元。',
         },
       },
       replace: {

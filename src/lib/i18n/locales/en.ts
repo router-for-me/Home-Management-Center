@@ -2521,7 +2521,8 @@ export const en = {
         edit: 'Edit',
         delete: 'Delete',
         copy: 'Copy',
-        copyIdentifier: 'Copy identifier {{identifier}}',
+        copyKey: 'Copy key {{key}}',
+        copyIdentifier: 'Copy identifier',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
@@ -2534,9 +2535,9 @@ export const en = {
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
-        identity: 'Identifier / key',
+        identity: 'Name / key',
         identifierTooltip:
-          'The stable identifier links the same access key across usage, billing, and request records.',
+          'The display name is an editable label and does not affect authentication. The stable identifier (api-key-N) survives renames and key rotations, and links the same key across usage, billing, and request records.',
         identifierUnavailable: 'No stable identifier',
         key: 'Key',
         owner: 'Owner',
@@ -2565,7 +2566,9 @@ export const en = {
         title: 'Key detail',
         empty: 'Select a key or create a new one.',
         secret: 'Secret value',
+        noName: 'No display name',
         fields: {
+          name: 'Display name',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',
@@ -2580,8 +2583,13 @@ export const en = {
         createTitle: 'New downstream key',
         editTitle: 'Update downstream key',
         keyValue: 'Key value',
+        displayName: 'Display name',
+        displayNamePlaceholder: 'e.g. Production key',
+        displayNameHint:
+          'Optional, up to {{max}} characters. Renaming does not change the key value, owner, or scopes.',
         validation: {
           required: 'Key value is required.',
+          displayNameTooLong: 'The display name must not exceed {{max}} characters.',
         },
       },
       replace: {
