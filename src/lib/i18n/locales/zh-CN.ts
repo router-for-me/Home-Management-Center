@@ -2461,7 +2461,9 @@ export const zhCN = {
         title: '密钥详情',
         empty: '选择一个密钥，或创建新密钥。',
         secret: '密钥值',
+        noName: '未设置展示名称',
         fields: {
+          name: '展示名称',
           prefix: '前缀',
           suffix: '后缀',
           length: '长度',
@@ -2476,8 +2478,12 @@ export const zhCN = {
         createTitle: '新的客户端访问密钥',
         editTitle: '更新客户端访问密钥',
         keyValue: '密钥值',
+        displayName: '展示名称',
+        displayNamePlaceholder: '例如：生产环境密钥',
+        displayNameHint: '可选，最多 {{max}} 个字符。重命名不会更改密钥值、所属用户或访问范围。',
         validation: {
           required: '必须填写密钥值。',
+          displayNameTooLong: '展示名称不能超过 {{max}} 个字符。',
         },
       },
       replace: {

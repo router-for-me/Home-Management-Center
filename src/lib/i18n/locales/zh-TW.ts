@@ -2460,7 +2460,9 @@ export const zhTW = {
         title: '金鑰詳情',
         empty: '選擇一個金鑰，或建立新金鑰。',
         secret: '金鑰值',
+        noName: '未設定顯示名稱',
         fields: {
+          name: '顯示名稱',
           prefix: '前綴',
           suffix: '後綴',
           length: '長度',
@@ -2475,8 +2477,13 @@ export const zhTW = {
         createTitle: '新的用戶端存取金鑰',
         editTitle: '更新用戶端存取金鑰',
         keyValue: '金鑰值',
+        displayName: '顯示名稱',
+        displayNamePlaceholder: '例如：正式環境金鑰',
+        displayNameHint:
+          '選填，最多 {{max}} 個字元。重新命名不會變更金鑰值、所屬使用者或存取範圍。',
         validation: {
           required: '必須填寫金鑰值。',
+          displayNameTooLong: '顯示名稱不能超過 {{max}} 個字元。',
         },
       },
       replace: {

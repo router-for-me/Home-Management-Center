@@ -13,6 +13,7 @@ export type AccessKeyResource = {
   index: number
   numericId: number | null
   identifier: string | null
+  displayName: string | null
   value: string
   maskedValue: string
   prefix: string
@@ -26,14 +27,29 @@ export type AccessKeyResource = {
 
 export type AccessKeyFormInput = {
   value: string
+  displayName?: string | null
   userId?: number | null
   channelGroupIds?: number[]
   modelGroupIds?: number[]
 }
 
-type AccessKeysSnapshot = {
+export type AccessKeyUpdateInput = {
+  value?: string
+  displayName?: string | null
+}
+
+export type AccessKeysSnapshot = {
   fetchedAt: string
+  etag: string | null
+  supportsDisplayNames: boolean
   resources: AccessKeyResource[]
+}
+
+export const ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH = 128
+
+function normalizeDisplayNameInput(displayName: string | null) {
+  const trimmed = displayName?.trim() ?? ''
+  return trimmed ? trimmed : null
 }
 
 function readKeys(responseData: unknown): string[] {
@@ -104,12 +120,14 @@ function normalizeAccessKey(value: unknown, index: number): AccessKeyResource {
   const trimmed = keyValue.trim()
   const numericId = record ? readNumber(record, ['id', 'api_key_id', 'api-key-id']) : null
   const identifier = numericId != null ? `api-key-${numericId}` : null
+  const displayName = record ? readString(record, ['display_name']) : null
 
   return {
     id: numericId != null ? String(numericId) : `${index}:${trimmed}`,
     index,
     numericId,
     identifier,
+    displayName: displayName ? displayName.trim() : null,
     value: trimmed,
     maskedValue: maskAccessKey(trimmed),
     prefix: trimmed.slice(0, 6),
@@ -129,6 +147,11 @@ function normalizeInput(input: string | AccessKeyFormInput): AccessKeyFormInput 
 function toAccessKeyEntry(input: AccessKeyFormInput) {
   return {
     api_key: input.value.trim(),
+    // An omitted display_name preserves the stored name on replacement, so only
+    // send the field when the caller set it explicitly.
+    ...(input.displayName === undefined
+      ? {}
+      : { display_name: normalizeDisplayNameInput(input.displayName) }),
     user_id: input.userId ?? 0,
     channels: input.channelGroupIds ?? [],
     model_groups: input.modelGroupIds ?? [],
@@ -140,10 +163,18 @@ export async function fetchAccessKeysSnapshot(
 ): Promise<AccessKeysSnapshot> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/api-keys')
+  const rawEtag: unknown = response.headers.etag
+  const etag = typeof rawEtag === 'string' && rawEtag.trim() ? rawEtag.trim() : null
+  const entries = readEntries(response.data)
 
   return {
     fetchedAt: new Date().toISOString(),
-    resources: readEntries(response.data).map((value, index) => normalizeAccessKey(value, index)),
+    etag,
+    // Older Home versions omit display_name from every entry; an empty list
+    // cannot disprove support, so keep the rename UI available there.
+    supportsDisplayNames:
+      entries.length === 0 || entries.some((entry) => isRecord(entry) && 'display_name' in entry),
+    resources: entries.map((value, index) => normalizeAccessKey(value, index)),
   }
 }
 
@@ -180,18 +211,35 @@ export async function createAccessKey(
 export async function updateAccessKey(
   session: ManagementSessionInput,
   resource: AccessKeyResource,
-  value: string,
+  input: AccessKeyUpdateInput,
 ) {
   const client = createManagementClient(session)
+  const nextValue = input.value?.trim()
+  const displayNamePatch =
+    input.displayName === undefined
+      ? {}
+      : { display_name: normalizeDisplayNameInput(input.displayName) }
 
+  if (nextValue) {
+    await client.patch('/api-keys', {
+      ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
+      value: {
+        api_key: nextValue,
+        user_id: resource.userId ?? 0,
+        channels: resource.channelGroupIds,
+        model_groups: resource.modelGroupIds,
+      },
+      ...displayNamePatch,
+    })
+    return
+  }
+
+  // A rename-only patch keeps the key value, ownership, and scope bindings
+  // untouched. The index selector requires a value payload, so fall back to
+  // the raw key selector when no stable ID exists.
   await client.patch('/api-keys', {
-    ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
-    value: {
-      api_key: value.trim(),
-      user_id: resource.userId ?? 0,
-      channels: resource.channelGroupIds,
-      model_groups: resource.modelGroupIds,
-    },
+    ...(resource.numericId != null ? { id: resource.numericId } : { api_key: resource.value }),
+    ...displayNamePatch,
   })
 }
 
@@ -210,12 +258,13 @@ export async function updateAccessKeyBindings(
   })
 }
 
-export async function replaceAccessKeys(session: ManagementSessionInput, values: string[]) {
+export async function replaceAccessKeys(
+  session: ManagementSessionInput,
+  values: string[],
+  snapshot: AccessKeysSnapshot,
+) {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/api-keys')
-  const currentEntries = readEntries(response.data)
-    .map((item, index) => normalizeAccessKey(item, index))
-    .filter((item) => item.value)
+  const currentEntries = snapshot.resources.filter((item) => item.value)
   const currentByValue = new Map(currentEntries.map((entry) => [entry.value, entry]))
   const nextEntries = values
     .map((value) => value.trim())
@@ -231,7 +280,11 @@ export async function replaceAccessKeys(session: ManagementSessionInput, values:
       })
     })
 
-  await client.put('/api-keys', { api_key_entries: nextEntries })
+  await client.put(
+    '/api-keys',
+    { api_key_entries: nextEntries },
+    { headers: snapshot.etag ? { 'If-Match': snapshot.etag } : undefined },
+  )
 }
 
 export async function deleteAccessKey(

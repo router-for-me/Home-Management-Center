@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchAccessGroupsSnapshot } from '@/lib/api/management/access-groups'
 import {
   type AccessKeyResource,
+  type AccessKeyUpdateInput,
+  type AccessKeysSnapshot,
   createAccessKey,
   deleteAccessKey,
   fetchAccessKeysSnapshot,
@@ -108,9 +110,9 @@ export function useAccessKeyWorkbench() {
   }
 
   const createMutation = useMutation({
-    mutationFn: async (value: string) => {
+    mutationFn: async ({ value, displayName }: { value: string; displayName?: string | null }) => {
       try {
-        return await createAccessKey(session, value)
+        return await createAccessKey(session, { value, displayName })
       } catch (error) {
         throw toAccessKeyApiError(error)
       }
@@ -119,9 +121,15 @@ export function useAccessKeyWorkbench() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async ({ resource, value }: { resource: AccessKeyResource; value: string }) => {
+    mutationFn: async ({
+      resource,
+      input,
+    }: {
+      resource: AccessKeyResource
+      input: AccessKeyUpdateInput
+    }) => {
       try {
-        return await updateAccessKey(session, resource, value)
+        return await updateAccessKey(session, resource, input)
       } catch (error) {
         throw toAccessKeyApiError(error)
       }
@@ -130,9 +138,15 @@ export function useAccessKeyWorkbench() {
   })
 
   const replaceMutation = useMutation({
-    mutationFn: async (values: string[]) => {
+    mutationFn: async ({
+      values,
+      snapshot,
+    }: {
+      values: string[]
+      snapshot: AccessKeysSnapshot
+    }) => {
       try {
-        return await replaceAccessKeys(session, values)
+        return await replaceAccessKeys(session, values, snapshot)
       } catch (error) {
         throw toAccessKeyApiError(error)
       }

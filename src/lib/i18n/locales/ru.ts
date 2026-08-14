@@ -2564,7 +2564,9 @@ export const ru = {
         title: 'Детали key',
         empty: 'Выберите key или создайте новый.',
         secret: 'Secret value',
+        noName: 'Без отображаемого имени',
         fields: {
+          name: 'Отображаемое имя',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',
@@ -2579,8 +2581,13 @@ export const ru = {
         createTitle: 'Новый downstream key',
         editTitle: 'Обновить downstream key',
         keyValue: 'Key value',
+        displayName: 'Отображаемое имя',
+        displayNamePlaceholder: 'например, Production key',
+        displayNameHint:
+          'Необязательно, до {{max}} символов. Переименование не меняет значение ключа, владельца или области доступа.',
         validation: {
           required: 'Key value обязателен.',
+          displayNameTooLong: 'Отображаемое имя не должно превышать {{max}} символов.',
         },
       },
       replace: {
