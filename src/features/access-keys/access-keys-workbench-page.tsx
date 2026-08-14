@@ -347,37 +347,37 @@ function AccessKeyList({
               {resource.displayName ? (
                 <p className="truncate text-sm font-medium">{resource.displayName}</p>
               ) : null}
-              <div className="flex min-w-0 items-center gap-1.5">
-                {resource.identifier ? (
-                  <span className="min-w-0 truncate font-mono text-xs font-medium">
-                    {resource.identifier}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground min-w-0 truncate text-xs">
-                    {t('accessKeysPage.list.identifierUnavailable')}
-                  </span>
-                )}
-                {resource.identifier ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-md"
-                    className="-my-1"
-                    aria-label={t('accessKeysPage.actions.copyIdentifier', {
-                      identifier: resource.identifier,
-                    })}
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onCopyIdentifier(resource)
-                    }}
-                  >
-                    <Copy className="size-3.5" aria-hidden="true" />
-                  </Button>
-                ) : null}
+              {resource.identifier ? (
+                <p className="truncate font-mono text-xs font-medium">{resource.identifier}</p>
+              ) : (
+                <p className="text-muted-foreground truncate text-xs">
+                  {t('accessKeysPage.list.identifierUnavailable')}
+                </p>
+              )}
+              {/*
+                The copy button sits on the masked value and copies the full
+                key string: pasting the key into a client is the frequent
+                intent, and a button beside the identifier reads as copying
+                the key while yielding a string that fails authentication.
+              */}
+              <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                <p className="text-muted-foreground min-w-0 truncate font-mono text-xs">
+                  {resource.maskedValue}
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-md"
+                  className="-my-1"
+                  aria-label={t('accessKeysPage.actions.copyKey', { key: resource.maskedValue })}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onCopy(resource)
+                  }}
+                >
+                  <Copy className="size-3.5" aria-hidden="true" />
+                </Button>
               </div>
-              <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                {resource.maskedValue}
-              </p>
             </TableCell>
             {showSecondary ? (
               <>
@@ -413,13 +413,12 @@ function AccessKeyList({
             </TableCell>
             <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
               {/*
-                Four actions, two inline slots, so the order below is a ranking
-                and not a list. View and edit lead because they are the only ones
-                with no other path from this row: the eye is the only way into the
-                detail sheet, and nothing else opens the editor. Copy is the least
-                exclusive — the identifier cell carries its own copy button and
-                the sheet reveals the value too — and delete is deliberately one
-                deliberate step further away than the two that cannot hurt.
+                Two inline slots, so the order below is a ranking and not a
+                list. View and edit lead because this row is their only entry
+                point. Copying the key value lives beside the masked value it
+                copies, so the menu only keeps the low-frequency identifier
+                copy for cross-referencing usage and billing records, with
+                delete last and one deliberate step away.
               */}
               <RowActions
                 menuLabel={formatAccessKeyIdentity(resource)}
@@ -436,18 +435,22 @@ function AccessKeyList({
                     icon: Pencil,
                     onSelect: () => onEditKey(resource),
                   },
+                  ...(resource.identifier
+                    ? [
+                        {
+                          id: 'copy-identifier',
+                          label: t('accessKeysPage.actions.copyIdentifier'),
+                          icon: Copy,
+                          onSelect: () => onCopyIdentifier(resource),
+                        },
+                      ]
+                    : []),
                   {
                     id: 'delete',
                     label: t('accessKeysPage.actions.delete'),
                     icon: Trash2,
-                    tone: 'destructive',
+                    tone: 'destructive' as const,
                     onSelect: () => onDeleteKey(resource),
-                  },
-                  {
-                    id: 'copy',
-                    label: t('accessKeysPage.actions.copy'),
-                    icon: Copy,
-                    onSelect: () => onCopy(resource),
                   },
                 ]}
               />
