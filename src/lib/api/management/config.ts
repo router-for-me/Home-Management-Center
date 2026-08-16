@@ -29,6 +29,7 @@ export type ConfigFieldKey =
   | 'requestRetry'
   | 'maxRetryInterval'
   | 'forceModelPrefix'
+  | 'disableCooling'
   | 'routingStrategy'
   | 'quotaSwitchProject'
   | 'quotaSwitchPreviewModel'
@@ -67,6 +68,7 @@ type YamlTextPatch = {
 }
 
 const yamlBackedConfigKeys = new Set<ConfigFieldKey>([
+  'disableCooling',
   'tlsEnable',
   'tlsCert',
   'tlsKey',
@@ -346,6 +348,7 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
   const plugins = toRecord(parsed.plugins)
 
   return {
+    'disable-cooling': readBoolean(parsed, 'disable-cooling'),
     tls: {
       enable: readBoolean(tls, 'enable'),
       cert: readString(tls, 'cert'),
@@ -384,6 +387,9 @@ function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
 
   for (const change of changes) {
     switch (change.key) {
+      case 'disableCooling':
+        setBooleanInDoc(doc, ['disable-cooling'], Boolean(change.nextValue))
+        break
       case 'tlsEnable':
         ensureMapInDoc(doc, ['tls'])
         setBooleanInDoc(doc, ['tls', 'enable'], Boolean(change.nextValue))
@@ -483,6 +489,8 @@ function createYamlBackedChangeTextPatch(
   change: ConfigChange,
 ): YamlTextPatch | null {
   switch (change.key) {
+    case 'disableCooling':
+      return createExistingYamlScalarPatch(doc, ['disable-cooling'], Boolean(change.nextValue))
     case 'tlsEnable':
       return createExistingYamlScalarPatch(doc, ['tls', 'enable'], Boolean(change.nextValue))
     case 'tlsCert':
@@ -562,6 +570,7 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     requestRetry: readNumber(rawConfig, 'request-retry'),
     maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
     forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
+    disableCooling: readBoolean(rawConfig, 'disable-cooling'),
     routingStrategy: readManagementRoutingStrategy(rawConfig),
     quotaSwitchProject: readBoolean(quotaExceeded, 'switch-project'),
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),

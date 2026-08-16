@@ -2935,6 +2935,10 @@ export const zhTW = {
           label: '最大重試間隔',
           description: '限制重試等待時間上限。',
         },
+        disableCooling: {
+          label: '停用冷卻調度',
+          description: '開啟後全域停用認證與模型失敗後的冷卻視窗；所有憑證跳過失敗退避調度。',
+        },
         forceModelPrefix: {
           label: '強制模型前綴匹配',
           description: '開啟後，未帶模型前綴的請求只會使用未設定 Prefix 的憑證。',
