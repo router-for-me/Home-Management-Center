@@ -282,6 +282,7 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'requestRetry', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'maxRetryInterval', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'disableCooling', kind: 'boolean', sectionId: 'streaming' },
       { key: 'forceModelPrefix', kind: 'boolean', sectionId: 'streaming' },
       {
         key: 'routingStrategy',
@@ -1491,7 +1492,7 @@ function SectionNavigation({
 
   return (
     <>
-      <aside className="bg-card sticky top-[10.25rem] hidden max-h-[calc(100dvh-11.25rem)] min-w-0 self-start overflow-y-auto rounded-lg border p-3 shadow-sm xl:block">
+      <aside className="bg-card sticky top-[4.625rem] hidden max-h-[calc(100dvh-12rem)] min-w-0 self-start overflow-y-auto rounded-lg border p-3 shadow-sm xl:block">
         <div>
           <p className="text-muted-foreground px-2 pb-2 text-xs font-medium uppercase">
             {t('configPage.outline.title')}
@@ -1529,7 +1530,7 @@ function SectionNavigation({
         </div>
       </aside>
 
-      <div className="bg-background/95 sticky top-[10.25rem] z-10 -mx-1 overflow-x-auto border-y px-1 py-2 backdrop-blur xl:hidden">
+      <div className="bg-background/95 sticky top-[9.125rem] z-10 -mx-1 overflow-x-auto border-y px-1 py-2 backdrop-blur md:top-[3.625rem] xl:hidden">
         <div className="flex min-w-max gap-2">
           {sectionDefinitions.map((section) => (
             <Button
@@ -4107,7 +4108,7 @@ function ConfigActionBar({
   const dirty = changeCount > 0
 
   return (
-    <div className="bg-background/95 sticky top-16 z-[var(--z-page-sticky)] -mx-4 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+    <div className="bg-background/95 sticky -top-4 z-[var(--z-page-sticky)] -mx-4 px-4 py-3 backdrop-blur md:-top-6 md:-mx-6 md:px-6">
       <div className="bg-card rounded-lg border p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
