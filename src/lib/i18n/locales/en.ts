@@ -3061,6 +3061,11 @@ export const en = {
           label: 'Max retry interval',
           description: 'Upper bound for retry wait time.',
         },
+        disableCooling: {
+          label: 'Disable cooldown scheduling',
+          description:
+            'Disable auth and model failure cooldown windows globally; all credentials skip failure backoff scheduling.',
+        },
         forceModelPrefix: {
           label: 'Require model prefix match',
           description:

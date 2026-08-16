@@ -2935,6 +2935,10 @@ export const zhCN = {
           label: '最大重试间隔',
           description: '限制重试等待时间上限。',
         },
+        disableCooling: {
+          label: '禁用冷却调度',
+          description: '开启后全局禁用认证与模型失败后的冷却窗口；所有凭证跳过失败退避调度。',
+        },
         forceModelPrefix: {
           label: '强制模型前缀匹配',
           description: '开启后，未带模型前缀的请求只会使用未配置 Prefix 的凭证。',
