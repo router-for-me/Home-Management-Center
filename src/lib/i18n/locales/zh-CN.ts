@@ -1527,6 +1527,7 @@ export const zhCN = {
         topology: '集群拓扑',
         nodes: '节点',
         usageOverview: '用量总览',
+        users: '用户',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',

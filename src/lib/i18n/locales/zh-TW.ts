@@ -1527,6 +1527,7 @@ export const zhTW = {
         topology: '集群拓撲',
         nodes: '節點',
         usageOverview: '用量總覽',
+        users: '使用者',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',

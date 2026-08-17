@@ -1,7 +1,13 @@
+import {
+  formatClientKeyIdentityLabel,
+  formatClientKeyRankLabel,
+} from '@/features/access-keys/access-key-display'
+import type { AccessKeyResource } from '@/lib/api/management/access-keys'
 import type { DashboardSnapshot } from '@/lib/api/management/dashboard'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 import type { UsageActivityStatus, UsageAggregateItem } from '@/lib/api/management/usage-logs'
+import type { UserResource } from '@/lib/api/management/users'
 
 type DashboardConfigCheckId = 'requestLog' | 'usageStatistics' | 'fileLogging' | 'debug' | 'routing'
 
@@ -308,12 +314,15 @@ function aggregateTone(item: Pick<UsageAggregateItem, 'failedCount' | 'errorRate
   return 'positive'
 }
 
+export { formatClientKeyIdentityLabel, formatClientKeyRankLabel }
+
 function createRankPreviewItems(
   items: UsageAggregateItem[] | undefined,
+  formatLabel?: (item: UsageAggregateItem) => string,
 ): DashboardRankPreviewItem[] {
   return (items ?? []).slice(0, 3).map((item) => ({
     id: item.id,
-    label: item.label,
+    label: formatLabel ? formatLabel(item) : item.label,
     requestCount: item.requestCount,
     totalTokens: item.tokenBreakdown?.totalTokens ?? null,
     successRate: item.successRate,
@@ -371,6 +380,8 @@ function createOperatingKpis(
 function createKeyStatusSummary(
   usageOverview: DashboardSnapshot['usageOverview'],
   totalConfigured: number,
+  accessKeys?: AccessKeyResource[],
+  users?: UserResource[],
 ): DashboardKeyStatusSummary {
   const activeCount = usageOverview?.totals.activeClientKeyCount ?? null
   const quietCount = activeCount === null ? null : Math.max(0, totalConfigured - activeCount)
@@ -379,7 +390,9 @@ function createKeyStatusSummary(
     totalConfigured,
     activeCount,
     quietCount,
-    topClientKeys: createRankPreviewItems(usageOverview?.top.clientKeys),
+    topClientKeys: createRankPreviewItems(usageOverview?.top.clientKeys, (item) =>
+      formatClientKeyRankLabel(item, accessKeys, users),
+    ),
   }
 }
 
@@ -544,6 +557,8 @@ export function createDashboardOverviewViewModel(
   const keyStatusSummary = createKeyStatusSummary(
     snapshot.usageOverview,
     snapshot.clientKeys.length,
+    snapshot.accessKeys,
+    snapshot.users,
   )
   const modelUsageSummary = createModelUsageSummary(snapshot.usageOverview)
   const healthSummary = createHealthSummary({

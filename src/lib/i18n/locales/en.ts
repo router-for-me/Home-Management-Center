@@ -1591,6 +1591,7 @@ export const en = {
         topology: 'Cluster topology',
         nodes: 'Nodes',
         usageOverview: 'Usage overview',
+        users: 'Users',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
