@@ -156,7 +156,7 @@ function interactiveCardClassName() {
 }
 
 function cornerDrillDownClassName() {
-  return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-2 bottom-2 inline-flex size-10 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
+  return 'text-muted-foreground/40 absolute right-3 bottom-2.5 opacity-60 transition-all duration-150 sm:opacity-0 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:text-primary group-focus-within/card:opacity-100 motion-reduce:transition-none'
 }
 
 function DashboardDrillDownIndicator() {
@@ -270,7 +270,7 @@ function OperatingKpiCard({ kpi, to }: { kpi: DashboardOperatingKpi; to?: Dashbo
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-2 min-h-5 truncate pr-8 text-xs leading-5">
+      <p className="text-muted-foreground mt-1.5 truncate pr-6 text-xs leading-5">
         <span className="min-w-0 truncate">
           {detailValue
             ? t(`dashboard.operatingKpis.${kpi.id}.detail`, { value: detailValue })
@@ -286,7 +286,7 @@ function OperatingKpiCard({ kpi, to }: { kpi: DashboardOperatingKpi; to?: Dashbo
       <Link
         to={to}
         className={cn(
-          'bg-card relative block min-w-0 rounded-lg border p-3.5 pb-10 shadow-sm',
+          'bg-card relative block min-w-0 rounded-lg border p-3.5 shadow-sm',
           interactiveCardClassName(),
         )}
         aria-label={t('dashboard.drillDown.open', { title })}
@@ -330,7 +330,7 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-2 min-h-5 truncate pr-8 text-xs leading-5">
+      <p className="text-muted-foreground mt-1.5 truncate pr-6 text-xs leading-5">
         <span className="min-w-0 truncate">
           {t(detailKey, {
             count: metric.detailValue ?? metric.value ?? 0,
@@ -346,7 +346,7 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
       <Link
         to={to}
         className={cn(
-          'bg-card relative block min-w-0 rounded-lg border p-3.5 pb-10 shadow-sm',
+          'bg-card relative block min-w-0 rounded-lg border p-3.5 shadow-sm',
           interactiveCardClassName(),
         )}
         aria-label={t('dashboard.drillDown.open', { title })}
