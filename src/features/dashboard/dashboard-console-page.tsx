@@ -155,13 +155,12 @@ function interactiveCardClassName() {
   return 'group/card transition-colors hover:border-primary/35 hover:bg-accent/35 focus-visible:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 }
 
-function cornerDrillDownClassName() {
-  return 'text-muted-foreground/60 border-transparent bg-background/70 absolute right-2 bottom-2 inline-flex size-10 items-center justify-center rounded-md border opacity-70 transition-all duration-200 sm:opacity-0 group-hover/card:border-primary/20 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:border-primary/20 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:border-primary/20 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 dark:bg-background/40 motion-reduce:transition-none'
-}
-
 function DashboardDrillDownIndicator() {
   return (
-    <span className={cn('pointer-events-none', cornerDrillDownClassName())} aria-hidden="true">
+    <span
+      className="text-muted-foreground/40 group-hover/card:text-primary group-focus-visible/card:text-primary group-focus-within/card:text-primary shrink-0 opacity-60 transition-all duration-150 group-focus-within/card:opacity-100 group-hover/card:opacity-100 group-focus-visible/card:opacity-100 motion-reduce:transition-none sm:opacity-0"
+      aria-hidden="true"
+    >
       <Eye className="size-3.5" aria-hidden="true" />
     </span>
   )
@@ -270,14 +269,14 @@ function OperatingKpiCard({ kpi, to }: { kpi: DashboardOperatingKpi; to?: Dashbo
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-2 min-h-5 truncate pr-8 text-xs leading-5">
-        <span className="min-w-0 truncate">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs leading-5">
+        <p className="text-muted-foreground min-w-0 truncate">
           {detailValue
             ? t(`dashboard.operatingKpis.${kpi.id}.detail`, { value: detailValue })
             : t(`dashboard.operatingKpis.${kpi.id}.unavailable`)}
-        </span>
-      </p>
-      {to ? <DashboardDrillDownIndicator /> : null}
+        </p>
+        {to ? <DashboardDrillDownIndicator /> : null}
+      </div>
     </>
   )
 
@@ -286,7 +285,7 @@ function OperatingKpiCard({ kpi, to }: { kpi: DashboardOperatingKpi; to?: Dashbo
       <Link
         to={to}
         className={cn(
-          'bg-card relative block min-w-0 rounded-lg border p-3.5 pb-10 shadow-sm',
+          'bg-card relative block min-w-0 rounded-lg border p-3.5 shadow-sm',
           interactiveCardClassName(),
         )}
         aria-label={t('dashboard.drillDown.open', { title })}
@@ -330,14 +329,14 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-2 min-h-5 truncate pr-8 text-xs leading-5">
-        <span className="min-w-0 truncate">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs leading-5">
+        <p className="text-muted-foreground min-w-0 truncate">
           {t(detailKey, {
             count: metric.detailValue ?? metric.value ?? 0,
           })}
-        </span>
-      </p>
-      {to ? <DashboardDrillDownIndicator /> : null}
+        </p>
+        {to ? <DashboardDrillDownIndicator /> : null}
+      </div>
     </>
   )
 
@@ -346,7 +345,7 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
       <Link
         to={to}
         className={cn(
-          'bg-card relative block min-w-0 rounded-lg border p-3.5 pb-10 shadow-sm',
+          'bg-card relative block min-w-0 rounded-lg border p-3.5 shadow-sm',
           interactiveCardClassName(),
         )}
         aria-label={t('dashboard.drillDown.open', { title })}
@@ -568,24 +567,19 @@ function DashboardUsageConsumptionTrendPanel({
 
   return (
     <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <Gauge className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-            <h2 className="min-w-0 truncate text-base font-semibold">
-              {t('dashboard.usageConsumptionTrend.title')}
-            </h2>
-          </div>
-          <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
-            {t('dashboard.usageConsumptionTrend.description')}
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('dashboard.usageConsumptionTrend.summary', {
-              buckets: formatNumber(summary.bucketCount),
-              tokens: formatCompactNumber(summary.totalTokens),
-            })}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Gauge className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <h2 className="min-w-0 truncate text-base font-semibold">
+            {t('dashboard.usageConsumptionTrend.title')}
+          </h2>
         </div>
+        <p className="text-muted-foreground text-xs leading-5 tabular-nums">
+          {t('dashboard.usageConsumptionTrend.summary', {
+            buckets: formatNumber(summary.bucketCount),
+            tokens: formatCompactNumber(summary.totalTokens),
+          })}
+        </p>
       </div>
       {/*
         The hand-drawn chart named itself on its `<svg>` and described every point
@@ -604,7 +598,7 @@ function DashboardUsageConsumptionTrendPanel({
         </p>
         <ChartContainer
           config={usageConsumptionTrendChartConfig}
-          className="[&_.recharts-wrapper:focus-visible]:ring-ring mt-4 aspect-auto h-[200px] w-full min-w-0 [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
+          className="[&_.recharts-wrapper:focus-visible]:ring-ring mt-3 aspect-auto h-[160px] w-full min-w-0 [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
         >
           <AreaChart
             accessibilityLayer
@@ -690,39 +684,34 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
 
   return (
     <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <Activity className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-            <h2 className="min-w-0 truncate text-base font-semibold">
-              {t('dashboard.usageActivity.title')}
-            </h2>
-          </div>
-          <p className="text-muted-foreground mt-1 text-sm leading-6">
-            {t('dashboard.usageActivity.description')}
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('dashboard.usageActivity.summary', {
-              activeBuckets: formatNumber(summary.activeBucketCount),
-              totalBuckets: formatNumber(summary.bucketCount),
-              requests: formatNumber(summary.requestCount),
-              successRate: formatPercent(summary.successRate),
-            })}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Activity className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <h2 className="min-w-0 truncate text-base font-semibold">
+            {t('dashboard.usageActivity.title')}
+          </h2>
         </div>
+        <p className="text-muted-foreground text-xs leading-5 tabular-nums">
+          {t('dashboard.usageActivity.summary', {
+            activeBuckets: formatNumber(summary.activeBucketCount),
+            totalBuckets: formatNumber(summary.bucketCount),
+            requests: formatNumber(summary.requestCount),
+            successRate: formatPercent(summary.successRate),
+          })}
+        </p>
       </div>
-      <div className="mt-4">
+      <div className="mt-3">
         <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
         <UsageActivityMatrix
           ariaLabel={t('dashboard.usageActivity.matrixLabel')}
           buckets={summary.buckets}
-          className="mt-2"
+          className="mt-1.5"
           getBucketLabel={getBucketLabel}
           getStatusClassName={getUsageActivityBucketClassName}
           getStatusLabel={(status) => t(`dashboard.usageActivity.status.${status}`)}
         />
       </div>
-      <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+      <div className="text-muted-foreground mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
         {legendStatuses.map((status) => (
           <span key={status} className="inline-flex items-center gap-1.5">
             <span

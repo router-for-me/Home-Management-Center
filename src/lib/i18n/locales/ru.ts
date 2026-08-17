@@ -1491,7 +1491,6 @@ export const ru = {
       },
       usageConsumptionTrend: {
         title: 'Общий тренд потребления',
-        description: 'Потребление токенов за текущий период usage.',
         summary: '{{buckets}} интервалов · всего {{tokens}} токенов',
         tooltip: {
           tokens: 'Расход токенов',
@@ -1505,7 +1504,6 @@ export const ru = {
       },
       usageActivity: {
         title: 'Состояние запросов',
-        description: 'Активность, доля успеха и отказы за весь выбранный временной диапазон.',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} активных интервалов · {{requests}} запросов · {{successRate}} успешно',
         range: '{{from}}–{{to}} · {{interval}}',
@@ -1589,6 +1587,7 @@ export const ru = {
         topology: 'Топология кластера',
         nodes: 'Узлы',
         usageOverview: 'Usage overview',
+        users: 'Пользователи',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',
