@@ -567,24 +567,19 @@ function DashboardUsageConsumptionTrendPanel({
 
   return (
     <div className="group/card bg-card relative h-full min-w-0 rounded-lg border p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <Gauge className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-            <h2 className="min-w-0 truncate text-base font-semibold">
-              {t('dashboard.usageConsumptionTrend.title')}
-            </h2>
-          </div>
-          <p className="text-muted-foreground mt-1 max-w-3xl text-sm leading-6">
-            {t('dashboard.usageConsumptionTrend.description')}
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('dashboard.usageConsumptionTrend.summary', {
-              buckets: formatNumber(summary.bucketCount),
-              tokens: formatCompactNumber(summary.totalTokens),
-            })}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Gauge className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <h2 className="min-w-0 truncate text-base font-semibold">
+            {t('dashboard.usageConsumptionTrend.title')}
+          </h2>
         </div>
+        <p className="text-muted-foreground text-xs leading-5 tabular-nums">
+          {t('dashboard.usageConsumptionTrend.summary', {
+            buckets: formatNumber(summary.bucketCount),
+            tokens: formatCompactNumber(summary.totalTokens),
+          })}
+        </p>
       </div>
       {/*
         The hand-drawn chart named itself on its `<svg>` and described every point
@@ -603,7 +598,7 @@ function DashboardUsageConsumptionTrendPanel({
         </p>
         <ChartContainer
           config={usageConsumptionTrendChartConfig}
-          className="[&_.recharts-wrapper:focus-visible]:ring-ring mt-4 aspect-auto h-[200px] w-full min-w-0 [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
+          className="[&_.recharts-wrapper:focus-visible]:ring-ring mt-3 aspect-auto h-[160px] w-full min-w-0 [&_.recharts-wrapper]:rounded-sm [&_.recharts-wrapper:focus-visible]:ring-2 [&_.recharts-wrapper:focus-visible]:outline-none"
         >
           <AreaChart
             accessibilityLayer
@@ -689,39 +684,34 @@ function DashboardUsageActivityPanel({ summary }: { summary: DashboardUsageActiv
 
   return (
     <div className="group/card bg-card relative flex h-full min-w-0 flex-col rounded-lg border p-4 shadow-sm">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <Activity className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
-            <h2 className="min-w-0 truncate text-base font-semibold">
-              {t('dashboard.usageActivity.title')}
-            </h2>
-          </div>
-          <p className="text-muted-foreground mt-1 text-sm leading-6">
-            {t('dashboard.usageActivity.description')}
-          </p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {t('dashboard.usageActivity.summary', {
-              activeBuckets: formatNumber(summary.activeBucketCount),
-              totalBuckets: formatNumber(summary.bucketCount),
-              requests: formatNumber(summary.requestCount),
-              successRate: formatPercent(summary.successRate),
-            })}
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex min-w-0 items-center gap-2">
+          <Activity className="text-muted-foreground size-4 shrink-0" aria-hidden="true" />
+          <h2 className="min-w-0 truncate text-base font-semibold">
+            {t('dashboard.usageActivity.title')}
+          </h2>
         </div>
+        <p className="text-muted-foreground text-xs leading-5 tabular-nums">
+          {t('dashboard.usageActivity.summary', {
+            activeBuckets: formatNumber(summary.activeBucketCount),
+            totalBuckets: formatNumber(summary.bucketCount),
+            requests: formatNumber(summary.requestCount),
+            successRate: formatPercent(summary.successRate),
+          })}
+        </p>
       </div>
-      <div className="mt-4">
+      <div className="mt-3">
         <p className="text-foreground text-xs font-medium">{rangeLabel}</p>
         <UsageActivityMatrix
           ariaLabel={t('dashboard.usageActivity.matrixLabel')}
           buckets={summary.buckets}
-          className="mt-2"
+          className="mt-1.5"
           getBucketLabel={getBucketLabel}
           getStatusClassName={getUsageActivityBucketClassName}
           getStatusLabel={(status) => t(`dashboard.usageActivity.status.${status}`)}
         />
       </div>
-      <div className="text-muted-foreground mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+      <div className="text-muted-foreground mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-xs">
         {legendStatuses.map((status) => (
           <span key={status} className="inline-flex items-center gap-1.5">
             <span

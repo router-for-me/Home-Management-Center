@@ -1433,7 +1433,6 @@ export const zhTW = {
       },
       usageConsumptionTrend: {
         title: '整體消耗趨勢',
-        description: '按目前用量時間段展示 Token 消耗變化。',
         summary: '{{buckets}} 個時段 · 總消耗 {{tokens}} Token',
         tooltip: {
           tokens: 'Token 消耗',
@@ -1446,7 +1445,6 @@ export const zhTW = {
       },
       usageActivity: {
         title: '請求健康度',
-        description: '按完整時間範圍展示請求活躍度、成功率和失敗分布。',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} 個活躍時段 · {{requests}} 次請求 · {{successRate}} 成功率',
         range: '{{from}}–{{to}} · {{interval}}',
