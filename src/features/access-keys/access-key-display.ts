@@ -1,7 +1,7 @@
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
 import type { UserResource } from '@/lib/api/management/users'
 
-export type ClientKeyIdentityTarget = {
+type ClientKeyIdentityTarget = {
   id?: string | null
   label?: string | null
   metadata?: Record<string, unknown> | null
@@ -87,5 +87,3 @@ export function formatClientKeyIdentityLabel(
 
   return item.label ?? ''
 }
-
-export const formatClientKeyRankLabel = formatClientKeyIdentityLabel

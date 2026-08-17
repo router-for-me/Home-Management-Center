@@ -1,7 +1,4 @@
-import {
-  formatClientKeyIdentityLabel,
-  formatClientKeyRankLabel,
-} from '@/features/access-keys/access-key-display'
+import { formatClientKeyIdentityLabel } from '@/features/access-keys/access-key-display'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
 import type { DashboardSnapshot } from '@/lib/api/management/dashboard'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
@@ -314,8 +311,6 @@ function aggregateTone(item: Pick<UsageAggregateItem, 'failedCount' | 'errorRate
   return 'positive'
 }
 
-export { formatClientKeyIdentityLabel, formatClientKeyRankLabel }
-
 function createRankPreviewItems(
   items: UsageAggregateItem[] | undefined,
   formatLabel?: (item: UsageAggregateItem) => string,
@@ -391,7 +386,7 @@ function createKeyStatusSummary(
     activeCount,
     quietCount,
     topClientKeys: createRankPreviewItems(usageOverview?.top.clientKeys, (item) =>
-      formatClientKeyRankLabel(item, accessKeys, users),
+      formatClientKeyIdentityLabel(item, accessKeys, users),
     ),
   }
 }

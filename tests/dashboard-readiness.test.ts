@@ -1,10 +1,8 @@
 import axios from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import {
-  createDashboardOverviewViewModel,
-  formatClientKeyRankLabel,
-} from '../src/features/dashboard/dashboard-model'
+import { formatClientKeyIdentityLabel } from '../src/features/access-keys/access-key-display'
+import { createDashboardOverviewViewModel } from '../src/features/dashboard/dashboard-model'
 import type { AccessKeyResource } from '../src/lib/api/management/access-keys'
 import {
   type DashboardSnapshot,
@@ -261,14 +259,14 @@ function createUser(overrides: Partial<UserResource> = {}): UserResource {
 describe('dashboard client key username resolution (Issue #155)', () => {
   test('returns direct username from metadata when provided', () => {
     const item = createUsageItem({ metadata: { username: 'bob' } })
-    const label = formatClientKeyRankLabel(item, [], [])
+    const label = formatClientKeyIdentityLabel(item, [], [])
     expect(label).toBe('bob')
   })
 
   test('resolves username from user_id in item metadata', () => {
     const item = createUsageItem({ metadata: { user_id: 1 } })
     const users = [createUser({ numericId: 1, username: 'alice' })]
-    const label = formatClientKeyRankLabel(item, [], users)
+    const label = formatClientKeyIdentityLabel(item, [], users)
     expect(label).toBe('alice')
   })
 
@@ -281,7 +279,7 @@ describe('dashboard client key username resolution (Issue #155)', () => {
     const accessKeys = [createAccessKey({ numericId: 8, identifier: 'api-key-8', userId: 1 })]
     const users = [createUser({ numericId: 1, username: 'alice' })]
 
-    const label = formatClientKeyRankLabel(item, accessKeys, users)
+    const label = formatClientKeyIdentityLabel(item, accessKeys, users)
     expect(label).toBe('alice')
   })
 
@@ -300,7 +298,7 @@ describe('dashboard client key username resolution (Issue #155)', () => {
       }),
     ]
 
-    const label = formatClientKeyRankLabel(item, accessKeys, [])
+    const label = formatClientKeyIdentityLabel(item, accessKeys, [])
     expect(label).toBe('Production Key')
   })
 
@@ -315,13 +313,13 @@ describe('dashboard client key username resolution (Issue #155)', () => {
       }),
     ]
 
-    const label = formatClientKeyRankLabel(item, accessKeys, [])
+    const label = formatClientKeyIdentityLabel(item, accessKeys, [])
     expect(label).toBe('api-key-8')
   })
 
   test('falls back to item label when key is unknown', () => {
     const item = createUsageItem({ id: 'unknown-key', label: 'custom-label' })
-    const label = formatClientKeyRankLabel(item, [], [])
+    const label = formatClientKeyIdentityLabel(item, [], [])
     expect(label).toBe('custom-label')
   })
 
