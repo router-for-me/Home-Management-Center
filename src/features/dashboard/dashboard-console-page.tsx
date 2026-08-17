@@ -156,7 +156,7 @@ function interactiveCardClassName() {
 }
 
 function cornerDrillDownClassName() {
-  return 'text-muted-foreground/50 absolute right-2.5 bottom-2.5 inline-flex size-5 items-center justify-center rounded transition-all duration-150 sm:opacity-0 group-hover/card:bg-primary/10 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:bg-primary/10 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:bg-primary/10 group-focus-within/card:text-primary group-focus-within/card:opacity-100 motion-reduce:transition-none'
+  return 'text-muted-foreground/40 absolute right-3 bottom-2.5 opacity-60 transition-all duration-150 sm:opacity-0 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:text-primary group-focus-within/card:opacity-100 motion-reduce:transition-none'
 }
 
 function DashboardDrillDownIndicator() {
