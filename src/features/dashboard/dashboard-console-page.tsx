@@ -155,13 +155,12 @@ function interactiveCardClassName() {
   return 'group/card transition-colors hover:border-primary/35 hover:bg-accent/35 focus-visible:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 }
 
-function cornerDrillDownClassName() {
-  return 'text-muted-foreground/40 absolute right-3 bottom-2.5 opacity-60 transition-all duration-150 sm:opacity-0 group-hover/card:text-primary group-hover/card:opacity-100 group-focus-visible/card:text-primary group-focus-visible/card:opacity-100 group-focus-within/card:text-primary group-focus-within/card:opacity-100 motion-reduce:transition-none'
-}
-
 function DashboardDrillDownIndicator() {
   return (
-    <span className={cn('pointer-events-none', cornerDrillDownClassName())} aria-hidden="true">
+    <span
+      className="text-muted-foreground/40 group-hover/card:text-primary group-focus-visible/card:text-primary group-focus-within/card:text-primary shrink-0 opacity-60 transition-all duration-150 group-focus-within/card:opacity-100 group-hover/card:opacity-100 group-focus-visible/card:opacity-100 motion-reduce:transition-none sm:opacity-0"
+      aria-hidden="true"
+    >
       <Eye className="size-3.5" aria-hidden="true" />
     </span>
   )
@@ -270,14 +269,14 @@ function OperatingKpiCard({ kpi, to }: { kpi: DashboardOperatingKpi; to?: Dashbo
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-1.5 truncate pr-6 text-xs leading-5">
-        <span className="min-w-0 truncate">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs leading-5">
+        <p className="text-muted-foreground min-w-0 truncate">
           {detailValue
             ? t(`dashboard.operatingKpis.${kpi.id}.detail`, { value: detailValue })
             : t(`dashboard.operatingKpis.${kpi.id}.unavailable`)}
-        </span>
-      </p>
-      {to ? <DashboardDrillDownIndicator /> : null}
+        </p>
+        {to ? <DashboardDrillDownIndicator /> : null}
+      </div>
     </>
   )
 
@@ -330,14 +329,14 @@ function MetricCard({ metric, to }: { metric: DashboardMetric; to?: DashboardLin
           <Icon className="size-4" aria-hidden="true" />
         </div>
       </div>
-      <p className="text-muted-foreground mt-1.5 truncate pr-6 text-xs leading-5">
-        <span className="min-w-0 truncate">
+      <div className="mt-1.5 flex items-center justify-between gap-2 text-xs leading-5">
+        <p className="text-muted-foreground min-w-0 truncate">
           {t(detailKey, {
             count: metric.detailValue ?? metric.value ?? 0,
           })}
-        </span>
-      </p>
-      {to ? <DashboardDrillDownIndicator /> : null}
+        </p>
+        {to ? <DashboardDrillDownIndicator /> : null}
+      </div>
     </>
   )
 
