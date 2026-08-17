@@ -1493,7 +1493,6 @@ export const en = {
       },
       usageConsumptionTrend: {
         title: 'Overall consumption trend',
-        description: 'Token consumption over the current usage time range.',
         summary: '{{buckets}} intervals · {{tokens}} tokens total',
         tooltip: {
           tokens: 'Token consumption',
@@ -1507,7 +1506,6 @@ export const en = {
       },
       usageActivity: {
         title: 'Request health',
-        description: 'Request activity, success rate, and failures across the complete time range.',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} active intervals · {{requests}} requests · {{successRate}} success',
         range: '{{from}}–{{to}} · {{interval}}',

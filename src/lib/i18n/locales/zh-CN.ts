@@ -1433,7 +1433,6 @@ export const zhCN = {
       },
       usageConsumptionTrend: {
         title: '整体消耗趋势',
-        description: '按当前用量时间段展示 Token 消耗变化。',
         summary: '{{buckets}} 个时段 · 总消耗 {{tokens}} Token',
         tooltip: {
           tokens: 'Token 消耗',
@@ -1446,7 +1445,6 @@ export const zhCN = {
       },
       usageActivity: {
         title: '请求健康度',
-        description: '按完整时间范围展示请求活跃度、成功率和失败分布。',
         summary:
           '{{activeBuckets}} / {{totalBuckets}} 个活跃时段 · {{requests}} 次请求 · {{successRate}} 成功率',
         range: '{{from}}–{{to}} · {{interval}}',
