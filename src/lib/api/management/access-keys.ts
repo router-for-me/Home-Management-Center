@@ -92,7 +92,7 @@ function readNumberArray(record: Record<string, unknown>, keys: string[]) {
   return []
 }
 
-function readEntries(responseData: unknown): unknown[] {
+export function readEntries(responseData: unknown): unknown[] {
   const response = responseData as AccessKeysResponse
   const entries = response.api_key_entries ?? response.items
 
@@ -110,7 +110,7 @@ function maskAccessKey(value: string) {
   return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`
 }
 
-function normalizeAccessKey(value: unknown, index: number): AccessKeyResource {
+export function normalizeAccessKey(value: unknown, index: number): AccessKeyResource {
   const record = isRecord(value) ? value : null
   const keyValue = record
     ? (readString(record, ['api_key', 'api-key', 'key', 'value']) ?? '')

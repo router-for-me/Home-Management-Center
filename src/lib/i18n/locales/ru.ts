@@ -1589,6 +1589,7 @@ export const ru = {
         topology: 'Топология кластера',
         nodes: 'Узлы',
         usageOverview: 'Usage overview',
+        users: 'Пользователи',
         gemini: 'Gemini',
         claude: 'Claude',
         codex: 'Codex',

@@ -1,9 +1,15 @@
 import type { AxiosInstance } from 'axios'
 
+import {
+  type AccessKeyResource,
+  normalizeAccessKey,
+  readEntries,
+} from '@/lib/api/management/access-keys'
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import { fetchModelsSnapshot } from '@/lib/api/management/models'
 import type { CapabilityMap, ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 import { type UsageOverview, fetchUsageOverview } from '@/lib/api/management/usage-logs'
+import { type UserResource, fetchUsersSnapshot } from '@/lib/api/management/users'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -17,6 +23,7 @@ type DashboardRequestIssueScope =
   | 'topology'
   | 'nodes'
   | 'usageOverview'
+  | 'users'
   | DashboardProviderId
 
 type DashboardProviderDescriptor = {
@@ -72,6 +79,8 @@ export type DashboardSnapshot = {
   config: UnknownRecord
   latestVersion: string | null
   clientKeys: string[]
+  accessKeys?: AccessKeyResource[]
+  users?: UserResource[]
   authFiles: DashboardAuthFileSummary[]
   availableModels: DashboardAvailableModelsSummary
   providers: DashboardProviderSummary[]
@@ -272,13 +281,14 @@ export async function fetchManagementDashboardSnapshot(
   const [
     configResponse,
     latestVersion,
-    optionalClientKeys,
+    optionalAccessKeys,
     authFiles,
     availableModels,
     providers,
     topology,
     nodes,
     usageOverview,
+    users,
   ] = await Promise.all([
     // Awaited on its own this cost the dashboard a whole round trip before any
     // of the requests below could start, and the only thing the rest of this
@@ -293,12 +303,13 @@ export async function fetchManagementDashboardSnapshot(
       },
       null,
     ),
-    readOptional(
+    readOptional<AccessKeyResource[] | null>(
       issues,
       'clientKeys',
       async () => {
         const response = await client.get<unknown>('/api-keys')
-        return readStringArray(response.data, 'api-keys')
+        const entries = readEntries(response.data)
+        return entries.map((entry, index) => normalizeAccessKey(entry, index))
       },
       null,
     ),
@@ -360,6 +371,17 @@ export async function fetchManagementDashboardSnapshot(
           null,
         )
       : Promise.resolve(null),
+    capabilities.users
+      ? readOptional(
+          issues,
+          'users',
+          async () => {
+            const snapshot = await fetchUsersSnapshot(session)
+            return snapshot.resources
+          },
+          [],
+        )
+      : Promise.resolve([]),
   ])
   const fallbackNodes =
     !topology && capabilities.topology && capabilities.nodes
@@ -379,13 +401,18 @@ export async function fetchManagementDashboardSnapshot(
   const config = toRecord(configResponse.data)
   // Older Home builds list the client keys inside /config; the dedicated
   // endpoint is authoritative when it answers.
-  const clientKeys = optionalClientKeys ?? readStringArray(config, 'api-keys')
+  const fallbackKeys = readStringArray(config, 'api-keys')
+  const accessKeys =
+    optionalAccessKeys ?? fallbackKeys.map((key, index) => normalizeAccessKey(key, index))
+  const clientKeys = accessKeys.map((key) => key.value)
 
   return {
     fetchedAt: new Date().toISOString(),
     config,
     latestVersion,
     clientKeys,
+    accessKeys,
+    users,
     authFiles,
     availableModels,
     providers,
