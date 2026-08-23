@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
+import type { TFunction } from 'i18next'
 import {
   AlertTriangle,
   BookOpen,
@@ -68,6 +69,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
+import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
 import type { UpstreamProvidersStats } from '@/features/upstream/summary-cards'
 import type {
@@ -106,6 +108,7 @@ const emptyForm: ProviderEntryFormInput = {
   disableCooling: false,
   websockets: false,
   priority: undefined,
+  requestRetry: undefined,
   models: [],
   headers: [],
   excludedModelsText: '',
@@ -241,6 +244,7 @@ function createFormState(
     disableCooling: resource.disableCooling,
     websockets: resource.websockets,
     priority: resource.priority ?? undefined,
+    requestRetry: resource.requestRetry ?? undefined,
     models: readProviderModels(raw),
     headers: readProviderHeaders(raw),
     excludedModelsText: readExcludedModelsText(raw),
@@ -342,23 +346,51 @@ function getProviderConnectivityValidationError(
   return null
 }
 
-function validateProviderInput(
+type ProviderFormField = 'name' | 'apiKey' | 'baseUrl' | 'proxyUrl' | 'priority' | 'requestRetry'
+type ProviderFieldErrors = Partial<Record<ProviderFormField, string>>
+
+export function validateProviderForm(
   descriptor: ProviderDescriptor,
   form: ProviderEntryFormInput,
   mode: PanelMode,
-) {
+  t: TFunction,
+): { fieldErrors: ProviderFieldErrors; generalError: string | null } {
+  const fieldErrors: ProviderFieldErrors = {}
+
   if (descriptor.supportsName && !form.name.trim()) {
-    return 'nameRequired'
+    fieldErrors.name = t('providersPage.form.validation.nameRequired')
   }
 
   if (mode === 'create' && descriptor.supportsApiKey && !form.apiKey.trim()) {
-    return 'apiKeyRequired'
+    fieldErrors.apiKey = t('providersPage.form.validation.apiKeyRequired')
   }
 
   if (descriptor.requiresBaseUrl && !form.baseUrl.trim()) {
-    return 'baseUrlRequired'
+    fieldErrors.baseUrl = t('providersPage.form.validation.baseUrlRequired')
   }
 
+  const trimmedProxy = form.proxyUrl.trim()
+  if (trimmedProxy && !isValidProxyUrl(trimmedProxy)) {
+    fieldErrors.proxyUrl = t('configPage.proxyPools.validation.urlInvalid')
+  }
+
+  if (
+    form.priority !== undefined &&
+    form.priority !== null &&
+    !Number.isSafeInteger(form.priority)
+  ) {
+    fieldErrors.priority = t('credentialsPage.form.priorityInvalid')
+  }
+
+  if (
+    form.requestRetry !== undefined &&
+    form.requestRetry !== null &&
+    (!Number.isSafeInteger(form.requestRetry) || form.requestRetry < 0)
+  ) {
+    fieldErrors.requestRetry = t('providersPage.form.validation.requestRetryInvalid')
+  }
+
+  let generalError: string | null = null
   if (
     form.models.some(
       (model) =>
@@ -366,14 +398,12 @@ function validateProviderInput(
         (model.alias.trim() || model.displayName.trim() || model.forceMapping),
     )
   ) {
-    return 'modelNameRequired'
+    generalError = t('providersPage.form.validation.modelNameRequired')
+  } else if (form.headers.some((header) => !header.key.trim() && header.value.trim())) {
+    generalError = t('providersPage.form.validation.headerNameRequired')
   }
 
-  if (form.headers.some((header) => !header.key.trim() && header.value.trim())) {
-    return 'headerNameRequired'
-  }
-
-  return null
+  return { fieldErrors, generalError }
 }
 
 function ProviderDisconnectedState() {
@@ -985,6 +1015,7 @@ function ProviderFormPanel({
     createFormState(resource, descriptor),
   )
   const [localError, setLocalError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<ProviderFieldErrors>({})
   const [modelDiscoveryOpen, setModelDiscoveryOpen] = useState(false)
   const [modelDiscoverySearch, setModelDiscoverySearch] = useState('')
   const [modelDiscoveryModels, setModelDiscoveryModels] = useState<ProviderDiscoveredModel[]>([])
@@ -1008,6 +1039,7 @@ function ProviderFormPanel({
   useEffect(() => {
     setForm(createFormState(mode === 'create' ? null : resource, descriptor))
     setLocalError(null)
+    setFieldErrors({})
     setModelDiscoveryOpen(false)
     setModelDiscoverySearch('')
     setModelDiscoveryModels([])
@@ -1046,6 +1078,11 @@ function ProviderFormPanel({
     field: Field,
     value: ProviderEntryFormInput[Field],
   ) => {
+    setLocalError(null)
+    setFieldErrors((current) => ({
+      ...current,
+      [field]: undefined,
+    }))
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -1055,15 +1092,25 @@ function ProviderFormPanel({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const validationError = validateProviderInput(descriptor, form, mode)
+    const { fieldErrors: nextFieldErrors, generalError } = validateProviderForm(
+      descriptor,
+      form,
+      mode,
+      t,
+    )
 
-    if (validationError) {
-      setLocalError(t(`providersPage.form.validation.${validationError}`))
+    if (Object.keys(nextFieldErrors).length > 0 || generalError) {
+      setFieldErrors(nextFieldErrors)
+      setLocalError(generalError)
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('#provider-entry-form [aria-invalid="true"]')?.focus()
+      }, 0)
       return
     }
 
     try {
       setLocalError(null)
+      setFieldErrors({})
       if (creating) {
         await onCreate(form)
       } else if (editing) {
@@ -1363,6 +1410,16 @@ function ProviderFormPanel({
         ['excludedModels', String(resource.excludedModelCount)],
         ['apiKeyEntries', String(resource.apiKeyEntryCount)],
         [
+          'priority',
+          resource.priority === null ? t('providersPage.status.notSet') : String(resource.priority),
+        ],
+        [
+          'requestRetry',
+          resource.requestRetry === null
+            ? t('providersPage.status.inherited')
+            : String(resource.requestRetry),
+        ],
+        [
           'disableCooling',
           resource.disableCooling
             ? t('providersPage.status.enabled')
@@ -1482,15 +1539,34 @@ function ProviderFormPanel({
         </h2>
       </div>
 
-      <form className="mt-5 grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
+      <form
+        id="provider-entry-form"
+        noValidate
+        className="mt-5 grid gap-4"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
         {descriptor.supportsName ? (
           <label className={fieldClassName}>
             <span>{t('providersPage.form.name')}</span>
             <Input
               value={form.name}
+              aria-invalid={Boolean(fieldErrors.name)}
               onChange={(event) => updateField('name', event.target.value)}
+              onBlur={() => {
+                if (descriptor.supportsName && !form.name.trim()) {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    name: t('providersPage.form.validation.nameRequired'),
+                  }))
+                }
+              }}
               disabled={mutating}
             />
+            {fieldErrors.name ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.name}
+              </span>
+            ) : null}
           </label>
         ) : null}
 
@@ -1501,7 +1577,16 @@ function ProviderFormPanel({
               ref={apiKeyInputRef}
               type="password"
               value={form.apiKey}
+              aria-invalid={Boolean(fieldErrors.apiKey)}
               onChange={(event) => updateField('apiKey', event.target.value)}
+              onBlur={() => {
+                if (creating && descriptor.supportsApiKey && !form.apiKey.trim()) {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    apiKey: t('providersPage.form.validation.apiKeyRequired'),
+                  }))
+                }
+              }}
               placeholder={
                 editing
                   ? t('providersPage.form.apiKeyEditPlaceholder')
@@ -1509,6 +1594,11 @@ function ProviderFormPanel({
               }
               disabled={mutating}
             />
+            {fieldErrors.apiKey ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.apiKey}
+              </span>
+            ) : null}
           </label>
         ) : null}
 
@@ -1517,11 +1607,24 @@ function ProviderFormPanel({
           <Input
             ref={baseUrlInputRef}
             value={form.baseUrl}
+            aria-invalid={Boolean(fieldErrors.baseUrl)}
             onChange={(event) => updateField('baseUrl', event.target.value)}
+            onBlur={() => {
+              if (baseUrlRequired && !form.baseUrl.trim()) {
+                setFieldErrors((current) => ({
+                  ...current,
+                  baseUrl: t('providersPage.form.validation.baseUrlRequired'),
+                }))
+              }
+            }}
             placeholder="https://api.example.com"
             disabled={mutating}
           />
-          {baseUrlRequired ? (
+          {fieldErrors.baseUrl ? (
+            <span className="text-destructive text-xs leading-5 font-normal">
+              {fieldErrors.baseUrl}
+            </span>
+          ) : baseUrlRequired ? (
             <span className="text-muted-foreground text-xs leading-5">
               {t('providersPage.form.baseUrlRequiredHint')}
             </span>
@@ -1533,10 +1636,25 @@ function ProviderFormPanel({
             <span>{t('providersPage.form.proxyUrl')}</span>
             <Input
               value={form.proxyUrl}
+              aria-invalid={Boolean(fieldErrors.proxyUrl)}
               onChange={(event) => updateField('proxyUrl', event.target.value)}
+              onBlur={() => {
+                const trimmed = form.proxyUrl.trim()
+                if (trimmed && !isValidProxyUrl(trimmed)) {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    proxyUrl: t('configPage.proxyPools.validation.urlInvalid'),
+                  }))
+                }
+              }}
               placeholder="http://127.0.0.1:7890"
               disabled={mutating}
             />
+            {fieldErrors.proxyUrl ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.proxyUrl}
+              </span>
+            ) : null}
           </label>
         ) : null}
 
@@ -1553,15 +1671,72 @@ function ProviderFormPanel({
           <span>{t('providersPage.form.priority')}</span>
           <Input
             type="number"
+            inputMode="numeric"
             value={form.priority ?? ''}
+            aria-invalid={Boolean(fieldErrors.priority)}
             onChange={(event) =>
               updateField(
                 'priority',
                 event.target.value === '' ? undefined : Number(event.target.value),
               )
             }
+            onBlur={() => {
+              if (
+                form.priority !== undefined &&
+                form.priority !== null &&
+                !Number.isSafeInteger(form.priority)
+              ) {
+                setFieldErrors((current) => ({
+                  ...current,
+                  priority: t('credentialsPage.form.priorityInvalid'),
+                }))
+              }
+            }}
             disabled={mutating}
           />
+          {fieldErrors.priority ? (
+            <span className="text-destructive text-xs leading-5 font-normal">
+              {fieldErrors.priority}
+            </span>
+          ) : null}
+        </label>
+
+        <label className={fieldClassName}>
+          <span>{t('providersPage.form.requestRetry')}</span>
+          <Input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            value={form.requestRetry ?? ''}
+            placeholder={t('providersPage.form.requestRetryPlaceholder')}
+            aria-invalid={Boolean(fieldErrors.requestRetry)}
+            onChange={(event) => {
+              const val = event.target.value.trim()
+              updateField('requestRetry', val === '' ? null : Number(val))
+            }}
+            onBlur={() => {
+              if (
+                form.requestRetry !== undefined &&
+                form.requestRetry !== null &&
+                (!Number.isSafeInteger(form.requestRetry) || form.requestRetry < 0)
+              ) {
+                setFieldErrors((current) => ({
+                  ...current,
+                  requestRetry: t('providersPage.form.validation.requestRetryInvalid'),
+                }))
+              }
+            }}
+            disabled={mutating}
+          />
+          {fieldErrors.requestRetry ? (
+            <span className="text-destructive text-xs leading-5 font-normal">
+              {fieldErrors.requestRetry}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-xs leading-5 font-normal">
+              {t('providersPage.form.requestRetryHint')}
+            </span>
+          )}
         </label>
 
         {connectivityTestAvailable ? (

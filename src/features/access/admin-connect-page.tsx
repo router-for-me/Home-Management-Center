@@ -101,7 +101,11 @@ export function AdminConnectPage() {
             </p>
           </div>
 
-          <form className="grid gap-5 p-5 md:p-6" onSubmit={(event) => void handleSubmit(event)}>
+          <form
+            noValidate
+            className="grid gap-5 p-5 md:p-6"
+            onSubmit={(event) => void handleSubmit(event)}
+          >
             {showManagementEndpointField ? (
               <ManagementEndpointField
                 value={draftBaseUrl}

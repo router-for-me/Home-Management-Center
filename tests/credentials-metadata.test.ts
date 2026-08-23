@@ -88,6 +88,7 @@ function createCredentialResource(
     failed: null,
     path: null,
     priority: null,
+    requestRetry: null,
     note: null,
     prefix: null,
     proxyUrl: null,
@@ -274,5 +275,33 @@ describe('updateCredentialMetadata websockets payload', () => {
       (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
     )
     expect((patch?.body as Record<string, unknown>).priority).toBeUndefined()
+  })
+
+  test('includes request-retry when provided as a string or number', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+
+    await updateCredentialMetadata(session, createCredentialResource('codex'), {
+      ...metadata,
+      requestRetry: '3',
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+    )
+    expect(patch?.body).toMatchObject({ 'request-retry': 3 })
+  })
+
+  test('sends an explicit null for request-retry when clearing or inheriting', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+
+    await updateCredentialMetadata(session, createCredentialResource('codex'), {
+      ...metadata,
+      requestRetry: null,
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+    )
+    expect(patch?.body).toMatchObject({ 'request-retry': null })
   })
 })

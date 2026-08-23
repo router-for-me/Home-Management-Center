@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, test } from 'bun:test'
-import i18n from 'i18next'
+import { beforeAll, beforeEach, describe, expect, test } from 'bun:test'
+import { createInstance } from 'i18next'
+import { initReactI18next } from 'react-i18next'
 
 import { navigationGroups } from '@/components/shell/navigation'
 import {
@@ -10,11 +11,12 @@ import { getUpstreamQuotaWindowDisplayLabel } from '@/features/upstream/quota-fo
 import { toManagementApiError } from '@/lib/api/management/client'
 import type { CredentialResource } from '@/lib/api/management/credentials'
 import { normalizeQuotaCredentialDetail, normalizeQuotaSnapshot } from '@/lib/api/management/quota'
-import '@/lib/i18n/i18n'
 import { en } from '@/lib/i18n/locales/en'
 import { ru } from '@/lib/i18n/locales/ru'
 import { zhCN } from '@/lib/i18n/locales/zh-CN'
 import { zhTW } from '@/lib/i18n/locales/zh-TW'
+
+const testI18n = createInstance()
 
 function getLeafPaths(value: unknown, prefix = ''): string[] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return [prefix]
@@ -24,8 +26,19 @@ function getLeafPaths(value: unknown, prefix = ''): string[] {
   )
 }
 
+beforeAll(async () => {
+  await testI18n.use(initReactI18next).init({
+    resources: { en, 'zh-CN': zhCN, 'zh-TW': zhTW, ru },
+    lng: 'en',
+    fallbackLng: 'en',
+    defaultNS: 'common',
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  })
+})
+
 beforeEach(async () => {
-  await i18n.changeLanguage('en')
+  await testI18n.changeLanguage('en')
 })
 
 describe('upstream navigation and i18n', () => {
@@ -504,20 +517,22 @@ describe('quota snapshot normalization contracts', () => {
       periodUnit: 'unknown',
       periodValue: null,
     })
-    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[0]!, i18n.t, 'en')).toBe('Weekly')
+    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[0]!, testI18n.t, 'en')).toBe('Weekly')
     expect(detail.windows[1]).toMatchObject({
       label: null,
       periodUnit: 'unknown',
       periodValue: null,
     })
-    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[1]!, i18n.t, 'en')).toBe(
+    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[1]!, testI18n.t, 'en')).toBe(
       'Unknown period',
     )
     expect(detail.windows[2]).toMatchObject({
       periodUnit: 'minute',
       periodValue: 15,
     })
-    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[2]!, i18n.t, 'en')).toBe('15 minutes')
+    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[2]!, testI18n.t, 'en')).toBe(
+      '15 minutes',
+    )
   })
 
   test('localizes structured quota periods', async () => {
@@ -551,10 +566,10 @@ describe('quota snapshot normalization contracts', () => {
       ],
     })
 
-    await i18n.changeLanguage('zh-CN')
-    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[0]!, i18n.t, 'zh-CN')).toBe('每周')
-    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[1]!, i18n.t, 'zh-CN')).toBe('每月')
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('zh-CN')
+    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[0]!, testI18n.t, 'zh-CN')).toBe('每周')
+    expect(getUpstreamQuotaWindowDisplayLabel(detail.windows[1]!, testI18n.t, 'zh-CN')).toBe('每月')
+    await testI18n.changeLanguage('en')
   })
 
   test('rejects ratios outside the backend contract instead of converting percentages', () => {

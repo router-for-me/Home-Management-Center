@@ -1690,6 +1690,7 @@ export const en = {
         disabled: 'Disabled',
         none: 'None',
         notSet: 'Not set',
+        inherited: 'Inherit global',
         notAvailable: 'N/A',
       },
       detail: {
@@ -1709,6 +1710,8 @@ export const en = {
           headers: 'Headers',
           excludedModels: 'Excluded models',
           apiKeyEntries: 'API key entries',
+          priority: 'Priority',
+          requestRetry: 'Request retry rounds',
           disableCooling: 'Disable cooling',
           websockets: 'WebSocket',
         },
@@ -1726,6 +1729,10 @@ export const en = {
         proxyUrl: 'Proxy URL',
         prefix: 'Model prefix',
         priority: 'Priority',
+        requestRetry: 'Request retry rounds',
+        requestRetryPlaceholder: 'Leave blank to inherit global, 0 to disable retry rounds',
+        requestRetryHint:
+          'Additional retry rounds allowed after all credentials fail in the initial attempt round. 0 disables additional rounds; blank or negative values inherit the global setting.',
         disabled: 'Disabled',
         disabledHint: 'When disabled, this entry will not be used for upstream requests.',
         disableCooling: 'Disable cooling',
@@ -1769,6 +1776,7 @@ export const en = {
           modelNameRequired:
             'Enter a model ID when an alias, display name, or force mapping is set.',
           headerNameRequired: 'Enter a header name when a header value is set.',
+          requestRetryInvalid: 'Request retry rounds must be a non-negative integer.',
         },
       },
       discovery: {
@@ -1980,7 +1988,6 @@ export const en = {
         metadata: {
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values have higher scheduling priority.',
-          secondarySection: 'Less common',
           websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
           websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
@@ -2202,6 +2209,7 @@ export const en = {
         disabled: 'Disabled',
         unavailable: 'Unavailable',
         notSet: 'Not set',
+        inherited: 'Inherit global',
         notAvailable: 'N/A',
       },
       detail: {
@@ -2220,6 +2228,7 @@ export const en = {
           path: 'Path',
           size: 'Size',
           priority: 'Priority',
+          requestRetry: 'Request retry rounds',
           websockets: 'WebSocket',
           cooling: 'Cooling',
           success: 'Success',
@@ -2237,6 +2246,11 @@ export const en = {
         proxyUrl: 'Proxy URL',
         priority: 'Priority',
         priorityInvalid: 'Priority must be an integer.',
+        requestRetry: 'Request retry rounds',
+        requestRetryPlaceholder: 'Leave blank to inherit global, 0 to disable retry rounds',
+        requestRetryHint:
+          'Additional retry rounds allowed after all credentials fail in the initial attempt round. 0 disables additional rounds; blank or negative values inherit the global setting.',
+        requestRetryInvalid: 'Request retry rounds must be a non-negative integer.',
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
@@ -3053,12 +3067,19 @@ export const en = {
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
         requestRetry: {
-          label: 'Request retries',
-          description: 'Number of retries after request failures.',
+          label: 'Request retry rounds',
+          description:
+            'Additional retry rounds allowed after all credentials fail in the initial attempt round. 0 disables additional rounds after the initial round.',
+        },
+        maxRetryCredentials: {
+          label: 'Max retry credentials per round',
+          description:
+            'Maximum number of credentials attempted in each retry round. 0 or negative numbers attempt all available credentials without a per-round limit.',
         },
         maxRetryInterval: {
-          label: 'Max retry interval',
-          description: 'Upper bound for retry wait time.',
+          label: 'Max retry wait interval (seconds)',
+          description:
+            'Maximum wait time (in seconds) for cooling credentials to recover. When all credentials are in cooldown, the server waits up to this duration for the earliest recovering credential before proceeding to the next round.',
         },
         disableCooling: {
           label: 'Disable cooldown scheduling',

@@ -43,6 +43,7 @@ export type ProviderEntryFormInput = {
   disableCooling: boolean
   websockets: boolean
   priority?: number
+  requestRetry?: number | null
   models: ProviderModelEntryInput[]
   headers: ProviderHeaderEntryInput[]
   excludedModelsText: string
@@ -111,6 +112,7 @@ export type ProviderResource = {
   disableCooling: boolean
   websockets: boolean
   priority: number | null
+  requestRetry: number | null
   modelCount: number
   headerCount: number
   excludedModelCount: number
@@ -294,6 +296,11 @@ function readNumber(record: UnknownRecord, key: string): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
+function readNonNegativeInteger(record: UnknownRecord, key: string): number | null {
+  const value = readNumber(record, key)
+  return value !== null && Number.isSafeInteger(value) && value >= 0 ? value : null
+}
+
 function readStringArray(record: UnknownRecord, key: string): string[] {
   const value = record[key]
   return Array.isArray(value)
@@ -415,6 +422,9 @@ function normalizeProviderResource(
     disableCooling: readBoolean(record, 'disable-cooling'),
     websockets: readBoolean(record, 'websockets'),
     priority: readNumber(record, 'priority'),
+    requestRetry:
+      readNonNegativeInteger(record, 'request-retry') ??
+      readNonNegativeInteger(record, 'request_retry'),
     modelCount: countArray(record, 'models'),
     headerCount: countRecordKeys(record, 'headers'),
     excludedModelCount: countArray(record, 'excluded-models'),
@@ -735,6 +745,15 @@ function appendProviderOptions(
   const excludedModels = parseTextList(input.excludedModelsText)
   payload['excluded-models'] = excludedModels
   payload['disable-cooling'] = input.disableCooling
+
+  if (input.requestRetry !== undefined) {
+    payload['request-retry'] =
+      input.requestRetry === null
+        ? null
+        : Number.isSafeInteger(input.requestRetry) && input.requestRetry >= 0
+          ? input.requestRetry
+          : null
+  }
 
   if (descriptor.supportsWebsockets) {
     payload.websockets = input.websockets

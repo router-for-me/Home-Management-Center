@@ -1190,7 +1190,7 @@ function CpaNodeRenameForm({
   }
 
   return (
-    <form className="grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
+    <form noValidate className="grid gap-4" onSubmit={(event) => void handleSubmit(event)}>
       <label className={fieldClassName}>
         <span>{t('systemNodesPage.nodes.rename.label')}</span>
         <Input
@@ -1353,7 +1353,7 @@ function ApiCallTool({
         </div>
       </div>
 
-      <form className="grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
+      <form noValidate className="grid gap-3" onSubmit={(event) => void handleSubmit(event)}>
         <div className="grid gap-3 sm:grid-cols-[120px_minmax(0,1fr)]">
           <div className="grid gap-2 text-sm font-medium">
             <span>{t('systemNodesPage.apiCall.method')}</span>

@@ -1688,6 +1688,7 @@ export const ru = {
         disabled: 'Отключено',
         none: 'Нет',
         notSet: 'Не задано',
+        inherited: 'Наследовать глобальный',
         notAvailable: 'Н/Д',
       },
       detail: {
@@ -1708,6 +1709,8 @@ export const ru = {
           headers: 'Headers',
           excludedModels: 'Исключенные модели',
           apiKeyEntries: 'API key entries',
+          priority: 'Приоритет',
+          requestRetry: 'Раунды повторов запроса',
           disableCooling: 'Отключить cooling',
           websockets: 'WebSocket',
         },
@@ -1725,6 +1728,10 @@ export const ru = {
         proxyUrl: 'Proxy URL',
         prefix: 'Model prefix',
         priority: 'Приоритет',
+        requestRetry: 'Раунды повторов запроса',
+        requestRetryPlaceholder: 'Оставьте пустым для глобального, 0 для отключения доп. раундов',
+        requestRetryHint:
+          'Количество дополнительных раундов повторных попыток после сбоя всех учетных данных в начальном раунде. 0 отключает дополнительные раунды; пустое или отрицательное значение наследует глобальную настройку.',
         disabled: 'Отключено',
         disabledHint: 'Отключенная запись не используется для upstream requests.',
         disableCooling: 'Отключить cooling',
@@ -1767,6 +1774,8 @@ export const ru = {
           modelNameRequired:
             'Введите model ID, если заданы alias, отображаемое имя или принудительное отображение.',
           headerNameRequired: 'Введите имя Header, если задано значение Header.',
+          requestRetryInvalid:
+            'Количество раундов повторов должно быть неотрицательным целым числом.',
         },
       },
       discovery: {
@@ -1978,7 +1987,6 @@ export const ru = {
         metadata: {
           priorityPlaceholder: 'например, 10 или -1',
           priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
-          secondarySection: 'Дополнительно',
           websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
           websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
@@ -2201,6 +2209,7 @@ export const ru = {
         disabled: 'Отключено',
         unavailable: 'Недоступно',
         notSet: 'Не задано',
+        inherited: 'Наследовать глобальный',
         notAvailable: 'Н/Д',
       },
       detail: {
@@ -2219,6 +2228,7 @@ export const ru = {
           path: 'Путь',
           size: 'Размер',
           priority: 'Приоритет',
+          requestRetry: 'Раунды повторов запроса',
           websockets: 'WebSocket',
           cooling: 'Охлаждение',
           success: 'Успешно',
@@ -2236,6 +2246,12 @@ export const ru = {
         proxyUrl: 'Proxy URL',
         priority: 'Приоритет',
         priorityInvalid: 'Приоритет должен быть целым числом.',
+        requestRetry: 'Раунды повторов запроса',
+        requestRetryPlaceholder: 'Оставьте пустым для глобального, 0 для отключения доп. раундов',
+        requestRetryHint:
+          'Количество дополнительных раундов повторных попыток после сбоя всех учетных данных в начальном раунде. 0 отключает дополнительные раунды; пустое или отрицательное значение наследует глобальную настройку.',
+        requestRetryInvalid:
+          'Количество раундов повторов должно быть неотрицательным целым числом.',
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
@@ -3060,12 +3076,19 @@ export const ru = {
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
         requestRetry: {
-          label: 'Повторы запросов',
-          description: 'Количество повторов после ошибок запроса.',
+          label: 'Раунды повторов запроса',
+          description:
+            'Количество дополнительных раундов повторных попыток после сбоя всех учетных данных в начальном раунде. 0 отключает дополнительные раунды после первого раунда.',
+        },
+        maxRetryCredentials: {
+          label: 'Макс. учетных данных на раунд повтора',
+          description:
+            'Максимальное количество учетных данных, опрашиваемых в каждом раунде повтора. 0 или отрицательное число означает проверку всех доступных учетных данных без лимита на раунд.',
         },
         maxRetryInterval: {
-          label: 'Макс. интервал повтора',
-          description: 'Верхняя граница ожидания перед повтором.',
+          label: 'Макс. интервал ожидания повтора (сек)',
+          description:
+            'Максимальное время ожидания (в секундах) для восстановления охлаждающихся учетных данных. Когда все учетные данные находятся на охлаждении, сервер ожидает до этого времени восстановления ближайших данных перед переходом к следующему раунду.',
         },
         disableCooling: {
           label: 'Отключить планирование cooldown',
