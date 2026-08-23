@@ -78,6 +78,8 @@ describe('provider logo resolution', () => {
   test('folds the protocol-family spellings onto their provider', () => {
     expect(resolveProviderLogoId('anthropic')).toBe('claude')
     expect(resolveProviderLogoId('google')).toBe('gemini')
+    expect(resolveProviderLogoId('interactions')).toBe('gemini')
+    expect(resolveProviderLogoId('gemini-interactions')).toBe('gemini')
     expect(resolveProviderLogoId('grok')).toBe('xai')
     expect(resolveProviderLogoId('x-ai')).toBe('xai')
     expect(resolveProviderLogoId('moonshot')).toBe('kimi')

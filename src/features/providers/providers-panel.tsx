@@ -264,7 +264,7 @@ function hasProviderDiscoveryHeaderAuth(
   providerId: ProviderId,
   headers: ProviderHeaderEntryInput[],
 ) {
-  if (providerId === 'gemini') {
+  if (providerId === 'gemini' || providerId === 'interactions') {
     return hasHeaderEntry(headers, ['x-goog-api-key'])
   }
 
