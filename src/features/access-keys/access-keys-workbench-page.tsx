@@ -496,45 +496,54 @@ function AccessKeyDetailContent({
   const [keyValue, setKeyValue] = useState('')
   const [displayNameValue, setDisplayNameValue] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<{ keyValue?: string; displayName?: string }>({})
 
   useEffect(() => {
     setShowSecret(false)
     setLocalError(null)
+    setFieldErrors({})
     setKeyValue(mode === 'edit' && resource ? resource.value : '')
     setDisplayNameValue(mode === 'edit' && resource ? (resource.displayName ?? '') : '')
   }, [mode, resource])
 
-  const validateKey = (value: string) => {
-    const trimmed = value.trim()
+  const validateDraft = () => {
+    const nextErrors: { keyValue?: string; displayName?: string } = {}
+    const trimmed = keyValue.trim()
     if (!trimmed) {
-      setLocalError(t('accessKeysPage.form.validation.required'))
-      return null
+      nextErrors.keyValue = t('accessKeysPage.form.validation.required')
     }
 
-    return trimmed
-  }
-
-  const handleCreateOrUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const trimmed = validateKey(keyValue)
-    if (!trimmed) return
-
     const trimmedDisplayName = displayNameValue.trim()
-    // The backend limit counts Unicode code points, not UTF-16 units.
     if (
       supportsDisplayNames &&
       Array.from(trimmedDisplayName).length > ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH
     ) {
-      setLocalError(
-        t('accessKeysPage.form.validation.displayNameTooLong', {
-          max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
-        }),
-      )
+      nextErrors.displayName = t('accessKeysPage.form.validation.displayNameTooLong', {
+        max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+      })
+    }
+
+    return nextErrors
+  }
+
+  const handleCreateOrUpdate = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const nextErrors = validateDraft()
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors)
+      setLocalError(null)
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('#access-key-form [aria-invalid="true"]')?.focus()
+      }, 0)
       return
     }
 
+    const trimmed = keyValue.trim()
+    const trimmedDisplayName = displayNameValue.trim()
+
     try {
       setLocalError(null)
+      setFieldErrors({})
       const input: AccessKeyFormValues = {
         value: trimmed,
         displayName: supportsDisplayNames ? trimmedDisplayName || null : undefined,
@@ -552,21 +561,51 @@ function AccessKeyDetailContent({
   if (mode === 'create' || mode === 'edit') {
     return (
       <div className="p-5">
-        <form className="grid gap-4" onSubmit={(event) => void handleCreateOrUpdate(event)}>
+        <form
+          id="access-key-form"
+          noValidate
+          className="grid gap-4"
+          onSubmit={(event) => void handleCreateOrUpdate(event)}
+        >
           {supportsDisplayNames ? (
             <label className={fieldClassName}>
               <span>{t('accessKeysPage.form.displayName')}</span>
               <Input
                 value={displayNameValue}
                 disabled={mutating}
+                aria-invalid={Boolean(fieldErrors.displayName)}
                 placeholder={t('accessKeysPage.form.displayNamePlaceholder')}
-                onChange={(event) => setDisplayNameValue(event.target.value)}
+                onChange={(event) => {
+                  setLocalError(null)
+                  setFieldErrors((current) => ({ ...current, displayName: undefined }))
+                  setDisplayNameValue(event.target.value)
+                }}
+                onBlur={() => {
+                  const trimmed = displayNameValue.trim()
+                  if (
+                    supportsDisplayNames &&
+                    Array.from(trimmed).length > ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH
+                  ) {
+                    setFieldErrors((current) => ({
+                      ...current,
+                      displayName: t('accessKeysPage.form.validation.displayNameTooLong', {
+                        max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+                      }),
+                    }))
+                  }
+                }}
               />
-              <span className="text-muted-foreground text-xs">
-                {t('accessKeysPage.form.displayNameHint', {
-                  max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
-                })}
-              </span>
+              {fieldErrors.displayName ? (
+                <span className="text-destructive text-xs leading-5 font-normal">
+                  {fieldErrors.displayName}
+                </span>
+              ) : (
+                <span className="text-muted-foreground text-xs">
+                  {t('accessKeysPage.form.displayNameHint', {
+                    max: ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
+                  })}
+                </span>
+              )}
             </label>
           ) : null}
           <label className={fieldClassName}>
@@ -576,8 +615,21 @@ function AccessKeyDetailContent({
                 type={showSecret ? 'text' : 'password'}
                 value={keyValue}
                 disabled={mutating}
+                aria-invalid={Boolean(fieldErrors.keyValue)}
                 placeholder="sk-..."
-                onChange={(event) => setKeyValue(event.target.value)}
+                onChange={(event) => {
+                  setLocalError(null)
+                  setFieldErrors((current) => ({ ...current, keyValue: undefined }))
+                  setKeyValue(event.target.value)
+                }}
+                onBlur={() => {
+                  if (!keyValue.trim()) {
+                    setFieldErrors((current) => ({
+                      ...current,
+                      keyValue: t('accessKeysPage.form.validation.required'),
+                    }))
+                  }
+                }}
               />
               <Button
                 type="button"
@@ -595,12 +647,21 @@ function AccessKeyDetailContent({
                 )}
               </Button>
             </div>
+            {fieldErrors.keyValue ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.keyValue}
+              </span>
+            ) : null}
           </label>
           <Button
             type="button"
             variant="outline"
             disabled={mutating}
-            onClick={() => setKeyValue(generateAccessKey())}
+            onClick={() => {
+              setLocalError(null)
+              setFieldErrors((current) => ({ ...current, keyValue: undefined }))
+              setKeyValue(generateAccessKey())
+            }}
           >
             <RotateCcw className="size-4" aria-hidden="true" />
             {t('accessKeysPage.actions.generate')}
@@ -759,7 +820,7 @@ function ReplaceAccessKeysContent({
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
         <span>{t('accessKeysPage.replace.warning')}</span>
       </div>
-      <form className="mt-5 grid gap-4" onSubmit={handleReplace}>
+      <form noValidate className="mt-5 grid gap-4" onSubmit={handleReplace}>
         <label className={fieldClassName}>
           <span>{t('accessKeysPage.replace.textarea')}</span>
           <Textarea

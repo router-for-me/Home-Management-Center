@@ -87,25 +87,22 @@ export function CoolingCell({
 
   const handleToggle = async (checked: boolean) => {
     try {
-      await onSave(resource, { disableCooling: checked })
+      await onSave(resource, { disableCooling: !checked })
       toast.success(t('credentialsPage.inline.saved'))
     } catch (error) {
       toast.error(readErrorMessage(error))
     }
   }
 
-  // Cooling is universal (no metadataAvailability gate) so there is no unsupported
-  // branch. The switch keeps the drawer's polarity — on = "Disable cooling" — so the
-  // same credential shows the same position on both surfaces. That polarity is why
-  // there is no adjacent enabled/disabled text: a switch that reads on while a label
-  // reads "Disabled" would look self-contradictory. The header plus the tooltip carry
-  // the meaning instead.
+  // Cooling schedule is universal (no metadataAvailability gate). The switch
+  // represents whether the credential participates in cooldown scheduling:
+  // on = cooling enabled (disableCooling: false), off = cooling disabled (disableCooling: true).
   return (
     <Switch
-      checked={resource.disableCooling}
+      checked={!resource.disableCooling}
       disabled={mutating}
-      aria-label={t('credentialsPage.form.disableCooling')}
-      title={t('credentialsPage.form.disableCoolingHint')}
+      aria-label={t('credentialsPage.form.coolingSchedule')}
+      title={t('credentialsPage.form.coolingScheduleHint')}
       onCheckedChange={(checked) => void handleToggle(checked)}
       onClick={(event) => event.stopPropagation()}
     />

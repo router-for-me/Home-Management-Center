@@ -30,6 +30,7 @@ export type CredentialMetadataForm = {
   prefix: string
   proxyUrl: string
   priority: string
+  requestRetry: string
   note: string
   websockets: boolean
   disableCooling: boolean
@@ -510,8 +511,10 @@ export function CredentialConcurrencyEditor({
       <label className="mt-4 grid gap-2 text-sm font-medium">
         <span>{t('credentialsPage.concurrency.totalLimit')}</span>
         <Input
-          value={form.maxInFlight}
+          type="number"
+          min={0}
           inputMode="numeric"
+          value={form.maxInFlight}
           placeholder={t('credentialsPage.concurrency.unlimited')}
           disabled={mutating}
           onChange={(event) =>
@@ -559,8 +562,10 @@ export function CredentialConcurrencyEditor({
               }
             />
             <Input
-              value={row.limit}
+              type="number"
+              min={0}
               inputMode="numeric"
+              value={row.limit}
               placeholder="∞"
               aria-label={t('credentialsPage.concurrency.modelLimitInputLabel', {
                 index: index + 1,

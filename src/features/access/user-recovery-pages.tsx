@@ -217,7 +217,7 @@ export function UserForgotPasswordPage() {
           </div>
         </div>
       ) : (
-        <form className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
+        <form noValidate className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
           <label className={fieldClassName}>
             <span>{t('userRecovery.forgot.email')}</span>
             <Input
@@ -323,7 +323,7 @@ export function UserResetPasswordPage() {
           </Button>
         </div>
       ) : (
-        <form className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
+        <form noValidate className="grid gap-5" onSubmit={(event) => void handleSubmit(event)}>
           <label className={fieldClassName}>
             <span>{t('userRecovery.reset.newPassword')}</span>
             <Input

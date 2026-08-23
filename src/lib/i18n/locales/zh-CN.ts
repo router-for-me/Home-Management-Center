@@ -1477,6 +1477,7 @@ export const zhCN = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1527,6 +1528,7 @@ export const zhCN = {
         usageOverview: '用量总览',
         users: '用户',
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1563,6 +1565,7 @@ export const zhCN = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1609,6 +1612,7 @@ export const zhCN = {
         thinking: 'Thinking {{value}}',
         channels: {
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           claude: 'Claude',
           codex: 'Codex',
           vertex: 'Vertex',
@@ -1624,6 +1628,7 @@ export const zhCN = {
         disabled: '禁用',
         none: '无',
         notSet: '未设置',
+        inherited: '继承全局',
         notAvailable: '不可用',
       },
       detail: {
@@ -1643,6 +1648,8 @@ export const zhCN = {
           headers: 'Headers',
           excludedModels: '排除模型',
           apiKeyEntries: 'API key entries',
+          priority: '优先级',
+          requestRetry: '请求重试轮数',
           disableCooling: '禁用冷却调度',
           websockets: 'WebSocket',
         },
@@ -1660,6 +1667,10 @@ export const zhCN = {
         proxyUrl: 'Proxy URL',
         prefix: '模型 Prefix',
         priority: '优先级',
+        requestRetry: '请求重试轮数',
+        requestRetryPlaceholder: '留空继承全局，0 禁用追加重试',
+        requestRetryHint:
+          '初轮失败后允许追加的整轮重试轮数。0 表示禁止追加重试，留空或负数继承全局配置。',
         disabled: '禁用',
         disabledHint: '停用后，该条目不会被网关用于上游请求。',
         disableCooling: '禁用冷却调度',
@@ -1699,6 +1710,7 @@ export const zhCN = {
             '保存前请填写 Base URL。Codex、xAI 和 OpenAI 兼容提供商的 Base URL 不能为空。',
           modelNameRequired: '填写模型别名、显示名称或强制映射时，必须同时填写模型 ID。',
           headerNameRequired: '填写 Header 值时，必须同时填写 Header 名称。',
+          requestRetryInvalid: '请求重试轮数必须是非负整数。',
         },
       },
       discovery: {
@@ -1902,7 +1914,6 @@ export const zhCN = {
         metadata: {
           priorityPlaceholder: '例如 10 或 -1',
           priorityHint: '仅支持整数；数值越大，调度优先级越高。',
-          secondarySection: '次常用',
           websocketsXaiHint: '适用于 xAI/Grok。开启后该凭证可参与 WebSocket 传输。',
           websocketsUnsupported: '当前供应商不展示 WS 开关。',
           enableTitle: '启用凭证',
@@ -2086,7 +2097,7 @@ export const zhCN = {
         toggleStatus: '切换凭证 {{name}} 的启用状态',
         enabled: '启用',
         ws: 'WS',
-        cooling: '冷却',
+        cooling: '冷却调度',
         priority: '优先级',
         actions: '操作',
       },
@@ -2120,6 +2131,7 @@ export const zhCN = {
         disabled: '禁用',
         unavailable: '不可用',
         notSet: '未设置',
+        inherited: '继承全局',
         notAvailable: '不可用',
       },
       detail: {
@@ -2138,8 +2150,9 @@ export const zhCN = {
           path: '路径',
           size: '大小',
           priority: '优先级',
+          requestRetry: '请求重试轮数',
           websockets: 'WebSocket',
-          cooling: '冷却',
+          cooling: '冷却调度',
           success: '成功',
           failed: '失败',
           updatedAt: '更新时间',
@@ -2155,10 +2168,15 @@ export const zhCN = {
         proxyUrl: 'Proxy URL',
         priority: '优先级',
         priorityInvalid: '优先级必须是整数。',
+        requestRetry: '请求重试轮数',
+        requestRetryPlaceholder: '留空继承全局，0 禁用追加重试',
+        requestRetryHint:
+          '初轮失败后允许追加的整轮重试轮数。0 表示禁止追加重试，留空或负数继承全局配置。',
+        requestRetryInvalid: '请求重试轮数必须是非负整数。',
         websockets: 'WebSocket 支持',
         websocketsHint: '仅适用于 Codex 凭证。开启后，该凭证可参与需要 WebSocket 的 Codex 请求。',
-        disableCooling: '禁用冷却',
-        disableCoolingHint: '将此凭证从配额冷却调度中排除。',
+        coolingSchedule: '冷却调度',
+        coolingScheduleHint: '开启后，该凭证在配额受限时将参与冷却调度；关闭后将不参与冷却。',
         note: '备注',
       },
       concurrency: {
@@ -2927,12 +2945,19 @@ export const zhCN = {
           placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         },
         requestRetry: {
-          label: '请求重试次数',
-          description: '请求失败后的重试次数。',
+          label: '请求重试轮数',
+          description:
+            '全部凭证在初轮尝试均失败后，允许追加的整轮重试轮数。0 表示初轮失败后不追加整轮重试。',
+        },
+        maxRetryCredentials: {
+          label: '单轮最大重试凭证数',
+          description:
+            '每轮重试中最多尝试的凭证数量上限。0 或负数表示尝试所有可用凭证，不设单轮凭证上限。',
         },
         maxRetryInterval: {
-          label: '最大重试间隔',
-          description: '限制重试等待时间上限。',
+          label: '最大重试等待间隔 (秒)',
+          description:
+            '冷却凭证恢复的最大等待时间（秒）。当所有凭证都在冷却时，最多等待该时间以让最早恢复的凭证重新可用并进入下一轮重试。',
         },
         disableCooling: {
           label: '禁用冷却调度',
@@ -3259,6 +3284,7 @@ export const zhCN = {
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           vertex: 'Vertex',
           aistudio: 'AI Studio',
           codex: 'Codex',

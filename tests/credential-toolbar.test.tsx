@@ -89,6 +89,8 @@ describe('credential toolbar', () => {
       )
       expect(locale.common.credentialsPage.filters.resultCount).toContain('{{visible}}')
       expect(locale.common.credentialsPage.filters.resultCount).toContain('{{total}}')
+      expect(locale.common.credentialsPage.form.coolingSchedule).toBeDefined()
+      expect(locale.common.credentialsPage.form.coolingScheduleHint).toBeDefined()
     }
   })
 })

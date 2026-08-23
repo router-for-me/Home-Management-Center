@@ -214,7 +214,11 @@ function OAuthClosurePanel({
         </div>
       </div>
 
-      <form className="mt-4 grid gap-3" onSubmit={(event) => void handleCheckStatus(event)}>
+      <form
+        noValidate
+        className="mt-4 grid gap-3"
+        onSubmit={(event) => void handleCheckStatus(event)}
+      >
         <label className={fieldClassName}>
           <span>{t('credentialsPage.oauth.statusState')}</span>
           <Input
@@ -255,6 +259,7 @@ function OAuthClosurePanel({
 
       {callbackForm && callbackSupported ? (
         <form
+          noValidate
           className="mt-5 grid gap-3 border-t pt-5"
           onSubmit={(event) => void handleSubmitCallback(event)}
         >
@@ -574,6 +579,7 @@ function VertexImportPanel({
       </div>
 
       <form
+        noValidate
         aria-busy={mutating}
         className="mt-4 grid gap-3"
         onSubmit={(event) => void handleSubmit(event)}

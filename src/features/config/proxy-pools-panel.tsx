@@ -266,7 +266,11 @@ function ProxyPoolSheet({
   }
 
   return (
-    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      noValidate
+      className="flex min-h-0 flex-1 flex-col"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <CompactDrawerFormBody>
         <section className="grid gap-3">
           <div>

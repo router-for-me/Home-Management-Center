@@ -493,7 +493,7 @@ function CredentialList({
           <>
             <col className="w-[232px]" />
             <col className="w-[96px]" />
-            <col className="w-[96px]" />
+            <col className="w-[120px]" />
             <col className="w-[112px]" />
           </>
         ) : null}

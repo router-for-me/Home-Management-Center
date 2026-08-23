@@ -90,6 +90,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
   return (
     <div className="bg-overlay fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center p-4 backdrop-blur-sm">
       <form
+        noValidate
         className="bg-popover text-popover-foreground grid w-full max-w-lg gap-5 rounded-lg border p-5 shadow-xl"
         onSubmit={(event) => void handleSubmit(event)}
       >

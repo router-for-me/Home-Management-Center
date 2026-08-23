@@ -97,6 +97,10 @@ function createMetadataForm(
         resource?.priority === null || resource?.priority === undefined
           ? ''
           : String(resource.priority),
+      requestRetry:
+        resource?.requestRetry === null || resource?.requestRetry === undefined
+          ? ''
+          : String(resource.requestRetry),
       websockets: resource?.websockets ?? false,
       disableCooling: resource?.disableCooling ?? false,
       note: resource?.note ?? '',
@@ -109,9 +113,26 @@ function createMetadataForm(
   )
 }
 
+export function isValidProxyUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return ['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol)
+  } catch {
+    return false
+  }
+}
+
 export function isValidCredentialPriorityDraft(value: string) {
   const trimmed = value.trim()
   return trimmed === '' || (/^-?\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)))
+}
+
+export function isValidCredentialRequestRetryDraft(value: string) {
+  const trimmed = value.trim()
+  return (
+    trimmed === '' ||
+    (/^\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)) && Number(trimmed) >= 0)
+  )
 }
 
 export function buildCredentialMetadataPatch(
@@ -122,12 +143,16 @@ export function buildCredentialMetadataPatch(
   const prefix = form.prefix.trim()
   const proxyUrl = form.proxyUrl.trim()
   const priority = form.priority.trim()
+  const requestRetry = form.requestRetry.trim()
   const note = form.note.trim()
 
   if (prefix !== (resource.prefix ?? '')) patch.prefix = form.prefix
   if (proxyUrl !== (resource.proxyUrl ?? '')) patch.proxyUrl = form.proxyUrl
-  if (priority !== (resource.priority === null ? '' : String(resource.priority))) {
+  if (priority !== (resource.priority == null ? '' : String(resource.priority))) {
     patch.priority = priority === '' ? null : priority
+  }
+  if (requestRetry !== (resource.requestRetry == null ? '' : String(resource.requestRetry))) {
+    patch.requestRetry = requestRetry === '' ? null : requestRetry
   }
   if (note !== (resource.note ?? '')) patch.note = form.note
   if (
@@ -260,6 +285,12 @@ function OverviewTab({
               : String(resource.priority),
           ],
           [
+            'requestRetry',
+            resource.requestRetry === null
+              ? t('credentialsPage.status.inherited')
+              : String(resource.requestRetry),
+          ],
+          [
             'websockets',
             websocketsSupported
               ? resource.metadataAvailability.websockets
@@ -316,6 +347,9 @@ function OverviewTab({
   )
 }
 
+type CredentialFormField = 'proxyUrl' | 'priority' | 'requestRetry' | 'prefix'
+type CredentialFieldErrors = Partial<Record<CredentialFormField, string>>
+
 function MetadataTab({
   resource,
   open,
@@ -344,6 +378,7 @@ function MetadataTab({
     createMetadataForm(resource, concurrencyPolicy),
   )
   const [localError, setLocalError] = useState<CredentialMetadataLocalError | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<CredentialFieldErrors>({})
   const credentialId = getCredentialInFlightId(resource)
   const previousCredentialId = useRef(credentialId)
   const previousPolicyVersion = useRef<CredentialMetadataPolicyVersion>('unobserved')
@@ -370,6 +405,7 @@ function MetadataTab({
     if (refreshMode === 'reset') {
       setForm(createMetadataForm(resource, concurrencyPolicy))
       setLocalError(null)
+      setFieldErrors({})
       return
     }
     if (refreshMode === 'policy') {
@@ -385,16 +421,53 @@ function MetadataTab({
     setForm(nextForm)
   }
 
+  const updateField = <K extends keyof CredentialMetadataForm>(
+    key: K,
+    value: CredentialMetadataForm[K],
+  ) => {
+    setLocalError(null)
+    setFieldErrors((current) => ({ ...current, [key]: undefined }))
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const websocketsAvailable = resource.metadataAvailability.websockets
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
   const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
+  const validateDraft = (): CredentialFieldErrors => {
+    const nextErrors: CredentialFieldErrors = {}
+    const trimmedProxy = form.proxyUrl.trim()
+    if (trimmedProxy && !isValidProxyUrl(trimmedProxy)) {
+      nextErrors.proxyUrl = t('configPage.proxyPools.validation.urlInvalid')
+    }
+    if (!isValidCredentialPriorityDraft(form.priority)) {
+      nextErrors.priority = t('credentialsPage.form.priorityInvalid')
+    }
+    if (!isValidCredentialRequestRetryDraft(form.requestRetry)) {
+      nextErrors.requestRetry = t('credentialsPage.form.requestRetryInvalid')
+    }
+    return nextErrors
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
+    const nextFieldErrors = validateDraft()
+    if (Object.keys(nextFieldErrors).length > 0) {
+      setFieldErrors(nextFieldErrors)
+      setLocalError(null)
+      setTimeout(() => {
+        document
+          .querySelector<HTMLElement>('#credential-metadata-form [aria-invalid="true"]')
+          ?.focus()
+      }, 0)
+      return
+    }
+
     try {
       setLocalError(null)
+      setFieldErrors({})
       const maxInFlight = parseConcurrencyLimit(form.maxInFlight)
       if (concurrencyEditable && maxInFlight === undefined) {
         throw new Error(t('credentialsPage.concurrency.validation.totalLimit'))
@@ -427,9 +500,6 @@ function MetadataTab({
         }
       }
       const normalizedMaxInFlight = maxInFlight && maxInFlight > 0 ? maxInFlight : null
-      if (!isValidCredentialPriorityDraft(form.priority)) {
-        throw new Error(t('credentialsPage.form.priorityInvalid'))
-      }
       const currentModelLimits = concurrencyPolicy?.maxInFlightByModel ?? {}
       const modelLimitsChanged =
         Object.keys(currentModelLimits).length !== Object.keys(maxInFlightByModel).length ||
@@ -476,6 +546,7 @@ function MetadataTab({
   return (
     <form
       id="credential-metadata-form"
+      noValidate
       className="grid gap-4"
       onSubmit={(event) => void handleSubmit(event)}
     >
@@ -487,25 +558,82 @@ function MetadataTab({
           disabled={mutating}
           className="font-mono"
           spellCheck={false}
-          onChange={(event) =>
-            handleFormChange((current) => ({ ...current, proxyUrl: event.target.value }))
-          }
+          aria-invalid={Boolean(fieldErrors.proxyUrl)}
+          onChange={(event) => updateField('proxyUrl', event.target.value)}
+          onBlur={() => {
+            const val = form.proxyUrl.trim()
+            if (val && !isValidProxyUrl(val)) {
+              setFieldErrors((current) => ({
+                ...current,
+                proxyUrl: t('configPage.proxyPools.validation.urlInvalid'),
+              }))
+            }
+          }}
         />
+        {fieldErrors.proxyUrl ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.proxyUrl}
+          </span>
+        ) : null}
       </label>
       <label className={fieldClassName}>
         <span>{t('credentialsPage.form.priority')}</span>
         <Input
-          value={form.priority}
+          type="number"
           inputMode="numeric"
+          value={form.priority}
           placeholder={t('upstreamPage.drawer.metadata.priorityPlaceholder')}
           disabled={mutating}
-          onChange={(event) =>
-            handleFormChange((current) => ({ ...current, priority: event.target.value }))
-          }
+          aria-invalid={Boolean(fieldErrors.priority)}
+          onChange={(event) => updateField('priority', event.target.value)}
+          onBlur={() => {
+            if (!isValidCredentialPriorityDraft(form.priority)) {
+              setFieldErrors((current) => ({
+                ...current,
+                priority: t('credentialsPage.form.priorityInvalid'),
+              }))
+            }
+          }}
         />
-        <span className="text-muted-foreground text-xs leading-5 font-normal">
-          {t('upstreamPage.drawer.metadata.priorityHint')}
-        </span>
+        {fieldErrors.priority ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.priority}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('upstreamPage.drawer.metadata.priorityHint')}
+          </span>
+        )}
+      </label>
+      <label className={fieldClassName}>
+        <span>{t('credentialsPage.form.requestRetry')}</span>
+        <Input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          value={form.requestRetry}
+          placeholder={t('credentialsPage.form.requestRetryPlaceholder')}
+          disabled={mutating}
+          aria-invalid={Boolean(fieldErrors.requestRetry)}
+          onChange={(event) => updateField('requestRetry', event.target.value)}
+          onBlur={() => {
+            if (!isValidCredentialRequestRetryDraft(form.requestRetry)) {
+              setFieldErrors((current) => ({
+                ...current,
+                requestRetry: t('credentialsPage.form.requestRetryInvalid'),
+              }))
+            }
+          }}
+        />
+        {fieldErrors.requestRetry ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.requestRetry}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('credentialsPage.form.requestRetryHint')}
+          </span>
+        )}
       </label>
       <label className={fieldClassName}>
         <span>{t('credentialsPage.form.note')}</span>
@@ -513,23 +641,16 @@ function MetadataTab({
           className="min-h-24"
           value={form.note}
           disabled={mutating}
-          onChange={(event) =>
-            handleFormChange((current) => ({ ...current, note: event.target.value }))
-          }
+          onChange={(event) => updateField('note', event.target.value)}
         />
       </label>
 
-      <p className="text-muted-foreground mt-1 text-xs font-semibold tracking-wide uppercase">
-        {t('upstreamPage.drawer.metadata.secondarySection')}
-      </p>
       <label className={fieldClassName}>
         <span>{t('credentialsPage.form.prefix')}</span>
         <Input
           value={form.prefix}
           disabled={mutating}
-          onChange={(event) =>
-            handleFormChange((current) => ({ ...current, prefix: event.target.value }))
-          }
+          onChange={(event) => updateField('prefix', event.target.value)}
         />
       </label>
 
@@ -571,18 +692,18 @@ function MetadataTab({
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">{t('credentialsPage.form.disableCooling')}</p>
+            <p className="text-sm font-medium">{t('credentialsPage.form.coolingSchedule')}</p>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('credentialsPage.form.disableCoolingHint')}
+              {t('credentialsPage.form.coolingScheduleHint')}
             </p>
           </div>
           <Switch
-            checked={form.disableCooling}
+            checked={!form.disableCooling}
             disabled={mutating}
             onCheckedChange={(checked) =>
-              handleFormChange((current) => ({ ...current, disableCooling: checked }))
+              handleFormChange((current) => ({ ...current, disableCooling: !checked }))
             }
-            aria-label={t('credentialsPage.form.disableCooling')}
+            aria-label={t('credentialsPage.form.coolingSchedule')}
           />
         </div>
       </div>

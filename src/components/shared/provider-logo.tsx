@@ -94,7 +94,7 @@ const providerAliases: Array<[brandId: string, matches: RegExp]> = [
   ['vertex', /vertex/],
   ['codex', /codex/],
   ['claude', /claude|anthropic/],
-  ['gemini', /gemini|google/],
+  ['gemini', /gemini|google|interaction/],
   ['kimi', /kimi|moonshot/],
   ['xai', /xai|x-ai|grok/],
   ['openai', /openai|chatgpt|^gpt|^o\d/],

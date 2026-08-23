@@ -154,7 +154,11 @@ export function UserAuthPage({ mode }: UserAuthPageProps) {
             </p>
           </div>
 
-          <form className="grid gap-5 p-5 md:p-6" onSubmit={(event) => void handleSubmit(event)}>
+          <form
+            noValidate
+            className="grid gap-5 p-5 md:p-6"
+            onSubmit={(event) => void handleSubmit(event)}
+          >
             {status === 'authenticated' && user ? (
               <div className="border-success/30 bg-success/10 text-success-foreground flex items-start gap-2 rounded-md border px-3 py-2 text-sm">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />

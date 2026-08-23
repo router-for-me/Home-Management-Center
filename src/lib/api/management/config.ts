@@ -27,6 +27,7 @@ export type ConfigFieldKey =
   | 'proxyUrl'
   | 'requestLog'
   | 'requestRetry'
+  | 'maxRetryCredentials'
   | 'maxRetryInterval'
   | 'forceModelPrefix'
   | 'disableCooling'
@@ -537,7 +538,7 @@ function createYamlBackedChangeTextPatch(
   }
 }
 
-function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
+export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
   const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
   const tls = toRecord(rawConfig.tls)
   const remoteManagement = toRecord(rawConfig['remote-management'])
@@ -568,6 +569,7 @@ function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues
     proxyUrl: readString(rawConfig, 'proxy-url'),
     requestLog: readBoolean(rawConfig, 'request-log'),
     requestRetry: readNumber(rawConfig, 'request-retry'),
+    maxRetryCredentials: readNumber(rawConfig, 'max-retry-credentials'),
     maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
     forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
     disableCooling: readBoolean(rawConfig, 'disable-cooling'),
@@ -667,7 +669,7 @@ export async function fetchConfigSnapshot(
   }
 }
 
-async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
+export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
   const value = change.nextValue
 
@@ -699,6 +701,9 @@ async function applyConfigChange(session: ManagementSessionInput, change: Config
       return
     case 'requestRetry':
       await client.put('/request-retry', { value })
+      return
+    case 'maxRetryCredentials':
+      await client.put('/max-retry-credentials', { value })
       return
     case 'maxRetryInterval':
       await client.put('/max-retry-interval', { value })

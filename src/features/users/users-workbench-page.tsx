@@ -2868,7 +2868,11 @@ function BalanceOperationForm({
   }
 
   return (
-    <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      noValidate
+      className="flex min-h-0 flex-1 flex-col"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <DrawerScaffoldBody className="grid gap-4">
         <div className="grid gap-2">
           <p className="text-sm font-medium">{t('usersPage.balance.form.target')}</p>
