@@ -8,7 +8,7 @@ import {
   isValidCredentialPriorityDraft,
   isValidCredentialRequestRetryDraft,
 } from '@/features/credentials/credential-detail-drawer'
-import { WebsocketsCell } from '@/features/credentials/credential-inline-cells'
+import { CoolingCell, WebsocketsCell } from '@/features/credentials/credential-inline-cells'
 import type { CredentialResource } from '@/lib/api/management/credentials'
 import { en } from '@/lib/i18n/locales/en'
 
@@ -221,5 +221,39 @@ describe('WebsocketsCell', () => {
     )
     expect(markup).not.toContain('role="switch"')
     expect(markup).toContain('N/A')
+  })
+})
+
+describe('CoolingCell', () => {
+  const noopSave = async () => {}
+
+  test('renders switch ON when cooling schedule is enabled (disableCooling: false)', () => {
+    const markup = renderToStaticMarkup(
+      <I18nextProvider i18n={testI18n}>
+        <CoolingCell
+          resource={createCredentialResource('gemini', { disableCooling: false })}
+          mutating={false}
+          onSave={noopSave}
+        />
+      </I18nextProvider>,
+    )
+    expect(markup).toContain('role="switch"')
+    expect(markup).toContain('aria-checked="true"')
+    expect(markup).toContain('aria-label="Cooling schedule"')
+  })
+
+  test('renders switch OFF when cooling schedule is disabled (disableCooling: true)', () => {
+    const markup = renderToStaticMarkup(
+      <I18nextProvider i18n={testI18n}>
+        <CoolingCell
+          resource={createCredentialResource('gemini', { disableCooling: true })}
+          mutating={false}
+          onSave={noopSave}
+        />
+      </I18nextProvider>,
+    )
+    expect(markup).toContain('role="switch"')
+    expect(markup).toContain('aria-checked="false"')
+    expect(markup).toContain('aria-label="Cooling schedule"')
   })
 })

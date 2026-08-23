@@ -2175,7 +2175,7 @@ export const en = {
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
         ws: 'WS',
-        cooling: 'Cooling',
+        cooling: 'Cooling schedule',
         priority: 'Priority',
         actions: 'Actions',
       },
@@ -2230,7 +2230,7 @@ export const en = {
           priority: 'Priority',
           requestRetry: 'Request retry rounds',
           websockets: 'WebSocket',
-          cooling: 'Cooling',
+          cooling: 'Cooling schedule',
           success: 'Success',
           failed: 'Failed',
           updatedAt: 'Updated',
@@ -2254,8 +2254,9 @@ export const en = {
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
-        disableCooling: 'Disable cooling',
-        disableCoolingHint: 'Exclude this credential from quota cooldown scheduling.',
+        coolingSchedule: 'Cooling schedule',
+        coolingScheduleHint:
+          'When enabled, this credential participates in quota cooldown scheduling; when disabled, it is excluded from cooling.',
         note: 'Note',
       },
       concurrency: {
