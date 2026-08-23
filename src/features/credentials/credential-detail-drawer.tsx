@@ -692,18 +692,18 @@ function MetadataTab({
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-sm font-medium">{t('credentialsPage.form.disableCooling')}</p>
+            <p className="text-sm font-medium">{t('credentialsPage.form.coolingSchedule')}</p>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
-              {t('credentialsPage.form.disableCoolingHint')}
+              {t('credentialsPage.form.coolingScheduleHint')}
             </p>
           </div>
           <Switch
-            checked={form.disableCooling}
+            checked={!form.disableCooling}
             disabled={mutating}
             onCheckedChange={(checked) =>
-              handleFormChange((current) => ({ ...current, disableCooling: checked }))
+              handleFormChange((current) => ({ ...current, disableCooling: !checked }))
             }
-            aria-label={t('credentialsPage.form.disableCooling')}
+            aria-label={t('credentialsPage.form.coolingSchedule')}
           />
         </div>
       </div>

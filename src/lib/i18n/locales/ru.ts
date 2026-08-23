@@ -2175,7 +2175,7 @@ export const ru = {
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
         ws: 'WS',
-        cooling: 'Охлаждение',
+        cooling: 'Расписание охлаждения',
         priority: 'Приоритет',
         actions: 'Действия',
       },
@@ -2230,7 +2230,7 @@ export const ru = {
           priority: 'Приоритет',
           requestRetry: 'Раунды повторов запроса',
           websockets: 'WebSocket',
-          cooling: 'Охлаждение',
+          cooling: 'Расписание охлаждения',
           success: 'Успешно',
           failed: 'Ошибки',
           updatedAt: 'Обновлено',
@@ -2255,8 +2255,9 @@ export const ru = {
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
-        disableCooling: 'Отключить охлаждение',
-        disableCoolingHint: 'Исключить эти учётные данные из планирования охлаждения квот.',
+        coolingSchedule: 'Расписание охлаждения',
+        coolingScheduleHint:
+          'При включении эти учётные данные участвуют в расписании охлаждения квот; при выключении исключаются из охлаждения.',
         note: 'Заметка',
       },
       concurrency: {
