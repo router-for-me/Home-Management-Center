@@ -1477,6 +1477,7 @@ export const zhTW = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1527,6 +1528,7 @@ export const zhTW = {
         usageOverview: '用量總覽',
         users: '使用者',
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1563,6 +1565,7 @@ export const zhTW = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1609,6 +1612,7 @@ export const zhTW = {
         thinking: 'Thinking {{value}}',
         channels: {
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           claude: 'Claude',
           codex: 'Codex',
           vertex: 'Vertex',
@@ -3280,6 +3284,7 @@ export const zhTW = {
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           vertex: 'Vertex',
           aistudio: 'AI Studio',
           codex: 'Codex',

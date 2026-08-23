@@ -5,10 +5,18 @@ import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/t
 
 type UnknownRecord = Record<string, unknown>
 
-export type ProviderId = 'gemini' | 'claude' | 'codex' | 'xai' | 'vertex' | 'openaiCompatibility'
+export type ProviderId =
+  | 'gemini'
+  | 'interactions'
+  | 'claude'
+  | 'codex'
+  | 'xai'
+  | 'vertex'
+  | 'openaiCompatibility'
 export type ProviderModelChannel =
   | 'claude'
   | 'gemini'
+  | 'gemini-interactions'
   | 'vertex'
   | 'aistudio'
   | 'codex'
@@ -159,6 +167,7 @@ type ProviderModelDefinitionsSnapshot = {
 
 const providerModelDefinitionChannels: ProviderModelChannel[] = [
   'gemini',
+  'gemini-interactions',
   'claude',
   'codex',
   'vertex',
@@ -190,6 +199,22 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsCloak: false,
     supportsWebsockets: false,
     supportsRichModelAliases: false,
+  },
+  {
+    id: 'interactions',
+    path: '/interactions-api-key',
+    responseKey: 'interactions-api-key',
+    supportsName: false,
+    supportsApiKey: true,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: false,
+    defaultBaseUrl: '',
+    modelDefinitionChannel: 'gemini-interactions',
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: false,
+    supportsCloak: false,
+    supportsWebsockets: false,
+    supportsRichModelAliases: true,
   },
   {
     id: 'claude',
@@ -907,7 +932,7 @@ export async function fetchProviderDiscoveredModels(
   const apiKey = input.apiKey.trim()
   const authIndex = input.authIndex?.trim() || undefined
 
-  if (input.providerId === 'gemini') {
+  if (input.providerId === 'gemini' || input.providerId === 'interactions') {
     const endpoint = buildGeminiModelsEndpoint(input.baseUrl)
     const resolvedHeaders = { ...headers }
     if (apiKey && !hasHeader(resolvedHeaders, 'x-goog-api-key')) {

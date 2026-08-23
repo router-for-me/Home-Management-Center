@@ -302,6 +302,7 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
 const modelDefinitionChannels: ProviderModelChannel[] = [
   'claude',
   'gemini',
+  'gemini-interactions',
   'vertex',
   'aistudio',
   'codex',

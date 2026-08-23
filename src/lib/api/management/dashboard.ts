@@ -13,7 +13,14 @@ import { type UserResource, fetchUsersSnapshot } from '@/lib/api/management/user
 
 type UnknownRecord = Record<string, unknown>
 
-type DashboardProviderId = 'gemini' | 'claude' | 'codex' | 'xai' | 'vertex' | 'openaiCompatibility'
+type DashboardProviderId =
+  | 'gemini'
+  | 'interactions'
+  | 'claude'
+  | 'codex'
+  | 'xai'
+  | 'vertex'
+  | 'openaiCompatibility'
 
 type DashboardRequestIssueScope =
   | 'latestVersion'
@@ -95,6 +102,11 @@ const dashboardProviderDescriptors: DashboardProviderDescriptor[] = [
     id: 'gemini',
     path: '/gemini-api-key',
     responseKey: 'gemini-api-key',
+  },
+  {
+    id: 'interactions',
+    path: '/interactions-api-key',
+    responseKey: 'interactions-api-key',
   },
   {
     id: 'claude',

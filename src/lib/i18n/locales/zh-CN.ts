@@ -1477,6 +1477,7 @@ export const zhCN = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1527,6 +1528,7 @@ export const zhCN = {
         usageOverview: '用量总览',
         users: '用户',
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1563,6 +1565,7 @@ export const zhCN = {
       },
       providerNames: {
         gemini: 'Gemini',
+        interactions: 'Google Interactions',
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
@@ -1609,6 +1612,7 @@ export const zhCN = {
         thinking: 'Thinking {{value}}',
         channels: {
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           claude: 'Claude',
           codex: 'Codex',
           vertex: 'Vertex',
@@ -3280,6 +3284,7 @@ export const zhCN = {
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
+          'gemini-interactions': 'Google Interactions',
           vertex: 'Vertex',
           aistudio: 'AI Studio',
           codex: 'Codex',
