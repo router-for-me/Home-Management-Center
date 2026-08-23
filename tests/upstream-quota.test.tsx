@@ -1,5 +1,7 @@
-import { describe, expect, test } from 'bun:test'
+import { beforeAll, describe, expect, test } from 'bun:test'
+import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { I18nextProvider, initReactI18next } from 'react-i18next'
 
 import { UpstreamQuotaDetail } from '@/features/credentials/credential-detail-drawer'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
@@ -19,7 +21,27 @@ import {
 } from '@/features/upstream/upstream-quota-model'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
 import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
-import '@/lib/i18n/i18n'
+import { en } from '@/lib/i18n/locales/en'
+import { ru } from '@/lib/i18n/locales/ru'
+import { zhCN } from '@/lib/i18n/locales/zh-CN'
+import { zhTW } from '@/lib/i18n/locales/zh-TW'
+
+const testI18n = createInstance()
+
+beforeAll(async () => {
+  await testI18n.use(initReactI18next).init({
+    resources: { en, 'zh-CN': zhCN, 'zh-TW': zhTW, ru },
+    lng: 'en',
+    fallbackLng: 'en',
+    defaultNS: 'common',
+    interpolation: { escapeValue: false },
+    react: { useSuspense: false },
+  })
+})
+
+function renderWithI18n(node: React.ReactElement) {
+  return renderToStaticMarkup(<I18nextProvider i18n={testI18n}>{node}</I18nextProvider>)
+}
 
 function createWindow(overrides: Partial<QuotaWindow> = {}): QuotaWindow {
   return {
@@ -418,7 +440,7 @@ describe('Antigravity quota grouping', () => {
 describe('UpstreamQuotaCell rendering', () => {
   test('renders grok plan and on-demand rows from real backend fields', () => {
     const entry = createXaiEntry()
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('$42.00')
     expect(markup).toContain('$150.00')
@@ -435,21 +457,20 @@ describe('UpstreamQuotaCell rendering', () => {
       windows: [],
       windowCount: 1,
     })
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).not.toContain('SuperGrok')
     expect(markup).toContain('$42.00')
   })
 
   test('renders generic windows for other providers', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderWithI18n(
       <UpstreamQuotaCell state={{ kind: 'entry', entry: createQuotaEntry() }} />,
     )
     expect(markup).toContain('82%')
   })
 
   test('renders Codex plan and keeps account and model weekly limits distinguishable', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const accountWeekly = createWindow({
       id: 'codex-1-week',
       label: null,
@@ -481,7 +502,7 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 3,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Pro 20x')
     expect(markup).toContain('GPT-5.3-Codex-Spark')
     expect(markup).toContain('Weekly')
@@ -491,8 +512,7 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('localizes the generic Codex usage label and formats 300 minutes as 5 hours', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('zh-CN')
+    await testI18n.changeLanguage('zh-CN')
     const usageWindow = createWindow({
       id: 'codex-usage-5-hour',
       label: 'usage',
@@ -507,8 +527,8 @@ describe('UpstreamQuotaCell rendering', () => {
       windows: [usageWindow],
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
-    await i18n.changeLanguage('en')
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    await testI18n.changeLanguage('en')
 
     expect(markup).toContain('用量')
     expect(markup).toContain('5小时')
@@ -517,18 +537,16 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('surfaces partial collection even when the current quota status is healthy', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({ collectionStatus: 'partial' })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Healthy')
     expect(markup).toContain('Partially collected')
   })
 
   test('renders Antigravity Free quota as two weekly groups', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       primaryWindows: [
@@ -551,7 +569,7 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 2,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Gemini')
     expect(markup).toContain('Claude + GPT')
     expect(markup).toContain('Weekly')
@@ -560,8 +578,7 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('renders Antigravity Pro quota with one 5-hour primary per group', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       primaryWindows: [
@@ -580,7 +597,7 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 4,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('5 hours')
     expect(markup).toContain('70%')
     expect(markup).toContain('40%')
@@ -588,8 +605,7 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('supports an asymmetric optional 5-hour bucket', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       primaryWindows: [
@@ -610,15 +626,14 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 3,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('5 hours')
     expect(markup).toContain('Weekly')
     expect(markup).toContain('+1 more')
   })
 
   test('keeps Antigravity partial collection visible', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       collectionStatus: 'partial',
@@ -640,14 +655,13 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 2,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Healthy')
     expect(markup).toContain('Partially collected')
   })
 
   test('does not present legacy Antigravity scopes as healthy empty quota', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       primaryWindows: [createWindow({ id: 'antigravity-model-chat-20706', scopeId: 'chat-20706' })],
@@ -655,7 +669,7 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 1,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Unknown')
     expect(markup).toContain('Stale')
     expect(markup).toContain('older or unrecognized format')
@@ -664,8 +678,7 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('shows collecting and failed Antigravity legacy upgrades explicitly', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const collecting = createQuotaEntry({
       provider: 'antigravity',
       status: 'unknown',
@@ -695,14 +708,14 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 1,
     })
 
-    const collectingMarkup = renderToStaticMarkup(
+    const collectingMarkup = renderWithI18n(
       <UpstreamQuotaCell state={{ kind: 'entry', entry: collecting }} />,
     )
     expect(collectingMarkup).toContain('Collecting in background')
     expect(collectingMarkup).toContain('Refreshing Antigravity quota')
     expect(collectingMarkup).not.toContain('Healthy')
 
-    const failedMarkup = renderToStaticMarkup(
+    const failedMarkup = renderWithI18n(
       <UpstreamQuotaCell state={{ kind: 'entry', entry: failed }} />,
     )
     expect(failedMarkup).toContain('Query failed')
@@ -711,8 +724,7 @@ describe('UpstreamQuotaCell rendering', () => {
   })
 
   test('shows a genuinely never-collected Antigravity credential as not collected', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const entry = createQuotaEntry({
       provider: 'antigravity',
       status: 'unknown',
@@ -723,32 +735,28 @@ describe('UpstreamQuotaCell rendering', () => {
       windowCount: 0,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('Not collected')
     expect(markup).not.toContain('older or unrecognized format')
   })
 
   test('renders not-collected and capability-absent states', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
 
-    const notCollected = renderToStaticMarkup(
-      <UpstreamQuotaCell state={{ kind: 'not-collected' }} />,
-    )
+    const notCollected = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'not-collected' }} />)
     expect(notCollected).toContain('Not collected')
 
-    const absent = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'capability-absent' }} />)
+    const absent = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'capability-absent' }} />)
     expect(absent).toContain('Unsupported')
 
-    const loading = renderToStaticMarkup(<UpstreamQuotaCell state={{ kind: 'loading' }} />)
+    const loading = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'loading' }} />)
     expect(loading).toContain('data-slot="skeleton"')
   })
 })
 
 describe('UpstreamQuotaDetail rendering', () => {
   test('groups all stable Antigravity windows and ignores legacy scopes', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const item = createQuotaEntry({
       provider: 'antigravity',
       primaryWindows: [],
@@ -786,7 +794,7 @@ describe('UpstreamQuotaDetail rendering', () => {
       windowCount: 5,
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaDetail item={item} />)
+    const markup = renderWithI18n(<UpstreamQuotaDetail item={item} />)
     expect(markup).toContain('Gemini')
     expect(markup).toContain('Claude + GPT')
     expect(markup).toContain('70%')
@@ -797,8 +805,7 @@ describe('UpstreamQuotaDetail rendering', () => {
   })
 
   test('preserves Codex plan and reset-credit detail', async () => {
-    const i18n = (await import('i18next')).default
-    await i18n.changeLanguage('en')
+    await testI18n.changeLanguage('en')
     const item = createQuotaEntry({
       provider: 'codex',
       plan: { name: 'Pro 20x', premium: true },
@@ -815,7 +822,7 @@ describe('UpstreamQuotaDetail rendering', () => {
       },
     })
 
-    const markup = renderToStaticMarkup(<UpstreamQuotaDetail item={item} />)
+    const markup = renderWithI18n(<UpstreamQuotaDetail item={item} />)
     expect(markup).toContain('Pro 20x')
     expect(markup).toContain('Rate-limit reset credits')
     expect(markup).toContain('2 available')

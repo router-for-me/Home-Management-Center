@@ -34,8 +34,14 @@ function DrawerScaffoldContent({ className, ...props }: ComponentProps<typeof Sh
  * primitive rather than a rule: `DrawerScaffoldForm` plus a Body and a Footer is
  * the only arrangement that scrolls, and now it is also the shortest one to write.
  */
-function DrawerScaffoldForm({ className, ...props }: ComponentProps<'form'>) {
-  return <form className={cn('flex min-h-0 flex-1 flex-col', className)} {...props} />
+function DrawerScaffoldForm({ className, noValidate = true, ...props }: ComponentProps<'form'>) {
+  return (
+    <form
+      noValidate={noValidate}
+      className={cn('flex min-h-0 flex-1 flex-col', className)}
+      {...props}
+    />
+  )
 }
 
 function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerScaffoldHeaderProps) {

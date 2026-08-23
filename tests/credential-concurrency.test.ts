@@ -1,7 +1,7 @@
 import { createElement } from 'react'
 
 import axios, { type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios'
-import { afterEach, describe, expect, test } from 'bun:test'
+import { afterEach, beforeAll, describe, expect, test } from 'bun:test'
 import i18n from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 
@@ -35,7 +35,13 @@ import {
   updateCredentialMetadata,
 } from '../src/lib/api/management/credentials'
 import { probeManagementRuntime } from '../src/lib/api/management/probe'
-import '../src/lib/i18n/i18n'
+import { initI18n, loadLanguageBundle } from '../src/lib/i18n/i18n'
+
+beforeAll(async () => {
+  await initI18n()
+  await loadLanguageBundle('en')
+  await loadLanguageBundle('zh-CN')
+})
 
 const defaultAxiosAdapter = axios.defaults.adapter
 const session = { baseUrl: 'http://management.test', managementKey: 'test-key' }

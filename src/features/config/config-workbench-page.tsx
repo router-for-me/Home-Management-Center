@@ -281,6 +281,7 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'streaming',
     fields: [
       { key: 'requestRetry', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'maxRetryCredentials', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'maxRetryInterval', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'disableCooling', kind: 'boolean', sectionId: 'streaming' },
       { key: 'forceModelPrefix', kind: 'boolean', sectionId: 'streaming' },

@@ -112,22 +112,35 @@ function ApiKeyForm({
 }) {
   const { t } = useTranslation()
   const [keyValue, setKeyValue] = useState('')
+  const [fieldError, setFieldError] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalError(null)
+    setFieldError(null)
     setKeyValue(mode.type === 'edit' ? mode.resource.key : '')
   }, [mode])
+
+  const handleBlur = () => {
+    if (mode.type === 'edit' && !keyValue.trim()) {
+      setFieldError(t('userWorkspace.keys.validation.keyRequired'))
+    }
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     if (mode.type === 'edit' && !keyValue.trim()) {
-      setLocalError(t('userWorkspace.keys.validation.keyRequired'))
+      setFieldError(t('userWorkspace.keys.validation.keyRequired'))
+      setLocalError(null)
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('#user-api-key-form [aria-invalid="true"]')?.focus()
+      }, 0)
       return
     }
 
     try {
+      setFieldError(null)
       setLocalError(null)
       await onSubmit({ key: keyValue.trim() || undefined })
     } catch (error) {
@@ -136,24 +149,38 @@ function ApiKeyForm({
   }
 
   return (
-    <form className="grid gap-5 p-5" onSubmit={(event) => void handleSubmit(event)}>
+    <form
+      id="user-api-key-form"
+      noValidate
+      className="grid gap-5 p-5"
+      onSubmit={(event) => void handleSubmit(event)}
+    >
       <label className={fieldClassName}>
         <span>{t('userWorkspace.keys.form.key')}</span>
         <Input
           value={keyValue}
           disabled={mutating}
+          aria-invalid={Boolean(fieldError)}
           placeholder={
             mode.type === 'create'
               ? t('userWorkspace.keys.form.keyCreatePlaceholder')
               : t('userWorkspace.keys.form.keyEditPlaceholder')
           }
-          onChange={(event) => setKeyValue(event.target.value)}
+          onChange={(event) => {
+            setKeyValue(event.target.value)
+            if (fieldError) setFieldError(null)
+          }}
+          onBlur={handleBlur}
         />
-        <span className="text-muted-foreground text-xs leading-5">
-          {mode.type === 'create'
-            ? t('userWorkspace.keys.form.generatedHint')
-            : t('userWorkspace.keys.form.editHint')}
-        </span>
+        {fieldError ? (
+          <span className="text-destructive text-xs leading-5 font-normal">{fieldError}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs leading-5">
+            {mode.type === 'create'
+              ? t('userWorkspace.keys.form.generatedHint')
+              : t('userWorkspace.keys.form.editHint')}
+          </span>
+        )}
       </label>
       {localError ? (
         <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
@@ -340,9 +367,13 @@ function SecurityPanel({
   const { t } = useTranslation()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState<
+    Partial<Record<'newPassword' | 'confirmPassword', string>>
+  >({})
   const [totpCode, setTotpCode] = useState('')
   const [passkeyName, setPasskeyName] = useState('')
   const [emailDraft, setEmailDraft] = useState('')
+  const [emailFieldError, setEmailFieldError] = useState<string | null>(null)
   const [emailEditing, setEmailEditing] = useState(false)
   const [totpAction, setTotpAction] = useState<'show' | 'regenerate' | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -357,20 +388,41 @@ function SecurityPanel({
     if (localError) securityErrorRef.current?.focus()
   }, [localError])
 
+  const handlePasswordBlur = (field: 'newPassword' | 'confirmPassword') => {
+    setPasswordFieldErrors((prev) => {
+      const next = { ...prev }
+      if (field === 'newPassword' && !newPassword) {
+        next.newPassword = t('userWorkspace.security.validation.passwordRequired')
+      }
+      if (field === 'confirmPassword' && confirmPassword && newPassword !== confirmPassword) {
+        next.confirmPassword = t('userWorkspace.security.validation.passwordMismatch')
+      }
+      return next
+    })
+  }
+
   const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
+    const errors: Partial<Record<'newPassword' | 'confirmPassword', string>> = {}
     if (!newPassword) {
-      setLocalError(t('userWorkspace.security.validation.passwordRequired'))
-      return
+      errors.newPassword = t('userWorkspace.security.validation.passwordRequired')
+    }
+    if (newPassword !== confirmPassword) {
+      errors.confirmPassword = t('userWorkspace.security.validation.passwordMismatch')
     }
 
-    if (newPassword !== confirmPassword) {
-      setLocalError(t('userWorkspace.security.validation.passwordMismatch'))
+    if (Object.keys(errors).length > 0) {
+      setPasswordFieldErrors(errors)
+      setLocalError(null)
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('#change-password-form [aria-invalid="true"]')?.focus()
+      }, 0)
       return
     }
 
     try {
+      setPasswordFieldErrors({})
       setLocalError(null)
       await onChangePassword({ newPassword })
       setNewPassword('')
@@ -430,15 +482,26 @@ function SecurityPanel({
     }
   }
 
+  const handleEmailBlur = () => {
+    if (!emailDraft.trim()) {
+      setEmailFieldError(t('userWorkspace.security.validation.emailRequired'))
+    }
+  }
+
   const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const email = emailDraft.trim()
     if (!email) {
-      setLocalError(t('userWorkspace.security.validation.emailRequired'))
+      setEmailFieldError(t('userWorkspace.security.validation.emailRequired'))
+      setLocalError(null)
+      setTimeout(() => {
+        document.querySelector<HTMLElement>('#user-email-form [aria-invalid="true"]')?.focus()
+      }, 0)
       return
     }
 
     try {
+      setEmailFieldError(null)
       setLocalError(null)
       await onUpdateEmail(email)
       setEmailDraft('')
@@ -511,6 +574,8 @@ function SecurityPanel({
 
       <div className="grid gap-0 md:grid-cols-2">
         <form
+          id="change-password-form"
+          noValidate
           className="grid gap-4 p-4 md:border-r"
           onSubmit={(event) => void handlePasswordSubmit(event)}
         >
@@ -527,9 +592,21 @@ function SecurityPanel({
               value={newPassword}
               autoComplete="new-password"
               disabled={passwordChanging}
+              aria-invalid={Boolean(passwordFieldErrors.newPassword)}
               placeholder={t('userWorkspace.security.password.newPasswordPlaceholder')}
-              onChange={(event) => setNewPassword(event.target.value)}
+              onChange={(event) => {
+                setNewPassword(event.target.value)
+                if (passwordFieldErrors.newPassword) {
+                  setPasswordFieldErrors((prev) => ({ ...prev, newPassword: undefined }))
+                }
+              }}
+              onBlur={() => handlePasswordBlur('newPassword')}
             />
+            {passwordFieldErrors.newPassword ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {passwordFieldErrors.newPassword}
+              </span>
+            ) : null}
           </label>
           <label className={fieldClassName}>
             <span>{t('userWorkspace.security.password.confirmPassword')}</span>
@@ -538,9 +615,21 @@ function SecurityPanel({
               value={confirmPassword}
               autoComplete="new-password"
               disabled={passwordChanging}
+              aria-invalid={Boolean(passwordFieldErrors.confirmPassword)}
               placeholder={t('userWorkspace.security.password.confirmPasswordPlaceholder')}
-              onChange={(event) => setConfirmPassword(event.target.value)}
+              onChange={(event) => {
+                setConfirmPassword(event.target.value)
+                if (passwordFieldErrors.confirmPassword) {
+                  setPasswordFieldErrors((prev) => ({ ...prev, confirmPassword: undefined }))
+                }
+              }}
+              onBlur={() => handlePasswordBlur('confirmPassword')}
             />
+            {passwordFieldErrors.confirmPassword ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {passwordFieldErrors.confirmPassword}
+              </span>
+            ) : null}
           </label>
           <Button type="submit" disabled={passwordChanging} className="w-fit">
             {passwordChanging ? (
@@ -718,6 +807,8 @@ function SecurityPanel({
           </div>
         ) : emailEditing ? (
           <form
+            id="user-email-form"
+            noValidate
             className="grid gap-3 md:max-w-2xl md:grid-cols-[minmax(0,1fr)_auto]"
             onSubmit={(event) => void handleEmailSubmit(event)}
           >
@@ -732,12 +823,23 @@ function SecurityPanel({
                 value={emailDraft}
                 autoComplete="email"
                 disabled={emailMutating}
+                aria-invalid={Boolean(emailFieldError)}
                 placeholder={t('userWorkspace.security.email.placeholder')}
-                onChange={(event) => setEmailDraft(event.target.value)}
+                onChange={(event) => {
+                  setEmailDraft(event.target.value)
+                  if (emailFieldError) setEmailFieldError(null)
+                }}
+                onBlur={handleEmailBlur}
               />
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('userWorkspace.security.email.saveHint')}
-              </span>
+              {emailFieldError ? (
+                <span className="text-destructive text-xs leading-5 font-normal">
+                  {emailFieldError}
+                </span>
+              ) : (
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('userWorkspace.security.email.saveHint')}
+                </span>
+              )}
             </label>
             <div className="flex flex-wrap gap-2 md:col-span-2">
               <Button type="submit" disabled={emailMutating}>
@@ -752,6 +854,7 @@ function SecurityPanel({
                 disabled={emailMutating}
                 onClick={() => {
                   setEmailDraft('')
+                  setEmailFieldError(null)
                   setEmailEditing(false)
                 }}
               >

@@ -12,6 +12,8 @@ export type CredentialMetadataInput = {
   proxyUrl: string
   // An empty string leaves priority unchanged; null clears it back to unset.
   priority: string | null
+  // An empty string leaves requestRetry unchanged; null clears it back to unset.
+  requestRetry?: string | null
   note: string
   websockets?: boolean
   disableCooling?: boolean
@@ -98,6 +100,7 @@ export type CredentialResource = {
   failed: number | null
   path: string | null
   priority: number | null
+  requestRetry: number | null
   note: string | null
   prefix: string | null
   proxyUrl: string | null
@@ -481,6 +484,11 @@ function readNestedFlexibleBoolean(record: UnknownRecord, rootKey: string, key: 
   return isRecord(nested) ? readFlexibleBoolean(nested, key) : null
 }
 
+function readNestedNonNegativeInteger(record: UnknownRecord, rootKey: string, key: string) {
+  const nested = record[rootKey]
+  return isRecord(nested) ? readNonNegativeInteger(nested, key) : null
+}
+
 function readNestedString(record: UnknownRecord, rootKey: string, key: string) {
   const nested = record[rootKey]
   return isRecord(nested) ? readString(nested, key) : null
@@ -498,6 +506,18 @@ function readCredentialWebsockets(record: UnknownRecord) {
     readNestedFlexibleBoolean(record, 'attributes', 'websockets') ??
     readNestedFlexibleBoolean(record, 'metadata', 'websockets') ??
     false
+  )
+}
+
+function readCredentialRequestRetry(record: UnknownRecord): number | null {
+  return (
+    readNonNegativeInteger(record, 'request-retry') ??
+    readNonNegativeInteger(record, 'request_retry') ??
+    readNestedNonNegativeInteger(record, 'metadata', 'request-retry') ??
+    readNestedNonNegativeInteger(record, 'metadata', 'request_retry') ??
+    readNestedNonNegativeInteger(record, 'attributes', 'request-retry') ??
+    readNestedNonNegativeInteger(record, 'attributes', 'request_retry') ??
+    null
   )
 }
 
@@ -603,7 +623,10 @@ function createOAuthCallbackPayload(input: CredentialOAuthCallbackInput) {
   }
 }
 
-function normalizeCredentialResource(record: UnknownRecord, index: number): CredentialResource {
+export function normalizeCredentialResource(
+  record: UnknownRecord,
+  index: number,
+): CredentialResource {
   const id = readString(record, 'id')
   const authIndex = readString(record, 'auth_index')
   const name = readString(record, 'name')
@@ -641,6 +664,7 @@ function normalizeCredentialResource(record: UnknownRecord, index: number): Cred
     failed: readNumber(record, 'failed'),
     path: readString(record, 'path'),
     priority: readNumber(record, 'priority'),
+    requestRetry: readCredentialRequestRetry(record),
     note: readString(record, 'note'),
     prefix: readString(record, 'prefix') ?? readNestedString(record, 'metadata', 'prefix'),
     proxyUrl:
@@ -1124,6 +1148,17 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     const priority = Number(input.priority)
     if (input.priority.trim() && Number.isFinite(priority)) {
       payload.priority = priority
+    }
+  }
+
+  if (input.requestRetry === null) {
+    payload['request-retry'] = null
+    payload.request_retry = null
+  } else if (typeof input.requestRetry === 'string') {
+    const requestRetry = Number(input.requestRetry)
+    if (input.requestRetry.trim() && Number.isSafeInteger(requestRetry) && requestRetry >= 0) {
+      payload['request-retry'] = requestRetry
+      payload.request_retry = requestRetry
     }
   }
 
