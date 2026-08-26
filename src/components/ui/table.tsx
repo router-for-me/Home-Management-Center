@@ -34,7 +34,7 @@ function Table({
       ref={containerRef}
       data-slot="table-container"
       className={cn(
-        'relative w-full touch-pan-x [scrollbar-gutter:stable] overflow-x-auto overscroll-x-contain',
+        'relative w-full [scrollbar-gutter:stable] overflow-x-auto overscroll-x-contain',
         containerClassName,
       )}
     >
