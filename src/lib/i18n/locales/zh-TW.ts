@@ -2869,6 +2869,12 @@ export const zhTW = {
           label: 'Debug 模式',
           description: '開啟後輸出更多執行診斷資訊，生產環境建議謹慎啟用。',
         },
+        port: {
+          label: 'CPA 監聽連接埠',
+          description:
+            '下發給下游 CPA 節點的監聽連接埠（1~65535）。修改後會持久化並下發，已執行的 CPA 需重啟行程後生效。',
+          placeholder: '8317',
+        },
         loggingToFile: {
           label: '檔案日誌',
           description: '將日誌寫入檔案，便於長期排查。',
