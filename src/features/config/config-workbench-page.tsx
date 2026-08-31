@@ -194,6 +194,7 @@ type ConfigFieldDefinition = {
   kind: ConfigFieldKind
   sectionId: ConfigSectionId
   min?: number
+  max?: number
   options?: string[]
 }
 
@@ -205,7 +206,10 @@ type ConfigSectionDefinition = {
 const sectionDefinitions: ConfigSectionDefinition[] = [
   {
     id: 'server',
-    fields: [{ key: 'debug', kind: 'boolean', sectionId: 'server' }],
+    fields: [
+      { key: 'debug', kind: 'boolean', sectionId: 'server' },
+      { key: 'port', kind: 'number', sectionId: 'server', min: 1, max: 65535 },
+    ],
   },
   {
     id: 'tls',
@@ -1355,7 +1359,11 @@ function getValidationErrorsWithOptions(
     .filter((field) => {
       const value = draft[field.key]
       if (field.kind === 'number') {
-        return typeof value !== 'number' || Number.isNaN(value) || value < (field.min ?? 0)
+        const num = typeof value === 'number' ? value : Number(value)
+        if (typeof value !== 'number' || Number.isNaN(value) || !Number.isInteger(num)) return true
+        if (field.min !== undefined && num < field.min) return true
+        if (field.max !== undefined && num > field.max) return true
+        return false
       }
       if (field.kind === 'select') {
         return !field.options?.includes(String(value))
@@ -1618,9 +1626,11 @@ function ConfigField({
           <Input
             type="number"
             min={field.min}
+            max={field.max}
             value={String(value)}
             disabled={disabled}
             className="md:max-w-56"
+            placeholder={t(`configPage.fields.${field.key}.placeholder`)}
             onChange={(event) => onChange(field.key, Number(event.target.value))}
           />
         ) : null}

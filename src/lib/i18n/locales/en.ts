@@ -2994,6 +2994,12 @@ export const en = {
           label: 'Debug mode',
           description: 'Outputs more runtime diagnostics. Use carefully in production.',
         },
+        port: {
+          label: 'CPA listening port',
+          description:
+            'Listening port distributed to downstream CPA nodes (1–65535). Changes are persisted and broadcast immediately, but running CPA instances must be restarted to rebind.',
+          placeholder: '8317',
+        },
         loggingToFile: {
           label: 'File logging',
           description: 'Write logs to files for longer-term troubleshooting.',

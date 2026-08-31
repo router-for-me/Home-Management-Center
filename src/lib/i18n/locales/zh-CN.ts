@@ -2869,6 +2869,12 @@ export const zhCN = {
           label: 'Debug 模式',
           description: '开启后输出更多运行诊断信息，生产环境建议谨慎启用。',
         },
+        port: {
+          label: 'CPA 监听端口',
+          description:
+            '下发给下游 CPA 节点的监听端口（1~65535）。修改后会持久化并下发，已运行的 CPA 需重启进程后生效。',
+          placeholder: '8317',
+        },
         loggingToFile: {
           label: '文件日志',
           description: '将日志写入文件，便于长期排查。',
