@@ -9,6 +9,7 @@ type UnknownRecord = Record<string, unknown>
 
 export type ConfigFieldKey =
   | 'debug'
+  | 'port'
   | 'pluginsEnabled'
   | 'pluginsDir'
   | 'pluginStoreSourcesJson'
@@ -548,6 +549,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
 
   return {
     debug: readBoolean(rawConfig, 'debug'),
+    port: readNumber(rawConfig, 'port', 8317),
     pluginsEnabled: readBoolean(plugins, 'enabled'),
     pluginsDir: readString(plugins, 'dir', 'plugins'),
     pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
@@ -622,6 +624,21 @@ export async function fetchConfigSnapshot(
   }
 
   try {
+    const portResponse = await client.get<unknown>('/port')
+    const portData = toRecord(portResponse.data)
+    if (typeof portData.port === 'number' && Number.isFinite(portData.port) && portData.port > 0) {
+      rawConfig = {
+        ...rawConfig,
+        port: portData.port,
+      }
+    }
+  } catch (error) {
+    if (rawConfig.port === undefined) {
+      issues.push(normalizeIssue('config', error))
+    }
+  }
+
+  try {
     const excludedModelsResponse = await client.get<unknown>('/oauth-excluded-models')
     const excludedModels = toRecord(excludedModelsResponse.data)['oauth-excluded-models']
     const modelAliasResponse = await client.get<unknown>('/oauth-model-alias')
@@ -676,6 +693,9 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   switch (change.key) {
     case 'debug':
       await client.put('/debug', { value })
+      return
+    case 'port':
+      await client.put('/port', { value: Number(value) })
       return
     case 'loggingToFile':
       await client.put('/logging-to-file', { value })
