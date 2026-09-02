@@ -12,3 +12,33 @@ export const shellScrollToTopSelectors = [
   `[data-scroll-restoration-id="${appShellScrollRestorationId}"]`,
   `[data-scroll-restoration-id="${publicShellScrollRestorationId}"]`,
 ]
+
+/**
+ * Scrolls an element into view within the shell's isolated `<main>` scroll container,
+ * preventing browser-level ancestor chain scrolling from shifting the outer layout or creating blank space.
+ */
+export function scrollElementIntoShell(elementId: string, topOffset = 16) {
+  const target = document.getElementById(elementId)
+  if (!target) return
+
+  const container = target.closest(
+    `[data-scroll-restoration-id="${appShellScrollRestorationId}"], [data-scroll-restoration-id="${publicShellScrollRestorationId}"]`,
+  )
+
+  if (container) {
+    const targetRect = target.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+    const targetScrollTop = container.scrollTop + (targetRect.top - containerRect.top) - topOffset
+
+    container.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth',
+    })
+    return
+  }
+
+  target.scrollIntoView({
+    block: 'start',
+    behavior: 'smooth',
+  })
+}

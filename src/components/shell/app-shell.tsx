@@ -341,7 +341,7 @@ export function AppShell({ children }: AppShellProps) {
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="bg-background min-w-0">
+      <SidebarInset className="bg-background min-h-0 min-w-0 overflow-hidden">
         <header className="bg-background/92 sticky top-0 z-[var(--z-shell-header)] flex h-16 shrink-0 items-center justify-between gap-3 overflow-hidden border-b px-4 backdrop-blur md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <AppSidebarTrigger />
