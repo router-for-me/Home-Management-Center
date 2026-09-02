@@ -72,6 +72,7 @@ import type {
   ConfigStructuredValues,
 } from '@/lib/api/management/config'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
+import { scrollElementIntoShell } from '@/lib/shell-scroll'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -1337,10 +1338,7 @@ function formatDateTime(value: string) {
 }
 
 function scrollToSection(sectionId: ConfigSectionId) {
-  document.getElementById(`config-section-${sectionId}`)?.scrollIntoView({
-    block: 'start',
-    behavior: 'smooth',
-  })
+  scrollElementIntoShell(`config-section-${sectionId}`)
 }
 
 function scrollToField(key: ConfigFieldKey) {
@@ -1348,10 +1346,7 @@ function scrollToField(key: ConfigFieldKey) {
 }
 
 function scrollToPayloadSection(sectionKey: PayloadSectionKey) {
-  document.getElementById(`payload-section-${sectionKey}`)?.scrollIntoView({
-    block: 'start',
-    behavior: 'smooth',
-  })
+  scrollElementIntoShell(`payload-section-${sectionKey}`)
 }
 
 function areConfigValuesEqual(
