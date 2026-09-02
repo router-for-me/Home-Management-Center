@@ -2863,6 +2863,11 @@ export const zhCN = {
           shortTitle: '参数改写',
           description: '按模型和协议匹配请求，自动补齐、强制覆盖或移除请求参数。',
         },
+        antigravity: {
+          title: 'Antigravity',
+          shortTitle: 'Antigravity',
+          description: '配置 Antigravity 反重力网关行为与系统提示词敏感词混淆。',
+        },
       },
       fields: {
         debug: {
@@ -3001,6 +3006,11 @@ export const zhCN = {
           description: '配置请求参数的补齐、覆盖和移除行为；保存后写入后端 payload 配置。',
           placeholder: '{"override":[]}',
         },
+        antigravitySensitiveWordsJson: {
+          label: '敏感词混淆',
+          description: '在 Antigravity 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+          placeholder: 'proxy\nAPI',
+        },
       },
       routingStrategies: {
         'round-robin': '轮询',
@@ -3089,6 +3099,11 @@ export const zhCN = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: '每行一个 registry.json URL，保存时会过滤空行。',
         count: '已配置 {{count}} 个第三方来源',
+      },
+      antigravitySensitiveWords: {
+        placeholder: 'proxy\nAPI',
+        hint: '每行一个敏感词；匹配不区分大小写，保存时自动忽略空行，少于 2 个字符的项会被后端忽略。',
+        count: '已配置 {{count}} 个敏感词',
       },
       payload: {
         summaryTitle: '请求 payload 改写',

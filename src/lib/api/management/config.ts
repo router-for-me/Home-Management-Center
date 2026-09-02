@@ -38,6 +38,7 @@ export type ConfigFieldKey =
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
   | 'payloadRulesJson'
+  | 'antigravitySensitiveWordsJson'
 
 export type ConfigStructuredValues = Record<ConfigFieldKey, boolean | number | string>
 
@@ -348,6 +349,7 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
   const tls = toRecord(parsed.tls)
   const remoteManagement = toRecord(parsed['remote-management'])
   const plugins = toRecord(parsed.plugins)
+  const antigravity = isRecord(parsed.antigravity) ? parsed.antigravity : null
 
   return {
     'disable-cooling': readBoolean(parsed, 'disable-cooling'),
@@ -370,6 +372,15 @@ function readYamlBackedConfig(yaml: string): UnknownRecord {
       dir: readString(plugins, 'dir', 'plugins'),
       'store-sources': Array.isArray(plugins['store-sources']) ? plugins['store-sources'] : [],
     },
+    ...(antigravity
+      ? {
+          antigravity: {
+            'sensitive-words': Array.isArray(antigravity['sensitive-words'])
+              ? antigravity['sensitive-words']
+              : [],
+          },
+        }
+      : {}),
   }
 }
 
@@ -546,6 +557,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const plugins = toRecord(rawConfig.plugins)
   const oauthExcludedModels = toRecord(rawConfig['oauth-excluded-models'])
   const oauthModelAlias = toRecord(rawConfig['oauth-model-alias'])
+  const antigravity = toRecord(rawConfig.antigravity)
 
   return {
     debug: readBoolean(rawConfig, 'debug'),
@@ -581,6 +593,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),
     oauthModelAliasJson: stringifyJsonObject(oauthModelAlias),
     payloadRulesJson: stringifyPayload(rawConfig.payload),
+    antigravitySensitiveWordsJson: stringifyJsonArray(antigravity['sensitive-words']),
   }
 }
 
@@ -664,6 +677,27 @@ export async function fetchConfigSnapshot(
     }
   } catch (error) {
     issues.push(normalizeIssue('config', error))
+  }
+
+  try {
+    const antigravityResponse = await client.get<unknown>('/antigravity')
+    const antigravityRoot = toRecord(antigravityResponse.data)
+    const antigravity = isRecord(antigravityRoot.antigravity)
+      ? antigravityRoot.antigravity
+      : isRecord(antigravityRoot.value)
+        ? antigravityRoot.value
+        : antigravityRoot
+
+    rawConfig = {
+      ...rawConfig,
+      antigravity: isRecord(rawConfig.antigravity)
+        ? { ...toRecord(rawConfig.antigravity), ...antigravity }
+        : antigravity,
+    }
+  } catch (error) {
+    if (rawConfig.antigravity === undefined) {
+      issues.push(normalizeIssue('config', error))
+    }
   }
 
   try {
@@ -758,6 +792,23 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       }
 
       await client.delete('/payload')
+      return
+    }
+    case 'antigravitySensitiveWordsJson': {
+      const words = parseJsonArrayText(value)
+        .map((item) => (typeof item === 'string' ? item.trim() : ''))
+        .filter((item) => item.length > 0)
+
+      if (words.length > 0) {
+        await client.put('/antigravity', {
+          antigravity: {
+            'sensitive-words': words,
+          },
+        })
+        return
+      }
+
+      await client.delete('/antigravity')
       return
     }
   }
