@@ -23,6 +23,7 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -85,6 +86,7 @@ type ConfigSectionId =
   | 'quota'
   | 'streaming'
   | 'payload'
+  | 'antigravity'
 
 type ConfigFieldKind =
   | 'boolean'
@@ -100,6 +102,7 @@ type JsonConfigFieldKey =
   | 'oauthModelAliasJson'
   | 'pluginStoreSourcesJson'
   | 'payloadRulesJson'
+  | 'antigravitySensitiveWordsJson'
 
 type OAuthModelCatalogState = {
   channel: ProviderModelChannel
@@ -301,6 +304,16 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'payload',
     fields: [{ key: 'payloadRulesJson', kind: 'jsonObject', sectionId: 'payload' }],
   },
+  {
+    id: 'antigravity',
+    fields: [
+      {
+        key: 'antigravitySensitiveWordsJson',
+        kind: 'jsonArray',
+        sectionId: 'antigravity',
+      },
+    ],
+  },
 ]
 
 const modelDefinitionChannels: ProviderModelChannel[] = [
@@ -335,6 +348,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   quota: Gauge,
   streaming: Route,
   payload: Code2,
+  antigravity: Sparkles,
 }
 
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
@@ -342,6 +356,7 @@ const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthModelAliasJson',
   'pluginStoreSourcesJson',
   'payloadRulesJson',
+  'antigravitySensitiveWordsJson',
 ])
 
 const payloadRuleSections: PayloadRuleSection[] = [
@@ -501,6 +516,20 @@ function normalizePluginStoreSources(value: unknown) {
 }
 
 function canEditPluginStoreSources(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false
+
+  return value.every((item) => typeof item === 'string')
+}
+
+function normalizeAntigravitySensitiveWords(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
+function canEditAntigravitySensitiveWords(value: unknown): value is string[] {
   if (!Array.isArray(value)) return false
 
   return value.every((item) => typeof item === 'string')
@@ -1295,6 +1324,8 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
       return canEditPluginStoreSources(value)
     case 'payloadRulesJson':
       return canEditPayloadConfig(value)
+    case 'antigravitySensitiveWordsJson':
+      return canEditAntigravitySensitiveWords(value)
   }
 }
 
@@ -2244,6 +2275,64 @@ function PluginStoreSourcesEditor({
         <span>
           {t('configPage.pluginStoreSources.count', {
             count: normalizePluginStoreSources(value).length,
+          })}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function AntigravitySensitiveWordsEditor({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string[]
+  disabled: boolean
+  onChange: (value: string[]) => void
+}) {
+  const { t } = useTranslation()
+  const normalizedValue = normalizeAntigravitySensitiveWords(value).join('\n')
+  const [draft, setDraft] = useState(normalizedValue)
+
+  useEffect(() => {
+    const normalizedDraft = draft
+      .split('\n')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .join('\n')
+
+    if (normalizedDraft !== normalizedValue) {
+      setDraft(normalizedValue)
+    }
+  }, [draft, normalizedValue])
+
+  const commitDraft = (nextDraft: string) => {
+    onChange(
+      nextDraft
+        .split('\n')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    )
+  }
+
+  return (
+    <div className="grid gap-3">
+      <Textarea
+        value={draft}
+        disabled={disabled}
+        className="min-h-28 font-mono text-sm"
+        placeholder={t('configPage.antigravitySensitiveWords.placeholder')}
+        onChange={(event) => {
+          setDraft(event.target.value)
+          commitDraft(event.target.value)
+        }}
+      />
+      <div className="text-muted-foreground flex flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
+        <span>{t('configPage.antigravitySensitiveWords.hint')}</span>
+        <span>
+          {t('configPage.antigravitySensitiveWords.count', {
+            count: normalizeAntigravitySensitiveWords(value).length,
           })}
         </span>
       </div>
@@ -3930,6 +4019,14 @@ function StructuredJsonEditor({
           value={normalizePayloadConfig(value)}
           disabled={disabled}
           onChange={(nextValue) => onChange(serializePayloadDraftConfig(nextValue))}
+        />
+      )
+    case 'antigravitySensitiveWordsJson':
+      return (
+        <AntigravitySensitiveWordsEditor
+          value={normalizeAntigravitySensitiveWords(value)}
+          disabled={disabled}
+          onChange={onChange}
         />
       )
   }

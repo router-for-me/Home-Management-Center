@@ -2863,6 +2863,11 @@ export const zhTW = {
           shortTitle: '參數改寫',
           description: '按模型和協議匹配請求，自動補齊、強制覆蓋或移除請求參數。',
         },
+        antigravity: {
+          title: 'Antigravity',
+          shortTitle: 'Antigravity',
+          description: '設定 Antigravity 反重力閘道行為與系統提示詞敏感詞混淆。',
+        },
       },
       fields: {
         debug: {
@@ -3001,6 +3006,11 @@ export const zhTW = {
           description: '設定請求參數的補齊、覆蓋和移除行為；保存後寫入後端 payload 設定。',
           placeholder: '{"override":[]}',
         },
+        antigravitySensitiveWordsJson: {
+          label: '敏感詞混淆',
+          description: '在 Antigravity 系統提示詞匹配項中插入零寬字元，降低上游精確關鍵字檢測。',
+          placeholder: 'proxy\nAPI',
+        },
       },
       routingStrategies: {
         'round-robin': '輪詢',
@@ -3089,6 +3099,11 @@ export const zhTW = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: '每行一個 registry.json URL，儲存時會過濾空行。',
         count: '已設定 {{count}} 個第三方來源',
+      },
+      antigravitySensitiveWords: {
+        placeholder: 'proxy\nAPI',
+        hint: '每行一個敏感詞；匹配不區分大小寫，儲存時自動忽略空行，少於 2 個字元的項目會被後端忽略。',
+        count: '已設定 {{count}} 個敏感詞',
       },
       payload: {
         summaryTitle: '請求 payload 改寫',
