@@ -2988,6 +2988,12 @@ export const en = {
           description:
             'Match requests by model and protocol, then fill, force, or remove request parameters.',
         },
+        antigravity: {
+          title: 'Antigravity',
+          shortTitle: 'Antigravity',
+          description:
+            'Configure Antigravity gateway behavior and system prompt sensitive words obfuscation.',
+        },
       },
       fields: {
         debug: {
@@ -3133,6 +3139,12 @@ export const en = {
             'Configure how request parameters are filled, forced, or removed. Saving writes the backend payload config.',
           placeholder: '{"override":[]}',
         },
+        antigravitySensitiveWordsJson: {
+          label: 'Sensitive words obfuscation',
+          description:
+            'Insert zero-width spaces into matching Antigravity system prompts to reduce exact keyword detection upstream.',
+          placeholder: 'proxy\nAPI',
+        },
       },
       routingStrategies: {
         'round-robin': 'Round robin',
@@ -3227,6 +3239,11 @@ export const en = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: 'One registry.json URL per line. Empty lines are ignored when saving.',
         count: '{{count}} third-party sources configured',
+      },
+      antigravitySensitiveWords: {
+        placeholder: 'proxy\nAPI',
+        hint: 'One sensitive word per line. Matching is case-insensitive, empty lines are ignored when saving, and items shorter than 2 characters are ignored by the backend.',
+        count: '{{count}} sensitive words configured',
       },
       payload: {
         summaryTitle: 'Request payload rewriting',

@@ -2996,6 +2996,12 @@ export const ru = {
           description:
             'Сопоставляет запросы по модели и protocol, затем дополняет, принудительно задает или удаляет параметры.',
         },
+        antigravity: {
+          title: 'Antigravity',
+          shortTitle: 'Antigravity',
+          description:
+            'Настройка шлюза Antigravity и обфускации чувствительных слов в системных промптах.',
+        },
       },
       fields: {
         debug: {
@@ -3142,6 +3148,12 @@ export const ru = {
             'Настройка заполнения, принудительной замены и удаления параметров запроса. Сохранение пишет backend payload config.',
           placeholder: '{"override":[]}',
         },
+        antigravitySensitiveWordsJson: {
+          label: 'Обфускация чувствительных слов',
+          description:
+            'Вставка символов нулевой ширины в совпадающие системные промпты Antigravity для снижения риска точного сопоставления ключевых слов на стороне upstream.',
+          placeholder: 'proxy\nAPI',
+        },
       },
       routingStrategies: {
         'round-robin': 'Round robin',
@@ -3236,6 +3248,11 @@ export const ru = {
         placeholder: 'https://example.com/cliproxy-plugins/registry.json',
         hint: 'Один registry.json URL на строку. Пустые строки игнорируются при сохранении.',
         count: 'Сторонних источников настроено: {{count}}',
+      },
+      antigravitySensitiveWords: {
+        placeholder: 'proxy\nAPI',
+        hint: 'Одно чувствительное слово на строку. Регистр не учитывается, пустые строки игнорируются при сохранении, слова короче 2 символов игнорируются backend.',
+        count: 'Чувствительных слов настроено: {{count}}',
       },
       payload: {
         summaryTitle: 'Перезапись payload запроса',
