@@ -26,7 +26,6 @@ const capabilityRequests: Record<
     | 'requestEventExport'
     | 'requestLogIndex'
     | 'oauthUsage'
-    | 'quotaSnapshots'
     | 'quotaSnapshotDetails'
     | 'credentialInFlight'
     | 'credentialInFlightSnapshotCursor'
@@ -74,6 +73,11 @@ const capabilityRequests: Record<
   },
   accessGroups: {
     path: '/channel-groups',
+  },
+  quotaSnapshots: {
+    // Read-only list; a single row is enough to prove the route exists on
+    // runtimes that predate the /capabilities declaration.
+    path: '/quota/credentials?limit=1',
   },
 }
 
@@ -614,9 +618,15 @@ export async function probeManagementRuntime(
     requestEventFilters: declaredRequestEventFilters ?? probedCapabilities.requestEventFilters,
     requestLogIndex: declaredRequestLogIndex ?? false,
     oauthUsage: declaredOauthUsage ?? declaredUsageAggregates ?? false,
-    quotaSnapshots: declaredQuotaSnapshots ?? false,
-    quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? false,
-    quotaRecollect: declaredQuotaRecollect ?? false,
+    quotaSnapshots: declaredQuotaSnapshots ?? probedCapabilities.quotaSnapshots,
+    // The detail route lives in the same cluster-management handler as the list,
+    // so a runtime that serves the list serves the detail read too. The declared
+    // bit stays authoritative when /capabilities exists.
+    quotaSnapshotDetails: declaredQuotaSnapshotDetails ?? probedCapabilities.quotaSnapshots,
+    // POST /quota/collect only exists on runtimes wired with a quota collector
+    // (Home). A Home that serves /quota/credentials always wires one today; a
+    // stale flag only costs one guarded POST 404 at sync time.
+    quotaRecollect: declaredQuotaRecollect ?? probedCapabilities.quotaSnapshots,
     users: declaredUsers ?? probedCapabilities.users,
     userPeriodLimits: declaredUserPeriodLimits ?? probedCapabilities.userPeriodLimits,
     usageQueue: false,

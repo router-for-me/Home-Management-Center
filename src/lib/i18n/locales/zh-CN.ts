@@ -1797,6 +1797,7 @@ export const zhCN = {
         updated: '检测到新的主动探测结果，额度快照已刷新。',
         pending: '额度采集仍可能在后台进行，页面会继续自动刷新。',
         notQueued: '没有新任务入队；凭证可能不符合条件、处于冷却期，或已在排队或采集中。',
+        credentialQueued: '已将 {{name}} 加入额度采集队列。',
         unavailable: '当前后端暂不支持主动触发额度采集，已改为重新读取快照。',
       },
       summary: {
@@ -1812,6 +1813,8 @@ export const zhCN = {
       },
       quota: {
         notCollected: '未采集',
+        snapshotMiss: '快照外',
+        snapshotMissHint: '该凭证的额度快照存在，但按风险排序超出了控制台本次加载的页范围。',
         unsupported: '不支持',
         unsupportedHint: '该凭证类型暂不支持额度采集(常见于 Provider API Key)。',
         collectFailed: '采集失败',
@@ -1955,6 +1958,8 @@ export const zhCN = {
         download: '下载',
         clearCooldown: '清除冷却',
         clearCooldownFor: '清除 {{name}} 的冷却',
+        collectQuota: '采集额度',
+        collectQuotaFor: '采集 {{name}} 的额度',
         delete: '删除',
       },
       filters: {

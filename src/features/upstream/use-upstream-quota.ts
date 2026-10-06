@@ -79,6 +79,19 @@ export function useUpstreamQuota() {
     isError: query.isError,
     error: query.error ?? null,
     refetch: query.refetch,
+    syncCredentialQuota: async (credentialId: string): Promise<QuotaCollectResult | null> => {
+      if (!capabilities.quotaRecollect) return null
+      try {
+        const result = await triggerQuotaCollection(session, { credentialIds: [credentialId] })
+        await Promise.all([
+          query.refetch(),
+          queryClient.invalidateQueries({ queryKey: ['upstream-quota-credential'] }),
+        ])
+        return result
+      } catch (error) {
+        throw toQuotaApiError(error)
+      }
+    },
     syncQuota: async (
       onQueued?: (result: QuotaCollectResult) => void,
     ): Promise<UpstreamQuotaSyncResult | null> => {

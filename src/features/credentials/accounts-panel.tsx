@@ -98,6 +98,7 @@ import {
   type UpstreamQuotaEntry,
   countUpstreamQuotaAttentionResources,
   findUpstreamQuotaEntry,
+  isCredentialQuotaCollectable,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
@@ -396,10 +397,13 @@ function CredentialList({
   cooldownResetSupported,
   quotaAvailable,
   quotaLoading,
+  quotaTruncated,
   quotaMap,
+  quotaCollectingIds,
   emptyState,
   onClearFilters,
   onClearCooldown,
+  onCollectQuota,
   onDeleteResource,
   onDownloadResource,
   onOpenDrawer,
@@ -415,10 +419,13 @@ function CredentialList({
   cooldownResetSupported: boolean
   quotaAvailable: boolean
   quotaLoading: boolean
+  quotaTruncated: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
+  quotaCollectingIds: Set<string>
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
   onClearCooldown: (resource: CredentialResource) => void
+  onCollectQuota: (resource: CredentialResource) => void
   onDeleteResource: (resource: CredentialResource) => void
   onDownloadResource: (resource: CredentialResource) => void
   onOpenDrawer: (resource: CredentialResource, tab: CredentialDrawerTab) => void
@@ -630,6 +637,7 @@ function CredentialList({
                       state={resolveUpstreamQuotaCellState({
                         available: quotaAvailable,
                         loading: quotaLoading,
+                        truncated: quotaTruncated,
                         map: quotaMap,
                         resource,
                       })}
@@ -671,6 +679,23 @@ function CredentialList({
                       disabled: mutating,
                       onSelect: () => onDownloadResource(resource),
                     },
+                    quotaAvailable &&
+                    isCredentialQuotaCollectable(resource) &&
+                    findUpstreamQuotaEntry(quotaMap, resource) === null
+                      ? {
+                          id: 'collect-quota',
+                          label: t('credentialsPage.actions.collectQuota'),
+                          ariaLabel: t('credentialsPage.actions.collectQuotaFor', {
+                            name: displayName,
+                          }),
+                          icon: RefreshCw,
+                          busy:
+                            resource.authIndex !== null &&
+                            quotaCollectingIds.has(resource.authIndex),
+                          disabled: mutating,
+                          onSelect: () => onCollectQuota(resource),
+                        }
+                      : null,
                     cooldownResetSupported && getCredentialCooldownId(resource) !== null
                       ? {
                           id: 'clear-cooldown',
@@ -714,6 +739,8 @@ export function AccountsPanel({
   quotaLoading = false,
   quotaTruncated = false,
   quotaMap,
+  quotaRecollectAvailable = false,
+  onCollectQuota,
   onStatsChange,
 }: {
   initialCredentialId?: string
@@ -727,6 +754,8 @@ export function AccountsPanel({
   quotaLoading?: boolean
   quotaTruncated?: boolean
   quotaMap?: Map<string, UpstreamQuotaEntry>
+  quotaRecollectAvailable?: boolean
+  onCollectQuota?: (resource: CredentialResource) => Promise<void>
   onStatsChange?: (stats: UpstreamAccountsStats) => void
 }) {
   const { t } = useTranslation()
@@ -745,6 +774,7 @@ export function AccountsPanel({
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
+  const [quotaCollectingIds, setQuotaCollectingIds] = useState<Set<string>>(() => new Set())
   const autoOpenedCredentialRef = useRef<string | null>(null)
   const oauthPollTokenRef = useRef(0)
   const oauthFlowCompletingRef = useRef(false)
@@ -1049,6 +1079,23 @@ export function AccountsPanel({
         return
       }
       toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  const handleCollectQuota = async (resource: CredentialResource) => {
+    if (!onCollectQuota) return
+    const credentialId = resource.authIndex ?? resource.identifier
+    if (!credentialId || quotaCollectingIds.has(credentialId)) return
+
+    setQuotaCollectingIds((current) => new Set(current).add(credentialId))
+    try {
+      await onCollectQuota(resource)
+    } finally {
+      setQuotaCollectingIds((current) => {
+        const next = new Set(current)
+        next.delete(credentialId)
+        return next
+      })
     }
   }
 
@@ -1425,9 +1472,14 @@ export function AccountsPanel({
             cooldownResetSupported={workbench.credentialCooldownReset}
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
+            quotaTruncated={quotaTruncated}
             quotaMap={resolvedQuotaMap}
+            quotaCollectingIds={quotaCollectingIds}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
+            onCollectQuota={
+              quotaRecollectAvailable ? (resource) => void handleCollectQuota(resource) : () => {}
+            }
             onClearCooldown={(resource) => void handleClearCooldown(resource)}
             onDeleteResource={(resource) => {
               handleDelete(resource)

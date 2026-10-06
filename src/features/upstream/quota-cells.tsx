@@ -426,10 +426,17 @@ export function UpstreamQuotaCell({ state }: { state: UpstreamQuotaCellState }) 
     return <Skeleton className="h-8 w-40 rounded-md" />
   }
 
-  if (state.kind === 'not-collected') {
+  if (state.kind === 'not-collected' || state.kind === 'snapshot-miss') {
     return (
-      <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
-        {t('upstreamPage.quota.notCollected')}
+      <span
+        className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium"
+        title={
+          state.kind === 'snapshot-miss' ? t('upstreamPage.quota.snapshotMissHint') : undefined
+        }
+      >
+        {state.kind === 'snapshot-miss'
+          ? t('upstreamPage.quota.snapshotMiss')
+          : t('upstreamPage.quota.notCollected')}
       </span>
     )
   }
