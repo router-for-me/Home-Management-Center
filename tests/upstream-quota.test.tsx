@@ -186,22 +186,51 @@ describe('quota join map', () => {
     const resource = { authIndex: 'auth-01', id: 'auth-01', identifier: 'auth-01', name: 'a' }
 
     expect(
-      resolveUpstreamQuotaCellState({ available: false, loading: false, map, resource }).kind,
+      resolveUpstreamQuotaCellState({
+        available: false,
+        loading: false,
+        truncated: false,
+        map,
+        resource,
+      }).kind,
     ).toBe('capability-absent')
     expect(
-      resolveUpstreamQuotaCellState({ available: true, loading: true, map, resource }).kind,
+      resolveUpstreamQuotaCellState({
+        available: true,
+        loading: true,
+        truncated: false,
+        map,
+        resource,
+      }).kind,
     ).toBe('loading')
     expect(
-      resolveUpstreamQuotaCellState({ available: true, loading: false, map, resource }),
+      resolveUpstreamQuotaCellState({
+        available: true,
+        loading: false,
+        truncated: false,
+        map,
+        resource,
+      }),
     ).toEqual({ kind: 'entry', entry })
     expect(
       resolveUpstreamQuotaCellState({
         available: true,
         loading: false,
+        truncated: false,
         map,
         resource: { authIndex: 'x', id: 'x', identifier: 'x', name: 'x' },
       }).kind,
     ).toBe('not-collected')
+    // Past the fetched risk-sorted page: not "never collected", just not loaded.
+    expect(
+      resolveUpstreamQuotaCellState({
+        available: true,
+        loading: false,
+        truncated: true,
+        map,
+        resource: { authIndex: 'x', id: 'x', identifier: 'x', name: 'x' },
+      }).kind,
+    ).toBe('snapshot-miss')
   })
 })
 

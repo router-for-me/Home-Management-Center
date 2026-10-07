@@ -7,6 +7,10 @@ export type UpstreamQuotaCellState =
   | { kind: 'capability-absent' }
   | { kind: 'loading' }
   | { kind: 'not-collected' }
+  // The credential is past the risk-sorted snapshot page the console fetched, so
+  // its quota exists on the backend but was not loaded — not the same as a
+  // credential that was never collected.
+  | { kind: 'snapshot-miss' }
   | { kind: 'entry'; entry: UpstreamQuotaEntry }
 
 export type AntigravityQuotaGroupId = 'gemini' | 'third-party'
@@ -161,11 +165,13 @@ export function countUpstreamQuotaAttentionResources(
 export function resolveUpstreamQuotaCellState({
   available,
   loading,
+  truncated,
   map,
   resource,
 }: {
   available: boolean
   loading: boolean
+  truncated: boolean
   map: Map<string, UpstreamQuotaEntry>
   resource: Pick<CredentialResource, 'authIndex' | 'id' | 'identifier' | 'name'>
 }): UpstreamQuotaCellState {
@@ -173,7 +179,18 @@ export function resolveUpstreamQuotaCellState({
   if (loading) return { kind: 'loading' }
 
   const entry = findUpstreamQuotaEntry(map, resource)
-  return entry ? { kind: 'entry', entry } : { kind: 'not-collected' }
+  if (entry) return { kind: 'entry', entry }
+  return { kind: truncated ? 'snapshot-miss' : 'not-collected' }
+}
+
+const quotaCollectableProviders = new Set(['claude', 'antigravity', 'codex', 'kimi', 'xai', 'grok'])
+
+export function isCredentialQuotaCollectable(
+  resource: Pick<CredentialResource, 'provider' | 'disabled' | 'status'>,
+) {
+  if (resource.disabled || resource.status === 'disabled') return false
+  const provider = resource.provider.trim().toLowerCase()
+  return quotaCollectableProviders.has(provider)
 }
 
 export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {

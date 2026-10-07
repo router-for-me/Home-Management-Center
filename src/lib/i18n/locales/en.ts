@@ -1871,6 +1871,7 @@ export const en = {
           'Quota collection may still be running in the background; this page will keep refreshing.',
         notQueued:
           'No new jobs were queued; credentials may be ineligible, cooling down, or already queued or running.',
+        credentialQueued: 'Queued quota collection for {{name}}.',
         unavailable:
           'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
       },
@@ -1887,6 +1888,9 @@ export const en = {
       },
       quota: {
         notCollected: 'Not collected',
+        snapshotMiss: 'Not in snapshot',
+        snapshotMissHint:
+          'Quota exists on the backend but this credential is outside the risk-sorted page the console loaded.',
         unsupported: 'Unsupported',
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
@@ -2035,6 +2039,8 @@ export const en = {
         download: 'Download',
         clearCooldown: 'Clear cooldown',
         clearCooldownFor: 'Clear cooldown for {{name}}',
+        collectQuota: 'Collect quota',
+        collectQuotaFor: 'Collect quota for {{name}}',
         delete: 'Delete',
       },
       filters: {

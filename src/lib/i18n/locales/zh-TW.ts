@@ -1797,6 +1797,7 @@ export const zhTW = {
         updated: '偵測到新的主動探測結果，額度快照已更新。',
         pending: '額度採集仍可能在背景執行，頁面會繼續自動更新。',
         notQueued: '沒有新工作入列；憑證可能不符合條件、處於冷卻期，或已在排隊或採集中。',
+        credentialQueued: '已將 {{name}} 加入額度採集佇列。',
         unavailable: '目前後端暫不支援主動觸發額度採集，已改為重新讀取快照。',
       },
       summary: {
@@ -1812,6 +1813,8 @@ export const zhTW = {
       },
       quota: {
         notCollected: '未採集',
+        snapshotMiss: '快照外',
+        snapshotMissHint: '該憑證的額度快照存在，但依風險排序超出控制台本次載入的頁範圍。',
         unsupported: '不支援',
         unsupportedHint: '該憑證類型暫不支援額度採集(常見於 Provider API Key)。',
         collectFailed: '採集失敗',
@@ -1955,6 +1958,8 @@ export const zhTW = {
         download: '下載',
         clearCooldown: '清除冷卻',
         clearCooldownFor: '清除 {{name}} 的冷卻',
+        collectQuota: '採集額度',
+        collectQuotaFor: '採集 {{name}} 的額度',
         delete: '刪除',
       },
       filters: {

@@ -18,6 +18,7 @@ import {
 } from '@/features/upstream/summary-cards'
 import type { UpstreamTab } from '@/features/upstream/upstream-route'
 import { useUpstreamQuota } from '@/features/upstream/use-upstream-quota'
+import type { CredentialResource } from '@/lib/api/management/credentials'
 
 const upstreamTabs: UpstreamTab[] = ['accounts', 'providers']
 
@@ -102,6 +103,25 @@ export function UpstreamWorkbenchPage({
     handleTabChange('accounts')
   }
 
+  const handleCollectCredentialQuota = async (resource: CredentialResource) => {
+    const credentialId = resource.authIndex ?? resource.identifier
+    if (!credentialId) return
+    try {
+      const result = await quota.syncCredentialQuota(credentialId)
+      if (result === null) {
+        toast.info(t('upstreamPage.sync.unavailable'))
+        return
+      }
+      if (result.accepted > 0) {
+        toast.success(t('upstreamPage.sync.credentialQueued', { name: credentialId }))
+      } else {
+        toast.info(t('upstreamPage.sync.notQueued'))
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
   return (
     <section className="grid w-full gap-5">
       <PageHeader
@@ -161,6 +181,8 @@ export function UpstreamWorkbenchPage({
             quotaLoading={quota.isPending || quota.isFetching}
             quotaTruncated={quota.truncated}
             quotaMap={quota.map}
+            quotaRecollectAvailable={quota.capabilities.quotaRecollect}
+            onCollectQuota={handleCollectCredentialQuota}
             onStatsChange={setAccountsStats}
           />
         </TabsContent>
