@@ -121,7 +121,7 @@ export const ru = {
       close: 'Закрыть окно подключения',
       baseUrl: 'Management endpoint',
       baseUrlHintDev:
-        'Только dev. Укажите URL backend-сервиса, например http://127.0.0.1:8327. /v0/management добавится автоматически.',
+        'Только dev. Укажите URL backend-сервиса, например http://127.0.0.1:8327. /v8/management добавится автоматически.',
       detectedRuntime: 'Доступный management endpoint обнаружен: {{endpoint}}',
       detectedProxyEndpoint: 'Обнаружен same-origin proxy endpoint: {{endpoint}}',
       managementKey: 'Management key',
@@ -136,6 +136,11 @@ export const ru = {
       connectedAs: 'Подключено к {{mode}}.',
       errors: {
         managementKeyRequired: 'Management key обязателен.',
+        unsupportedApiVersion: {
+          title: 'Неподдерживаемая версия Management API',
+          description:
+            'Этот backend обслуживает только устаревший Management API. Обновите CLIProxyAPIHome до версии с поддержкой V8 Management API и повторите попытку.',
+        },
       },
     },
     embeddedPortal: {
@@ -2950,7 +2955,14 @@ export const ru = {
         server: {
           title: 'Runtime сервера',
           shortTitle: 'Сервер',
-          description: 'Базовые переключатели для диагностики runtime и поведения сервиса.',
+          description:
+            'Настройка порта прослушивания, адреса привязки, списка разрешённых хостов, доверенных proxy и коммерческого режима.',
+        },
+        discovery: {
+          title: 'Обнаружение сервиса',
+          shortTitle: 'Discovery',
+          description:
+            'Настройка mDNS broadcast: имя сервиса, тип сервиса, подтипы, диапазон интерфейсов и контроль доступа.',
         },
         tls: {
           title: 'TLS',
@@ -2963,6 +2975,12 @@ export const ru = {
           description:
             'Управление удаленным доступом к Management API, management key и обновлением панели.',
         },
+        userEmail: {
+          title: 'Почта пользователей',
+          shortTitle: 'Почта',
+          description:
+            'Настройка отправки писем подтверждения и восстановления: отправитель, SMTP-подключение и срок действия токенов.',
+        },
         plugins: {
           title: 'Настройки плагинов',
           shortTitle: 'Плагины',
@@ -2973,17 +2991,31 @@ export const ru = {
           title: 'Правила моделей OAuth',
           shortTitle: 'OAuth rules',
           description:
-            'Настройка исключенных моделей и клиентских алиасов для OAuth и file-backed credentials.',
+            'Настройка исключенных моделей, клиентских алиасов и request-scoped правил ошибок для OAuth и file-backed credentials.',
+        },
+        oauthProviders: {
+          title: 'Провайдеры OAuth',
+          shortTitle: 'Провайдеры',
+          description:
+            'Настройка каталога OAuth auth, числа workers автообновления и переключателей уровня провайдера.',
+        },
+        liveMediaRelay: {
+          title: 'Ретрансляция живого медиа',
+          shortTitle: 'Медиарелей',
+          description:
+            'Настройка ретрансляции живого медиа (аудио/видео) Codex: лимит сессий, публичный IP, диапазон UDP-портов и ICE-серверы.',
         },
         system: {
           title: 'Журналы и usage',
           shortTitle: 'Журналы',
-          description: 'Управление request logs, file logs, usage statistics и хранением журналов.',
+          description:
+            'Управление диагностикой debug, request logs, file logs, usage statistics, хранением журналов, pprof и Redis usage queue.',
         },
         network: {
           title: 'Сетевой proxy',
           shortTitle: 'Сеть',
-          description: 'Настройка outbound proxy для запросов сервера.',
+          description:
+            'Настройка outbound proxy для запросов сервера и passthrough заголовков запросов.',
         },
         quota: {
           title: 'Обработка квот',
@@ -2994,7 +3026,31 @@ export const ru = {
           title: 'Повторы и маршрутизация',
           shortTitle: 'Роутинг',
           description:
-            'Управление повторами запросов, совпадением prefix модели и маршрутизацией модельных сервисов.',
+            'Управление повторами запросов, совпадением prefix модели, стратегией маршрутизации, session affinity, сохранением cooldown и транспортным keepalive.',
+        },
+        credentialConcurrency: {
+          title: 'Параллелизм учетных данных',
+          shortTitle: 'Параллелизм',
+          description:
+            'Настройка heartbeat, reclaim и release для CPA. Первые четыре пункта отклоняются backend, пока любой CPA online (active/canceling).',
+        },
+        credentialInFlight: {
+          title: 'Снапшоты in-flight',
+          shortTitle: 'In-flight',
+          description:
+            'Частота наблюдения in-flight запросов и лимиты памяти. stale-after должен быть не меньше 3× snapshot-interval.',
+        },
+        upstream: {
+          title: 'Поведение upstream',
+          shortTitle: 'Upstream',
+          description:
+            'Управление маскировкой запросов, охлаждением и поведением стриминга для upstream Codex, Claude и xAI.',
+        },
+        headers: {
+          title: 'Подмена заголовков',
+          shortTitle: 'Заголовки',
+          description:
+            'Настройка заголовков по умолчанию для запросов к upstream Claude и Codex: подмена идентификаторов клиента и стабилизация профиля устройства.',
         },
         payload: {
           title: 'Перезапись параметров запроса',
@@ -3006,7 +3062,13 @@ export const ru = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Настройка шлюза Antigravity и обфускации чувствительных слов в системных промптах.',
+            'Настройка шлюза Antigravity, обфускации чувствительных слов, credits и пула соединений.',
+        },
+        multimedia: {
+          title: 'Мультимедиа',
+          shortTitle: 'Медиа',
+          description:
+            'Управление обработкой генерации изображений и кэшем авторизации результатов видео.',
         },
       },
       fields: {
@@ -3034,7 +3096,8 @@ export const ru = {
         },
         usageStatisticsEnabled: {
           label: 'Статистика usage',
-          description: 'Записывать usage по клиентским ключам и запросам.',
+          description:
+            'Записывать usage по клиентским ключам и запросам. Home принудительно включает эту настройку; переключатель недоступен.',
         },
         tlsEnable: {
           label: 'Включить HTTPS',
@@ -3160,11 +3223,538 @@ export const ru = {
             'Вставка символов нулевой ширины в совпадающие системные промпты Antigravity для снижения риска точного сопоставления ключевых слов на стороне upstream.',
           placeholder: 'proxy\nAPI',
         },
+        serverHost: {
+          label: 'Адрес прослушивания',
+          description:
+            'Адрес, к которому привязывается сервер. Пустое значение слушает все интерфейсы.',
+          placeholder: '0.0.0.0',
+        },
+        serverAllowHostJson: {
+          label: 'Разрешенные заголовки Host',
+          description:
+            'По одному разрешенному HTTP Host на строку. Пустой массив означает без ограничений.',
+        },
+        serverTrustedProxiesJson: {
+          label: 'Доверенные proxy',
+          description:
+            'По одному IP или CIDR доверенного proxy на строку. X-Forwarded-For учитывается только от этих proxy.',
+        },
+        serverCommercialMode: {
+          label: 'Коммерческий режим',
+          description: 'Включает ограничения поведения сервера для коммерческих развертываний.',
+        },
+        discoveryEnabled: {
+          label: 'Включить обнаружение сервиса',
+          description:
+            'Транслировать этот экземпляр по mDNS, чтобы узлы CPA в LAN могли его найти.',
+        },
+        discoveryServiceName: {
+          label: 'Имя сервиса',
+          description: 'Имя экземпляра сервиса в mDNS broadcast.',
+          placeholder: 'CLIProxyAPIHome',
+        },
+        discoveryServiceType: {
+          label: 'Тип сервиса',
+          description: 'Тип сервиса mDNS (service type). Обычно оставьте значение по умолчанию.',
+          placeholder: '_cliproxyapi._tcp',
+        },
+        discoverySubtypesJson: {
+          label: 'Подтипы сервиса',
+          description:
+            'По одному дополнительному mDNS subtype на строку для более точной фильтрации обнаружения.',
+        },
+        discoveryInterfacesIncludeJson: {
+          label: 'Включаемые интерфейсы',
+          description:
+            'По одному имени интерфейса на строку; broadcast только на этих интерфейсах. Пустой массив означает без ограничений.',
+        },
+        discoveryInterfacesExcludeJson: {
+          label: 'Исключаемые интерфейсы',
+          description:
+            'По одному имени интерфейса на строку; эти интерфейсы не участвуют в broadcast.',
+        },
+        discoveryAuthRequired: {
+          label: 'Обнаружение требует аутентификации',
+          description: 'Помечать ответы обнаружения как требующие аутентификации для подключения.',
+        },
+        discoveryAdvertiseManagement: {
+          label: 'Анонсировать management',
+          description: 'Включать информацию о доступе к management в broadcast обнаружения.',
+        },
+        managementBaseUrl: {
+          label: 'Base URL панели управления',
+          description:
+            'Внешний URL management, который анонсируется наружу. Пустое значение вычисляется из запроса.',
+          placeholder: 'https://admin.example.com',
+        },
+        userEmailEnabled: {
+          label: 'Включить почту пользователей',
+          description:
+            'Отправлять письма подтверждения и восстановления пароля по настройкам ниже.',
+        },
+        userEmailPublicUrl: {
+          label: 'Публичный URL пользовательского сайта',
+          description: 'Внешний базовый URL для callback-ссылок в письмах.',
+          placeholder: 'https://home.example.com',
+        },
+        userEmailFromAddress: {
+          label: 'Адрес отправителя',
+          description: 'Почтовый адрес отправителя в заголовке From.',
+          placeholder: 'no-reply@example.com',
+        },
+        userEmailFromName: {
+          label: 'Имя отправителя',
+          description: 'Отображаемое имя в заголовке From письма.',
+          placeholder: 'Home Center',
+        },
+        userEmailSmtpHost: {
+          label: 'SMTP хост',
+          description: 'Имя хоста или IP SMTP-сервера.',
+          placeholder: 'smtp.example.com',
+        },
+        userEmailSmtpPort: {
+          label: 'SMTP порт',
+          description:
+            'Порт SMTP-сервера (1–65535). 0 означает «не настроено» и использует политику backend.',
+          placeholder: '465',
+        },
+        userEmailSmtpUsername: {
+          label: 'Имя пользователя SMTP',
+          description: 'Имя пользователя для SMTP auth. Пустое значение отключает аутентификацию.',
+        },
+        userEmailSmtpPasswordEnv: {
+          label: 'Переменная окружения пароля SMTP',
+          description:
+            'Имя переменной окружения с паролем SMTP; сам пароль не записывается в конфиг.',
+          placeholder: 'SMTP_PASSWORD',
+        },
+        userEmailSmtpStarttls: {
+          label: 'Включить STARTTLS',
+          description: 'Обновлять SMTP-подключение шифрованием STARTTLS.',
+        },
+        userEmailVerificationTokenTtl: {
+          label: 'TTL токена подтверждения',
+          description:
+            'Срок действия токена подтверждения email (Go duration). Пустое значение использует значение backend.',
+          placeholder: 'По умолчанию backend',
+        },
+        userEmailResetTokenTtl: {
+          label: 'TTL токена сброса',
+          description:
+            'Срок действия токена сброса пароля (Go duration). Пустое значение использует значение backend.',
+          placeholder: 'По умолчанию backend',
+        },
+        concurrencyCpaHeartbeatTimeout: {
+          label: 'Таймаут heartbeat CPA',
+          description:
+            'Время ожидания, после которого heartbeat CPA считается потерянным (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 3s',
+        },
+        concurrencyCpaCancelBound: {
+          label: 'Граница отмены CPA',
+          description:
+            'Максимальное время удержания состояния canceling (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 5s',
+        },
+        concurrencyReclaimGrace: {
+          label: 'Льготный период reclaim',
+          description:
+            'Льготное время до reclaim недоступного credential (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 5s',
+        },
+        concurrencyCleanupInterval: {
+          label: 'Интервал очистки',
+          description:
+            'Интервал сканирования для очистки состояния параллелизма (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 5s',
+        },
+        concurrencyReleaseFlushInterval: {
+          label: 'Интервал сброса release',
+          description:
+            'Интервал пакетной записи release параллелизма (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 250ms',
+        },
+        concurrencyReleaseMaxBackoff: {
+          label: 'Максимальный backoff release',
+          description:
+            'Максимальный backoff между неудачными повторами release (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 2s',
+        },
+        concurrencyBusyRetryMin: {
+          label: 'Мин. интервал повтора при занятости',
+          description:
+            'Минимальный интервал повтора при конфликте занятости (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 250ms',
+        },
+        concurrencyBusyRetryMax: {
+          label: 'Макс. интервал повтора при занятости',
+          description:
+            'Максимальный интервал повтора при конфликте занятости (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 1s',
+        },
+        concurrencyMaxLimit: {
+          label: 'Глобальный лимит параллелизма',
+          description: 'Глобальная верхняя граница параллельных занятостей (1–1000000).',
+        },
+        concurrencyLifecycleConfigRevision: {
+          label: 'Ревизия конфигурации жизненного цикла',
+          description:
+            'Ревизия конфигурации жизненного цикла параллелизма, поддерживаемая backend. Только чтение.',
+        },
+        concurrencyObservationBarrierRevision: {
+          label: 'Ревизия барьера наблюдения',
+          description:
+            'Ревизия барьера наблюдения параллелизма, поддерживаемая backend. Только чтение.',
+        },
+        inFlightSnapshotInterval: {
+          label: 'Интервал снапшотов',
+          description:
+            'Интервал сбора снапшотов in-flight запросов (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 2s',
+        },
+        inFlightStaleAfter: {
+          label: 'Устаревание снапшота',
+          description:
+            'Записи in-flight, не обновлявшиеся дольше этого срока, считаются устаревшими (Go duration). Должно быть не меньше 3× интервала снапшотов.',
+          placeholder: 'По умолчанию 10s',
+        },
+        inFlightStagingRetention: {
+          label: 'Хранение staging',
+          description:
+            'Срок хранения staging-данных in-flight (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 1m',
+        },
+        inFlightMaxPartBytes: {
+          label: 'Макс. байт части',
+          description: 'Максимум байт для одной части снапшота in-flight.',
+        },
+        inFlightMaxPartCount: {
+          label: 'Макс. число частей',
+          description: 'Максимальное число частей в снапшоте in-flight.',
+        },
+        inFlightMaxRevisionBytes: {
+          label: 'Макс. байт ревизии',
+          description: 'Максимум байт для одной ревизии снапшота in-flight.',
+        },
+        inFlightMaxAggregateGroups: {
+          label: 'Макс. групп агрегации',
+          description: 'Максимальное число групп агрегации в снапшотах in-flight.',
+        },
+        inFlightMaxDetails: {
+          label: 'Макс. записей деталей',
+          description: 'Максимальное число записей деталей в снапшотах in-flight.',
+        },
+        inFlightMaxStringBytes: {
+          label: 'Макс. байт строки',
+          description: 'Максимум байт для одного строкового поля в снапшотах in-flight.',
+        },
+        sessionAffinity: {
+          label: 'Session affinity',
+          description: 'По возможности направлять одну и ту же сессию на один и тот же credential.',
+        },
+        sessionAffinityTtl: {
+          label: 'TTL session affinity',
+          description:
+            'Срок действия привязок session affinity (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 1h',
+        },
+        sessionAffinitySubagents: {
+          label: 'Session affinity для subagent',
+          description: 'Включать запросы subagent в маршрутизацию session affinity.',
+        },
+        saveCooldownStatus: {
+          label: 'Сохранять состояние cooldown',
+          description:
+            'Записывать состояние cooldown учетных данных на диск, чтобы оно переживало перезапуск.',
+        },
+        transientErrorCooldownSeconds: {
+          label: 'Cooldown временных ошибок (сек)',
+          description:
+            'Секунды cooldown после временной ошибки. -1 отключает этот cooldown; 0 использует значение backend 60s.',
+        },
+        streamingKeepaliveSeconds: {
+          label: 'Интервал keepalive потока (сек)',
+          description:
+            'Интервал отправки keepalive для потоковых ответов в секундах. 0 использует политику backend.',
+        },
+        streamingBootstrapRetries: {
+          label: 'Повторы запуска потока',
+          description: 'Количество повторов, разрешенных на этапе bootstrap потокового запроса.',
+        },
+        passthroughHeaders: {
+          label: 'Passthrough заголовков клиента',
+          description: 'Пересылать заголовки клиентского запроса на upstream.',
+        },
+        nonstreamKeepaliveInterval: {
+          label: 'Интервал keepalive non-stream (сек)',
+          description:
+            'Интервал keepalive для непотоковых запросов в секундах. 0 использует политику backend.',
+        },
+        pprofEnable: {
+          label: 'Включить pprof',
+          description: 'Открыть endpoint диагностики Go pprof. Включайте только для диагностики.',
+        },
+        pprofAddr: {
+          label: 'Адрес прослушивания pprof',
+          description: 'Адрес прослушивания сервера диагностики pprof.',
+          placeholder: '127.0.0.1:6060',
+        },
+        redisUsageQueueRetentionSeconds: {
+          label: 'Хранение очереди usage Redis (сек)',
+          description: 'Секунды хранения событий usage в очереди Redis (0–3600).',
+        },
+        upstreamCodexDisableCloaking: {
+          label: 'Отключить маскировку Codex',
+          description: 'Не применять клиентскую маскировку к запросам upstream Codex.',
+        },
+        upstreamCodexStreamBootstrapBuffering: {
+          label: 'Буферизация запуска потока Codex',
+          description:
+            'Буферизовать этап bootstrap потоковых ответов Codex, снижая риск обрезанных потоков.',
+        },
+        upstreamCodexStreamBootstrapTimeout: {
+          label: 'Таймаут запуска потока Codex',
+          description:
+            'Максимальное ожидание этапа bootstrap потока Codex (Go duration). 0 означает без ограничений.',
+          placeholder: '0 — без ограничений',
+        },
+        upstreamCodexOrphanDelegationCompatibility: {
+          label: 'Совместимость orphan delegation',
+          description: 'Принимать формы ответов Codex orphan delegation.',
+        },
+        upstreamCodexModelLevelCooling: {
+          label: 'Охлаждение Codex по моделям',
+          description: 'Охлаждать учетные данные Codex независимо для каждой модели.',
+        },
+        upstreamCodexResponseSteering: {
+          label: 'Response steering Codex',
+          description: 'Разрешить steering-директивы для ответов Codex.',
+        },
+        clientCodexOptimizeMultiAgentV2: {
+          label: 'Оптимизация multi-agent V2',
+          description: 'Применять оптимизации V2 к multi-agent запросам Codex со стороны клиента.',
+        },
+        upstreamClaudeModelLevelCooling: {
+          label: 'Охлаждение Claude по моделям',
+          description: 'Охлаждать учетные данные Claude независимо для каждой модели.',
+        },
+        upstreamClaudeToolSearch: {
+          label: 'Поиск инструментов Claude',
+          description: 'Включить возможность tool search на upstream Claude.',
+        },
+        upstreamClaudeDisableCloakMode: {
+          label: 'Отключить cloak mode Claude',
+          description: 'Выключить cloak mode на upstream Claude.',
+        },
+        upstreamClaudeDisableCloakingModelList: {
+          label: 'Отключить список моделей маскировки',
+          description: 'Не отправлять список моделей маскировки на upstream.',
+        },
+        upstreamClaudeHeaderUserAgent: {
+          label: 'Claude User-Agent',
+          description:
+            'Заголовок User-Agent по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderPackageVersion: {
+          label: 'Заголовок package-version Claude',
+          description:
+            'Заголовок package-version по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderRuntimeVersion: {
+          label: 'Заголовок runtime-version Claude',
+          description:
+            'Заголовок runtime-version по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderOs: {
+          label: 'Заголовок os Claude',
+          description:
+            'Заголовок os по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderArch: {
+          label: 'Заголовок arch Claude',
+          description:
+            'Заголовок arch по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderTimeout: {
+          label: 'Заголовок timeout Claude',
+          description:
+            'Заголовок timeout по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderTimezone: {
+          label: 'Заголовок timezone Claude',
+          description:
+            'Заголовок timezone по умолчанию для upstream Claude. Пустое значение использует значение backend.',
+        },
+        upstreamClaudeHeaderStabilizeDeviceProfile: {
+          label: 'Стабилизация профиля устройства',
+          description:
+            'Управляет стабильностью заголовков профиля устройства Claude. «Не задано» использует политику backend.',
+        },
+        upstreamXaiInjectXSearch: {
+          label: 'Внедрение X Search в xAI',
+          description: 'Внедрять возможность X Search в запросы upstream xAI.',
+        },
+        oauthAuthDir: {
+          label: 'Каталог OAuth auth',
+          description: 'Каталог хранения OAuth file credentials.',
+          placeholder: '~/.cli-proxy-api',
+        },
+        oauthAuthAutoRefreshWorkers: {
+          label: 'Потоки автообновления',
+          description:
+            'Параллельные worker для автообновления OAuth credentials. 0 использует политику backend.',
+        },
+        oauthCodexHeaderUserAgent: {
+          label: 'Codex User-Agent',
+          description:
+            'Заголовок User-Agent по умолчанию для OAuth upstream Codex. Пустое значение использует значение backend.',
+        },
+        oauthCodexHeaderBetaFeatures: {
+          label: 'Заголовок beta-features Codex',
+          description:
+            'Заголовок beta-features для OAuth upstream Codex. Пустое значение использует значение backend.',
+        },
+        liveMediaRelayEnabled: {
+          label: 'Включить live media relay',
+          description: 'Включить live media (WebRTC) relay Codex.',
+        },
+        liveMediaRelayMaxSessions: {
+          label: 'Макс. сессий relay',
+          description:
+            'Максимум параллельных сессий live media relay. 0 использует значение backend 32.',
+        },
+        liveMediaRelayDisablePrivateRemoteIps: {
+          label: 'Запретить приватные remote IP',
+          description: 'Отклонять приватные remote IP в live media relay.',
+        },
+        liveMediaRelayPublicIp: {
+          label: 'Публичный IP',
+          description:
+            'Публичный IP, анонсируемый relay. Пустое значение определяет его автоматически.',
+        },
+        liveMediaRelayUdpPortMin: {
+          label: 'Нижняя граница UDP-портов',
+          description:
+            'Нижняя граница диапазона UDP-портов relay. Должна настраиваться вместе с верхней границей.',
+        },
+        liveMediaRelayUdpPortMax: {
+          label: 'Верхняя граница UDP-портов',
+          description:
+            'Верхняя граница диапазона UDP-портов relay. Должна настраиваться вместе с нижней границей.',
+        },
+        liveMediaRelayIceServersJson: {
+          label: 'Серверы ICE',
+          description:
+            'JSON-массив серверов STUN/TURN. Внимание: при чтении JSON маскирует username/credential; существующие ключи сохраняются только у записей с неизменными urls. При изменении urls ключи нужно ввести заново.',
+        },
+        devinSensitiveWordsJson: {
+          label: 'Обфускация чувствительных слов Devin',
+          description:
+            'Вставка символов нулевой ширины в совпадающие системные промпты Devin для снижения точного сопоставления ключевых слов на стороне upstream.',
+        },
+        aistudioWsAuth: {
+          label: 'WS auth AI Studio',
+          description:
+            'Переключатель аутентификации WebSocket AI Studio. Home принудительно отключает эту настройку; переключатель недоступен.',
+        },
+        oauthRequestScopedErrorsJson: {
+          label: 'Правила ошибок request-scoped',
+          description:
+            'Правила обработки ошибок, сгруппированные по provider. Каждое правило имеет форму {status, match[], match-regexr[], action}.',
+          placeholder: '{}',
+        },
+        antigravityCredits: {
+          label: 'Antigravity credits',
+          description: 'Включить поведение биллинга Antigravity credits.',
+        },
+        antigravitySignatureCacheEnabled: {
+          label: 'Кэш подписей',
+          description:
+            'Управление кэшированием подписей запросов Antigravity. «Не задано» использует политику backend.',
+        },
+        antigravitySignatureBypassStrict: {
+          label: 'Строгий обход подписи',
+          description:
+            'Управление строгим обходом проверки подписи Antigravity. «Не задано» использует политику backend.',
+        },
+        antigravityConnPoolEnabled: {
+          label: 'Пул соединений',
+          description: 'Использовать постоянный пул соединений для upstream Antigravity.',
+        },
+        antigravityConnPoolIdleTimeout: {
+          label: 'Таймаут простоя пула',
+          description:
+            'Максимальное время хранения простаивающих соединений (Go duration), не более 210s. Пустое значение использует значение backend.',
+          placeholder: 'Не более 210s',
+        },
+        antigravityConnPoolMaxIdleConnsPerHost: {
+          label: 'Макс. простаивающих соединений на хост',
+          description: 'Максимум простаивающих соединений, которые пул хранит для каждого хоста.',
+        },
+        multimediaDisableImageGeneration: {
+          label: 'Режим генерации изображений',
+          description: 'Управляет обработкой запросов генерации изображений.',
+          options: {
+            false: 'Оставить включенной (false)',
+            true: 'Отключена (true)',
+            chat: 'Преобразовать в чат (chat)',
+            passthrough: 'Прямая пересылка (passthrough)',
+          },
+        },
+        multimediaGptImage2BaseModel: {
+          label: 'Базовая модель GPT Image 2',
+          description: 'Базовая модель, используемая для перезаписи генерации изображений.',
+          placeholder: 'По умолчанию gpt-5.4-mini',
+        },
+        multimediaVideoResultAuthCacheTtl: {
+          label: 'TTL кэша авторизации видео',
+          description:
+            'Срок кэширования данных авторизации результатов видео (Go duration). Пустое значение восстанавливает значение backend.',
+          placeholder: 'По умолчанию 3h',
+        },
       },
       routingStrategies: {
         'round-robin': 'Round robin',
+        'weighted-round-robin': 'Weighted round robin',
         'fill-first': 'Fill first',
         unknown: 'Неизвестно',
+      },
+      nullableBoolean: {
+        unset: 'Не задано (по умолчанию)',
+        enabled: 'Включено',
+        disabled: 'Отключено',
+      },
+      stringList: {
+        serverAllowHostJson: {
+          placeholder: 'example.com\nadmin.example.com',
+          hint: 'По одному разрешенному Host на строку. Пустые строки удаляются при сохранении.',
+          count: 'Настроено Host: {{count}}',
+        },
+        serverTrustedProxiesJson: {
+          placeholder: '10.0.0.0/8\n192.168.1.10',
+          hint: 'По одному IP или CIDR proxy на строку. Пустые строки удаляются при сохранении.',
+          count: 'Настроено доверенных proxy: {{count}}',
+        },
+        discoverySubtypesJson: {
+          placeholder: '_home\n_management',
+          hint: 'По одному mDNS subtype на строку. Пустые строки удаляются при сохранении.',
+          count: 'Настроено подтипов: {{count}}',
+        },
+        discoveryInterfacesIncludeJson: {
+          placeholder: 'en0\neth0',
+          hint: 'По одному имени интерфейса на строку. Пустые строки удаляются при сохранении.',
+          count: 'Включено интерфейсов: {{count}}',
+        },
+        discoveryInterfacesExcludeJson: {
+          placeholder: 'utun0\nawdl0',
+          hint: 'По одному имени интерфейса на строку. Пустые строки удаляются при сохранении.',
+          count: 'Исключено интерфейсов: {{count}}',
+        },
+        devinSensitiveWordsJson: {
+          placeholder: 'proxy\nAPI',
+          hint: 'По одному чувствительному слову на строку. Совпадение без учета регистра; пустые строки удаляются при сохранении.',
+          count: 'Настроено чувствительных слов: {{count}}',
+        },
       },
       proxyPools: {
         title: 'Proxy pool',

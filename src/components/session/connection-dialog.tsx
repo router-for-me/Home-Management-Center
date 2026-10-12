@@ -172,7 +172,18 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
 
         {localError || error ? (
           <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-            {localError ?? error?.message}
+            {localError ? (
+              localError
+            ) : error?.backendCode === 'unsupported-api-version' ? (
+              <span className="grid gap-1">
+                <span className="font-medium">
+                  {t('connectionDialog.errors.unsupportedApiVersion.title')}
+                </span>
+                <span>{t('connectionDialog.errors.unsupportedApiVersion.description')}</span>
+              </span>
+            ) : (
+              error?.message
+            )}
           </div>
         ) : null}
 

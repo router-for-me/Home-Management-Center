@@ -120,7 +120,7 @@ export const zhTW = {
       close: '關閉連線視窗',
       baseUrl: '管理端位址',
       baseUrlHintDev:
-        '開發聯調：填寫後端服務位址，例如 http://127.0.0.1:8327；會自動補齊 /v0/management。',
+        '開發聯調：填寫後端服務位址，例如 http://127.0.0.1:8327；會自動補齊 /v8/management。',
       detectedRuntime: '已偵測到可用管理端：{{endpoint}}',
       detectedProxyEndpoint: '已偵測到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
@@ -134,6 +134,11 @@ export const zhTW = {
       connectedAs: '已連線到 {{mode}}。',
       errors: {
         managementKeyRequired: '必須填寫 management key。',
+        unsupportedApiVersion: {
+          title: '後端 Management API 版本過舊',
+          description:
+            '該後端僅提供舊版 Management API。請將 CLIProxyAPIHome 升級到支援 V8 Management API 的版本後重試。',
+        },
       },
     },
     embeddedPortal: {
@@ -2821,7 +2826,12 @@ export const zhTW = {
         server: {
           title: '服務執行',
           shortTitle: '服務',
-          description: '影響執行環境診斷和服務行為的基礎開關。',
+          description: '設定監聽埠、綁定位址、主機名稱校驗、可信代理和商業版模式等基礎服務行為。',
+        },
+        discovery: {
+          title: '服務發現',
+          shortTitle: '發現',
+          description: '設定 mDNS 服務發現廣播：服務名、服務類型、子類型、網卡範圍與存取控制。',
         },
         tls: {
           title: 'TLS',
@@ -2833,6 +2843,11 @@ export const zhTW = {
           shortTitle: '管理',
           description: '控制管理端遠端存取、管理金鑰和控制面板更新策略。',
         },
+        userEmail: {
+          title: '使用者郵件',
+          shortTitle: '郵件',
+          description: '設定使用者驗證與密碼找回郵件的發送：寄件者身分、SMTP 連線和權杖有效期。',
+        },
         plugins: {
           title: '外掛設定',
           shortTitle: '外掛',
@@ -2841,17 +2856,29 @@ export const zhTW = {
         oauthRules: {
           title: 'OAuth 模型規則',
           shortTitle: 'OAuth 規則',
-          description: '設定 OAuth 與檔案憑證的排除模型和用戶端可見模型別名。',
+          description: '設定 OAuth 與檔案憑證的排除模型、用戶端可見模型別名和按請求範圍錯誤規則。',
+        },
+        oauthProviders: {
+          title: 'OAuth 提供商',
+          shortTitle: '提供商',
+          description: '設定 OAuth 憑證目錄、自動重新整理並行數和各提供商級開關。',
+        },
+        liveMediaRelay: {
+          title: '即時媒體中繼',
+          shortTitle: '媒體中繼',
+          description:
+            '設定 Codex 即時媒體(音訊/視訊)中繼的工作階段上限、公開 IP、UDP 連接埠範圍與 ICE 伺服器。',
         },
         system: {
           title: '日誌與統計',
           shortTitle: '日誌',
-          description: '控制請求日誌、檔案日誌、用量統計和日誌保留。',
+          description:
+            '控制 Debug 診斷、請求日誌、檔案日誌、用量統計、日誌保留、pprof 和 Redis 用量佇列。',
         },
         network: {
           title: '網路代理',
           shortTitle: '網路',
-          description: '設定服務端出站請求使用的代理位址。',
+          description: '設定服務端出站請求使用的代理位址和請求 Header 透傳。',
         },
         quota: {
           title: '額度處理',
@@ -2861,7 +2888,30 @@ export const zhTW = {
         streaming: {
           title: '重試與路由',
           shortTitle: '路由',
-          description: '控制請求重試、模型前綴匹配和模型服務路由策略。',
+          description: '控制請求重試、模型前綴匹配、路由策略、工作階段親和、冷卻持久化與傳輸保活。',
+        },
+        credentialConcurrency: {
+          title: '憑證並發',
+          shortTitle: '並發',
+          description:
+            '調整 CPA 心跳、回收與釋放排程的並發參數。任一 CPA 線上（active/canceling）時，前 4 項不可修改，後端會拒絕寫入。',
+        },
+        credentialInFlight: {
+          title: '在途請求快照',
+          shortTitle: '在途',
+          description:
+            '控制在途請求觀測快照的採集頻率與記憶體上限；stale-after 必須不小於 snapshot-interval 的 3 倍。',
+        },
+        upstream: {
+          title: '上游行為',
+          shortTitle: '上游',
+          description: '控制發往 Codex、Claude、xAI 上游的請求偽裝、冷卻與流式行為。',
+        },
+        headers: {
+          title: '請求標頭偽裝',
+          shortTitle: '請求標頭',
+          description:
+            '設定發往 Claude 與 Codex 上游的預設請求標頭,用於用戶端身分偽裝與裝置畫像穩定。',
         },
         payload: {
           title: '請求參數改寫',
@@ -2871,7 +2921,12 @@ export const zhTW = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '設定 Antigravity 反重力閘道行為與系統提示詞敏感詞混淆。',
+          description: '設定 Antigravity 反重力閘道行為、敏感詞混淆、額度與連線池。',
+        },
+        multimedia: {
+          title: '多媒體',
+          shortTitle: '多媒體',
+          description: '控制影像生成處理方式和影片結果驗證快取等多媒體行為。',
         },
       },
       fields: {
@@ -2899,7 +2954,7 @@ export const zhTW = {
         },
         usageStatisticsEnabled: {
           label: '用量統計',
-          description: '記錄用戶端金鑰和請求維度的用量資料。',
+          description: '記錄用戶端金鑰和請求維度的用量資料。Home 強制歸一為開啟，此開關不可修改。',
         },
         tlsEnable: {
           label: '啟用 HTTPS',
@@ -3016,11 +3071,486 @@ export const zhTW = {
           description: '在 Antigravity 系統提示詞匹配項中插入零寬字元，降低上游精確關鍵字檢測。',
           placeholder: 'proxy\nAPI',
         },
+        serverHost: {
+          label: '監聽位址',
+          description: '服務端綁定的監聽位址；留空表示監聽所有網卡。',
+          placeholder: '0.0.0.0',
+        },
+        serverAllowHostJson: {
+          label: '允許的 Host 請求頭',
+          description: '逐行填寫允許存取的 HTTP Host；空陣列表示不限制。',
+        },
+        serverTrustedProxiesJson: {
+          label: '受信代理',
+          description:
+            '逐行填寫受信代理 IP 或 CIDR；只有來自這些代理的 X-Forwarded-For 才會被採信。',
+        },
+        serverCommercialMode: {
+          label: '商業化模式',
+          description: '開啟後啟用面向商業部署的服務端行為約束。',
+        },
+        discoveryEnabled: {
+          label: '啟用服務發現',
+          description: '開啟後透過 mDNS 廣播本執行個體，便於區域網路內的 CPA 自動發現。',
+        },
+        discoveryServiceName: {
+          label: '服務名',
+          description: 'mDNS 廣播使用的服務執行個體名。',
+          placeholder: 'CLIProxyAPIHome',
+        },
+        discoveryServiceType: {
+          label: '服務類型',
+          description: 'mDNS 服務類型（service type），通常保持預設值。',
+          placeholder: '_cliproxyapi._tcp',
+        },
+        discoverySubtypesJson: {
+          label: '服務子類型',
+          description: '逐行填寫附加的 mDNS subtype，用於更細粒度的發現過濾。',
+        },
+        discoveryInterfacesIncludeJson: {
+          label: '網卡包含清單',
+          description: '逐行填寫僅在這些網卡上廣播的網卡名；空陣列表示不限制。',
+        },
+        discoveryInterfacesExcludeJson: {
+          label: '網卡排除清單',
+          description: '逐行填寫不參與廣播的網卡名。',
+        },
+        discoveryAuthRequired: {
+          label: '發現需要認證',
+          description: '開啟後在發現回應中標記需要認證才能接入。',
+        },
+        discoveryAdvertiseManagement: {
+          label: '廣播管理端',
+          description: '開啟後在發現廣播中附帶管理端接入資訊。',
+        },
+        managementBaseUrl: {
+          label: '管理端 Base URL',
+          description: '對外宣告的管理端存取位址；留空時按請求來源推斷。',
+          placeholder: 'https://admin.example.com',
+        },
+        userEmailEnabled: {
+          label: '啟用使用者郵件',
+          description: '開啟後按以下設定發送使用者驗證與密碼找回郵件。',
+        },
+        userEmailPublicUrl: {
+          label: '使用者站公開 URL',
+          description: '郵件中回調連結使用的外部存取位址。',
+          placeholder: 'https://home.example.com',
+        },
+        userEmailFromAddress: {
+          label: '寄件位址',
+          description: '郵件 From 使用的寄件郵箱位址。',
+          placeholder: 'no-reply@example.com',
+        },
+        userEmailFromName: {
+          label: '寄件者名稱',
+          description: '郵件 From 使用的顯示名稱。',
+          placeholder: 'Home Center',
+        },
+        userEmailSmtpHost: {
+          label: 'SMTP 主機',
+          description: 'SMTP 伺服器主機名或 IP。',
+          placeholder: 'smtp.example.com',
+        },
+        userEmailSmtpPort: {
+          label: 'SMTP 連接埠',
+          description: 'SMTP 伺服器連接埠（1~65535）；0 表示未設定，由後端按預設策略處理。',
+          placeholder: '465',
+        },
+        userEmailSmtpUsername: {
+          label: 'SMTP 使用者名稱',
+          description: 'SMTP 認證使用者名稱；留空表示不進行認證。',
+        },
+        userEmailSmtpPasswordEnv: {
+          label: 'SMTP 密碼環境變數',
+          description: '保存 SMTP 密碼的環境變數名；密碼本身不寫入設定。',
+          placeholder: 'SMTP_PASSWORD',
+        },
+        userEmailSmtpStarttls: {
+          label: '啟用 STARTTLS',
+          description: '開啟後 SMTP 連線使用 STARTTLS 升級加密。',
+        },
+        userEmailVerificationTokenTtl: {
+          label: '驗證權杖有效期',
+          description: '郵箱驗證權杖的有效時長（Go duration）；留空使用後端預設值。',
+          placeholder: '預設由後端決定',
+        },
+        userEmailResetTokenTtl: {
+          label: '重設權杖有效期',
+          description: '密碼重設權杖的有效時長（Go duration）；留空使用後端預設值。',
+          placeholder: '預設由後端決定',
+        },
+        concurrencyCpaHeartbeatTimeout: {
+          label: 'CPA 心跳逾時',
+          description: '判定 CPA 心跳失效的等待時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 3s',
+        },
+        concurrencyCpaCancelBound: {
+          label: 'CPA 取消收斂時長',
+          description: 'canceling 狀態最長保留時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 5s',
+        },
+        concurrencyReclaimGrace: {
+          label: '回收寬限期',
+          description: '憑證失聯後進入回收前的寬限時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 5s',
+        },
+        concurrencyCleanupInterval: {
+          label: '清理掃描間隔',
+          description: '並發狀態清理的掃描間隔（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 5s',
+        },
+        concurrencyReleaseFlushInterval: {
+          label: '釋放沖刷間隔',
+          description: '並發釋放批次寫入的間隔（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 250ms',
+        },
+        concurrencyReleaseMaxBackoff: {
+          label: '釋放最大退避',
+          description: '並發釋放失敗重試的最大退避時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 2s',
+        },
+        concurrencyBusyRetryMin: {
+          label: '繁忙重試最小間隔',
+          description: '並發佔用衝突重試的最小間隔（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 250ms',
+        },
+        concurrencyBusyRetryMax: {
+          label: '繁忙重試最大間隔',
+          description: '並發佔用衝突重試的最大間隔（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 1s',
+        },
+        concurrencyMaxLimit: {
+          label: '全域並發上限',
+          description: '全域允許的並發佔用上限（1~1000000）。',
+        },
+        concurrencyLifecycleConfigRevision: {
+          label: '生命週期設定版本',
+          description: '後端維護的並發生命週期設定修訂號，唯讀展示。',
+        },
+        concurrencyObservationBarrierRevision: {
+          label: '觀測屏障版本',
+          description: '後端維護的並發觀測屏障修訂號，唯讀展示。',
+        },
+        inFlightSnapshotInterval: {
+          label: '快照採集間隔',
+          description: '在途請求快照的採集間隔（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 2s',
+        },
+        inFlightStaleAfter: {
+          label: '快照過期時長',
+          description:
+            '超過該時長未更新的在途記錄視為過期（Go duration）；必須不小於採集間隔的 3 倍。',
+          placeholder: '預設 10s',
+        },
+        inFlightStagingRetention: {
+          label: '暫存保留時長',
+          description: '在途暫存資料的保留時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 1m',
+        },
+        inFlightMaxPartBytes: {
+          label: '單分片最大位元組',
+          description: '在途快照單個分片允許的最大位元組數。',
+        },
+        inFlightMaxPartCount: {
+          label: '最大分片數',
+          description: '在途快照允許的最大分片數量。',
+        },
+        inFlightMaxRevisionBytes: {
+          label: '單版本最大位元組',
+          description: '在途快照單個版本允許的最大位元組數。',
+        },
+        inFlightMaxAggregateGroups: {
+          label: '最大聚合組數',
+          description: '在途快照聚合允許的最大分組數量。',
+        },
+        inFlightMaxDetails: {
+          label: '最大明細條數',
+          description: '在途快照保留的最大明細條數。',
+        },
+        inFlightMaxStringBytes: {
+          label: '單字串最大位元組',
+          description: '在途快照單個字串欄位允許的最大位元組數。',
+        },
+        sessionAffinity: {
+          label: '工作階段親和',
+          description: '開啟後同一工作階段優先路由到同一憑證。',
+        },
+        sessionAffinityTtl: {
+          label: '工作階段親和有效期',
+          description: '工作階段親和綁定的有效時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 1h',
+        },
+        sessionAffinitySubagents: {
+          label: '子代理工作階段親和',
+          description: '開啟後子代理請求也參與工作階段親和路由。',
+        },
+        saveCooldownStatus: {
+          label: '持久化冷卻狀態',
+          description: '開啟後將憑證冷卻狀態寫入磁碟，重啟後保留。',
+        },
+        transientErrorCooldownSeconds: {
+          label: '暫態錯誤冷卻 (秒)',
+          description: '暫態錯誤後的冷卻秒數；-1 表示停用該冷卻，0 表示使用後端預設值 60s。',
+        },
+        streamingKeepaliveSeconds: {
+          label: '流式保活間隔 (秒)',
+          description: '流式回應的保活發送間隔（秒）；0 表示由後端預設策略處理。',
+        },
+        streamingBootstrapRetries: {
+          label: '流式啟動重試次數',
+          description: '流式請求啟動階段允許的重試次數。',
+        },
+        passthroughHeaders: {
+          label: '透傳用戶端 Header',
+          description: '開啟後將用戶端請求 Header 透傳給上游。',
+        },
+        nonstreamKeepaliveInterval: {
+          label: '非流式保活間隔 (秒)',
+          description: '非流式請求的保活間隔（秒）；0 表示由後端預設策略處理。',
+        },
+        pprofEnable: {
+          label: '啟用 pprof',
+          description: '開啟後暴露 Go pprof 診斷端點，僅限排查問題時啟用。',
+        },
+        pprofAddr: {
+          label: 'pprof 監聽位址',
+          description: 'pprof 診斷服務的監聽位址。',
+          placeholder: '127.0.0.1:6060',
+        },
+        redisUsageQueueRetentionSeconds: {
+          label: 'Redis 用量佇列保留 (秒)',
+          description: '用量事件在 Redis 佇列中的保留秒數（0~3600）。',
+        },
+        upstreamCodexDisableCloaking: {
+          label: '停用 Codex 偽裝',
+          description: '開啟後不再對 Codex 上游請求套用用戶端偽裝。',
+        },
+        upstreamCodexStreamBootstrapBuffering: {
+          label: 'Codex 流啟動緩衝',
+          description: '開啟後緩衝 Codex 流式回應的啟動階段，降低半截流風險。',
+        },
+        upstreamCodexStreamBootstrapTimeout: {
+          label: 'Codex 流啟動逾時',
+          description: 'Codex 流式啟動階段的最長等待（Go duration）；0 表示不限制。',
+          placeholder: '0 表示不限制',
+        },
+        upstreamCodexOrphanDelegationCompatibility: {
+          label: '孤兒委託相容',
+          description: '開啟後相容 Codex 孤兒委託（orphan delegation）回應形態。',
+        },
+        upstreamCodexModelLevelCooling: {
+          label: 'Codex 模型級冷卻',
+          description: '開啟後 Codex 憑證按模型維度獨立冷卻。',
+        },
+        upstreamCodexResponseSteering: {
+          label: 'Codex 回應引導',
+          description: '開啟後允許對 Codex 回應施加 steering 指令。',
+        },
+        clientCodexOptimizeMultiAgentV2: {
+          label: '多代理最佳化 V2',
+          description: '開啟後用戶端對 Codex 多代理請求套用 V2 最佳化。',
+        },
+        upstreamClaudeModelLevelCooling: {
+          label: 'Claude 模型級冷卻',
+          description: '開啟後 Claude 憑證按模型維度獨立冷卻。',
+        },
+        upstreamClaudeToolSearch: {
+          label: 'Claude 工具搜尋',
+          description: '開啟後啟用 Claude 上游的 tool search 能力。',
+        },
+        upstreamClaudeDisableCloakMode: {
+          label: '停用 Claude 偽裝模式',
+          description: '開啟後關閉 Claude 上游的 cloak mode。',
+        },
+        upstreamClaudeDisableCloakingModelList: {
+          label: '停用偽裝模型清單',
+          description: '開啟後不再向上游發送偽裝用的模型清單。',
+        },
+        upstreamClaudeHeaderUserAgent: {
+          label: 'Claude User-Agent',
+          description: '發往 Claude 上游的預設 User-Agent Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderPackageVersion: {
+          label: 'Claude 套件版本 Header',
+          description: '發往 Claude 上游的預設 package-version Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderRuntimeVersion: {
+          label: 'Claude 執行環境版本 Header',
+          description: '發往 Claude 上游的預設 runtime-version Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderOs: {
+          label: 'Claude OS Header',
+          description: '發往 Claude 上游的預設 os Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderArch: {
+          label: 'Claude 架構 Header',
+          description: '發往 Claude 上游的預設 arch Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderTimeout: {
+          label: 'Claude 逾時 Header',
+          description: '發往 Claude 上游的預設 timeout Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderTimezone: {
+          label: 'Claude 時區 Header',
+          description: '發往 Claude 上游的預設 timezone Header；留空使用後端預設。',
+        },
+        upstreamClaudeHeaderStabilizeDeviceProfile: {
+          label: '穩定裝置畫像',
+          description: '控制 Claude 裝置畫像 Header 是否穩定輸出；未設定時由後端預設策略決定。',
+        },
+        upstreamXaiInjectXSearch: {
+          label: 'xAI 注入 X Search',
+          description: '開啟後向 xAI 上游請求注入 X Search 能力。',
+        },
+        oauthAuthDir: {
+          label: 'OAuth 憑證目錄',
+          description: 'OAuth 檔案憑證的儲存目錄。',
+          placeholder: '~/.cli-proxy-api',
+        },
+        oauthAuthAutoRefreshWorkers: {
+          label: '自動重新整理工作執行緒數',
+          description: 'OAuth 憑證自動重新整理的並發 worker 數；0 表示由後端預設策略處理。',
+        },
+        oauthCodexHeaderUserAgent: {
+          label: 'Codex User-Agent',
+          description: '發往 Codex OAuth 上游的預設 User-Agent Header；留空使用後端預設。',
+        },
+        oauthCodexHeaderBetaFeatures: {
+          label: 'Codex Beta 特性 Header',
+          description: '發往 Codex OAuth 上游的 beta-features Header；留空使用後端預設。',
+        },
+        liveMediaRelayEnabled: {
+          label: '啟用即時媒體中繼',
+          description: '開啟後啟用 Codex 即時媒體（WebRTC）中繼。',
+        },
+        liveMediaRelayMaxSessions: {
+          label: '最大中繼工作階段數',
+          description: '即時媒體中繼允許的最大並發工作階段數；0 表示使用後端預設值 32。',
+        },
+        liveMediaRelayDisablePrivateRemoteIps: {
+          label: '停用私網遠端 IP',
+          description: '開啟後即時媒體中繼拒絕私網遠端 IP。',
+        },
+        liveMediaRelayPublicIp: {
+          label: '公網 IP',
+          description: '中繼對外宣告的公網 IP；留空表示自動探測。',
+        },
+        liveMediaRelayUdpPortMin: {
+          label: 'UDP 連接埠下限',
+          description: '中繼使用的 UDP 連接埠範圍下限；須與上限成對設定。',
+        },
+        liveMediaRelayUdpPortMax: {
+          label: 'UDP 連接埠上限',
+          description: '中繼使用的 UDP 連接埠範圍上限；須與下限成對設定。',
+        },
+        liveMediaRelayIceServersJson: {
+          label: 'ICE 伺服器',
+          description:
+            'JSON 陣列設定 STUN/TURN 伺服器。注意：JSON 讀回會遮蔽 username/credential，只有 urls 完全不變的條目才保留既有金鑰，改動 urls 需重新填寫金鑰。',
+        },
+        devinSensitiveWordsJson: {
+          label: 'Devin 敏感詞混淆',
+          description: '在 Devin 系統提示詞匹配項中插入零寬字元，降低上游精確關鍵字檢測。',
+        },
+        aistudioWsAuth: {
+          label: 'AI Studio WS 認證',
+          description: 'AI Studio WebSocket 鑑權開關。Home 強制歸一為關閉，此開關不可修改。',
+        },
+        oauthRequestScopedErrorsJson: {
+          label: '按請求範圍錯誤規則',
+          description:
+            '按 provider 鍵控的錯誤處理規則，每條規則形狀為 {status, match[], match-regexr[], action}。',
+          placeholder: '{}',
+        },
+        antigravityCredits: {
+          label: 'Antigravity 額度',
+          description: '開啟後啟用 Antigravity credits 計費行為。',
+        },
+        antigravitySignatureCacheEnabled: {
+          label: '簽名快取',
+          description: '控制 Antigravity 請求簽名快取；未設定時由後端預設策略決定。',
+        },
+        antigravitySignatureBypassStrict: {
+          label: '嚴格簽名繞過',
+          description: '控制 Antigravity 簽名校驗的嚴格繞過行為；未設定時由後端預設策略決定。',
+        },
+        antigravityConnPoolEnabled: {
+          label: '連線池',
+          description: '開啟後 Antigravity 上游使用長連線池。',
+        },
+        antigravityConnPoolIdleTimeout: {
+          label: '連線池閒置逾時',
+          description: '閒置連線的最長保留時長（Go duration），上限 210s；留空使用後端預設值。',
+          placeholder: '上限 210s',
+        },
+        antigravityConnPoolMaxIdleConnsPerHost: {
+          label: '每主機最大閒置連線',
+          description: '連線池為每個主機保留的最大閒置連線數。',
+        },
+        multimediaDisableImageGeneration: {
+          label: '影像生成模式',
+          description: '控制影像生成請求的處理方式。',
+          options: {
+            false: '保持啟用 (false)',
+            true: '停用 (true)',
+            chat: '轉為對話 (chat)',
+            passthrough: '直接透傳 (passthrough)',
+          },
+        },
+        multimediaGptImage2BaseModel: {
+          label: 'GPT Image 2 基礎模型',
+          description: '影像生成改寫使用的基礎模型。',
+          placeholder: '預設 gpt-5.4-mini',
+        },
+        multimediaVideoResultAuthCacheTtl: {
+          label: '影片結果驗證快取',
+          description: '影片生成結果驗證資訊的快取時長（Go duration）；留空恢復後端預設。',
+          placeholder: '預設 3h',
+        },
       },
       routingStrategies: {
         'round-robin': '輪詢',
+        'weighted-round-robin': '加權輪詢',
         'fill-first': '優先填滿',
         unknown: '未知',
+      },
+      nullableBoolean: {
+        unset: '未設定（預設）',
+        enabled: '啟用',
+        disabled: '停用',
+      },
+      stringList: {
+        serverAllowHostJson: {
+          placeholder: 'example.com\nadmin.example.com',
+          hint: '每行一個允許的 Host，儲存時會過濾空行。',
+          count: '已設定 {{count}} 個 Host',
+        },
+        serverTrustedProxiesJson: {
+          placeholder: '10.0.0.0/8\n192.168.1.10',
+          hint: '每行一個代理 IP 或 CIDR，儲存時會過濾空行。',
+          count: '已設定 {{count}} 個受信代理',
+        },
+        discoverySubtypesJson: {
+          placeholder: '_home\n_management',
+          hint: '每行一個 mDNS subtype，儲存時會過濾空行。',
+          count: '已設定 {{count}} 個子類型',
+        },
+        discoveryInterfacesIncludeJson: {
+          placeholder: 'en0\neth0',
+          hint: '每行一個網卡名，儲存時會過濾空行。',
+          count: '已包含 {{count}} 張網卡',
+        },
+        discoveryInterfacesExcludeJson: {
+          placeholder: 'utun0\nawdl0',
+          hint: '每行一個網卡名，儲存時會過濾空行。',
+          count: '已排除 {{count}} 張網卡',
+        },
+        devinSensitiveWordsJson: {
+          placeholder: 'proxy\nAPI',
+          hint: '每行一個敏感詞；匹配不區分大小寫，儲存時自動忽略空行。',
+          count: '已設定 {{count}} 個敏感詞',
+        },
       },
       proxyPools: {
         title: '代理池',

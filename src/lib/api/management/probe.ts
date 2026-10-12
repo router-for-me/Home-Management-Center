@@ -1,4 +1,4 @@
-import type { AxiosInstance, AxiosResponse } from 'axios'
+import axios, { type AxiosInstance, type AxiosResponse } from 'axios'
 
 import { createManagementClient } from '@/lib/api/management/client'
 import type {
@@ -45,7 +45,7 @@ const capabilityRequests: Record<
     path: '/nodes',
   },
   usage: {
-    path: '/api-key-usage',
+    path: '/observability/usage/api-keys',
   },
   usageOverview: {
     path: '/usage/overview',
@@ -60,7 +60,7 @@ const capabilityRequests: Record<
     path: '/request-events/filter-options?limit=1',
   },
   requestErrorLogs: {
-    path: '/request-error-logs',
+    path: '/observability/logs/errors',
   },
   users: {
     path: '/users',
@@ -470,11 +470,41 @@ async function probeCapability(client: AxiosInstance, key: ProbedCapabilityKey) 
   return true
 }
 
+const SUPPORTED_CONFIG_VERSION = 8
+
+function createUnsupportedApiVersionError() {
+  const error = new Error(
+    'The connected backend only serves a legacy Management API. Upgrade CLIProxyAPIHome to a release that supports the V8 Management API.',
+  ) as Error & { backendCode: string }
+  error.backendCode = 'unsupported-api-version'
+  return error
+}
+
+async function getVersionedConfig(client: AxiosInstance) {
+  try {
+    return await client.get<unknown>('/config')
+  } catch (error) {
+    // A runtime without the /v8/management route tree answers 404 here; that
+    // means a legacy backend, not a missing session.
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      throw createUnsupportedApiVersionError()
+    }
+    throw error
+  }
+}
+
 export async function probeManagementRuntime(
   session: ManagementSessionInput,
 ): Promise<CapabilityProbeResult> {
   const client = createManagementClient(session)
-  const configResponse = await client.get<unknown>('/config')
+  const configResponse = await getVersionedConfig(client)
+  const configVersion = isRecord(configResponse.data)
+    ? configResponse.data['config-version']
+    : undefined
+  if (configVersion !== SUPPORTED_CONFIG_VERSION) {
+    throw createUnsupportedApiVersionError()
+  }
+
   const capabilitiesPayload = await readCapabilitiesPayload(client)
   const capabilitySource = capabilitiesPayload ?? configResponse.data
   const serverInfo = mergeServerInfo(

@@ -276,7 +276,7 @@ export async function fetchPluginStore(
   session: ManagementSessionInput,
 ): Promise<PluginStoreResponse> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/plugin-store')
+  const response = await client.get<unknown>('/plugins/store')
   return normalizePluginStoreResponse(response.data)
 }
 
@@ -293,7 +293,7 @@ export async function installPluginFromStore(
   if (version) params.set('version', version)
 
   const response = await client.post<unknown>(
-    `/plugin-store/${encodeURIComponent(input.id)}/install${params.size ? `?${params}` : ''}`,
+    `/plugins/store/${encodeURIComponent(input.id)}/install${params.size ? `?${params}` : ''}`,
     version ? { version } : undefined,
   )
 
@@ -305,7 +305,7 @@ export async function uninstallPluginFromStore(
   id: string,
 ): Promise<PluginStoreUninstallResult> {
   const client = createManagementClient(session)
-  const response = await client.post<unknown>(`/plugin-store/${encodeURIComponent(id)}/uninstall`)
+  const response = await client.post<unknown>(`/plugins/store/${encodeURIComponent(id)}/uninstall`)
   return normalizeUninstallResult(response.data)
 }
 

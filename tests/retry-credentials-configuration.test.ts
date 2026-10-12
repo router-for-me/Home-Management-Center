@@ -66,11 +66,15 @@ function createManagementAdapter(responseFor: (method: string, pathname: string)
 }
 
 describe('global max-retry-credentials config', () => {
-  test('normalizes max-retry-credentials from raw config', () => {
+  test('normalizes max-retry-credentials from the v8 config tree', () => {
     const config = normalizeConfigValues({
-      'max-retry-credentials': 5,
-      'request-retry': 2,
-      'max-retry-interval': 30,
+      routing: {
+        retry: {
+          'max-retry-credentials': 5,
+          'request-retry': 2,
+          'max-retry-interval': 30,
+        },
+      },
     })
 
     expect(config.maxRetryCredentials).toBe(5)
@@ -83,7 +87,7 @@ describe('global max-retry-credentials config', () => {
     expect(config.maxRetryCredentials).toBe(0)
   })
 
-  test('applies change via PUT /max-retry-credentials', async () => {
+  test('applies change via PUT /config/routing/retry/max-retry-credentials with a bare value', async () => {
     const { requests, session } = createManagementAdapter(() => ({}))
 
     await applyConfigChange(session, {
@@ -93,10 +97,12 @@ describe('global max-retry-credentials config', () => {
     })
 
     const request = requests.find(
-      (req) => req.method === 'PUT' && req.pathname.endsWith('/max-retry-credentials'),
+      (req) =>
+        req.method === 'PUT' &&
+        req.pathname.endsWith('/config/routing/retry/max-retry-credentials'),
     )
     expect(request).toBeDefined()
-    expect(request?.body).toEqual({ value: 3 })
+    expect(request?.body).toEqual(3)
   })
 })
 
@@ -172,7 +178,7 @@ describe('credential request-retry metadata', () => {
     })
 
     const patch = requests.find(
-      (req) => req.method === 'PATCH' && req.pathname.endsWith('/auth-files/fields'),
+      (req) => req.method === 'PATCH' && req.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({
       'request-retry': 2,
@@ -182,28 +188,26 @@ describe('credential request-retry metadata', () => {
 
 describe('provider request-retry options', () => {
   test('normalizes request-retry from provider resource snapshot', async () => {
-    const { session } = createManagementAdapter((method, pathname) => {
-      if (pathname.endsWith('/codex-api-key')) {
-        return {
-          'codex-api-key': [
-            {
-              'api-key': 'sk-test-1',
-              'base-url': 'https://api.example.com',
-              'request-retry': 2,
-            },
-            {
-              'api-key': 'sk-test-2',
-              'base-url': 'https://api.example.com',
-              'request-retry': 0,
-            },
-            {
-              'api-key': 'sk-test-3',
-              'base-url': 'https://api.example.com',
-            },
-          ],
-        }
+    const { session } = createManagementAdapter((_method, pathname) => {
+      if (pathname.endsWith('/config/api-keys/codex')) {
+        return [
+          {
+            'base-url': 'https://api.example.com',
+            'request-retry': 2,
+            keys: [{ 'api-key': 'sk-test-1' }],
+          },
+          {
+            'base-url': 'https://api.example.com',
+            'request-retry': 0,
+            keys: [{ 'api-key': 'sk-test-2' }],
+          },
+          {
+            'base-url': 'https://api.example.com',
+            keys: [{ 'api-key': 'sk-test-3' }],
+          },
+        ]
       }
-      return {}
+      return []
     })
 
     const snapshot = await fetchProviderSnapshot(session)
@@ -215,12 +219,7 @@ describe('provider request-retry options', () => {
   })
 
   test('appends request-retry to provider entry payload when saving', async () => {
-    const { requests, session } = createManagementAdapter((method, pathname) => {
-      if (method === 'GET' && pathname.endsWith('/codex-api-key')) {
-        return { 'codex-api-key': [] }
-      }
-      return {}
-    })
+    const { requests, session } = createManagementAdapter(() => [])
 
     await createProviderResource(session, 'codex', {
       name: 'Test Codex',
@@ -239,7 +238,7 @@ describe('provider request-retry options', () => {
     })
 
     const putRequest = requests.find(
-      (req) => req.method === 'PUT' && req.pathname.endsWith('/codex-api-key'),
+      (req) => req.method === 'PUT' && req.pathname.endsWith('/config/api-keys/codex'),
     )
     expect(putRequest).toBeDefined()
     const payload = (putRequest?.body as unknown[])[0] as Record<string, unknown>
@@ -247,7 +246,17 @@ describe('provider request-retry options', () => {
   })
 
   test('handles requestRetry: null when updating provider resource', async () => {
-    const { requests, session } = createManagementAdapter(() => ({}))
+    const { requests, session } = createManagementAdapter((_method, pathname) => {
+      if (pathname.endsWith('/config/api-keys/codex')) {
+        return [
+          {
+            'base-url': 'https://api.example.com',
+            keys: [{ 'api-key': 'sk-test' }],
+          },
+        ]
+      }
+      return []
+    })
 
     const dummyResource = {
       id: 'codex:0',
@@ -289,12 +298,12 @@ describe('provider request-retry options', () => {
       excludedModelsText: '',
     })
 
-    const patchRequest = requests.find(
-      (req) => req.method === 'PATCH' && req.pathname.endsWith('/codex-api-key'),
+    const putRequest = requests.find(
+      (req) => req.method === 'PUT' && req.pathname.endsWith('/config/api-keys/codex'),
     )
-    expect(patchRequest).toBeDefined()
-    const value = (patchRequest?.body as Record<string, unknown>).value as Record<string, unknown>
-    expect(value['request-retry']).toBeNull()
+    expect(putRequest).toBeDefined()
+    const group = (putRequest?.body as unknown[])[0] as Record<string, unknown>
+    expect(group['request-retry']).toBeNull()
   })
 })
 

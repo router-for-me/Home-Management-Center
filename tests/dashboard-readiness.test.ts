@@ -72,8 +72,7 @@ const oauthCredential: DashboardSnapshot['authFiles'][number] = {
 
 const providerKey: DashboardSnapshot['providers'][number] = {
   id: 'codex',
-  path: '/codex-api-key',
-  responseKey: 'codex-api-key',
+  path: '/config/api-keys/codex',
   total: 1,
   active: 1,
   disabled: 0,
@@ -392,7 +391,7 @@ describe('fetchManagementDashboardSnapshot integration', () => {
       let data: unknown = {}
 
       if (url.endsWith('/config')) {
-        data = { 'api-keys': [] }
+        data = { access: { 'api-keys': [] } }
       } else if (url.endsWith('/api-keys')) {
         data = {
           api_key_entries: [
@@ -414,7 +413,7 @@ describe('fetchManagementDashboardSnapshot integration', () => {
         ]
       } else if (url.endsWith('/models')) {
         data = { models: [{ id: 'gpt-4o' }] }
-      } else if (url.endsWith('/auth-files')) {
+      } else if (url.endsWith('/credentials')) {
         data = { files: [] }
       }
 

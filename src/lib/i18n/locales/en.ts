@@ -121,7 +121,7 @@ export const en = {
       close: 'Close connection dialog',
       baseUrl: 'Management endpoint',
       baseUrlHintDev:
-        'Dev only. Enter the backend service URL, e.g. http://127.0.0.1:8327. /v0/management is added automatically.',
+        'Dev only. Enter the backend service URL, e.g. http://127.0.0.1:8327. /v8/management is added automatically.',
       detectedRuntime: 'Available management endpoint detected: {{endpoint}}',
       detectedProxyEndpoint: 'Same-origin proxy endpoint detected: {{endpoint}}',
       managementKey: 'Management key',
@@ -136,6 +136,11 @@ export const en = {
       connectedAs: 'Connected to {{mode}}.',
       errors: {
         managementKeyRequired: 'Management key is required.',
+        unsupportedApiVersion: {
+          title: 'Unsupported Management API version',
+          description:
+            'This backend only serves a legacy Management API. Upgrade CLIProxyAPIHome to a release that supports the V8 Management API, then try again.',
+        },
       },
     },
     embeddedPortal: {
@@ -2943,7 +2948,14 @@ export const en = {
         server: {
           title: 'Server runtime',
           shortTitle: 'Server',
-          description: 'Core switches that affect runtime diagnostics and service behavior.',
+          description:
+            'Configure the listen port, bind address, host allowlist, trusted proxies, and commercial mode.',
+        },
+        discovery: {
+          title: 'Service discovery',
+          shortTitle: 'Discovery',
+          description:
+            'Configure mDNS service discovery broadcast: service name, service type, subtypes, interface scope, and access control.',
         },
         tls: {
           title: 'TLS',
@@ -2956,6 +2968,12 @@ export const en = {
           description:
             'Control remote Management API access, the management key, and control panel update behavior.',
         },
+        userEmail: {
+          title: 'User email',
+          shortTitle: 'Email',
+          description:
+            'Configure delivery of user verification and recovery emails: sender identity, SMTP connection, and token lifetimes.',
+        },
         plugins: {
           title: 'Plugin settings',
           shortTitle: 'Plugins',
@@ -2966,17 +2984,31 @@ export const en = {
           title: 'OAuth model rules',
           shortTitle: 'OAuth rules',
           description:
-            'Configure excluded models and client-visible aliases for OAuth and file-backed credentials.',
+            'Configure excluded models, client-visible aliases, and request-scoped error rules for OAuth and file-backed credentials.',
+        },
+        oauthProviders: {
+          title: 'OAuth providers',
+          shortTitle: 'Providers',
+          description:
+            'Configure the OAuth auth directory, auto-refresh workers, and provider-level switches.',
+        },
+        liveMediaRelay: {
+          title: 'Live media relay',
+          shortTitle: 'Media relay',
+          description:
+            'Configure the Codex live media (audio/video) relay: session limit, public IP, UDP port range, and ICE servers.',
         },
         system: {
           title: 'Logs and usage',
           shortTitle: 'Logs',
-          description: 'Control request logs, file logs, usage statistics, and log retention.',
+          description:
+            'Control debug diagnostics, request logs, file logs, usage statistics, log retention, pprof, and the Redis usage queue.',
         },
         network: {
           title: 'Network proxy',
           shortTitle: 'Network',
-          description: 'Configure the outbound proxy used by the server.',
+          description:
+            'Configure the outbound proxy used by the server and request header passthrough.',
         },
         quota: {
           title: 'Quota handling',
@@ -2986,7 +3018,32 @@ export const en = {
         streaming: {
           title: 'Retry and routing',
           shortTitle: 'Routing',
-          description: 'Control request retries, model prefix matching, and model service routing.',
+          description:
+            'Control request retries, model prefix matching, routing strategy, session affinity, cooldown persistence, and transport keepalive.',
+        },
+        credentialConcurrency: {
+          title: 'Credential concurrency',
+          shortTitle: 'Concurrency',
+          description:
+            'Tune concurrency scheduling for CPA heartbeat, reclaim, and release. The first four items are rejected by the backend while any CPA is online (active/canceling).',
+        },
+        credentialInFlight: {
+          title: 'In-flight snapshots',
+          shortTitle: 'In-flight',
+          description:
+            'Control in-flight request observation cadence and memory limits. stale-after must be at least 3× snapshot-interval.',
+        },
+        upstream: {
+          title: 'Upstream behavior',
+          shortTitle: 'Upstream',
+          description:
+            'Control request cloaking, cooling, and streaming behavior for Codex, Claude, and xAI upstreams.',
+        },
+        headers: {
+          title: 'Header spoofing',
+          shortTitle: 'Headers',
+          description:
+            'Configure default request headers sent to Claude and Codex upstreams for client identity spoofing and device-profile stabilization.',
         },
         payload: {
           title: 'Request parameter rewriting',
@@ -2998,7 +3055,12 @@ export const en = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Configure Antigravity gateway behavior and system prompt sensitive words obfuscation.',
+            'Configure Antigravity gateway behavior, sensitive words obfuscation, credits, and the connection pool.',
+        },
+        multimedia: {
+          title: 'Multimedia',
+          shortTitle: 'Media',
+          description: 'Control image generation handling and video result auth caching behavior.',
         },
       },
       fields: {
@@ -3026,7 +3088,8 @@ export const en = {
         },
         usageStatisticsEnabled: {
           label: 'Usage statistics',
-          description: 'Record usage data by client key and request.',
+          description:
+            'Record usage data by client key and request. Home normalizes this to enabled; the switch cannot be changed.',
         },
         tlsEnable: {
           label: 'Enable HTTPS',
@@ -3151,11 +3214,529 @@ export const en = {
             'Insert zero-width spaces into matching Antigravity system prompts to reduce exact keyword detection upstream.',
           placeholder: 'proxy\nAPI',
         },
+        serverHost: {
+          label: 'Listen address',
+          description: 'Address the server binds to. Empty listens on all interfaces.',
+          placeholder: '0.0.0.0',
+        },
+        serverAllowHostJson: {
+          label: 'Allowed Host headers',
+          description: 'One allowed HTTP Host per line. An empty array means no restriction.',
+        },
+        serverTrustedProxiesJson: {
+          label: 'Trusted proxies',
+          description:
+            'One trusted proxy IP or CIDR per line. X-Forwarded-For is only honored from these proxies.',
+        },
+        serverCommercialMode: {
+          label: 'Commercial mode',
+          description: 'Enable server behavior constraints intended for commercial deployments.',
+        },
+        discoveryEnabled: {
+          label: 'Enable service discovery',
+          description: 'Broadcast this instance over mDNS so LAN CPA nodes can discover it.',
+        },
+        discoveryServiceName: {
+          label: 'Service name',
+          description: 'Service instance name used in the mDNS broadcast.',
+          placeholder: 'CLIProxyAPIHome',
+        },
+        discoveryServiceType: {
+          label: 'Service type',
+          description: 'mDNS service type. Usually keep the default.',
+          placeholder: '_cliproxyapi._tcp',
+        },
+        discoverySubtypesJson: {
+          label: 'Service subtypes',
+          description: 'One additional mDNS subtype per line for finer discovery filtering.',
+        },
+        discoveryInterfacesIncludeJson: {
+          label: 'Included interfaces',
+          description:
+            'One interface name per line; broadcast only on these interfaces. An empty array means no restriction.',
+        },
+        discoveryInterfacesExcludeJson: {
+          label: 'Excluded interfaces',
+          description: 'One interface name per line; these interfaces do not broadcast.',
+        },
+        discoveryAuthRequired: {
+          label: 'Discovery requires auth',
+          description: 'Mark discovery responses as requiring authentication to join.',
+        },
+        discoveryAdvertiseManagement: {
+          label: 'Advertise management',
+          description: 'Include management access information in the discovery broadcast.',
+        },
+        managementBaseUrl: {
+          label: 'Management base URL',
+          description: 'Externally advertised management URL. Empty infers it from the request.',
+          placeholder: 'https://admin.example.com',
+        },
+        userEmailEnabled: {
+          label: 'Enable user email',
+          description:
+            'Send user verification and password recovery emails with the settings below.',
+        },
+        userEmailPublicUrl: {
+          label: 'Public user site URL',
+          description: 'External base URL used for callback links in emails.',
+          placeholder: 'https://home.example.com',
+        },
+        userEmailFromAddress: {
+          label: 'From address',
+          description: 'Sender mailbox used in the email From header.',
+          placeholder: 'no-reply@example.com',
+        },
+        userEmailFromName: {
+          label: 'From name',
+          description: 'Display name used in the email From header.',
+          placeholder: 'Home Center',
+        },
+        userEmailSmtpHost: {
+          label: 'SMTP host',
+          description: 'SMTP server hostname or IP.',
+          placeholder: 'smtp.example.com',
+        },
+        userEmailSmtpPort: {
+          label: 'SMTP port',
+          description:
+            'SMTP server port (1–65535). 0 means unconfigured and lets the backend default apply.',
+          placeholder: '465',
+        },
+        userEmailSmtpUsername: {
+          label: 'SMTP username',
+          description: 'SMTP auth username. Empty skips authentication.',
+        },
+        userEmailSmtpPasswordEnv: {
+          label: 'SMTP password env var',
+          description:
+            'Name of the environment variable holding the SMTP password; the password itself is never written to config.',
+          placeholder: 'SMTP_PASSWORD',
+        },
+        userEmailSmtpStarttls: {
+          label: 'Enable STARTTLS',
+          description: 'Upgrade the SMTP connection with STARTTLS encryption.',
+        },
+        userEmailVerificationTokenTtl: {
+          label: 'Verification token TTL',
+          description:
+            'Validity duration of email verification tokens (Go duration). Empty uses the backend default.',
+          placeholder: 'Backend default',
+        },
+        userEmailResetTokenTtl: {
+          label: 'Reset token TTL',
+          description:
+            'Validity duration of password reset tokens (Go duration). Empty uses the backend default.',
+          placeholder: 'Backend default',
+        },
+        concurrencyCpaHeartbeatTimeout: {
+          label: 'CPA heartbeat timeout',
+          description:
+            'Wait duration before a CPA heartbeat is considered lost (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 3s',
+        },
+        concurrencyCpaCancelBound: {
+          label: 'CPA cancel bound',
+          description:
+            'Maximum duration a canceling state is retained (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 5s',
+        },
+        concurrencyReclaimGrace: {
+          label: 'Reclaim grace period',
+          description:
+            'Grace duration before an unreachable credential is reclaimed (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 5s',
+        },
+        concurrencyCleanupInterval: {
+          label: 'Cleanup interval',
+          description:
+            'Scan interval for concurrency state cleanup (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 5s',
+        },
+        concurrencyReleaseFlushInterval: {
+          label: 'Release flush interval',
+          description:
+            'Batch flush interval for concurrency releases (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 250ms',
+        },
+        concurrencyReleaseMaxBackoff: {
+          label: 'Release max backoff',
+          description:
+            'Maximum backoff between failed release retries (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 2s',
+        },
+        concurrencyBusyRetryMin: {
+          label: 'Busy retry min interval',
+          description:
+            'Minimum retry interval on concurrency contention (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 250ms',
+        },
+        concurrencyBusyRetryMax: {
+          label: 'Busy retry max interval',
+          description:
+            'Maximum retry interval on concurrency contention (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 1s',
+        },
+        concurrencyMaxLimit: {
+          label: 'Global concurrency limit',
+          description: 'Global upper bound of concurrent occupancy (1–1000000).',
+        },
+        concurrencyLifecycleConfigRevision: {
+          label: 'Lifecycle config revision',
+          description: 'Backend-maintained concurrency lifecycle config revision. Read-only.',
+        },
+        concurrencyObservationBarrierRevision: {
+          label: 'Observation barrier revision',
+          description: 'Backend-maintained concurrency observation barrier revision. Read-only.',
+        },
+        inFlightSnapshotInterval: {
+          label: 'Snapshot interval',
+          description:
+            'Collection interval for in-flight request snapshots (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 2s',
+        },
+        inFlightStaleAfter: {
+          label: 'Snapshot stale after',
+          description:
+            'In-flight records not updated within this duration are stale (Go duration). Must be at least 3× the snapshot interval.',
+          placeholder: 'Default 10s',
+        },
+        inFlightStagingRetention: {
+          label: 'Staging retention',
+          description:
+            'Retention duration for in-flight staging data (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 1m',
+        },
+        inFlightMaxPartBytes: {
+          label: 'Max part bytes',
+          description: 'Maximum bytes allowed for a single in-flight snapshot part.',
+        },
+        inFlightMaxPartCount: {
+          label: 'Max part count',
+          description: 'Maximum number of parts allowed in an in-flight snapshot.',
+        },
+        inFlightMaxRevisionBytes: {
+          label: 'Max revision bytes',
+          description: 'Maximum bytes allowed for a single in-flight snapshot revision.',
+        },
+        inFlightMaxAggregateGroups: {
+          label: 'Max aggregate groups',
+          description: 'Maximum number of aggregation groups in in-flight snapshots.',
+        },
+        inFlightMaxDetails: {
+          label: 'Max details',
+          description: 'Maximum number of detail entries kept in in-flight snapshots.',
+        },
+        inFlightMaxStringBytes: {
+          label: 'Max string bytes',
+          description: 'Maximum bytes allowed for a single string field in in-flight snapshots.',
+        },
+        sessionAffinity: {
+          label: 'Session affinity',
+          description: 'Route the same session to the same credential when possible.',
+        },
+        sessionAffinityTtl: {
+          label: 'Session affinity TTL',
+          description:
+            'Validity duration of session affinity bindings (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 1h',
+        },
+        sessionAffinitySubagents: {
+          label: 'Subagent session affinity',
+          description: 'Include subagent requests in session affinity routing.',
+        },
+        saveCooldownStatus: {
+          label: 'Persist cooldown status',
+          description: 'Write credential cooldown state to disk so it survives restarts.',
+        },
+        transientErrorCooldownSeconds: {
+          label: 'Transient error cooldown (seconds)',
+          description:
+            'Cooldown seconds after a transient error. -1 disables this cooldown; 0 uses the backend default of 60s.',
+        },
+        streamingKeepaliveSeconds: {
+          label: 'Stream keepalive interval (seconds)',
+          description:
+            'Keepalive send interval for streaming responses in seconds. 0 lets the backend default apply.',
+        },
+        streamingBootstrapRetries: {
+          label: 'Stream bootstrap retries',
+          description: 'Retries allowed during the bootstrap phase of a streaming request.',
+        },
+        passthroughHeaders: {
+          label: 'Passthrough client headers',
+          description: 'Forward client request headers to the upstream.',
+        },
+        nonstreamKeepaliveInterval: {
+          label: 'Non-stream keepalive interval (seconds)',
+          description:
+            'Keepalive interval for non-streaming requests in seconds. 0 lets the backend default apply.',
+        },
+        pprofEnable: {
+          label: 'Enable pprof',
+          description:
+            'Expose the Go pprof diagnostics endpoint. Enable only while troubleshooting.',
+        },
+        pprofAddr: {
+          label: 'pprof listen address',
+          description: 'Listen address of the pprof diagnostics server.',
+          placeholder: '127.0.0.1:6060',
+        },
+        redisUsageQueueRetentionSeconds: {
+          label: 'Redis usage queue retention (seconds)',
+          description: 'Seconds usage events are retained in the Redis queue (0–3600).',
+        },
+        upstreamCodexDisableCloaking: {
+          label: 'Disable Codex cloaking',
+          description: 'Stop applying client cloaking to Codex upstream requests.',
+        },
+        upstreamCodexStreamBootstrapBuffering: {
+          label: 'Codex stream bootstrap buffering',
+          description:
+            'Buffer the bootstrap phase of Codex streaming responses to reduce truncated streams.',
+        },
+        upstreamCodexStreamBootstrapTimeout: {
+          label: 'Codex stream bootstrap timeout',
+          description:
+            'Maximum wait for the Codex streaming bootstrap phase (Go duration). 0 means no limit.',
+          placeholder: '0 means no limit',
+        },
+        upstreamCodexOrphanDelegationCompatibility: {
+          label: 'Orphan delegation compatibility',
+          description: 'Accept Codex orphan delegation response shapes.',
+        },
+        upstreamCodexModelLevelCooling: {
+          label: 'Codex model-level cooling',
+          description: 'Cool down Codex credentials independently per model.',
+        },
+        upstreamCodexResponseSteering: {
+          label: 'Codex response steering',
+          description: 'Allow steering directives on Codex responses.',
+        },
+        clientCodexOptimizeMultiAgentV2: {
+          label: 'Multi-agent optimization V2',
+          description: 'Apply V2 optimizations to Codex multi-agent requests from the client.',
+        },
+        upstreamClaudeModelLevelCooling: {
+          label: 'Claude model-level cooling',
+          description: 'Cool down Claude credentials independently per model.',
+        },
+        upstreamClaudeToolSearch: {
+          label: 'Claude tool search',
+          description: 'Enable the tool search capability on the Claude upstream.',
+        },
+        upstreamClaudeDisableCloakMode: {
+          label: 'Disable Claude cloak mode',
+          description: 'Turn off cloak mode on the Claude upstream.',
+        },
+        upstreamClaudeDisableCloakingModelList: {
+          label: 'Disable cloaking model list',
+          description: 'Stop sending the cloaking model list to the upstream.',
+        },
+        upstreamClaudeHeaderUserAgent: {
+          label: 'Claude User-Agent',
+          description:
+            'Default User-Agent header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderPackageVersion: {
+          label: 'Claude package version header',
+          description:
+            'Default package-version header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderRuntimeVersion: {
+          label: 'Claude runtime version header',
+          description:
+            'Default runtime-version header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderOs: {
+          label: 'Claude OS header',
+          description:
+            'Default os header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderArch: {
+          label: 'Claude arch header',
+          description:
+            'Default arch header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderTimeout: {
+          label: 'Claude timeout header',
+          description:
+            'Default timeout header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderTimezone: {
+          label: 'Claude timezone header',
+          description:
+            'Default timezone header sent to the Claude upstream. Empty uses the backend default.',
+        },
+        upstreamClaudeHeaderStabilizeDeviceProfile: {
+          label: 'Stabilize device profile',
+          description:
+            'Control whether Claude device profile headers stay stable. Unset lets the backend default decide.',
+        },
+        upstreamXaiInjectXSearch: {
+          label: 'xAI inject X Search',
+          description: 'Inject X Search capability into xAI upstream requests.',
+        },
+        oauthAuthDir: {
+          label: 'OAuth auth directory',
+          description: 'Storage directory for OAuth file credentials.',
+          placeholder: '~/.cli-proxy-api',
+        },
+        oauthAuthAutoRefreshWorkers: {
+          label: 'Auto refresh workers',
+          description:
+            'Concurrent workers for OAuth credential auto refresh. 0 lets the backend default apply.',
+        },
+        oauthCodexHeaderUserAgent: {
+          label: 'Codex User-Agent',
+          description:
+            'Default User-Agent header sent to the Codex OAuth upstream. Empty uses the backend default.',
+        },
+        oauthCodexHeaderBetaFeatures: {
+          label: 'Codex beta features header',
+          description:
+            'beta-features header sent to the Codex OAuth upstream. Empty uses the backend default.',
+        },
+        liveMediaRelayEnabled: {
+          label: 'Enable live media relay',
+          description: 'Enable the Codex live media (WebRTC) relay.',
+        },
+        liveMediaRelayMaxSessions: {
+          label: 'Max relay sessions',
+          description:
+            'Maximum concurrent sessions for the live media relay. 0 uses the backend default of 32.',
+        },
+        liveMediaRelayDisablePrivateRemoteIps: {
+          label: 'Disable private remote IPs',
+          description: 'Reject private remote IPs in the live media relay.',
+        },
+        liveMediaRelayPublicIp: {
+          label: 'Public IP',
+          description: 'Public IP advertised by the relay. Empty auto-detects it.',
+        },
+        liveMediaRelayUdpPortMin: {
+          label: 'UDP port range min',
+          description:
+            'Lower bound of the UDP port range used by the relay. Must be configured together with the upper bound.',
+        },
+        liveMediaRelayUdpPortMax: {
+          label: 'UDP port range max',
+          description:
+            'Upper bound of the UDP port range used by the relay. Must be configured together with the lower bound.',
+        },
+        liveMediaRelayIceServersJson: {
+          label: 'ICE servers',
+          description:
+            'JSON array of STUN/TURN servers. Note: reading back JSON masks username/credential; only entries whose urls are unchanged keep their existing credentials. Changing urls requires re-entering the credentials.',
+        },
+        devinSensitiveWordsJson: {
+          label: 'Devin sensitive words obfuscation',
+          description:
+            'Insert zero-width spaces into matching Devin system prompts to reduce exact keyword detection upstream.',
+        },
+        aistudioWsAuth: {
+          label: 'AI Studio WS auth',
+          description:
+            'AI Studio WebSocket authentication switch. Home normalizes this to disabled; the switch cannot be changed.',
+        },
+        oauthRequestScopedErrorsJson: {
+          label: 'Request-scoped error rules',
+          description:
+            'Error handling rules keyed by provider. Each rule has the shape {status, match[], match-regexr[], action}.',
+          placeholder: '{}',
+        },
+        antigravityCredits: {
+          label: 'Antigravity credits',
+          description: 'Enable Antigravity credits billing behavior.',
+        },
+        antigravitySignatureCacheEnabled: {
+          label: 'Signature cache',
+          description:
+            'Control Antigravity request signature caching. Unset lets the backend default decide.',
+        },
+        antigravitySignatureBypassStrict: {
+          label: 'Strict signature bypass',
+          description:
+            'Control strict bypass behavior for Antigravity signature verification. Unset lets the backend default decide.',
+        },
+        antigravityConnPoolEnabled: {
+          label: 'Connection pool',
+          description: 'Use a persistent connection pool for the Antigravity upstream.',
+        },
+        antigravityConnPoolIdleTimeout: {
+          label: 'Connection pool idle timeout',
+          description:
+            'Maximum retention of idle connections (Go duration), capped at 210s. Empty uses the backend default.',
+          placeholder: 'Capped at 210s',
+        },
+        antigravityConnPoolMaxIdleConnsPerHost: {
+          label: 'Max idle connections per host',
+          description: 'Maximum idle connections the pool keeps per host.',
+        },
+        multimediaDisableImageGeneration: {
+          label: 'Image generation mode',
+          description: 'Control how image generation requests are handled.',
+          options: {
+            false: 'Keep enabled (false)',
+            true: 'Disabled (true)',
+            chat: 'Convert to chat (chat)',
+            passthrough: 'Passthrough (passthrough)',
+          },
+        },
+        multimediaGptImage2BaseModel: {
+          label: 'GPT Image 2 base model',
+          description: 'Base model used for image generation rewriting.',
+          placeholder: 'Default gpt-5.4-mini',
+        },
+        multimediaVideoResultAuthCacheTtl: {
+          label: 'Video result auth cache TTL',
+          description:
+            'Cache duration for video result authorization data (Go duration). Empty restores the backend default.',
+          placeholder: 'Default 3h',
+        },
       },
       routingStrategies: {
         'round-robin': 'Round robin',
+        'weighted-round-robin': 'Weighted round robin',
         'fill-first': 'Fill first',
         unknown: 'Unknown',
+      },
+      nullableBoolean: {
+        unset: 'Unset (default)',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+      },
+      stringList: {
+        serverAllowHostJson: {
+          placeholder: 'example.com\nadmin.example.com',
+          hint: 'One allowed Host per line. Empty lines are dropped when saving.',
+          count: '{{count}} Hosts configured',
+        },
+        serverTrustedProxiesJson: {
+          placeholder: '10.0.0.0/8\n192.168.1.10',
+          hint: 'One proxy IP or CIDR per line. Empty lines are dropped when saving.',
+          count: '{{count}} trusted proxies configured',
+        },
+        discoverySubtypesJson: {
+          placeholder: '_home\n_management',
+          hint: 'One mDNS subtype per line. Empty lines are dropped when saving.',
+          count: '{{count}} subtypes configured',
+        },
+        discoveryInterfacesIncludeJson: {
+          placeholder: 'en0\neth0',
+          hint: 'One interface name per line. Empty lines are dropped when saving.',
+          count: '{{count}} interfaces included',
+        },
+        discoveryInterfacesExcludeJson: {
+          placeholder: 'utun0\nawdl0',
+          hint: 'One interface name per line. Empty lines are dropped when saving.',
+          count: '{{count}} interfaces excluded',
+        },
+        devinSensitiveWordsJson: {
+          placeholder: 'proxy\nAPI',
+          hint: 'One sensitive word per line. Matching is case-insensitive; empty lines are dropped when saving.',
+          count: '{{count}} sensitive words configured',
+        },
       },
       proxyPools: {
         title: 'Proxy pool',

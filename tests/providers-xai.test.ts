@@ -130,31 +130,33 @@ describe('xAI provider Management API integration', () => {
   })
 
   test('filters the xAI provider route from CPA snapshots', async () => {
-    const { requests, session } = createManagementAdapter((_method, pathname) => ({
-      [providerResponseKey(pathname)]: [],
-    }))
+    const { requests, session } = createManagementAdapter(() => [])
 
     const snapshot = await fetchProviderSnapshot(session, 'cpa')
 
     expect(snapshot.groups.map((group) => group.id)).not.toContain('xai')
-    expect(requests.some((request) => request.pathname.endsWith('/xai-api-key'))).toBe(false)
+    expect(requests.some((request) => request.pathname.endsWith('/config/api-keys/xai'))).toBe(
+      false,
+    )
   })
 
   test('keeps Dashboard xAI requests and summaries scoped to Home runtimes', async () => {
     const { requests, session } = createManagementAdapter((_method, pathname) => {
       const responseKey = providerResponseKey(pathname)
-      if (responseKey === 'config') return { 'api-keys': [] }
+      if (responseKey === 'config') return { access: { 'api-keys': [] } }
       if (responseKey === 'latest-version') return { 'latest-version': 'v1.0.0' }
-      if (responseKey === 'auth-files') return { files: [] }
-      if (responseKey === 'xai-api-key') {
-        return { 'xai-api-key': [{ id: 'xai-auth-id', disabled: false }] }
+      if (responseKey === 'credentials') return { files: [] }
+      if (responseKey === 'xai') {
+        return [{ id: 'xai-auth-id', disabled: false }]
       }
       return { [responseKey]: [] }
     })
 
     const cpaSnapshot = await fetchManagementDashboardSnapshot(session, noCapabilities, 'cpa')
     expect(cpaSnapshot.providers.map((provider) => provider.id)).not.toContain('xai')
-    expect(requests.some((request) => request.pathname.endsWith('/xai-api-key'))).toBe(false)
+    expect(requests.some((request) => request.pathname.endsWith('/config/api-keys/xai'))).toBe(
+      false,
+    )
 
     requests.splice(0)
     const homeSnapshot = await fetchManagementDashboardSnapshot(
@@ -169,36 +171,35 @@ describe('xAI provider Management API integration', () => {
       disabled: 0,
     })
     expect(requests.some((request) => request.pathname.endsWith('/models'))).toBe(true)
-    expect(requests.some((request) => request.pathname.endsWith('/xai-api-key'))).toBe(true)
+    expect(requests.some((request) => request.pathname.endsWith('/config/api-keys/xai'))).toBe(true)
   })
 
-  test('round-trips xAI advanced fields and uses the returned auth ID', async () => {
+  test('round-trips xAI advanced fields and uses the returned key ID', async () => {
     const { requests, session } = createManagementAdapter((_method, pathname) => {
-      const responseKey = providerResponseKey(pathname)
-      if (responseKey !== 'xai-api-key') return { [responseKey]: [] }
+      if (!pathname.endsWith('/config/api-keys/xai')) return []
 
-      return {
-        'xai-api-key': [
-          {
-            id: 'xai-auth-id',
-            uuid: 'xai-auth-id',
-            auth_index: 'xai-auth-id',
-            'api-key': 'xai-test-key',
-            'base-url': 'https://api.x.ai/v1',
-            prefix: 'grok',
-            websockets: true,
-            'disable-cooling': true,
-            models: [
-              {
-                name: 'grok-4.5',
-                alias: 'grok-latest',
-                'display-name': 'Grok Latest',
-                'force-mapping': true,
-              },
-            ],
-          },
-        ],
-      }
+      return [
+        {
+          'base-url': 'https://api.x.ai/v1',
+          prefix: 'grok',
+          'disable-cooling': true,
+          models: [
+            {
+              name: 'grok-4.5',
+              alias: 'grok-latest',
+              'display-name': 'Grok Latest',
+              'force-mapping': true,
+            },
+          ],
+          keys: [
+            {
+              id: 'xai-auth-id',
+              'api-key': 'xai-test-key',
+              websockets: true,
+            },
+          ],
+        },
+      ]
     })
 
     const snapshot = await fetchProviderSnapshot(session, 'home-cluster')
@@ -215,9 +216,10 @@ describe('xAI provider Management API integration', () => {
     })
     expect(resource).toMatchObject({
       identifier: 'xai-auth-id',
-      authIndex: 'xai-auth-id',
+      authIndex: null,
       disableCooling: true,
       websockets: true,
+      selector: { id: 'xai-auth-id' },
     })
 
     if (!resource) throw new Error('Missing xAI test resource')
@@ -226,11 +228,10 @@ describe('xAI provider Management API integration', () => {
     await updateProviderStatus(session, resource, true)
 
     const updateRequest = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/xai-api-key'),
+      (request) => request.method === 'PUT' && request.pathname.endsWith('/config/api-keys/xai'),
     )
-    expect(updateRequest?.body).toEqual({
-      id: 'xai-auth-id',
-      value: {
+    expect(updateRequest?.body).toEqual([
+      {
         'base-url': 'https://api.x.ai/v1',
         'proxy-url': 'socks5://127.0.0.1:1080',
         prefix: 'grok',
@@ -246,25 +247,23 @@ describe('xAI provider Management API integration', () => {
         ],
         'excluded-models': ['grok-3-*'],
         'disable-cooling': true,
-        websockets: true,
+        keys: [{ id: 'xai-auth-id', 'api-key': 'xai-test-key', websockets: true }],
       },
-    })
+    ])
 
     const statusRequest = requests.find((request) =>
-      request.pathname.endsWith('/auth-files/status'),
+      request.pathname.endsWith('/credentials/status'),
     )
     expect(statusRequest?.body).toEqual({ name: 'xai-auth-id', disabled: true })
   })
 
   test('creates xAI entries with the audited native payload', async () => {
-    const { requests, session } = createManagementAdapter((_method, pathname) => ({
-      [providerResponseKey(pathname)]: [],
-    }))
+    const { requests, session } = createManagementAdapter(() => [])
 
     await createProviderResource(session, 'xai', createXaiForm())
 
     const createRequest = requests.find(
-      (request) => request.method === 'PUT' && request.pathname.endsWith('/xai-api-key'),
+      (request) => request.method === 'PUT' && request.pathname.endsWith('/config/api-keys/xai'),
     )
     expect(createRequest?.body).toEqual([
       {
@@ -283,8 +282,7 @@ describe('xAI provider Management API integration', () => {
         ],
         'excluded-models': ['grok-3-*'],
         'disable-cooling': true,
-        websockets: true,
-        'api-key': 'xai-test-key',
+        keys: [{ 'api-key': 'xai-test-key', websockets: true }],
       },
     ])
   })

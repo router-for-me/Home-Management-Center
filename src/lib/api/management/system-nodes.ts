@@ -246,14 +246,20 @@ async function readOptional<T>(
 
 function normalizeConfigSummary(responseData: unknown): SystemConfigSummary {
   const config = toRecord(responseData)
+  // v8 persisted config tree; optional absent fields are omitted, so every read
+  // keeps its default fallback (false / null / round-robin).
+  const observability = toRecord(config.observability)
+  const logs = toRecord(observability.logs)
+  const usage = toRecord(observability.usage)
+  const requests = toRecord(config.requests)
 
   return {
-    debug: readBoolean(config, 'debug'),
-    requestLog: readBoolean(config, 'request-log'),
-    usageStatistics: readBoolean(config, 'usage-statistics-enabled'),
-    loggingToFile: readBoolean(config, 'logging-to-file'),
+    debug: readBoolean(logs, 'debug'),
+    requestLog: readBoolean(logs, 'request-log'),
+    usageStatistics: readBoolean(usage, 'usage-statistics-enabled'),
+    loggingToFile: readBoolean(logs, 'logging-to-file'),
     routingStrategy: readManagementRoutingStrategy(config),
-    proxyConfigured: Boolean(readString(config, 'proxy-url')),
+    proxyConfigured: Boolean(readString(requests, 'proxy-url')),
   }
 }
 
@@ -541,7 +547,7 @@ export async function fetchSystemNodesSnapshot(
       issues,
       'latestVersion',
       async () => {
-        const response = await client.get<unknown>('/latest-version')
+        const response = await client.get<unknown>('/server/latest-version')
         homeVersion = readResponseHeader(response, 'x-cpa-home-version')
         latestVersion = readString(toRecord(response.data), 'latest-version')
         return true
@@ -714,7 +720,7 @@ export async function runManagementApiCall(
   input: ApiCallInput,
 ): Promise<ApiCallResult> {
   const client = createManagementClient(session)
-  const response = await client.post<unknown>('/api-call', {
+  const response = await client.post<unknown>('/requests/api-call', {
     auth_index: input.authIndex.trim() || undefined,
     method: input.method.trim().toUpperCase(),
     url: input.url.trim(),

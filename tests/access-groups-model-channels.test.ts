@@ -101,7 +101,7 @@ describe('access group model channel bindings', () => {
   test('reads the declared model_channel_bindings capability bit', async () => {
     let declared: boolean | undefined = true
     const adapter: AxiosAdapter = async (config) => {
-      if (config.url === '/config') return response(config, {})
+      if (config.url === '/config') return response(config, { 'config-version': 8 })
       if (config.url === '/capabilities') {
         return response(config, {
           capabilities: declared === undefined ? {} : { model_channel_bindings: declared },
