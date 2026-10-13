@@ -869,6 +869,8 @@ export const en = {
         title: 'Charge records',
         empty: 'No charge records in the selected range.',
         tokenSummary: 'In {{input}} / Out {{output}} / Cache {{cache}}',
+        tokenSummaryCacheSplit:
+          'In {{input}} / Out {{output}} / Cache R {{cacheRead}} / W {{cacheWrite}}',
         columns: {
           time: 'Time',
           user: 'User',

@@ -141,6 +141,7 @@ import type {
   UsageRecordSortableField,
   UsageRecordsPage,
   UsageTokenBreakdown,
+  UsageTokens,
 } from '@/lib/api/management/usage-logs'
 import { formatCreditAmount, formatUsageAmount } from '@/lib/billing/amount-format'
 import { formatCompactNumber, formatNumber, getNumberLocale } from '@/lib/number-format'
@@ -3760,17 +3761,23 @@ function QuotaWindowProgress({ window }: { window: UsageQuotaWindow }) {
   )
 }
 
-function RequestTokenBreakdown({ record }: { record: UsageRecord }) {
+export function RequestTokenBreakdown({
+  tokens,
+  tokenBreakdown,
+}: {
+  tokens: UsageTokens
+  tokenBreakdown: UsageTokenBreakdown | null
+}) {
   const { t } = useTranslation()
-  const breakdown = record.tokenBreakdown
+  const breakdown = tokenBreakdown
   const legacyTokenFields = [
-    ['input', record.tokens.inputTokens],
-    ['output', record.tokens.outputTokens],
-    ['reasoning', record.tokens.reasoningTokens],
-    ['cached', record.tokens.cachedTokens],
-    ['cacheRead', record.tokens.cacheReadTokens],
-    ['cacheCreate', record.tokens.cacheCreationTokens],
-    ['total', record.tokens.totalTokens],
+    ['input', tokens.inputTokens],
+    ['output', tokens.outputTokens],
+    ['reasoning', tokens.reasoningTokens],
+    ['cached', tokens.cachedTokens],
+    ['cacheRead', tokens.cacheReadTokens],
+    ['cacheCreate', tokens.cacheCreationTokens],
+    ['total', tokens.totalTokens],
   ] as const
 
   return (
@@ -4030,7 +4037,10 @@ export function RequestDetailSheet({
                 </DiagnosticDetailField>
               </div>
 
-              <RequestTokenBreakdown record={record} />
+              <RequestTokenBreakdown
+                tokens={record.tokens}
+                tokenBreakdown={record.tokenBreakdown}
+              />
 
               <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                 <DiagnosticDetailField label={t('usageLogsPage.detail.fields.latency')}>

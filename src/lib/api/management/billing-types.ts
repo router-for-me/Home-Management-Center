@@ -85,6 +85,10 @@ export type ChargeRecord = {
   inputTokens: number
   outputTokens: number
   cacheTokens: number
+  // Canonical cache read/write buckets; null when the backend has no complete
+  // v2 accounting for the charge, in which case clients show cacheTokens.
+  cacheReadTokens: number | null
+  cacheWriteTokens: number | null
   amount: number
   balanceBefore: number
   balanceAfter: number

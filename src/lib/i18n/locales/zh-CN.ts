@@ -834,6 +834,8 @@ export const zhCN = {
         title: '扣款明细',
         empty: '当前时间范围内没有扣款明细。',
         tokenSummary: '入 {{input}} / 出 {{output}} / 缓 {{cache}}',
+        tokenSummaryCacheSplit:
+          '入 {{input}} / 出 {{output}} / 缓读 {{cacheRead}} / 缓写 {{cacheWrite}}',
         columns: {
           time: '时间',
           user: '用户',

@@ -112,6 +112,7 @@ export function useRequestEventsWorkbench() {
     session.baseUrl,
     connectedAt,
     capabilities.requestEvents,
+    capabilities.usageTokenBreakdownV2,
     filters,
   ] as const
 
@@ -123,7 +124,7 @@ export function useRequestEventsWorkbench() {
     refetchOnReconnect: false,
     queryFn: async () => {
       try {
-        return await fetchRequestEvents(session, filters)
+        return await fetchRequestEvents(session, filters, capabilities.usageTokenBreakdownV2)
       } catch (error) {
         throw toRequestEventsApiError(error)
       }
@@ -136,6 +137,7 @@ export function useRequestEventsWorkbench() {
       session.baseUrl,
       connectedAt,
       capabilities.requestEvents,
+      capabilities.usageTokenBreakdownV2,
       filters,
     ],
     enabled:
@@ -150,7 +152,11 @@ export function useRequestEventsWorkbench() {
     refetchIntervalInBackground: false,
     queryFn: async () => {
       try {
-        return await fetchRequestEvents(session, { ...filters, offset: 0 })
+        return await fetchRequestEvents(
+          session,
+          { ...filters, offset: 0 },
+          capabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toRequestEventsApiError(error)
       }
@@ -228,6 +234,7 @@ export function useRequestEventsWorkbench() {
       session.baseUrl,
       connectedAt,
       capabilities.requestEventDetails,
+      capabilities.usageTokenBreakdownV2,
       selectedEventId,
     ],
     enabled:
@@ -242,7 +249,11 @@ export function useRequestEventsWorkbench() {
       if (!selectedEventId) throw new Error('Request event is not selected')
 
       try {
-        return await fetchRequestEventDetail(session, selectedEventId)
+        return await fetchRequestEventDetail(
+          session,
+          selectedEventId,
+          capabilities.usageTokenBreakdownV2,
+        )
       } catch (error) {
         throw toRequestEventsApiError(error)
       }

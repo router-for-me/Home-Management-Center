@@ -185,6 +185,32 @@ function formatUnpricedChargeMessage(
   })
 }
 
+export function formatChargeTokenSummary(
+  record: Pick<
+    ChargeRecord,
+    'inputTokens' | 'outputTokens' | 'cacheTokens' | 'cacheReadTokens' | 'cacheWriteTokens'
+  >,
+  t: ReturnType<typeof useTranslation>['t'],
+) {
+  const input = formatNumber(record.inputTokens)
+  const output = formatNumber(record.outputTokens)
+  // The split is null without complete v2 token accounting on the linked usage
+  // row; keep the combined cache counter instead of showing a fabricated split.
+  if (record.cacheReadTokens == null || record.cacheWriteTokens == null) {
+    return t('billingPage.charges.tokenSummary', {
+      input,
+      output,
+      cache: formatNumber(record.cacheTokens),
+    })
+  }
+  return t('billingPage.charges.tokenSummaryCacheSplit', {
+    input,
+    output,
+    cacheRead: formatNumber(record.cacheReadTokens),
+    cacheWrite: formatNumber(record.cacheWriteTokens),
+  })
+}
+
 function toModelPriceInput(
   resource: ModelPrice,
   enabled = resource.enabled,
@@ -860,11 +886,7 @@ function ChargeRecordsTab({
                           {record.requestId}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {t('billingPage.charges.tokenSummary', {
-                            input: formatNumber(record.inputTokens),
-                            output: formatNumber(record.outputTokens),
-                            cache: formatNumber(record.cacheTokens),
-                          })}
+                          {formatChargeTokenSummary(record, t)}
                         </TableCell>
                       </>
                     ) : null}

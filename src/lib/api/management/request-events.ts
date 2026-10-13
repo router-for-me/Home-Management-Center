@@ -1,5 +1,7 @@
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
+import { parseUsageTokenBreakdown } from '@/lib/api/management/usage-logs'
+import type { UsageTokenBreakdown } from '@/lib/api/management/usage-logs'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -144,6 +146,7 @@ export type RequestEvent = {
   client: RequestEventClient | null
   error: RequestEventError | null
   tokens: RequestEventTokens
+  tokenBreakdown: UsageTokenBreakdown | null
   performance: RequestEventPerformance
   billing: RequestEventBilling | null
   related: RequestEventRelated | null
@@ -591,7 +594,11 @@ function normalizeRelated(value: unknown): RequestEventRelated | null {
   }
 }
 
-function normalizeRequestEvent(value: unknown, index: number): RequestEvent {
+function normalizeRequestEvent(
+  value: unknown,
+  index: number,
+  tokenBreakdownV2 = false,
+): RequestEvent {
   const record = toRecord(value)
   const statusText = readString(record, 'status')?.toLowerCase()
   const explicitFailed = readBoolean(record, 'failed')
@@ -638,10 +645,27 @@ function normalizeRequestEvent(value: unknown, index: number): RequestEvent {
     client: normalizeClient(record.client),
     error,
     tokens: normalizeTokens(record.tokens),
+    tokenBreakdown: normalizeTokenBreakdown(
+      record.token_breakdown ?? record.tokenBreakdown,
+      tokenBreakdownV2,
+    ),
     performance: normalizePerformance(record.performance, record),
     billing: normalizeBilling(record.billing),
     related: normalizeRelated(record.related),
     raw: record,
+  }
+}
+
+// The usage_token_breakdown_v2 capability shipped with /usage/records, while
+// /request-events gained the field one release later — a capable backend can
+// still omit it here, so an unparseable payload degrades to the flat counters
+// instead of failing the whole query.
+function normalizeTokenBreakdown(value: unknown, enabled: boolean): UsageTokenBreakdown | null {
+  if (!enabled) return null
+  try {
+    return parseUsageTokenBreakdown(value)
+  } catch {
+    return null
   }
 }
 
@@ -662,9 +686,14 @@ function normalizeSort(value: string | null): RequestEventSortKey {
     : 'timestamp_desc'
 }
 
-function normalizeRequestEventsPage(responseData: unknown): RequestEventsPage {
+export function normalizeRequestEventsPage(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): RequestEventsPage {
   const root = toRecord(responseData)
-  const items = readArray(root.items ?? root.events ?? root.records).map(normalizeRequestEvent)
+  const items = readArray(root.items ?? root.events ?? root.records).map((item, index) =>
+    normalizeRequestEvent(item, index, tokenBreakdownV2),
+  )
   return {
     items,
     total:
@@ -688,9 +717,12 @@ function normalizePayloadSummary(value: unknown): RequestEventPayloadSummary | n
   }
 }
 
-function normalizeRequestEventDetail(responseData: unknown): RequestEventDetail {
+export function normalizeRequestEventDetail(
+  responseData: unknown,
+  tokenBreakdownV2 = false,
+): RequestEventDetail {
   const root = toRecord(responseData)
-  const event = normalizeRequestEvent(root.event ?? root.record ?? root, 0)
+  const event = normalizeRequestEvent(root.event ?? root.record ?? root, 0, tokenBreakdownV2)
   return {
     event,
     payloadSummary: normalizePayloadSummary(root.payload_summary ?? root.payloadSummary),
@@ -780,12 +812,13 @@ export function toRequestEventsApiError(error: unknown): RequestEventsApiError {
 export async function fetchRequestEvents(
   session: ManagementSessionInput,
   filters: RequestEventFilters,
+  tokenBreakdownV2 = false,
 ): Promise<RequestEventsPage> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/request-events', {
     params: getRequestEventQueryParams(filters),
   })
-  return normalizeRequestEventsPage(response.data)
+  return normalizeRequestEventsPage(response.data, tokenBreakdownV2)
 }
 
 export async function fetchRequestEventFilterOptions(
@@ -814,6 +847,7 @@ export async function fetchRequestEventFilterOptions(
 export async function fetchRequestEventDetail(
   session: ManagementSessionInput,
   eventId: string,
+  tokenBreakdownV2 = false,
 ): Promise<RequestEventDetail> {
   const client = createManagementClient(session)
   const response = await client.get<unknown>(`/request-events/${encodeURIComponent(eventId)}`, {
@@ -823,7 +857,7 @@ export async function fetchRequestEventDetail(
       include_related: true,
     },
   })
-  return normalizeRequestEventDetail(response.data)
+  return normalizeRequestEventDetail(response.data, tokenBreakdownV2)
 }
 
 export async function exportRequestEvents(

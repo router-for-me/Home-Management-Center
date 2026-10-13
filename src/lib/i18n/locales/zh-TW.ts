@@ -834,6 +834,8 @@ export const zhTW = {
         title: '扣款明細',
         empty: '目前時間範圍內沒有扣款明細。',
         tokenSummary: '入 {{input}} / 出 {{output}} / 快取 {{cache}}',
+        tokenSummaryCacheSplit:
+          '入 {{input}} / 出 {{output}} / 快取讀 {{cacheRead}} / 快取寫 {{cacheWrite}}',
         columns: {
           time: '時間',
           user: '使用者',
