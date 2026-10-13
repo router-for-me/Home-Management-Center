@@ -426,6 +426,12 @@ export function useLogsWorkbench() {
     runtimeLogLimit,
     runtimeLogOffset,
     runtimeLogFilters,
+    runtimeLogSearchUnsupported:
+      runtimeLogFilters.search.trim() !== '' &&
+      Boolean(runtimeLogsQuery.data) &&
+      !runtimeLogsQuery.isPlaceholderData &&
+      !runtimeLogsQuery.isFetching &&
+      runtimeLogsQuery.data?.appliedSearch !== runtimeLogFilters.search.trim(),
     runtimeLogPageSizeOptions,
     setRuntimeLogLimit,
     setRuntimeLogFilters,

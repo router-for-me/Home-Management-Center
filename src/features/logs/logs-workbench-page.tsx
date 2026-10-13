@@ -228,6 +228,7 @@ export function LogsWorkbenchPage() {
         canClear={workbench.capabilities.logs && context.settings.fileLoggingEnabled}
         fileLoggingEnabled={context.settings.fileLoggingEnabled}
         filters={workbench.runtimeLogFilters}
+        searchUnsupported={workbench.runtimeLogSearchUnsupported}
         pageSizeOptions={workbench.runtimeLogPageSizeOptions}
         pageSize={workbench.runtimeLogLimit}
         offset={workbench.runtimeLogOffset}

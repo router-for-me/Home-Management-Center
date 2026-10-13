@@ -4755,6 +4755,8 @@ export const zhTW = {
         emptyPage: '請返回上一頁或重新同步。',
         latest: '最新日誌：{{time}}',
         latestUnavailable: '日誌時間不可用',
+        searchUnsupported:
+          '目前後端不支援日誌內容檢索，檢索條件未生效。請升級 CLIProxyAPIHome 後重試。',
         columns: {
           time: '時間',
           level: '級別',
@@ -4779,6 +4781,7 @@ export const zhTW = {
             requestId: 'Request ID',
             homeIp: 'Home IP',
             clientIp: 'Client IP',
+            search: '日誌內容',
           },
           levels: {
             all: '全部級別',
@@ -4792,8 +4795,12 @@ export const zhTW = {
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 筆',
           pageSize: '每頁筆數',
+          first: '首頁',
           previous: '上一頁',
           next: '下一頁',
+          pageIndicator: '第 {{page}} / {{pages}} 頁',
+          jumpInput: '頁碼',
+          jump: '跳轉',
         },
         detail: {
           title: '日誌詳情',

@@ -4754,6 +4754,8 @@ export const zhCN = {
         emptyPage: '请返回上一页或重新同步。',
         latest: '最新日志：{{time}}',
         latestUnavailable: '日志时间不可用',
+        searchUnsupported:
+          '当前后端不支持日志内容检索，检索条件未生效。请升级 CLIProxyAPIHome 后重试。',
         columns: {
           time: '时间',
           level: '级别',
@@ -4778,6 +4780,7 @@ export const zhCN = {
             requestId: 'Request ID',
             homeIp: 'Home IP',
             clientIp: 'Client IP',
+            search: '日志内容',
           },
           levels: {
             all: '全部级别',
@@ -4791,8 +4794,12 @@ export const zhCN = {
         pagination: {
           range: '{{start}}-{{end}} / 共 {{total}} 条',
           pageSize: '每页条数',
+          first: '首页',
           previous: '上一页',
           next: '下一页',
+          pageIndicator: '第 {{page}} / {{pages}} 页',
+          jumpInput: '页码',
+          jump: '跳转',
         },
         detail: {
           title: '日志详情',

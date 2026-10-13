@@ -199,6 +199,7 @@ export type RuntimeLogSnapshot = {
   total: number | null
   limit: number | null
   offset: number | null
+  appliedSearch: string | null
 }
 
 export type RuntimeLogLevelFilter = 'all' | 'trace' | 'debug' | 'info' | 'warn' | 'error'
@@ -207,6 +208,7 @@ export type RuntimeLogFilters = {
   homeIp: string
   clientIp: string
   requestId: string
+  search: string
   level: RuntimeLogLevelFilter
   after: string
   before: string
@@ -221,6 +223,7 @@ export const defaultRuntimeLogFilters: RuntimeLogFilters = {
   homeIp: '',
   clientIp: '',
   requestId: '',
+  search: '',
   level: 'all',
   after: '',
   before: '',
@@ -972,6 +975,7 @@ function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogS
     total: readNumber(record, 'total'),
     limit: readNumber(record, 'limit'),
     offset: readNumber(record, 'offset'),
+    appliedSearch: readString(record, 'search'),
   }
 }
 
@@ -1834,6 +1838,7 @@ function getRuntimeLogQueryParams(query: RuntimeLogQuery) {
   const homeIp = query.homeIp.trim()
   const clientIp = query.clientIp.trim()
   const requestId = query.requestId.trim()
+  const search = query.search.trim()
   const after = normalizeRuntimeLogTimeFilter(query.after)
   const before = normalizeRuntimeLogTimeFilter(query.before)
 
@@ -1843,6 +1848,7 @@ function getRuntimeLogQueryParams(query: RuntimeLogQuery) {
     ...(homeIp ? { home_ip: homeIp } : {}),
     ...(clientIp ? { client_ip: clientIp } : {}),
     ...(requestId ? { request_id: requestId } : {}),
+    ...(search ? { search } : {}),
     ...(query.level !== 'all' ? { level: query.level } : {}),
     ...(after ? { after } : {}),
     ...(before ? { before } : {}),
