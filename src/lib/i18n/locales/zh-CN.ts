@@ -120,7 +120,7 @@ export const zhCN = {
       close: '关闭连接弹窗',
       baseUrl: '管理端地址',
       baseUrlHintDev:
-        '开发联调：填写后端服务地址，例如 http://127.0.0.1:8327；会自动补齐 /v0/management。',
+        '开发联调：填写后端服务地址，例如 http://127.0.0.1:8327；会自动补齐 /v8/management。',
       detectedRuntime: '已检测到可用管理端：{{endpoint}}',
       detectedProxyEndpoint: '已检测到同源代理入口：{{endpoint}}',
       managementKey: 'Management key',
@@ -134,6 +134,11 @@ export const zhCN = {
       connectedAs: '已连接到 {{mode}}。',
       errors: {
         managementKeyRequired: '必须填写 management key。',
+        unsupportedApiVersion: {
+          title: '后端 Management API 版本过旧',
+          description:
+            '该后端仅提供旧版 Management API。请将 CLIProxyAPIHome 升级到支持 V8 Management API 的版本后重试。',
+        },
       },
     },
     embeddedPortal: {
@@ -2821,7 +2826,12 @@ export const zhCN = {
         server: {
           title: '服务运行',
           shortTitle: '服务',
-          description: '影响运行时诊断和服务行为的基础开关。',
+          description: '配置监听端口、绑定地址、主机名校验、可信代理和商业版模式等基础服务行为。',
+        },
+        discovery: {
+          title: '服务发现',
+          shortTitle: '发现',
+          description: '配置 mDNS 服务发现广播：服务名、服务类型、子类型、网卡范围与接入控制。',
         },
         tls: {
           title: 'TLS',
@@ -2833,6 +2843,11 @@ export const zhCN = {
           shortTitle: '管理',
           description: '控制管理端远程访问、管理密钥和控制面板更新策略。',
         },
+        userEmail: {
+          title: '用户邮件',
+          shortTitle: '邮件',
+          description: '配置用户验证与密码找回邮件的发送：发件人身份、SMTP 连接和令牌有效期。',
+        },
         plugins: {
           title: '插件设置',
           shortTitle: '插件',
@@ -2841,17 +2856,29 @@ export const zhCN = {
         oauthRules: {
           title: 'OAuth 模型规则',
           shortTitle: 'OAuth 规则',
-          description: '配置 OAuth 与文件凭证的排除模型和客户端可见模型别名。',
+          description: '配置 OAuth 与文件凭证的排除模型、客户端可见模型别名和按请求范围错误规则。',
+        },
+        oauthProviders: {
+          title: 'OAuth 提供商',
+          shortTitle: '提供商',
+          description: '配置 OAuth 凭证目录、自动刷新并发和各提供商级开关。',
+        },
+        liveMediaRelay: {
+          title: '实时媒体中继',
+          shortTitle: '媒体中继',
+          description:
+            '配置 Codex 实时媒体(音频/视频)中继的会话上限、公网 IP、UDP 端口范围与 ICE 服务器。',
         },
         system: {
           title: '日志与统计',
           shortTitle: '日志',
-          description: '控制请求日志、文件日志、用量统计和日志保留。',
+          description:
+            '控制 Debug 诊断、请求日志、文件日志、用量统计、日志保留、pprof 和 Redis 用量队列。',
         },
         network: {
           title: '网络代理',
           shortTitle: '网络',
-          description: '配置服务端出站请求使用的代理地址。',
+          description: '配置服务端出站请求使用的代理地址和请求 Header 透传。',
         },
         quota: {
           title: '额度处理',
@@ -2861,7 +2888,30 @@ export const zhCN = {
         streaming: {
           title: '重试与路由',
           shortTitle: '路由',
-          description: '控制请求重试、模型前缀匹配和模型服务路由策略。',
+          description: '控制请求重试、模型前缀匹配、路由策略、会话亲和、冷却持久化与传输保活。',
+        },
+        credentialConcurrency: {
+          title: '凭证并发',
+          shortTitle: '并发',
+          description:
+            '调整 CPA 心跳、回收与释放调度的并发参数。任一 CPA 在线（active/canceling）时，前 4 项不可修改，后端会拒绝写入。',
+        },
+        credentialInFlight: {
+          title: '在途请求快照',
+          shortTitle: '在途',
+          description:
+            '控制在途请求观测快照的采集频率与内存上限；stale-after 必须不小于 snapshot-interval 的 3 倍。',
+        },
+        upstream: {
+          title: '上游行为',
+          shortTitle: '上游',
+          description: '控制发往 Codex、Claude、xAI 上游的请求伪装、冷却与流式行为。',
+        },
+        headers: {
+          title: '请求头伪装',
+          shortTitle: '请求头',
+          description:
+            '配置发往 Claude 与 Codex 上游的默认请求头,用于客户端身份伪装与设备画像稳定。',
         },
         payload: {
           title: '请求参数改写',
@@ -2871,7 +2921,12 @@ export const zhCN = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '配置 Antigravity 反重力网关行为与系统提示词敏感词混淆。',
+          description: '配置 Antigravity 反重力网关行为、敏感词混淆、额度与连接池。',
+        },
+        multimedia: {
+          title: '多媒体',
+          shortTitle: '多媒体',
+          description: '控制图像生成处理方式和视频结果鉴权缓存等多媒体行为。',
         },
       },
       fields: {
@@ -2899,7 +2954,7 @@ export const zhCN = {
         },
         usageStatisticsEnabled: {
           label: '用量统计',
-          description: '记录客户端密钥和请求维度的用量数据。',
+          description: '记录客户端密钥和请求维度的用量数据。Home 强制归一为开启，此开关不可修改。',
         },
         tlsEnable: {
           label: '启用 HTTPS',
@@ -3016,11 +3071,486 @@ export const zhCN = {
           description: '在 Antigravity 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
           placeholder: 'proxy\nAPI',
         },
+        serverHost: {
+          label: '监听地址',
+          description: '服务端绑定的监听地址；留空表示监听所有网卡。',
+          placeholder: '0.0.0.0',
+        },
+        serverAllowHostJson: {
+          label: '允许的 Host 请求头',
+          description: '逐行填写允许访问的 HTTP Host；空数组表示不限制。',
+        },
+        serverTrustedProxiesJson: {
+          label: '受信代理',
+          description:
+            '逐行填写受信代理 IP 或 CIDR；只有来自这些代理的 X-Forwarded-For 才会被采信。',
+        },
+        serverCommercialMode: {
+          label: '商业化模式',
+          description: '开启后启用面向商业部署的服务端行为约束。',
+        },
+        discoveryEnabled: {
+          label: '启用服务发现',
+          description: '开启后通过 mDNS 广播本实例，便于局域网内的 CPA 自动发现。',
+        },
+        discoveryServiceName: {
+          label: '服务名',
+          description: 'mDNS 广播使用的服务实例名。',
+          placeholder: 'CLIProxyAPIHome',
+        },
+        discoveryServiceType: {
+          label: '服务类型',
+          description: 'mDNS 服务类型（service type），通常保持默认值。',
+          placeholder: '_cliproxyapi._tcp',
+        },
+        discoverySubtypesJson: {
+          label: '服务子类型',
+          description: '逐行填写附加的 mDNS subtype，用于更细粒度的发现过滤。',
+        },
+        discoveryInterfacesIncludeJson: {
+          label: '网卡包含列表',
+          description: '逐行填写仅在这些网卡上广播的网卡名；空数组表示不限制。',
+        },
+        discoveryInterfacesExcludeJson: {
+          label: '网卡排除列表',
+          description: '逐行填写不参与广播的网卡名。',
+        },
+        discoveryAuthRequired: {
+          label: '发现需要认证',
+          description: '开启后在发现响应中标记需要认证才能接入。',
+        },
+        discoveryAdvertiseManagement: {
+          label: '广播管理端',
+          description: '开启后在发现广播中附带管理端接入信息。',
+        },
+        managementBaseUrl: {
+          label: '管理端 Base URL',
+          description: '对外宣告的管理端访问地址；留空时按请求来源推断。',
+          placeholder: 'https://admin.example.com',
+        },
+        userEmailEnabled: {
+          label: '启用用户邮件',
+          description: '开启后按以下配置发送用户验证与密码找回邮件。',
+        },
+        userEmailPublicUrl: {
+          label: '用户站公开 URL',
+          description: '邮件中回调链接使用的外部访问地址。',
+          placeholder: 'https://home.example.com',
+        },
+        userEmailFromAddress: {
+          label: '发件地址',
+          description: '邮件 From 使用的发件邮箱地址。',
+          placeholder: 'no-reply@example.com',
+        },
+        userEmailFromName: {
+          label: '发件人名称',
+          description: '邮件 From 使用的显示名称。',
+          placeholder: 'Home Center',
+        },
+        userEmailSmtpHost: {
+          label: 'SMTP 主机',
+          description: 'SMTP 服务器主机名或 IP。',
+          placeholder: 'smtp.example.com',
+        },
+        userEmailSmtpPort: {
+          label: 'SMTP 端口',
+          description: 'SMTP 服务器端口（1~65535）；0 表示未配置，由后端按默认策略处理。',
+          placeholder: '465',
+        },
+        userEmailSmtpUsername: {
+          label: 'SMTP 用户名',
+          description: 'SMTP 认证用户名；留空表示不进行认证。',
+        },
+        userEmailSmtpPasswordEnv: {
+          label: 'SMTP 密码环境变量',
+          description: '保存 SMTP 密码的环境变量名；密码本身不写入配置。',
+          placeholder: 'SMTP_PASSWORD',
+        },
+        userEmailSmtpStarttls: {
+          label: '启用 STARTTLS',
+          description: '开启后 SMTP 连接使用 STARTTLS 升级加密。',
+        },
+        userEmailVerificationTokenTtl: {
+          label: '验证令牌有效期',
+          description: '邮箱验证令牌的有效时长（Go duration）；留空使用后端默认值。',
+          placeholder: '默认由后端决定',
+        },
+        userEmailResetTokenTtl: {
+          label: '重置令牌有效期',
+          description: '密码重置令牌的有效时长（Go duration）；留空使用后端默认值。',
+          placeholder: '默认由后端决定',
+        },
+        concurrencyCpaHeartbeatTimeout: {
+          label: 'CPA 心跳超时',
+          description: '判定 CPA 心跳失效的等待时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 3s',
+        },
+        concurrencyCpaCancelBound: {
+          label: 'CPA 取消收敛时长',
+          description: 'canceling 状态最长保留时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 5s',
+        },
+        concurrencyReclaimGrace: {
+          label: '回收宽限期',
+          description: '凭证失联后进入回收前的宽限时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 5s',
+        },
+        concurrencyCleanupInterval: {
+          label: '清理扫描间隔',
+          description: '并发状态清理的扫描间隔（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 5s',
+        },
+        concurrencyReleaseFlushInterval: {
+          label: '释放冲刷间隔',
+          description: '并发释放批量落盘的间隔（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 250ms',
+        },
+        concurrencyReleaseMaxBackoff: {
+          label: '释放最大退避',
+          description: '并发释放失败重试的最大退避时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 2s',
+        },
+        concurrencyBusyRetryMin: {
+          label: '繁忙重试最小间隔',
+          description: '并发占用冲突重试的最小间隔（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 250ms',
+        },
+        concurrencyBusyRetryMax: {
+          label: '繁忙重试最大间隔',
+          description: '并发占用冲突重试的最大间隔（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 1s',
+        },
+        concurrencyMaxLimit: {
+          label: '全局并发上限',
+          description: '全局允许的并发占用上限（1~1000000）。',
+        },
+        concurrencyLifecycleConfigRevision: {
+          label: '生命周期配置版本',
+          description: '后端维护的并发生命周期配置修订号，只读展示。',
+        },
+        concurrencyObservationBarrierRevision: {
+          label: '观测屏障版本',
+          description: '后端维护的并发观测屏障修订号，只读展示。',
+        },
+        inFlightSnapshotInterval: {
+          label: '快照采集间隔',
+          description: '在途请求快照的采集间隔（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 2s',
+        },
+        inFlightStaleAfter: {
+          label: '快照过期时长',
+          description:
+            '超过该时长未更新的在途记录视为过期（Go duration）；必须不小于采集间隔的 3 倍。',
+          placeholder: '默认 10s',
+        },
+        inFlightStagingRetention: {
+          label: '暂存保留时长',
+          description: '在途暂存数据的保留时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 1m',
+        },
+        inFlightMaxPartBytes: {
+          label: '单分片最大字节',
+          description: '在途快照单个分片允许的最大字节数。',
+        },
+        inFlightMaxPartCount: {
+          label: '最大分片数',
+          description: '在途快照允许的最大分片数量。',
+        },
+        inFlightMaxRevisionBytes: {
+          label: '单版本最大字节',
+          description: '在途快照单个版本允许的最大字节数。',
+        },
+        inFlightMaxAggregateGroups: {
+          label: '最大聚合组数',
+          description: '在途快照聚合允许的最大分组数量。',
+        },
+        inFlightMaxDetails: {
+          label: '最大明细条数',
+          description: '在途快照保留的最大明细条数。',
+        },
+        inFlightMaxStringBytes: {
+          label: '单字符串最大字节',
+          description: '在途快照单个字符串字段允许的最大字节数。',
+        },
+        sessionAffinity: {
+          label: '会话亲和',
+          description: '开启后同一会话优先路由到同一凭证。',
+        },
+        sessionAffinityTtl: {
+          label: '会话亲和有效期',
+          description: '会话亲和绑定的有效时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 1h',
+        },
+        sessionAffinitySubagents: {
+          label: '子代理会话亲和',
+          description: '开启后子代理请求也参与会话亲和路由。',
+        },
+        saveCooldownStatus: {
+          label: '持久化冷却状态',
+          description: '开启后将凭证冷却状态写入磁盘，重启后保留。',
+        },
+        transientErrorCooldownSeconds: {
+          label: '瞬时错误冷却 (秒)',
+          description: '瞬时错误后的冷却秒数；-1 表示禁用该冷却，0 表示使用后端默认值 60s。',
+        },
+        streamingKeepaliveSeconds: {
+          label: '流式保活间隔 (秒)',
+          description: '流式响应的保活发送间隔（秒）；0 表示由后端默认策略处理。',
+        },
+        streamingBootstrapRetries: {
+          label: '流式启动重试次数',
+          description: '流式请求启动阶段允许的重试次数。',
+        },
+        passthroughHeaders: {
+          label: '透传客户端 Header',
+          description: '开启后将客户端请求 Header 透传给上游。',
+        },
+        nonstreamKeepaliveInterval: {
+          label: '非流式保活间隔 (秒)',
+          description: '非流式请求的保活间隔（秒）；0 表示由后端默认策略处理。',
+        },
+        pprofEnable: {
+          label: '启用 pprof',
+          description: '开启后暴露 Go pprof 诊断端点，仅限排查问题时启用。',
+        },
+        pprofAddr: {
+          label: 'pprof 监听地址',
+          description: 'pprof 诊断服务的监听地址。',
+          placeholder: '127.0.0.1:6060',
+        },
+        redisUsageQueueRetentionSeconds: {
+          label: 'Redis 用量队列保留 (秒)',
+          description: '用量事件在 Redis 队列中的保留秒数（0~3600）。',
+        },
+        upstreamCodexDisableCloaking: {
+          label: '禁用 Codex 伪装',
+          description: '开启后不再对 Codex 上游请求应用客户端伪装。',
+        },
+        upstreamCodexStreamBootstrapBuffering: {
+          label: 'Codex 流启动缓冲',
+          description: '开启后缓冲 Codex 流式响应的启动阶段，降低半截流风险。',
+        },
+        upstreamCodexStreamBootstrapTimeout: {
+          label: 'Codex 流启动超时',
+          description: 'Codex 流式启动阶段的最长等待（Go duration）；0 表示不限制。',
+          placeholder: '0 表示不限制',
+        },
+        upstreamCodexOrphanDelegationCompatibility: {
+          label: '孤儿委托兼容',
+          description: '开启后兼容 Codex 孤儿委托（orphan delegation）响应形态。',
+        },
+        upstreamCodexModelLevelCooling: {
+          label: 'Codex 模型级冷却',
+          description: '开启后 Codex 凭证按模型维度独立冷却。',
+        },
+        upstreamCodexResponseSteering: {
+          label: 'Codex 响应引导',
+          description: '开启后允许对 Codex 响应施加 steering 指令。',
+        },
+        clientCodexOptimizeMultiAgentV2: {
+          label: '多代理优化 V2',
+          description: '开启后客户端对 Codex 多代理请求应用 V2 优化。',
+        },
+        upstreamClaudeModelLevelCooling: {
+          label: 'Claude 模型级冷却',
+          description: '开启后 Claude 凭证按模型维度独立冷却。',
+        },
+        upstreamClaudeToolSearch: {
+          label: 'Claude 工具搜索',
+          description: '开启后启用 Claude 上游的 tool search 能力。',
+        },
+        upstreamClaudeDisableCloakMode: {
+          label: '禁用 Claude 伪装模式',
+          description: '开启后关闭 Claude 上游的 cloak mode。',
+        },
+        upstreamClaudeDisableCloakingModelList: {
+          label: '禁用伪装模型清单',
+          description: '开启后不再向上游发送伪装用的模型清单。',
+        },
+        upstreamClaudeHeaderUserAgent: {
+          label: 'Claude User-Agent',
+          description: '发往 Claude 上游的默认 User-Agent Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderPackageVersion: {
+          label: 'Claude 包版本 Header',
+          description: '发往 Claude 上游的默认 package-version Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderRuntimeVersion: {
+          label: 'Claude 运行时版本 Header',
+          description: '发往 Claude 上游的默认 runtime-version Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderOs: {
+          label: 'Claude OS Header',
+          description: '发往 Claude 上游的默认 os Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderArch: {
+          label: 'Claude 架构 Header',
+          description: '发往 Claude 上游的默认 arch Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderTimeout: {
+          label: 'Claude 超时 Header',
+          description: '发往 Claude 上游的默认 timeout Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderTimezone: {
+          label: 'Claude 时区 Header',
+          description: '发往 Claude 上游的默认 timezone Header；留空使用后端默认。',
+        },
+        upstreamClaudeHeaderStabilizeDeviceProfile: {
+          label: '稳定设备画像',
+          description: '控制 Claude 设备画像 Header 是否稳定输出；未设置时由后端默认策略决定。',
+        },
+        upstreamXaiInjectXSearch: {
+          label: 'xAI 注入 X Search',
+          description: '开启后向 xAI 上游请求注入 X Search 能力。',
+        },
+        oauthAuthDir: {
+          label: 'OAuth 凭证目录',
+          description: 'OAuth 文件凭证的存储目录。',
+          placeholder: '~/.cli-proxy-api',
+        },
+        oauthAuthAutoRefreshWorkers: {
+          label: '自动刷新工作线程数',
+          description: 'OAuth 凭证自动刷新的并发 worker 数；0 表示由后端默认策略处理。',
+        },
+        oauthCodexHeaderUserAgent: {
+          label: 'Codex User-Agent',
+          description: '发往 Codex OAuth 上游的默认 User-Agent Header；留空使用后端默认。',
+        },
+        oauthCodexHeaderBetaFeatures: {
+          label: 'Codex Beta 特性 Header',
+          description: '发往 Codex OAuth 上游的 beta-features Header；留空使用后端默认。',
+        },
+        liveMediaRelayEnabled: {
+          label: '启用实时媒体中继',
+          description: '开启后启用 Codex 实时媒体（WebRTC）中继。',
+        },
+        liveMediaRelayMaxSessions: {
+          label: '最大中继会话数',
+          description: '实时媒体中继允许的最大并发会话数；0 表示使用后端默认值 32。',
+        },
+        liveMediaRelayDisablePrivateRemoteIps: {
+          label: '禁用私网远端 IP',
+          description: '开启后实时媒体中继拒绝私网远端 IP。',
+        },
+        liveMediaRelayPublicIp: {
+          label: '公网 IP',
+          description: '中继对外宣告的公网 IP；留空表示自动探测。',
+        },
+        liveMediaRelayUdpPortMin: {
+          label: 'UDP 端口下限',
+          description: '中继使用的 UDP 端口范围下限；须与上限成对配置。',
+        },
+        liveMediaRelayUdpPortMax: {
+          label: 'UDP 端口上限',
+          description: '中继使用的 UDP 端口范围上限；须与下限成对配置。',
+        },
+        liveMediaRelayIceServersJson: {
+          label: 'ICE 服务器',
+          description:
+            'JSON 数组配置 STUN/TURN 服务器。注意：JSON 读回会遮蔽 username/credential，只有 urls 完全不变的条目才保留既有密钥，改动 urls 需重新填写密钥。',
+        },
+        devinSensitiveWordsJson: {
+          label: 'Devin 敏感词混淆',
+          description: '在 Devin 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+        },
+        aistudioWsAuth: {
+          label: 'AI Studio WS 认证',
+          description: 'AI Studio WebSocket 鉴权开关。Home 强制归一为关闭，此开关不可修改。',
+        },
+        oauthRequestScopedErrorsJson: {
+          label: '按请求范围错误规则',
+          description:
+            '按 provider 键控的错误处理规则，每条规则形状为 {status, match[], match-regexr[], action}。',
+          placeholder: '{}',
+        },
+        antigravityCredits: {
+          label: 'Antigravity 额度',
+          description: '开启后启用 Antigravity credits 计费行为。',
+        },
+        antigravitySignatureCacheEnabled: {
+          label: '签名缓存',
+          description: '控制 Antigravity 请求签名缓存；未设置时由后端默认策略决定。',
+        },
+        antigravitySignatureBypassStrict: {
+          label: '严格签名绕过',
+          description: '控制 Antigravity 签名校验的严格绕过行为；未设置时由后端默认策略决定。',
+        },
+        antigravityConnPoolEnabled: {
+          label: '连接池',
+          description: '开启后 Antigravity 上游使用长连接池。',
+        },
+        antigravityConnPoolIdleTimeout: {
+          label: '连接池空闲超时',
+          description: '空闲连接的最长保留时长（Go duration），上限 210s；留空使用后端默认值。',
+          placeholder: '上限 210s',
+        },
+        antigravityConnPoolMaxIdleConnsPerHost: {
+          label: '每主机最大空闲连接',
+          description: '连接池为每个主机保留的最大空闲连接数。',
+        },
+        multimediaDisableImageGeneration: {
+          label: '图像生成模式',
+          description: '控制图像生成请求的处理方式。',
+          options: {
+            false: '保持启用 (false)',
+            true: '禁用 (true)',
+            chat: '转为对话 (chat)',
+            passthrough: '直接透传 (passthrough)',
+          },
+        },
+        multimediaGptImage2BaseModel: {
+          label: 'GPT Image 2 基础模型',
+          description: '图像生成改写使用的基础模型。',
+          placeholder: '默认 gpt-5.4-mini',
+        },
+        multimediaVideoResultAuthCacheTtl: {
+          label: '视频结果鉴权缓存',
+          description: '视频生成结果鉴权信息的缓存时长（Go duration）；留空恢复后端默认。',
+          placeholder: '默认 3h',
+        },
       },
       routingStrategies: {
         'round-robin': '轮询',
+        'weighted-round-robin': '加权轮询',
         'fill-first': '优先填满',
         unknown: '未知',
+      },
+      nullableBoolean: {
+        unset: '未设置（默认）',
+        enabled: '启用',
+        disabled: '禁用',
+      },
+      stringList: {
+        serverAllowHostJson: {
+          placeholder: 'example.com\nadmin.example.com',
+          hint: '每行一个允许的 Host，保存时会过滤空行。',
+          count: '已配置 {{count}} 个 Host',
+        },
+        serverTrustedProxiesJson: {
+          placeholder: '10.0.0.0/8\n192.168.1.10',
+          hint: '每行一个代理 IP 或 CIDR，保存时会过滤空行。',
+          count: '已配置 {{count}} 个受信代理',
+        },
+        discoverySubtypesJson: {
+          placeholder: '_home\n_management',
+          hint: '每行一个 mDNS subtype，保存时会过滤空行。',
+          count: '已配置 {{count}} 个子类型',
+        },
+        discoveryInterfacesIncludeJson: {
+          placeholder: 'en0\neth0',
+          hint: '每行一个网卡名，保存时会过滤空行。',
+          count: '已包含 {{count}} 块网卡',
+        },
+        discoveryInterfacesExcludeJson: {
+          placeholder: 'utun0\nawdl0',
+          hint: '每行一个网卡名，保存时会过滤空行。',
+          count: '已排除 {{count}} 块网卡',
+        },
+        devinSensitiveWordsJson: {
+          placeholder: 'proxy\nAPI',
+          hint: '每行一个敏感词；匹配不区分大小写，保存时自动忽略空行。',
+          count: '已配置 {{count}} 个敏感词',
+        },
       },
       proxyPools: {
         title: '代理池',

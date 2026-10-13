@@ -36,7 +36,6 @@ type DashboardRequestIssueScope =
 type DashboardProviderDescriptor = {
   id: DashboardProviderId
   path: string
-  responseKey: string
 }
 
 type DashboardRequestIssue = {
@@ -100,38 +99,31 @@ export type DashboardSnapshot = {
 const dashboardProviderDescriptors: DashboardProviderDescriptor[] = [
   {
     id: 'gemini',
-    path: '/gemini-api-key',
-    responseKey: 'gemini-api-key',
+    path: '/config/api-keys/gemini',
   },
   {
     id: 'interactions',
-    path: '/interactions-api-key',
-    responseKey: 'interactions-api-key',
+    path: '/config/api-keys/interactions',
   },
   {
     id: 'claude',
-    path: '/claude-api-key',
-    responseKey: 'claude-api-key',
+    path: '/config/api-keys/claude',
   },
   {
     id: 'codex',
-    path: '/codex-api-key',
-    responseKey: 'codex-api-key',
+    path: '/config/api-keys/codex',
   },
   {
     id: 'xai',
-    path: '/xai-api-key',
-    responseKey: 'xai-api-key',
+    path: '/config/api-keys/xai',
   },
   {
     id: 'vertex',
-    path: '/vertex-api-key',
-    responseKey: 'vertex-api-key',
+    path: '/config/api-keys/vertex',
   },
   {
     id: 'openaiCompatibility',
-    path: '/openai-compatibility',
-    responseKey: 'openai-compatibility',
+    path: '/config/api-keys/openai-compatibility',
   },
 ]
 
@@ -200,7 +192,8 @@ function normalizeProviderSummary(
   descriptor: DashboardProviderDescriptor,
   responseData: unknown,
 ): DashboardProviderSummary {
-  const records = readArrayRecords(responseData, descriptor.responseKey)
+  // v8 `GET /config/api-keys/<provider>` returns the raw group array.
+  const records = Array.isArray(responseData) ? responseData.filter(isRecord) : []
   const disabled = records.filter((record) => readBoolean(record.disabled)).length
 
   return {
@@ -274,8 +267,18 @@ async function fetchProviderSummary(
   client: AxiosInstance,
   descriptor: DashboardProviderDescriptor,
 ): Promise<DashboardProviderSummary> {
-  const response = await client.get<unknown>(descriptor.path)
-  return normalizeProviderSummary(descriptor, response.data)
+  try {
+    const response = await client.get<unknown>(descriptor.path)
+    return normalizeProviderSummary(descriptor, response.data)
+  } catch (error) {
+    // Absent provider families are pruned from the persisted v8 config view
+    // and read back as 404; that means zero configured entries, not a failed
+    // or unsupported request.
+    if (toManagementApiError(error).status === 404) {
+      return { ...descriptor, total: 0, active: 0, disabled: 0 }
+    }
+    throw error
+  }
 }
 
 export async function fetchManagementDashboardSnapshot(
@@ -310,7 +313,7 @@ export async function fetchManagementDashboardSnapshot(
       issues,
       'latestVersion',
       async () => {
-        const response = await client.get<unknown>('/latest-version')
+        const response = await client.get<unknown>('/server/latest-version')
         return readString(toRecord(response.data)['latest-version'])
       },
       null,
@@ -319,7 +322,7 @@ export async function fetchManagementDashboardSnapshot(
       issues,
       'clientKeys',
       async () => {
-        const response = await client.get<unknown>('/api-keys')
+        const response = await client.get<unknown>('/access/api-keys')
         const entries = readEntries(response.data)
         return entries.map((entry, index) => normalizeAccessKey(entry, index))
       },
@@ -329,7 +332,7 @@ export async function fetchManagementDashboardSnapshot(
       issues,
       'authFiles',
       async () => {
-        const response = await client.get<unknown>('/auth-files')
+        const response = await client.get<unknown>('/credentials')
         return normalizeAuthFiles(response.data)
       },
       [],
@@ -411,9 +414,9 @@ export async function fetchManagementDashboardSnapshot(
     topology ?? (capabilities.nodes ? createNodesTopologySummary(fallbackNodes) : null)
 
   const config = toRecord(configResponse.data)
-  // Older Home builds list the client keys inside /config; the dedicated
-  // endpoint is authoritative when it answers.
-  const fallbackKeys = readStringArray(config, 'api-keys')
+  // The v8 config tree carries the client-key string-list projection at
+  // `access.api-keys`; the dedicated endpoint is authoritative when it answers.
+  const fallbackKeys = readStringArray(config.access, 'api-keys')
   const accessKeys =
     optionalAccessKeys ?? fallbackKeys.map((key, index) => normalizeAccessKey(key, index))
   const clientKeys = accessKeys.map((key) => key.value)

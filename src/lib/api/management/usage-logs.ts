@@ -2011,10 +2011,14 @@ export async function fetchUsageRuntimeSettings(
   const client = createManagementClient(session)
   const response = await client.get<unknown>('/config')
   const config = toRecord(response.data)
+  const observability = toRecord(config.observability)
 
   return {
-    usageStatisticsEnabled: readConfigBoolean(config, 'usage-statistics-enabled'),
-    fileLoggingEnabled: readConfigBoolean(config, 'logging-to-file'),
+    usageStatisticsEnabled: readConfigBoolean(
+      toRecord(observability.usage),
+      'usage-statistics-enabled',
+    ),
+    fileLoggingEnabled: readConfigBoolean(toRecord(observability.logs), 'logging-to-file'),
   }
 }
 
@@ -2072,7 +2076,7 @@ export async function fetchRequestErrorLogs(
   session: ManagementSessionInput,
 ): Promise<RequestErrorLogFile[]> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/request-error-logs')
+  const response = await client.get<unknown>('/observability/logs/errors')
   return normalizeRequestErrorLogs(response.data)
 }
 
@@ -2137,7 +2141,7 @@ export async function fetchRuntimeLogs(
   query: RuntimeLogQuery,
 ): Promise<RuntimeLogSnapshot> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/logs', {
+  const response = await client.get<unknown>('/observability/logs', {
     params: getRuntimeLogQueryParams(query),
   })
   return normalizeRuntimeLogs(response.data, query.offset)
@@ -2145,7 +2149,7 @@ export async function fetchRuntimeLogs(
 
 export async function clearRuntimeLogs(session: ManagementSessionInput): Promise<ClearLogsResult> {
   const client = createManagementClient(session)
-  const response = await client.delete<unknown>('/logs')
+  const response = await client.delete<unknown>('/observability/logs')
   const record = toRecord(response.data)
 
   return {
@@ -2160,9 +2164,12 @@ export async function downloadRequestErrorLog(
   fileName: string,
 ): Promise<LogDownloadResult> {
   const client = createManagementClient(session)
-  const response = await client.get<Blob>(`/request-error-logs/${encodeURIComponent(fileName)}`, {
-    responseType: 'blob',
-  })
+  const response = await client.get<Blob>(
+    `/observability/logs/errors/${encodeURIComponent(fileName)}`,
+    {
+      responseType: 'blob',
+    },
+  )
 
   return {
     blob: response.data,
@@ -2191,7 +2198,7 @@ export async function downloadRequestLogById(
         }
       : undefined
   const response = await client.get<Blob>(
-    `/request-log-by-id/${encodeURIComponent(normalizedRequestId)}`,
+    `/observability/logs/requests/${encodeURIComponent(normalizedRequestId)}`,
     {
       params,
       responseType: 'blob',

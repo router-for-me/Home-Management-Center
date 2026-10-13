@@ -2,7 +2,9 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
+  Antenna,
   CheckCircle2,
+  CloudUpload,
   Code2,
   Copy,
   Database,
@@ -11,11 +13,18 @@ import {
   FileDiff,
   Filter,
   Gauge,
+  Hourglass,
+  Image,
   Info,
+  KeyRound,
+  Layers,
   Loader2,
+  Mail,
   Network,
+  PanelTop,
   Plug,
   Plus,
+  Radio,
   RefreshCw,
   Route,
   Save,
@@ -69,7 +78,9 @@ import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import type {
   ConfigChange,
   ConfigFieldKey,
+  ConfigFieldValue,
   ConfigStructuredValues,
+  WritableConfigFieldKey,
 } from '@/lib/api/management/config'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
 import { scrollElementIntoShell } from '@/lib/shell-scroll'
@@ -78,16 +89,25 @@ import { useConsoleUiStore } from '@/stores/ui-store'
 
 type ConfigSectionId =
   | 'server'
+  | 'discovery'
   | 'tls'
   | 'remoteManagement'
+  | 'userEmail'
   | 'plugins'
   | 'oauthRules'
+  | 'oauthProviders'
+  | 'liveMediaRelay'
   | 'system'
   | 'network'
   | 'quota'
   | 'streaming'
+  | 'credentialConcurrency'
+  | 'credentialInFlight'
+  | 'upstream'
+  | 'headers'
   | 'payload'
   | 'antigravity'
+  | 'multimedia'
 
 type ConfigFieldKind =
   | 'boolean'
@@ -95,6 +115,8 @@ type ConfigFieldKind =
   | 'text'
   | 'sensitiveText'
   | 'select'
+  | 'duration'
+  | 'nullableBoolean'
   | 'jsonArray'
   | 'jsonObject'
 
@@ -104,6 +126,14 @@ type JsonConfigFieldKey =
   | 'pluginStoreSourcesJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
+  | 'serverAllowHostJson'
+  | 'serverTrustedProxiesJson'
+  | 'discoverySubtypesJson'
+  | 'discoveryInterfacesIncludeJson'
+  | 'discoveryInterfacesExcludeJson'
+  | 'devinSensitiveWordsJson'
+  | 'oauthRequestScopedErrorsJson'
+  | 'liveMediaRelayIceServersJson'
 
 type OAuthModelCatalogState = {
   channel: ProviderModelChannel
@@ -211,8 +241,24 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
   {
     id: 'server',
     fields: [
-      { key: 'debug', kind: 'boolean', sectionId: 'server' },
       { key: 'port', kind: 'number', sectionId: 'server', min: 1, max: 65535 },
+      { key: 'serverHost', kind: 'text', sectionId: 'server' },
+      { key: 'serverAllowHostJson', kind: 'jsonArray', sectionId: 'server' },
+      { key: 'serverTrustedProxiesJson', kind: 'jsonArray', sectionId: 'server' },
+      { key: 'serverCommercialMode', kind: 'boolean', sectionId: 'server' },
+    ],
+  },
+  {
+    id: 'discovery',
+    fields: [
+      { key: 'discoveryEnabled', kind: 'boolean', sectionId: 'discovery' },
+      { key: 'discoveryServiceName', kind: 'text', sectionId: 'discovery' },
+      { key: 'discoveryServiceType', kind: 'text', sectionId: 'discovery' },
+      { key: 'discoverySubtypesJson', kind: 'jsonArray', sectionId: 'discovery' },
+      { key: 'discoveryInterfacesIncludeJson', kind: 'jsonArray', sectionId: 'discovery' },
+      { key: 'discoveryInterfacesExcludeJson', kind: 'jsonArray', sectionId: 'discovery' },
+      { key: 'discoveryAuthRequired', kind: 'boolean', sectionId: 'discovery' },
+      { key: 'discoveryAdvertiseManagement', kind: 'boolean', sectionId: 'discovery' },
     ],
   },
   {
@@ -247,6 +293,23 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
         kind: 'text',
         sectionId: 'remoteManagement',
       },
+      { key: 'managementBaseUrl', kind: 'text', sectionId: 'remoteManagement' },
+    ],
+  },
+  {
+    id: 'userEmail',
+    fields: [
+      { key: 'userEmailEnabled', kind: 'boolean', sectionId: 'userEmail' },
+      { key: 'userEmailPublicUrl', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailFromAddress', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailFromName', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailSmtpHost', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailSmtpPort', kind: 'number', sectionId: 'userEmail', max: 65535 },
+      { key: 'userEmailSmtpUsername', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailSmtpPasswordEnv', kind: 'text', sectionId: 'userEmail' },
+      { key: 'userEmailSmtpStarttls', kind: 'boolean', sectionId: 'userEmail' },
+      { key: 'userEmailVerificationTokenTtl', kind: 'duration', sectionId: 'userEmail' },
+      { key: 'userEmailResetTokenTtl', kind: 'duration', sectionId: 'userEmail' },
     ],
   },
   {
@@ -258,31 +321,30 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'oauthRules',
-    fields: [
-      { key: 'oauthExcludedModelsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
-      { key: 'oauthModelAliasJson', kind: 'jsonObject', sectionId: 'oauthRules' },
-    ],
-  },
-  {
     id: 'system',
     fields: [
+      { key: 'debug', kind: 'boolean', sectionId: 'system' },
       { key: 'requestLog', kind: 'boolean', sectionId: 'system' },
       { key: 'usageStatisticsEnabled', kind: 'boolean', sectionId: 'system' },
       { key: 'loggingToFile', kind: 'boolean', sectionId: 'system' },
       { key: 'logsMaxTotalSizeMb', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'errorLogsMaxFiles', kind: 'number', sectionId: 'system', min: 0 },
+      { key: 'pprofEnable', kind: 'boolean', sectionId: 'system' },
+      { key: 'pprofAddr', kind: 'text', sectionId: 'system' },
+      {
+        key: 'redisUsageQueueRetentionSeconds',
+        kind: 'number',
+        sectionId: 'system',
+        min: 0,
+        max: 3600,
+      },
     ],
   },
   {
     id: 'network',
-    fields: [{ key: 'proxyUrl', kind: 'text', sectionId: 'network' }],
-  },
-  {
-    id: 'quota',
     fields: [
-      { key: 'quotaSwitchProject', kind: 'boolean', sectionId: 'quota' },
-      { key: 'quotaSwitchPreviewModel', kind: 'boolean', sectionId: 'quota' },
+      { key: 'proxyUrl', kind: 'text', sectionId: 'network' },
+      { key: 'passthroughHeaders', kind: 'boolean', sectionId: 'network' },
     ],
   },
   {
@@ -297,13 +359,162 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
         key: 'routingStrategy',
         kind: 'select',
         sectionId: 'streaming',
-        options: ['round-robin', 'fill-first'],
+        options: ['round-robin', 'weighted-round-robin', 'fill-first'],
       },
+      { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
+      { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
+      { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
+      { key: 'saveCooldownStatus', kind: 'boolean', sectionId: 'streaming' },
+      { key: 'transientErrorCooldownSeconds', kind: 'number', sectionId: 'streaming', min: -1 },
+      { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'nonstreamKeepaliveInterval', kind: 'number', sectionId: 'streaming', min: 0 },
+    ],
+  },
+  {
+    id: 'credentialConcurrency',
+    fields: [
+      {
+        key: 'concurrencyCpaHeartbeatTimeout',
+        kind: 'duration',
+        sectionId: 'credentialConcurrency',
+      },
+      {
+        key: 'concurrencyCpaCancelBound',
+        kind: 'duration',
+        sectionId: 'credentialConcurrency',
+      },
+      { key: 'concurrencyReclaimGrace', kind: 'duration', sectionId: 'credentialConcurrency' },
+      { key: 'concurrencyCleanupInterval', kind: 'duration', sectionId: 'credentialConcurrency' },
+      {
+        key: 'concurrencyReleaseFlushInterval',
+        kind: 'duration',
+        sectionId: 'credentialConcurrency',
+      },
+      {
+        key: 'concurrencyReleaseMaxBackoff',
+        kind: 'duration',
+        sectionId: 'credentialConcurrency',
+      },
+      { key: 'concurrencyBusyRetryMin', kind: 'duration', sectionId: 'credentialConcurrency' },
+      { key: 'concurrencyBusyRetryMax', kind: 'duration', sectionId: 'credentialConcurrency' },
+      {
+        key: 'concurrencyMaxLimit',
+        kind: 'number',
+        sectionId: 'credentialConcurrency',
+        min: 1,
+        max: 1000000,
+      },
+      {
+        key: 'concurrencyLifecycleConfigRevision',
+        kind: 'number',
+        sectionId: 'credentialConcurrency',
+      },
+      {
+        key: 'concurrencyObservationBarrierRevision',
+        kind: 'number',
+        sectionId: 'credentialConcurrency',
+      },
+    ],
+  },
+  {
+    id: 'credentialInFlight',
+    fields: [
+      { key: 'inFlightSnapshotInterval', kind: 'duration', sectionId: 'credentialInFlight' },
+      { key: 'inFlightStaleAfter', kind: 'duration', sectionId: 'credentialInFlight' },
+      { key: 'inFlightStagingRetention', kind: 'duration', sectionId: 'credentialInFlight' },
+      { key: 'inFlightMaxPartBytes', kind: 'number', sectionId: 'credentialInFlight', min: 1 },
+      { key: 'inFlightMaxPartCount', kind: 'number', sectionId: 'credentialInFlight', min: 1 },
+      { key: 'inFlightMaxRevisionBytes', kind: 'number', sectionId: 'credentialInFlight', min: 1 },
+      {
+        key: 'inFlightMaxAggregateGroups',
+        kind: 'number',
+        sectionId: 'credentialInFlight',
+        min: 1,
+      },
+      { key: 'inFlightMaxDetails', kind: 'number', sectionId: 'credentialInFlight', min: 1 },
+      { key: 'inFlightMaxStringBytes', kind: 'number', sectionId: 'credentialInFlight', min: 1 },
+    ],
+  },
+  {
+    id: 'upstream',
+    fields: [
+      { key: 'upstreamCodexDisableCloaking', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamCodexStreamBootstrapBuffering', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamCodexStreamBootstrapTimeout', kind: 'duration', sectionId: 'upstream' },
+      { key: 'upstreamCodexOrphanDelegationCompatibility', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamCodexModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamCodexResponseSteering', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamClaudeModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamClaudeToolSearch', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamClaudeDisableCloakMode', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamClaudeDisableCloakingModelList', kind: 'boolean', sectionId: 'upstream' },
+      { key: 'upstreamXaiInjectXSearch', kind: 'boolean', sectionId: 'upstream' },
+    ],
+  },
+  {
+    id: 'headers',
+    fields: [
+      { key: 'upstreamClaudeHeaderUserAgent', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderPackageVersion', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderRuntimeVersion', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderOs', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderArch', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderTimeout', kind: 'text', sectionId: 'headers' },
+      { key: 'upstreamClaudeHeaderTimezone', kind: 'text', sectionId: 'headers' },
+      {
+        key: 'upstreamClaudeHeaderStabilizeDeviceProfile',
+        kind: 'nullableBoolean',
+        sectionId: 'headers',
+      },
+      { key: 'oauthCodexHeaderUserAgent', kind: 'text', sectionId: 'headers' },
+      { key: 'oauthCodexHeaderBetaFeatures', kind: 'text', sectionId: 'headers' },
+    ],
+  },
+  {
+    id: 'quota',
+    fields: [
+      { key: 'quotaSwitchProject', kind: 'boolean', sectionId: 'quota' },
+      { key: 'quotaSwitchPreviewModel', kind: 'boolean', sectionId: 'quota' },
     ],
   },
   {
     id: 'payload',
     fields: [{ key: 'payloadRulesJson', kind: 'jsonObject', sectionId: 'payload' }],
+  },
+  {
+    id: 'oauthRules',
+    fields: [
+      { key: 'oauthExcludedModelsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+      { key: 'oauthModelAliasJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+      { key: 'oauthRequestScopedErrorsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+    ],
+  },
+  {
+    id: 'oauthProviders',
+    fields: [
+      { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
+      { key: 'oauthAuthAutoRefreshWorkers', kind: 'number', sectionId: 'oauthProviders', min: 0 },
+      { key: 'devinSensitiveWordsJson', kind: 'jsonArray', sectionId: 'oauthProviders' },
+      { key: 'aistudioWsAuth', kind: 'boolean', sectionId: 'oauthProviders' },
+    ],
+  },
+  {
+    id: 'liveMediaRelay',
+    fields: [
+      { key: 'liveMediaRelayEnabled', kind: 'boolean', sectionId: 'liveMediaRelay' },
+      { key: 'liveMediaRelayMaxSessions', kind: 'number', sectionId: 'liveMediaRelay', min: 0 },
+      {
+        key: 'liveMediaRelayDisablePrivateRemoteIps',
+        kind: 'boolean',
+        sectionId: 'liveMediaRelay',
+      },
+      { key: 'liveMediaRelayPublicIp', kind: 'text', sectionId: 'liveMediaRelay' },
+      { key: 'liveMediaRelayUdpPortMin', kind: 'number', sectionId: 'liveMediaRelay' },
+      { key: 'liveMediaRelayUdpPortMax', kind: 'number', sectionId: 'liveMediaRelay' },
+      { key: 'liveMediaRelayIceServersJson', kind: 'jsonArray', sectionId: 'liveMediaRelay' },
+    ],
   },
   {
     id: 'antigravity',
@@ -313,6 +524,38 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
         kind: 'jsonArray',
         sectionId: 'antigravity',
       },
+      { key: 'antigravityCredits', kind: 'boolean', sectionId: 'antigravity' },
+      {
+        key: 'antigravitySignatureCacheEnabled',
+        kind: 'nullableBoolean',
+        sectionId: 'antigravity',
+      },
+      {
+        key: 'antigravitySignatureBypassStrict',
+        kind: 'nullableBoolean',
+        sectionId: 'antigravity',
+      },
+      { key: 'antigravityConnPoolEnabled', kind: 'boolean', sectionId: 'antigravity' },
+      { key: 'antigravityConnPoolIdleTimeout', kind: 'duration', sectionId: 'antigravity' },
+      {
+        key: 'antigravityConnPoolMaxIdleConnsPerHost',
+        kind: 'number',
+        sectionId: 'antigravity',
+        min: 0,
+      },
+    ],
+  },
+  {
+    id: 'multimedia',
+    fields: [
+      {
+        key: 'multimediaDisableImageGeneration',
+        kind: 'select',
+        sectionId: 'multimedia',
+        options: ['false', 'true', 'chat', 'passthrough'],
+      },
+      { key: 'multimediaGptImage2BaseModel', kind: 'text', sectionId: 'multimedia' },
+      { key: 'multimediaVideoResultAuthCacheTtl', kind: 'duration', sectionId: 'multimedia' },
     ],
   },
 ]
@@ -340,16 +583,25 @@ const fieldDefinitionByKey = fieldDefinitions.reduce<Record<ConfigFieldKey, Conf
 
 const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   server: ServerCog,
+  discovery: Radio,
   tls: ShieldCheck,
   remoteManagement: Network,
+  userEmail: Mail,
   plugins: Plug,
   oauthRules: Route,
+  oauthProviders: KeyRound,
+  liveMediaRelay: Antenna,
   system: Database,
   network: Network,
   quota: Gauge,
   streaming: Route,
+  credentialConcurrency: Hourglass,
+  credentialInFlight: Layers,
+  upstream: CloudUpload,
+  headers: PanelTop,
   payload: Code2,
   antigravity: Sparkles,
+  multimedia: Image,
 }
 
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
@@ -358,7 +610,41 @@ const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'pluginStoreSourcesJson',
   'payloadRulesJson',
   'antigravitySensitiveWordsJson',
+  'serverAllowHostJson',
+  'serverTrustedProxiesJson',
+  'discoverySubtypesJson',
+  'discoveryInterfacesIncludeJson',
+  'discoveryInterfacesExcludeJson',
+  'devinSensitiveWordsJson',
+  'oauthRequestScopedErrorsJson',
+  'liveMediaRelayIceServersJson',
 ])
+
+const stringListConfigFieldKeys = new Set<JsonConfigFieldKey>([
+  'serverAllowHostJson',
+  'serverTrustedProxiesJson',
+  'discoverySubtypesJson',
+  'discoveryInterfacesIncludeJson',
+  'discoveryInterfacesExcludeJson',
+  'devinSensitiveWordsJson',
+])
+
+const defaultJsonEditorFieldKeys = new Set<JsonConfigFieldKey>([
+  'oauthRequestScopedErrorsJson',
+  'liveMediaRelayIceServersJson',
+])
+
+const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
+  'concurrencyLifecycleConfigRevision',
+  'concurrencyObservationBarrierRevision',
+])
+
+const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>([
+  'usageStatisticsEnabled',
+  'aistudioWsAuth',
+])
+
+const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
 
 const payloadRuleSections: PayloadRuleSection[] = [
   'default',
@@ -534,6 +820,47 @@ function canEditAntigravitySensitiveWords(value: unknown): value is string[] {
   if (!Array.isArray(value)) return false
 
   return value.every((item) => typeof item === 'string')
+}
+
+function normalizeStringList(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter((item) => item.length > 0)
+}
+
+function canEditStringList(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false
+
+  return value.every((item) => typeof item === 'string')
+}
+
+function isWritableConfigField(
+  field: ConfigFieldDefinition,
+): field is ConfigFieldDefinition & { key: WritableConfigFieldKey } {
+  return !readOnlyConfigFieldKeys.has(field.key)
+}
+
+function selectOptionFromValue(value: ConfigStructuredValues[ConfigFieldKey]) {
+  return String(value)
+}
+
+function selectValueFromOption(option: string): ConfigStructuredValues[ConfigFieldKey] {
+  if (option === 'true') return true
+  if (option === 'false') return false
+  return option
+}
+
+function nullableBooleanOptionFromValue(value: ConfigStructuredValues[ConfigFieldKey]) {
+  if (value === null) return 'unset'
+  return value === true ? 'enabled' : 'disabled'
+}
+
+function nullableBooleanValueFromOption(option: string) {
+  if (option === 'enabled') return true
+  if (option === 'disabled') return false
+  return null
 }
 
 function parsePayloadParamValue(value: unknown): {
@@ -1316,6 +1643,9 @@ function getModelDisplayName(model: ProviderModelDefinition) {
 }
 
 function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
+  if (stringListConfigFieldKeys.has(fieldKey)) return canEditStringList(value)
+  if (defaultJsonEditorFieldKeys.has(fieldKey)) return true
+
   switch (fieldKey) {
     case 'oauthExcludedModelsJson':
       return canEditExcludedModels(value)
@@ -1327,6 +1657,8 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
       return canEditPayloadConfig(value)
     case 'antigravitySensitiveWordsJson':
       return canEditAntigravitySensitiveWords(value)
+    default:
+      return false
   }
 }
 
@@ -1361,6 +1693,7 @@ function getStructuredChanges(
   draft: ConfigStructuredValues,
 ): ConfigChange[] {
   return fieldDefinitions
+    .filter(isWritableConfigField)
     .filter((field) => !areConfigValuesEqual(baseline[field.key], draft[field.key]))
     .map((field) => ({
       key: field.key,
@@ -1383,6 +1716,8 @@ function getValidationErrorsWithOptions(
 ) {
   return fieldDefinitions
     .filter((field) => {
+      if (readOnlyConfigFieldKeys.has(field.key)) return false
+
       const value = draft[field.key]
       if (field.kind === 'number') {
         const num = typeof value === 'number' ? value : Number(value)
@@ -1393,6 +1728,13 @@ function getValidationErrorsWithOptions(
       }
       if (field.kind === 'select') {
         return !field.options?.includes(String(value))
+      }
+      if (field.kind === 'duration') {
+        const text = typeof value === 'string' ? value.trim() : ''
+        return text.length > 0 && !durationPattern.test(text)
+      }
+      if (field.kind === 'nullableBoolean') {
+        return value !== null && typeof value !== 'boolean'
       }
       if (field.kind === 'jsonArray') {
         try {
@@ -1425,7 +1767,7 @@ function getValidationErrorsWithOptions(
 }
 
 function formatConfigValue(value: ConfigChange['nextValue'], emptyLabel: string) {
-  return value === '' ? emptyLabel : String(value)
+  return value === '' || value === null ? emptyLabel : String(value)
 }
 
 function ConfigDisconnectedState() {
@@ -1617,10 +1959,15 @@ function ConfigField({
   value: ConfigStructuredValues[ConfigFieldKey]
   disabled: boolean
   invalid: boolean
-  onChange: (key: ConfigFieldKey, value: boolean | number | string) => void
+  onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
+  const locked =
+    readOnlyConfigFieldKeys.has(field.key) || forcedDisabledConfigFieldKeys.has(field.key)
+  const controlDisabled = disabled || locked
+  const placeholderKey = `configPage.fields.${field.key}.placeholder`
+  const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
 
   return (
     <div
@@ -1644,7 +1991,7 @@ function ConfigField({
         {field.kind === 'boolean' ? (
           <BooleanControl
             checked={Boolean(value)}
-            disabled={disabled}
+            disabled={controlDisabled}
             onChange={(nextValue) => onChange(field.key, nextValue)}
           />
         ) : null}
@@ -1654,18 +2001,18 @@ function ConfigField({
             min={field.min}
             max={field.max}
             value={String(value)}
-            disabled={disabled}
+            disabled={controlDisabled}
             className="md:max-w-56"
-            placeholder={t(`configPage.fields.${field.key}.placeholder`)}
+            placeholder={placeholder}
             onChange={(event) => onChange(field.key, Number(event.target.value))}
           />
         ) : null}
-        {field.kind === 'text' ? (
+        {field.kind === 'text' || field.kind === 'duration' ? (
           <Input
             value={String(value)}
-            disabled={disabled}
+            disabled={controlDisabled}
             className="md:max-w-80"
-            placeholder={t(`configPage.fields.${field.key}.placeholder`)}
+            placeholder={placeholder}
             onChange={(event) => onChange(field.key, event.target.value)}
           />
         ) : null}
@@ -1674,9 +2021,9 @@ function ConfigField({
             <Input
               type={sensitiveVisible ? 'text' : 'password'}
               value={String(value)}
-              disabled={disabled}
+              disabled={controlDisabled}
               className="pr-10"
-              placeholder={t(`configPage.fields.${field.key}.placeholder`)}
+              placeholder={placeholder}
               onChange={(event) => onChange(field.key, event.target.value)}
             />
             <Button
@@ -1684,7 +2031,7 @@ function ConfigField({
               variant="ghost"
               size="icon-sm"
               className="absolute top-1/2 right-1 -translate-y-1/2"
-              disabled={disabled}
+              disabled={controlDisabled}
               aria-label={
                 sensitiveVisible
                   ? t('configPage.actions.hideSensitive')
@@ -1702,9 +2049,9 @@ function ConfigField({
         ) : null}
         {field.kind === 'select' ? (
           <Select
-            value={String(value)}
-            disabled={disabled}
-            onValueChange={(nextValue) => onChange(field.key, nextValue)}
+            value={selectOptionFromValue(value)}
+            disabled={controlDisabled}
+            onValueChange={(nextValue) => onChange(field.key, selectValueFromOption(nextValue))}
           >
             <SelectTrigger
               className="md:w-56"
@@ -1715,7 +2062,32 @@ function ConfigField({
             <SelectContent>
               {field.options?.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {t(`configPage.routingStrategies.${option}`)}
+                  {field.key === 'routingStrategy'
+                    ? t(`configPage.routingStrategies.${option}`)
+                    : t(`configPage.fields.${field.key}.options.${option}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+        {field.kind === 'nullableBoolean' ? (
+          <Select
+            value={nullableBooleanOptionFromValue(value)}
+            disabled={controlDisabled}
+            onValueChange={(nextValue) =>
+              onChange(field.key, nullableBooleanValueFromOption(nextValue))
+            }
+          >
+            <SelectTrigger
+              className="md:w-56"
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['unset', 'enabled', 'disabled'] as const).map((option) => (
+                <SelectItem key={option} value={option}>
+                  {t(`configPage.nullableBoolean.${option}`)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -2330,6 +2702,65 @@ function AntigravitySensitiveWordsEditor({
             count: normalizeAntigravitySensitiveWords(value).length,
           })}
         </span>
+      </div>
+    </div>
+  )
+}
+
+function StringListEditor({
+  value,
+  disabled,
+  placeholder,
+  hint,
+  countLabel,
+  onChange,
+}: {
+  value: string[]
+  disabled: boolean
+  placeholder: string
+  hint: string
+  countLabel: string
+  onChange: (value: string[]) => void
+}) {
+  const normalizedValue = normalizeStringList(value).join('\n')
+  const [draft, setDraft] = useState(normalizedValue)
+
+  useEffect(() => {
+    const normalizedDraft = draft
+      .split('\n')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
+      .join('\n')
+
+    if (normalizedDraft !== normalizedValue) {
+      setDraft(normalizedValue)
+    }
+  }, [draft, normalizedValue])
+
+  const commitDraft = (nextDraft: string) => {
+    onChange(
+      nextDraft
+        .split('\n')
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0),
+    )
+  }
+
+  return (
+    <div className="grid gap-3">
+      <Textarea
+        value={draft}
+        disabled={disabled}
+        className="min-h-28 font-mono text-sm"
+        placeholder={placeholder}
+        onChange={(event) => {
+          setDraft(event.target.value)
+          commitDraft(event.target.value)
+        }}
+      />
+      <div className="text-muted-foreground flex flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
+        <span>{hint}</span>
+        <span>{countLabel}</span>
       </div>
     </div>
   )
@@ -3982,6 +4413,23 @@ function StructuredJsonEditor({
   oauthModelCatalog: OAuthModelCatalogState | null
   onChange: (value: unknown) => void
 }) {
+  const { t } = useTranslation()
+
+  if (stringListConfigFieldKeys.has(fieldKey)) {
+    const items = normalizeStringList(value)
+
+    return (
+      <StringListEditor
+        value={items}
+        disabled={disabled}
+        placeholder={t(`configPage.stringList.${fieldKey}.placeholder`)}
+        hint={t(`configPage.stringList.${fieldKey}.hint`)}
+        countLabel={t(`configPage.stringList.${fieldKey}.count`, { count: items.length })}
+        onChange={onChange}
+      />
+    )
+  }
+
   switch (fieldKey) {
     case 'oauthExcludedModelsJson':
       return (
@@ -4024,6 +4472,8 @@ function StructuredJsonEditor({
           onChange={onChange}
         />
       )
+    default:
+      return null
   }
 }
 
@@ -4040,12 +4490,29 @@ function JsonConfigField({
   disabled: boolean
   invalid: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
-  onChange: (key: ConfigFieldKey, value: boolean | number | string) => void
+  onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const parsed = parseJsonDraft(field, value)
-  const canUseStructured = parsed.ok && canEditJsonField(field.key, parsed.value)
   const parseError = parsed.ok ? null : parsed.message
+
+  if (defaultJsonEditorFieldKeys.has(field.key)) {
+    const placeholderKey = `configPage.fields.${field.key}.placeholder`
+
+    return (
+      <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
+        <Textarea
+          value={value}
+          disabled={disabled}
+          className="min-h-32 font-mono text-sm"
+          placeholder={i18n.exists(placeholderKey) ? t(placeholderKey) : undefined}
+          onChange={(event) => onChange(field.key, event.target.value)}
+        />
+      </JsonEditorFrame>
+    )
+  }
+
+  const canUseStructured = parsed.ok && canEditJsonField(field.key, parsed.value)
 
   return (
     <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
@@ -4082,7 +4549,7 @@ function StructuredWorkspace({
   validationErrors: ConfigFieldKey[]
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
-  onChange: (key: ConfigFieldKey, value: boolean | number | string) => void
+  onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
   const { t } = useTranslation()
   const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
@@ -4463,7 +4930,7 @@ export function ConfigWorkbenchPage() {
 
   const snapshot = workbench.snapshot
 
-  const handleStructuredChange = (key: ConfigFieldKey, value: boolean | number | string) => {
+  const handleStructuredChange = (key: ConfigFieldKey, value: ConfigFieldValue) => {
     setStructuredDraft((current) => (current ? { ...current, [key]: value } : current))
   }
 

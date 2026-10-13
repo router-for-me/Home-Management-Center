@@ -264,15 +264,15 @@ type CredentialOAuthStartResult = {
   state: string | null
 }
 
-const oauthRoutes: Record<CredentialOAuthProvider, string> = {
-  claude: '/anthropic-auth-url',
-  codex: '/codex-auth-url',
-  antigravity: '/antigravity-auth-url',
-  kimi: '/kimi-auth-url',
-  xai: '/xai-auth-url',
-}
+const credentialOAuthAuthUrlPath = '/oauth/auth-url'
 
-const credentialOAuthProviders = Object.keys(oauthRoutes) as CredentialOAuthProvider[]
+const credentialOAuthProviders: CredentialOAuthProvider[] = [
+  'claude',
+  'codex',
+  'antigravity',
+  'kimi',
+  'xai',
+]
 
 export function getCredentialOAuthProviders(runtimeMode: RuntimeMode) {
   return runtimeMode === 'cpa'
@@ -468,7 +468,7 @@ function normalizeCredentialProvider(value: string | null | undefined) {
 }
 
 // WebSocket metadata is writable for Codex and xAI (Grok) credentials. Keep this in
-// sync with the backend auth-files field whitelist; other providers ignore the field.
+// sync with the backend credentials field whitelist; other providers ignore the field.
 export function supportsCredentialWebsockets(
   resource: Pick<CredentialResource, 'provider' | 'type'>,
 ) {
@@ -1167,7 +1167,7 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
   }
 
   // Home reads the cooling override from the `disable_cooling` auth metadata key
-  // (the arbitrary-nested-path channel of /auth-files/fields); the override is
+  // (the arbitrary-nested-path channel of /credentials/fields); the override is
   // true-only, so writing false clears it and re-enables central cooldown.
   if (typeof input.disableCooling === 'boolean') {
     payload.disable_cooling = input.disableCooling
@@ -1194,7 +1194,7 @@ export async function fetchCredentialSnapshot(
   session: ManagementSessionInput,
 ): Promise<CredentialsSnapshot> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/auth-files')
+  const response = await client.get<unknown>('/credentials')
 
   return {
     fetchedAt: new Date().toISOString(),
@@ -1429,7 +1429,7 @@ export async function updateCredentialStatus(
   disabled: boolean,
 ) {
   const client = createManagementClient(session)
-  await client.patch('/auth-files/status', {
+  await client.patch('/credentials/status', {
     name: getStatusSelector(resource),
     disabled,
   })
@@ -1441,7 +1441,7 @@ export async function updateCredentialMetadata(
   input: CredentialMetadataPatch,
 ) {
   const client = createManagementClient(session)
-  await client.patch('/auth-files/fields', createFieldsPayload(resource, input))
+  await client.patch('/credentials/fields', createFieldsPayload(resource, input))
 }
 
 // The cooldown route is keyed by the stable Home auth UUID (`id`), not the
@@ -1486,7 +1486,7 @@ export async function deleteCredentialResource(
   resource: CredentialResource,
 ) {
   const client = createManagementClient(session)
-  await client.delete('/auth-files', {
+  await client.delete('/credentials', {
     params: resource.selector,
   })
 }
@@ -1500,7 +1500,7 @@ export async function uploadCredentialFile(
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await client.post<CredentialUploadResponse>('/auth-files', formData, {
+  const response = await client.post<CredentialUploadResponse>('/credentials', formData, {
     onUploadProgress: (event: AxiosProgressEvent) => {
       const ratio =
         event.progress ??
@@ -1531,7 +1531,7 @@ export async function downloadCredentialResource(
   resource: CredentialResource,
 ) {
   const client = createManagementClient(session)
-  const response = await client.get<Blob>('/auth-files/download', {
+  const response = await client.get<Blob>('/credentials/download', {
     params: createDownloadParams(resource),
     responseType: 'blob',
   })
@@ -1547,7 +1547,7 @@ export async function fetchCredentialModels(
   resource: CredentialResource,
 ): Promise<CredentialModel[]> {
   const client = createManagementClient(session)
-  const response = await client.get<CredentialModelResponse>('/auth-files/models', {
+  const response = await client.get<CredentialModelResponse>('/credentials/models', {
     params: {
       name: getStatusSelector(resource),
     },
@@ -1568,8 +1568,9 @@ export async function startCredentialOAuth(
   input: CredentialOAuthStartInput,
 ): Promise<CredentialOAuthStartResult> {
   const client = createManagementClient(session)
-  const response = await client.get<OAuthUrlResponse>(oauthRoutes[input.provider], {
+  const response = await client.get<OAuthUrlResponse>(credentialOAuthAuthUrlPath, {
     params: {
+      provider: input.provider,
       is_webui: true,
     },
   })
@@ -1590,7 +1591,7 @@ export async function fetchCredentialOAuthStatus(
   state?: string,
 ): Promise<CredentialOAuthStatus> {
   const client = createManagementClient(session)
-  const response = await client.get<OAuthStatusResponse>('/get-auth-status', {
+  const response = await client.get<OAuthStatusResponse>('/oauth/status', {
     params: {
       state: state?.trim() || undefined,
     },
@@ -1607,7 +1608,7 @@ export async function submitCredentialOAuthCallback(
   input: CredentialOAuthCallbackInput,
 ) {
   const client = createManagementClient(session)
-  await client.post('/oauth-callback', createOAuthCallbackPayload(input))
+  await client.post('/oauth/callback', createOAuthCallbackPayload(input))
 }
 
 export async function importVertexCredential(
@@ -1623,7 +1624,9 @@ export async function importVertexCredential(
     formData.append('location', location)
   }
 
-  const response = await client.post<VertexImportResponse>('/vertex/import', formData)
+  const response = await client.post<VertexImportResponse>('/oauth/import', formData, {
+    params: { provider: 'vertex' },
+  })
 
   return {
     status: response.data.status ?? 'unknown',

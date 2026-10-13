@@ -592,7 +592,7 @@ describe('credential concurrency v2 contract', () => {
   test('sends the loaded policy version with an atomic metadata and limit update', async () => {
     let patchBody: Record<string, unknown> | null = null
     const adapter: AxiosAdapter = async (config) => {
-      if (config.url === '/auth-files') {
+      if (config.url === '/credentials') {
         return response(config, {
           files: [
             {
@@ -606,7 +606,7 @@ describe('credential concurrency v2 contract', () => {
           ],
         })
       }
-      if (config.url === '/auth-files/fields') {
+      if (config.url === '/credentials/fields') {
         patchBody = JSON.parse(String(config.data)) as Record<string, unknown>
         return response(config, { status: 'ok' })
       }
@@ -934,7 +934,7 @@ describe('credential concurrency v2 contract', () => {
   test('uses only the exact independent v2 capability flags', async () => {
     const capabilityResult = async (capabilities: Record<string, boolean>) => {
       const adapter: AxiosAdapter = async (config) => {
-        if (config.url === '/config') return response(config, {})
+        if (config.url === '/config') return response(config, { 'config-version': 8 })
         if (config.url === '/capabilities') return response(config, { capabilities })
         return response(config, {}, 404)
       }

@@ -186,8 +186,8 @@ export function getProviderModelDefinitionChannels(runtimeMode: RuntimeMode) {
 const providerDescriptors: ProviderDescriptor[] = [
   {
     id: 'gemini',
-    path: '/gemini-api-key',
-    responseKey: 'gemini-api-key',
+    path: '/config/api-keys/gemini',
+    responseKey: 'gemini',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -202,8 +202,8 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'interactions',
-    path: '/interactions-api-key',
-    responseKey: 'interactions-api-key',
+    path: '/config/api-keys/interactions',
+    responseKey: 'interactions',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -218,8 +218,8 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'claude',
-    path: '/claude-api-key',
-    responseKey: 'claude-api-key',
+    path: '/config/api-keys/claude',
+    responseKey: 'claude',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -234,8 +234,8 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'codex',
-    path: '/codex-api-key',
-    responseKey: 'codex-api-key',
+    path: '/config/api-keys/codex',
+    responseKey: 'codex',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -250,8 +250,8 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'xai',
-    path: '/xai-api-key',
-    responseKey: 'xai-api-key',
+    path: '/config/api-keys/xai',
+    responseKey: 'xai',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -266,8 +266,8 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'vertex',
-    path: '/vertex-api-key',
-    responseKey: 'vertex-api-key',
+    path: '/config/api-keys/vertex',
+    responseKey: 'vertex',
     supportsName: false,
     supportsApiKey: true,
     disabledMode: 'auth-status',
@@ -282,7 +282,7 @@ const providerDescriptors: ProviderDescriptor[] = [
   },
   {
     id: 'openaiCompatibility',
-    path: '/openai-compatibility',
+    path: '/config/api-keys/openai-compatibility',
     responseKey: 'openai-compatibility',
     supportsName: true,
     supportsApiKey: true,
@@ -352,6 +352,10 @@ function countRecordKeys(record: UnknownRecord, key: string): number {
 }
 
 function readProviderEntries(responseData: unknown, responseKey: string): UnknownRecord[] {
+  // v8 GET returns a bare group array; fall back to an object wrapper defensively.
+  if (Array.isArray(responseData)) {
+    return responseData.filter(isRecord)
+  }
   const value = toRecord(responseData)[responseKey]
   return Array.isArray(value) ? value.filter(isRecord) : []
 }
@@ -391,13 +395,16 @@ function normalizeIssue(providerId: ProviderId, error: unknown): ProviderRequest
   }
 }
 
+function readGroupKeys(group: UnknownRecord): UnknownRecord[] {
+  const value = group.keys
+  return Array.isArray(value) ? value.filter(isRecord) : []
+}
+
 function createSelector(descriptor: ProviderDescriptor, record: UnknownRecord, index: number) {
   const id = readString(record, 'id')
   const uuid = readString(record, 'uuid')
   const authIndex = readString(record, 'auth_index') ?? readString(record, 'auth-index')
-  const apiKey = readString(record, 'api-key')
   const name = readString(record, 'name')
-  const baseUrl = readString(record, 'base-url')
 
   if (id) return { id }
   if (uuid) return { uuid }
@@ -407,42 +414,101 @@ function createSelector(descriptor: ProviderDescriptor, record: UnknownRecord, i
     return { name }
   }
 
+  return { index }
+}
+
+function createNativeKeySelector(key: UnknownRecord, group: UnknownRecord, index: number) {
+  const id = readString(key, 'id') ?? readString(key, 'uuid')
+  if (id) return { id }
+
+  const authIndex =
+    readString(key, 'auth_index') ??
+    readString(key, 'auth-index') ??
+    readString(group, 'auth_index') ??
+    readString(group, 'auth-index')
+  if (authIndex) return { auth_index: authIndex }
+
+  const apiKey = readString(key, 'api-key')
   if (apiKey) {
+    const baseUrl = readString(group, 'base-url')
     return baseUrl ? { 'api-key': apiKey, 'base-url': baseUrl } : { 'api-key': apiKey }
   }
 
   return { index }
 }
 
-function normalizeProviderResource(
+function readAuthIndex(record: UnknownRecord) {
+  return readString(record, 'auth_index') ?? readString(record, 'auth-index')
+}
+
+function normalizeNativeKeyResource(
+  descriptor: ProviderDescriptor,
+  group: UnknownRecord,
+  key: UnknownRecord,
+  index: number,
+): ProviderResource {
+  // Effective credential view: group fields with the key's own overrides winning.
+  const record = { ...group, ...key }
+  delete record.keys
+
+  const authIndex = readAuthIndex(key) ?? readAuthIndex(group)
+  const name = readString(record, 'name')
+  const id =
+    readString(key, 'id') ?? readString(key, 'uuid') ?? authIndex ?? `${descriptor.id}-${index + 1}`
+
+  return {
+    id: `${descriptor.id}:${id}`,
+    providerId: descriptor.id,
+    index,
+    identifier: name ?? authIndex ?? id,
+    authIndex,
+    name,
+    apiKeyPreview: maskSecret(readString(key, 'api-key')),
+    baseUrl: readString(group, 'base-url'),
+    proxyUrl: readString(record, 'proxy-url'),
+    prefix: readString(record, 'prefix'),
+    disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
+    disableCooling: readBoolean(record, 'disable-cooling'),
+    websockets: readBoolean(key, 'websockets'),
+    priority: readNumber(record, 'priority'),
+    requestRetry:
+      readNonNegativeInteger(record, 'request-retry') ??
+      readNonNegativeInteger(record, 'request_retry'),
+    modelCount: countArray(record, 'models'),
+    headerCount: countRecordKeys(record, 'headers'),
+    excludedModelCount: countArray(record, 'excluded-models'),
+    apiKeyEntryCount: readGroupKeys(group).length,
+    selector: createNativeKeySelector(key, group, index),
+    raw: record,
+  }
+}
+
+function normalizeCompatibilityResource(
   descriptor: ProviderDescriptor,
   record: UnknownRecord,
   index: number,
 ): ProviderResource {
-  const authIndex = readString(record, 'auth_index') ?? readString(record, 'auth-index')
+  const authIndex = readAuthIndex(record)
   const name = readString(record, 'name')
-  const apiKey = readString(record, 'api-key')
-  const baseUrl = readString(record, 'base-url')
-  const prefix = readString(record, 'prefix')
+  const firstKey = readGroupKeys(record)[0] ?? {}
   const id =
     readString(record, 'id') ??
     readString(record, 'uuid') ??
     authIndex ??
     name ??
     `${descriptor.id}-${index + 1}`
-  const identifier = name ?? authIndex ?? id
 
   return {
     id: `${descriptor.id}:${id}`,
     providerId: descriptor.id,
     index,
-    identifier,
+    identifier: name ?? authIndex ?? id,
     authIndex,
     name,
-    apiKeyPreview: maskSecret(apiKey),
-    baseUrl,
-    proxyUrl: readString(record, 'proxy-url'),
-    prefix,
+    apiKeyPreview: maskSecret(readString(firstKey, 'api-key') ?? readString(record, 'api-key')),
+    baseUrl: readString(record, 'base-url'),
+    proxyUrl: readString(record, 'proxy-url') ?? readString(firstKey, 'proxy-url'),
+    prefix: readString(record, 'prefix'),
     disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
     disableCooling: readBoolean(record, 'disable-cooling'),
     websockets: readBoolean(record, 'websockets'),
@@ -453,10 +519,31 @@ function normalizeProviderResource(
     modelCount: countArray(record, 'models'),
     headerCount: countRecordKeys(record, 'headers'),
     excludedModelCount: countArray(record, 'excluded-models'),
-    apiKeyEntryCount: countArray(record, 'api-key-entries'),
+    apiKeyEntryCount: Array.isArray(record.keys)
+      ? record.keys.length
+      : countArray(record, 'api-key-entries'),
     selector: createSelector(descriptor, record, index),
     raw: record,
   }
+}
+
+function normalizeProviderResources(
+  descriptor: ProviderDescriptor,
+  family: UnknownRecord[],
+): ProviderResource[] {
+  if (descriptor.id === 'openaiCompatibility') {
+    return family.map((record, index) => normalizeCompatibilityResource(descriptor, record, index))
+  }
+
+  // Home may persist one native group per credential or group several keys
+  // together; the console lists one resource per key either way.
+  const resources: ProviderResource[] = []
+  for (const group of family) {
+    for (const key of readGroupKeys(group)) {
+      resources.push(normalizeNativeKeyResource(descriptor, group, key, resources.length))
+    }
+  }
+  return resources
 }
 
 function normalizeProviderModelDefinition(
@@ -676,7 +763,7 @@ async function runProviderApiCall(
   },
 ) {
   const response = await client.post<unknown>(
-    '/api-call',
+    '/requests/api-call',
     {
       auth_index: input.authIndex?.trim() || undefined,
       method: input.method,
@@ -779,33 +866,48 @@ function appendProviderOptions(
           ? input.requestRetry
           : null
   }
-
-  if (descriptor.supportsWebsockets) {
-    payload.websockets = input.websockets
-  }
 }
 
-function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
+// Group fields the entry form does not manage; carried over on update so an
+// edit does not silently drop them from the strict-schema PUT.
+const NATIVE_GROUP_CARRY_FIELDS = ['name', 'request-scoped-errors']
+const COMPATIBILITY_GROUP_CARRY_FIELDS = ['id', 'support-prompt-cache-key', 'request-scoped-errors']
+// Provider-specific key options the form does not manage; carried per key.
+const NATIVE_KEY_CARRY_FIELDS = [
+  'request-scoped-errors',
+  'disable-codex-cloaking',
+  'alpha-search',
+  'experimental-cch-signing',
+  'rebuild-mid-system-message',
+  'native-tool-search',
+  'fingerprint-profile',
+]
+
+function createNativeKeyPayload(
+  descriptor: ProviderDescriptor,
+  input: ProviderEntryFormInput,
+  existingKey?: UnknownRecord,
+) {
+  const existing = existingKey ?? {}
   const payload: UnknownRecord = {}
 
-  if (descriptor.supportsName && input.name.trim()) {
-    payload.name = input.name.trim()
+  // `id` is the credential identity; keeping it preserves the binding on edit.
+  const id = readString(existing, 'id') ?? readString(existing, 'uuid')
+  if (id) payload.id = id
+
+  const apiKey = input.apiKey.trim() || readString(existing, 'api-key') || ''
+  if (apiKey) payload['api-key'] = apiKey
+
+  const weight = readNumber(existing, 'weight')
+  if (weight !== null) payload.weight = weight
+
+  for (const field of NATIVE_KEY_CARRY_FIELDS) {
+    if (existing[field] !== undefined) payload[field] = existing[field]
   }
 
-  if (input.baseUrl.trim()) {
-    payload['base-url'] = input.baseUrl.trim()
-  }
-
-  if (input.proxyUrl.trim() && descriptor.id !== 'openaiCompatibility') {
-    payload['proxy-url'] = input.proxyUrl.trim()
-  }
-
-  if (input.prefix.trim()) {
-    payload.prefix = input.prefix.trim()
-  }
-
-  if (descriptor.disabledMode === 'provider-payload') {
-    payload.disabled = input.disabled
+  // Provider-specific options live on the key, not on the group.
+  if (descriptor.supportsWebsockets) {
+    payload.websockets = input.websockets
   }
 
   if (descriptor.supportsCloak) {
@@ -813,49 +915,286 @@ function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntry
     if (cloak) payload.cloak = cloak
   }
 
+  return payload
+}
+
+function createNativeGroupPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
+  const payload: UnknownRecord = {}
+
+  if (input.baseUrl.trim()) {
+    payload['base-url'] = input.baseUrl.trim()
+  }
+
+  if (input.proxyUrl.trim()) {
+    payload['proxy-url'] = input.proxyUrl.trim()
+  }
+
+  if (input.prefix.trim()) {
+    payload.prefix = input.prefix.trim()
+  }
+
   appendProviderOptions(payload, descriptor, input)
-
-  if (descriptor.id === 'openaiCompatibility') {
-    if (input.testModel?.trim()) {
-      payload['test-model'] = input.testModel.trim()
-    }
-
-    if (input.apiKey.trim()) {
-      payload['api-key-entries'] = [{ 'api-key': input.apiKey.trim() }]
-    }
-    return payload
-  }
-
-  if (input.apiKey.trim()) {
-    payload['api-key'] = input.apiKey.trim()
-  }
 
   return payload
 }
 
-function createPatchSelector(resource: ProviderResource) {
+function createCompatibilityGroupPayload(
+  descriptor: ProviderDescriptor,
+  input: ProviderEntryFormInput,
+) {
+  const payload: UnknownRecord = {}
+
+  if (input.name.trim()) {
+    payload.name = input.name.trim()
+  }
+
+  if (input.baseUrl.trim()) {
+    payload['base-url'] = input.baseUrl.trim()
+  }
+
+  if (input.prefix.trim()) {
+    payload.prefix = input.prefix.trim()
+  }
+
+  payload.disabled = input.disabled
+
+  appendProviderOptions(payload, descriptor, input)
+
+  return payload
+}
+
+function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: UnknownRecord[]) {
+  const apiKey = input.apiKey.trim()
+  const proxyUrl = input.proxyUrl.trim()
+
+  // An empty keys list is the keyless fallback credential for the group.
+  if (!existingKeys.length) {
+    if (!apiKey) return []
+    const key: UnknownRecord = { 'api-key': apiKey }
+    if (proxyUrl) key['proxy-url'] = proxyUrl
+    return [key]
+  }
+
+  return existingKeys.map((existing, index) => {
+    if (index !== 0) return existing
+
+    const payload: UnknownRecord = {}
+    const id = readString(existing, 'id') ?? readString(existing, 'uuid')
+    if (id) payload.id = id
+
+    const resolvedApiKey = apiKey || readString(existing, 'api-key') || ''
+    if (resolvedApiKey) payload['api-key'] = resolvedApiKey
+    if (proxyUrl) payload['proxy-url'] = proxyUrl
+
+    const weight = readNumber(existing, 'weight')
+    if (weight !== null) payload.weight = weight
+
+    return payload
+  })
+}
+
+function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
+  if (descriptor.id === 'openaiCompatibility') {
+    return {
+      ...createCompatibilityGroupPayload(descriptor, input),
+      keys: createCompatibilityKeys(input, []),
+    }
+  }
+
+  const key = createNativeKeyPayload(descriptor, input)
+
+  return {
+    ...createNativeGroupPayload(descriptor, input),
+    keys: readString(key, 'api-key') ? [key] : [],
+  }
+}
+
+type NativeCredentialLocation = {
+  groupIndex: number
+  keyIndex: number
+}
+
+function locateNativeCredential(
+  family: UnknownRecord[],
+  resource: ProviderResource,
+): NativeCredentialLocation | null {
   const selector = resource.selector
 
-  if (typeof selector.id === 'string') return { id: selector.id }
-  if (typeof selector.uuid === 'string') return { uuid: selector.uuid }
-  if (typeof selector.name === 'string') return { name: selector.name }
-  if (typeof selector['api-key'] === 'string') return { match: selector['api-key'] }
+  const id =
+    (typeof selector.id === 'string' ? selector.id : null) ??
+    (typeof selector.uuid === 'string' ? selector.uuid : null)
+  if (id) {
+    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
+      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
+        (key) => readString(key, 'id') === id || readString(key, 'uuid') === id,
+      )
+      if (keyIndex !== -1) return { groupIndex, keyIndex }
+    }
+  }
 
-  return { index: resource.index }
+  const authIndex = typeof selector.auth_index === 'string' ? selector.auth_index : null
+  if (authIndex) {
+    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
+      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
+        (key) => readAuthIndex(key) === authIndex,
+      )
+      if (keyIndex !== -1) return { groupIndex, keyIndex }
+    }
+  }
+
+  const apiKey = typeof selector['api-key'] === 'string' ? selector['api-key'] : null
+  if (apiKey) {
+    const baseUrl = typeof selector['base-url'] === 'string' ? selector['base-url'] : null
+    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
+      if (baseUrl && readString(family[groupIndex], 'base-url') !== baseUrl) continue
+      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
+        (key) => readString(key, 'api-key') === apiKey,
+      )
+      if (keyIndex !== -1) return { groupIndex, keyIndex }
+    }
+  }
+
+  if (typeof selector.index === 'number') {
+    let flatIndex = 0
+    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
+      const keyCount = readGroupKeys(family[groupIndex]).length
+      if (selector.index < flatIndex + keyCount) {
+        return { groupIndex, keyIndex: selector.index - flatIndex }
+      }
+      flatIndex += keyCount
+    }
+  }
+
+  return null
+}
+
+function locateCompatibilityGroup(family: UnknownRecord[], resource: ProviderResource) {
+  const selector = resource.selector
+
+  const id =
+    (typeof selector.id === 'string' ? selector.id : null) ??
+    (typeof selector.uuid === 'string' ? selector.uuid : null)
+  if (id) {
+    const index = family.findIndex(
+      (group) => readString(group, 'id') === id || readString(group, 'uuid') === id,
+    )
+    if (index !== -1) return index
+  }
+
+  const name = typeof selector.name === 'string' ? selector.name : null
+  if (name) {
+    const index = family.findIndex((group) => readString(group, 'name') === name)
+    if (index !== -1) return index
+  }
+
+  if (typeof selector.index === 'number' && selector.index >= 0 && selector.index < family.length) {
+    return selector.index
+  }
+
+  return null
+}
+
+function replaceNativeCredential(
+  family: UnknownRecord[],
+  descriptor: ProviderDescriptor,
+  resource: ProviderResource,
+  input: ProviderEntryFormInput,
+) {
+  const location = locateNativeCredential(family, resource)
+  if (!location) throw new Error('Provider credential not found')
+
+  const group = family[location.groupIndex]
+  const existingKeys = readGroupKeys(group)
+  const nextKey = createNativeKeyPayload(descriptor, input, existingKeys[location.keyIndex])
+  const nextKeys = existingKeys.length
+    ? existingKeys.map((key, index) => (index === location.keyIndex ? nextKey : key))
+    : [nextKey]
+
+  const nextGroup: UnknownRecord = {}
+  for (const field of NATIVE_GROUP_CARRY_FIELDS) {
+    if (group[field] !== undefined) nextGroup[field] = group[field]
+  }
+  Object.assign(nextGroup, createNativeGroupPayload(descriptor, input))
+  nextGroup.keys = nextKeys
+
+  const nextFamily = family.slice()
+  nextFamily[location.groupIndex] = nextGroup
+  return nextFamily
+}
+
+function replaceCompatibilityGroup(
+  family: UnknownRecord[],
+  descriptor: ProviderDescriptor,
+  resource: ProviderResource,
+  input: ProviderEntryFormInput,
+) {
+  const groupIndex = locateCompatibilityGroup(family, resource)
+  if (groupIndex === null) throw new Error('Provider entry not found')
+
+  const group = family[groupIndex]
+  const nextGroup: UnknownRecord = {}
+  for (const field of COMPATIBILITY_GROUP_CARRY_FIELDS) {
+    if (group[field] !== undefined) nextGroup[field] = group[field]
+  }
+  Object.assign(nextGroup, createCompatibilityGroupPayload(descriptor, input))
+  nextGroup.keys = createCompatibilityKeys(input, readGroupKeys(group))
+
+  const nextFamily = family.slice()
+  nextFamily[groupIndex] = nextGroup
+  return nextFamily
+}
+
+function removeNativeCredential(family: UnknownRecord[], resource: ProviderResource) {
+  const location = locateNativeCredential(family, resource)
+  if (!location) throw new Error('Provider credential not found')
+
+  const group = family[location.groupIndex]
+  const nextKeys = readGroupKeys(group).filter((_key, index) => index !== location.keyIndex)
+
+  const nextFamily = family.slice()
+  if (nextKeys.length) {
+    nextFamily[location.groupIndex] = { ...group, keys: nextKeys }
+  } else {
+    // A group without keys no longer holds a credential; drop it.
+    nextFamily.splice(location.groupIndex, 1)
+  }
+  return nextFamily
+}
+
+function removeCompatibilityGroup(family: UnknownRecord[], resource: ProviderResource) {
+  const groupIndex = locateCompatibilityGroup(family, resource)
+  if (groupIndex === null) throw new Error('Provider entry not found')
+
+  return family.filter((_group, index) => index !== groupIndex)
+}
+
+async function fetchProviderFamily(
+  client: AxiosInstance,
+  descriptor: ProviderDescriptor,
+): Promise<UnknownRecord[]> {
+  try {
+    const response = await client.get<unknown>(descriptor.path)
+    return readProviderEntries(response.data, descriptor.responseKey)
+  } catch (error) {
+    // The persisted v8 config view prunes empty provider families, so the
+    // subtree read answers 404 for "no keys configured" — an empty family,
+    // not an unsupported endpoint.
+    if (toManagementApiError(error).status === 404) {
+      return []
+    }
+    throw error
+  }
 }
 
 async function fetchProviderGroup(
   client: AxiosInstance,
   descriptor: ProviderDescriptor,
 ): Promise<ProviderGroup> {
-  const response = await client.get<unknown>(descriptor.path)
-  const resources = readProviderEntries(response.data, descriptor.responseKey).map(
-    (record, index) => normalizeProviderResource(descriptor, record, index),
-  )
+  const family = await fetchProviderFamily(client, descriptor)
 
   return {
     ...descriptor,
-    resources,
+    resources: normalizeProviderResources(descriptor, family),
     issue: null,
   }
 }
@@ -912,7 +1251,9 @@ export async function fetchProviderModelDefinitions(
   channel: ProviderModelChannel,
 ): Promise<ProviderModelDefinitionsSnapshot> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>(`/model-definitions/${encodeURIComponent(channel)}`)
+  const response = await client.get<unknown>(
+    `/routing/model-definitions/${encodeURIComponent(channel)}`,
+  )
 
   return {
     channel,
@@ -1128,13 +1469,10 @@ export async function createProviderResource(
   const descriptor = providerDescriptors.find((item) => item.id === providerId)
   if (!descriptor) throw new Error(`Unknown provider: ${providerId}`)
 
+  // v8 PUT replaces the whole family, so append requires read-modify-write.
   const client = createManagementClient(session)
-  const currentGroup = await fetchProviderGroup(client, descriptor)
-  const payload = createEntryPayload(descriptor, input)
-  await client.put(descriptor.path, [
-    ...currentGroup.resources.map((resource) => resource.raw),
-    payload,
-  ])
+  const family = await fetchProviderFamily(client, descriptor)
+  await client.put(descriptor.path, [...family, createEntryPayload(descriptor, input)])
 }
 
 export async function updateProviderResource(
@@ -1146,10 +1484,12 @@ export async function updateProviderResource(
   if (!descriptor) throw new Error(`Unknown provider: ${resource.providerId}`)
 
   const client = createManagementClient(session)
-  await client.patch(descriptor.path, {
-    ...createPatchSelector(resource),
-    value: createEntryPayload(descriptor, input),
-  })
+  const family = await fetchProviderFamily(client, descriptor)
+  const nextFamily =
+    descriptor.id === 'openaiCompatibility'
+      ? replaceCompatibilityGroup(family, descriptor, resource, input)
+      : replaceNativeCredential(family, descriptor, resource, input)
+  await client.put(descriptor.path, nextFamily)
 }
 
 export async function deleteProviderResource(
@@ -1160,9 +1500,12 @@ export async function deleteProviderResource(
   if (!descriptor) throw new Error(`Unknown provider: ${resource.providerId}`)
 
   const client = createManagementClient(session)
-  await client.delete(descriptor.path, {
-    params: resource.selector,
-  })
+  const family = await fetchProviderFamily(client, descriptor)
+  const nextFamily =
+    descriptor.id === 'openaiCompatibility'
+      ? removeCompatibilityGroup(family, resource)
+      : removeNativeCredential(family, resource)
+  await client.put(descriptor.path, nextFamily)
 }
 
 export async function updateProviderStatus(
@@ -1180,7 +1523,7 @@ export async function updateProviderStatus(
   if (!authId) throw new Error('Missing provider auth identifier')
 
   const client = createManagementClient(session)
-  await client.patch('/auth-files/status', {
+  await client.patch('/credentials/status', {
     name: authId,
     disabled,
   })

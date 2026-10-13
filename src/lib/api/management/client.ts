@@ -2,7 +2,8 @@ import axios, { type AxiosError, type AxiosInstance } from 'axios'
 
 import type { ManagementApiError, ManagementApiFieldError, ManagementSessionInput } from './types'
 
-const MANAGEMENT_PATH = '/v0/management'
+const MANAGEMENT_PATH = '/v8/management'
+const LEGACY_MANAGEMENT_PATH = '/v0/management'
 const DEFAULT_MANAGEMENT_ORIGIN = 'http://localhost:8327'
 const SAME_ORIGIN_MANAGEMENT_BASE_URL = MANAGEMENT_PATH
 const CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT = import.meta.env.DEV
@@ -40,6 +41,11 @@ export function normalizeManagementBaseUrl(rawBaseUrl: string) {
   }
 
   const parsed = parseManagementBaseUrl(trimmed)
+
+  if (parsed.pathname.includes(LEGACY_MANAGEMENT_PATH)) {
+    parsed.pathname = parsed.pathname.replace(LEGACY_MANAGEMENT_PATH, MANAGEMENT_PATH)
+  }
+
   const managementPathIndex = parsed.pathname.indexOf(MANAGEMENT_PATH)
 
   if (managementPathIndex >= 0) {
@@ -146,7 +152,17 @@ function readResponseErrorDetails(data: unknown): ResponseErrorDetails {
   return details
 }
 
+function isShapedManagementApiError(error: unknown): error is ManagementApiError {
+  if (!error || typeof error !== 'object' || axios.isAxiosError(error)) return false
+  const record = error as Partial<ManagementApiError>
+  return typeof record.message === 'string' && typeof record.backendCode === 'string'
+}
+
 export function toManagementApiError(error: unknown): ManagementApiError {
+  if (isShapedManagementApiError(error)) {
+    return error
+  }
+
   if (error instanceof TypeError || error instanceof DOMException) {
     return {
       message: error.message,

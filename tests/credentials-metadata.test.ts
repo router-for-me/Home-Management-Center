@@ -122,9 +122,9 @@ describe('supportsCredentialWebsockets', () => {
 })
 
 describe('fetchCredentialSnapshot metadata projection', () => {
-  test('normalizes editable metadata returned by auth-files', async () => {
+  test('normalizes editable metadata returned by the credentials route', async () => {
     const { session } = createManagementAdapter((method, pathname) => {
-      if (method === 'GET' && pathname.endsWith('/auth-files')) {
+      if (method === 'GET' && pathname.endsWith('/credentials')) {
         return {
           files: [
             {
@@ -159,7 +159,7 @@ describe('fetchCredentialSnapshot metadata projection', () => {
 
   test('marks metadata omitted by older backends as unavailable', async () => {
     const { session } = createManagementAdapter((method, pathname) => {
-      if (method === 'GET' && pathname.endsWith('/auth-files')) {
+      if (method === 'GET' && pathname.endsWith('/credentials')) {
         return {
           files: [{ id: 'codex-01', provider: 'codex', type: 'codex' }],
         }
@@ -193,7 +193,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({
       name: 'xai-01',
@@ -212,7 +212,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ websockets: false })
   })
@@ -226,7 +226,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ name: 'gemini-01' })
     expect((patch?.body as Record<string, unknown>).websockets).toBeUndefined()
@@ -240,7 +240,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ name: 'codex-01', websockets: true })
     expect(patch?.body).not.toHaveProperty('prefix')
@@ -258,7 +258,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ priority: null })
   })
@@ -272,7 +272,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect((patch?.body as Record<string, unknown>).priority).toBeUndefined()
   })
@@ -286,7 +286,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ 'request-retry': 3 })
   })
@@ -300,7 +300,7 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
 
     const patch = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/auth-files/fields'),
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ 'request-retry': null })
   })

@@ -162,7 +162,7 @@ export async function fetchAccessKeysSnapshot(
   session: ManagementSessionInput,
 ): Promise<AccessKeysSnapshot> {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/api-keys')
+  const response = await client.get<unknown>('/access/api-keys')
   const rawEtag: unknown = response.headers.etag
   const etag = typeof rawEtag === 'string' && rawEtag.trim() ? rawEtag.trim() : null
   const entries = readEntries(response.data)
@@ -183,7 +183,7 @@ export async function createAccessKey(
   input: string | AccessKeyFormInput,
 ) {
   const client = createManagementClient(session)
-  const response = await client.get<unknown>('/api-keys')
+  const response = await client.get<unknown>('/access/api-keys')
   const nextInput = normalizeInput(input)
   const currentResources = readEntries(response.data)
     .map((item, index) => normalizeAccessKey(item, index))
@@ -195,7 +195,7 @@ export async function createAccessKey(
 
   if (supportsStableIds) {
     try {
-      await client.post('/api-keys', nextEntry)
+      await client.post('/access/api-keys', nextEntry)
       return
     } catch (error) {
       const apiError = toManagementApiError(error)
@@ -203,7 +203,7 @@ export async function createAccessKey(
     }
   }
 
-  await client.put('/api-keys', {
+  await client.put('/access/api-keys', {
     api_key_entries: [...currentResources.map((item) => toAccessKeyEntry(item)), nextEntry],
   })
 }
@@ -221,7 +221,7 @@ export async function updateAccessKey(
       : { display_name: normalizeDisplayNameInput(input.displayName) }
 
   if (nextValue) {
-    await client.patch('/api-keys', {
+    await client.patch('/access/api-keys', {
       ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
       value: {
         api_key: nextValue,
@@ -237,7 +237,7 @@ export async function updateAccessKey(
   // A rename-only patch keeps the key value, ownership, and scope bindings
   // untouched. The index selector requires a value payload, so fall back to
   // the raw key selector when no stable ID exists.
-  await client.patch('/api-keys', {
+  await client.patch('/access/api-keys', {
     ...(resource.numericId != null ? { id: resource.numericId } : { api_key: resource.value }),
     ...displayNamePatch,
   })
@@ -250,7 +250,7 @@ export async function updateAccessKeyBindings(
 ) {
   const client = createManagementClient(session)
 
-  await client.patch('/api-keys', {
+  await client.patch('/access/api-keys', {
     ...(resource.numericId != null ? { id: resource.numericId } : { api_key: resource.value }),
     user_id: input.userId ?? 0,
     channels: input.channelGroupIds ?? [],
@@ -281,7 +281,7 @@ export async function replaceAccessKeys(
     })
 
   await client.put(
-    '/api-keys',
+    '/access/api-keys',
     { api_key_entries: nextEntries },
     { headers: snapshot.etag ? { 'If-Match': snapshot.etag } : undefined },
   )
@@ -293,7 +293,7 @@ export async function deleteAccessKey(
 ) {
   const client = createManagementClient(session)
 
-  await client.delete('/api-keys', {
+  await client.delete('/access/api-keys', {
     params: {
       ...(resource.numericId != null ? { id: resource.numericId } : { index: resource.index }),
     },

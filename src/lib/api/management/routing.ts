@@ -1,6 +1,6 @@
 type UnknownRecord = Record<string, unknown>
 
-type ManagementRoutingStrategy = 'round-robin' | 'fill-first' | 'unknown'
+type ManagementRoutingStrategy = 'round-robin' | 'weighted-round-robin' | 'fill-first' | 'unknown'
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -16,6 +16,10 @@ export function normalizeManagementRoutingStrategy(value: unknown): ManagementRo
     case 'roundrobin':
     case 'rr':
       return 'round-robin'
+    case 'weighted-round-robin':
+    case 'weightedroundrobin':
+    case 'wrr':
+      return 'weighted-round-robin'
     case 'fill-first':
     case 'fillfirst':
     case 'ff':

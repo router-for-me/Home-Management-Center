@@ -5,6 +5,7 @@ import { fetchManagementDashboardSnapshot } from '../src/lib/api/management/dash
 import {
   type ProviderEntryFormInput,
   createProviderResource,
+  deleteProviderResource,
   fetchProviderDiscoveredModels,
   fetchProviderSnapshot,
   getProviderModelDefinitionChannels,
@@ -142,31 +143,31 @@ describe('Google Interactions provider Management API integration', () => {
 
   test('fetches and normalizes interactions provider group in snapshot', async () => {
     const { requests, session } = createManagementAdapter((_method, pathname) => {
-      const responseKey = providerResponseKey(pathname)
-      if (responseKey !== 'interactions-api-key') return { [responseKey]: [] }
+      if (!pathname.endsWith('/config/api-keys/interactions')) return []
 
-      return {
-        'interactions-api-key': [
-          {
-            id: 'interactions-auth-id',
-            uuid: 'interactions-auth-id',
-            auth_index: 'interactions-auth-id',
-            'api-key': 'AIzaSyTestInteractionsKey',
-            'base-url': 'https://generativelanguage.googleapis.com',
-            prefix: 'team-interactions',
-            'disable-cooling': true,
-            'request-retry': 2,
-            models: [
-              {
-                name: 'gemini-2.5-pro',
-                alias: 'gemini-pro',
-                'display-name': 'Gemini Pro',
-                'force-mapping': true,
-              },
-            ],
-          },
-        ],
-      }
+      return [
+        {
+          name: 'team-interactions',
+          'base-url': 'https://generativelanguage.googleapis.com',
+          prefix: 'team-interactions',
+          'disable-cooling': true,
+          'request-retry': 2,
+          models: [
+            {
+              name: 'gemini-2.5-pro',
+              alias: 'gemini-pro',
+              'display-name': 'Gemini Pro',
+              'force-mapping': true,
+            },
+          ],
+          keys: [
+            {
+              id: 'interactions-auth-id',
+              'api-key': 'AIzaSyTestInteractionsKey',
+            },
+          ],
+        },
+      ]
     })
 
     const snapshot = await fetchProviderSnapshot(session, 'home-cluster')
@@ -175,31 +176,34 @@ describe('Google Interactions provider Management API integration', () => {
 
     expect(interactionsGroup).toMatchObject({
       id: 'interactions',
-      path: '/interactions-api-key',
-      responseKey: 'interactions-api-key',
+      path: '/config/api-keys/interactions',
+      responseKey: 'interactions',
       modelDefinitionChannel: 'gemini-interactions',
       supportsModelDiscovery: true,
       supportsRichModelAliases: true,
     })
     expect(resource).toMatchObject({
-      identifier: 'interactions-auth-id',
-      authIndex: 'interactions-auth-id',
+      identifier: 'team-interactions',
+      name: 'team-interactions',
+      authIndex: null,
       disableCooling: true,
       requestRetry: 2,
+      apiKeyEntryCount: 1,
+      selector: { id: 'interactions-auth-id' },
     })
-    expect(requests.some((request) => request.pathname.endsWith('/interactions-api-key'))).toBe(
-      true,
-    )
+    expect(
+      requests.some((request) => request.pathname.endsWith('/config/api-keys/interactions')),
+    ).toBe(true)
   })
 
   test('includes interactions provider in dashboard snapshot and summaries', async () => {
     const { requests, session } = createManagementAdapter((_method, pathname) => {
       const responseKey = providerResponseKey(pathname)
-      if (responseKey === 'config') return { 'api-keys': [] }
+      if (responseKey === 'config') return { access: { 'api-keys': [] } }
       if (responseKey === 'latest-version') return { 'latest-version': 'v1.0.0' }
-      if (responseKey === 'auth-files') return { files: [] }
-      if (responseKey === 'interactions-api-key') {
-        return { 'interactions-api-key': [{ id: 'interactions-auth-id', disabled: false }] }
+      if (responseKey === 'credentials') return { files: [] }
+      if (responseKey === 'interactions') {
+        return [{ id: 'interactions-auth-id', disabled: false }]
       }
       return { [responseKey]: [] }
     })
@@ -211,30 +215,27 @@ describe('Google Interactions provider Management API integration', () => {
     )
     expect(dashboardSnapshot.providers.find((p) => p.id === 'interactions')).toMatchObject({
       id: 'interactions',
-      path: '/interactions-api-key',
-      responseKey: 'interactions-api-key',
+      path: '/config/api-keys/interactions',
       total: 1,
       active: 1,
       disabled: 0,
     })
-    expect(requests.some((request) => request.pathname.endsWith('/interactions-api-key'))).toBe(
-      true,
-    )
+    expect(
+      requests.some((request) => request.pathname.endsWith('/config/api-keys/interactions')),
+    ).toBe(true)
   })
 
   test('creates interactions entries with the expected payload', async () => {
-    const { requests, session } = createManagementAdapter((_method, pathname) => ({
-      [providerResponseKey(pathname)]: [],
-    }))
+    const { requests, session } = createManagementAdapter(() => [])
 
     await createProviderResource(session, 'interactions', createInteractionsForm())
 
     const createRequest = requests.find(
-      (request) => request.method === 'PUT' && request.pathname.endsWith('/interactions-api-key'),
+      (request) =>
+        request.method === 'PUT' && request.pathname.endsWith('/config/api-keys/interactions'),
     )
     expect(createRequest?.body).toEqual([
       {
-        'api-key': 'AIzaSyTestInteractionsKey',
         'base-url': 'https://generativelanguage.googleapis.com',
         'proxy-url': 'socks5://127.0.0.1:1080',
         prefix: 'team-interactions',
@@ -251,23 +252,26 @@ describe('Google Interactions provider Management API integration', () => {
         ],
         'excluded-models': ['gemini-1.0-*'],
         'disable-cooling': true,
+        keys: [{ 'api-key': 'AIzaSyTestInteractionsKey' }],
       },
     ])
   })
 
-  test('updates and patches interactions entries correctly', async () => {
+  test('updates interactions entries with a full-family PUT and toggles status', async () => {
     const { requests, session } = createManagementAdapter((_method, pathname) => {
-      const responseKey = providerResponseKey(pathname)
-      if (responseKey !== 'interactions-api-key') return { [responseKey]: [] }
+      if (!pathname.endsWith('/config/api-keys/interactions')) return []
 
-      return {
-        'interactions-api-key': [
-          {
-            id: 'interactions-auth-id',
-            'api-key': 'AIzaSyTestInteractionsKey',
-          },
-        ],
-      }
+      return [
+        {
+          'base-url': 'https://generativelanguage.googleapis.com',
+          keys: [{ id: 'interactions-auth-id', 'api-key': 'AIzaSyTestInteractionsKey' }],
+        },
+        {
+          name: 'untouched-group',
+          'base-url': 'https://example.com',
+          keys: [{ id: 'other-credential-id', 'api-key': 'other-key', weight: 3 }],
+        },
+      ]
     })
 
     const snapshot = await fetchProviderSnapshot(session, 'home-cluster')
@@ -278,11 +282,11 @@ describe('Google Interactions provider Management API integration', () => {
     await updateProviderStatus(session, resource, true)
 
     const updateRequest = requests.find(
-      (request) => request.method === 'PATCH' && request.pathname.endsWith('/interactions-api-key'),
+      (request) =>
+        request.method === 'PUT' && request.pathname.endsWith('/config/api-keys/interactions'),
     )
-    expect(updateRequest?.body).toEqual({
-      id: 'interactions-auth-id',
-      value: {
+    expect(updateRequest?.body).toEqual([
+      {
         'base-url': 'https://generativelanguage.googleapis.com',
         'proxy-url': 'socks5://127.0.0.1:1080',
         prefix: 'team-interactions',
@@ -299,13 +303,80 @@ describe('Google Interactions provider Management API integration', () => {
         ],
         'excluded-models': ['gemini-1.0-*'],
         'disable-cooling': true,
+        keys: [{ id: 'interactions-auth-id', 'api-key': 'AIzaSyTestInteractionsKey' }],
       },
-    })
+      {
+        name: 'untouched-group',
+        'base-url': 'https://example.com',
+        keys: [{ id: 'other-credential-id', 'api-key': 'other-key', weight: 3 }],
+      },
+    ])
 
     const statusRequest = requests.find((request) =>
-      request.pathname.endsWith('/auth-files/status'),
+      request.pathname.endsWith('/credentials/status'),
     )
     expect(statusRequest?.body).toEqual({ name: 'interactions-auth-id', disabled: true })
+  })
+
+  test('deletes one credential by key id and drops emptied groups', async () => {
+    const { requests, session } = createManagementAdapter((_method, pathname) => {
+      if (!pathname.endsWith('/config/api-keys/interactions')) return []
+
+      return [
+        {
+          name: 'shared-group',
+          'base-url': 'https://generativelanguage.googleapis.com',
+          keys: [
+            { id: 'interactions-auth-id', 'api-key': 'AIzaSyTestInteractionsKey' },
+            { id: 'sibling-id', 'api-key': 'sibling-key', weight: 2 },
+          ],
+        },
+        {
+          name: 'solo-group',
+          keys: [{ id: 'solo-id', 'api-key': 'solo-key' }],
+        },
+      ]
+    })
+
+    const snapshot = await fetchProviderSnapshot(session, 'home-cluster')
+    const resources = snapshot.groups.find((g) => g.id === 'interactions')?.resources ?? []
+    const target = resources.find((item) => item.selector.id === 'interactions-auth-id')
+    const solo = resources.find((item) => item.selector.id === 'solo-id')
+    if (!target || !solo) throw new Error('Missing resources')
+
+    await deleteProviderResource(session, target)
+
+    const putRequests = () =>
+      requests.filter(
+        (request) =>
+          request.method === 'PUT' && request.pathname.endsWith('/config/api-keys/interactions'),
+      )
+    const firstDelete = putRequests().at(-1)
+    expect(firstDelete?.body).toEqual([
+      {
+        name: 'shared-group',
+        'base-url': 'https://generativelanguage.googleapis.com',
+        keys: [{ id: 'sibling-id', 'api-key': 'sibling-key', weight: 2 }],
+      },
+      {
+        name: 'solo-group',
+        keys: [{ id: 'solo-id', 'api-key': 'solo-key' }],
+      },
+    ])
+
+    await deleteProviderResource(session, solo)
+
+    const secondDelete = putRequests().at(-1)
+    expect(secondDelete?.body).toEqual([
+      {
+        name: 'shared-group',
+        'base-url': 'https://generativelanguage.googleapis.com',
+        keys: [
+          { id: 'interactions-auth-id', 'api-key': 'AIzaSyTestInteractionsKey' },
+          { id: 'sibling-id', 'api-key': 'sibling-key', weight: 2 },
+        ],
+      },
+    ])
   })
 
   test('discovers models using x-goog-api-key header', async () => {
@@ -364,5 +435,76 @@ describe('Google Interactions provider Management API integration', () => {
       expect(locale.common.providersPage.modelCatalog.channels['gemini-interactions']).toBeDefined()
       expect(locale.common.configPage.oauthExcluded.channels['gemini-interactions']).toBeDefined()
     }
+  })
+})
+
+describe('v8 absent provider families', () => {
+  function createNotFoundAdapter() {
+    const requests: CapturedRequest[] = []
+    const adapter: AxiosAdapter = async (config) => {
+      const method = config.method?.toUpperCase() ?? 'GET'
+      const pathname = new URL(config.url ?? '', config.baseURL).pathname
+      requests.push({
+        method,
+        pathname,
+        body: readRequestBody(config.data),
+        headers: config.headers as Record<string, string> | undefined,
+      })
+
+      if (pathname.includes('/config/api-keys/')) {
+        return {
+          data: { error: 'not_found' },
+          status: 404,
+          statusText: 'Not Found',
+          headers: {},
+          config,
+        }
+      }
+
+      return {
+        data: pathname.endsWith('/config') ? { access: { 'api-keys': [] } } : {},
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config,
+      }
+    }
+    axios.defaults.adapter = adapter
+
+    return {
+      requests,
+      session: {
+        baseUrl: 'http://management.test',
+        managementKey: 'test-management-key',
+      },
+    }
+  }
+
+  test('treats a 404 family read as an empty family without issues', async () => {
+    const { session } = createNotFoundAdapter()
+
+    const snapshot = await fetchProviderSnapshot(session, 'home-cluster')
+
+    expect(snapshot.issues).toEqual([])
+    for (const group of snapshot.groups) {
+      expect(group.resources).toEqual([])
+      expect(group.issue).toBeNull()
+    }
+  })
+
+  test('treats a 404 family read as zeroed dashboard summaries without issues', async () => {
+    const { session } = createNotFoundAdapter()
+
+    const snapshot = await fetchManagementDashboardSnapshot(session, noCapabilities, 'home-cluster')
+
+    expect(snapshot.providers.length).toBeGreaterThan(0)
+    for (const provider of snapshot.providers) {
+      expect(provider).toMatchObject({ total: 0, active: 0, disabled: 0 })
+    }
+    expect(
+      snapshot.issues.filter((issue) =>
+        snapshot.providers.some((provider) => provider.id === issue.scope),
+      ),
+    ).toEqual([])
   })
 })

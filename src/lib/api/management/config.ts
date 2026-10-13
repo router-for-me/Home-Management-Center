@@ -1,11 +1,10 @@
-import { Document, isMap, isScalar, parseDocument, parse as parseYaml } from 'yaml'
-import type { Scalar } from 'yaml'
-
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
+
+export type ConfigFieldValue = string | number | boolean | null
 
 export type ConfigFieldKey =
   | 'debug'
@@ -39,51 +38,125 @@ export type ConfigFieldKey =
   | 'oauthModelAliasJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
+  | 'serverHost'
+  | 'serverAllowHostJson'
+  | 'serverTrustedProxiesJson'
+  | 'serverCommercialMode'
+  | 'discoveryEnabled'
+  | 'discoveryServiceName'
+  | 'discoveryServiceType'
+  | 'discoveryAuthRequired'
+  | 'discoveryAdvertiseManagement'
+  | 'discoverySubtypesJson'
+  | 'discoveryInterfacesIncludeJson'
+  | 'discoveryInterfacesExcludeJson'
+  | 'managementBaseUrl'
+  | 'userEmailEnabled'
+  | 'userEmailPublicUrl'
+  | 'userEmailFromAddress'
+  | 'userEmailFromName'
+  | 'userEmailSmtpHost'
+  | 'userEmailSmtpPort'
+  | 'userEmailSmtpUsername'
+  | 'userEmailSmtpPasswordEnv'
+  | 'userEmailSmtpStarttls'
+  | 'userEmailVerificationTokenTtl'
+  | 'userEmailResetTokenTtl'
+  | 'concurrencyCpaHeartbeatTimeout'
+  | 'concurrencyCpaCancelBound'
+  | 'concurrencyReclaimGrace'
+  | 'concurrencyCleanupInterval'
+  | 'concurrencyReleaseFlushInterval'
+  | 'concurrencyReleaseMaxBackoff'
+  | 'concurrencyBusyRetryMin'
+  | 'concurrencyBusyRetryMax'
+  | 'concurrencyMaxLimit'
+  | 'concurrencyLifecycleConfigRevision'
+  | 'concurrencyObservationBarrierRevision'
+  | 'inFlightSnapshotInterval'
+  | 'inFlightStaleAfter'
+  | 'inFlightStagingRetention'
+  | 'inFlightMaxPartBytes'
+  | 'inFlightMaxPartCount'
+  | 'inFlightMaxRevisionBytes'
+  | 'inFlightMaxAggregateGroups'
+  | 'inFlightMaxDetails'
+  | 'inFlightMaxStringBytes'
+  | 'sessionAffinity'
+  | 'sessionAffinityTtl'
+  | 'sessionAffinitySubagents'
+  | 'saveCooldownStatus'
+  | 'transientErrorCooldownSeconds'
+  | 'streamingKeepaliveSeconds'
+  | 'streamingBootstrapRetries'
+  | 'passthroughHeaders'
+  | 'nonstreamKeepaliveInterval'
+  | 'upstreamCodexDisableCloaking'
+  | 'upstreamCodexStreamBootstrapBuffering'
+  | 'upstreamCodexModelLevelCooling'
+  | 'upstreamCodexOrphanDelegationCompatibility'
+  | 'upstreamCodexResponseSteering'
+  | 'upstreamCodexStreamBootstrapTimeout'
+  | 'upstreamClaudeModelLevelCooling'
+  | 'upstreamClaudeToolSearch'
+  | 'upstreamClaudeDisableCloakMode'
+  | 'upstreamClaudeDisableCloakingModelList'
+  | 'upstreamClaudeHeaderUserAgent'
+  | 'upstreamClaudeHeaderPackageVersion'
+  | 'upstreamClaudeHeaderRuntimeVersion'
+  | 'upstreamClaudeHeaderOs'
+  | 'upstreamClaudeHeaderArch'
+  | 'upstreamClaudeHeaderTimeout'
+  | 'upstreamClaudeHeaderTimezone'
+  | 'upstreamClaudeHeaderStabilizeDeviceProfile'
+  | 'upstreamXaiInjectXSearch'
+  | 'clientCodexOptimizeMultiAgentV2'
+  | 'oauthAuthDir'
+  | 'oauthAuthAutoRefreshWorkers'
+  | 'oauthCodexHeaderUserAgent'
+  | 'oauthCodexHeaderBetaFeatures'
+  | 'liveMediaRelayEnabled'
+  | 'liveMediaRelayDisablePrivateRemoteIps'
+  | 'liveMediaRelayMaxSessions'
+  | 'liveMediaRelayUdpPortMin'
+  | 'liveMediaRelayUdpPortMax'
+  | 'liveMediaRelayPublicIp'
+  | 'liveMediaRelayIceServersJson'
+  | 'devinSensitiveWordsJson'
+  | 'aistudioWsAuth'
+  | 'oauthRequestScopedErrorsJson'
+  | 'antigravityCredits'
+  | 'antigravitySignatureCacheEnabled'
+  | 'antigravitySignatureBypassStrict'
+  | 'antigravityConnPoolEnabled'
+  | 'antigravityConnPoolIdleTimeout'
+  | 'antigravityConnPoolMaxIdleConnsPerHost'
+  | 'multimediaDisableImageGeneration'
+  | 'multimediaGptImage2BaseModel'
+  | 'multimediaVideoResultAuthCacheTtl'
+  | 'pprofEnable'
+  | 'pprofAddr'
+  | 'redisUsageQueueRetentionSeconds'
 
-export type ConfigStructuredValues = Record<ConfigFieldKey, boolean | number | string>
+export type ReadOnlyConfigFieldKey =
+  | 'concurrencyLifecycleConfigRevision'
+  | 'concurrencyObservationBarrierRevision'
+
+export type WritableConfigFieldKey = Exclude<ConfigFieldKey, ReadOnlyConfigFieldKey>
+
+export type ConfigStructuredValues = Record<ConfigFieldKey, ConfigFieldValue>
 
 export type ConfigChange = {
-  key: ConfigFieldKey
-  previousValue: boolean | number | string
-  nextValue: boolean | number | string
+  key: WritableConfigFieldKey
+  previousValue: ConfigFieldValue
+  nextValue: ConfigFieldValue
 }
 
 type ConfigSnapshot = {
   fetchedAt: string
   rawConfig: UnknownRecord
   structured: ConfigStructuredValues
-  yaml: string
-  issues: Array<{
-    scope: 'config' | 'yaml' | 'oauthRules'
-    message: string
-    status?: number
-    code?: ManagementApiError['code']
-  }>
 }
-
-type YamlDocument = ReturnType<typeof parseDocument>
-type YamlPath = string[]
-type YamlScalar = Scalar<unknown> & { range: [number, number, number] }
-type YamlTextPatch = {
-  start: number
-  end: number
-  value: string
-}
-
-const yamlBackedConfigKeys = new Set<ConfigFieldKey>([
-  'disableCooling',
-  'tlsEnable',
-  'tlsCert',
-  'tlsKey',
-  'remoteManagementAllowRemote',
-  'remoteManagementSecretKey',
-  'remoteManagementDisableControlPanel',
-  'remoteManagementDisableAutoUpdatePanel',
-  'remoteManagementPanelGithubRepository',
-  'pluginsEnabled',
-  'pluginsDir',
-  'pluginStoreSourcesJson',
-])
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -97,6 +170,11 @@ function readBoolean(record: UnknownRecord, key: string, fallback = false) {
   return typeof record[key] === 'boolean' ? record[key] : fallback
 }
 
+function readNullableBoolean(record: UnknownRecord, key: string): boolean | null {
+  const value = record[key]
+  return typeof value === 'boolean' ? value : null
+}
+
 function readNumber(record: UnknownRecord, key: string, fallback = 0) {
   return typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] : fallback
 }
@@ -105,65 +183,10 @@ function readString(record: UnknownRecord, key: string, fallback = '') {
   return typeof record[key] === 'string' ? record[key] : fallback
 }
 
-function docHas(doc: YamlDocument, path: YamlPath) {
-  return doc.hasIn(path)
-}
-
-function ensureMapInDoc(doc: YamlDocument, path: YamlPath) {
-  const existing: unknown = doc.getIn(path, true)
-  if (isMap(existing)) return
-  doc.setIn(path, doc.createNode({}))
-}
-
-function deleteIfMapEmpty(doc: YamlDocument, path: YamlPath) {
-  const value: unknown = doc.getIn(path, true)
-  if (!isMap(value)) return
-  if (value.items.length === 0) doc.deleteIn(path)
-}
-
-function setBooleanInDoc(doc: YamlDocument, path: YamlPath, value: boolean) {
-  doc.setIn(path, value)
-}
-
-function setStringInDoc(doc: YamlDocument, path: YamlPath, value: unknown) {
-  const safe = typeof value === 'string' ? value : ''
-  doc.setIn(path, safe)
-}
-
-function stringifyInlineYamlScalar(value: boolean | string) {
-  const doc = new Document({ value })
-  const serialized = doc.toString().trim()
-  const prefix = 'value: '
-
-  if (!serialized.startsWith(prefix)) return ''
-
-  return serialized.slice(prefix.length)
-}
-
-function getExistingScalar(doc: YamlDocument, path: YamlPath): YamlScalar | null {
-  const node: unknown = doc.getIn(path, true)
-
-  if (!isScalar(node) || !node.range) return null
-
-  return node as YamlScalar
-}
-
-function createExistingYamlScalarPatch(
-  doc: YamlDocument,
-  path: YamlPath,
-  value: boolean | string,
-): YamlTextPatch | null {
-  const node = getExistingScalar(doc, path)
-  if (!node) return null
-
-  const nextValue = stringifyInlineYamlScalar(value)
-  if (!nextValue || nextValue.includes('\n')) return null
-
-  return {
-    start: node.range[0],
-    end: node.range[1],
-    value: nextValue,
-  }
+function readImageGenerationMode(value: unknown): boolean | 'chat' | 'passthrough' {
+  if (typeof value === 'boolean') return value
+  if (value === 'chat' || value === 'passthrough') return value
+  return false
 }
 
 function parseJsonText(value: string): unknown {
@@ -341,277 +364,201 @@ function sanitizePayloadForWrite(value: UnknownRecord) {
   }
 }
 
-function readYamlBackedConfig(yaml: string): UnknownRecord {
-  if (!yaml.trim()) return {}
-
-  const parsedRaw = parseYaml(yaml) as unknown
-  const parsed = toRecord(parsedRaw)
-  const tls = toRecord(parsed.tls)
-  const remoteManagement = toRecord(parsed['remote-management'])
-  const plugins = toRecord(parsed.plugins)
-  const antigravity = isRecord(parsed.antigravity) ? parsed.antigravity : null
-
-  return {
-    'disable-cooling': readBoolean(parsed, 'disable-cooling'),
-    tls: {
-      enable: readBoolean(tls, 'enable'),
-      cert: readString(tls, 'cert'),
-      key: readString(tls, 'key'),
-    },
-    'remote-management': {
-      'allow-remote': readBoolean(remoteManagement, 'allow-remote'),
-      'secret-key': readString(remoteManagement, 'secret-key'),
-      'disable-control-panel': readBoolean(remoteManagement, 'disable-control-panel'),
-      'disable-auto-update-panel': readBoolean(remoteManagement, 'disable-auto-update-panel'),
-      'panel-github-repository':
-        readString(remoteManagement, 'panel-github-repository') ||
-        readString(remoteManagement, 'panel-repo'),
-    },
-    plugins: {
-      enabled: readBoolean(plugins, 'enabled'),
-      dir: readString(plugins, 'dir', 'plugins'),
-      'store-sources': Array.isArray(plugins['store-sources']) ? plugins['store-sources'] : [],
-    },
-    ...(antigravity
-      ? {
-          antigravity: {
-            'sensitive-words': Array.isArray(antigravity['sensitive-words'])
-              ? antigravity['sensitive-words']
-              : [],
-          },
-        }
-      : {}),
-  }
-}
-
-function patchYamlBackedConfig(yaml: string, changes: ConfigChange[]) {
-  const doc = parseDocument(yaml || '{}', { keepSourceTokens: true })
-
-  if (doc.errors.length > 0) {
-    throw new Error(doc.errors[0]?.message ?? 'Invalid YAML')
-  }
-
-  const minimallyPatchedYaml = patchYamlBackedConfigText(yaml, doc, changes)
-  if (minimallyPatchedYaml !== null) return minimallyPatchedYaml
-
-  if (!isMap(doc.contents)) {
-    doc.contents = doc.createNode({}) as unknown as typeof doc.contents
-  }
-
-  for (const change of changes) {
-    switch (change.key) {
-      case 'disableCooling':
-        setBooleanInDoc(doc, ['disable-cooling'], Boolean(change.nextValue))
-        break
-      case 'tlsEnable':
-        ensureMapInDoc(doc, ['tls'])
-        setBooleanInDoc(doc, ['tls', 'enable'], Boolean(change.nextValue))
-        break
-      case 'tlsCert':
-        ensureMapInDoc(doc, ['tls'])
-        setStringInDoc(doc, ['tls', 'cert'], change.nextValue)
-        break
-      case 'tlsKey':
-        ensureMapInDoc(doc, ['tls'])
-        setStringInDoc(doc, ['tls', 'key'], change.nextValue)
-        break
-      case 'remoteManagementAllowRemote':
-        ensureMapInDoc(doc, ['remote-management'])
-        setBooleanInDoc(doc, ['remote-management', 'allow-remote'], Boolean(change.nextValue))
-        break
-      case 'remoteManagementSecretKey':
-        ensureMapInDoc(doc, ['remote-management'])
-        setStringInDoc(doc, ['remote-management', 'secret-key'], change.nextValue)
-        break
-      case 'remoteManagementDisableControlPanel':
-        ensureMapInDoc(doc, ['remote-management'])
-        setBooleanInDoc(
-          doc,
-          ['remote-management', 'disable-control-panel'],
-          Boolean(change.nextValue),
-        )
-        break
-      case 'remoteManagementDisableAutoUpdatePanel':
-        ensureMapInDoc(doc, ['remote-management'])
-        setBooleanInDoc(
-          doc,
-          ['remote-management', 'disable-auto-update-panel'],
-          Boolean(change.nextValue),
-        )
-        break
-      case 'remoteManagementPanelGithubRepository':
-        ensureMapInDoc(doc, ['remote-management'])
-        setStringInDoc(doc, ['remote-management', 'panel-github-repository'], change.nextValue)
-        if (docHas(doc, ['remote-management', 'panel-repo'])) {
-          doc.deleteIn(['remote-management', 'panel-repo'])
-        }
-        break
-      case 'pluginsEnabled':
-        ensureMapInDoc(doc, ['plugins'])
-        setBooleanInDoc(doc, ['plugins', 'enabled'], Boolean(change.nextValue))
-        break
-      case 'pluginsDir':
-        ensureMapInDoc(doc, ['plugins'])
-        setStringInDoc(doc, ['plugins', 'dir'], change.nextValue)
-        break
-      case 'pluginStoreSourcesJson': {
-        ensureMapInDoc(doc, ['plugins'])
-        const sources = parseJsonArrayText(change.nextValue)
-          .map((item) => (typeof item === 'string' ? item.trim() : ''))
-          .filter((item) => item.length > 0)
-        if (sources.length > 0) {
-          doc.setIn(['plugins', 'store-sources'], sources)
-        } else if (docHas(doc, ['plugins', 'store-sources'])) {
-          doc.deleteIn(['plugins', 'store-sources'])
-        }
-        break
-      }
-      default:
-        break
-    }
-  }
-
-  deleteIfMapEmpty(doc, ['tls'])
-  deleteIfMapEmpty(doc, ['remote-management'])
-  deleteIfMapEmpty(doc, ['plugins'])
-
-  return doc.toString()
-}
-
-function patchYamlBackedConfigText(yaml: string, doc: YamlDocument, changes: ConfigChange[]) {
-  const patches: YamlTextPatch[] = []
-
-  for (const change of changes) {
-    const patch = createYamlBackedChangeTextPatch(doc, change)
-    if (patch === null) return null
-
-    patches.push(patch)
-  }
-
-  let nextYaml = yaml
-
-  for (const patch of patches.sort((left, right) => right.start - left.start)) {
-    nextYaml = `${nextYaml.slice(0, patch.start)}${patch.value}${nextYaml.slice(patch.end)}`
-  }
-
-  return nextYaml
-}
-
-function createYamlBackedChangeTextPatch(
-  doc: YamlDocument,
-  change: ConfigChange,
-): YamlTextPatch | null {
-  switch (change.key) {
-    case 'disableCooling':
-      return createExistingYamlScalarPatch(doc, ['disable-cooling'], Boolean(change.nextValue))
-    case 'tlsEnable':
-      return createExistingYamlScalarPatch(doc, ['tls', 'enable'], Boolean(change.nextValue))
-    case 'tlsCert':
-      return createExistingYamlScalarPatch(doc, ['tls', 'cert'], String(change.nextValue))
-    case 'tlsKey':
-      return createExistingYamlScalarPatch(doc, ['tls', 'key'], String(change.nextValue))
-    case 'remoteManagementAllowRemote':
-      return createExistingYamlScalarPatch(
-        doc,
-        ['remote-management', 'allow-remote'],
-        Boolean(change.nextValue),
-      )
-    case 'remoteManagementSecretKey':
-      return createExistingYamlScalarPatch(
-        doc,
-        ['remote-management', 'secret-key'],
-        String(change.nextValue),
-      )
-    case 'remoteManagementDisableControlPanel':
-      return createExistingYamlScalarPatch(
-        doc,
-        ['remote-management', 'disable-control-panel'],
-        Boolean(change.nextValue),
-      )
-    case 'remoteManagementDisableAutoUpdatePanel':
-      return createExistingYamlScalarPatch(
-        doc,
-        ['remote-management', 'disable-auto-update-panel'],
-        Boolean(change.nextValue),
-      )
-    case 'remoteManagementPanelGithubRepository':
-      if (docHas(doc, ['remote-management', 'panel-repo'])) return null
-      return createExistingYamlScalarPatch(
-        doc,
-        ['remote-management', 'panel-github-repository'],
-        String(change.nextValue),
-      )
-    case 'pluginsEnabled':
-      return createExistingYamlScalarPatch(doc, ['plugins', 'enabled'], Boolean(change.nextValue))
-    case 'pluginsDir':
-      return createExistingYamlScalarPatch(doc, ['plugins', 'dir'], String(change.nextValue))
-    default:
-      return null
-  }
-}
-
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
+  const server = toRecord(rawConfig.server)
+  const serverTls = toRecord(server.tls)
+  const discovery = toRecord(server.discovery)
+  const discoveryInterfaces = toRecord(discovery.interfaces)
+  const management = toRecord(rawConfig.management)
+  const userEmail = toRecord(rawConfig['user-email'])
+  const userEmailSender = toRecord(userEmail.sender)
+  const userEmailSmtp = toRecord(userEmailSender.smtp)
+  const requests = toRecord(rawConfig.requests)
+  const requestsStreaming = toRecord(requests.streaming)
+  const routing = toRecord(rawConfig.routing)
+  const routingRetry = toRecord(routing.retry)
+  const routingCooldown = toRecord(routing.cooldown)
   const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
-  const tls = toRecord(rawConfig.tls)
-  const remoteManagement = toRecord(rawConfig['remote-management'])
+  const observability = toRecord(rawConfig.observability)
+  const observabilityLogs = toRecord(observability.logs)
+  const observabilityUsage = toRecord(observability.usage)
+  const observabilityPprof = toRecord(observability.pprof)
   const plugins = toRecord(rawConfig.plugins)
-  const oauthExcludedModels = toRecord(rawConfig['oauth-excluded-models'])
-  const oauthModelAlias = toRecord(rawConfig['oauth-model-alias'])
-  const antigravity = toRecord(rawConfig.antigravity)
+  const credentials = toRecord(rawConfig.credentials)
+  const concurrency = toRecord(credentials.concurrency)
+  const inFlight = toRecord(credentials['in-flight'])
+  const upstream = toRecord(rawConfig.upstream)
+  const upstreamCodex = toRecord(upstream.codex)
+  const upstreamClaude = toRecord(upstream.claude)
+  const upstreamClaudeHeaders = toRecord(upstreamClaude['header-defaults'])
+  const upstreamXai = toRecord(upstream.xai)
+  const client = toRecord(rawConfig.client)
+  const clientCodex = toRecord(client.codex)
+  const oauth = toRecord(rawConfig.oauth)
+  const oauthProviders = toRecord(oauth.providers)
+  const oauthCodex = toRecord(oauthProviders.codex)
+  const oauthCodexHeaders = toRecord(oauthCodex['header-defaults'])
+  const liveMediaRelay = toRecord(oauthCodex['live-media-relay'])
+  const antigravity = toRecord(oauthProviders.antigravity)
+  const antigravityConnPool = toRecord(antigravity['connection-pool'])
+  const aistudio = toRecord(oauthProviders.aistudio)
+  const devin = toRecord(oauthProviders.devin)
+  const multimedia = toRecord(rawConfig.multimedia)
 
   return {
-    debug: readBoolean(rawConfig, 'debug'),
-    port: readNumber(rawConfig, 'port', 8317),
+    debug: readBoolean(observabilityLogs, 'debug'),
+    port: readNumber(server, 'port', 8317),
     pluginsEnabled: readBoolean(plugins, 'enabled'),
     pluginsDir: readString(plugins, 'dir', 'plugins'),
     pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
-    loggingToFile: readBoolean(rawConfig, 'logging-to-file'),
-    logsMaxTotalSizeMb: readNumber(rawConfig, 'logs-max-total-size-mb'),
-    errorLogsMaxFiles: readNumber(rawConfig, 'error-logs-max-files', 10),
-    usageStatisticsEnabled: readBoolean(rawConfig, 'usage-statistics-enabled'),
-    tlsEnable: readBoolean(tls, 'enable'),
-    tlsCert: readString(tls, 'cert'),
-    tlsKey: readString(tls, 'key'),
-    remoteManagementAllowRemote: readBoolean(remoteManagement, 'allow-remote'),
-    remoteManagementSecretKey: readString(remoteManagement, 'secret-key'),
-    remoteManagementDisableControlPanel: readBoolean(remoteManagement, 'disable-control-panel'),
-    remoteManagementDisableAutoUpdatePanel: readBoolean(
-      remoteManagement,
-      'disable-auto-update-panel',
-    ),
-    remoteManagementPanelGithubRepository: readString(remoteManagement, 'panel-github-repository'),
-    proxyUrl: readString(rawConfig, 'proxy-url'),
-    requestLog: readBoolean(rawConfig, 'request-log'),
-    requestRetry: readNumber(rawConfig, 'request-retry'),
-    maxRetryCredentials: readNumber(rawConfig, 'max-retry-credentials'),
-    maxRetryInterval: readNumber(rawConfig, 'max-retry-interval'),
-    forceModelPrefix: readBoolean(rawConfig, 'force-model-prefix'),
-    disableCooling: readBoolean(rawConfig, 'disable-cooling'),
+    loggingToFile: readBoolean(observabilityLogs, 'logging-to-file'),
+    logsMaxTotalSizeMb: readNumber(observabilityLogs, 'logs-max-total-size-mb'),
+    errorLogsMaxFiles: readNumber(observabilityLogs, 'error-logs-max-files', 10),
+    usageStatisticsEnabled: readBoolean(observabilityUsage, 'usage-statistics-enabled'),
+    tlsEnable: readBoolean(serverTls, 'enable'),
+    tlsCert: readString(serverTls, 'cert'),
+    tlsKey: readString(serverTls, 'key'),
+    remoteManagementAllowRemote: readBoolean(management, 'allow-remote'),
+    remoteManagementSecretKey: readString(management, 'secret-key'),
+    remoteManagementDisableControlPanel: readBoolean(management, 'disable-control-panel'),
+    remoteManagementDisableAutoUpdatePanel: readBoolean(management, 'disable-auto-update-panel'),
+    remoteManagementPanelGithubRepository: readString(management, 'panel-github-repository'),
+    proxyUrl: readString(requests, 'proxy-url'),
+    requestLog: readBoolean(observabilityLogs, 'request-log'),
+    requestRetry: readNumber(routingRetry, 'request-retry'),
+    maxRetryCredentials: readNumber(routingRetry, 'max-retry-credentials'),
+    maxRetryInterval: readNumber(routingRetry, 'max-retry-interval'),
+    forceModelPrefix: readBoolean(routing, 'force-model-prefix'),
+    disableCooling: readBoolean(routingCooldown, 'disable-cooling'),
     routingStrategy: readManagementRoutingStrategy(rawConfig),
     quotaSwitchProject: readBoolean(quotaExceeded, 'switch-project'),
     quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
-    oauthExcludedModelsJson: stringifyJsonObject(oauthExcludedModels),
-    oauthModelAliasJson: stringifyJsonObject(oauthModelAlias),
-    payloadRulesJson: stringifyPayload(rawConfig.payload),
+    oauthExcludedModelsJson: stringifyJsonObject(oauth['excluded-models']),
+    oauthModelAliasJson: stringifyJsonObject(oauth['model-alias']),
+    payloadRulesJson: stringifyPayload(requests.payload),
     antigravitySensitiveWordsJson: stringifyJsonArray(antigravity['sensitive-words']),
+    serverHost: readString(server, 'host'),
+    serverAllowHostJson: stringifyJsonArray(server['allow-host']),
+    serverTrustedProxiesJson: stringifyJsonArray(server['trusted-proxies']),
+    serverCommercialMode: readBoolean(server, 'commercial-mode'),
+    discoveryEnabled: readBoolean(discovery, 'enabled'),
+    discoveryServiceName: readString(discovery, 'service-name'),
+    discoveryServiceType: readString(discovery, 'service-type'),
+    discoveryAuthRequired: readBoolean(discovery, 'auth-required'),
+    discoveryAdvertiseManagement: readBoolean(discovery, 'advertise-management'),
+    discoverySubtypesJson: stringifyJsonArray(discovery.subtypes),
+    discoveryInterfacesIncludeJson: stringifyJsonArray(discoveryInterfaces.include),
+    discoveryInterfacesExcludeJson: stringifyJsonArray(discoveryInterfaces.exclude),
+    managementBaseUrl: readString(management, 'base-url'),
+    userEmailEnabled: readBoolean(userEmail, 'enabled'),
+    userEmailPublicUrl: readString(userEmail, 'public-user-url'),
+    userEmailFromAddress: readString(userEmail, 'from-address'),
+    userEmailFromName: readString(userEmail, 'from-name'),
+    userEmailSmtpHost: readString(userEmailSmtp, 'host'),
+    userEmailSmtpPort: readNumber(userEmailSmtp, 'port'),
+    userEmailSmtpUsername: readString(userEmailSmtp, 'username'),
+    userEmailSmtpPasswordEnv: readString(userEmailSmtp, 'password-env'),
+    userEmailSmtpStarttls: readBoolean(userEmailSmtp, 'starttls'),
+    userEmailVerificationTokenTtl: readString(userEmail, 'verification-token-ttl'),
+    userEmailResetTokenTtl: readString(userEmail, 'reset-token-ttl'),
+    concurrencyCpaHeartbeatTimeout: readString(concurrency, 'cpa-heartbeat-timeout'),
+    concurrencyCpaCancelBound: readString(concurrency, 'cpa-cancel-bound'),
+    concurrencyReclaimGrace: readString(concurrency, 'reclaim-grace'),
+    concurrencyCleanupInterval: readString(concurrency, 'cleanup-interval'),
+    concurrencyReleaseFlushInterval: readString(concurrency, 'release-flush-interval'),
+    concurrencyReleaseMaxBackoff: readString(concurrency, 'release-max-backoff'),
+    concurrencyBusyRetryMin: readString(concurrency, 'busy-retry-min'),
+    concurrencyBusyRetryMax: readString(concurrency, 'busy-retry-max'),
+    concurrencyMaxLimit: readNumber(concurrency, 'max-limit', 1_000_000),
+    concurrencyLifecycleConfigRevision: readNumber(concurrency, 'lifecycle-config-revision'),
+    concurrencyObservationBarrierRevision: readNumber(concurrency, 'observation-barrier-revision'),
+    inFlightSnapshotInterval: readString(inFlight, 'snapshot-interval'),
+    inFlightStaleAfter: readString(inFlight, 'stale-after'),
+    inFlightStagingRetention: readString(inFlight, 'staging-retention'),
+    inFlightMaxPartBytes: readNumber(inFlight, 'max-part-bytes', 262_144),
+    inFlightMaxPartCount: readNumber(inFlight, 'max-part-count', 64),
+    inFlightMaxRevisionBytes: readNumber(inFlight, 'max-revision-bytes', 16_777_216),
+    inFlightMaxAggregateGroups: readNumber(inFlight, 'max-aggregate-groups', 100_000),
+    inFlightMaxDetails: readNumber(inFlight, 'max-details', 10_000),
+    inFlightMaxStringBytes: readNumber(inFlight, 'max-string-bytes', 256),
+    sessionAffinity: readBoolean(routing, 'session-affinity'),
+    sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
+    sessionAffinitySubagents: readBoolean(routing, 'session-affinity-subagents'),
+    saveCooldownStatus: readBoolean(routingCooldown, 'save-cooldown-status'),
+    transientErrorCooldownSeconds: readNumber(routingCooldown, 'transient-error-cooldown-seconds'),
+    streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
+    streamingBootstrapRetries: readNumber(requestsStreaming, 'bootstrap-retries'),
+    passthroughHeaders: readBoolean(requests, 'passthrough-headers'),
+    nonstreamKeepaliveInterval: readNumber(requests, 'nonstream-keepalive-interval'),
+    upstreamCodexDisableCloaking: readBoolean(upstreamCodex, 'disable-codex-cloaking'),
+    upstreamCodexStreamBootstrapBuffering: readBoolean(upstreamCodex, 'stream-bootstrap-buffering'),
+    upstreamCodexModelLevelCooling: readBoolean(upstreamCodex, 'model-level-cooling'),
+    upstreamCodexOrphanDelegationCompatibility: readBoolean(
+      upstreamCodex,
+      'orphan-delegation-compatibility',
+    ),
+    upstreamCodexResponseSteering: readBoolean(upstreamCodex, 'response-steering'),
+    upstreamCodexStreamBootstrapTimeout: readString(upstreamCodex, 'stream-bootstrap-timeout'),
+    upstreamClaudeModelLevelCooling: readBoolean(upstreamClaude, 'model-level-cooling'),
+    upstreamClaudeToolSearch: readBoolean(upstreamClaude, 'tool-search'),
+    upstreamClaudeDisableCloakMode: readBoolean(upstreamClaude, 'disable-claude-cloak-mode'),
+    upstreamClaudeDisableCloakingModelList: readBoolean(
+      upstreamClaude,
+      'disable-cloaking-model-list',
+    ),
+    upstreamClaudeHeaderUserAgent: readString(upstreamClaudeHeaders, 'user-agent'),
+    upstreamClaudeHeaderPackageVersion: readString(upstreamClaudeHeaders, 'package-version'),
+    upstreamClaudeHeaderRuntimeVersion: readString(upstreamClaudeHeaders, 'runtime-version'),
+    upstreamClaudeHeaderOs: readString(upstreamClaudeHeaders, 'os'),
+    upstreamClaudeHeaderArch: readString(upstreamClaudeHeaders, 'arch'),
+    upstreamClaudeHeaderTimeout: readString(upstreamClaudeHeaders, 'timeout'),
+    upstreamClaudeHeaderTimezone: readString(upstreamClaudeHeaders, 'timezone'),
+    upstreamClaudeHeaderStabilizeDeviceProfile: readNullableBoolean(
+      upstreamClaudeHeaders,
+      'stabilize-device-profile',
+    ),
+    upstreamXaiInjectXSearch: readBoolean(upstreamXai, 'inject-x-search'),
+    clientCodexOptimizeMultiAgentV2: readBoolean(clientCodex, 'optimize-multi-agent-v2'),
+    oauthAuthDir: readString(oauth, 'auth-dir'),
+    oauthAuthAutoRefreshWorkers: readNumber(oauth, 'auth-auto-refresh-workers'),
+    oauthCodexHeaderUserAgent: readString(oauthCodexHeaders, 'user-agent'),
+    oauthCodexHeaderBetaFeatures: readString(oauthCodexHeaders, 'beta-features'),
+    liveMediaRelayEnabled: readBoolean(liveMediaRelay, 'enabled'),
+    liveMediaRelayDisablePrivateRemoteIps: readBoolean(
+      liveMediaRelay,
+      'disable-private-remote-ips',
+    ),
+    liveMediaRelayMaxSessions: readNumber(liveMediaRelay, 'max-sessions'),
+    liveMediaRelayUdpPortMin: readNumber(liveMediaRelay, 'udp-port-min'),
+    liveMediaRelayUdpPortMax: readNumber(liveMediaRelay, 'udp-port-max'),
+    liveMediaRelayPublicIp: readString(liveMediaRelay, 'public-ip'),
+    liveMediaRelayIceServersJson: stringifyJsonArray(liveMediaRelay['ice-servers']),
+    devinSensitiveWordsJson: stringifyJsonArray(devin['sensitive-words']),
+    aistudioWsAuth: readBoolean(aistudio, 'ws-auth'),
+    oauthRequestScopedErrorsJson: stringifyJsonObject(oauth['request-scoped-errors']),
+    antigravityCredits: readBoolean(antigravity, 'antigravity-credits'),
+    antigravitySignatureCacheEnabled: readNullableBoolean(antigravity, 'signature-cache-enabled'),
+    antigravitySignatureBypassStrict: readNullableBoolean(antigravity, 'signature-bypass-strict'),
+    antigravityConnPoolEnabled: readBoolean(antigravityConnPool, 'enabled'),
+    antigravityConnPoolIdleTimeout: readString(antigravityConnPool, 'idle-conn-timeout'),
+    antigravityConnPoolMaxIdleConnsPerHost: readNumber(
+      antigravityConnPool,
+      'max-idle-conns-per-host',
+      2,
+    ),
+    multimediaDisableImageGeneration: readImageGenerationMode(
+      multimedia['disable-image-generation'],
+    ),
+    multimediaGptImage2BaseModel: readString(multimedia, 'gpt-image-2-base-model'),
+    multimediaVideoResultAuthCacheTtl: readString(multimedia, 'video-result-auth-cache-ttl'),
+    pprofEnable: readBoolean(observabilityPprof, 'enable'),
+    pprofAddr: readString(observabilityPprof, 'addr'),
+    redisUsageQueueRetentionSeconds: readNumber(
+      observabilityUsage,
+      'redis-usage-queue-retention-seconds',
+      60,
+    ),
   }
-}
-
-function normalizeIssue(scope: ConfigSnapshot['issues'][number]['scope'], error: unknown) {
-  const apiError = toManagementApiError(error)
-
-  return {
-    scope,
-    message: apiError.message,
-    status: apiError.status,
-    code: apiError.code,
-  }
-}
-
-function normalizeYamlResponse(data: unknown) {
-  if (typeof data === 'string') return data
-  if (data === null || data === undefined) return ''
-  return JSON.stringify(data)
 }
 
 function toThrowableManagementError(error: unknown) {
@@ -625,218 +572,359 @@ export async function fetchConfigSnapshot(
   session: ManagementSessionInput,
 ): Promise<ConfigSnapshot> {
   const client = createManagementClient(session)
-  const issues: ConfigSnapshot['issues'] = []
-  let rawConfig: UnknownRecord
-  let yaml = ''
 
   try {
     const configResponse = await client.get<unknown>('/config')
-    rawConfig = toRecord(configResponse.data)
+    const rawConfig = toRecord(configResponse.data)
+
+    return {
+      fetchedAt: new Date().toISOString(),
+      rawConfig,
+      structured: normalizeConfigValues(rawConfig),
+    }
   } catch (error) {
     throw toThrowableManagementError(error)
   }
+}
 
-  try {
-    const portResponse = await client.get<unknown>('/port')
-    const portData = toRecord(portResponse.data)
-    if (typeof portData.port === 'number' && Number.isFinite(portData.port) && portData.port > 0) {
-      rawConfig = {
-        ...rawConfig,
-        port: portData.port,
-      }
-    }
-  } catch (error) {
-    if (rawConfig.port === undefined) {
-      issues.push(normalizeIssue('config', error))
-    }
-  }
+type ConfigWriteKind =
+  | 'boolean'
+  | 'number'
+  | 'string'
+  | 'nullableBoolean'
+  | 'stringList'
+  | 'jsonObject'
+  | 'jsonArray'
 
-  try {
-    const excludedModelsResponse = await client.get<unknown>('/oauth-excluded-models')
-    const excludedModels = toRecord(excludedModelsResponse.data)['oauth-excluded-models']
-    const modelAliasResponse = await client.get<unknown>('/oauth-model-alias')
-    const modelAlias = toRecord(modelAliasResponse.data)['oauth-model-alias']
+type ConfigWriteTarget = {
+  path: string
+  kind: ConfigWriteKind
+}
 
-    rawConfig = {
-      ...rawConfig,
-      'oauth-excluded-models': isRecord(excludedModels) ? excludedModels : {},
-      'oauth-model-alias': isRecord(modelAlias) ? modelAlias : {},
-    }
-  } catch (error) {
-    issues.push(normalizeIssue('oauthRules', error))
-  }
+type ConfigWriteTargetKey = Exclude<
+  WritableConfigFieldKey,
+  'payloadRulesJson' | 'multimediaDisableImageGeneration'
+>
 
-  try {
-    const payloadResponse = await client.get<unknown>('/payload')
-    const payloadRoot = toRecord(payloadResponse.data)
-    const payload = isRecord(payloadRoot.payload) ? payloadRoot.payload : payloadRoot
-
-    rawConfig = {
-      ...rawConfig,
-      payload,
-    }
-  } catch (error) {
-    issues.push(normalizeIssue('config', error))
-  }
-
-  try {
-    const antigravityResponse = await client.get<unknown>('/antigravity')
-    const antigravityRoot = toRecord(antigravityResponse.data)
-    const antigravity = isRecord(antigravityRoot.antigravity)
-      ? antigravityRoot.antigravity
-      : isRecord(antigravityRoot.value)
-        ? antigravityRoot.value
-        : antigravityRoot
-
-    rawConfig = {
-      ...rawConfig,
-      antigravity: isRecord(rawConfig.antigravity)
-        ? { ...toRecord(rawConfig.antigravity), ...antigravity }
-        : antigravity,
-    }
-  } catch (error) {
-    if (rawConfig.antigravity === undefined) {
-      issues.push(normalizeIssue('config', error))
-    }
-  }
-
-  try {
-    const yamlResponse = await client.get<unknown>('/config.yaml', {
-      responseType: 'text',
-      transformResponse: [(data: unknown) => data],
-    })
-    yaml = normalizeYamlResponse(yamlResponse.data)
-    rawConfig = { ...rawConfig, ...readYamlBackedConfig(yaml) }
-  } catch (error) {
-    issues.push(normalizeIssue('yaml', error))
-  }
-
-  return {
-    fetchedAt: new Date().toISOString(),
-    rawConfig,
-    structured: normalizeConfigValues(rawConfig),
-    yaml,
-    issues,
-  }
+const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
+  debug: { path: 'observability/logs/debug', kind: 'boolean' },
+  port: { path: 'server/port', kind: 'number' },
+  pluginsEnabled: { path: 'plugins/enabled', kind: 'boolean' },
+  pluginsDir: { path: 'plugins/dir', kind: 'string' },
+  pluginStoreSourcesJson: { path: 'plugins/store-sources', kind: 'stringList' },
+  loggingToFile: { path: 'observability/logs/logging-to-file', kind: 'boolean' },
+  logsMaxTotalSizeMb: { path: 'observability/logs/logs-max-total-size-mb', kind: 'number' },
+  errorLogsMaxFiles: { path: 'observability/logs/error-logs-max-files', kind: 'number' },
+  usageStatisticsEnabled: {
+    path: 'observability/usage/usage-statistics-enabled',
+    kind: 'boolean',
+  },
+  tlsEnable: { path: 'server/tls/enable', kind: 'boolean' },
+  tlsCert: { path: 'server/tls/cert', kind: 'string' },
+  tlsKey: { path: 'server/tls/key', kind: 'string' },
+  remoteManagementAllowRemote: { path: 'management/allow-remote', kind: 'boolean' },
+  remoteManagementSecretKey: { path: 'management/secret-key', kind: 'string' },
+  remoteManagementDisableControlPanel: {
+    path: 'management/disable-control-panel',
+    kind: 'boolean',
+  },
+  remoteManagementDisableAutoUpdatePanel: {
+    path: 'management/disable-auto-update-panel',
+    kind: 'boolean',
+  },
+  remoteManagementPanelGithubRepository: {
+    path: 'management/panel-github-repository',
+    kind: 'string',
+  },
+  proxyUrl: { path: 'requests/proxy-url', kind: 'string' },
+  requestLog: { path: 'observability/logs/request-log', kind: 'boolean' },
+  requestRetry: { path: 'routing/retry/request-retry', kind: 'number' },
+  maxRetryCredentials: { path: 'routing/retry/max-retry-credentials', kind: 'number' },
+  maxRetryInterval: { path: 'routing/retry/max-retry-interval', kind: 'number' },
+  forceModelPrefix: { path: 'routing/force-model-prefix', kind: 'boolean' },
+  disableCooling: { path: 'routing/cooldown/disable-cooling', kind: 'boolean' },
+  routingStrategy: { path: 'routing/strategy', kind: 'string' },
+  quotaSwitchProject: { path: 'quota-exceeded/switch-project', kind: 'boolean' },
+  quotaSwitchPreviewModel: { path: 'quota-exceeded/switch-preview-model', kind: 'boolean' },
+  oauthExcludedModelsJson: { path: 'oauth/excluded-models', kind: 'jsonObject' },
+  oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'jsonObject' },
+  antigravitySensitiveWordsJson: {
+    path: 'oauth/providers/antigravity/sensitive-words',
+    kind: 'stringList',
+  },
+  serverHost: { path: 'server/host', kind: 'string' },
+  serverAllowHostJson: { path: 'server/allow-host', kind: 'stringList' },
+  serverTrustedProxiesJson: { path: 'server/trusted-proxies', kind: 'stringList' },
+  serverCommercialMode: { path: 'server/commercial-mode', kind: 'boolean' },
+  discoveryEnabled: { path: 'server/discovery/enabled', kind: 'boolean' },
+  discoveryServiceName: { path: 'server/discovery/service-name', kind: 'string' },
+  discoveryServiceType: { path: 'server/discovery/service-type', kind: 'string' },
+  discoveryAuthRequired: { path: 'server/discovery/auth-required', kind: 'boolean' },
+  discoveryAdvertiseManagement: { path: 'server/discovery/advertise-management', kind: 'boolean' },
+  discoverySubtypesJson: { path: 'server/discovery/subtypes', kind: 'stringList' },
+  discoveryInterfacesIncludeJson: {
+    path: 'server/discovery/interfaces/include',
+    kind: 'stringList',
+  },
+  discoveryInterfacesExcludeJson: {
+    path: 'server/discovery/interfaces/exclude',
+    kind: 'stringList',
+  },
+  managementBaseUrl: { path: 'management/base-url', kind: 'string' },
+  userEmailEnabled: { path: 'user-email/enabled', kind: 'boolean' },
+  userEmailPublicUrl: { path: 'user-email/public-user-url', kind: 'string' },
+  userEmailFromAddress: { path: 'user-email/from-address', kind: 'string' },
+  userEmailFromName: { path: 'user-email/from-name', kind: 'string' },
+  userEmailSmtpHost: { path: 'user-email/sender/smtp/host', kind: 'string' },
+  userEmailSmtpPort: { path: 'user-email/sender/smtp/port', kind: 'number' },
+  userEmailSmtpUsername: { path: 'user-email/sender/smtp/username', kind: 'string' },
+  userEmailSmtpPasswordEnv: { path: 'user-email/sender/smtp/password-env', kind: 'string' },
+  userEmailSmtpStarttls: { path: 'user-email/sender/smtp/starttls', kind: 'boolean' },
+  userEmailVerificationTokenTtl: { path: 'user-email/verification-token-ttl', kind: 'string' },
+  userEmailResetTokenTtl: { path: 'user-email/reset-token-ttl', kind: 'string' },
+  concurrencyCpaHeartbeatTimeout: {
+    path: 'credentials/concurrency/cpa-heartbeat-timeout',
+    kind: 'string',
+  },
+  concurrencyCpaCancelBound: { path: 'credentials/concurrency/cpa-cancel-bound', kind: 'string' },
+  concurrencyReclaimGrace: { path: 'credentials/concurrency/reclaim-grace', kind: 'string' },
+  concurrencyCleanupInterval: { path: 'credentials/concurrency/cleanup-interval', kind: 'string' },
+  concurrencyReleaseFlushInterval: {
+    path: 'credentials/concurrency/release-flush-interval',
+    kind: 'string',
+  },
+  concurrencyReleaseMaxBackoff: {
+    path: 'credentials/concurrency/release-max-backoff',
+    kind: 'string',
+  },
+  concurrencyBusyRetryMin: { path: 'credentials/concurrency/busy-retry-min', kind: 'string' },
+  concurrencyBusyRetryMax: { path: 'credentials/concurrency/busy-retry-max', kind: 'string' },
+  concurrencyMaxLimit: { path: 'credentials/concurrency/max-limit', kind: 'number' },
+  inFlightSnapshotInterval: { path: 'credentials/in-flight/snapshot-interval', kind: 'string' },
+  inFlightStaleAfter: { path: 'credentials/in-flight/stale-after', kind: 'string' },
+  inFlightStagingRetention: { path: 'credentials/in-flight/staging-retention', kind: 'string' },
+  inFlightMaxPartBytes: { path: 'credentials/in-flight/max-part-bytes', kind: 'number' },
+  inFlightMaxPartCount: { path: 'credentials/in-flight/max-part-count', kind: 'number' },
+  inFlightMaxRevisionBytes: { path: 'credentials/in-flight/max-revision-bytes', kind: 'number' },
+  inFlightMaxAggregateGroups: {
+    path: 'credentials/in-flight/max-aggregate-groups',
+    kind: 'number',
+  },
+  inFlightMaxDetails: { path: 'credentials/in-flight/max-details', kind: 'number' },
+  inFlightMaxStringBytes: { path: 'credentials/in-flight/max-string-bytes', kind: 'number' },
+  sessionAffinity: { path: 'routing/session-affinity', kind: 'boolean' },
+  sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
+  sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'boolean' },
+  saveCooldownStatus: { path: 'routing/cooldown/save-cooldown-status', kind: 'boolean' },
+  transientErrorCooldownSeconds: {
+    path: 'routing/cooldown/transient-error-cooldown-seconds',
+    kind: 'number',
+  },
+  streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },
+  streamingBootstrapRetries: { path: 'requests/streaming/bootstrap-retries', kind: 'number' },
+  passthroughHeaders: { path: 'requests/passthrough-headers', kind: 'boolean' },
+  nonstreamKeepaliveInterval: { path: 'requests/nonstream-keepalive-interval', kind: 'number' },
+  upstreamCodexDisableCloaking: { path: 'upstream/codex/disable-codex-cloaking', kind: 'boolean' },
+  upstreamCodexStreamBootstrapBuffering: {
+    path: 'upstream/codex/stream-bootstrap-buffering',
+    kind: 'boolean',
+  },
+  upstreamCodexModelLevelCooling: { path: 'upstream/codex/model-level-cooling', kind: 'boolean' },
+  upstreamCodexOrphanDelegationCompatibility: {
+    path: 'upstream/codex/orphan-delegation-compatibility',
+    kind: 'boolean',
+  },
+  upstreamCodexResponseSteering: { path: 'upstream/codex/response-steering', kind: 'boolean' },
+  upstreamCodexStreamBootstrapTimeout: {
+    path: 'upstream/codex/stream-bootstrap-timeout',
+    kind: 'string',
+  },
+  upstreamClaudeModelLevelCooling: { path: 'upstream/claude/model-level-cooling', kind: 'boolean' },
+  upstreamClaudeToolSearch: { path: 'upstream/claude/tool-search', kind: 'boolean' },
+  upstreamClaudeDisableCloakMode: {
+    path: 'upstream/claude/disable-claude-cloak-mode',
+    kind: 'boolean',
+  },
+  upstreamClaudeDisableCloakingModelList: {
+    path: 'upstream/claude/disable-cloaking-model-list',
+    kind: 'boolean',
+  },
+  upstreamClaudeHeaderUserAgent: {
+    path: 'upstream/claude/header-defaults/user-agent',
+    kind: 'string',
+  },
+  upstreamClaudeHeaderPackageVersion: {
+    path: 'upstream/claude/header-defaults/package-version',
+    kind: 'string',
+  },
+  upstreamClaudeHeaderRuntimeVersion: {
+    path: 'upstream/claude/header-defaults/runtime-version',
+    kind: 'string',
+  },
+  upstreamClaudeHeaderOs: { path: 'upstream/claude/header-defaults/os', kind: 'string' },
+  upstreamClaudeHeaderArch: { path: 'upstream/claude/header-defaults/arch', kind: 'string' },
+  upstreamClaudeHeaderTimeout: { path: 'upstream/claude/header-defaults/timeout', kind: 'string' },
+  upstreamClaudeHeaderTimezone: {
+    path: 'upstream/claude/header-defaults/timezone',
+    kind: 'string',
+  },
+  upstreamClaudeHeaderStabilizeDeviceProfile: {
+    path: 'upstream/claude/header-defaults/stabilize-device-profile',
+    kind: 'nullableBoolean',
+  },
+  upstreamXaiInjectXSearch: { path: 'upstream/xai/inject-x-search', kind: 'boolean' },
+  clientCodexOptimizeMultiAgentV2: {
+    path: 'client/codex/optimize-multi-agent-v2',
+    kind: 'boolean',
+  },
+  oauthAuthDir: { path: 'oauth/auth-dir', kind: 'string' },
+  oauthAuthAutoRefreshWorkers: { path: 'oauth/auth-auto-refresh-workers', kind: 'number' },
+  oauthCodexHeaderUserAgent: {
+    path: 'oauth/providers/codex/header-defaults/user-agent',
+    kind: 'string',
+  },
+  oauthCodexHeaderBetaFeatures: {
+    path: 'oauth/providers/codex/header-defaults/beta-features',
+    kind: 'string',
+  },
+  liveMediaRelayEnabled: {
+    path: 'oauth/providers/codex/live-media-relay/enabled',
+    kind: 'boolean',
+  },
+  liveMediaRelayDisablePrivateRemoteIps: {
+    path: 'oauth/providers/codex/live-media-relay/disable-private-remote-ips',
+    kind: 'boolean',
+  },
+  liveMediaRelayMaxSessions: {
+    path: 'oauth/providers/codex/live-media-relay/max-sessions',
+    kind: 'number',
+  },
+  liveMediaRelayUdpPortMin: {
+    path: 'oauth/providers/codex/live-media-relay/udp-port-min',
+    kind: 'number',
+  },
+  liveMediaRelayUdpPortMax: {
+    path: 'oauth/providers/codex/live-media-relay/udp-port-max',
+    kind: 'number',
+  },
+  liveMediaRelayPublicIp: {
+    path: 'oauth/providers/codex/live-media-relay/public-ip',
+    kind: 'string',
+  },
+  liveMediaRelayIceServersJson: {
+    path: 'oauth/providers/codex/live-media-relay/ice-servers',
+    kind: 'jsonArray',
+  },
+  devinSensitiveWordsJson: { path: 'oauth/providers/devin/sensitive-words', kind: 'stringList' },
+  aistudioWsAuth: { path: 'oauth/providers/aistudio/ws-auth', kind: 'boolean' },
+  oauthRequestScopedErrorsJson: { path: 'oauth/request-scoped-errors', kind: 'jsonObject' },
+  antigravityCredits: { path: 'oauth/providers/antigravity/antigravity-credits', kind: 'boolean' },
+  antigravitySignatureCacheEnabled: {
+    path: 'oauth/providers/antigravity/signature-cache-enabled',
+    kind: 'nullableBoolean',
+  },
+  antigravitySignatureBypassStrict: {
+    path: 'oauth/providers/antigravity/signature-bypass-strict',
+    kind: 'nullableBoolean',
+  },
+  antigravityConnPoolEnabled: {
+    path: 'oauth/providers/antigravity/connection-pool/enabled',
+    kind: 'boolean',
+  },
+  antigravityConnPoolIdleTimeout: {
+    path: 'oauth/providers/antigravity/connection-pool/idle-conn-timeout',
+    kind: 'string',
+  },
+  antigravityConnPoolMaxIdleConnsPerHost: {
+    path: 'oauth/providers/antigravity/connection-pool/max-idle-conns-per-host',
+    kind: 'number',
+  },
+  multimediaGptImage2BaseModel: { path: 'multimedia/gpt-image-2-base-model', kind: 'string' },
+  multimediaVideoResultAuthCacheTtl: {
+    path: 'multimedia/video-result-auth-cache-ttl',
+    kind: 'string',
+  },
+  pprofEnable: { path: 'observability/pprof/enable', kind: 'boolean' },
+  pprofAddr: { path: 'observability/pprof/addr', kind: 'string' },
+  redisUsageQueueRetentionSeconds: {
+    path: 'observability/usage/redis-usage-queue-retention-seconds',
+    kind: 'number',
+  },
 }
 
 export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
-  const value = change.nextValue
+  const key = change.key
 
-  switch (change.key) {
-    case 'debug':
-      await client.put('/debug', { value })
-      return
-    case 'port':
-      await client.put('/port', { value: Number(value) })
-      return
-    case 'loggingToFile':
-      await client.put('/logging-to-file', { value })
-      return
-    case 'logsMaxTotalSizeMb':
-      await client.put('/logs-max-total-size-mb', { value })
-      return
-    case 'errorLogsMaxFiles':
-      await client.put('/error-logs-max-files', { value })
-      return
-    case 'usageStatisticsEnabled':
-      await client.put('/usage-statistics-enabled', { value })
-      return
-    case 'proxyUrl':
-      if (typeof value === 'string' && value.trim()) {
-        await client.put('/proxy-url', { value: value.trim() })
-        return
-      }
-      await client.delete('/proxy-url')
-      return
-    case 'requestLog':
-      await client.put('/request-log', { value })
-      return
-    case 'requestRetry':
-      await client.put('/request-retry', { value })
-      return
-    case 'maxRetryCredentials':
-      await client.put('/max-retry-credentials', { value })
-      return
-    case 'maxRetryInterval':
-      await client.put('/max-retry-interval', { value })
-      return
-    case 'forceModelPrefix':
-      await client.put('/force-model-prefix', { value })
-      return
-    case 'routingStrategy':
-      await client.put('/routing/strategy', { value })
-      return
-    case 'quotaSwitchProject':
-      await client.put('/quota-exceeded/switch-project', { value })
-      return
-    case 'quotaSwitchPreviewModel':
-      await client.put('/quota-exceeded/switch-preview-model', { value })
-      return
-    case 'oauthExcludedModelsJson':
-      await client.put('/oauth-excluded-models', parseJsonObjectText(value))
-      return
-    case 'oauthModelAliasJson':
-      await client.put('/oauth-model-alias', parseJsonObjectText(value))
-      return
-    case 'payloadRulesJson': {
-      const payload = sanitizePayloadForWrite(parseJsonObjectText(value))
-      const hasRules = Object.values(payload).some(
-        (section) => Array.isArray(section) && section.length > 0,
-      )
+  if (key === 'payloadRulesJson') {
+    const payload = sanitizePayloadForWrite(parseJsonObjectText(change.nextValue))
+    const hasRules = Object.values(payload).some(
+      (section) => Array.isArray(section) && section.length > 0,
+    )
 
-      if (hasRules) {
-        await client.patch('/payload', { payload })
-        return
-      }
-
-      await client.delete('/payload')
+    if (hasRules) {
+      await client.put('/config/requests/payload', payload)
       return
     }
-    case 'antigravitySensitiveWordsJson': {
-      const words = parseJsonArrayText(value)
+
+    await client.delete('/config/requests/payload')
+    return
+  }
+
+  if (key === 'multimediaDisableImageGeneration') {
+    const value = change.nextValue
+
+    if (typeof value === 'string' && !value.trim()) {
+      await client.delete('/config/multimedia/disable-image-generation')
+      return
+    }
+
+    await client.put('/config/multimedia/disable-image-generation', value)
+    return
+  }
+
+  const target = configWriteTargets[key]
+  const url = `/config/${target.path}`
+
+  switch (target.kind) {
+    case 'boolean':
+      await client.put(url, change.nextValue)
+      return
+    case 'number':
+      await client.put(url, Number(change.nextValue))
+      return
+    case 'nullableBoolean':
+      await client.put(url, change.nextValue === null ? null : Boolean(change.nextValue))
+      return
+    case 'string': {
+      const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
+      if (!value) {
+        await client.delete(url)
+        return
+      }
+      await client.put(url, value)
+      return
+    }
+    case 'stringList': {
+      const items = parseJsonArrayText(change.nextValue)
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter((item) => item.length > 0)
-
-      if (words.length > 0) {
-        await client.put('/antigravity', {
-          antigravity: {
-            'sensitive-words': words,
-          },
-        })
-        return
-      }
-
-      await client.delete('/antigravity')
+      await client.put(url, items)
       return
     }
+    case 'jsonObject':
+      await client.put(url, parseJsonObjectText(change.nextValue))
+      return
+    case 'jsonArray':
+      await client.put(url, parseJsonArrayText(change.nextValue))
+      return
   }
 }
 
 export async function applyConfigChanges(session: ManagementSessionInput, changes: ConfigChange[]) {
-  const leafChanges = changes.filter((change) => !yamlBackedConfigKeys.has(change.key))
-  const yamlBackedChanges = changes.filter((change) => yamlBackedConfigKeys.has(change.key))
-
-  for (const change of leafChanges) {
+  for (const change of changes) {
     await applyConfigChange(session, change)
   }
-
-  if (yamlBackedChanges.length === 0) return
-
-  const client = createManagementClient(session)
-  const yamlResponse = await client.get<unknown>('/config.yaml', {
-    responseType: 'text',
-    transformResponse: [(data: unknown) => data],
-  })
-  const yaml = normalizeYamlResponse(yamlResponse.data)
-  const patchedYaml = patchYamlBackedConfig(yaml, yamlBackedChanges)
-
-  await client.put('/config.yaml', patchedYaml, {
-    headers: {
-      'Content-Type': 'application/yaml; charset=utf-8',
-    },
-  })
 }
 
 export function toConfigApiError(error: unknown): ManagementApiError {

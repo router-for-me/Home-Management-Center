@@ -63,8 +63,7 @@ function createSnapshot(config: Record<string, unknown>): DashboardSnapshot {
     providers: [
       {
         id: 'codex',
-        path: '/codex-api-key',
-        responseKey: 'codex-api-key',
+        path: '/config/api-keys/codex',
         total: 1,
         active: 1,
         disabled: 0,
