@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronsDown,
+  ChevronsLeft,
   ChevronsUp,
   ChevronsUpDown,
   CircleDollarSign,
@@ -483,8 +484,13 @@ const runtimeLogLevelOptions: RuntimeLogLevelFilter[] = [
   'warn',
   'error',
 ]
-type RuntimeLogSearchField = 'homeIp' | 'clientIp' | 'requestId'
-const runtimeLogSearchFieldOptions: RuntimeLogSearchField[] = ['requestId', 'homeIp', 'clientIp']
+type RuntimeLogSearchField = 'homeIp' | 'clientIp' | 'requestId' | 'search'
+const runtimeLogSearchFieldOptions: RuntimeLogSearchField[] = [
+  'requestId',
+  'homeIp',
+  'clientIp',
+  'search',
+]
 const defaultRuntimeLogSearchField: RuntimeLogSearchField = 'requestId'
 const requestRecordScopedFilterKeys: Array<keyof UsageFilters> = [
   'status',
@@ -5022,6 +5028,7 @@ function RuntimeLogFiltersToolbar({
     homeIp: defaultRuntimeLogFilters.homeIp,
     clientIp: defaultRuntimeLogFilters.clientIp,
     requestId: defaultRuntimeLogFilters.requestId,
+    search: defaultRuntimeLogFilters.search,
   }
 
   useEffect(() => {
@@ -5038,6 +5045,7 @@ function RuntimeLogFiltersToolbar({
     filters.homeIp,
     filters.level,
     filters.requestId,
+    filters.search,
   ])
 
   const handleSearchFieldChange = (value: string, carriedValue: string) => {
@@ -5126,6 +5134,7 @@ export function RuntimeLogViewer({
   canClear,
   fileLoggingEnabled,
   filters,
+  searchUnsupported,
   pageSizeOptions,
   pageSize,
   offset,
@@ -5154,6 +5163,7 @@ export function RuntimeLogViewer({
   canClear: boolean
   fileLoggingEnabled: boolean
   filters: RuntimeLogFilters
+  searchUnsupported: boolean
   pageSizeOptions: number[]
   pageSize: number
   offset: number
@@ -5191,6 +5201,7 @@ export function RuntimeLogViewer({
   const { t, i18n } = useTranslation()
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
   const records = runtimeLogs?.records ?? []
+  const displayRecords = useMemo(() => [...records].reverse(), [records])
   const total = runtimeLogs?.total ?? runtimeLogs?.lineCount ?? 0
   const effectiveOffset = runtimeLogs?.offset ?? offset
   const effectiveLimit = runtimeLogs?.limit ?? pageSize
@@ -5282,6 +5293,14 @@ export function RuntimeLogViewer({
           />
         </div>
       ) : null}
+      {canRead && searchUnsupported ? (
+        <div className="border-warning/30 bg-warning/8 text-warning-foreground dark:text-warning mt-3 rounded-md border px-3 py-2.5 text-sm">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{t('usageLogsPage.logs.searchUnsupported')}</span>
+          </div>
+        </div>
+      ) : null}
       <NewItemsNotice
         count={pendingItemCount}
         truncated={pendingItemsTruncated}
@@ -5325,7 +5344,7 @@ export function RuntimeLogViewer({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((record) => (
+                {displayRecords.map((record) => (
                   <RuntimeLogRow
                     key={record.id}
                     record={record}
@@ -5343,10 +5362,13 @@ export function RuntimeLogViewer({
               start={start}
               end={end}
               total={total}
+              offset={effectiveOffset}
+              limit={effectiveLimit}
               canGoPrevious={canGoPrevious}
               canGoNext={canGoNext}
               mutating={fetching || mutating}
               onPageSizeChange={onPageSizeChange}
+              onOffsetChange={onOffsetChange}
               onPrevious={() => onOffsetChange(Math.max(0, effectiveOffset - effectiveLimit))}
               onNext={() => onOffsetChange(effectiveOffset + effectiveLimit)}
             />
@@ -5413,10 +5435,13 @@ function RuntimeLogPagination({
   start,
   end,
   total,
+  offset,
+  limit,
   canGoPrevious,
   canGoNext,
   mutating,
   onPageSizeChange,
+  onOffsetChange,
   onPrevious,
   onNext,
 }: {
@@ -5425,14 +5450,35 @@ function RuntimeLogPagination({
   start: number
   end: number
   total: number
+  offset: number
+  limit: number
   canGoPrevious: boolean
   canGoNext: boolean
   mutating: boolean
   onPageSizeChange: (pageSize: number) => void
+  onOffsetChange: (offset: number) => void
   onPrevious: () => void
   onNext: () => void
 }) {
   const { t } = useTranslation()
+  const currentPage = Math.floor(offset / limit) + 1
+  const totalPages = Math.max(1, Math.ceil(total / limit))
+  const [jumpPage, setJumpPage] = useState(String(currentPage))
+
+  useEffect(() => {
+    setJumpPage(String(currentPage))
+  }, [currentPage])
+
+  const submitJumpPage = () => {
+    const parsed = Number.parseInt(jumpPage, 10)
+    if (Number.isNaN(parsed)) {
+      setJumpPage(String(currentPage))
+      return
+    }
+    const nextPage = Math.min(Math.max(1, parsed), totalPages)
+    setJumpPage(String(nextPage))
+    if (nextPage !== currentPage) onOffsetChange((nextPage - 1) * limit)
+  }
 
   return (
     <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -5476,6 +5522,16 @@ function RuntimeLogPagination({
             type="button"
             variant="outline"
             size="md"
+            disabled={offset === 0 || mutating}
+            onClick={() => onOffsetChange(0)}
+          >
+            <ChevronsLeft className="size-4" aria-hidden="true" />
+            {t('usageLogsPage.logs.pagination.first')}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
             disabled={!canGoPrevious || mutating}
             onClick={onPrevious}
           >
@@ -5491,6 +5547,37 @@ function RuntimeLogPagination({
           >
             {t('usageLogsPage.logs.pagination.next')}
             <ChevronRight className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-sm whitespace-nowrap">
+            {t('usageLogsPage.logs.pagination.pageIndicator', {
+              page: formatNumber(currentPage),
+              pages: formatNumber(totalPages),
+            })}
+          </span>
+          <Input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={jumpPage}
+            disabled={mutating}
+            size="md"
+            className="w-20"
+            aria-label={t('usageLogsPage.logs.pagination.jumpInput')}
+            onChange={(event) => setJumpPage(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') submitJumpPage()
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            disabled={mutating}
+            onClick={submitJumpPage}
+          >
+            {t('usageLogsPage.logs.pagination.jump')}
           </Button>
         </div>
       </div>

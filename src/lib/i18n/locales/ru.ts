@@ -5009,6 +5009,8 @@ export const ru = {
         emptyPage: 'Вернитесь назад или синхронизируйте данные.',
         latest: 'Последняя запись: {{time}}',
         latestUnavailable: 'Время записи недоступно',
+        searchUnsupported:
+          'Этот backend не поддерживает поиск по содержимому журналов, поэтому фильтр поиска не был применён. Обновите CLIProxyAPIHome и повторите попытку.',
         columns: {
           time: 'Время',
           level: 'Уровень',
@@ -5033,6 +5035,7 @@ export const ru = {
             requestId: 'Request ID',
             homeIp: 'Home IP',
             clientIp: 'Client IP',
+            search: 'Содержимое',
           },
           levels: {
             all: 'Все уровни',
@@ -5046,8 +5049,12 @@ export const ru = {
         pagination: {
           range: '{{start}}-{{end}} из {{total}}',
           pageSize: 'Строк на странице',
+          first: 'В начало',
           previous: 'Назад',
           next: 'Вперед',
+          pageIndicator: 'Стр. {{page}} из {{pages}}',
+          jumpInput: 'Номер страницы',
+          jump: 'Перейти',
         },
         detail: {
           title: 'Детали журнала',

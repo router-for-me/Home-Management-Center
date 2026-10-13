@@ -4983,6 +4983,8 @@ export const en = {
         emptyPage: 'Go back one page or sync again.',
         latest: 'Latest log: {{time}}',
         latestUnavailable: 'Log timestamp unavailable',
+        searchUnsupported:
+          'This backend does not support log content search, so the search filter was not applied. Upgrade CLIProxyAPIHome and try again.',
         columns: {
           time: 'Time',
           level: 'Level',
@@ -5007,6 +5009,7 @@ export const en = {
             requestId: 'Request ID',
             homeIp: 'Home IP',
             clientIp: 'Client IP',
+            search: 'Log content',
           },
           levels: {
             all: 'All levels',
@@ -5020,8 +5023,12 @@ export const en = {
         pagination: {
           range: '{{start}}-{{end}} of {{total}}',
           pageSize: 'Rows per page',
+          first: 'First',
           previous: 'Previous',
           next: 'Next',
+          pageIndicator: 'Page {{page}} of {{pages}}',
+          jumpInput: 'Page number',
+          jump: 'Go',
         },
         detail: {
           title: 'Log details',
