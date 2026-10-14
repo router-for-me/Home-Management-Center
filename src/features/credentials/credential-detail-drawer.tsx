@@ -49,6 +49,7 @@ import {
   type UpstreamQuotaEntry,
   findCurrencyWindow,
   findXaiOnDemandWindow,
+  findXaiWeeklyWindow,
   resolveAntigravityQuotaPresentation,
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
@@ -873,10 +874,12 @@ function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCre
   )
 }
 
-function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
+export function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
+  const weeklyWindow = findXaiWeeklyWindow(entry)
+  const hasKnownWindows = Boolean(monthlyWindow || onDemandWindow || weeklyWindow)
 
   return (
     <div className="grid gap-3">
@@ -905,7 +908,9 @@ function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
           <span className="text-muted-foreground text-xs">
             {onDemandWindow
               ? t('upstreamPage.quota.onDemandEnabled')
-              : t('upstreamPage.quota.onDemandUnknown')}
+              : hasKnownWindows
+                ? t('upstreamPage.quota.onDemandDisabled')
+                : t('upstreamPage.quota.onDemandUnknown')}
           </span>
         </div>
         {onDemandWindow ? (

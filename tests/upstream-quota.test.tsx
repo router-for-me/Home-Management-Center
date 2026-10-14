@@ -3,7 +3,10 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import { UpstreamQuotaDetail } from '@/features/credentials/credential-detail-drawer'
+import {
+  GrokQuotaDetail,
+  UpstreamQuotaDetail,
+} from '@/features/credentials/credential-detail-drawer'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import {
   type UpstreamQuotaEntry,
@@ -941,6 +944,42 @@ describe('UpstreamQuotaDetail rendering', () => {
     expect(markup).toContain('2 available')
     expect(markup).toContain('Reset credit 1')
     expect(markup).toContain('1 more reset credits')
+  })
+})
+
+describe('GrokQuotaDetail rendering', () => {
+  test('marks on-demand as disabled when weekly or monthly windows exist without one', async () => {
+    await testI18n.changeLanguage('en')
+    const weekly = createXaiWeeklyWindow()
+    const entry = createQuotaEntry({
+      provider: 'xai',
+      plan: { name: 'SuperGrok', premium: false },
+      primaryWindows: [weekly],
+      windows: [weekly],
+      windowCount: 1,
+    })
+
+    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    expect(markup).toContain('SuperGrok')
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Disabled')
+    expect(markup).not.toContain('Not provided')
+    expect(markup).toContain('84%')
+  })
+
+  test('keeps on-demand as not provided when no known window exists', async () => {
+    await testI18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'xai',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 0,
+    })
+
+    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Not provided')
+    expect(markup).not.toContain('Disabled')
   })
 })
 
