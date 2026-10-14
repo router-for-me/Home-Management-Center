@@ -18,6 +18,7 @@ import {
   type UpstreamQuotaEntry,
   findCurrencyWindow,
   findXaiOnDemandWindow,
+  findXaiWeeklyWindow,
   resolveAntigravityQuotaPresentation,
 } from './upstream-quota-model'
 
@@ -329,6 +330,8 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
+  const weeklyWindow = findXaiWeeklyWindow(entry)
+  const hasKnownWindows = Boolean(monthlyWindow || onDemandWindow || weeklyWindow)
 
   return (
     <div className="grid min-w-44 gap-1.5">
@@ -340,19 +343,25 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
         </UpstreamQuotaMetaBadge>
         <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
       </div>
+      {!hasKnownWindows ? <GenericWindowsCell entry={entry} /> : null}
+      {weeklyWindow ? (
+        <InlineWindowBar window={weeklyWindow} label={t('upstreamPage.quota.weekly')} />
+      ) : null}
       {monthlyWindow ? (
         <>
           <InlineWindowBar window={monthlyWindow} label={t('upstreamPage.quota.monthly')} />
           <InlineWindowMoneyLine window={monthlyWindow} />
         </>
-      ) : (
-        <GenericWindowsCell entry={entry} />
-      )}
+      ) : null}
       {onDemandWindow ? (
         <>
           <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.onDemand')} />
           <InlineWindowMoneyLine window={onDemandWindow} />
         </>
+      ) : hasKnownWindows ? (
+        <p className="text-muted-foreground text-[11px]">
+          {t('upstreamPage.quota.onDemand')}: {t('upstreamPage.quota.onDemandDisabled')}
+        </p>
       ) : null}
     </div>
   )

@@ -38,6 +38,7 @@ type UpstreamQuotaCollectionBaselineEntry = {
 }
 
 const xaiOnDemandWindowId = 'xai-on-demand'
+const xaiWeeklyWindowId = 'xai-weekly-usage'
 
 const antigravityQuotaGroupOrder: AntigravityQuotaGroupId[] = ['gemini', 'third-party']
 
@@ -203,6 +204,11 @@ export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | nul
 export function findXaiOnDemandWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return windows.find((window) => window.id === xaiOnDemandWindowId) ?? null
+}
+
+export function findXaiWeeklyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
+  const windows = [...entry.primaryWindows, ...entry.windows]
+  return windows.find((window) => window.id === xaiWeeklyWindowId) ?? null
 }
 
 function normalizeAntigravityQuotaGroupId(

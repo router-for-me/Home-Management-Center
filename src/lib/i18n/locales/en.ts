@@ -1902,11 +1902,13 @@ export const en = {
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
+        weekly: 'Weekly limit',
         monthly: 'Monthly',
         monthlyCredits: 'Monthly credits',
         onDemand: 'On-demand',
         onDemandEnabled: 'Enabled',
         onDemandUnknown: 'Not provided',
+        onDemandDisabled: 'Disabled',
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',

@@ -1900,11 +1900,13 @@ export const ru = {
         unsupportedHint:
           'Сбор квоты недоступен для этого типа учётных данных (обычно для API-ключей поставщика).',
         collectFailed: 'Ошибка сбора',
+        weekly: 'Неделя',
         monthly: 'Месяц',
         monthlyCredits: 'Месячные кредиты',
         onDemand: 'По требованию',
         onDemandEnabled: 'Включено',
         onDemandUnknown: 'Не предоставлено',
+        onDemandDisabled: 'Отключено',
         remaining: 'Остаток',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: 'Ещё {{count}}',
