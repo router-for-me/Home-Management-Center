@@ -3,7 +3,10 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
-import { UpstreamQuotaDetail } from '@/features/credentials/credential-detail-drawer'
+import {
+  GrokQuotaDetail,
+  UpstreamQuotaDetail,
+} from '@/features/credentials/credential-detail-drawer'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import {
   type UpstreamQuotaEntry,
@@ -13,6 +16,7 @@ import {
   findCurrencyWindow,
   findUpstreamQuotaEntry,
   findXaiOnDemandWindow,
+  findXaiWeeklyWindow,
   getUpstreamQuotaCollectionProgress,
   groupAntigravityQuotaWindows,
   isQuotaAttentionEntry,
@@ -151,6 +155,25 @@ function createXaiEntry(): UpstreamQuotaEntry {
       }),
     ],
     windowCount: 2,
+  })
+}
+
+function createXaiWeeklyWindow(overrides: Partial<QuotaWindow> = {}): QuotaWindow {
+  return createWindow({
+    id: 'xai-weekly-usage',
+    label: 'Weekly Limit',
+    mode: 'fixed',
+    status: 'healthy',
+    unit: 'percentage',
+    used: 16,
+    remaining: 84,
+    limit: 100,
+    usedRatio: 0.16,
+    remainingRatio: 0.84,
+    periodUnit: 'week',
+    periodValue: 1,
+    resetAt: '2026-10-16T20:46:00Z',
+    ...overrides,
   })
 }
 
@@ -415,6 +438,16 @@ describe('findCurrencyWindow', () => {
   test('returns null when the on-demand window is absent', () => {
     expect(findXaiOnDemandWindow(createQuotaEntry())).toBeNull()
   })
+
+  test('finds the weekly usage window when present', () => {
+    const entry = createQuotaEntry({
+      provider: 'xai',
+      primaryWindows: [createXaiWeeklyWindow()],
+      windows: [createXaiWeeklyWindow()],
+    })
+    expect(findXaiWeeklyWindow(entry)?.id).toBe('xai-weekly-usage')
+    expect(findXaiWeeklyWindow(createXaiEntry())).toBeNull()
+  })
 })
 
 describe('Antigravity quota grouping', () => {
@@ -489,6 +522,60 @@ describe('UpstreamQuotaCell rendering', () => {
     const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).not.toContain('SuperGrok')
     expect(markup).toContain('$42.00')
+  })
+
+  test('renders the weekly limit with a disabled on-demand row when only the weekly window exists', () => {
+    const weekly = createXaiWeeklyWindow()
+    const entry = createQuotaEntry({
+      id: 'xai-01',
+      authIndex: 'xai-01',
+      provider: 'xai',
+      plan: { name: 'SuperGrok', premium: false },
+      primaryWindows: [weekly],
+      windows: [weekly],
+      windowCount: 1,
+    })
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('SuperGrok')
+    expect(markup).toContain('Weekly limit')
+    expect(markup).toContain('84%')
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Disabled')
+    expect(markup).not.toContain('Monthly')
+  })
+
+  test('marks on-demand as disabled when the monthly window exists without an on-demand window', () => {
+    const monthly = createXaiEntry().primaryWindows[0]!
+    const entry = createQuotaEntry({
+      id: 'xai-01',
+      authIndex: 'xai-01',
+      provider: 'xai',
+      primaryWindows: [monthly],
+      windows: [monthly],
+      windowCount: 1,
+    })
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Monthly')
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Disabled')
+  })
+
+  test('renders the weekly limit before the monthly row when all xAI windows exist', () => {
+    const base = createXaiEntry()
+    const weekly = createXaiWeeklyWindow()
+    const entry: UpstreamQuotaEntry = {
+      ...base,
+      primaryWindows: [weekly, ...base.primaryWindows],
+      windows: [weekly, ...base.windows],
+      windowCount: 3,
+    }
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    const weeklyIndex = markup.indexOf('Weekly limit')
+    const monthlyIndex = markup.indexOf('Monthly')
+    expect(weeklyIndex).toBeGreaterThan(-1)
+    expect(monthlyIndex).toBeGreaterThan(-1)
+    expect(weeklyIndex).toBeLessThan(monthlyIndex)
+    expect(markup).not.toContain('Disabled')
   })
 
   test('renders generic windows for other providers', () => {
@@ -857,6 +944,42 @@ describe('UpstreamQuotaDetail rendering', () => {
     expect(markup).toContain('2 available')
     expect(markup).toContain('Reset credit 1')
     expect(markup).toContain('1 more reset credits')
+  })
+})
+
+describe('GrokQuotaDetail rendering', () => {
+  test('marks on-demand as disabled when weekly or monthly windows exist without one', async () => {
+    await testI18n.changeLanguage('en')
+    const weekly = createXaiWeeklyWindow()
+    const entry = createQuotaEntry({
+      provider: 'xai',
+      plan: { name: 'SuperGrok', premium: false },
+      primaryWindows: [weekly],
+      windows: [weekly],
+      windowCount: 1,
+    })
+
+    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    expect(markup).toContain('SuperGrok')
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Disabled')
+    expect(markup).not.toContain('Not provided')
+    expect(markup).toContain('84%')
+  })
+
+  test('keeps on-demand as not provided when no known window exists', async () => {
+    await testI18n.changeLanguage('en')
+    const entry = createQuotaEntry({
+      provider: 'xai',
+      primaryWindows: [],
+      windows: [],
+      windowCount: 0,
+    })
+
+    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    expect(markup).toContain('On-demand')
+    expect(markup).toContain('Not provided')
+    expect(markup).not.toContain('Disabled')
   })
 })
 
