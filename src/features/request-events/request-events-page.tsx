@@ -81,6 +81,7 @@ import {
   ObservabilityDisconnectedState,
   ObservabilityErrorState,
   ObservabilityLoadingState,
+  RequestTokenBreakdown,
   downloadBlob,
   formatDateTime,
   getObservabilityVerdictBadgeClassName,
@@ -928,29 +929,36 @@ function RequestEventDetailSheet({
                 </DiagnosticDetailField>
               </div>
 
-              <div>
-                <h3 className="text-sm font-medium">{t('requestEventsPage.detail.tokens')}</h3>
-                <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
-                  {(
-                    [
-                      'inputTokens',
-                      'outputTokens',
-                      'reasoningTokens',
-                      'cachedTokens',
-                      'cacheReadTokens',
-                      'cacheCreationTokens',
-                      'totalTokens',
-                    ] as const
-                  ).map((key) => (
-                    <DiagnosticDetailField
-                      key={key}
-                      label={t(`requestEventsPage.detail.tokenFields.${key}`)}
-                    >
-                      {formatNumber(event.tokens[key])}
-                    </DiagnosticDetailField>
-                  ))}
+              {event.tokenBreakdown ? (
+                <RequestTokenBreakdown
+                  tokens={event.tokens}
+                  tokenBreakdown={event.tokenBreakdown}
+                />
+              ) : (
+                <div>
+                  <h3 className="text-sm font-medium">{t('requestEventsPage.detail.tokens')}</h3>
+                  <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                    {(
+                      [
+                        'inputTokens',
+                        'outputTokens',
+                        'reasoningTokens',
+                        'cachedTokens',
+                        'cacheReadTokens',
+                        'cacheCreationTokens',
+                        'totalTokens',
+                      ] as const
+                    ).map((key) => (
+                      <DiagnosticDetailField
+                        key={key}
+                        label={t(`requestEventsPage.detail.tokenFields.${key}`)}
+                      >
+                        {formatNumber(event.tokens[key])}
+                      </DiagnosticDetailField>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {event.error ? (
                 <div>

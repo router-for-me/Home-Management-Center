@@ -275,6 +275,8 @@ function normalizeChargeRecord(value: unknown, index: number): ChargeRecord {
     inputTokens: readNumber(record, ['input_tokens', 'inputTokens']) ?? 0,
     outputTokens: readNumber(record, ['output_tokens', 'outputTokens']) ?? 0,
     cacheTokens: readNumber(record, ['cache_tokens', 'cacheTokens']) ?? 0,
+    cacheReadTokens: readNumber(record, ['cache_read_tokens', 'cacheReadTokens']),
+    cacheWriteTokens: readNumber(record, ['cache_write_tokens', 'cacheWriteTokens']),
     amount: readNumber(record, ['amount', 'charge_amount', 'chargeAmount']) ?? 0,
     balanceBefore: readNumber(record, ['balance_before', 'balanceBefore']) ?? 0,
     balanceAfter: readNumber(record, ['balance_after', 'balanceAfter']) ?? 0,

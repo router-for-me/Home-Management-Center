@@ -869,6 +869,8 @@ export const ru = {
         title: 'Записи списаний',
         empty: 'В выбранном периоде нет записей списаний.',
         tokenSummary: 'Вход {{input}} / Выход {{output}} / Кэш {{cache}}',
+        tokenSummaryCacheSplit:
+          'Вход {{input}} / Выход {{output}} / Кэш R {{cacheRead}} / W {{cacheWrite}}',
         columns: {
           time: 'Время',
           user: 'Пользователь',
