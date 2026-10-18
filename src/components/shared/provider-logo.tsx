@@ -11,6 +11,7 @@ import grokLogo from '@/assets/icons/grok.svg'
 import iflowLogo from '@/assets/icons/iflow.svg'
 import kimiDarkLogo from '@/assets/icons/kimi-dark.svg'
 import kimiLightLogo from '@/assets/icons/kimi-light.svg'
+import metaLogo from '@/assets/icons/meta.svg'
 import minimaxLogo from '@/assets/icons/minimax.svg'
 import openaiDarkLogo from '@/assets/icons/openai-dark.svg'
 import openaiLightLogo from '@/assets/icons/openai-light.svg'
@@ -34,6 +35,7 @@ const brandLogos: Record<string, { src: string; darkSrc?: string; className?: st
   vertex: { src: vertexLogo },
   antigravity: { src: antigravityLogo },
   kimi: { src: kimiLightLogo, darkSrc: kimiDarkLogo },
+  meta: { src: metaLogo },
   openai: { src: openaiLightLogo, darkSrc: openaiDarkLogo },
   xai: { src: grokLogo, className: 'p-0.5 dark:invert' },
   deepseek: { src: deepseekLogo },
@@ -96,6 +98,7 @@ const providerAliases: Array<[brandId: string, matches: RegExp]> = [
   ['claude', /claude|anthropic/],
   ['gemini', /gemini|google|interaction/],
   ['kimi', /kimi|moonshot/],
+  ['meta', /meta|muse/],
   ['xai', /xai|x-ai|grok/],
   ['openai', /openai|chatgpt|^gpt|^o\d/],
 ]
@@ -120,6 +123,7 @@ const vendorRules: Array<[brandId: string, matches: RegExp]> = [
   ['qwen', /(^|[/-])(qwen|qwq|qvq)/],
   ['minimax', /(^|[/-])(minimax|abab)/],
   ['kimi', /(^|[/-])(kimi|moonshot)/],
+  ['meta', /(^|[/-])(meta|muse|llama)/],
   ['xai', /(^|[/-])grok/],
   ['openai', /(^|[/-])(gpt|chatgpt|openai|codex|o[1-4]([/-]|$))/],
 ]

@@ -19,6 +19,7 @@ import {
   findXaiWeeklyWindow,
   getUpstreamQuotaCollectionProgress,
   groupAntigravityQuotaWindows,
+  isCredentialQuotaCollectable,
   isQuotaAttentionEntry,
   resolveAntigravityQuotaPresentation,
   resolveUpstreamQuotaCellState,
@@ -583,6 +584,46 @@ describe('UpstreamQuotaCell rendering', () => {
       <UpstreamQuotaCell state={{ kind: 'entry', entry: createQuotaEntry() }} />,
     )
     expect(markup).toContain('82%')
+  })
+
+  test('marks meta and muse credentials as quota collectable and renders Meta plan and windows (#197)', async () => {
+    await testI18n.changeLanguage('en')
+    expect(
+      isCredentialQuotaCollectable({ provider: 'meta', disabled: false, status: 'active' }),
+    ).toBe(true)
+    expect(
+      isCredentialQuotaCollectable({ provider: 'muse', disabled: false, status: 'active' }),
+    ).toBe(true)
+
+    const metaWindow = createWindow({
+      id: 'meta-window',
+      label: 'Window',
+      periodUnit: 'hour',
+      periodValue: 5,
+      remainingRatio: 0.98,
+    })
+    const metaWeekly = createWindow({
+      id: 'meta-weekly',
+      label: 'Weekly limit',
+      periodUnit: 'week',
+      periodValue: 1,
+      remainingRatio: 0.75,
+    })
+    const entry = createQuotaEntry({
+      id: 'meta-01',
+      authIndex: 'meta-01',
+      provider: 'meta',
+      plan: { name: 'Muse Code Everyday Usage', premium: false },
+      primaryWindows: [metaWindow, metaWeekly],
+      windows: [metaWindow, metaWeekly],
+      windowCount: 2,
+    })
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Muse Code Everyday Usage')
+    expect(markup).toContain('5 hours')
+    expect(markup).toContain('98%')
+    expect(markup).toContain('Weekly')
+    expect(markup).toContain('75%')
   })
 
   test('renders Codex plan and keeps account and model weekly limits distinguishable', async () => {

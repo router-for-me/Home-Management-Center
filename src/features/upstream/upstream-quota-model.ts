@@ -184,7 +184,16 @@ export function resolveUpstreamQuotaCellState({
   return { kind: truncated ? 'snapshot-miss' : 'not-collected' }
 }
 
-const quotaCollectableProviders = new Set(['claude', 'antigravity', 'codex', 'kimi', 'xai', 'grok'])
+const quotaCollectableProviders = new Set([
+  'claude',
+  'antigravity',
+  'codex',
+  'kimi',
+  'xai',
+  'grok',
+  'meta',
+  'muse',
+])
 
 export function isCredentialQuotaCollectable(
   resource: Pick<CredentialResource, 'provider' | 'disabled' | 'status'>,
