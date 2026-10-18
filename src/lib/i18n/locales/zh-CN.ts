@@ -2880,10 +2880,10 @@ export const zhCN = {
         oauthProviders: {
           title: 'OAuth 提供商',
           shortTitle: '提供商',
-          description: '配置 OAuth 凭证目录、自动刷新并发和各提供商级开关。',
+          description: '配置 OAuth 凭证目录及 Codex、Antigravity、Devin 等提供商专属参数。',
         },
         liveMediaRelay: {
-          title: '实时媒体中继',
+          title: 'Codex · 实时媒体中继',
           shortTitle: '媒体中继',
           description:
             '配置 Codex 实时媒体(音频/视频)中继的会话上限、公网 IP、UDP 端口范围与 ICE 服务器。',
@@ -2899,15 +2899,10 @@ export const zhCN = {
           shortTitle: '网络',
           description: '配置服务端出站请求使用的代理地址和请求 Header 透传。',
         },
-        quota: {
-          title: '额度处理',
-          shortTitle: '额度',
-          description: '控制额度耗尽时是否自动切换项目或预览模型。',
-        },
         streaming: {
           title: '重试与路由',
           shortTitle: '路由',
-          description: '控制请求重试、模型前缀匹配、路由策略、会话亲和、冷却持久化与传输保活。',
+          description: '控制请求重试、模型前缀匹配、路由策略、粘性会话与传输保活。',
         },
         credentialConcurrency: {
           title: '凭证并发',
@@ -3002,15 +2997,6 @@ export const zhCN = {
           label: '禁用控制面板',
           description: '关闭 /management.html 和面板同步能力。',
         },
-        remoteManagementDisableAutoUpdatePanel: {
-          label: '禁用面板自动更新',
-          description: '关闭后台周期性面板资源更新。',
-        },
-        remoteManagementPanelGithubRepository: {
-          label: '面板仓库地址',
-          description: '用于面板资源更新的 GitHub repository URL 或 releases API URL。',
-          placeholder: 'https://github.com/org/repo',
-        },
         proxyUrl: {
           label: '出站代理地址',
           description: '服务端访问外部服务时使用的代理地址；留空会删除该配置。',
@@ -3060,14 +3046,6 @@ export const zhCN = {
         routingStrategy: {
           label: '路由策略',
           description: '控制多密钥或多凭证时的选择策略。',
-        },
-        quotaSwitchProject: {
-          label: '额度耗尽切换项目',
-          description: '项目额度耗尽后尝试切换到其他可用项目。',
-        },
-        quotaSwitchPreviewModel: {
-          label: '额度耗尽切换预览模型',
-          description: '额度耗尽后尝试切换到可用的预览模型。',
         },
         oauthExcludedModelsJson: {
           label: '模型禁用',
@@ -3292,25 +3270,17 @@ export const zhCN = {
           description: '在途快照单个字符串字段允许的最大字节数。',
         },
         sessionAffinity: {
-          label: '会话亲和',
+          label: '粘性会话',
           description: '开启后同一会话优先路由到同一凭证。',
         },
         sessionAffinityTtl: {
-          label: '会话亲和有效期',
-          description: '会话亲和绑定的有效时长（Go duration）；留空恢复后端默认。',
+          label: '粘性会话有效期',
+          description: '粘性会话绑定的有效时长（Go duration）；留空恢复后端默认。',
           placeholder: '默认 1h',
         },
         sessionAffinitySubagents: {
-          label: '子代理会话亲和',
-          description: '开启后子代理请求也参与会话亲和路由。',
-        },
-        saveCooldownStatus: {
-          label: '持久化冷却状态',
-          description: '开启后将凭证冷却状态写入磁盘，重启后保留。',
-        },
-        transientErrorCooldownSeconds: {
-          label: '瞬时错误冷却 (秒)',
-          description: '瞬时错误后的冷却秒数；-1 表示禁用该冷却，0 表示使用后端默认值 60s。',
+          label: '子代理粘性会话',
+          description: '开启后子代理请求也参与粘性会话路由。',
         },
         streamingKeepaliveSeconds: {
           label: '流式保活间隔 (秒)',
@@ -3427,10 +3397,6 @@ export const zhCN = {
           description: 'OAuth 文件凭证的存储目录。',
           placeholder: '~/.cli-proxy-api',
         },
-        oauthAuthAutoRefreshWorkers: {
-          label: '自动刷新工作线程数',
-          description: 'OAuth 凭证自动刷新的并发 worker 数；0 表示由后端默认策略处理。',
-        },
         oauthCodexHeaderUserAgent: {
           label: 'Codex User-Agent',
           description: '发往 Codex OAuth 上游的默认 User-Agent Header；留空使用后端默认。',
@@ -3471,10 +3437,6 @@ export const zhCN = {
         devinSensitiveWordsJson: {
           label: 'Devin 敏感词混淆',
           description: '在 Devin 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
-        },
-        aistudioWsAuth: {
-          label: 'AI Studio WS 认证',
-          description: 'AI Studio WebSocket 鉴权开关。Home 强制归一为关闭，此开关不可修改。',
         },
         oauthRequestScopedErrorsJson: {
           label: '按请求范围错误规则',

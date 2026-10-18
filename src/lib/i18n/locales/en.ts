@@ -3011,10 +3011,10 @@ export const en = {
           title: 'OAuth providers',
           shortTitle: 'Providers',
           description:
-            'Configure the OAuth auth directory, auto-refresh workers, and provider-level switches.',
+            'Configure the OAuth credential directory and provider-specific settings for Codex, Antigravity, and Devin.',
         },
         liveMediaRelay: {
-          title: 'Live media relay',
+          title: 'Codex · Live media relay',
           shortTitle: 'Media relay',
           description:
             'Configure the Codex live media (audio/video) relay: session limit, public IP, UDP port range, and ICE servers.',
@@ -3031,16 +3031,11 @@ export const en = {
           description:
             'Configure the outbound proxy used by the server and request header passthrough.',
         },
-        quota: {
-          title: 'Quota handling',
-          shortTitle: 'Quota',
-          description: 'Control fallback behavior when quota is exhausted.',
-        },
         streaming: {
           title: 'Retry and routing',
           shortTitle: 'Routing',
           description:
-            'Control request retries, model prefix matching, routing strategy, session affinity, cooldown persistence, and transport keepalive.',
+            'Control request retries, model prefix matching, routing strategy, session affinity, and transport keepalive.',
         },
         credentialConcurrency: {
           title: 'Credential concurrency',
@@ -3139,15 +3134,6 @@ export const en = {
           label: 'Disable control panel',
           description: 'Disable /management.html and panel syncing.',
         },
-        remoteManagementDisableAutoUpdatePanel: {
-          label: 'Disable panel auto update',
-          description: 'Disable periodic background updates for panel assets.',
-        },
-        remoteManagementPanelGithubRepository: {
-          label: 'Panel repository URL',
-          description: 'GitHub repository URL or releases API URL used for panel asset updates.',
-          placeholder: 'https://github.com/org/repo',
-        },
         proxyUrl: {
           label: 'Outbound proxy URL',
           description: 'Proxy URL used by the server for outbound requests. Empty removes it.',
@@ -3201,14 +3187,6 @@ export const en = {
         routingStrategy: {
           label: 'Routing strategy',
           description: 'Selection strategy when multiple keys or credentials are available.',
-        },
-        quotaSwitchProject: {
-          label: 'Switch project on quota',
-          description: 'Try another available project when project quota is exhausted.',
-        },
-        quotaSwitchPreviewModel: {
-          label: 'Switch preview model on quota',
-          description: 'Try an available preview model when quota is exhausted.',
         },
         oauthExcludedModelsJson: {
           label: 'Disabled models',
@@ -3466,15 +3444,6 @@ export const en = {
           label: 'Subagent session affinity',
           description: 'Include subagent requests in session affinity routing.',
         },
-        saveCooldownStatus: {
-          label: 'Persist cooldown status',
-          description: 'Write credential cooldown state to disk so it survives restarts.',
-        },
-        transientErrorCooldownSeconds: {
-          label: 'Transient error cooldown (seconds)',
-          description:
-            'Cooldown seconds after a transient error. -1 disables this cooldown; 0 uses the backend default of 60s.',
-        },
         streamingKeepaliveSeconds: {
           label: 'Stream keepalive interval (seconds)',
           description:
@@ -3603,11 +3572,6 @@ export const en = {
           description: 'Storage directory for OAuth file credentials.',
           placeholder: '~/.cli-proxy-api',
         },
-        oauthAuthAutoRefreshWorkers: {
-          label: 'Auto refresh workers',
-          description:
-            'Concurrent workers for OAuth credential auto refresh. 0 lets the backend default apply.',
-        },
         oauthCodexHeaderUserAgent: {
           label: 'Codex User-Agent',
           description:
@@ -3654,11 +3618,6 @@ export const en = {
           label: 'Devin sensitive words obfuscation',
           description:
             'Insert zero-width spaces into matching Devin system prompts to reduce exact keyword detection upstream.',
-        },
-        aistudioWsAuth: {
-          label: 'AI Studio WS auth',
-          description:
-            'AI Studio WebSocket authentication switch. Home normalizes this to disabled; the switch cannot be changed.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Request-scoped error rules',

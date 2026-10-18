@@ -3018,10 +3018,10 @@ export const ru = {
           title: 'Провайдеры OAuth',
           shortTitle: 'Провайдеры',
           description:
-            'Настройка каталога OAuth auth, числа workers автообновления и переключателей уровня провайдера.',
+            'Настройка каталога учётных данных OAuth и параметров провайдеров Codex, Antigravity и Devin.',
         },
         liveMediaRelay: {
-          title: 'Ретрансляция живого медиа',
+          title: 'Codex · Ретрансляция живого медиа',
           shortTitle: 'Медиарелей',
           description:
             'Настройка ретрансляции живого медиа (аудио/видео) Codex: лимит сессий, публичный IP, диапазон UDP-портов и ICE-серверы.',
@@ -3038,16 +3038,11 @@ export const ru = {
           description:
             'Настройка outbound proxy для запросов сервера и passthrough заголовков запросов.',
         },
-        quota: {
-          title: 'Обработка квот',
-          shortTitle: 'Квоты',
-          description: 'Поведение при исчерпании квоты.',
-        },
         streaming: {
           title: 'Повторы и маршрутизация',
           shortTitle: 'Роутинг',
           description:
-            'Управление повторами запросов, совпадением prefix модели, стратегией маршрутизации, session affinity, сохранением cooldown и транспортным keepalive.',
+            'Управление повторами запросов, совпадением prefix модели, стратегией маршрутизации, session affinity и транспортным keepalive.',
         },
         credentialConcurrency: {
           title: 'Параллелизм учетных данных',
@@ -3147,15 +3142,6 @@ export const ru = {
           label: 'Отключить control panel',
           description: 'Отключить /management.html и синхронизацию panel.',
         },
-        remoteManagementDisableAutoUpdatePanel: {
-          label: 'Отключить автообновление panel',
-          description: 'Отключить периодические фоновые обновления panel assets.',
-        },
-        remoteManagementPanelGithubRepository: {
-          label: 'Panel repository URL',
-          description: 'GitHub repository URL или releases API URL для обновления panel assets.',
-          placeholder: 'https://github.com/org/repo',
-        },
         proxyUrl: {
           label: 'Outbound proxy URL',
           description:
@@ -3210,14 +3196,6 @@ export const ru = {
         routingStrategy: {
           label: 'Стратегия маршрутизации',
           description: 'Стратегия выбора при нескольких ключах или учетных данных.',
-        },
-        quotaSwitchProject: {
-          label: 'Переключать проект при квоте',
-          description: 'Пробовать другой проект при исчерпании квоты.',
-        },
-        quotaSwitchPreviewModel: {
-          label: 'Переключать preview model при квоте',
-          description: 'Пробовать доступную preview model при исчерпании квоты.',
         },
         oauthExcludedModelsJson: {
           label: 'Disabled models',
@@ -3483,16 +3461,6 @@ export const ru = {
           label: 'Session affinity для subagent',
           description: 'Включать запросы subagent в маршрутизацию session affinity.',
         },
-        saveCooldownStatus: {
-          label: 'Сохранять состояние cooldown',
-          description:
-            'Записывать состояние cooldown учетных данных на диск, чтобы оно переживало перезапуск.',
-        },
-        transientErrorCooldownSeconds: {
-          label: 'Cooldown временных ошибок (сек)',
-          description:
-            'Секунды cooldown после временной ошибки. -1 отключает этот cooldown; 0 использует значение backend 60s.',
-        },
         streamingKeepaliveSeconds: {
           label: 'Интервал keepalive потока (сек)',
           description:
@@ -3620,11 +3588,6 @@ export const ru = {
           description: 'Каталог хранения OAuth file credentials.',
           placeholder: '~/.cli-proxy-api',
         },
-        oauthAuthAutoRefreshWorkers: {
-          label: 'Потоки автообновления',
-          description:
-            'Параллельные worker для автообновления OAuth credentials. 0 использует политику backend.',
-        },
         oauthCodexHeaderUserAgent: {
           label: 'Codex User-Agent',
           description:
@@ -3672,11 +3635,6 @@ export const ru = {
           label: 'Обфускация чувствительных слов Devin',
           description:
             'Вставка символов нулевой ширины в совпадающие системные промпты Devin для снижения точного сопоставления ключевых слов на стороне upstream.',
-        },
-        aistudioWsAuth: {
-          label: 'WS auth AI Studio',
-          description:
-            'Переключатель аутентификации WebSocket AI Studio. Home принудительно отключает эту настройку; переключатель недоступен.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Правила ошибок request-scoped',

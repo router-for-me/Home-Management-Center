@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
-  Antenna,
   CheckCircle2,
   CloudUpload,
   Code2,
@@ -12,7 +11,6 @@ import {
   EyeOff,
   FileDiff,
   Filter,
-  Gauge,
   Hourglass,
   Image,
   Info,
@@ -32,7 +30,6 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -96,18 +93,17 @@ type ConfigSectionId =
   | 'plugins'
   | 'oauthRules'
   | 'oauthProviders'
-  | 'liveMediaRelay'
   | 'system'
   | 'network'
-  | 'quota'
   | 'streaming'
   | 'credentialConcurrency'
   | 'credentialInFlight'
   | 'upstream'
   | 'headers'
   | 'payload'
-  | 'antigravity'
   | 'multimedia'
+
+type ConfigSubgroupId = 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
   | 'boolean'
@@ -227,6 +223,7 @@ type ConfigFieldDefinition = {
   key: ConfigFieldKey
   kind: ConfigFieldKind
   sectionId: ConfigSectionId
+  groupId?: ConfigSubgroupId
   min?: number
   max?: number
   options?: string[]
@@ -237,7 +234,7 @@ type ConfigSectionDefinition = {
   fields: ConfigFieldDefinition[]
 }
 
-const sectionDefinitions: ConfigSectionDefinition[] = [
+export const sectionDefinitions: ConfigSectionDefinition[] = [
   {
     id: 'server',
     fields: [
@@ -281,16 +278,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
       {
         key: 'remoteManagementDisableControlPanel',
         kind: 'boolean',
-        sectionId: 'remoteManagement',
-      },
-      {
-        key: 'remoteManagementDisableAutoUpdatePanel',
-        kind: 'boolean',
-        sectionId: 'remoteManagement',
-      },
-      {
-        key: 'remoteManagementPanelGithubRepository',
-        kind: 'text',
         sectionId: 'remoteManagement',
       },
       { key: 'managementBaseUrl', kind: 'text', sectionId: 'remoteManagement' },
@@ -364,8 +351,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
       { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
-      { key: 'saveCooldownStatus', kind: 'boolean', sectionId: 'streaming' },
-      { key: 'transientErrorCooldownSeconds', kind: 'number', sectionId: 'streaming', min: -1 },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'nonstreamKeepaliveInterval', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -473,13 +458,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'quota',
-    fields: [
-      { key: 'quotaSwitchProject', kind: 'boolean', sectionId: 'quota' },
-      { key: 'quotaSwitchPreviewModel', kind: 'boolean', sectionId: 'quota' },
-    ],
-  },
-  {
     id: 'payload',
     fields: [{ key: 'payloadRulesJson', kind: 'jsonObject', sectionId: 'payload' }],
   },
@@ -495,52 +473,91 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'oauthProviders',
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
-      { key: 'oauthAuthAutoRefreshWorkers', kind: 'number', sectionId: 'oauthProviders', min: 0 },
       { key: 'devinSensitiveWordsJson', kind: 'jsonArray', sectionId: 'oauthProviders' },
-      { key: 'aistudioWsAuth', kind: 'boolean', sectionId: 'oauthProviders' },
-    ],
-  },
-  {
-    id: 'liveMediaRelay',
-    fields: [
-      { key: 'liveMediaRelayEnabled', kind: 'boolean', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayMaxSessions', kind: 'number', sectionId: 'liveMediaRelay', min: 0 },
+      {
+        key: 'liveMediaRelayEnabled',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayMaxSessions',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+        min: 0,
+      },
       {
         key: 'liveMediaRelayDisablePrivateRemoteIps',
         kind: 'boolean',
-        sectionId: 'liveMediaRelay',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
       },
-      { key: 'liveMediaRelayPublicIp', kind: 'text', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayUdpPortMin', kind: 'number', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayUdpPortMax', kind: 'number', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayIceServersJson', kind: 'jsonArray', sectionId: 'liveMediaRelay' },
-    ],
-  },
-  {
-    id: 'antigravity',
-    fields: [
+      {
+        key: 'liveMediaRelayPublicIp',
+        kind: 'text',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayUdpPortMin',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayUdpPortMax',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayIceServersJson',
+        kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
       {
         key: 'antigravitySensitiveWordsJson',
         kind: 'jsonArray',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
-      { key: 'antigravityCredits', kind: 'boolean', sectionId: 'antigravity' },
+      {
+        key: 'antigravityCredits',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
       {
         key: 'antigravitySignatureCacheEnabled',
         kind: 'nullableBoolean',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
       {
         key: 'antigravitySignatureBypassStrict',
         kind: 'nullableBoolean',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
-      { key: 'antigravityConnPoolEnabled', kind: 'boolean', sectionId: 'antigravity' },
-      { key: 'antigravityConnPoolIdleTimeout', kind: 'duration', sectionId: 'antigravity' },
+      {
+        key: 'antigravityConnPoolEnabled',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityConnPoolIdleTimeout',
+        kind: 'duration',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
       {
         key: 'antigravityConnPoolMaxIdleConnsPerHost',
         kind: 'number',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
         min: 0,
       },
     ],
@@ -590,17 +607,14 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   plugins: Plug,
   oauthRules: Route,
   oauthProviders: KeyRound,
-  liveMediaRelay: Antenna,
   system: Database,
   network: Network,
-  quota: Gauge,
   streaming: Route,
   credentialConcurrency: Hourglass,
   credentialInFlight: Layers,
   upstream: CloudUpload,
   headers: PanelTop,
   payload: Code2,
-  antigravity: Sparkles,
   multimedia: Image,
 }
 
@@ -639,10 +653,7 @@ const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
   'concurrencyObservationBarrierRevision',
 ])
 
-const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>([
-  'usageStatisticsEnabled',
-  'aistudioWsAuth',
-])
+const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>(['usageStatisticsEnabled'])
 
 const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
 
@@ -4554,6 +4565,28 @@ function StructuredWorkspace({
   const { t } = useTranslation()
   const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
 
+  const renderField = (field: ConfigFieldDefinition) =>
+    isJsonConfigFieldKey(field.key) ? (
+      <JsonConfigField
+        key={field.key}
+        field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+        value={String(draft[field.key])}
+        disabled={disabled}
+        invalid={validationErrors.includes(field.key)}
+        oauthModelCatalog={oauthModelCatalog}
+        onChange={onChange}
+      />
+    ) : (
+      <ConfigField
+        key={field.key}
+        field={field}
+        value={draft[field.key]}
+        disabled={disabled}
+        invalid={validationErrors.includes(field.key)}
+        onChange={onChange}
+      />
+    )
+
   return (
     <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
       <SectionNavigation changes={changes} validationErrors={validationErrors} />
@@ -4618,30 +4651,48 @@ function StructuredWorkspace({
                 )}
               </div>
             ) : (
-              <div className="mt-4 grid gap-3">
-                {section.fields.map((field) =>
-                  isJsonConfigFieldKey(field.key) ? (
-                    <JsonConfigField
-                      key={field.key}
-                      field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-                      value={String(draft[field.key])}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      oauthModelCatalog={oauthModelCatalog}
-                      onChange={onChange}
-                    />
-                  ) : (
-                    <ConfigField
-                      key={field.key}
-                      field={field}
-                      value={draft[field.key]}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      onChange={onChange}
-                    />
+              (() => {
+                const ungroupedFields = section.fields.filter((field) => !field.groupId)
+                const subgroupIds = Array.from(
+                  new Set(
+                    section.fields
+                      .map((field) => field.groupId)
+                      .filter((groupId): groupId is ConfigSubgroupId => Boolean(groupId)),
                   ),
-                )}
-              </div>
+                )
+
+                if (subgroupIds.length === 0) {
+                  return <div className="mt-4 grid gap-3">{section.fields.map(renderField)}</div>
+                }
+
+                return (
+                  <div className="mt-4 grid gap-4">
+                    {ungroupedFields.length > 0 ? (
+                      <div className="grid gap-3">{ungroupedFields.map(renderField)}</div>
+                    ) : null}
+                    {subgroupIds.map((groupId) => {
+                      const groupFields = section.fields.filter(
+                        (field) => field.groupId === groupId,
+                      )
+                      return (
+                        <div
+                          key={groupId}
+                          id={`config-section-${groupId}`}
+                          className="border-t pt-4"
+                        >
+                          <h3 className="text-sm font-semibold">
+                            {t(`configPage.sections.${groupId}.title`)}
+                          </h3>
+                          <p className="text-muted-foreground mt-1 text-xs leading-5">
+                            {t(`configPage.sections.${groupId}.description`)}
+                          </p>
+                          <div className="mt-3 grid gap-3">{groupFields.map(renderField)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
             )}
           </section>
         ))}
