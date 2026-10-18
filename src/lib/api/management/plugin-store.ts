@@ -64,6 +64,23 @@ export type PluginStoreInstallInput = {
   version?: string
 }
 
+export type PluginConfigFieldDescriptor = {
+  name: string
+  type: string
+  enumValues: string[]
+  description: string
+}
+
+export type PluginConfigObject = Record<string, unknown>
+
+export type PluginConfigSaveInput = {
+  enabled: boolean
+  priority: number | null
+  loadInHome: boolean
+  params: Record<string, unknown>
+  removedKeys?: string[]
+}
+
 type PluginStoreInstallResult = {
   status: string
   sourceId: string
@@ -307,6 +324,122 @@ export async function uninstallPluginFromStore(
   const client = createManagementClient(session)
   const response = await client.post<unknown>(`/plugins/store/${encodeURIComponent(id)}/uninstall`)
   return normalizeUninstallResult(response.data)
+}
+
+const RESERVED_PLUGIN_CONFIG_KEYS = new Set(['enabled', 'priority', 'load-in-home', 'store'])
+
+function normalizePluginConfigField(value: unknown): PluginConfigFieldDescriptor | null {
+  if (!isRecord(value)) return null
+  const name = readString(value, 'name')
+  if (!name || RESERVED_PLUGIN_CONFIG_KEYS.has(name)) return null
+  return {
+    name,
+    type: readString(value, 'type') || 'string',
+    enumValues: readStringArray(value.enum_values),
+    description: readString(value, 'description'),
+  }
+}
+
+export async function fetchPluginConfigFields(
+  session: ManagementSessionInput,
+  pluginId: string,
+): Promise<PluginConfigFieldDescriptor[]> {
+  const client = createManagementClient(session)
+  try {
+    const response = await client.get<unknown>('/plugins')
+    const root = toRecord(response.data)
+    const plugins = Array.isArray(root.plugins) ? root.plugins.filter(isRecord) : []
+    const entry = plugins.find((item) => readString(item, 'id') === pluginId)
+    if (!entry) return []
+    const directFields = Array.isArray(entry.config_fields)
+      ? entry.config_fields.flatMap((f) => {
+          const normalized = normalizePluginConfigField(f)
+          return normalized ? [normalized] : []
+        })
+      : []
+    if (directFields.length > 0) return directFields
+    const metadata = toRecord(entry.metadata)
+    return Array.isArray(metadata.config_fields)
+      ? metadata.config_fields.flatMap((f) => {
+          const normalized = normalizePluginConfigField(f)
+          return normalized ? [normalized] : []
+        })
+      : []
+  } catch {
+    return []
+  }
+}
+
+export async function fetchPluginConfig(
+  session: ManagementSessionInput,
+  pluginId: string,
+): Promise<PluginConfigObject> {
+  const client = createManagementClient(session)
+  try {
+    const response = await client.get<unknown>(
+      `/config/plugins/configs/${encodeURIComponent(pluginId)}`,
+    )
+    return toRecord(response.data)
+  } catch (error) {
+    if (toManagementApiError(error).status === 404) {
+      return {}
+    }
+    throw error
+  }
+}
+
+export async function updatePluginEnabled(
+  session: ManagementSessionInput,
+  pluginId: string,
+  enabled: boolean,
+) {
+  const client = createManagementClient(session)
+  await client.put(
+    `/config/plugins/configs/${encodeURIComponent(pluginId)}/enabled`,
+    JSON.stringify(enabled),
+    { headers: { 'Content-Type': 'application/json' } },
+  )
+}
+
+export async function savePluginConfig(
+  session: ManagementSessionInput,
+  pluginId: string,
+  input: PluginConfigSaveInput,
+): Promise<PluginConfigObject> {
+  const client = createManagementClient(session)
+  const current = await fetchPluginConfig(session, pluginId)
+  const next: PluginConfigObject = { ...current }
+
+  next.enabled = input.enabled
+
+  if (input.priority !== null && Number.isSafeInteger(input.priority) && input.priority !== 0) {
+    next.priority = input.priority
+  } else {
+    delete next.priority
+  }
+
+  if (input.loadInHome) {
+    next['load-in-home'] = true
+  } else if (current['load-in-home'] !== undefined) {
+    next['load-in-home'] = false
+  } else {
+    delete next['load-in-home']
+  }
+
+  for (const key of input.removedKeys ?? []) {
+    const trimmed = key.trim()
+    if (!trimmed || RESERVED_PLUGIN_CONFIG_KEYS.has(trimmed)) continue
+    delete next[trimmed]
+  }
+
+  for (const [rawKey, value] of Object.entries(input.params)) {
+    const key = rawKey.trim()
+    if (!key || RESERVED_PLUGIN_CONFIG_KEYS.has(key)) continue
+    next[key] = value
+  }
+
+  await client.put(`/config/plugins/configs/${encodeURIComponent(pluginId)}`, next)
+  return next
 }
 
 export function toPluginStoreApiError(error: unknown): ManagementApiError {

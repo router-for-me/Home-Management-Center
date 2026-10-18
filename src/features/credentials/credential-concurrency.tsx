@@ -30,10 +30,14 @@ export type CredentialMetadataForm = {
   prefix: string
   proxyUrl: string
   priority: string
+  weight?: string
   requestRetry: string
   note: string
   websockets: boolean
-  disableCooling: boolean
+  disableCooling?: boolean | null
+  headers?: Array<{ key: string; value: string }>
+  excludedModelsText?: string
+  customFields?: Array<{ path: string; value: string }>
   maxInFlight: string
   maxInFlightByModel: Array<{ model: string; limit: string }>
 }

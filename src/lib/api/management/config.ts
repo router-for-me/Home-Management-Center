@@ -82,6 +82,7 @@ export type ConfigFieldKey =
   | 'sessionAffinityTtl'
   | 'sessionAffinitySubagents'
   | 'streamingKeepaliveSeconds'
+  | 'streamingSendKeepaliveBeforeFt'
   | 'streamingBootstrapRetries'
   | 'passthroughHeaders'
   | 'nonstreamKeepaliveInterval'
@@ -471,6 +472,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
     sessionAffinitySubagents: readBoolean(routing, 'session-affinity-subagents'),
     streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
+    streamingSendKeepaliveBeforeFt: readBoolean(requestsStreaming, 'send-keepalive-before-ft'),
     streamingBootstrapRetries: readNumber(requestsStreaming, 'bootstrap-retries'),
     passthroughHeaders: readBoolean(requests, 'passthrough-headers'),
     nonstreamKeepaliveInterval: readNumber(requests, 'nonstream-keepalive-interval'),
@@ -688,6 +690,10 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
   sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'boolean' },
   streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },
+  streamingSendKeepaliveBeforeFt: {
+    path: 'requests/streaming/send-keepalive-before-ft',
+    kind: 'boolean',
+  },
   streamingBootstrapRetries: { path: 'requests/streaming/bootstrap-retries', kind: 'number' },
   passthroughHeaders: { path: 'requests/passthrough-headers', kind: 'boolean' },
   nonstreamKeepaliveInterval: { path: 'requests/nonstream-keepalive-interval', kind: 'number' },

@@ -19,6 +19,7 @@ import {
   fetchCredentialInFlightSummary,
   fetchCredentialModels,
   fetchCredentialOAuthStatus,
+  fetchCredentialRawMetadata,
   fetchCredentialSnapshot,
   getCredentialBindingAuthId,
   getCredentialOAuthProviders,
@@ -156,6 +157,9 @@ export function useCredentialWorkbench() {
       queryClient.invalidateQueries({ queryKey: concurrencyQueryKey }),
       queryClient.invalidateQueries({
         queryKey: credentialConcurrencyPolicyQueryKey(session.baseUrl, connectedAt),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['management-credential-raw-metadata', session.baseUrl, connectedAt],
       }),
     ])
   }
@@ -475,6 +479,35 @@ export function useCredentialInFlightDetail(credentialId: string | null, enabled
     hasNextPage: query.hasNextPage,
     fetchNextPage: query.fetchNextPage,
     refresh: () => queryClient.resetQueries({ queryKey, exact: true }),
+  }
+}
+
+export function useCredentialRawMetadata(resource: CredentialResource | null, enabled: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  const credentialId = resource ? getCredentialBindingAuthId(resource) : null
+  const query = useQuery({
+    queryKey: ['management-credential-raw-metadata', session.baseUrl, connectedAt, credentialId],
+    enabled:
+      connected &&
+      Boolean(session.managementKey) &&
+      enabled &&
+      Boolean(resource) &&
+      !resource?.runtimeOnly,
+    queryFn: async () => {
+      if (!resource) return {}
+      try {
+        return await fetchCredentialRawMetadata(session, resource)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+  })
+
+  return {
+    rawMetadata: query.data ?? null,
+    isPending: query.isPending,
   }
 }
 

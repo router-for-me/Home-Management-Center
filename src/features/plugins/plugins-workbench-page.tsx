@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
@@ -12,15 +12,26 @@ import {
   Loader2,
   Package,
   Plug,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import {
+  DrawerScaffoldBody,
+  DrawerScaffoldContent,
+  DrawerScaffoldFooter,
+  DrawerScaffoldForm,
+  DrawerScaffoldHeader,
+} from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { fieldClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
@@ -58,6 +69,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -71,8 +83,16 @@ import {
   type PluginStatusFilter,
   isPluginInstallActionDisabled,
 } from '@/features/plugins/plugin-store-model'
-import { type PluginPageVerdict, usePluginWorkbench } from '@/features/plugins/use-plugin-workbench'
-import type { PluginStoreEntry } from '@/lib/api/management/plugin-store'
+import {
+  type PluginPageVerdict,
+  usePluginConfig,
+  usePluginWorkbench,
+} from '@/features/plugins/use-plugin-workbench'
+import type {
+  PluginConfigFieldDescriptor,
+  PluginConfigSaveInput,
+  PluginStoreEntry,
+} from '@/lib/api/management/plugin-store'
 import type { SystemPluginReportStatus } from '@/lib/api/management/system-nodes'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -451,11 +471,13 @@ function PluginDetailSheet({
   plugin,
   onClose,
   onManageAuth,
+  onOpenConfig,
   reports,
 }: {
   plugin: PluginStoreEntry | null
   onClose: () => void
   onManageAuth: () => void
+  onOpenConfig: (plugin: PluginStoreEntry) => void
   reports: PluginReportView[]
 }) {
   const { t } = useTranslation()
@@ -526,12 +548,25 @@ function PluginDetailSheet({
                   : t('pluginPage.badges.authNotRequired')}
               </StatusBadge>
             </div>
-            {plugin.authRequired ? (
-              <Button type="button" variant="outline" size="md" onClick={onManageAuth}>
-                <KeyRound className="size-4" aria-hidden="true" />
-                {t('pluginPage.actions.manageAuth')}
-              </Button>
-            ) : null}
+            <div className="flex flex-wrap gap-2">
+              {(plugin.installed || plugin.configured) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() => onOpenConfig(plugin)}
+                >
+                  <SlidersHorizontal className="size-4" aria-hidden="true" />
+                  {t('pluginPage.actions.configure')}
+                </Button>
+              )}
+              {plugin.authRequired ? (
+                <Button type="button" variant="outline" size="md" onClick={onManageAuth}>
+                  <KeyRound className="size-4" aria-hidden="true" />
+                  {t('pluginPage.actions.manageAuth')}
+                </Button>
+              ) : null}
+            </div>
           </section>
           <section className="grid gap-3 rounded-lg border p-4">
             <h3 className="text-sm font-semibold">{t('pluginPage.detail.version')}</h3>
@@ -616,6 +651,420 @@ function PluginDetailSheet({
   )
 }
 
+const RESERVED_PLUGIN_KEYS = new Set(['enabled', 'priority', 'load-in-home', 'store'])
+
+function formatPluginParamValue(value: unknown): string {
+  if (value === undefined || value === null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return ''
+  }
+}
+
+function parsePluginCustomParamValue(raw: string): unknown {
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  try {
+    return JSON.parse(trimmed) as unknown
+  } catch {
+    return raw
+  }
+}
+
+function PluginConfigSheet({
+  plugin,
+  open,
+  saving,
+  onClose,
+  onSave,
+}: {
+  plugin: PluginStoreEntry | null
+  open: boolean
+  saving: boolean
+  onClose: () => void
+  onSave: (plugin: PluginStoreEntry, input: PluginConfigSaveInput) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const configQuery = usePluginConfig(plugin?.id ?? null, open && Boolean(plugin))
+  const [enabled, setEnabled] = useState(true)
+  const [priority, setPriority] = useState('0')
+  const [loadInHome, setLoadInHome] = useState(false)
+  const [declaredValues, setDeclaredValues] = useState<Record<string, string | boolean>>({})
+  const [customEntries, setCustomEntries] = useState<Array<{ key: string; value: string }>>([])
+  const [baselineKeys, setBaselineKeys] = useState<string[]>([])
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || !plugin) return
+    const cfg = configQuery.config ?? {}
+    setEnabled(typeof cfg.enabled === 'boolean' ? cfg.enabled : plugin.enabled !== false)
+    setPriority(
+      typeof cfg.priority === 'number' && Number.isFinite(cfg.priority)
+        ? String(cfg.priority)
+        : '0',
+    )
+    setLoadInHome(cfg['load-in-home'] === true)
+
+    const declaredFieldNames = new Set(configQuery.fields.map((field) => field.name))
+    const nextDeclared: Record<string, string | boolean> = {}
+    for (const field of configQuery.fields) {
+      const val = cfg[field.name]
+      if (field.type.trim().toLowerCase() === 'boolean') {
+        nextDeclared[field.name] = val === true
+      } else {
+        nextDeclared[field.name] = formatPluginParamValue(val)
+      }
+    }
+    setDeclaredValues(nextDeclared)
+
+    const custom: Array<{ key: string; value: string }> = []
+    const existingParamKeys: string[] = []
+    for (const [key, value] of Object.entries(cfg)) {
+      if (RESERVED_PLUGIN_KEYS.has(key)) continue
+      existingParamKeys.push(key)
+      if (declaredFieldNames.has(key)) continue
+      custom.push({ key, value: formatPluginParamValue(value) })
+    }
+    setCustomEntries(custom)
+    setBaselineKeys(existingParamKeys)
+    setLocalError(null)
+  }, [configQuery.config, configQuery.fields, open, plugin])
+
+  if (!plugin) return null
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setLocalError(null)
+
+    const priorityText = priority.trim()
+    if (
+      priorityText &&
+      (!/^-?\d+$/.test(priorityText) || !Number.isSafeInteger(Number(priorityText)))
+    ) {
+      setLocalError(t('pluginPage.config.validation.priorityInvalid'))
+      return
+    }
+
+    const params: Record<string, unknown> = {}
+    for (const field of configQuery.fields) {
+      const fieldType = field.type.trim().toLowerCase()
+      const rawValue = declaredValues[field.name]
+      if (fieldType === 'boolean') {
+        params[field.name] = rawValue === true
+        continue
+      }
+      const text = typeof rawValue === 'string' ? rawValue.trim() : ''
+      if (!text) continue
+      if (fieldType === 'integer') {
+        if (!/^-?\d+$/.test(text) || !Number.isSafeInteger(Number(text))) {
+          setLocalError(t('pluginPage.config.validation.paramInvalid', { name: field.name }))
+          return
+        }
+        params[field.name] = Number(text)
+      } else if (fieldType === 'number') {
+        const parsed = Number(text)
+        if (!Number.isFinite(parsed)) {
+          setLocalError(t('pluginPage.config.validation.paramInvalid', { name: field.name }))
+          return
+        }
+        params[field.name] = parsed
+      } else if (fieldType === 'array' || fieldType === 'object') {
+        try {
+          params[field.name] = JSON.parse(text) as unknown
+        } catch {
+          setLocalError(t('pluginPage.config.validation.paramInvalid', { name: field.name }))
+          return
+        }
+      } else {
+        params[field.name] = text
+      }
+    }
+
+    for (const entry of customEntries) {
+      const key = entry.key.trim()
+      if (!key && entry.value.trim()) {
+        setLocalError(t('pluginPage.config.validation.keyRequired'))
+        return
+      }
+      if (!key) continue
+      if (RESERVED_PLUGIN_KEYS.has(key)) {
+        setLocalError(t('pluginPage.config.validation.reservedKey', { name: key }))
+        return
+      }
+      params[key] = parsePluginCustomParamValue(entry.value)
+    }
+
+    const removedKeys = baselineKeys.filter(
+      (key) => !Object.prototype.hasOwnProperty.call(params, key),
+    )
+
+    try {
+      await onSave(plugin, {
+        enabled,
+        priority: priorityText ? Number(priorityText) : 0,
+        loadInHome,
+        params,
+        removedKeys,
+      })
+      toast.success(t('pluginPage.config.saved', { name: getPluginTitle(plugin) }))
+      onClose()
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : String(error))
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && !saving && onClose()}>
+      <DrawerScaffoldContent className="sm:max-w-xl">
+        <DrawerScaffoldHeader>
+          <SheetTitle>{t('pluginPage.config.title', { name: getPluginTitle(plugin) })}</SheetTitle>
+          <SheetDescription className="font-mono text-xs">{plugin.id}</SheetDescription>
+        </DrawerScaffoldHeader>
+        <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
+          <DrawerScaffoldBody className="grid gap-4">
+            {configQuery.isPending ? (
+              <div className="grid gap-3">
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            ) : (
+              <>
+                <div className="bg-muted/35 flex items-start justify-between gap-4 rounded-md border px-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t('pluginPage.config.enabledLabel')}</p>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                      {t('pluginPage.config.enabledDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={enabled}
+                    disabled={saving}
+                    onCheckedChange={setEnabled}
+                    aria-label={t('pluginPage.config.enabledLabel')}
+                  />
+                </div>
+
+                <label className={fieldClassName}>
+                  <span>{t('pluginPage.config.priorityLabel')}</span>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    value={priority}
+                    placeholder="0"
+                    disabled={saving}
+                    onChange={(event) => setPriority(event.target.value)}
+                  />
+                  <span className="text-muted-foreground text-xs leading-5 font-normal">
+                    {t('pluginPage.config.priorityDescription')}
+                  </span>
+                </label>
+
+                <div className="bg-muted/35 flex items-start justify-between gap-4 rounded-md border px-3 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t('pluginPage.config.loadInHomeLabel')}</p>
+                    <p className="text-muted-foreground mt-1 text-xs leading-5">
+                      {t('pluginPage.config.loadInHomeDescription')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={loadInHome}
+                    disabled={saving}
+                    onCheckedChange={setLoadInHome}
+                    aria-label={t('pluginPage.config.loadInHomeLabel')}
+                  />
+                </div>
+
+                {configQuery.fields.length > 0 ? (
+                  <div className="grid gap-3 rounded-md border p-3">
+                    <h3 className="text-sm font-medium">
+                      {t('pluginPage.config.declaredFieldsTitle')}
+                    </h3>
+                    {configQuery.fields.map((field: PluginConfigFieldDescriptor) => {
+                      const fieldType = field.type.trim().toLowerCase()
+                      if (fieldType === 'boolean') {
+                        return (
+                          <div
+                            key={field.name}
+                            className="flex items-start justify-between gap-4 rounded-md border px-3 py-2.5"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-mono text-xs font-medium">{field.name}</p>
+                              {field.description ? (
+                                <p className="text-muted-foreground mt-1 text-xs leading-5">
+                                  {field.description}
+                                </p>
+                              ) : null}
+                            </div>
+                            <Switch
+                              checked={declaredValues[field.name] === true}
+                              disabled={saving}
+                              onCheckedChange={(checked) =>
+                                setDeclaredValues((current) => ({
+                                  ...current,
+                                  [field.name]: checked,
+                                }))
+                              }
+                              aria-label={field.name}
+                            />
+                          </div>
+                        )
+                      }
+                      if (fieldType === 'enum' && field.enumValues.length > 0) {
+                        return (
+                          <div key={field.name} className={fieldClassName}>
+                            <span className="font-mono text-xs">{field.name}</span>
+                            <Select
+                              value={String(declaredValues[field.name] ?? '')}
+                              disabled={saving}
+                              onValueChange={(val) =>
+                                setDeclaredValues((current) => ({ ...current, [field.name]: val }))
+                              }
+                            >
+                              <SelectTrigger aria-label={field.name}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {field.enumValues.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {field.description ? (
+                              <span className="text-muted-foreground text-xs leading-5 font-normal">
+                                {field.description}
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      }
+                      return (
+                        <label key={field.name} className={fieldClassName}>
+                          <span className="font-mono text-xs">{field.name}</span>
+                          <Input
+                            value={String(declaredValues[field.name] ?? '')}
+                            disabled={saving}
+                            className="font-mono text-xs"
+                            onChange={(event) =>
+                              setDeclaredValues((current) => ({
+                                ...current,
+                                [field.name]: event.target.value,
+                              }))
+                            }
+                          />
+                          {field.description ? (
+                            <span className="text-muted-foreground text-xs leading-5 font-normal">
+                              {field.description}
+                            </span>
+                          ) : null}
+                        </label>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                <div className="grid gap-2.5 rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {t('pluginPage.config.customParamsTitle')}
+                      </p>
+                      <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+                        {t('pluginPage.config.customParamsDescription')}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={saving}
+                      onClick={() =>
+                        setCustomEntries((current) => [...current, { key: '', value: '' }])
+                      }
+                    >
+                      <Plus className="size-3.5" aria-hidden="true" />
+                      {t('pluginPage.config.addParam')}
+                    </Button>
+                  </div>
+                  {customEntries.length > 0 ? (
+                    <div className="grid gap-2">
+                      {customEntries.map((entry, idx) => (
+                        <div
+                          key={idx}
+                          className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center"
+                        >
+                          <Input
+                            value={entry.key}
+                            placeholder="option-key"
+                            disabled={saving}
+                            className="font-mono text-xs"
+                            onChange={(event) =>
+                              setCustomEntries((current) =>
+                                current.map((item, i) =>
+                                  i === idx ? { ...item, key: event.target.value } : item,
+                                ),
+                              )
+                            }
+                          />
+                          <Input
+                            value={entry.value}
+                            placeholder={t('pluginPage.config.paramValuePlaceholder')}
+                            disabled={saving}
+                            className="font-mono text-xs"
+                            onChange={(event) =>
+                              setCustomEntries((current) =>
+                                current.map((item, i) =>
+                                  i === idx ? { ...item, value: event.target.value } : item,
+                                ),
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-md"
+                            disabled={saving}
+                            aria-label={t('pluginPage.config.removeParam')}
+                            onClick={() =>
+                              setCustomEntries((current) => current.filter((_, i) => i !== idx))
+                            }
+                          >
+                            <X className="size-4" aria-hidden="true" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                {localError || configQuery.errorMessage ? (
+                  <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
+                    {localError ?? configQuery.errorMessage}
+                  </div>
+                ) : null}
+              </>
+            )}
+          </DrawerScaffoldBody>
+          <DrawerScaffoldFooter>
+            <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={saving || configQuery.isPending}>
+              {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
+              {t('common.save')}
+            </Button>
+          </DrawerScaffoldFooter>
+        </DrawerScaffoldForm>
+      </DrawerScaffoldContent>
+    </Sheet>
+  )
+}
+
 function DetailRow({ label, value, href }: { label: string; value: string; href?: string }) {
   const { t } = useTranslation()
   const displayValue = value || t('pluginPage.status.notAvailable')
@@ -644,6 +1093,7 @@ export function PluginsWorkbenchPage() {
   const { t } = useTranslation()
   const workbench = usePluginWorkbench()
   const [selectedPlugin, setSelectedPlugin] = useState<PluginStoreEntry | null>(null)
+  const [configuringPlugin, setConfiguringPlugin] = useState<PluginStoreEntry | null>(null)
   const [installTarget, setInstallTarget] = useState<PluginStoreEntry | null>(null)
   const [installVersion, setInstallVersion] = useState('')
   const [installSourceKey, setInstallSourceKey] = useState('')
@@ -1193,6 +1643,12 @@ export function PluginsWorkbenchPage() {
                               icon: Eye,
                               onSelect: () => setSelectedPlugin(plugin),
                             },
+                            (plugin.installed || plugin.configured) && {
+                              id: 'configure',
+                              label: t('pluginPage.actions.configure'),
+                              icon: SlidersHorizontal,
+                              onSelect: () => setConfiguringPlugin(plugin),
+                            },
                             (!plugin.installed || plugin.updateAvailable) && {
                               id: 'install',
                               label: plugin.updateAvailable
@@ -1233,9 +1689,23 @@ export function PluginsWorkbenchPage() {
         plugin={selectedPlugin}
         reports={selectedReports}
         onClose={() => setSelectedPlugin(null)}
+        onOpenConfig={(plugin) => {
+          setSelectedPlugin(null)
+          setConfiguringPlugin(plugin)
+        }}
         onManageAuth={() => {
           setSelectedPlugin(null)
           setAuthOpen(true)
+        }}
+      />
+
+      <PluginConfigSheet
+        plugin={configuringPlugin}
+        open={Boolean(configuringPlugin)}
+        saving={Boolean(configuringPlugin && workbench.savingConfigId === configuringPlugin.id)}
+        onClose={() => setConfiguringPlugin(null)}
+        onSave={async (plugin, input) => {
+          await workbench.savePluginConfig(plugin, input)
         }}
       />
 
