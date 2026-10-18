@@ -1,6 +1,10 @@
 import axios, { type AxiosAdapter } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
+import {
+  formatDateTime,
+  scrollRuntimeLogContainerToBottom,
+} from '../src/features/observability/observability-components'
 import { defaultRuntimeLogFilters, fetchRuntimeLogs } from '../src/lib/api/management/usage-logs'
 import { en } from '../src/lib/i18n/locales/en'
 import { ru } from '../src/lib/i18n/locales/ru'
@@ -121,6 +125,30 @@ describe('runtime log content search Management API integration', () => {
           searchUnsupported: locale.usageLogsPage.logs.searchUnsupported,
         }),
       ).toEqual(expected)
+    }
+  })
+
+  test('scrolls the runtime log container to the bottom when records load', () => {
+    const container = { scrollTop: 0, scrollHeight: 1280 }
+
+    scrollRuntimeLogContainerToBottom(container)
+    expect(container.scrollTop).toBe(1280)
+
+    scrollRuntimeLogContainerToBottom(null)
+  })
+
+  test('formats runtime log timestamps completely across double-digit dates and all locales', () => {
+    const timestamp = '2026-10-15T00:12:08Z'
+
+    for (const language of ['zh-CN', 'zh-TW', 'en', 'ru']) {
+      const formatted = formatDateTime(timestamp, {
+        language,
+        resolvedLanguage: language,
+      } as Parameters<typeof formatDateTime>[1])
+
+      expect(formatted).toBeTruthy()
+      expect(formatted).toContain('2026')
+      expect(formatted).toContain('12')
     }
   })
 })

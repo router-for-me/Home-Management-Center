@@ -304,6 +304,13 @@ function getRuntimeLogLevel(record: RuntimeLogRecord) {
 
 export { downloadBlob } from '@/lib/download'
 
+export function scrollRuntimeLogContainerToBottom(
+  container: Pick<HTMLElement, 'scrollTop' | 'scrollHeight'> | null,
+) {
+  if (!container) return
+  container.scrollTop = container.scrollHeight
+}
+
 export function isFileLoggingDisabledError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
   return message.toLowerCase().includes('logging to file disabled')
@@ -2583,7 +2590,7 @@ const usageRecordColumns: Array<{
    */
   compact?: boolean
 }> = [
-  { key: 'time', width: 156, required: true, compact: true },
+  { key: 'time', width: 216, required: true, compact: true },
   { key: 'status', width: 116, required: true, compact: true },
   { key: 'model', width: 230, required: true },
   { key: 'client', width: 210 },
@@ -3050,7 +3057,7 @@ export function RequestRecordsTable({
                 {rows.map((record) => (
                   <TableRow key={record.id} variant="resource">
                     {isColumnRendered('time') ? (
-                      <TableCell className="text-muted-foreground truncate">
+                      <TableCell className="text-muted-foreground truncate tabular-nums">
                         {formatDateTime(record.timestamp, i18n) ?? record.timestamp}
                       </TableCell>
                     ) : null}
@@ -3434,7 +3441,7 @@ export function RequestLogIndexTable({
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead
-                  className="w-[170px]"
+                  className="w-[216px]"
                   aria-sort={
                     sort.key === 'time'
                       ? sort.direction === 'asc'
@@ -3496,7 +3503,7 @@ export function RequestLogIndexTable({
 
                 return (
                   <TableRow key={row.id} variant="resource" className="group">
-                    <TableCell className="text-muted-foreground truncate">
+                    <TableCell className="text-muted-foreground truncate tabular-nums">
                       {formatDateTime(row.timestamp, i18n) ?? <EmptyValue />}
                     </TableCell>
                     <TableCell className="min-w-0">
@@ -5210,6 +5217,8 @@ export function RuntimeLogViewer({
   const liveRefreshStatusId = 'runtime-log-live-refresh-status'
   const { t, i18n } = useTranslation()
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
+  const logTableContainerRef = useRef<HTMLDivElement | null>(null)
+  const logLinesContainerRef = useRef<HTMLDivElement | null>(null)
   const records = runtimeLogs?.records ?? []
   const displayRecords = useMemo(() => [...records].reverse(), [records])
   const total = runtimeLogs?.total ?? runtimeLogs?.lineCount ?? 0
@@ -5220,6 +5229,17 @@ export function RuntimeLogViewer({
   const canGoPrevious = canRead && effectiveOffset > 0
   const canGoNext = canRead && effectiveOffset + effectiveLimit < total
   const hasActiveFilters = hasActiveRuntimeLogFilters(filters)
+
+  useEffect(() => {
+    if (!canRead || !runtimeLogs) return
+    const container =
+      runtimeLogs.records.length > 0
+        ? logTableContainerRef.current
+        : runtimeLogs.lines.length > 0
+          ? logLinesContainerRef.current
+          : null
+    scrollRuntimeLogContainerToBottom(container)
+  }, [canRead, runtimeLogs])
 
   return (
     <TableSurface className="min-w-0 p-4">
@@ -5336,12 +5356,13 @@ export function RuntimeLogViewer({
         ) : records.length > 0 ? (
           <>
             <Table
+              containerRef={logTableContainerRef}
               containerClassName={containedTableContainerClassName}
               className="w-full min-w-[900px] table-fixed"
             >
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
-                  <TableHead className="w-[172px]">
+                  <TableHead className="w-[216px]">
                     {t('usageLogsPage.logs.columns.time')}
                   </TableHead>
                   <TableHead className="w-[152px]">
@@ -5384,7 +5405,7 @@ export function RuntimeLogViewer({
             />
           </>
         ) : runtimeLogs?.lines.length ? (
-          <div className="bg-muted/40 max-h-[360px] overflow-auto p-3">
+          <div ref={logLinesContainerRef} className="bg-muted/40 max-h-[360px] overflow-auto p-3">
             <pre className="text-foreground font-mono text-xs leading-5 break-words whitespace-pre-wrap">
               {runtimeLogs.lines.join('\n')}
             </pre>
@@ -5706,7 +5727,7 @@ function RuntimeLogRow({
 
   return (
     <TableRow variant="resource" className="group">
-      <TableCell className="text-muted-foreground truncate">
+      <TableCell className="text-muted-foreground truncate tabular-nums">
         {formatDateTime(record.timestamp, i18n) ?? <EmptyValue />}
       </TableCell>
       <TableCell className="text-muted-foreground truncate font-mono text-xs">
@@ -5811,14 +5832,14 @@ export function ErrorLogFilesPanel({
         ) : rows.length > 0 ? (
           <Table
             containerClassName={containedTableContainerClassName}
-            className="min-w-[620px] table-fixed"
+            className="min-w-[680px] table-fixed"
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead className="w-[260px]">
                   {t('usageLogsPage.errorLogs.columns.name')}
                 </TableHead>
-                <TableHead className="w-[160px]">
+                <TableHead className="w-[216px]">
                   {t('usageLogsPage.errorLogs.columns.modified')}
                 </TableHead>
                 <TableHead className="w-[80px] text-right">
@@ -5836,7 +5857,7 @@ export function ErrorLogFilesPanel({
                 return (
                   <TableRow key={row.name} variant="resource" className="group">
                     <TableCell className="truncate font-mono text-xs">{row.name}</TableCell>
-                    <TableCell className="text-muted-foreground truncate">
+                    <TableCell className="text-muted-foreground truncate tabular-nums">
                       {formatTimestamp(row.modified, i18n) ?? <EmptyValue />}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-right">
