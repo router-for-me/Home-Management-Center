@@ -2806,6 +2806,8 @@ export const en = {
         keyValue: 'Key value',
         owner: 'Owner',
         unassigned: 'Unassigned',
+        ownerUnavailableHint:
+          'This user is deleted or missing from the available list. You can keep the original owner when saving other settings, or select another user.',
         emptyScopeHint:
           'When no scope is selected, this key does not add credential or model restrictions.',
         empty: 'No client keys yet.',

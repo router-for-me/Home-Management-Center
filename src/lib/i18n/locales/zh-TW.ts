@@ -2687,6 +2687,8 @@ export const zhTW = {
         keyValue: '金鑰值',
         owner: '所屬使用者',
         unassigned: '未分配',
+        ownerUnavailableHint:
+          '此使用者已刪除或不在目前可用清單中。保持所屬使用者不變可儲存其他設定，也可重新選擇使用者。',
         emptyScopeHint: '不選擇任何範圍時，該金鑰不額外限制憑證或模型範圍。',
         empty: '目前沒有用戶端金鑰。',
         key: '用戶端金鑰',

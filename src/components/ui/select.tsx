@@ -7,7 +7,24 @@ import { type ControlSize, controlSizeClassNames } from '@/components/ui/control
 import { cn } from '@/lib/utils'
 
 function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      {...props}
+      onValueChange={
+        props.onValueChange
+          ? (value) => {
+              // Radix SelectBubbleInput dispatches a synthetic change event on its hidden
+              // <select> when controlled `value` updates inside a <form>. If the matching
+              // <option> has not mounted yet, the DOM <select> reports `""`, even though
+              // SelectItem forbids empty-string values. Ignore empty-string bubble resets.
+              if (value === '') return
+              props.onValueChange?.(value)
+            }
+          : undefined
+      }
+    />
+  )
 }
 
 function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.Value>) {
