@@ -1,6 +1,15 @@
 import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react'
 
-import { AlertTriangle, CircleGauge, Download, Loader2, RefreshCw, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  CircleGauge,
+  Download,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -13,6 +22,13 @@ import { fieldClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -37,6 +53,7 @@ import {
 import {
   useCredentialConcurrencyPolicy,
   useCredentialInFlightDetail,
+  useCredentialRawMetadata,
 } from '@/features/credentials/use-credential-workbench'
 import {
   InlineWindowBar,
@@ -61,7 +78,13 @@ import {
   type CredentialInFlightSummary,
   type CredentialMetadataPatch,
   type CredentialResource,
+  MAX_CREDENTIAL_WEIGHT,
+  isEditableCredentialMetadataPath,
   matchesCredentialBackendError,
+  readCredentialDisableCoolingOverride,
+  readCredentialExcludedModels,
+  readCredentialHeaders,
+  readCredentialWeight,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
 import type { QuotaCredential, QuotaResetCredits, QuotaWindow } from '@/lib/api/management/quota'
@@ -86,12 +109,25 @@ function visibleDrawerTabs(showConcurrency: boolean): CredentialDrawerTab[] {
   ]
 }
 
-function createMetadataForm(
+export function createMetadataForm(
   resource: CredentialResource | null,
   policy: CredentialConcurrencyPolicy | null = null,
+  rawMetadata: Record<string, unknown> | null = null,
 ): CredentialMetadataForm {
   const maxInFlight = resource?.maxInFlight ?? null
   const maxInFlightByModel = resource?.maxInFlightByModel ?? {}
+  const weight =
+    (rawMetadata ? readCredentialWeight(rawMetadata) : null) ?? resource?.weight ?? null
+  const rawHeaders = rawMetadata ? readCredentialHeaders(rawMetadata) : {}
+  const headersMap = Object.keys(rawHeaders).length > 0 ? rawHeaders : (resource?.headers ?? {})
+  const rawExcluded = rawMetadata ? readCredentialExcludedModels(rawMetadata) : []
+  const excludedModels = rawExcluded.length > 0 ? rawExcluded : (resource?.excludedModels ?? [])
+  const rawCooling = rawMetadata ? readCredentialDisableCoolingOverride(rawMetadata) : null
+  const disableCoolingOverride =
+    resource?.disableCoolingOverride !== undefined && resource.disableCoolingOverride !== null
+      ? resource.disableCoolingOverride
+      : (rawCooling ?? resource?.disableCoolingOverride ?? null)
+
   return applyCredentialConcurrencyPolicyToForm(
     {
       prefix: resource?.prefix ?? '',
@@ -100,12 +136,16 @@ function createMetadataForm(
         resource?.priority === null || resource?.priority === undefined
           ? ''
           : String(resource.priority),
+      weight: weight === null ? '' : String(weight),
       requestRetry:
         resource?.requestRetry === null || resource?.requestRetry === undefined
           ? ''
           : String(resource.requestRetry),
       websockets: resource?.websockets ?? false,
-      disableCooling: resource?.disableCooling ?? false,
+      disableCooling: disableCoolingOverride,
+      headers: Object.entries(headersMap).map(([key, value]) => ({ key, value })),
+      excludedModelsText: excludedModels.join('\n'),
+      customFields: [],
       note: resource?.note ?? '',
       maxInFlight: maxInFlight ? String(maxInFlight) : '',
       maxInFlightByModel: Object.entries(maxInFlightByModel)
@@ -117,8 +157,11 @@ function createMetadataForm(
 }
 
 export function isValidProxyUrl(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return false
+  if (trimmed.toLowerCase() === 'direct') return true
   try {
-    const url = new URL(value)
+    const url = new URL(trimmed)
     return ['http:', 'https:', 'socks5:', 'socks5h:'].includes(url.protocol)
   } catch {
     return false
@@ -130,6 +173,14 @@ export function isValidCredentialPriorityDraft(value: string) {
   return trimmed === '' || (/^-?\d+$/.test(trimmed) && Number.isSafeInteger(Number(trimmed)))
 }
 
+export function isValidCredentialWeightDraft(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return true
+  if (!/^\+?\d+$/.test(trimmed)) return false
+  const parsed = Number(trimmed)
+  return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= MAX_CREDENTIAL_WEIGHT
+}
+
 export function isValidCredentialRequestRetryDraft(value: string) {
   const trimmed = value.trim()
   return (
@@ -138,9 +189,34 @@ export function isValidCredentialRequestRetryDraft(value: string) {
   )
 }
 
+function parseExcludedModelsDraft(text: string): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const item of text.split(/[\r\n,]+/)) {
+    const trimmed = item.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || seen.has(key)) continue
+    seen.add(key)
+    result.push(trimmed)
+  }
+  return result
+}
+
+function parseCustomMetadataValue(raw: string): unknown {
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  try {
+    return JSON.parse(trimmed) as unknown
+  } catch {
+    return raw
+  }
+}
+
 export function buildCredentialMetadataPatch(
   resource: CredentialResource,
   form: CredentialMetadataForm,
+  rawMetadata: Record<string, unknown> | null = null,
+  baseline: CredentialMetadataForm = createMetadataForm(resource, null, rawMetadata),
 ): CredentialMetadataPatch {
   const patch: CredentialMetadataPatch = {}
   const prefix = form.prefix.trim()
@@ -149,26 +225,81 @@ export function buildCredentialMetadataPatch(
   const requestRetry = form.requestRetry.trim()
   const note = form.note.trim()
 
-  if (prefix !== (resource.prefix ?? '')) patch.prefix = form.prefix
-  if (proxyUrl !== (resource.proxyUrl ?? '')) patch.proxyUrl = form.proxyUrl
-  if (priority !== (resource.priority == null ? '' : String(resource.priority))) {
+  if (prefix !== baseline.prefix.trim()) patch.prefix = form.prefix
+  if (proxyUrl !== baseline.proxyUrl.trim()) patch.proxyUrl = form.proxyUrl
+  if (priority !== baseline.priority.trim()) {
     patch.priority = priority === '' ? null : priority
   }
-  if (requestRetry !== (resource.requestRetry == null ? '' : String(resource.requestRetry))) {
+  if (form.weight !== undefined) {
+    const baselineWeight = baseline.weight?.trim() ? Number(baseline.weight) : null
+    const nextWeightText = form.weight.trim()
+    const nextWeight = nextWeightText === '' ? null : Number(nextWeightText)
+    if (nextWeight !== baselineWeight) {
+      patch.weight = nextWeight
+    }
+  }
+  if (requestRetry !== baseline.requestRetry.trim()) {
     patch.requestRetry = requestRetry === '' ? null : requestRetry
   }
-  if (note !== (resource.note ?? '')) patch.note = form.note
+  if (note !== baseline.note.trim()) patch.note = form.note
   if (
     supportsCredentialWebsockets(resource) &&
     resource.metadataAvailability.websockets &&
-    form.websockets !== resource.websockets
+    form.websockets !== baseline.websockets
   ) {
     patch.websockets = form.websockets
   }
-  // Cooling has no availability gate: an absent `disable-cooling` field means the
-  // override is unset, i.e. cooling stays enabled, so the toggle is always live.
-  if (form.disableCooling !== resource.disableCooling) {
-    patch.disableCooling = form.disableCooling
+  if (form.disableCooling !== undefined) {
+    const baselineCooling = baseline.disableCooling ?? null
+    if (form.disableCooling !== baselineCooling) {
+      patch.disableCooling = form.disableCooling
+    }
+  }
+  if (form.headers !== undefined) {
+    const baselineHeaders = Object.fromEntries(
+      (baseline.headers ?? [])
+        .filter(({ key, value }) => key.trim() && value.trim())
+        .map(({ key, value }) => [key.trim(), value.trim()]),
+    )
+    const nextHeaders: Record<string, string> = {}
+    for (const entry of form.headers) {
+      const key = entry.key.trim()
+      const value = entry.value.trim()
+      if (!key || !value) continue
+      nextHeaders[key] = value
+    }
+    const headersPatch: Record<string, string> = {}
+    for (const [key, value] of Object.entries(nextHeaders)) {
+      if (baselineHeaders[key] !== value) {
+        headersPatch[key] = value
+      }
+    }
+    for (const key of Object.keys(baselineHeaders)) {
+      if (!Object.prototype.hasOwnProperty.call(nextHeaders, key)) {
+        headersPatch[key] = ''
+      }
+    }
+    if (Object.keys(headersPatch).length > 0) {
+      patch.headers = headersPatch
+    }
+  }
+  if (form.excludedModelsText !== undefined) {
+    const baselineExcluded = parseExcludedModelsDraft(baseline.excludedModelsText ?? '')
+    const nextExcluded = parseExcludedModelsDraft(form.excludedModelsText)
+    if (JSON.stringify(nextExcluded) !== JSON.stringify(baselineExcluded)) {
+      patch.excludedModels = nextExcluded
+    }
+  }
+  if (form.customFields !== undefined) {
+    const customPatch: Record<string, unknown> = {}
+    for (const entry of form.customFields) {
+      const path = entry.path.trim()
+      if (!path) continue
+      customPatch[path] = parseCustomMetadataValue(entry.value)
+    }
+    if (Object.keys(customPatch).length > 0) {
+      patch.customFields = customPatch
+    }
   }
 
   return patch
@@ -305,9 +436,11 @@ function OverviewTab({
           ],
           [
             'cooling',
-            resource.disableCooling
-              ? t('credentialsPage.status.disabled')
-              : t('credentialsPage.status.enabled'),
+            resource.disableCoolingOverride === null
+              ? t('credentialsPage.status.inherited')
+              : resource.disableCooling
+                ? t('credentialsPage.status.disabled')
+                : t('credentialsPage.status.enabled'),
           ],
           ['path', resource.path ?? t('credentialsPage.status.notAvailable')],
           [
@@ -350,13 +483,21 @@ function OverviewTab({
   )
 }
 
-type CredentialFormField = 'proxyUrl' | 'priority' | 'requestRetry' | 'prefix'
+type CredentialFormField =
+  | 'proxyUrl'
+  | 'priority'
+  | 'weight'
+  | 'requestRetry'
+  | 'prefix'
+  | 'headers'
+  | 'customFields'
 type CredentialFieldErrors = Partial<Record<CredentialFormField, string>>
 
 function MetadataTab({
   resource,
   open,
   mutating,
+  rawMetadata,
   canEditConcurrency,
   concurrencyPolicy,
   concurrencyPolicyPending,
@@ -368,6 +509,7 @@ function MetadataTab({
   resource: CredentialResource
   open: boolean
   mutating: boolean
+  rawMetadata: Record<string, unknown> | null
   canEditConcurrency: boolean
   concurrencyPolicy: CredentialConcurrencyPolicy | null
   concurrencyPolicyPending: boolean
@@ -378,13 +520,15 @@ function MetadataTab({
 }) {
   const { t } = useTranslation()
   const [form, setForm] = useState<CredentialMetadataForm>(() =>
-    createMetadataForm(resource, concurrencyPolicy),
+    createMetadataForm(resource, concurrencyPolicy, rawMetadata),
   )
   const [localError, setLocalError] = useState<CredentialMetadataLocalError | null>(null)
   const [fieldErrors, setFieldErrors] = useState<CredentialFieldErrors>({})
   const credentialId = getCredentialInFlightId(resource)
   const previousCredentialId = useRef(credentialId)
   const previousPolicyVersion = useRef<CredentialMetadataPolicyVersion>('unobserved')
+  // Compare against the values actually shown, even if a background read completes later.
+  const baselineForm = useRef(form)
 
   useEffect(() => {
     const policyVersion = concurrencyPolicy === null ? null : concurrencyPolicy.version
@@ -406,7 +550,9 @@ function MetadataTab({
       previousPolicyVersion.current = policyVersion
     }
     if (refreshMode === 'reset') {
-      setForm(createMetadataForm(resource, concurrencyPolicy))
+      const nextForm = createMetadataForm(resource, concurrencyPolicy, rawMetadata)
+      baselineForm.current = nextForm
+      setForm(nextForm)
       setLocalError(null)
       setFieldErrors({})
       return
@@ -417,7 +563,7 @@ function MetadataTab({
         retainCredentialMetadataErrorAfterPolicyRefresh(current, credentialId),
       )
     }
-  }, [concurrencyPolicy, credentialId, open, resource])
+  }, [concurrencyPolicy, credentialId, open, rawMetadata, resource])
 
   const handleFormChange: Dispatch<SetStateAction<CredentialMetadataForm>> = (nextForm) => {
     setLocalError(null)
@@ -447,8 +593,29 @@ function MetadataTab({
     if (!isValidCredentialPriorityDraft(form.priority)) {
       nextErrors.priority = t('credentialsPage.form.priorityInvalid')
     }
+    if (form.weight !== undefined && !isValidCredentialWeightDraft(form.weight)) {
+      nextErrors.weight = t('credentialsPage.form.weightInvalid')
+    }
     if (!isValidCredentialRequestRetryDraft(form.requestRetry)) {
       nextErrors.requestRetry = t('credentialsPage.form.requestRetryInvalid')
+    }
+    if (
+      form.headers?.some(
+        (header) =>
+          (!header.key.trim() && header.value.trim()) ||
+          (header.key.trim() && !header.value.trim()),
+      )
+    ) {
+      nextErrors.headers = t('credentialsPage.form.headersIncomplete')
+    }
+    if (
+      form.customFields?.some(
+        (entry) =>
+          (entry.path.trim() || entry.value.trim()) &&
+          !isEditableCredentialMetadataPath(entry.path),
+      )
+    ) {
+      nextErrors.customFields = t('credentialsPage.form.customFieldsInvalid')
     }
     return nextErrors
   }
@@ -512,7 +679,12 @@ function MetadataTab({
       const concurrencyChanged =
         concurrencyEditable &&
         (normalizedMaxInFlight !== concurrencyPolicy?.maxInFlight || modelLimitsChanged)
-      const metadataPatch = buildCredentialMetadataPatch(resource, form)
+      const metadataPatch = buildCredentialMetadataPatch(
+        resource,
+        form,
+        rawMetadata,
+        baselineForm.current,
+      )
       const input: CredentialMetadataPatch = {
         ...metadataPatch,
         ...(concurrencyChanged
@@ -528,6 +700,10 @@ function MetadataTab({
         return
       }
       await onUpdateMetadata(input)
+      if (previousCredentialId.current === credentialId) {
+        baselineForm.current = { ...form, customFields: [] }
+        setForm((current) => ({ ...current, customFields: [] }))
+      }
     } catch (error) {
       const versionConflict = matchesCredentialBackendError(
         error,
@@ -553,11 +729,29 @@ function MetadataTab({
       className="grid gap-4"
       onSubmit={(event) => void handleSubmit(event)}
     >
-      <label className={fieldClassName}>
-        <span>{t('credentialsPage.form.proxyUrl')}</span>
+      <div className={fieldClassName}>
+        <div className="flex items-center justify-between gap-2">
+          <span>{t('credentialsPage.form.proxyUrl')}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            disabled={mutating}
+            onClick={() =>
+              updateField(
+                'proxyUrl',
+                form.proxyUrl.trim().toLowerCase() === 'direct' ? '' : 'direct',
+              )
+            }
+          >
+            {form.proxyUrl.trim().toLowerCase() === 'direct'
+              ? t('credentialsPage.form.proxyInherit')
+              : t('credentialsPage.form.directProxyAction')}
+          </Button>
+        </div>
         <Input
           value={form.proxyUrl}
-          placeholder="socks5://user:pass@host:port/"
+          placeholder="socks5://user:pass@host:port/ | direct"
           disabled={mutating}
           className="font-mono"
           spellCheck={false}
@@ -577,8 +771,12 @@ function MetadataTab({
           <span className="text-destructive text-xs leading-5 font-normal">
             {fieldErrors.proxyUrl}
           </span>
-        ) : null}
-      </label>
+        ) : (
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('credentialsPage.form.proxyUrlDirectHint')}
+          </span>
+        )}
+      </div>
       <label className={fieldClassName}>
         <span>{t('credentialsPage.form.priority')}</span>
         <Input
@@ -605,6 +803,37 @@ function MetadataTab({
         ) : (
           <span className="text-muted-foreground text-xs leading-5 font-normal">
             {t('upstreamPage.drawer.metadata.priorityHint')}
+          </span>
+        )}
+      </label>
+      <label className={fieldClassName}>
+        <span>{t('credentialsPage.form.weight')}</span>
+        <Input
+          type="number"
+          step={1}
+          max={MAX_CREDENTIAL_WEIGHT}
+          inputMode="numeric"
+          value={form.weight ?? ''}
+          placeholder="1"
+          disabled={mutating}
+          aria-invalid={Boolean(fieldErrors.weight)}
+          onChange={(event) => updateField('weight', event.target.value)}
+          onBlur={() => {
+            if (form.weight !== undefined && !isValidCredentialWeightDraft(form.weight)) {
+              setFieldErrors((current) => ({
+                ...current,
+                weight: t('credentialsPage.form.weightInvalid'),
+              }))
+            }
+          }}
+        />
+        {fieldErrors.weight ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.weight}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('credentialsPage.form.weightHint')}
           </span>
         )}
       </label>
@@ -693,22 +922,208 @@ function MetadataTab({
       </div>
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm font-medium">{t('credentialsPage.form.coolingSchedule')}</p>
             <p className="text-muted-foreground mt-1 text-xs leading-5">
               {t('credentialsPage.form.coolingScheduleHint')}
             </p>
           </div>
-          <Switch
-            checked={!form.disableCooling}
-            disabled={mutating}
-            onCheckedChange={(checked) =>
-              handleFormChange((current) => ({ ...current, disableCooling: !checked }))
+          <Select
+            value={
+              form.disableCooling === null || form.disableCooling === undefined
+                ? 'inherit'
+                : form.disableCooling
+                  ? 'disabled'
+                  : 'enabled'
             }
-            aria-label={t('credentialsPage.form.coolingSchedule')}
-          />
+            disabled={mutating}
+            onValueChange={(value) =>
+              updateField('disableCooling', value === 'inherit' ? null : value === 'disabled')
+            }
+          >
+            <SelectTrigger
+              className="sm:w-44"
+              aria-label={t('credentialsPage.form.coolingSchedule')}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">
+                {t('credentialsPage.form.coolingModeInherit')}
+              </SelectItem>
+              <SelectItem value="enabled">
+                {t('credentialsPage.form.coolingModeEnabled')}
+              </SelectItem>
+              <SelectItem value="disabled">
+                {t('credentialsPage.form.coolingModeDisabled')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+      </div>
+
+      <label className={fieldClassName}>
+        <span>{t('credentialsPage.form.excludedModels')}</span>
+        <Textarea
+          className="min-h-20 font-mono text-xs"
+          value={form.excludedModelsText ?? ''}
+          placeholder={'model-a\nmodel-b*'}
+          disabled={mutating}
+          onChange={(event) => updateField('excludedModelsText', event.target.value)}
+        />
+        <span className="text-muted-foreground text-xs leading-5 font-normal">
+          {t('credentialsPage.form.excludedModelsHint')}
+        </span>
+      </label>
+
+      <div className="grid gap-2 rounded-md border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium">{t('credentialsPage.form.headersSection')}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+              {t('credentialsPage.form.headersHint')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={mutating}
+            onClick={() =>
+              updateField('headers', [...(form.headers ?? []), { key: '', value: '' }])
+            }
+          >
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('credentialsPage.form.addHeader')}
+          </Button>
+        </div>
+        {(form.headers ?? []).length > 0 ? (
+          <div className="grid gap-2">
+            {(form.headers ?? []).map((header, index) => (
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                <Input
+                  value={header.key}
+                  placeholder="X-Custom-Header"
+                  disabled={mutating}
+                  className="font-mono text-xs"
+                  onChange={(event) => {
+                    const next = [...(form.headers ?? [])]
+                    next[index] = { ...header, key: event.target.value }
+                    updateField('headers', next)
+                  }}
+                />
+                <Input
+                  value={header.value}
+                  placeholder="value"
+                  disabled={mutating}
+                  className="font-mono text-xs"
+                  onChange={(event) => {
+                    const next = [...(form.headers ?? [])]
+                    next[index] = { ...header, value: event.target.value }
+                    updateField('headers', next)
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-md"
+                  disabled={mutating}
+                  aria-label={t('credentialsPage.form.removeHeader')}
+                  onClick={() =>
+                    updateField(
+                      'headers',
+                      (form.headers ?? []).filter((_, idx) => idx !== index),
+                    )
+                  }
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {fieldErrors.headers ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.headers}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="grid gap-2 rounded-md border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium">{t('credentialsPage.form.customFieldsSection')}</p>
+            <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+              {t('credentialsPage.form.customFieldsHint')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={mutating}
+            onClick={() =>
+              updateField('customFields', [...(form.customFields ?? []), { path: '', value: '' }])
+            }
+          >
+            <Plus className="size-3.5" aria-hidden="true" />
+            {t('credentialsPage.form.addCustomField')}
+          </Button>
+        </div>
+        <p className="border-warning/35 bg-warning/10 text-warning-foreground dark:text-warning rounded-md border px-2.5 py-1.5 text-xs leading-5">
+          {t('credentialsPage.form.customFieldsWarning')}
+        </p>
+        {(form.customFields ?? []).length > 0 ? (
+          <div className="grid gap-2">
+            {(form.customFields ?? []).map((entry, index) => (
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                <Input
+                  value={entry.path}
+                  placeholder="custom.team"
+                  disabled={mutating}
+                  className="font-mono text-xs"
+                  onChange={(event) => {
+                    const next = [...(form.customFields ?? [])]
+                    next[index] = { ...entry, path: event.target.value }
+                    updateField('customFields', next)
+                  }}
+                />
+                <Input
+                  value={entry.value}
+                  placeholder={t('credentialsPage.form.customFieldValuePlaceholder')}
+                  disabled={mutating}
+                  className="font-mono text-xs"
+                  onChange={(event) => {
+                    const next = [...(form.customFields ?? [])]
+                    next[index] = { ...entry, value: event.target.value }
+                    updateField('customFields', next)
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-md"
+                  disabled={mutating}
+                  aria-label={t('credentialsPage.form.removeCustomField')}
+                  onClick={() =>
+                    updateField(
+                      'customFields',
+                      (form.customFields ?? []).filter((_, idx) => idx !== index),
+                    )
+                  }
+                >
+                  <X className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        {fieldErrors.customFields ? (
+          <span className="text-destructive text-xs leading-5 font-normal">
+            {fieldErrors.customFields}
+          </span>
+        ) : null}
       </div>
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
@@ -1388,6 +1803,7 @@ export function CredentialDetailDrawer({
     getCredentialInFlightId(resource),
     canEditConcurrency && tab === 'metadata',
   )
+  const rawMetadataQuery = useCredentialRawMetadata(resource, open && tab === 'metadata')
 
   return (
     <>
@@ -1406,11 +1822,32 @@ export function CredentialDetailDrawer({
       <DrawerTabStrip activeTab={tab} showConcurrency={showConcurrency} onTabChange={onTabChange} />
       <DrawerScaffoldBody>
         {tab === 'overview' ? <OverviewTab resource={resource} quotaEntry={quotaEntry} /> : null}
-        {tab === 'metadata' ? (
+        {tab === 'metadata' && !resource.runtimeOnly && !rawMetadataQuery.rawMetadata ? (
+          rawMetadataQuery.errorMessage ? (
+            <div className="grid gap-3" role="alert">
+              <p className="text-destructive text-sm">{rawMetadataQuery.errorMessage}</p>
+              <Button variant="outline" onClick={() => void rawMetadataQuery.refetch()}>
+                {t('credentialsPage.error.retry')}
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="grid gap-3"
+              role="status"
+              aria-label={t('credentialsPage.form.metadataLoading')}
+            >
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          )
+        ) : tab === 'metadata' ? (
           <MetadataTab
+            key={resource.id}
             resource={resource}
             open={open}
             mutating={mutating}
+            rawMetadata={rawMetadataQuery.rawMetadata}
             canEditConcurrency={canEditConcurrency}
             concurrencyPolicy={concurrencyPolicyQuery.policy}
             concurrencyPolicyPending={concurrencyPolicyQuery.isPending}

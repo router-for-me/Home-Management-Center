@@ -7,16 +7,43 @@ type UnknownRecord = Record<string, unknown>
 
 export type CredentialStatusFilter = 'all' | 'active' | 'disabled' | 'unavailable'
 
+export const MAX_CREDENTIAL_WEIGHT = 1_000_000
+
+const RESERVED_METADATA_FIELDS = new Set([
+  'id',
+  'uuid',
+  'auth_index',
+  'authindex',
+  'index',
+  'name',
+  'file',
+  'filename',
+  'version',
+  'max_in_flight',
+  'max_in_flight_by_model',
+])
+
+export function isEditableCredentialMetadataPath(path: string) {
+  const parts = path.split('.').map((part) => part.trim())
+  return parts.every(Boolean) && !RESERVED_METADATA_FIELDS.has(parts[0].toLowerCase())
+}
+
 export type CredentialMetadataInput = {
   prefix: string
   proxyUrl: string
   // An empty string leaves priority unchanged; null clears it back to unset.
   priority: string | null
+  // null clears weight back to default; integer sets explicit routing weight.
+  weight?: number | null
   // An empty string leaves requestRetry unchanged; null clears it back to unset.
   requestRetry?: string | null
   note: string
   websockets?: boolean
-  disableCooling?: boolean
+  // null clears the override and inherits the global setting.
+  disableCooling?: boolean | null
+  headers?: Record<string, string>
+  excludedModels?: string[] | null
+  customFields?: Record<string, unknown>
   maxInFlight?: number | null
   maxInFlightByModel?: Record<string, number>
   concurrencyVersion?: number
@@ -100,12 +127,16 @@ export type CredentialResource = {
   failed: number | null
   path: string | null
   priority: number | null
+  weight?: number | null
   requestRetry: number | null
   note: string | null
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
   disableCooling: boolean
+  disableCoolingOverride?: boolean | null
+  headers?: Record<string, string>
+  excludedModels?: string[]
   metadataAvailability: CredentialMetadataAvailability
   maxInFlight: number | null
   maxInFlightByModel: Record<string, number>
@@ -521,17 +552,81 @@ function readCredentialRequestRetry(record: UnknownRecord): number | null {
   )
 }
 
-// The serializer emits `disable-cooling` only when the override is set, so an
-// absent field means cooling stays enabled. The override is true-only on the
-// backend; we read both spellings plus nested metadata for forward safety.
-function readCredentialDisableCooling(record: UnknownRecord) {
+export function readCredentialDisableCoolingOverride(record: UnknownRecord): boolean | null {
   return (
     readFlexibleBoolean(record, 'disable-cooling') ??
     readFlexibleBoolean(record, 'disable_cooling') ??
     readNestedFlexibleBoolean(record, 'metadata', 'disable-cooling') ??
     readNestedFlexibleBoolean(record, 'metadata', 'disable_cooling') ??
-    false
+    null
   )
+}
+
+function readCredentialDisableCooling(record: UnknownRecord) {
+  return readCredentialDisableCoolingOverride(record) ?? false
+}
+
+export function readCredentialWeight(record: UnknownRecord): number | null {
+  const candidates = [
+    record.weight,
+    isRecord(record.metadata) ? record.metadata.weight : undefined,
+    isRecord(record.attributes) ? record.attributes.weight : undefined,
+  ]
+  for (const candidate of candidates) {
+    if (
+      typeof candidate === 'number' &&
+      Number.isSafeInteger(candidate) &&
+      candidate >= 0 &&
+      candidate <= MAX_CREDENTIAL_WEIGHT
+    ) {
+      return candidate
+    }
+    if (typeof candidate === 'string' && /^\+?\d+$/.test(candidate.trim())) {
+      const parsed = Number(candidate.trim())
+      if (Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= MAX_CREDENTIAL_WEIGHT) {
+        return parsed
+      }
+    }
+  }
+  return null
+}
+
+export function readCredentialHeaders(record: UnknownRecord): Record<string, string> {
+  const source = isRecord(record.headers)
+    ? record.headers
+    : isRecord(record.metadata) && isRecord(record.metadata.headers)
+      ? record.metadata.headers
+      : null
+  if (!source) return {}
+  return Object.entries(source).reduce<Record<string, string>>((acc, [key, value]) => {
+    const trimmedKey = key.trim()
+    if (!trimmedKey || typeof value !== 'string') return acc
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return acc
+    acc[trimmedKey] = trimmedValue
+    return acc
+  }, {})
+}
+
+export function readCredentialExcludedModels(record: UnknownRecord): string[] {
+  const source =
+    record.excluded_models ??
+    record['excluded-models'] ??
+    (isRecord(record.metadata)
+      ? (record.metadata.excluded_models ?? record.metadata['excluded-models'])
+      : undefined)
+  if (!Array.isArray(source)) return []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const item of source) {
+    if (typeof item !== 'string') continue
+    const trimmed = item.trim()
+    const key = trimmed.toLowerCase()
+    if (!trimmed || seen.has(key)) continue
+    seen.add(key)
+    result.push(trimmed)
+  }
+  return result
 }
 
 function isAbsoluteUrl(value: string) {
@@ -664,6 +759,7 @@ export function normalizeCredentialResource(
     failed: readNumber(record, 'failed'),
     path: readString(record, 'path'),
     priority: readNumber(record, 'priority'),
+    weight: readCredentialWeight(record),
     requestRetry: readCredentialRequestRetry(record),
     note: readString(record, 'note'),
     prefix: readString(record, 'prefix') ?? readNestedString(record, 'metadata', 'prefix'),
@@ -674,6 +770,9 @@ export function normalizeCredentialResource(
       readNestedString(record, 'metadata', 'proxy-url'),
     websockets: readCredentialWebsockets(record),
     disableCooling: readCredentialDisableCooling(record),
+    disableCoolingOverride: readCredentialDisableCoolingOverride(record),
+    headers: readCredentialHeaders(record),
+    excludedModels: readCredentialExcludedModels(record),
     metadataAvailability: {
       prefix: hasOwn(record, 'prefix') || hasNestedField(record, 'metadata', 'prefix'),
       proxyUrl:
@@ -1162,15 +1261,44 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     }
   }
 
+  if (input.weight === null) {
+    payload.weight = null
+  } else if (
+    typeof input.weight === 'number' &&
+    Number.isSafeInteger(input.weight) &&
+    input.weight <= MAX_CREDENTIAL_WEIGHT
+  ) {
+    payload.weight = input.weight
+  }
+
   if (supportsCredentialWebsockets(resource) && typeof input.websockets === 'boolean') {
     payload.websockets = input.websockets
   }
 
-  // Home reads the cooling override from the `disable_cooling` auth metadata key
-  // (the arbitrary-nested-path channel of /credentials/fields); the override is
-  // true-only, so writing false clears it and re-enables central cooldown.
-  if (typeof input.disableCooling === 'boolean') {
+  if (input.disableCooling === null) {
+    payload['disable-cooling'] = null
+    payload.disable_cooling = null
+  } else if (typeof input.disableCooling === 'boolean') {
     payload.disable_cooling = input.disableCooling
+  }
+
+  if (input.headers !== undefined) {
+    payload.headers = input.headers
+  }
+
+  if (input.excludedModels !== undefined) {
+    payload.excluded_models = input.excludedModels
+  }
+
+  if (input.customFields) {
+    for (const [rawPath, value] of Object.entries(input.customFields)) {
+      const path = rawPath.trim()
+      if (!path) continue
+      if (!isEditableCredentialMetadataPath(path)) {
+        throw new Error('Credential selectors and concurrency fields cannot be edited as metadata')
+      }
+      payload[path] = value
+    }
   }
 
   if (input.maxInFlight !== undefined) {
@@ -1524,6 +1652,23 @@ export async function uploadCredentialFile(
         : 1,
     files,
   }
+}
+
+export async function fetchCredentialRawMetadata(
+  session: ManagementSessionInput,
+  resource: CredentialResource,
+): Promise<UnknownRecord> {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/credentials/download', {
+    params: createDownloadParams(resource),
+  })
+  if (typeof response.data === 'string') {
+    const parsed: unknown = JSON.parse(response.data)
+    if (isRecord(parsed)) return parsed
+  } else if (isRecord(response.data)) {
+    return response.data
+  }
+  throw new Error('Credential metadata must be a JSON object')
 }
 
 export async function downloadCredentialResource(

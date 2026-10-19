@@ -146,6 +146,8 @@ type OAuthModelCatalogState = {
 type AliasRule = {
   name?: string
   alias?: string
+  displayName?: string
+  'display-name'?: string
   fork?: boolean
   forceMapping?: boolean
   'force-mapping'?: boolean
@@ -352,6 +354,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
       { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'nonstreamKeepaliveInterval', kind: 'number', sectionId: 'streaming', min: 0 },
     ],
@@ -587,6 +590,7 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'kimi',
   'antigravity',
   'xai',
+  'meta',
 ]
 
 const fieldDefinitions = sectionDefinitions.flatMap((section) => section.fields)
@@ -746,9 +750,19 @@ function canEditModelAliases(value: unknown) {
       items.every(
         (item) =>
           isRecord(item) &&
-          hasOnlyKeys(item, ['name', 'alias', 'fork', 'force-mapping', 'forceMapping']) &&
+          hasOnlyKeys(item, [
+            'name',
+            'alias',
+            'display-name',
+            'displayName',
+            'fork',
+            'force-mapping',
+            'forceMapping',
+          ]) &&
           (item.name === undefined || typeof item.name === 'string') &&
           (item.alias === undefined || typeof item.alias === 'string') &&
+          (item['display-name'] === undefined || typeof item['display-name'] === 'string') &&
+          (item.displayName === undefined || typeof item.displayName === 'string') &&
           (item.fork === undefined || typeof item.fork === 'boolean') &&
           (item['force-mapping'] === undefined || typeof item['force-mapping'] === 'boolean') &&
           (item.forceMapping === undefined || typeof item.forceMapping === 'boolean'),
@@ -756,12 +770,14 @@ function canEditModelAliases(value: unknown) {
   )
 }
 
-function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
+export function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
+  const displayName = rule['display-name'] ?? rule.displayName
   const forceMapping = rule['force-mapping'] ?? rule.forceMapping
 
   return {
     ...(typeof rule.name === 'string' ? { name: rule.name } : {}),
     ...(typeof rule.alias === 'string' ? { alias: rule.alias } : {}),
+    ...(typeof displayName === 'string' ? { displayName } : {}),
     ...(typeof rule.fork === 'boolean' ? { fork: rule.fork } : {}),
     ...(typeof forceMapping === 'boolean' ? { forceMapping } : {}),
   }
@@ -783,12 +799,14 @@ function normalizeModelAliases(value: unknown): Record<string, AliasRule[]> {
   )
 }
 
-function serializeModelAliasRule(rule: AliasRule) {
+export function serializeModelAliasRule(rule: AliasRule) {
   const nextRule: Record<string, string | boolean> = {}
+  const displayName = (rule['display-name'] ?? rule.displayName)?.trim()
   const forceMapping = rule['force-mapping'] ?? rule.forceMapping
 
   if (rule.name !== undefined) nextRule.name = rule.name
   if (rule.alias !== undefined) nextRule.alias = rule.alias
+  if (displayName) nextRule['display-name'] = displayName
   if (typeof rule.fork === 'boolean') nextRule.fork = rule.fork
   if (forceMapping === true) nextRule['force-mapping'] = true
 
@@ -2436,7 +2454,7 @@ function ModelAliasEditor({
     })),
   )
   const columnsClass =
-    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
+    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
 
   const updateRow = (rowIndex: number, patch: Partial<{ channel: string; item: AliasRule }>) => {
     const nextRows = rows.map((row, index) => ({
@@ -2508,6 +2526,10 @@ function ModelAliasEditor({
               description={t('configPage.json.columnDescriptions.alias')}
             />
             <TableHeaderCell
+              label={t('configPage.json.columns.displayName')}
+              description={t('configPage.json.columnDescriptions.displayName')}
+            />
+            <TableHeaderCell
               label={t('configPage.json.columns.fork')}
               description={t('configPage.json.columnDescriptions.fork')}
             />
@@ -2561,6 +2583,20 @@ function ModelAliasEditor({
                     placeholder={t('configPage.json.placeholders.alias')}
                     onChange={(event) =>
                       updateRow(rowIndex, { item: { alias: event.target.value } })
+                    }
+                  />
+                </label>
+                <label className={fieldClassName}>
+                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
+                    {t('configPage.json.columns.displayName')}
+                  </span>
+                  <Input
+                    value={item.displayName ?? item['display-name'] ?? ''}
+                    disabled={disabled}
+                    aria-label={t('configPage.json.columns.displayName')}
+                    placeholder={t('configPage.json.placeholders.displayName')}
+                    onChange={(event) =>
+                      updateRow(rowIndex, { item: { displayName: event.target.value } })
                     }
                   />
                 </label>

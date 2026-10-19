@@ -7,13 +7,20 @@ import {
   matchesPluginStatusFilter,
 } from '@/features/plugins/plugin-store-model'
 import {
+  type PluginConfigFieldDescriptor,
+  type PluginConfigObject,
+  type PluginConfigSaveInput,
   type PluginStoreEntry,
   type PluginStoreInstallInput,
   type PluginStoreResponse,
+  fetchPluginConfig,
+  fetchPluginConfigFields,
   fetchPluginStore,
   installPluginFromStore,
+  savePluginConfig,
   toPluginStoreApiError,
   uninstallPluginFromStore,
+  updatePluginEnabled,
 } from '@/lib/api/management/plugin-store'
 import {
   type SystemNodePluginReportSnapshot,
@@ -212,6 +219,16 @@ export function usePluginWorkbench() {
     mutationFn: async (id: string) => uninstallPluginFromStore(session, id),
   })
 
+  const toggleEnabledMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) =>
+      updatePluginEnabled(session, id, enabled),
+  })
+
+  const saveConfigMutation = useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: PluginConfigSaveInput }) =>
+      savePluginConfig(session, id, input),
+  })
+
   const stats = useMemo<PluginWorkbenchStats>(() => {
     const store = query.data?.store
     const plugins = store?.plugins ?? []
@@ -337,10 +354,60 @@ export function usePluginWorkbench() {
             },
           )
         : null,
+    togglePluginEnabled: async (plugin: PluginStoreEntry, enabled: boolean) => {
+      await toggleEnabledMutation.mutateAsync({ id: plugin.id, enabled })
+      await query.refetch()
+    },
+    savePluginConfig: async (plugin: PluginStoreEntry, input: PluginConfigSaveInput) => {
+      const updated = await saveConfigMutation.mutateAsync({ id: plugin.id, input })
+      await query.refetch()
+      return updated
+    },
+    togglingId:
+      toggleEnabledMutation.isPending && toggleEnabledMutation.variables
+        ? toggleEnabledMutation.variables.id
+        : null,
+    savingConfigId:
+      saveConfigMutation.isPending && saveConfigMutation.variables
+        ? saveConfigMutation.variables.id
+        : null,
     uninstallingId:
       uninstallMutation.isPending && uninstallMutation.variables
         ? uninstallMutation.variables
         : null,
     getPluginStateKey,
+  }
+}
+
+const EMPTY_PLUGIN_FIELDS: PluginConfigFieldDescriptor[] = []
+
+export function usePluginConfig(pluginId: string | null, open: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  const query = useQuery<{
+    config: PluginConfigObject
+    fields: PluginConfigFieldDescriptor[]
+  }>({
+    queryKey: ['management-plugin-config', session.baseUrl, connectedAt, pluginId],
+    enabled: connected && Boolean(session.managementKey) && open && Boolean(pluginId),
+    queryFn: async () => {
+      if (!pluginId) return { config: {}, fields: [] }
+      const [config, fields] = await Promise.all([
+        fetchPluginConfig(session, pluginId),
+        fetchPluginConfigFields(session, pluginId),
+      ])
+      return { config, fields }
+    },
+    refetchOnWindowFocus: false,
+    staleTime: 0,
+  })
+
+  return {
+    config: query.data?.config ?? null,
+    fields: query.data?.fields ?? EMPTY_PLUGIN_FIELDS,
+    isPending: query.isPending,
+    isFetching: query.isFetching,
+    sessionKey: JSON.stringify([session.baseUrl, connectedAt, pluginId]),
+    errorMessage: query.error instanceof Error ? query.error.message : null,
+    refetch: query.refetch,
   }
 }
