@@ -4,6 +4,7 @@ import {
   type KeyboardEvent,
   type SetStateAction,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -567,16 +568,27 @@ function UserForm({
   onSubmit: (input: UserFormInput) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [username, setUsername] = useState('')
+  const initialEditUser = mode === 'edit' ? user : null
+  const [username, setUsername] = useState(() => (initialEditUser ? initialEditUser.username : ''))
   const [password, setPassword] = useState('')
-  const [credits, setCredits] = useState('0')
-  const [creditsUnlimited, setCreditsUnlimited] = useState(false)
-  const [timezone, setTimezone] = useState(defaultUserPeriodTimezone)
+  const [credits, setCredits] = useState(() =>
+    initialEditUser ? String(initialEditUser.credits) : '0',
+  )
+  const [creditsUnlimited, setCreditsUnlimited] = useState(
+    () => initialEditUser?.creditsUnlimited ?? false,
+  )
+  const [timezone, setTimezone] = useState(
+    () => initialEditUser?.periodLimits.timezone || defaultUserPeriodTimezone,
+  )
   const [windowDrafts, setWindowDrafts] = useState<
     Record<UserPeriodWindowId, UserPeriodWindowDraft>
-  >(() => createWindowDrafts(null))
-  const [weekResetDay, setWeekResetDay] = useState(String(defaultUserPeriodWeekResetDay))
-  const [weekResetHour, setWeekResetHour] = useState(String(defaultUserPeriodWeekResetHour))
+  >(() => createWindowDrafts(initialEditUser))
+  const [weekResetDay, setWeekResetDay] = useState(() =>
+    String(initialEditUser?.periodLimits.weekResetDay ?? defaultUserPeriodWeekResetDay),
+  )
+  const [weekResetHour, setWeekResetHour] = useState(() =>
+    String(initialEditUser?.periodLimits.weekResetHour ?? defaultUserPeriodWeekResetHour),
+  )
   const [localError, setLocalError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<UserFormFieldError[]>([])
 
@@ -978,7 +990,11 @@ function GroupCheckboxList({
   )
 }
 
-function AccessKeyForm({
+function normalizeBoundUserId(userId: number | null | undefined): number | null {
+  return typeof userId === 'number' && Number.isFinite(userId) && userId > 0 ? userId : null
+}
+
+export function AccessKeyForm({
   mode,
   accessKey,
   users,
@@ -1003,19 +1019,39 @@ function AccessKeyForm({
   }) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [value, setValue] = useState('')
-  const [userId, setUserId] = useState<number | null>(null)
-  const [channelGroupIds, setChannelGroupIds] = useState<number[]>([])
-  const [modelGroupIds, setModelGroupIds] = useState<number[]>([])
+  const ownerUnavailableHintId = useId()
+  const [value, setValue] = useState(() =>
+    mode === 'edit' && accessKey ? accessKey.value : generateAccessKey(),
+  )
+  const [userId, setUserId] = useState<number | null>(() =>
+    mode === 'edit' && accessKey ? normalizeBoundUserId(accessKey.userId) : null,
+  )
+  const [channelGroupIds, setChannelGroupIds] = useState<number[]>(() =>
+    mode === 'edit' && accessKey ? accessKey.channelGroupIds : [],
+  )
+  const [modelGroupIds, setModelGroupIds] = useState<number[]>(() =>
+    mode === 'edit' && accessKey ? accessKey.modelGroupIds : [],
+  )
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setLocalError(null)
     setValue(mode === 'edit' && accessKey ? accessKey.value : generateAccessKey())
-    setUserId(mode === 'edit' && accessKey ? accessKey.userId : null)
+    setUserId(mode === 'edit' && accessKey ? normalizeBoundUserId(accessKey.userId) : null)
     setChannelGroupIds(mode === 'edit' && accessKey ? accessKey.channelGroupIds : [])
     setModelGroupIds(mode === 'edit' && accessKey ? accessKey.modelGroupIds : [])
   }, [mode, accessKey])
+
+  const selectableUsers = useMemo(
+    () =>
+      users.filter(
+        (user) => user.numericId !== null && (!user.deletedAt || user.numericId === userId),
+      ),
+    [userId, users],
+  )
+  const selectedUser = selectableUsers.find((user) => user.numericId === userId)
+  const hasSelectedUserOption = userId === null || Boolean(selectedUser)
+  const ownerUnavailable = userId !== null && (!selectedUser || Boolean(selectedUser.deletedAt))
 
   const toggleChannelGroup = (id: number) => {
     setChannelGroupIds((current) =>
@@ -1068,24 +1104,41 @@ function AccessKeyForm({
           <Select
             value={userId === null ? unassignedUserValue : String(userId)}
             disabled={mutating}
-            onValueChange={(nextValue) =>
-              setUserId(nextValue === unassignedUserValue ? null : Number(nextValue))
-            }
+            onValueChange={(nextValue) => {
+              if (!nextValue) return
+              if (nextValue === unassignedUserValue) {
+                setUserId(null)
+                return
+              }
+              const parsed = Number(nextValue)
+              if (Number.isSafeInteger(parsed) && parsed > 0) {
+                setUserId(parsed)
+              }
+            }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-describedby={ownerUnavailable ? ownerUnavailableHintId : undefined}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={unassignedUserValue}>{t('usersPage.keys.unassigned')}</SelectItem>
-              {users
-                .filter((user) => user.numericId !== null && !user.deletedAt)
-                .map((user) => (
-                  <SelectItem key={user.id} value={String(user.numericId)}>
-                    {user.username}
-                  </SelectItem>
-                ))}
+              {!hasSelectedUserOption && userId !== null ? (
+                <SelectItem value={String(userId)}>{`#${userId}`}</SelectItem>
+              ) : null}
+              {selectableUsers.map((user) => (
+                <SelectItem key={user.id} value={String(user.numericId)}>
+                  {user.username}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          {ownerUnavailable ? (
+            <span
+              id={ownerUnavailableHintId}
+              className="text-muted-foreground text-meta font-normal"
+            >
+              {t('usersPage.keys.ownerUnavailableHint')}
+            </span>
+          ) : null}
         </label>
         <GroupCheckboxList
           label={t('usersPage.scopes.credential')}
