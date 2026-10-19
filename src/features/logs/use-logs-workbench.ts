@@ -35,6 +35,14 @@ const liveRefreshIntervalMs = 5_000
 const errorLogsRefreshIntervalMs = 60_000
 const settingsRefreshIntervalMs = 5 * 60_000
 
+type RuntimeLogRead = {
+  snapshot: RuntimeLogSnapshot
+  generation: number
+}
+
+// Keep full reads distinct even across remounts and identical API responses.
+let nextRuntimeLogGeneration = 0
+
 function parsePositiveLogId(value: string | undefined): number | null {
   if (!value || !/^\d+$/.test(value.trim())) return null
   const parsed = Number(value.trim())
@@ -111,8 +119,9 @@ export function useLogsWorkbench() {
   const [isFollowingBottom, setIsFollowingBottomState] = useState(true)
   const isFollowingBottomRef = useRef(true)
   const [runtimeLogDetailOpen, setRuntimeLogDetailOpen] = useState(false)
-  const [pendingRuntimeLogs, setPendingRuntimeLogs] =
-    useState<StagedRefresh<RuntimeLogSnapshot> | null>(null)
+  const [pendingRuntimeLogs, setPendingRuntimeLogs] = useState<
+    (StagedRefresh<RuntimeLogSnapshot> & { generation: number }) | null
+  >(null)
   const browserActivity = useBrowserActivity()
 
   const setIsFollowingBottom = (nextFollowing: boolean) => {
@@ -209,15 +218,26 @@ export function useLogsWorkbench() {
     ineligibleReason: liveIneligibleReason,
   })
   const effectiveAnchorId = runtimeLogOffset > 0 ? runtimeLogAnchorId : null
-  const runtimeLogsQueryKey = [
-    'management-runtime-logs',
-    session.baseUrl,
-    connectedAt,
-    runtimeLogFilters,
-    runtimeLogLimit,
-    runtimeLogOffset,
-    effectiveAnchorId,
-  ] as const
+  const runtimeLogsQueryKey = useMemo(
+    () =>
+      [
+        'management-runtime-logs',
+        session.baseUrl,
+        connectedAt,
+        runtimeLogFilters,
+        runtimeLogLimit,
+        runtimeLogOffset,
+        effectiveAnchorId,
+      ] as const,
+    [
+      session.baseUrl,
+      connectedAt,
+      runtimeLogFilters,
+      runtimeLogLimit,
+      runtimeLogOffset,
+      effectiveAnchorId,
+    ],
+  )
 
   const runtimeLogsQuery = useQuery({
     queryKey: runtimeLogsQueryKey,
@@ -226,17 +246,25 @@ export function useLogsWorkbench() {
     refetchOnReconnect: false,
     queryFn: async () => {
       try {
-        return await fetchRuntimeLogs(session, {
+        const snapshot = await fetchRuntimeLogs(session, {
           ...runtimeLogFilters,
           limit: runtimeLogLimit,
           offset: runtimeLogOffset,
           anchorId: effectiveAnchorId,
         })
+        return { snapshot, generation: ++nextRuntimeLogGeneration }
       } catch (error) {
         throw toLogsApiError(error)
       }
     },
   })
+  const runtimeLogs = runtimeLogsQuery.data?.snapshot
+  const runtimeLogGeneration = runtimeLogsQuery.data?.generation
+  const canPollRuntimeLogs =
+    liveRefresh.active &&
+    Boolean(runtimeLogs) &&
+    !runtimeLogsQuery.isPlaceholderData &&
+    !runtimeLogsQuery.isFetching
 
   const liveRuntimeLogsQuery = useQuery({
     queryKey: [
@@ -245,12 +273,9 @@ export function useLogsWorkbench() {
       connectedAt,
       runtimeLogFilters,
       runtimeLogLimit,
+      runtimeLogGeneration,
     ],
-    enabled:
-      liveRefresh.active &&
-      Boolean(runtimeLogsQuery.data) &&
-      !runtimeLogsQuery.isPlaceholderData &&
-      !runtimeLogsQuery.isFetching,
+    enabled: canPollRuntimeLogs,
     retry: false,
     staleTime: 0,
     refetchOnReconnect: false,
@@ -271,23 +296,26 @@ export function useLogsWorkbench() {
   const wasLiveActive = useRef(liveRefresh.active)
 
   useEffect(() => {
-    if (liveRefresh.active && !wasLiveActive.current && !liveRuntimeLogsQuery.isFetching) {
+    if (canPollRuntimeLogs && !wasLiveActive.current && !liveRuntimeLogsQuery.isFetching) {
       void liveRuntimeLogsQuery.refetch()
     }
     wasLiveActive.current = liveRefresh.active
-  }, [liveRefresh.active, liveRuntimeLogsQuery])
+  }, [canPollRuntimeLogs, liveRefresh.active, liveRuntimeLogsQuery])
 
   useEffect(() => {
-    if (!liveRefresh.active) {
+    if (!liveRefresh.active || runtimeLogsQuery.isFetching || runtimeLogsQuery.isPlaceholderData) {
       setPendingRuntimeLogs(null)
       return
     }
     const accepted = runtimeLogsQuery.data
     const incoming = liveRuntimeLogsQuery.data
-    if (!accepted || !incoming || runtimeLogsQuery.isPlaceholderData) return
+    if (!accepted || !incoming) {
+      setPendingRuntimeLogs(null)
+      return
+    }
 
     const staged = getStagedItemCount(
-      accepted.records,
+      accepted.snapshot.records,
       incoming.records,
       (record) => record.id,
       runtimeLogLimit,
@@ -297,14 +325,21 @@ export function useLogsWorkbench() {
       return
     }
     if (isFollowingBottomRef.current && runtimeLogOffset === 0) {
-      queryClient.setQueryData(
-        runtimeLogsQueryKey,
-        mergeIncomingTailRuntimeLogs(accepted, incoming, runtimeLogLimit),
-      )
+      queryClient.setQueryData<RuntimeLogRead>(runtimeLogsQueryKey, {
+        ...accepted,
+        snapshot: mergeIncomingTailRuntimeLogs(accepted.snapshot, incoming, runtimeLogLimit),
+      })
       setPendingRuntimeLogs(null)
       return
     }
-    setPendingRuntimeLogs({ data: incoming, ...staged })
+    setPendingRuntimeLogs((current) =>
+      current?.data === incoming &&
+      current.generation === accepted.generation &&
+      current.count === staged.count &&
+      current.truncated === staged.truncated
+        ? current
+        : { data: incoming, generation: accepted.generation, ...staged },
+    )
   }, [
     liveRuntimeLogsQuery.data,
     liveRuntimeLogsQuery.dataUpdatedAt,
@@ -313,6 +348,7 @@ export function useLogsWorkbench() {
     runtimeLogLimit,
     runtimeLogOffset,
     runtimeLogsQuery.data,
+    runtimeLogsQuery.isFetching,
     runtimeLogsQuery.isPlaceholderData,
     runtimeLogsQueryKey,
   ])
@@ -333,6 +369,7 @@ export function useLogsWorkbench() {
     }: {
       beforeId: number
       anchorId: number
+      generation: number
       queryKey: typeof runtimeLogsQueryKey
     }) => {
       try {
@@ -351,11 +388,14 @@ export function useLogsWorkbench() {
       if (JSON.stringify(variables.queryKey) !== JSON.stringify(runtimeLogsQueryKey)) {
         return
       }
-      const current = queryClient.getQueryData<RuntimeLogSnapshot>(variables.queryKey)
+      const current = queryClient.getQueryData<RuntimeLogRead>(variables.queryKey)
       if (
         !current ||
-        current.anchorId !== variables.anchorId ||
-        olderSnapshot.anchorId !== variables.anchorId
+        queryClient.isFetching({ queryKey: variables.queryKey, exact: true }) > 0 ||
+        current.generation !== variables.generation ||
+        current.snapshot.anchorId !== variables.anchorId ||
+        olderSnapshot.anchorId !== variables.anchorId ||
+        parsePositiveLogId(current.snapshot.records.at(-1)?.id) !== variables.beforeId
       )
         return
       if (olderSnapshot.records.length < runtimeLogLimit) {
@@ -365,7 +405,10 @@ export function useLogsWorkbench() {
         setExhaustedBeforeId(oldestReturnedId ?? variables.beforeId)
       }
       if (olderSnapshot.records.length === 0) return
-      queryClient.setQueryData(runtimeLogsQueryKey, mergeOlderRuntimeLogs(current, olderSnapshot))
+      queryClient.setQueryData<RuntimeLogRead>(runtimeLogsQueryKey, {
+        ...current,
+        snapshot: mergeOlderRuntimeLogs(current.snapshot, olderSnapshot),
+      })
     },
   })
   const { reset: resetOlderLogsMutation } = loadOlderLogsMutation
@@ -526,13 +569,15 @@ export function useLogsWorkbench() {
     downloadRequestErrorLogMutation.isPending ||
     downloadRequestLogByIdMutation.isPending
 
-  const currentRecords = runtimeLogsQuery.data?.records ?? []
+  const currentRecords = runtimeLogs?.records ?? []
   const oldestLoadedRecordId = parsePositiveLogId(currentRecords[currentRecords.length - 1]?.id)
   const canLoadOlderLogs =
     canQueryRuntimeLogs &&
     runtimeLogOffset === 0 &&
+    !runtimeLogsQuery.isPlaceholderData &&
+    !runtimeLogsQuery.isFetching &&
     !loadOlderLogsMutation.isError &&
-    hasOlderRuntimeLogs(runtimeLogsQuery.data, exhaustedBeforeId)
+    hasOlderRuntimeLogs(runtimeLogs, exhaustedBeforeId)
 
   return {
     connected,
@@ -541,7 +586,7 @@ export function useLogsWorkbench() {
     capabilities,
     runtimeMode,
     context,
-    runtimeLogs: runtimeLogsQuery.data ?? null,
+    runtimeLogs: runtimeLogs ?? null,
     runtimeLogsUpdatedAt:
       runtimeLogsQuery.dataUpdatedAt > 0
         ? new Date(runtimeLogsQuery.dataUpdatedAt).toISOString()
@@ -560,6 +605,7 @@ export function useLogsWorkbench() {
     errorMessage: settingsQuery.error?.message ?? null,
     refetch: () => {
       loadOlderLogsMutation.reset()
+      setPendingRuntimeLogs(null)
       if (runtimeLogOffset === 0) {
         setRuntimeLogAnchorId(null)
         setExhaustedBeforeId(null)
@@ -570,11 +616,6 @@ export function useLogsWorkbench() {
       const runtimeLogsRefresh = canQueryRuntimeLogs ? runtimeLogsQuery.refetch() : null
       if (runtimeLogsRefresh) queries.push(runtimeLogsRefresh)
       void Promise.allSettled(queries)
-      if (runtimeLogsRefresh) {
-        void runtimeLogsRefresh.then((result) => {
-          if (result.isSuccess) setPendingRuntimeLogs(null)
-        })
-      }
     },
     liveRefresh,
     liveRefreshIntervalMs,
@@ -585,15 +626,24 @@ export function useLogsWorkbench() {
     pendingRuntimeLogCount: pendingRuntimeLogs?.count ?? 0,
     pendingRuntimeLogsTruncated: pendingRuntimeLogs?.truncated ?? false,
     acceptPendingRuntimeLogs: () => {
-      setIsFollowingBottom(true)
-      if (!pendingRuntimeLogs) return
       const accepted = runtimeLogsQuery.data
-      queryClient.setQueryData(
-        runtimeLogsQueryKey,
-        accepted
-          ? mergeIncomingTailRuntimeLogs(accepted, pendingRuntimeLogs.data, runtimeLogLimit)
-          : pendingRuntimeLogs.data,
+      if (
+        !pendingRuntimeLogs ||
+        !accepted ||
+        pendingRuntimeLogs.generation !== accepted.generation ||
+        runtimeLogsQuery.isPlaceholderData ||
+        runtimeLogsQuery.isFetching
       )
+        return
+      setIsFollowingBottom(true)
+      queryClient.setQueryData<RuntimeLogRead>(runtimeLogsQueryKey, {
+        ...accepted,
+        snapshot: mergeIncomingTailRuntimeLogs(
+          accepted.snapshot,
+          pendingRuntimeLogs.data,
+          runtimeLogLimit,
+        ),
+      })
       setPendingRuntimeLogs(null)
     },
     isFollowingBottom,
@@ -601,11 +651,12 @@ export function useLogsWorkbench() {
     canLoadOlderLogs,
     isLoadingOlderLogs: loadOlderLogsMutation.isPending,
     loadOlderRuntimeLogs: () => {
-      const anchorId = runtimeLogsQuery.data?.anchorId
+      const anchorId = runtimeLogs?.anchorId
       if (
         !canLoadOlderLogs ||
         oldestLoadedRecordId === null ||
         anchorId == null ||
+        runtimeLogGeneration === undefined ||
         loadOlderLogsMutation.isPending
       ) {
         return
@@ -613,6 +664,7 @@ export function useLogsWorkbench() {
       loadOlderLogsMutation.mutate({
         beforeId: oldestLoadedRecordId,
         anchorId,
+        generation: runtimeLogGeneration,
         queryKey: runtimeLogsQueryKey,
       })
     },
@@ -634,7 +686,7 @@ export function useLogsWorkbench() {
       Boolean(runtimeLogsQuery.data) &&
       !runtimeLogsQuery.isPlaceholderData &&
       !runtimeLogsQuery.isFetching &&
-      runtimeLogsQuery.data?.appliedSearch !== runtimeLogFilters.search.trim(),
+      runtimeLogs?.appliedSearch !== runtimeLogFilters.search.trim(),
     runtimeLogPageSizeOptions,
     setRuntimeLogLimit,
     setRuntimeLogFilters,
@@ -648,7 +700,7 @@ export function useLogsWorkbench() {
         setIsFollowingBottom(false)
         setRuntimeLogAnchorId((current) => {
           if (current !== null) return current
-          return runtimeLogsQuery.data?.anchorId ?? null
+          return runtimeLogs?.anchorId ?? null
         })
       }
       setRuntimeLogPagination((current) => ({
