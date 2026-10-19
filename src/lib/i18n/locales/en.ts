@@ -1876,8 +1876,12 @@ export const en = {
         updated: 'New active-probe results were detected and quota snapshots were refreshed.',
         pending:
           'Quota collection may still be running in the background; this page will keep refreshing.',
-        notQueued:
-          'No new jobs were queued; credentials may be ineligible, cooling down, or already queued or running.',
+        notQueued: 'No new job was queued. Reading the current status.',
+        credentialPending:
+          'No new collection result is available yet. The page will continue refreshing periodically.',
+        credentialPartial:
+          'Quota updated, but some information could not be collected. See credential details.',
+        credentialUpdated: 'Quota updated.',
         credentialQueued: 'Queued quota collection for {{name}}.',
         unavailable:
           'This backend does not support triggering quota collection yet; snapshots were re-read instead.',
@@ -1894,10 +1898,22 @@ export const en = {
         unsupported: 'Not supported',
       },
       quota: {
+        actions: {
+          collect: 'Collect quota',
+          refresh: 'Refresh quota',
+          retry: 'Retry collection',
+          collecting: 'Collecting',
+          disabled: 'Enable this credential to collect quota',
+          unsupported: 'This credential type does not support quota collection',
+          unavailable: 'This backend does not support active collection',
+        },
+        updatedAt: 'Quota updated: {{time}}',
+        metaAuthorizationRequired:
+          'This credential is missing the authorization information required to query Meta quota. Import the credential again with its complete authorization information.',
         notCollected: 'Not collected',
-        snapshotMiss: 'Not in snapshot',
+        snapshotMiss: 'Not loaded',
         snapshotMissHint:
-          'Quota exists on the backend but this credential is outside the risk-sorted page the console loaded.',
+          'This credential is outside the loaded snapshot list. Open quota details to read its current status.',
         unsupported: 'Unsupported',
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
@@ -1913,7 +1929,7 @@ export const en = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',
         truncated:
-          'Quota snapshots cover only the top {{count}} credentials by risk; the rest show "Not collected".',
+          'The quota list loads the first {{count}} credentials by risk. Open quota details for the remaining credentials.',
         antigravity: {
           gemini: 'Gemini',
           thirdParty: 'Claude + GPT',
@@ -2023,7 +2039,8 @@ export const en = {
           unavailableTitle: 'Quota details unsupported',
           unavailableDescription:
             'The Management API does not expose quota snapshot details; only list summaries are shown.',
-          readOnlyNote: 'Quota is a read-only snapshot and does not trigger upstream probes.',
+          readOnlyNote:
+            'Viewing snapshots does not trigger upstream probes. Use Collect or Refresh to request updated quota.',
         },
       },
     },

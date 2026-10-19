@@ -3,6 +3,31 @@ import { describe, expect, test } from 'bun:test'
 import { resolveModelVendorId, resolveProviderLogoId } from '@/components/shared/provider-logo'
 
 describe('model vendor resolution', () => {
+  test('recognizes Meta model families without claiming unrelated aliases', () => {
+    for (const value of [
+      'muse-spark-1.3',
+      'muse-spark1.3',
+      'team/muse-spark-1.3',
+      'Llama3.1-8B',
+      'llama-3.1-8b',
+      'Meta-Llama-3.1-8B',
+      'team/Meta-Llama-3.1-8B',
+      'meta-llama/Llama-3.1-8B',
+    ]) {
+      expect(resolveModelVendorId(value)).toBe('meta')
+    }
+    for (const value of [
+      'metadata-search',
+      'metamath',
+      'amusement',
+      'llamaindex',
+      'meta-llamaindex',
+      'muse-sparkle',
+      'team/metadata-search',
+    ]) {
+      expect(resolveModelVendorId(value)).toBeNull()
+    }
+  })
   test('reads the vendor off the model ID, not off the provider that serves it', () => {
     // The two shapes that made this necessary: a GLM coding plan wired through
     // `codex-api-key` reports `providers: ["codex"]`, and a DeepSeek endpoint
@@ -58,6 +83,15 @@ describe('model vendor resolution', () => {
 })
 
 describe('provider logo resolution', () => {
+  test('resolves exact Meta aliases and preserves unrelated provider names', () => {
+    for (const value of ['meta', 'muse', ' Meta ', 'MUSE']) {
+      expect(resolveProviderLogoId(value)).toBe('meta')
+    }
+    for (const value of ['metadata-search', 'metamath', 'amusement', 'llamaindex']) {
+      expect(resolveProviderLogoId(value)).toBe(value)
+    }
+    expect(resolveProviderLogoId('openai-metadata-proxy')).toBe('openai')
+  })
   test('lands both spellings of the compatibility provider on one mark', () => {
     // The server emits `openai-compatibility`; this app's own provider
     // descriptors spell it `openaiCompatibility`. Keying a table on one of them

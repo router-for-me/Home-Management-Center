@@ -22,6 +22,7 @@ import {
   isCredentialQuotaCollectable,
   isQuotaAttentionEntry,
   resolveAntigravityQuotaPresentation,
+  resolveCredentialQuotaAction,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
@@ -223,7 +224,7 @@ describe('quota join map', () => {
         available: true,
         loading: true,
         truncated: false,
-        map,
+        map: new Map(),
         resource,
       }).kind,
     ).toBe('loading')
@@ -1040,5 +1041,59 @@ describe('normalizeUpstreamRouteSearch', () => {
   test('keeps the q filter', () => {
     expect(normalizeUpstreamRouteSearch({ q: 'kimi' }).q).toBe('kimi')
     expect(normalizeUpstreamRouteSearch({ q: '  ' }).q).toBeUndefined()
+  })
+})
+
+describe('credential quota action states', () => {
+  const resource = { provider: 'meta', disabled: false, status: 'active' }
+  const decide = (entry: UpstreamQuotaEntry | null, overrides = {}) =>
+    resolveCredentialQuotaAction({ resource, entry, available: true, ...overrides })
+  test('offers collection for an existing never-collected backend entry', () => {
+    expect(
+      decide(
+        createQuotaEntry({
+          provider: 'meta',
+          status: 'unknown',
+          freshness: 'never',
+          collectionStatus: 'idle',
+          lastAttemptAt: null,
+          primaryWindows: [],
+          windows: [],
+          windowCount: 0,
+        }),
+      ),
+    ).toBe('collect')
+    expect(decide(null)).toBe('collect')
+  })
+  test('offers refresh or retry and blocks local and remote duplicate collection', () => {
+    expect(decide(createQuotaEntry())).toBe('refresh')
+    expect(decide(createQuotaEntry({ collectionStatus: 'failed' }))).toBe('retry')
+    expect(decide(createQuotaEntry({ collectionStatus: 'partial' }))).toBe('retry')
+    expect(decide(createQuotaEntry({ collectionStatus: 'collecting' }))).toBe('collecting')
+    expect(decide(null, { collecting: true })).toBe('collecting')
+  })
+  test('honors capabilities, disabled and unsupported credentials without blocking execution cooldown', () => {
+    expect(decide(null, { available: false })).toBe('unavailable')
+    expect(decide(null, { resource: { ...resource, disabled: true } })).toBe('disabled')
+    expect(decide(createQuotaEntry({ credentialStatus: 'disabled' }))).toBe('disabled')
+    expect(decide(createQuotaEntry({ credentialType: 'provider_api_key' }))).toBe('unsupported')
+    expect(decide(createQuotaEntry({ collectionStatus: 'unsupported' }))).toBe('unsupported')
+    expect(
+      decide(createQuotaEntry({ credentialStatus: 'cooldown' }), {
+        resource: { ...resource, status: 'error' },
+      }),
+    ).toBe('refresh')
+  })
+  test('keeps an existing quota visible during background refresh', () => {
+    const entry = createQuotaEntry()
+    expect(
+      resolveUpstreamQuotaCellState({
+        available: true,
+        loading: true,
+        truncated: false,
+        map: buildUpstreamQuotaJoinMap([entry]),
+        resource: { id: entry.id, authIndex: entry.authIndex, name: null, identifier: entry.id },
+      }),
+    ).toEqual({ kind: 'entry', entry })
   })
 })

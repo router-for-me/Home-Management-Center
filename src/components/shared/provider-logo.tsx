@@ -98,7 +98,7 @@ const providerAliases: Array<[brandId: string, matches: RegExp]> = [
   ['claude', /claude|anthropic/],
   ['gemini', /gemini|google|interaction/],
   ['kimi', /kimi|moonshot/],
-  ['meta', /meta|muse/],
+  ['meta', /^(meta|muse)$/],
   ['xai', /xai|x-ai|grok/],
   ['openai', /openai|chatgpt|^gpt|^o\d/],
 ]
@@ -123,7 +123,7 @@ const vendorRules: Array<[brandId: string, matches: RegExp]> = [
   ['qwen', /(^|[/-])(qwen|qwq|qvq)/],
   ['minimax', /(^|[/-])(minimax|abab)/],
   ['kimi', /(^|[/-])(kimi|moonshot)/],
-  ['meta', /(^|[/-])(meta|muse|llama)/],
+  ['meta', /(^|\/)(meta-llama|muse-spark|llama)(?=$|[-/\d])/],
   ['xai', /(^|[/-])grok/],
   ['openai', /(^|[/-])(gpt|chatgpt|openai|codex|o[1-4]([/-]|$))/],
 ]
