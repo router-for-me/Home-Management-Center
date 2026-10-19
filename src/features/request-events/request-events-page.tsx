@@ -140,7 +140,7 @@ type RequestEventColumn = {
 }
 
 const requestEventColumns: RequestEventColumn[] = [
-  { key: 'time', width: 180, required: true, compact: true },
+  { key: 'time', width: 216, required: true, compact: true },
   { key: 'event', width: 150 },
   { key: 'status', width: 130, compact: true },
   { key: 'model', width: 240 },
@@ -1323,7 +1323,7 @@ function RequestEventsTable({
                       ref={virtualRows.measureRow}
                     >
                       {isColumnRendered('time') ? (
-                        <TableCell className="text-muted-foreground truncate">
+                        <TableCell className="text-muted-foreground truncate tabular-nums">
                           {formatDateTime(event.timestamp, i18n) ?? event.timestamp}
                         </TableCell>
                       ) : null}

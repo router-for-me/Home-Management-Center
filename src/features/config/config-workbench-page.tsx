@@ -2,7 +2,6 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
-  Antenna,
   CheckCircle2,
   CloudUpload,
   Code2,
@@ -12,7 +11,6 @@ import {
   EyeOff,
   FileDiff,
   Filter,
-  Gauge,
   Hourglass,
   Image,
   Info,
@@ -32,7 +30,6 @@ import {
   ServerCog,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   Trash2,
   Undo2,
 } from 'lucide-react'
@@ -96,18 +93,17 @@ type ConfigSectionId =
   | 'plugins'
   | 'oauthRules'
   | 'oauthProviders'
-  | 'liveMediaRelay'
   | 'system'
   | 'network'
-  | 'quota'
   | 'streaming'
   | 'credentialConcurrency'
   | 'credentialInFlight'
   | 'upstream'
   | 'headers'
   | 'payload'
-  | 'antigravity'
   | 'multimedia'
+
+type ConfigSubgroupId = 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
   | 'boolean'
@@ -150,6 +146,8 @@ type OAuthModelCatalogState = {
 type AliasRule = {
   name?: string
   alias?: string
+  displayName?: string
+  'display-name'?: string
   fork?: boolean
   forceMapping?: boolean
   'force-mapping'?: boolean
@@ -227,6 +225,7 @@ type ConfigFieldDefinition = {
   key: ConfigFieldKey
   kind: ConfigFieldKind
   sectionId: ConfigSectionId
+  groupId?: ConfigSubgroupId
   min?: number
   max?: number
   options?: string[]
@@ -237,7 +236,7 @@ type ConfigSectionDefinition = {
   fields: ConfigFieldDefinition[]
 }
 
-const sectionDefinitions: ConfigSectionDefinition[] = [
+export const sectionDefinitions: ConfigSectionDefinition[] = [
   {
     id: 'server',
     fields: [
@@ -281,16 +280,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
       {
         key: 'remoteManagementDisableControlPanel',
         kind: 'boolean',
-        sectionId: 'remoteManagement',
-      },
-      {
-        key: 'remoteManagementDisableAutoUpdatePanel',
-        kind: 'boolean',
-        sectionId: 'remoteManagement',
-      },
-      {
-        key: 'remoteManagementPanelGithubRepository',
-        kind: 'text',
         sectionId: 'remoteManagement',
       },
       { key: 'managementBaseUrl', kind: 'text', sectionId: 'remoteManagement' },
@@ -364,9 +353,8 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
       { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
-      { key: 'saveCooldownStatus', kind: 'boolean', sectionId: 'streaming' },
-      { key: 'transientErrorCooldownSeconds', kind: 'number', sectionId: 'streaming', min: -1 },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
+      { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'nonstreamKeepaliveInterval', kind: 'number', sectionId: 'streaming', min: 0 },
     ],
@@ -473,13 +461,6 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
-    id: 'quota',
-    fields: [
-      { key: 'quotaSwitchProject', kind: 'boolean', sectionId: 'quota' },
-      { key: 'quotaSwitchPreviewModel', kind: 'boolean', sectionId: 'quota' },
-    ],
-  },
-  {
     id: 'payload',
     fields: [{ key: 'payloadRulesJson', kind: 'jsonObject', sectionId: 'payload' }],
   },
@@ -495,52 +476,91 @@ const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'oauthProviders',
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
-      { key: 'oauthAuthAutoRefreshWorkers', kind: 'number', sectionId: 'oauthProviders', min: 0 },
       { key: 'devinSensitiveWordsJson', kind: 'jsonArray', sectionId: 'oauthProviders' },
-      { key: 'aistudioWsAuth', kind: 'boolean', sectionId: 'oauthProviders' },
-    ],
-  },
-  {
-    id: 'liveMediaRelay',
-    fields: [
-      { key: 'liveMediaRelayEnabled', kind: 'boolean', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayMaxSessions', kind: 'number', sectionId: 'liveMediaRelay', min: 0 },
+      {
+        key: 'liveMediaRelayEnabled',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayMaxSessions',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+        min: 0,
+      },
       {
         key: 'liveMediaRelayDisablePrivateRemoteIps',
         kind: 'boolean',
-        sectionId: 'liveMediaRelay',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
       },
-      { key: 'liveMediaRelayPublicIp', kind: 'text', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayUdpPortMin', kind: 'number', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayUdpPortMax', kind: 'number', sectionId: 'liveMediaRelay' },
-      { key: 'liveMediaRelayIceServersJson', kind: 'jsonArray', sectionId: 'liveMediaRelay' },
-    ],
-  },
-  {
-    id: 'antigravity',
-    fields: [
+      {
+        key: 'liveMediaRelayPublicIp',
+        kind: 'text',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayUdpPortMin',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayUdpPortMax',
+        kind: 'number',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'liveMediaRelayIceServersJson',
+        kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'liveMediaRelay',
+      },
       {
         key: 'antigravitySensitiveWordsJson',
         kind: 'jsonArray',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
-      { key: 'antigravityCredits', kind: 'boolean', sectionId: 'antigravity' },
+      {
+        key: 'antigravityCredits',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
       {
         key: 'antigravitySignatureCacheEnabled',
         kind: 'nullableBoolean',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
       {
         key: 'antigravitySignatureBypassStrict',
         kind: 'nullableBoolean',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
-      { key: 'antigravityConnPoolEnabled', kind: 'boolean', sectionId: 'antigravity' },
-      { key: 'antigravityConnPoolIdleTimeout', kind: 'duration', sectionId: 'antigravity' },
+      {
+        key: 'antigravityConnPoolEnabled',
+        kind: 'boolean',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityConnPoolIdleTimeout',
+        kind: 'duration',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
       {
         key: 'antigravityConnPoolMaxIdleConnsPerHost',
         kind: 'number',
-        sectionId: 'antigravity',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
         min: 0,
       },
     ],
@@ -570,6 +590,7 @@ const modelDefinitionChannels: ProviderModelChannel[] = [
   'kimi',
   'antigravity',
   'xai',
+  'meta',
 ]
 
 const fieldDefinitions = sectionDefinitions.flatMap((section) => section.fields)
@@ -590,17 +611,14 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   plugins: Plug,
   oauthRules: Route,
   oauthProviders: KeyRound,
-  liveMediaRelay: Antenna,
   system: Database,
   network: Network,
-  quota: Gauge,
   streaming: Route,
   credentialConcurrency: Hourglass,
   credentialInFlight: Layers,
   upstream: CloudUpload,
   headers: PanelTop,
   payload: Code2,
-  antigravity: Sparkles,
   multimedia: Image,
 }
 
@@ -639,10 +657,7 @@ const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
   'concurrencyObservationBarrierRevision',
 ])
 
-const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>([
-  'usageStatisticsEnabled',
-  'aistudioWsAuth',
-])
+const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>(['usageStatisticsEnabled'])
 
 const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
 
@@ -735,9 +750,19 @@ function canEditModelAliases(value: unknown) {
       items.every(
         (item) =>
           isRecord(item) &&
-          hasOnlyKeys(item, ['name', 'alias', 'fork', 'force-mapping', 'forceMapping']) &&
+          hasOnlyKeys(item, [
+            'name',
+            'alias',
+            'display-name',
+            'displayName',
+            'fork',
+            'force-mapping',
+            'forceMapping',
+          ]) &&
           (item.name === undefined || typeof item.name === 'string') &&
           (item.alias === undefined || typeof item.alias === 'string') &&
+          (item['display-name'] === undefined || typeof item['display-name'] === 'string') &&
+          (item.displayName === undefined || typeof item.displayName === 'string') &&
           (item.fork === undefined || typeof item.fork === 'boolean') &&
           (item['force-mapping'] === undefined || typeof item['force-mapping'] === 'boolean') &&
           (item.forceMapping === undefined || typeof item.forceMapping === 'boolean'),
@@ -745,12 +770,14 @@ function canEditModelAliases(value: unknown) {
   )
 }
 
-function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
+export function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
+  const displayName = rule['display-name'] ?? rule.displayName
   const forceMapping = rule['force-mapping'] ?? rule.forceMapping
 
   return {
     ...(typeof rule.name === 'string' ? { name: rule.name } : {}),
     ...(typeof rule.alias === 'string' ? { alias: rule.alias } : {}),
+    ...(typeof displayName === 'string' ? { displayName } : {}),
     ...(typeof rule.fork === 'boolean' ? { fork: rule.fork } : {}),
     ...(typeof forceMapping === 'boolean' ? { forceMapping } : {}),
   }
@@ -772,12 +799,14 @@ function normalizeModelAliases(value: unknown): Record<string, AliasRule[]> {
   )
 }
 
-function serializeModelAliasRule(rule: AliasRule) {
+export function serializeModelAliasRule(rule: AliasRule) {
   const nextRule: Record<string, string | boolean> = {}
+  const displayName = (rule['display-name'] ?? rule.displayName)?.trim()
   const forceMapping = rule['force-mapping'] ?? rule.forceMapping
 
   if (rule.name !== undefined) nextRule.name = rule.name
   if (rule.alias !== undefined) nextRule.alias = rule.alias
+  if (displayName) nextRule['display-name'] = displayName
   if (typeof rule.fork === 'boolean') nextRule.fork = rule.fork
   if (forceMapping === true) nextRule['force-mapping'] = true
 
@@ -1673,8 +1702,9 @@ function scrollToSection(sectionId: ConfigSectionId) {
   scrollElementIntoShell(`config-section-${sectionId}`)
 }
 
-function scrollToField(key: ConfigFieldKey) {
-  scrollToSection(fieldDefinitionByKey[key].sectionId)
+export function scrollToField(key: ConfigFieldKey) {
+  const field = fieldDefinitionByKey[key]
+  scrollElementIntoShell(`config-section-${field.groupId ?? field.sectionId}`)
 }
 
 function scrollToPayloadSection(sectionKey: PayloadSectionKey) {
@@ -2424,7 +2454,7 @@ function ModelAliasEditor({
     })),
   )
   const columnsClass =
-    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
+    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
 
   const updateRow = (rowIndex: number, patch: Partial<{ channel: string; item: AliasRule }>) => {
     const nextRows = rows.map((row, index) => ({
@@ -2496,6 +2526,10 @@ function ModelAliasEditor({
               description={t('configPage.json.columnDescriptions.alias')}
             />
             <TableHeaderCell
+              label={t('configPage.json.columns.displayName')}
+              description={t('configPage.json.columnDescriptions.displayName')}
+            />
+            <TableHeaderCell
               label={t('configPage.json.columns.fork')}
               description={t('configPage.json.columnDescriptions.fork')}
             />
@@ -2549,6 +2583,20 @@ function ModelAliasEditor({
                     placeholder={t('configPage.json.placeholders.alias')}
                     onChange={(event) =>
                       updateRow(rowIndex, { item: { alias: event.target.value } })
+                    }
+                  />
+                </label>
+                <label className={fieldClassName}>
+                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
+                    {t('configPage.json.columns.displayName')}
+                  </span>
+                  <Input
+                    value={item.displayName ?? item['display-name'] ?? ''}
+                    disabled={disabled}
+                    aria-label={t('configPage.json.columns.displayName')}
+                    placeholder={t('configPage.json.placeholders.displayName')}
+                    onChange={(event) =>
+                      updateRow(rowIndex, { item: { displayName: event.target.value } })
                     }
                   />
                 </label>
@@ -4554,6 +4602,28 @@ function StructuredWorkspace({
   const { t } = useTranslation()
   const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
 
+  const renderField = (field: ConfigFieldDefinition) =>
+    isJsonConfigFieldKey(field.key) ? (
+      <JsonConfigField
+        key={field.key}
+        field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+        value={String(draft[field.key])}
+        disabled={disabled}
+        invalid={validationErrors.includes(field.key)}
+        oauthModelCatalog={oauthModelCatalog}
+        onChange={onChange}
+      />
+    ) : (
+      <ConfigField
+        key={field.key}
+        field={field}
+        value={draft[field.key]}
+        disabled={disabled}
+        invalid={validationErrors.includes(field.key)}
+        onChange={onChange}
+      />
+    )
+
   return (
     <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
       <SectionNavigation changes={changes} validationErrors={validationErrors} />
@@ -4618,30 +4688,48 @@ function StructuredWorkspace({
                 )}
               </div>
             ) : (
-              <div className="mt-4 grid gap-3">
-                {section.fields.map((field) =>
-                  isJsonConfigFieldKey(field.key) ? (
-                    <JsonConfigField
-                      key={field.key}
-                      field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-                      value={String(draft[field.key])}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      oauthModelCatalog={oauthModelCatalog}
-                      onChange={onChange}
-                    />
-                  ) : (
-                    <ConfigField
-                      key={field.key}
-                      field={field}
-                      value={draft[field.key]}
-                      disabled={disabled}
-                      invalid={validationErrors.includes(field.key)}
-                      onChange={onChange}
-                    />
+              (() => {
+                const ungroupedFields = section.fields.filter((field) => !field.groupId)
+                const subgroupIds = Array.from(
+                  new Set(
+                    section.fields
+                      .map((field) => field.groupId)
+                      .filter((groupId): groupId is ConfigSubgroupId => Boolean(groupId)),
                   ),
-                )}
-              </div>
+                )
+
+                if (subgroupIds.length === 0) {
+                  return <div className="mt-4 grid gap-3">{section.fields.map(renderField)}</div>
+                }
+
+                return (
+                  <div className="mt-4 grid gap-4">
+                    {ungroupedFields.length > 0 ? (
+                      <div className="grid gap-3">{ungroupedFields.map(renderField)}</div>
+                    ) : null}
+                    {subgroupIds.map((groupId) => {
+                      const groupFields = section.fields.filter(
+                        (field) => field.groupId === groupId,
+                      )
+                      return (
+                        <div
+                          key={groupId}
+                          id={`config-section-${groupId}`}
+                          className="border-t pt-4"
+                        >
+                          <h3 className="text-sm font-semibold">
+                            {t(`configPage.sections.${groupId}.title`)}
+                          </h3>
+                          <p className="text-muted-foreground mt-1 text-xs leading-5">
+                            {t(`configPage.sections.${groupId}.description`)}
+                          </p>
+                          <div className="mt-3 grid gap-3">{groupFields.map(renderField)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
             )}
           </section>
         ))}

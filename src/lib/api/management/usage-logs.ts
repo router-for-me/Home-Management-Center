@@ -199,6 +199,9 @@ export type RuntimeLogSnapshot = {
   total: number | null
   limit: number | null
   offset: number | null
+  anchorId: number | null
+  beforeId: number | null
+  afterId: number | null
   appliedSearch: string | null
 }
 
@@ -214,9 +217,12 @@ export type RuntimeLogFilters = {
   before: string
 }
 
-type RuntimeLogQuery = {
+export type RuntimeLogQuery = {
   limit: number
   offset: number
+  anchorId?: number | null
+  beforeId?: number | null
+  afterId?: number | null
 } & RuntimeLogFilters
 
 export const defaultRuntimeLogFilters: RuntimeLogFilters = {
@@ -965,6 +971,8 @@ function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogS
   const latestRecordTimestamp = records
     .map((item) => timestampToMilliseconds(item.timestamp))
     .find((value): value is number => value !== null)
+  const offset = readNumber(record, 'offset')
+  const explicitAnchorId = readNumber(record, 'anchor_id') ?? readNumber(record, 'anchorId')
 
   return {
     lines: normalizedLines,
@@ -974,7 +982,13 @@ function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogS
     latestTimestamp: readNumber(record, 'latest-timestamp') ?? latestRecordTimestamp ?? null,
     total: readNumber(record, 'total'),
     limit: readNumber(record, 'limit'),
-    offset: readNumber(record, 'offset'),
+    offset,
+    anchorId:
+      explicitAnchorId !== null && Number.isSafeInteger(explicitAnchorId) && explicitAnchorId > 0
+        ? explicitAnchorId
+        : null,
+    beforeId: readNumber(record, 'before_id') ?? readNumber(record, 'beforeId'),
+    afterId: readNumber(record, 'after_id') ?? readNumber(record, 'afterId'),
     appliedSearch: readString(record, 'search'),
   }
 }
@@ -1841,6 +1855,18 @@ function getRuntimeLogQueryParams(query: RuntimeLogQuery) {
   const search = query.search.trim()
   const after = normalizeRuntimeLogTimeFilter(query.after)
   const before = normalizeRuntimeLogTimeFilter(query.before)
+  const anchorId =
+    typeof query.anchorId === 'number' && Number.isSafeInteger(query.anchorId) && query.anchorId > 0
+      ? query.anchorId
+      : undefined
+  const beforeId =
+    typeof query.beforeId === 'number' && Number.isSafeInteger(query.beforeId) && query.beforeId > 0
+      ? query.beforeId
+      : undefined
+  const afterId =
+    typeof query.afterId === 'number' && Number.isSafeInteger(query.afterId) && query.afterId > 0
+      ? query.afterId
+      : undefined
 
   return {
     limit: query.limit,
@@ -1852,6 +1878,9 @@ function getRuntimeLogQueryParams(query: RuntimeLogQuery) {
     ...(query.level !== 'all' ? { level: query.level } : {}),
     ...(after ? { after } : {}),
     ...(before ? { before } : {}),
+    ...(anchorId ? { anchor_id: anchorId } : {}),
+    ...(beforeId ? { before_id: beforeId } : {}),
+    ...(afterId ? { after_id: afterId } : {}),
   }
 }
 

@@ -98,7 +98,8 @@ import {
   type UpstreamQuotaEntry,
   countUpstreamQuotaAttentionResources,
   findUpstreamQuotaEntry,
-  isCredentialQuotaCollectable,
+  getCredentialQuotaId,
+  resolveCredentialQuotaAction,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { upstreamQuotaListLimit } from '@/features/upstream/use-upstream-quota'
@@ -138,6 +139,7 @@ type PendingCredentialConfirmation =
   | { type: 'bulkDelete'; resources: CredentialResource[] }
 
 const MAX_CONCURRENT_CREDENTIAL_UPLOADS = 3
+const EMPTY_QUOTA_COLLECTING_IDS = new Set<string>()
 const EMPTY_QUOTA_MAP = new Map<string, UpstreamQuotaEntry>()
 const EMPTY_CREDENTIAL_RESOURCES: CredentialResource[] = []
 
@@ -397,6 +399,8 @@ function CredentialList({
   cooldownResetSupported,
   quotaAvailable,
   quotaLoading,
+  quotaRecollectAvailable,
+  quotaSyncing,
   quotaTruncated,
   quotaMap,
   quotaCollectingIds,
@@ -419,6 +423,8 @@ function CredentialList({
   cooldownResetSupported: boolean
   quotaAvailable: boolean
   quotaLoading: boolean
+  quotaRecollectAvailable: boolean
+  quotaSyncing: boolean
   quotaTruncated: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
   quotaCollectingIds: Set<string>
@@ -537,6 +543,13 @@ function CredentialList({
           const statusTone = getCredentialStatusTone(resource)
           const displayName = getCredentialDisplayName(resource)
           const providerLabel = getCredentialProviderLabel(t, resource.provider)
+          const quotaAction = resolveCredentialQuotaAction({
+            resource,
+            entry: findUpstreamQuotaEntry(quotaMap, resource),
+            available: quotaAvailable && quotaRecollectAvailable,
+            collecting: quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(resource)),
+          })
+          const quotaBlocked = ['disabled', 'unsupported', 'unavailable'].includes(quotaAction)
 
           return (
             <TableRow
@@ -634,6 +647,10 @@ function CredentialList({
                 <>
                   <TableCell>
                     <UpstreamQuotaCell
+                      collecting={quotaAction === 'collecting'}
+                      unavailableReason={
+                        quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
+                      }
                       state={resolveUpstreamQuotaCellState({
                         available: quotaAvailable,
                         loading: quotaLoading,
@@ -679,19 +696,13 @@ function CredentialList({
                       disabled: mutating,
                       onSelect: () => onDownloadResource(resource),
                     },
-                    quotaAvailable &&
-                    isCredentialQuotaCollectable(resource) &&
-                    findUpstreamQuotaEntry(quotaMap, resource) === null
+                    !quotaBlocked
                       ? {
                           id: 'collect-quota',
-                          label: t('credentialsPage.actions.collectQuota'),
-                          ariaLabel: t('credentialsPage.actions.collectQuotaFor', {
-                            name: displayName,
-                          }),
+                          label: t(`upstreamPage.quota.actions.${quotaAction}`),
+                          ariaLabel: `${t(`upstreamPage.quota.actions.${quotaAction}`)}: ${displayName}`,
                           icon: RefreshCw,
-                          busy:
-                            resource.authIndex !== null &&
-                            quotaCollectingIds.has(resource.authIndex),
+                          busy: quotaAction === 'collecting',
                           disabled: mutating,
                           onSelect: () => onCollectQuota(resource),
                         }
@@ -740,6 +751,8 @@ export function AccountsPanel({
   quotaTruncated = false,
   quotaMap,
   quotaRecollectAvailable = false,
+  quotaSyncing = false,
+  quotaCollectingIds = EMPTY_QUOTA_COLLECTING_IDS,
   onCollectQuota,
   onStatsChange,
 }: {
@@ -755,6 +768,8 @@ export function AccountsPanel({
   quotaTruncated?: boolean
   quotaMap?: Map<string, UpstreamQuotaEntry>
   quotaRecollectAvailable?: boolean
+  quotaSyncing?: boolean
+  quotaCollectingIds?: Set<string>
   onCollectQuota?: (resource: CredentialResource) => Promise<void>
   onStatsChange?: (stats: UpstreamAccountsStats) => void
 }) {
@@ -774,7 +789,6 @@ export function AccountsPanel({
   const [createMode, setCreateMode] = useState<CreateCredentialMode>('oauth')
   const [uploadItems, setUploadItems] = useState<CredentialUploadItem[]>([])
   const [confirmation, setConfirmation] = useState<PendingCredentialConfirmation | null>(null)
-  const [quotaCollectingIds, setQuotaCollectingIds] = useState<Set<string>>(() => new Set())
   const autoOpenedCredentialRef = useRef<string | null>(null)
   const oauthPollTokenRef = useRef(0)
   const oauthFlowCompletingRef = useRef(false)
@@ -1079,23 +1093,6 @@ export function AccountsPanel({
         return
       }
       toast.error(error instanceof Error ? error.message : String(error))
-    }
-  }
-
-  const handleCollectQuota = async (resource: CredentialResource) => {
-    if (!onCollectQuota) return
-    const credentialId = resource.authIndex ?? resource.identifier
-    if (!credentialId || quotaCollectingIds.has(credentialId)) return
-
-    setQuotaCollectingIds((current) => new Set(current).add(credentialId))
-    try {
-      await onCollectQuota(resource)
-    } finally {
-      setQuotaCollectingIds((current) => {
-        const next = new Set(current)
-        next.delete(credentialId)
-        return next
-      })
     }
   }
 
@@ -1472,14 +1469,14 @@ export function AccountsPanel({
             cooldownResetSupported={workbench.credentialCooldownReset}
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
+            quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
+            quotaSyncing={quotaSyncing}
             quotaTruncated={quotaTruncated}
             quotaMap={resolvedQuotaMap}
             quotaCollectingIds={quotaCollectingIds}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
-            onCollectQuota={
-              quotaRecollectAvailable ? (resource) => void handleCollectQuota(resource) : () => {}
-            }
+            onCollectQuota={(resource) => void onCollectQuota?.(resource)}
             onClearCooldown={(resource) => void handleClearCooldown(resource)}
             onDeleteResource={(resource) => {
               handleDelete(resource)
@@ -1515,6 +1512,11 @@ export function AccountsPanel({
               mutating={workbench.mutating}
               models={workbench.models}
               quotaEntry={findUpstreamQuotaEntry(resolvedQuotaMap, selectedResource)}
+              quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
+              quotaCollecting={
+                quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(selectedResource))
+              }
+              onCollectQuota={() => void onCollectQuota?.(selectedResource)}
               showConcurrency={
                 workbench.credentialInFlight || workbench.credentialConcurrencyLimits
               }

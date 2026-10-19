@@ -72,19 +72,25 @@ import { Textarea } from '@/components/ui/textarea'
 import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
 import type { UpstreamProvidersStats } from '@/features/upstream/summary-cards'
-import type {
-  ProviderConnectivityTestInput,
-  ProviderDescriptor,
-  ProviderDiscoveredModel,
-  ProviderEntryFormInput,
-  ProviderGroup,
-  ProviderHeaderEntryInput,
-  ProviderId,
-  ProviderModelChannel,
-  ProviderModelDefinition,
-  ProviderModelDiscoveryInput,
-  ProviderModelEntryInput,
-  ProviderResource,
+import { MAX_CREDENTIAL_WEIGHT } from '@/lib/api/management/credentials'
+import {
+  PROVIDER_ERROR_RULE_ACTIONS,
+  PROVIDER_THINKING_LEVELS,
+  type ProviderApiKeyEntryInput,
+  type ProviderConnectivityTestInput,
+  type ProviderDescriptor,
+  type ProviderDiscoveredModel,
+  type ProviderEntryFormInput,
+  type ProviderErrorRuleAction,
+  type ProviderGroup,
+  type ProviderHeaderEntryInput,
+  type ProviderId,
+  type ProviderModelChannel,
+  type ProviderModelDefinition,
+  type ProviderModelDiscoveryInput,
+  type ProviderModelEntryInput,
+  type ProviderRequestScopedErrorRule,
+  type ProviderResource,
 } from '@/lib/api/management/providers'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -105,15 +111,25 @@ const emptyForm: ProviderEntryFormInput = {
   proxyUrl: '',
   prefix: '',
   disabled: false,
-  disableCooling: false,
+  disableCooling: null,
   websockets: false,
   priority: undefined,
+  weight: undefined,
   requestRetry: undefined,
   models: [],
   headers: [],
   excludedModelsText: '',
   testModel: undefined,
   cloak: undefined,
+  requestScopedErrors: [],
+  disableCodexCloaking: null,
+  alphaSearch: false,
+  rebuildMidSystemMessage: false,
+  nativeToolSearch: false,
+  fingerprintProfile: '',
+  experimentalCchSigning: false,
+  supportPromptCacheKey: false,
+  apiKeyEntries: undefined,
 }
 
 type UnknownRecord = Record<string, unknown>
@@ -124,6 +140,36 @@ function emptyModelEntry(): ProviderModelEntryInput {
     alias: '',
     displayName: '',
     forceMapping: false,
+    maxContextLength: '',
+    isCompat: false,
+    supportConfigurationUpdate: false,
+    image: false,
+    inputModalitiesText: '',
+    outputModalitiesText: '',
+    useMaxCompletionTokens: false,
+    thinkingEnabled: false,
+    thinkingLevels: [],
+    thinkingMin: '',
+    thinkingMax: '',
+    thinkingZeroAllowed: false,
+    thinkingDynamicAllowed: false,
+  }
+}
+
+function emptyApiKeyEntry(): ProviderApiKeyEntryInput {
+  return {
+    apiKey: '',
+    proxyUrl: '',
+    weight: undefined,
+  }
+}
+
+function emptyErrorRule(): ProviderRequestScopedErrorRule {
+  return {
+    status: 429,
+    action: 'continue-and-cooldown',
+    match: [],
+    'match-regexr': [],
   }
 }
 
@@ -156,12 +202,96 @@ function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[] {
   const models = raw.models
   if (!Array.isArray(models)) return []
 
-  return models.filter(isRecord).map((model) => ({
-    name: readStringField(model, 'name'),
-    alias: readStringField(model, 'alias'),
-    displayName: readStringField(model, 'display-name'),
-    forceMapping: model['force-mapping'] === true,
+  return models.filter(isRecord).map((model) => {
+    const thinking = isRecord(model.thinking) ? model.thinking : null
+    const rawLevels = Array.isArray(thinking?.levels) ? thinking.levels : []
+    const thinkingLevels = rawLevels
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean)
+    const inputModalities = Array.isArray(model['input-modalities'])
+      ? model['input-modalities'].filter((item): item is string => typeof item === 'string')
+      : []
+    const outputModalities = Array.isArray(model['output-modalities'])
+      ? model['output-modalities'].filter((item): item is string => typeof item === 'string')
+      : []
+
+    return {
+      name: readStringField(model, 'name'),
+      alias: readStringField(model, 'alias'),
+      displayName: readStringField(model, 'display-name'),
+      forceMapping: model['force-mapping'] === true,
+      maxContextLength:
+        typeof model['max-context-length'] === 'number' &&
+        Number.isFinite(model['max-context-length'])
+          ? String(model['max-context-length'])
+          : '',
+      isCompat: model['is-compat'] === true,
+      supportConfigurationUpdate: model['support-configuration-update'] === true,
+      image: model.image === true,
+      inputModalitiesText: inputModalities.join(', '),
+      outputModalitiesText: outputModalities.join(', '),
+      useMaxCompletionTokens: model['use-max-completion-tokens'] === true,
+      thinkingEnabled: thinking !== null,
+      thinkingLevels,
+      thinkingMin:
+        typeof thinking?.min === 'number' && Number.isFinite(thinking.min)
+          ? String(thinking.min)
+          : '',
+      thinkingMax:
+        typeof thinking?.max === 'number' && Number.isFinite(thinking.max)
+          ? String(thinking.max)
+          : '',
+      thinkingZeroAllowed: thinking?.['zero-allowed'] === true || thinking?.zero_allowed === true,
+      thinkingDynamicAllowed:
+        thinking?.['dynamic-allowed'] === true || thinking?.dynamic_allowed === true,
+      raw: model,
+    }
+  })
+}
+
+function readRequestScopedErrors(raw: UnknownRecord): ProviderRequestScopedErrorRule[] {
+  const rules = raw['request-scoped-errors']
+  if (!Array.isArray(rules)) return []
+  const allowedActions = new Set<string>(PROVIDER_ERROR_RULE_ACTIONS)
+
+  return rules.filter(isRecord).flatMap((rule) => {
+    const status = typeof rule.status === 'number' && Number.isFinite(rule.status) ? rule.status : 0
+    const rawAction = readStringField(rule, 'action').trim().toLowerCase()
+    const action: ProviderErrorRuleAction = allowedActions.has(rawAction)
+      ? (rawAction as ProviderErrorRuleAction)
+      : 'continue'
+    const match = Array.isArray(rule.match)
+      ? rule.match.filter((item): item is string => typeof item === 'string')
+      : undefined
+    const matchRegex = Array.isArray(rule['match-regexr'])
+      ? rule['match-regexr'].filter((item): item is string => typeof item === 'string')
+      : undefined
+    return [
+      {
+        status,
+        action,
+        ...(match ? { match } : {}),
+        ...(matchRegex ? { 'match-regexr': matchRegex } : {}),
+      },
+    ]
+  })
+}
+
+function readCompatibilityApiKeyEntries(raw: UnknownRecord): ProviderApiKeyEntryInput[] {
+  const rawKeys = Array.isArray(raw.keys)
+    ? raw.keys
+    : Array.isArray(raw['api-key-entries'])
+      ? raw['api-key-entries']
+      : []
+  const entries = rawKeys.filter(isRecord).map((key) => ({
+    id: readStringField(key, 'id') || readStringField(key, 'uuid') || undefined,
+    apiKey: '',
+    existingApiKey: readStringField(key, 'api-key') || undefined,
+    proxyUrl: readStringField(key, 'proxy-url'),
+    weight: typeof key.weight === 'number' && Number.isFinite(key.weight) ? key.weight : undefined,
   }))
+  return entries.length > 0 ? entries : [emptyApiKeyEntry()]
 }
 
 function readProviderHeaders(raw: UnknownRecord): ProviderHeaderEntryInput[] {
@@ -211,7 +341,7 @@ function formatDateTime(value: string) {
   }).format(new Date(value))
 }
 
-function createFormState(
+export function createFormState(
   resource: ProviderResource | null,
   descriptor?: ProviderDescriptor,
 ): ProviderEntryFormInput {
@@ -229,10 +359,17 @@ function createFormState(
       headers: [],
       testModel: supportsTestModel ? '' : undefined,
       cloak: supportsCloak ? emptyCloakInput() : undefined,
+      apiKeyEntries: providerId === 'openaiCompatibility' ? [emptyApiKeyEntry()] : undefined,
     }
   }
 
   const raw = resource.raw
+  const coolingOverride =
+    resource.disableCoolingOverride !== undefined
+      ? resource.disableCoolingOverride
+      : typeof raw['disable-cooling'] === 'boolean'
+        ? raw['disable-cooling']
+        : null
 
   return {
     apiKey: '',
@@ -241,15 +378,29 @@ function createFormState(
     proxyUrl: resource.proxyUrl ?? '',
     prefix: resource.prefix ?? '',
     disabled: resource.disabled,
-    disableCooling: resource.disableCooling,
+    disableCooling: coolingOverride,
     websockets: resource.websockets,
     priority: resource.priority ?? undefined,
+    weight:
+      resource.weight ??
+      (typeof raw.weight === 'number' && Number.isFinite(raw.weight) ? raw.weight : undefined),
     requestRetry: resource.requestRetry ?? undefined,
     models: readProviderModels(raw),
     headers: readProviderHeaders(raw),
     excludedModelsText: readExcludedModelsText(raw),
     testModel: supportsTestModel ? readStringField(raw, 'test-model') : undefined,
     cloak: supportsCloak ? readProviderCloak(raw) : undefined,
+    requestScopedErrors: readRequestScopedErrors(raw),
+    disableCodexCloaking:
+      typeof raw['disable-codex-cloaking'] === 'boolean' ? raw['disable-codex-cloaking'] : null,
+    alphaSearch: raw['alpha-search'] === true,
+    rebuildMidSystemMessage: raw['rebuild-mid-system-message'] === true,
+    nativeToolSearch: raw['native-tool-search'] === true,
+    fingerprintProfile: readStringField(raw, 'fingerprint-profile'),
+    experimentalCchSigning: raw['experimental-cch-signing'] === true,
+    supportPromptCacheKey: raw['support-prompt-cache-key'] === true,
+    apiKeyEntries:
+      providerId === 'openaiCompatibility' ? readCompatibilityApiKeyEntries(raw) : undefined,
   }
 }
 
@@ -275,12 +426,22 @@ function hasProviderDiscoveryHeaderAuth(
   return hasHeaderEntry(headers, ['authorization'])
 }
 
+function resolvePrimaryFormApiKey(form: ProviderEntryFormInput): string {
+  const direct = form.apiKey.trim()
+  if (direct) return direct
+  for (const entry of form.apiKeyEntries ?? []) {
+    const candidate = entry.apiKey.trim() || entry.existingApiKey?.trim() || ''
+    if (candidate) return candidate
+  }
+  return ''
+}
+
 function getProviderDiscoveryValidationError(
   descriptor: ProviderDescriptor,
   form: ProviderEntryFormInput,
   resource: ProviderResource | null,
 ) {
-  const hasApiKey = Boolean(form.apiKey.trim())
+  const hasApiKey = Boolean(resolvePrimaryFormApiKey(form))
   const hasAuthIndex = Boolean(resource?.authIndex?.trim())
   const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(descriptor.id, form.headers)
   const hasAuth = hasApiKey || hasAuthIndex || hasHeaderAuth
@@ -319,7 +480,7 @@ function getProviderConnectivityValidationError(
   form: ProviderEntryFormInput,
   resource: ProviderResource | null,
 ) {
-  const hasApiKey = Boolean(form.apiKey.trim())
+  const hasApiKey = Boolean(resolvePrimaryFormApiKey(form))
   const hasAuthIndex = Boolean(resource?.authIndex?.trim())
   const hasHeaderAuth = hasProviderDiscoveryHeaderAuth(descriptor.id, form.headers)
   const hasAuth = hasApiKey || hasAuthIndex || hasHeaderAuth
@@ -346,7 +507,14 @@ function getProviderConnectivityValidationError(
   return null
 }
 
-type ProviderFormField = 'name' | 'apiKey' | 'baseUrl' | 'proxyUrl' | 'priority' | 'requestRetry'
+type ProviderFormField =
+  | 'name'
+  | 'apiKey'
+  | 'baseUrl'
+  | 'proxyUrl'
+  | 'priority'
+  | 'weight'
+  | 'requestRetry'
 type ProviderFieldErrors = Partial<Record<ProviderFormField, string>>
 
 export function validateProviderForm(
@@ -361,7 +529,7 @@ export function validateProviderForm(
     fieldErrors.name = t('providersPage.form.validation.nameRequired')
   }
 
-  if (mode === 'create' && descriptor.supportsApiKey && !form.apiKey.trim()) {
+  if (mode === 'create' && descriptor.supportsApiKey && !resolvePrimaryFormApiKey(form)) {
     fieldErrors.apiKey = t('providersPage.form.validation.apiKeyRequired')
   }
 
@@ -383,6 +551,14 @@ export function validateProviderForm(
   }
 
   if (
+    form.weight !== undefined &&
+    form.weight !== null &&
+    (!Number.isSafeInteger(form.weight) || form.weight > MAX_CREDENTIAL_WEIGHT)
+  ) {
+    fieldErrors.weight = t('credentialsPage.form.weightInvalid')
+  }
+
+  if (
     form.requestRetry !== undefined &&
     form.requestRetry !== null &&
     (!Number.isSafeInteger(form.requestRetry) || form.requestRetry < 0)
@@ -392,6 +568,21 @@ export function validateProviderForm(
 
   let generalError: string | null = null
   if (
+    form.apiKeyEntries?.some(
+      (entry) => entry.proxyUrl.trim() && !isValidProxyUrl(entry.proxyUrl.trim()),
+    )
+  ) {
+    generalError = t('configPage.proxyPools.validation.urlInvalid')
+  } else if (
+    form.apiKeyEntries?.some(
+      (entry) =>
+        entry.weight !== undefined &&
+        entry.weight !== null &&
+        (!Number.isSafeInteger(entry.weight) || entry.weight > MAX_CREDENTIAL_WEIGHT),
+    )
+  ) {
+    generalError = t('credentialsPage.form.weightInvalid')
+  } else if (
     form.models.some(
       (model) =>
         !model.name.trim() &&
@@ -399,8 +590,42 @@ export function validateProviderForm(
     )
   ) {
     generalError = t('providersPage.form.validation.modelNameRequired')
+  } else if (
+    form.models.some((model) => {
+      if (!model.name.trim()) return false
+      const ctx = model.maxContextLength?.trim()
+      if (ctx && (!/^\d+$/.test(ctx) || !Number.isSafeInteger(Number(ctx)) || Number(ctx) <= 0)) {
+        return true
+      }
+      if (model.thinkingEnabled) {
+        const minText = model.thinkingMin?.trim()
+        const maxText = model.thinkingMax?.trim()
+        if (minText && (!/^\d+$/.test(minText) || !Number.isSafeInteger(Number(minText)))) {
+          return true
+        }
+        if (maxText && (!/^\d+$/.test(maxText) || !Number.isSafeInteger(Number(maxText)))) {
+          return true
+        }
+        if (minText && maxText && Number(minText) > Number(maxText)) {
+          return true
+        }
+      }
+      return false
+    })
+  ) {
+    generalError = t('providersPage.form.validation.modelOptionsInvalid')
   } else if (form.headers.some((header) => !header.key.trim() && header.value.trim())) {
     generalError = t('providersPage.form.validation.headerNameRequired')
+  } else if (
+    form.requestScopedErrors?.some(
+      (rule) =>
+        !Number.isSafeInteger(rule.status) ||
+        rule.status <= 0 ||
+        ((rule.match?.filter((m) => m.trim()).length ?? 0) === 0 &&
+          (rule['match-regexr']?.filter((m) => m.trim()).length ?? 0) === 0),
+    )
+  ) {
+    generalError = t('providersPage.form.validation.requestScopedErrorInvalid')
   }
 
   return { fieldErrors, generalError }
@@ -985,7 +1210,7 @@ function ProviderModelCatalogSummary({
   )
 }
 
-function ProviderFormPanel({
+export function ProviderFormPanel({
   mode,
   descriptor,
   resource,
@@ -1167,6 +1392,7 @@ function ProviderFormPanel({
       [
         descriptor.id,
         form.apiKey,
+        resolvePrimaryFormApiKey(form),
         form.baseUrl,
         form.testModel ?? '',
         resource?.authIndex ?? '',
@@ -1178,7 +1404,16 @@ function ProviderFormPanel({
           )
           .join('|'),
       ].join('||'),
-    [descriptor.id, form.apiKey, form.baseUrl, form.headers, form.models, form.testModel, resource],
+    [
+      descriptor.id,
+      form.apiKey,
+      form.apiKeyEntries,
+      form.baseUrl,
+      form.headers,
+      form.models,
+      form.testModel,
+      resource,
+    ],
   )
 
   useEffect(() => {
@@ -1209,7 +1444,7 @@ function ProviderFormPanel({
   const allDiscoveredModelsSelected =
     selectableDiscoveredModels.length > 0 &&
     selectableDiscoveredModels.every((model) => modelDiscoverySelected.has(model.name))
-  const hasDiscoveryApiKey = Boolean(form.apiKey.trim())
+  const hasDiscoveryApiKey = Boolean(resolvePrimaryFormApiKey(form))
   const hasDiscoveryAuthIndex = Boolean(resource?.authIndex?.trim())
   const hasDiscoveryHeaderAuth = hasProviderDiscoveryHeaderAuth(descriptor.id, form.headers)
   const discoveryAuthStatus = hasDiscoveryApiKey
@@ -1295,7 +1530,7 @@ function ProviderFormPanel({
       const models = await onDiscoverModels({
         providerId: descriptor.id,
         baseUrl: form.baseUrl,
-        apiKey: form.apiKey,
+        apiKey: resolvePrimaryFormApiKey(form),
         authIndex: resource?.authIndex,
         headers: form.headers,
       })
@@ -1337,7 +1572,7 @@ function ProviderFormPanel({
       await onTestModel({
         providerId: descriptor.id,
         baseUrl: form.baseUrl,
-        apiKey: form.apiKey,
+        apiKey: resolvePrimaryFormApiKey(form),
         authIndex: resource?.authIndex,
         headers: form.headers,
         testModel: form.testModel,
@@ -1385,10 +1620,9 @@ function ProviderFormPanel({
     updateField('models', [
       ...baseModels,
       ...selectedModels.map((model) => ({
+        ...emptyModelEntry(),
         name: model.name,
         alias: model.alias ?? '',
-        displayName: '',
-        forceMapping: false,
       })),
     ])
     setModelDiscoverySelected(new Set())
@@ -1421,9 +1655,11 @@ function ProviderFormPanel({
         ],
         [
           'disableCooling',
-          resource.disableCooling
-            ? t('providersPage.status.enabled')
-            : t('providersPage.status.disabled'),
+          resource.disableCoolingOverride === null
+            ? t('providersPage.status.inherited')
+            : resource.disableCooling
+              ? t('providersPage.status.enabled')
+              : t('providersPage.status.disabled'),
         ],
         ...(descriptor.supportsWebsockets
           ? ([
@@ -1570,7 +1806,140 @@ function ProviderFormPanel({
           </label>
         ) : null}
 
-        {descriptor.supportsApiKey ? (
+        {descriptor.id === 'openaiCompatibility' ? (
+          <div className="grid gap-3 rounded-md border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">
+                  {t('providersPage.form.apiKeyEntriesSection')}
+                </p>
+                <p className="text-muted-foreground mt-0.5 text-xs leading-5">
+                  {t('providersPage.form.apiKeyEntriesHint')}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={mutating}
+                onClick={() =>
+                  updateField('apiKeyEntries', [
+                    ...(form.apiKeyEntries ?? [emptyApiKeyEntry()]),
+                    emptyApiKeyEntry(),
+                  ])
+                }
+              >
+                <Plus className="size-3.5" aria-hidden="true" />
+                {t('providersPage.form.addApiKeyEntry')}
+              </Button>
+            </div>
+            {(form.apiKeyEntries ?? [emptyApiKeyEntry()]).map((entry, idx) => (
+              <div key={entry.id ?? idx} className="grid gap-2.5 rounded-md border p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium">
+                    {t('providersPage.form.apiKeyEntryLabel', { index: idx + 1 })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={mutating}
+                    aria-label={t('providersPage.form.removeApiKeyEntry')}
+                    onClick={() => {
+                      const next = (form.apiKeyEntries ?? []).filter((_, i) => i !== idx)
+                      updateField('apiKeyEntries', next)
+                    }}
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </Button>
+                </div>
+                <label className="grid gap-1 text-xs font-medium">
+                  <span>{t('providersPage.form.apiKey')}</span>
+                  <Input
+                    ref={idx === 0 ? apiKeyInputRef : undefined}
+                    type="password"
+                    value={entry.apiKey}
+                    aria-invalid={idx === 0 && Boolean(fieldErrors.apiKey)}
+                    placeholder={
+                      entry.existingApiKey
+                        ? t('providersPage.form.apiKeyEditPlaceholder')
+                        : t('providersPage.form.apiKeyCreatePlaceholder')
+                    }
+                    disabled={mutating}
+                    onChange={(event) => {
+                      const next = [...(form.apiKeyEntries ?? [emptyApiKeyEntry()])]
+                      next[idx] = { ...entry, apiKey: event.target.value }
+                      updateField('apiKeyEntries', next)
+                    }}
+                  />
+                </label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-1 text-xs font-medium">
+                    <div className="flex items-center justify-between gap-1">
+                      <span>{t('providersPage.form.proxyUrl')}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        disabled={mutating}
+                        onClick={() => {
+                          const next = [...(form.apiKeyEntries ?? [emptyApiKeyEntry()])]
+                          next[idx] = {
+                            ...entry,
+                            proxyUrl:
+                              entry.proxyUrl.trim().toLowerCase() === 'direct' ? '' : 'direct',
+                          }
+                          updateField('apiKeyEntries', next)
+                        }}
+                      >
+                        {entry.proxyUrl.trim().toLowerCase() === 'direct'
+                          ? t('credentialsPage.form.proxyInherit')
+                          : t('credentialsPage.form.directProxyAction')}
+                      </Button>
+                    </div>
+                    <Input
+                      value={entry.proxyUrl}
+                      placeholder="http://127.0.0.1:7890 | direct"
+                      disabled={mutating}
+                      className="font-mono text-xs"
+                      onChange={(event) => {
+                        const next = [...(form.apiKeyEntries ?? [emptyApiKeyEntry()])]
+                        next[idx] = { ...entry, proxyUrl: event.target.value }
+                        updateField('apiKeyEntries', next)
+                      }}
+                    />
+                  </div>
+                  <label className="grid gap-1 text-xs font-medium">
+                    <span>{t('credentialsPage.form.weight')}</span>
+                    <Input
+                      type="number"
+                      step={1}
+                      max={MAX_CREDENTIAL_WEIGHT}
+                      inputMode="numeric"
+                      value={entry.weight ?? ''}
+                      placeholder="1"
+                      disabled={mutating}
+                      onChange={(event) => {
+                        const rawVal = event.target.value.trim()
+                        const next = [...(form.apiKeyEntries ?? [emptyApiKeyEntry()])]
+                        next[idx] = {
+                          ...entry,
+                          weight: rawVal === '' ? null : Number(rawVal),
+                        }
+                        updateField('apiKeyEntries', next)
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+            {fieldErrors.apiKey ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.apiKey}
+              </span>
+            ) : null}
+          </div>
+        ) : descriptor.supportsApiKey ? (
           <label className={fieldClassName}>
             <span>{t('providersPage.form.apiKey')}</span>
             <Input
@@ -1617,7 +1986,7 @@ function ProviderFormPanel({
                 }))
               }
             }}
-            placeholder="https://api.example.com"
+            placeholder={descriptor.defaultBaseUrl || 'https://api.example.com'}
             disabled={mutating}
           />
           {fieldErrors.baseUrl ? (
@@ -1632,8 +2001,26 @@ function ProviderFormPanel({
         </label>
 
         {descriptor.id !== 'openaiCompatibility' ? (
-          <label className={fieldClassName}>
-            <span>{t('providersPage.form.proxyUrl')}</span>
+          <div className={fieldClassName}>
+            <div className="flex items-center justify-between gap-2">
+              <span>{t('providersPage.form.proxyUrl')}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                disabled={mutating}
+                onClick={() =>
+                  updateField(
+                    'proxyUrl',
+                    form.proxyUrl.trim().toLowerCase() === 'direct' ? '' : 'direct',
+                  )
+                }
+              >
+                {form.proxyUrl.trim().toLowerCase() === 'direct'
+                  ? t('credentialsPage.form.proxyInherit')
+                  : t('credentialsPage.form.directProxyAction')}
+              </Button>
+            </div>
             <Input
               value={form.proxyUrl}
               aria-invalid={Boolean(fieldErrors.proxyUrl)}
@@ -1647,15 +2034,20 @@ function ProviderFormPanel({
                   }))
                 }
               }}
-              placeholder="http://127.0.0.1:7890"
+              placeholder="http://127.0.0.1:7890 | direct"
               disabled={mutating}
+              className="font-mono"
             />
             {fieldErrors.proxyUrl ? (
               <span className="text-destructive text-xs leading-5 font-normal">
                 {fieldErrors.proxyUrl}
               </span>
-            ) : null}
-          </label>
+            ) : (
+              <span className="text-muted-foreground text-xs leading-5 font-normal">
+                {t('credentialsPage.form.proxyUrlDirectHint')}
+              </span>
+            )}
+          </div>
         ) : null}
 
         <label className={fieldClassName}>
@@ -1700,6 +2092,47 @@ function ProviderFormPanel({
             </span>
           ) : null}
         </label>
+
+        {descriptor.id !== 'openaiCompatibility' ? (
+          <label className={fieldClassName}>
+            <span>{t('credentialsPage.form.weight')}</span>
+            <Input
+              type="number"
+              step={1}
+              max={MAX_CREDENTIAL_WEIGHT}
+              inputMode="numeric"
+              value={form.weight ?? ''}
+              placeholder="1"
+              aria-invalid={Boolean(fieldErrors.weight)}
+              onChange={(event) => {
+                const rawVal = event.target.value.trim()
+                updateField('weight', rawVal === '' ? null : Number(rawVal))
+              }}
+              onBlur={() => {
+                if (
+                  form.weight !== undefined &&
+                  form.weight !== null &&
+                  (!Number.isSafeInteger(form.weight) || form.weight > MAX_CREDENTIAL_WEIGHT)
+                ) {
+                  setFieldErrors((current) => ({
+                    ...current,
+                    weight: t('credentialsPage.form.weightInvalid'),
+                  }))
+                }
+              }}
+              disabled={mutating}
+            />
+            {fieldErrors.weight ? (
+              <span className="text-destructive text-xs leading-5 font-normal">
+                {fieldErrors.weight}
+              </span>
+            ) : (
+              <span className="text-muted-foreground text-xs leading-5 font-normal">
+                {t('credentialsPage.form.weightHint')}
+              </span>
+            )}
+          </label>
+        ) : null}
 
         <label className={fieldClassName}>
           <span>{t('providersPage.form.requestRetry')}</span>
@@ -1851,20 +2284,176 @@ function ProviderFormPanel({
           </div>
         ) : null}
 
-        <label className="flex items-start gap-3 text-sm">
-          <Checkbox
-            className="mt-0.5"
-            checked={form.disableCooling}
+        <div className={fieldClassName}>
+          <span>{t('providersPage.form.disableCooling')}</span>
+          <Select
+            value={
+              form.disableCooling === null || form.disableCooling === undefined
+                ? 'inherit'
+                : form.disableCooling
+                  ? 'disabled'
+                  : 'enabled'
+            }
             disabled={mutating}
-            onCheckedChange={(checked) => updateField('disableCooling', checked === true)}
-          />
-          <span className="grid gap-1">
-            <span className="font-medium">{t('providersPage.form.disableCooling')}</span>
-            <span className="text-muted-foreground text-xs leading-5">
-              {t('providersPage.form.disableCoolingHint')}
-            </span>
+            onValueChange={(value) =>
+              updateField('disableCooling', value === 'inherit' ? null : value === 'disabled')
+            }
+          >
+            <SelectTrigger aria-label={t('providersPage.form.disableCooling')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">
+                {t('credentialsPage.form.coolingModeInherit')}
+              </SelectItem>
+              <SelectItem value="enabled">
+                {t('credentialsPage.form.coolingModeEnabled')}
+              </SelectItem>
+              <SelectItem value="disabled">
+                {t('credentialsPage.form.coolingModeDisabled')}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground text-xs leading-5 font-normal">
+            {t('providersPage.form.disableCoolingHint')}
           </span>
-        </label>
+        </div>
+
+        {descriptor.id === 'codex' ? (
+          <div className="grid gap-3 rounded-md border p-3">
+            <div className={fieldClassName}>
+              <span>{t('providersPage.form.disableCodexCloaking')}</span>
+              <Select
+                value={
+                  form.disableCodexCloaking === null || form.disableCodexCloaking === undefined
+                    ? 'inherit'
+                    : form.disableCodexCloaking
+                      ? 'true'
+                      : 'false'
+                }
+                disabled={mutating}
+                onValueChange={(value) =>
+                  updateField('disableCodexCloaking', value === 'inherit' ? null : value === 'true')
+                }
+              >
+                <SelectTrigger aria-label={t('providersPage.form.disableCodexCloaking')}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">
+                    {t('credentialsPage.form.coolingModeInherit')}
+                  </SelectItem>
+                  <SelectItem value="false">{t('providersPage.status.disabled')}</SelectItem>
+                  <SelectItem value="true">{t('providersPage.status.enabled')}</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground text-xs leading-5 font-normal">
+                {t('providersPage.form.disableCodexCloakingHint')}
+              </span>
+            </div>
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox
+                className="mt-0.5"
+                checked={form.alphaSearch === true}
+                disabled={mutating}
+                onCheckedChange={(checked) => updateField('alphaSearch', checked === true)}
+              />
+              <span className="grid gap-1">
+                <span className="font-medium">{t('providersPage.form.alphaSearch')}</span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('providersPage.form.alphaSearchHint')}
+                </span>
+              </span>
+            </label>
+          </div>
+        ) : null}
+
+        {descriptor.id === 'claude' ? (
+          <div className="grid gap-3 rounded-md border p-3">
+            <label className={fieldClassName}>
+              <span>{t('providersPage.form.claudeFingerprintProfile')}</span>
+              <Input
+                value={form.fingerprintProfile ?? ''}
+                placeholder="claude-code-cli"
+                disabled={mutating}
+                className="font-mono"
+                onChange={(event) => updateField('fingerprintProfile', event.target.value)}
+              />
+              <span className="text-muted-foreground text-xs leading-5 font-normal">
+                {t('providersPage.form.claudeFingerprintProfileHint')}
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox
+                className="mt-0.5"
+                checked={form.rebuildMidSystemMessage === true}
+                disabled={mutating}
+                onCheckedChange={(checked) =>
+                  updateField('rebuildMidSystemMessage', checked === true)
+                }
+              />
+              <span className="grid gap-1">
+                <span className="font-medium">
+                  {t('providersPage.form.claudeRebuildMidSystemMessage')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('providersPage.form.claudeRebuildMidSystemMessageHint')}
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox
+                className="mt-0.5"
+                checked={form.nativeToolSearch === true}
+                disabled={mutating}
+                onCheckedChange={(checked) => updateField('nativeToolSearch', checked === true)}
+              />
+              <span className="grid gap-1">
+                <span className="font-medium">
+                  {t('providersPage.form.claudeNativeToolSearch')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('providersPage.form.claudeNativeToolSearchHint')}
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-sm">
+              <Checkbox
+                className="mt-0.5"
+                checked={form.experimentalCchSigning === true}
+                disabled={mutating}
+                onCheckedChange={(checked) =>
+                  updateField('experimentalCchSigning', checked === true)
+                }
+              />
+              <span className="grid gap-1">
+                <span className="font-medium">
+                  {t('providersPage.form.claudeExperimentalCchSigning')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('providersPage.form.claudeExperimentalCchSigningHint')}
+                </span>
+              </span>
+            </label>
+          </div>
+        ) : null}
+
+        {descriptor.id === 'openaiCompatibility' ? (
+          <label className="flex items-start gap-3 text-sm">
+            <Checkbox
+              className="mt-0.5"
+              checked={form.supportPromptCacheKey === true}
+              disabled={mutating}
+              onCheckedChange={(checked) => updateField('supportPromptCacheKey', checked === true)}
+            />
+            <span className="grid gap-1">
+              <span className="font-medium">{t('providersPage.form.supportPromptCacheKey')}</span>
+              <span className="text-muted-foreground text-xs leading-5">
+                {t('providersPage.form.supportPromptCacheKeyHint')}
+              </span>
+            </span>
+          </label>
+        ) : null}
 
         {descriptor.supportsWebsockets ? (
           <label className="flex items-start gap-3 text-sm">
@@ -2117,74 +2706,303 @@ function ProviderFormPanel({
             ) : null}
 
             {modelsList.map((model, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-                <label className="grid gap-1.5 text-xs font-medium">
-                  <span>{t('providersPage.form.modelName')}</span>
-                  <Input
-                    value={model.name}
-                    onChange={(event) => updateModelField(index, 'name', event.target.value)}
-                    placeholder="model-name"
-                    disabled={mutating}
-                  />
-                </label>
-                <label className="grid gap-1.5 text-xs font-medium">
-                  <span>{t('providersPage.form.modelAlias')}</span>
-                  <Input
-                    value={model.alias}
-                    onChange={(event) => updateModelField(index, 'alias', event.target.value)}
-                    placeholder="alias"
-                    disabled={mutating}
-                  />
-                </label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-lg"
-                  className="justify-self-end"
-                  disabled={mutating || modelsList.length <= 1}
-                  aria-label={t('providersPage.form.removeModel')}
-                  onClick={() =>
-                    updateField(
-                      'models',
-                      modelsList.filter((_, modelIndex) => modelIndex !== index),
-                    )
-                  }
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </Button>
-                {descriptor.supportsRichModelAliases ? (
-                  <>
-                    <label className="grid gap-1.5 text-xs font-medium sm:col-span-2">
-                      <span>{t('providersPage.form.modelDisplayName')}</span>
+              <div key={index} className="grid gap-3 rounded-md border p-3">
+                <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                  <label className="grid gap-1.5 text-xs font-medium">
+                    <span>{t('providersPage.form.modelName')}</span>
+                    <Input
+                      value={model.name}
+                      onChange={(event) => updateModelField(index, 'name', event.target.value)}
+                      placeholder="model-name"
+                      disabled={mutating}
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-xs font-medium">
+                    <span>{t('providersPage.form.modelAlias')}</span>
+                    <Input
+                      value={model.alias}
+                      onChange={(event) => updateModelField(index, 'alias', event.target.value)}
+                      placeholder="alias"
+                      disabled={mutating}
+                    />
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-lg"
+                    className="justify-self-end"
+                    disabled={mutating || modelsList.length <= 1}
+                    aria-label={t('providersPage.form.removeModel')}
+                    onClick={() =>
+                      updateField(
+                        'models',
+                        modelsList.filter((_, modelIndex) => modelIndex !== index),
+                      )
+                    }
+                  >
+                    <X className="size-4" aria-hidden="true" />
+                  </Button>
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="grid gap-1.5 text-xs font-medium">
+                    <span>{t('providersPage.form.modelDisplayName')}</span>
+                    <Input
+                      value={model.displayName}
+                      onChange={(event) =>
+                        updateModelField(index, 'displayName', event.target.value)
+                      }
+                      placeholder={t('providersPage.form.modelDisplayNamePlaceholder')}
+                      disabled={mutating}
+                    />
+                  </label>
+                  {descriptor.id !== 'vertex' ? (
+                    <label className="grid gap-1.5 text-xs font-medium">
+                      <span>{t('providersPage.form.modelMaxContextLength')}</span>
                       <Input
-                        value={model.displayName}
+                        type="number"
+                        min={1}
+                        inputMode="numeric"
+                        value={model.maxContextLength ?? ''}
                         onChange={(event) =>
-                          updateModelField(index, 'displayName', event.target.value)
+                          updateModelField(index, 'maxContextLength', event.target.value)
                         }
-                        placeholder={t('providersPage.form.modelDisplayNamePlaceholder')}
+                        placeholder="128000"
                         disabled={mutating}
                       />
                     </label>
-                    <label className="flex items-start gap-3 text-xs sm:col-span-3">
+                  ) : null}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="flex items-start gap-3 text-xs">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={model.forceMapping}
+                      disabled={mutating}
+                      onCheckedChange={(checked) =>
+                        updateModelField(index, 'forceMapping', checked === true)
+                      }
+                    />
+                    <span className="grid gap-1">
+                      <span className="font-medium">
+                        {t('providersPage.form.modelForceMapping')}
+                      </span>
+                      <span className="text-muted-foreground leading-5">
+                        {t('providersPage.form.modelForceMappingHint')}
+                      </span>
+                    </span>
+                  </label>
+
+                  {descriptor.id !== 'vertex' ? (
+                    <label className="flex items-start gap-3 text-xs">
                       <Checkbox
                         className="mt-0.5"
-                        checked={model.forceMapping}
+                        checked={model.isCompat === true}
                         disabled={mutating}
                         onCheckedChange={(checked) =>
-                          updateModelField(index, 'forceMapping', checked === true)
+                          updateModelField(index, 'isCompat', checked === true)
+                        }
+                      />
+                      <span className="grid gap-1">
+                        <span className="font-medium">{t('providersPage.form.modelIsCompat')}</span>
+                        <span className="text-muted-foreground leading-5">
+                          {t('providersPage.form.modelIsCompatHint')}
+                        </span>
+                      </span>
+                    </label>
+                  ) : null}
+
+                  {descriptor.id === 'codex' ? (
+                    <label className="flex items-start gap-3 text-xs">
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={model.supportConfigurationUpdate === true}
+                        disabled={mutating}
+                        onCheckedChange={(checked) =>
+                          updateModelField(index, 'supportConfigurationUpdate', checked === true)
                         }
                       />
                       <span className="grid gap-1">
                         <span className="font-medium">
-                          {t('providersPage.form.modelForceMapping')}
+                          {t('providersPage.form.modelSupportConfigUpdate')}
                         </span>
                         <span className="text-muted-foreground leading-5">
-                          {t('providersPage.form.modelForceMappingHint')}
+                          {t('providersPage.form.modelSupportConfigUpdateHint')}
                         </span>
                       </span>
                     </label>
-                  </>
-                ) : null}
+                  ) : null}
+
+                  {descriptor.id === 'openaiCompatibility' ? (
+                    <>
+                      <label className="flex items-start gap-3 text-xs">
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={model.image === true}
+                          disabled={mutating}
+                          onCheckedChange={(checked) =>
+                            updateModelField(index, 'image', checked === true)
+                          }
+                        />
+                        <span className="grid gap-1">
+                          <span className="font-medium">
+                            {t('providersPage.form.modelImageSupport')}
+                          </span>
+                          <span className="text-muted-foreground leading-5">
+                            {t('providersPage.form.modelImageSupportHint')}
+                          </span>
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 text-xs">
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={model.useMaxCompletionTokens === true}
+                          disabled={mutating}
+                          onCheckedChange={(checked) =>
+                            updateModelField(index, 'useMaxCompletionTokens', checked === true)
+                          }
+                        />
+                        <span className="grid gap-1">
+                          <span className="font-medium">
+                            {t('providersPage.form.modelUseMaxCompletionTokens')}
+                          </span>
+                          <span className="text-muted-foreground leading-5">
+                            {t('providersPage.form.modelUseMaxCompletionTokensHint')}
+                          </span>
+                        </span>
+                      </label>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="grid gap-1.5 text-xs font-medium">
+                          <span>{t('providersPage.form.modelInputModalities')}</span>
+                          <Input
+                            value={model.inputModalitiesText ?? ''}
+                            placeholder="text, image"
+                            disabled={mutating}
+                            onChange={(event) =>
+                              updateModelField(index, 'inputModalitiesText', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="grid gap-1.5 text-xs font-medium">
+                          <span>{t('providersPage.form.modelOutputModalities')}</span>
+                          <Input
+                            value={model.outputModalitiesText ?? ''}
+                            placeholder="text"
+                            disabled={mutating}
+                            onChange={(event) =>
+                              updateModelField(index, 'outputModalitiesText', event.target.value)
+                            }
+                          />
+                        </label>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="grid gap-2.5 border-t pt-2.5">
+                  <label className="flex items-center gap-2 text-xs font-medium">
+                    <Checkbox
+                      checked={model.thinkingEnabled === true}
+                      disabled={mutating}
+                      onCheckedChange={(checked) =>
+                        updateModelField(index, 'thinkingEnabled', checked === true)
+                      }
+                    />
+                    <span>{t('providersPage.form.modelThinkingEnabled')}</span>
+                  </label>
+                  <p className="text-muted-foreground text-xs leading-5">
+                    {t('providersPage.form.modelThinkingHint')}
+                  </p>
+                  {model.thinkingEnabled ? (
+                    <div className="grid gap-2.5 pl-6">
+                      <div className="grid gap-1.5">
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {t('providersPage.form.modelThinkingLevels')}
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.from(
+                            new Set([...PROVIDER_THINKING_LEVELS, ...(model.thinkingLevels ?? [])]),
+                          ).map((level) => {
+                            const selected = (model.thinkingLevels ?? []).includes(level)
+                            return (
+                              <label
+                                key={level}
+                                className="flex items-center gap-1.5 rounded border px-2 py-1 text-xs"
+                              >
+                                <Checkbox
+                                  checked={selected}
+                                  disabled={mutating}
+                                  onCheckedChange={(checked) => {
+                                    const current = model.thinkingLevels ?? []
+                                    const next =
+                                      checked === true
+                                        ? Array.from(new Set([...current, level]))
+                                        : current.filter((item) => item !== level)
+                                    updateModelField(index, 'thinkingLevels', next)
+                                  }}
+                                />
+                                <span className="font-mono">{level}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="grid gap-1 text-xs font-medium">
+                          <span>{t('providersPage.form.modelThinkingMin')}</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={model.thinkingMin ?? ''}
+                            placeholder="0"
+                            disabled={mutating}
+                            onChange={(event) =>
+                              updateModelField(index, 'thinkingMin', event.target.value)
+                            }
+                          />
+                        </label>
+                        <label className="grid gap-1 text-xs font-medium">
+                          <span>{t('providersPage.form.modelThinkingMax')}</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            inputMode="numeric"
+                            value={model.thinkingMax ?? ''}
+                            placeholder="0"
+                            disabled={mutating}
+                            onChange={(event) =>
+                              updateModelField(index, 'thinkingMax', event.target.value)
+                            }
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={model.thinkingZeroAllowed === true}
+                            disabled={mutating}
+                            onCheckedChange={(checked) =>
+                              updateModelField(index, 'thinkingZeroAllowed', checked === true)
+                            }
+                          />
+                          <span>{t('providersPage.form.modelThinkingZeroAllowed')}</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-xs">
+                          <Checkbox
+                            checked={model.thinkingDynamicAllowed === true}
+                            disabled={mutating}
+                            onCheckedChange={(checked) =>
+                              updateModelField(index, 'thinkingDynamicAllowed', checked === true)
+                            }
+                          />
+                          <span>{t('providersPage.form.modelThinkingDynamicAllowed')}</span>
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ))}
             <Button
@@ -2290,6 +3108,146 @@ function ProviderFormPanel({
             </Button>
           </CollapsibleContent>
         </Collapsible>
+
+        {descriptor.id !== 'vertex' ? (
+          <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
+            <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">
+              <span className="min-w-0">
+                <span className="block">{t('providersPage.form.requestScopedErrorsSection')}</span>
+                <span className="text-muted-foreground mt-1 block text-xs leading-5 font-normal">
+                  {t('providersPage.form.requestScopedErrorsHint')}
+                </span>
+              </span>
+              <ChevronDown
+                className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
+                aria-hidden="true"
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 grid gap-3">
+              {(form.requestScopedErrors ?? []).map((rule, index) => (
+                <div key={index} className="grid gap-2.5 rounded-md border p-3">
+                  <div className="grid gap-2 sm:grid-cols-[7rem_1fr_auto] sm:items-end">
+                    <label className="grid gap-1 text-xs font-medium">
+                      <span>{t('providersPage.form.requestScopedErrorCode')}</span>
+                      <Input
+                        type="number"
+                        min={100}
+                        max={599}
+                        inputMode="numeric"
+                        value={rule.status || ''}
+                        disabled={mutating}
+                        onChange={(event) => {
+                          const next = [...(form.requestScopedErrors ?? [])]
+                          next[index] = {
+                            ...rule,
+                            status: Number(event.target.value) || 0,
+                          }
+                          updateField('requestScopedErrors', next)
+                        }}
+                      />
+                    </label>
+                    <div className="grid gap-1 text-xs font-medium">
+                      <span>{t('providersPage.form.requestScopedErrorAction')}</span>
+                      <Select
+                        value={rule.action}
+                        disabled={mutating}
+                        onValueChange={(value) => {
+                          const next = [...(form.requestScopedErrors ?? [])]
+                          next[index] = { ...rule, action: value as ProviderErrorRuleAction }
+                          updateField('requestScopedErrors', next)
+                        }}
+                      >
+                        <SelectTrigger
+                          aria-label={t('providersPage.form.requestScopedErrorAction')}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROVIDER_ERROR_RULE_ACTIONS.map((action) => (
+                            <SelectItem key={action} value={action}>
+                              {action}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-md"
+                      disabled={mutating}
+                      aria-label={t('providersPage.form.removeRequestScopedError')}
+                      onClick={() =>
+                        updateField(
+                          'requestScopedErrors',
+                          (form.requestScopedErrors ?? []).filter((_, idx) => idx !== index),
+                        )
+                      }
+                    >
+                      <X className="size-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <label className="grid gap-1 text-xs font-medium">
+                      <span>{t('providersPage.form.requestScopedErrorKeywords')}</span>
+                      <Textarea
+                        rows={2}
+                        className="font-mono text-xs"
+                        value={(rule.match ?? []).join('\n')}
+                        placeholder="invalid request"
+                        disabled={mutating}
+                        onChange={(event) => {
+                          const next = [...(form.requestScopedErrors ?? [])]
+                          const match = event.target.value.split(/\r?\n/)
+                          next[index] = {
+                            ...rule,
+                            match: match.length ? match : undefined,
+                          }
+                          updateField('requestScopedErrors', next)
+                        }}
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-medium">
+                      <span>{t('providersPage.form.requestScopedErrorRegex')}</span>
+                      <Textarea
+                        rows={2}
+                        className="font-mono text-xs"
+                        value={(rule['match-regexr'] ?? []).join('\n')}
+                        placeholder="rate.*limit"
+                        disabled={mutating}
+                        onChange={(event) => {
+                          const next = [...(form.requestScopedErrors ?? [])]
+                          const regexes = event.target.value.split(/\r?\n/)
+                          next[index] = {
+                            ...rule,
+                            'match-regexr': regexes.length ? regexes : undefined,
+                          }
+                          updateField('requestScopedErrors', next)
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                className="w-fit"
+                disabled={mutating}
+                onClick={() =>
+                  updateField('requestScopedErrors', [
+                    ...(form.requestScopedErrors ?? []),
+                    emptyErrorRule(),
+                  ])
+                }
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                {t('providersPage.form.addRequestScopedError')}
+              </Button>
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
 
         {descriptor.supportsCloak && form.cloak ? (
           <Collapsible className="rounded-md border px-3 py-2.5 text-sm">

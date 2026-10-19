@@ -19,8 +19,10 @@ import {
   findXaiWeeklyWindow,
   getUpstreamQuotaCollectionProgress,
   groupAntigravityQuotaWindows,
+  isCredentialQuotaCollectable,
   isQuotaAttentionEntry,
   resolveAntigravityQuotaPresentation,
+  resolveCredentialQuotaAction,
   resolveUpstreamQuotaCellState,
 } from '@/features/upstream/upstream-quota-model'
 import { normalizeUpstreamRouteSearch } from '@/features/upstream/upstream-route'
@@ -222,7 +224,7 @@ describe('quota join map', () => {
         available: true,
         loading: true,
         truncated: false,
-        map,
+        map: new Map(),
         resource,
       }).kind,
     ).toBe('loading')
@@ -583,6 +585,46 @@ describe('UpstreamQuotaCell rendering', () => {
       <UpstreamQuotaCell state={{ kind: 'entry', entry: createQuotaEntry() }} />,
     )
     expect(markup).toContain('82%')
+  })
+
+  test('marks meta and muse credentials as quota collectable and renders Meta plan and windows (#197)', async () => {
+    await testI18n.changeLanguage('en')
+    expect(
+      isCredentialQuotaCollectable({ provider: 'meta', disabled: false, status: 'active' }),
+    ).toBe(true)
+    expect(
+      isCredentialQuotaCollectable({ provider: 'muse', disabled: false, status: 'active' }),
+    ).toBe(true)
+
+    const metaWindow = createWindow({
+      id: 'meta-window',
+      label: 'Window',
+      periodUnit: 'hour',
+      periodValue: 5,
+      remainingRatio: 0.98,
+    })
+    const metaWeekly = createWindow({
+      id: 'meta-weekly',
+      label: 'Weekly limit',
+      periodUnit: 'week',
+      periodValue: 1,
+      remainingRatio: 0.75,
+    })
+    const entry = createQuotaEntry({
+      id: 'meta-01',
+      authIndex: 'meta-01',
+      provider: 'meta',
+      plan: { name: 'Muse Code Everyday Usage', premium: false },
+      primaryWindows: [metaWindow, metaWeekly],
+      windows: [metaWindow, metaWeekly],
+      windowCount: 2,
+    })
+    const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
+    expect(markup).toContain('Muse Code Everyday Usage')
+    expect(markup).toContain('5 hours')
+    expect(markup).toContain('98%')
+    expect(markup).toContain('Weekly')
+    expect(markup).toContain('75%')
   })
 
   test('renders Codex plan and keeps account and model weekly limits distinguishable', async () => {
@@ -999,5 +1041,59 @@ describe('normalizeUpstreamRouteSearch', () => {
   test('keeps the q filter', () => {
     expect(normalizeUpstreamRouteSearch({ q: 'kimi' }).q).toBe('kimi')
     expect(normalizeUpstreamRouteSearch({ q: '  ' }).q).toBeUndefined()
+  })
+})
+
+describe('credential quota action states', () => {
+  const resource = { provider: 'meta', disabled: false, status: 'active' }
+  const decide = (entry: UpstreamQuotaEntry | null, overrides = {}) =>
+    resolveCredentialQuotaAction({ resource, entry, available: true, ...overrides })
+  test('offers collection for an existing never-collected backend entry', () => {
+    expect(
+      decide(
+        createQuotaEntry({
+          provider: 'meta',
+          status: 'unknown',
+          freshness: 'never',
+          collectionStatus: 'idle',
+          lastAttemptAt: null,
+          primaryWindows: [],
+          windows: [],
+          windowCount: 0,
+        }),
+      ),
+    ).toBe('collect')
+    expect(decide(null)).toBe('collect')
+  })
+  test('offers refresh or retry and blocks local and remote duplicate collection', () => {
+    expect(decide(createQuotaEntry())).toBe('refresh')
+    expect(decide(createQuotaEntry({ collectionStatus: 'failed' }))).toBe('retry')
+    expect(decide(createQuotaEntry({ collectionStatus: 'partial' }))).toBe('retry')
+    expect(decide(createQuotaEntry({ collectionStatus: 'collecting' }))).toBe('collecting')
+    expect(decide(null, { collecting: true })).toBe('collecting')
+  })
+  test('honors capabilities, disabled and unsupported credentials without blocking execution cooldown', () => {
+    expect(decide(null, { available: false })).toBe('unavailable')
+    expect(decide(null, { resource: { ...resource, disabled: true } })).toBe('disabled')
+    expect(decide(createQuotaEntry({ credentialStatus: 'disabled' }))).toBe('disabled')
+    expect(decide(createQuotaEntry({ credentialType: 'provider_api_key' }))).toBe('unsupported')
+    expect(decide(createQuotaEntry({ collectionStatus: 'unsupported' }))).toBe('unsupported')
+    expect(
+      decide(createQuotaEntry({ credentialStatus: 'cooldown' }), {
+        resource: { ...resource, status: 'error' },
+      }),
+    ).toBe('refresh')
+  })
+  test('keeps an existing quota visible during background refresh', () => {
+    const entry = createQuotaEntry()
+    expect(
+      resolveUpstreamQuotaCellState({
+        available: true,
+        loading: true,
+        truncated: false,
+        map: buildUpstreamQuotaJoinMap([entry]),
+        resource: { id: entry.id, authIndex: entry.authIndex, name: null, identifier: entry.id },
+      }),
+    ).toEqual({ kind: 'entry', entry })
   })
 })

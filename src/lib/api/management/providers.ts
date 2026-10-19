@@ -11,6 +11,7 @@ export type ProviderId =
   | 'claude'
   | 'codex'
   | 'xai'
+  | 'meta'
   | 'vertex'
   | 'openaiCompatibility'
 export type ProviderModelChannel =
@@ -23,6 +24,42 @@ export type ProviderModelChannel =
   | 'kimi'
   | 'antigravity'
   | 'xai'
+  | 'meta'
+
+export const PROVIDER_THINKING_LEVELS = [
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'auto',
+] as const
+
+export const PROVIDER_ERROR_RULE_ACTIONS = [
+  'stop',
+  'stop-and-cooldown',
+  'continue',
+  'continue-and-cooldown',
+] as const
+
+export type ProviderErrorRuleAction = (typeof PROVIDER_ERROR_RULE_ACTIONS)[number]
+
+export type ProviderRequestScopedErrorRule = {
+  status: number
+  match?: string[]
+  'match-regexr'?: string[]
+  action: ProviderErrorRuleAction
+}
+
+export type ProviderApiKeyEntryInput = {
+  id?: string
+  apiKey: string
+  existingApiKey?: string
+  proxyUrl: string
+  weight?: number | null
+}
 
 export type ProviderDescriptor = {
   id: ProviderId
@@ -48,15 +85,25 @@ export type ProviderEntryFormInput = {
   proxyUrl: string
   prefix: string
   disabled: boolean
-  disableCooling: boolean
+  disableCooling: boolean | null
   websockets: boolean
   priority?: number
+  weight?: number | null
   requestRetry?: number | null
   models: ProviderModelEntryInput[]
   headers: ProviderHeaderEntryInput[]
   excludedModelsText: string
   testModel?: string
   cloak?: ProviderCloakInput
+  requestScopedErrors?: ProviderRequestScopedErrorRule[]
+  disableCodexCloaking?: boolean | null
+  alphaSearch?: boolean
+  rebuildMidSystemMessage?: boolean
+  nativeToolSearch?: boolean
+  fingerprintProfile?: string
+  experimentalCchSigning?: boolean
+  supportPromptCacheKey?: boolean
+  apiKeyEntries?: ProviderApiKeyEntryInput[]
 }
 
 export type ProviderCloakInput = {
@@ -71,6 +118,20 @@ export type ProviderModelEntryInput = {
   alias: string
   displayName: string
   forceMapping: boolean
+  maxContextLength?: string
+  isCompat?: boolean
+  supportConfigurationUpdate?: boolean
+  image?: boolean
+  inputModalitiesText?: string
+  outputModalitiesText?: string
+  useMaxCompletionTokens?: boolean
+  thinkingEnabled?: boolean
+  thinkingLevels?: string[]
+  thinkingMin?: string
+  thinkingMax?: string
+  thinkingZeroAllowed?: boolean
+  thinkingDynamicAllowed?: boolean
+  raw?: UnknownRecord
 }
 
 export type ProviderHeaderEntryInput = {
@@ -118,8 +179,10 @@ export type ProviderResource = {
   prefix: string | null
   disabled: boolean
   disableCooling: boolean
+  disableCoolingOverride?: boolean | null
   websockets: boolean
   priority: number | null
+  weight?: number | null
   requestRetry: number | null
   modelCount: number
   headerCount: number
@@ -175,6 +238,7 @@ const providerModelDefinitionChannels: ProviderModelChannel[] = [
   'kimi',
   'antigravity',
   'xai',
+  'meta',
 ]
 
 export function getProviderModelDefinitionChannels(runtimeMode: RuntimeMode) {
@@ -198,7 +262,7 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsConnectivityTest: false,
     supportsCloak: false,
     supportsWebsockets: false,
-    supportsRichModelAliases: false,
+    supportsRichModelAliases: true,
   },
   {
     id: 'interactions',
@@ -230,7 +294,7 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsConnectivityTest: true,
     supportsCloak: true,
     supportsWebsockets: false,
-    supportsRichModelAliases: false,
+    supportsRichModelAliases: true,
   },
   {
     id: 'codex',
@@ -265,6 +329,22 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsRichModelAliases: true,
   },
   {
+    id: 'meta',
+    path: '/config/api-keys/meta',
+    responseKey: 'meta',
+    supportsName: false,
+    supportsApiKey: true,
+    disabledMode: 'auth-status',
+    requiresBaseUrl: false,
+    defaultBaseUrl: 'https://api.meta.ai/v1',
+    modelDefinitionChannel: 'meta',
+    supportsModelDiscovery: true,
+    supportsConnectivityTest: false,
+    supportsCloak: false,
+    supportsWebsockets: true,
+    supportsRichModelAliases: true,
+  },
+  {
     id: 'vertex',
     path: '/config/api-keys/vertex',
     responseKey: 'vertex',
@@ -278,7 +358,7 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsConnectivityTest: false,
     supportsCloak: false,
     supportsWebsockets: false,
-    supportsRichModelAliases: false,
+    supportsRichModelAliases: true,
   },
   {
     id: 'openaiCompatibility',
@@ -294,7 +374,7 @@ const providerDescriptors: ProviderDescriptor[] = [
     supportsConnectivityTest: true,
     supportsCloak: false,
     supportsWebsockets: false,
-    supportsRichModelAliases: false,
+    supportsRichModelAliases: true,
   },
 ]
 
@@ -469,8 +549,11 @@ function normalizeNativeKeyResource(
     prefix: readString(record, 'prefix'),
     disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
     disableCooling: readBoolean(record, 'disable-cooling'),
+    disableCoolingOverride:
+      typeof record['disable-cooling'] === 'boolean' ? record['disable-cooling'] : null,
     websockets: readBoolean(key, 'websockets'),
     priority: readNumber(record, 'priority'),
+    weight: readNumber(key, 'weight'),
     requestRetry:
       readNonNegativeInteger(record, 'request-retry') ??
       readNonNegativeInteger(record, 'request_retry'),
@@ -511,8 +594,11 @@ function normalizeCompatibilityResource(
     prefix: readString(record, 'prefix'),
     disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
     disableCooling: readBoolean(record, 'disable-cooling'),
+    disableCoolingOverride:
+      typeof record['disable-cooling'] === 'boolean' ? record['disable-cooling'] : null,
     websockets: readBoolean(record, 'websockets'),
     priority: readNumber(record, 'priority'),
+    weight: readNumber(firstKey, 'weight'),
     requestRetry:
       readNonNegativeInteger(record, 'request-retry') ??
       readNonNegativeInteger(record, 'request_retry'),
@@ -788,20 +874,199 @@ async function runProviderApiCall(
   return body
 }
 
-function createModelPayload(entries: ProviderModelEntryInput[], supportsRichModelAliases: boolean) {
+function parseModalityList(value: string | undefined): string[] {
+  if (!value) return []
+  const seen = new Set<string>()
+  const result: string[] = []
+  for (const item of value.split(/[\s,]+/)) {
+    const trimmed = item.trim().toLowerCase()
+    if (!trimmed || seen.has(trimmed)) continue
+    seen.add(trimmed)
+    result.push(trimmed)
+  }
+  return result
+}
+
+function buildModelThinkingPayload(
+  entry: ProviderModelEntryInput,
+  existingThinking?: UnknownRecord,
+): UnknownRecord | undefined {
+  if (entry.thinkingEnabled === undefined) {
+    return existingThinking
+  }
+  if (!entry.thinkingEnabled) {
+    return undefined
+  }
+
+  const nextThinking: UnknownRecord = existingThinking ? { ...existingThinking } : {}
+  delete nextThinking.zero_allowed
+  delete nextThinking.dynamic_allowed
+
+  if (entry.thinkingLevels !== undefined) {
+    const levels = Array.from(
+      new Set(entry.thinkingLevels.map((level) => level.trim().toLowerCase()).filter(Boolean)),
+    )
+    if (levels.length > 0) {
+      nextThinking.levels = levels
+    } else {
+      delete nextThinking.levels
+    }
+  }
+
+  if (entry.thinkingMin !== undefined) {
+    const trimmed = entry.thinkingMin.trim()
+    const parsed = trimmed ? Number(trimmed) : Number.NaN
+    if (trimmed && Number.isSafeInteger(parsed) && parsed >= 0) {
+      nextThinking.min = parsed
+    } else {
+      delete nextThinking.min
+    }
+  }
+
+  if (entry.thinkingMax !== undefined) {
+    const trimmed = entry.thinkingMax.trim()
+    const parsed = trimmed ? Number(trimmed) : Number.NaN
+    if (trimmed && Number.isSafeInteger(parsed) && parsed >= 0) {
+      nextThinking.max = parsed
+    } else {
+      delete nextThinking.max
+    }
+  }
+
+  if (entry.thinkingZeroAllowed !== undefined) {
+    if (entry.thinkingZeroAllowed) {
+      nextThinking['zero-allowed'] = true
+    } else {
+      delete nextThinking['zero-allowed']
+    }
+  }
+
+  if (entry.thinkingDynamicAllowed !== undefined) {
+    if (entry.thinkingDynamicAllowed) {
+      nextThinking['dynamic-allowed'] = true
+    } else {
+      delete nextThinking['dynamic-allowed']
+    }
+  }
+
+  // An explicit empty object suppresses backend defaults; omission inherits them.
+  return nextThinking
+}
+
+function createModelPayload(
+  entries: ProviderModelEntryInput[],
+  descriptor: ProviderDescriptor,
+  existingModels: UnknownRecord[] = [],
+) {
+  const existingByName = new Map<string, UnknownRecord>()
+  for (const model of existingModels) {
+    const name = readString(model, 'name')
+    if (name && !existingByName.has(name)) {
+      existingByName.set(name, model)
+    }
+  }
+
   return entries
     .map((entry) => {
       const name = entry.name.trim()
       if (!name) return null
 
-      const payload: UnknownRecord = { name }
-      const alias = entry.alias.trim()
+      const baseRaw = entry.raw ?? existingByName.get(name)
+      const payload: UnknownRecord = baseRaw ? { ...baseRaw } : {}
+      payload.name = name
 
-      if (alias && alias !== name) payload.alias = alias
-      if (supportsRichModelAliases) {
+      const alias = entry.alias.trim()
+      if (alias && alias !== name) {
+        payload.alias = alias
+      } else {
+        delete payload.alias
+      }
+
+      if (descriptor.supportsRichModelAliases) {
         const displayName = entry.displayName.trim()
-        if (displayName) payload['display-name'] = displayName
-        if (entry.forceMapping) payload['force-mapping'] = true
+        if (displayName) {
+          payload['display-name'] = displayName
+        } else {
+          delete payload['display-name']
+        }
+
+        if (entry.forceMapping) {
+          payload['force-mapping'] = true
+        } else {
+          delete payload['force-mapping']
+        }
+      }
+
+      if (descriptor.id !== 'vertex') {
+        if (entry.maxContextLength !== undefined) {
+          const trimmed = entry.maxContextLength.trim()
+          const parsed = trimmed ? Number(trimmed) : Number.NaN
+          if (trimmed && Number.isSafeInteger(parsed) && parsed > 0) {
+            payload['max-context-length'] = parsed
+          } else {
+            delete payload['max-context-length']
+          }
+        }
+
+        if (entry.isCompat !== undefined) {
+          if (entry.isCompat) {
+            payload['is-compat'] = true
+          } else {
+            delete payload['is-compat']
+          }
+        }
+      }
+
+      if (descriptor.id === 'codex' && entry.supportConfigurationUpdate !== undefined) {
+        if (entry.supportConfigurationUpdate) {
+          payload['support-configuration-update'] = true
+        } else {
+          delete payload['support-configuration-update']
+        }
+      }
+
+      if (descriptor.id === 'openaiCompatibility') {
+        if (entry.image !== undefined) {
+          if (entry.image) {
+            payload.image = true
+          } else {
+            delete payload.image
+          }
+        }
+
+        if (entry.inputModalitiesText !== undefined) {
+          const modalities = parseModalityList(entry.inputModalitiesText)
+          if (modalities.length > 0) {
+            payload['input-modalities'] = modalities
+          } else {
+            delete payload['input-modalities']
+          }
+        }
+
+        if (entry.outputModalitiesText !== undefined) {
+          const modalities = parseModalityList(entry.outputModalitiesText)
+          if (modalities.length > 0) {
+            payload['output-modalities'] = modalities
+          } else {
+            delete payload['output-modalities']
+          }
+        }
+
+        if (entry.useMaxCompletionTokens !== undefined) {
+          if (entry.useMaxCompletionTokens) {
+            payload['use-max-completion-tokens'] = true
+          } else {
+            delete payload['use-max-completion-tokens']
+          }
+        }
+      }
+
+      const existingThinking = isRecord(baseRaw?.thinking) ? baseRaw.thinking : undefined
+      const thinking = buildModelThinkingPayload(entry, existingThinking)
+      if (thinking !== undefined) {
+        payload.thinking = thinking
+      } else {
+        delete payload.thinking
       }
 
       return payload
@@ -844,6 +1109,7 @@ function appendProviderOptions(
   payload: UnknownRecord,
   descriptor: ProviderDescriptor,
   input: ProviderEntryFormInput,
+  existingModels: UnknownRecord[] = [],
 ) {
   payload.priority =
     typeof input.priority === 'number' && Number.isFinite(input.priority) ? input.priority : 0
@@ -851,12 +1117,15 @@ function appendProviderOptions(
   const headers = createHeaderPayload(input.headers)
   payload.headers = headers
 
-  const models = createModelPayload(input.models, descriptor.supportsRichModelAliases)
+  const models = createModelPayload(input.models, descriptor, existingModels)
   payload.models = models
 
   const excludedModels = parseTextList(input.excludedModelsText)
   payload['excluded-models'] = excludedModels
-  payload['disable-cooling'] = input.disableCooling
+
+  if (typeof input.disableCooling === 'boolean') {
+    payload['disable-cooling'] = input.disableCooling
+  }
 
   if (input.requestRetry !== undefined) {
     payload['request-retry'] =
@@ -865,6 +1134,23 @@ function appendProviderOptions(
         : Number.isSafeInteger(input.requestRetry) && input.requestRetry >= 0
           ? input.requestRetry
           : null
+  }
+
+  if (descriptor.id !== 'vertex' && input.requestScopedErrors !== undefined) {
+    if (input.requestScopedErrors.length > 0) {
+      payload['request-scoped-errors'] = input.requestScopedErrors.map((rule) => {
+        const match = rule.match?.map((item) => item.trim()).filter(Boolean) ?? []
+        const regexes = rule['match-regexr']?.map((item) => item.trim()).filter(Boolean) ?? []
+        return {
+          status: rule.status,
+          action: rule.action,
+          ...(match.length ? { match } : {}),
+          ...(regexes.length ? { 'match-regexr': regexes } : {}),
+        }
+      })
+    } else {
+      delete payload['request-scoped-errors']
+    }
   }
 }
 
@@ -898,11 +1184,66 @@ function createNativeKeyPayload(
   const apiKey = input.apiKey.trim() || readString(existing, 'api-key') || ''
   if (apiKey) payload['api-key'] = apiKey
 
-  const weight = readNumber(existing, 'weight')
-  if (weight !== null) payload.weight = weight
+  if (input.weight !== undefined) {
+    if (typeof input.weight === 'number' && Number.isSafeInteger(input.weight)) {
+      payload.weight = input.weight
+    }
+  } else {
+    const weight = readNumber(existing, 'weight')
+    if (weight !== null) payload.weight = weight
+  }
 
   for (const field of NATIVE_KEY_CARRY_FIELDS) {
     if (existing[field] !== undefined) payload[field] = existing[field]
+  }
+
+  if (descriptor.id === 'codex') {
+    if (input.disableCodexCloaking !== undefined) {
+      if (typeof input.disableCodexCloaking === 'boolean') {
+        payload['disable-codex-cloaking'] = input.disableCodexCloaking
+      } else {
+        delete payload['disable-codex-cloaking']
+      }
+    }
+    if (input.alphaSearch !== undefined) {
+      if (input.alphaSearch) {
+        payload['alpha-search'] = true
+      } else {
+        delete payload['alpha-search']
+      }
+    }
+  }
+
+  if (descriptor.id === 'claude') {
+    if (input.rebuildMidSystemMessage !== undefined) {
+      if (input.rebuildMidSystemMessage) {
+        payload['rebuild-mid-system-message'] = true
+      } else {
+        delete payload['rebuild-mid-system-message']
+      }
+    }
+    if (input.nativeToolSearch !== undefined) {
+      if (input.nativeToolSearch) {
+        payload['native-tool-search'] = true
+      } else {
+        delete payload['native-tool-search']
+      }
+    }
+    if (input.fingerprintProfile !== undefined) {
+      const profile = input.fingerprintProfile.trim()
+      if (profile) {
+        payload['fingerprint-profile'] = profile
+      } else {
+        delete payload['fingerprint-profile']
+      }
+    }
+    if (input.experimentalCchSigning !== undefined) {
+      if (input.experimentalCchSigning) {
+        payload['experimental-cch-signing'] = true
+      } else {
+        delete payload['experimental-cch-signing']
+      }
+    }
   }
 
   // Provider-specific options live on the key, not on the group.
@@ -918,7 +1259,11 @@ function createNativeKeyPayload(
   return payload
 }
 
-function createNativeGroupPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
+function createNativeGroupPayload(
+  descriptor: ProviderDescriptor,
+  input: ProviderEntryFormInput,
+  existingModels: UnknownRecord[] = [],
+) {
   const payload: UnknownRecord = {}
 
   if (input.baseUrl.trim()) {
@@ -933,7 +1278,7 @@ function createNativeGroupPayload(descriptor: ProviderDescriptor, input: Provide
     payload.prefix = input.prefix.trim()
   }
 
-  appendProviderOptions(payload, descriptor, input)
+  appendProviderOptions(payload, descriptor, input, existingModels)
 
   return payload
 }
@@ -941,6 +1286,7 @@ function createNativeGroupPayload(descriptor: ProviderDescriptor, input: Provide
 function createCompatibilityGroupPayload(
   descriptor: ProviderDescriptor,
   input: ProviderEntryFormInput,
+  existingModels: UnknownRecord[] = [],
 ) {
   const payload: UnknownRecord = {}
 
@@ -958,12 +1304,56 @@ function createCompatibilityGroupPayload(
 
   payload.disabled = input.disabled
 
-  appendProviderOptions(payload, descriptor, input)
+  if (input.supportPromptCacheKey !== undefined) {
+    if (input.supportPromptCacheKey) {
+      payload['support-prompt-cache-key'] = true
+    }
+  }
+
+  appendProviderOptions(payload, descriptor, input, existingModels)
 
   return payload
 }
 
 function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: UnknownRecord[]) {
+  if (input.apiKeyEntries !== undefined) {
+    return input.apiKeyEntries
+      .map((entry) => {
+        const entryId = entry.id?.trim()
+        const existingApiKey = entry.existingApiKey?.trim()
+        const existing = existingKeys.find((key) =>
+          entryId
+            ? (readString(key, 'id') ?? readString(key, 'uuid')) === entryId
+            : Boolean(existingApiKey) && readString(key, 'api-key') === existingApiKey,
+        )
+        if ((entryId || existingApiKey) && !existing) {
+          throw new Error('Provider credential not found')
+        }
+        const resolvedApiKey = entry.apiKey.trim() || readString(existing ?? {}, 'api-key') || ''
+        if (!resolvedApiKey) return null
+
+        const payload: UnknownRecord = {}
+        const id = readString(existing ?? {}, 'id') ?? readString(existing ?? {}, 'uuid')
+        if (id) payload.id = id
+
+        payload['api-key'] = resolvedApiKey
+        const proxyUrl = entry.proxyUrl.trim()
+        if (proxyUrl) payload['proxy-url'] = proxyUrl
+
+        if (entry.weight !== undefined) {
+          if (typeof entry.weight === 'number' && Number.isSafeInteger(entry.weight)) {
+            payload.weight = entry.weight
+          }
+        } else {
+          const weight = readNumber(existing ?? {}, 'weight')
+          if (weight !== null) payload.weight = weight
+        }
+
+        return payload
+      })
+      .filter((entry): entry is UnknownRecord => Boolean(entry))
+  }
+
   const apiKey = input.apiKey.trim()
   const proxyUrl = input.proxyUrl.trim()
 
@@ -972,6 +1362,9 @@ function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: Un
     if (!apiKey) return []
     const key: UnknownRecord = { 'api-key': apiKey }
     if (proxyUrl) key['proxy-url'] = proxyUrl
+    if (typeof input.weight === 'number' && Number.isSafeInteger(input.weight)) {
+      key.weight = input.weight
+    }
     return [key]
   }
 
@@ -986,8 +1379,14 @@ function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: Un
     if (resolvedApiKey) payload['api-key'] = resolvedApiKey
     if (proxyUrl) payload['proxy-url'] = proxyUrl
 
-    const weight = readNumber(existing, 'weight')
-    if (weight !== null) payload.weight = weight
+    if (input.weight !== undefined) {
+      if (typeof input.weight === 'number' && Number.isSafeInteger(input.weight)) {
+        payload.weight = input.weight
+      }
+    } else {
+      const weight = readNumber(existing, 'weight')
+      if (weight !== null) payload.weight = weight
+    }
 
     return payload
   })
@@ -1105,6 +1504,7 @@ function replaceNativeCredential(
 
   const group = family[location.groupIndex]
   const existingKeys = readGroupKeys(group)
+  const existingModels = Array.isArray(group.models) ? group.models.filter(isRecord) : []
   const nextKey = createNativeKeyPayload(descriptor, input, existingKeys[location.keyIndex])
   const nextKeys = existingKeys.length
     ? existingKeys.map((key, index) => (index === location.keyIndex ? nextKey : key))
@@ -1114,7 +1514,10 @@ function replaceNativeCredential(
   for (const field of NATIVE_GROUP_CARRY_FIELDS) {
     if (group[field] !== undefined) nextGroup[field] = group[field]
   }
-  Object.assign(nextGroup, createNativeGroupPayload(descriptor, input))
+  Object.assign(nextGroup, createNativeGroupPayload(descriptor, input, existingModels))
+  if (input.requestScopedErrors !== undefined && input.requestScopedErrors.length === 0) {
+    delete nextGroup['request-scoped-errors']
+  }
   nextGroup.keys = nextKeys
 
   const nextFamily = family.slice()
@@ -1132,11 +1535,18 @@ function replaceCompatibilityGroup(
   if (groupIndex === null) throw new Error('Provider entry not found')
 
   const group = family[groupIndex]
+  const existingModels = Array.isArray(group.models) ? group.models.filter(isRecord) : []
   const nextGroup: UnknownRecord = {}
   for (const field of COMPATIBILITY_GROUP_CARRY_FIELDS) {
     if (group[field] !== undefined) nextGroup[field] = group[field]
   }
-  Object.assign(nextGroup, createCompatibilityGroupPayload(descriptor, input))
+  Object.assign(nextGroup, createCompatibilityGroupPayload(descriptor, input, existingModels))
+  if (input.supportPromptCacheKey === false) {
+    delete nextGroup['support-prompt-cache-key']
+  }
+  if (input.requestScopedErrors !== undefined && input.requestScopedErrors.length === 0) {
+    delete nextGroup['request-scoped-errors']
+  }
   nextGroup.keys = createCompatibilityKeys(input, readGroupKeys(group))
 
   const nextFamily = family.slice()
@@ -1338,7 +1748,7 @@ export async function fetchProviderDiscoveredModels(
     return normalizeDiscoveredModels(payload)
   }
 
-  if (input.providerId === 'codex') {
+  if (input.providerId === 'codex' || input.providerId === 'meta' || input.providerId === 'xai') {
     const resolvedHeaders = { ...headers }
     if (apiKey && !hasHeader(resolvedHeaders, 'authorization')) {
       resolvedHeaders.Authorization = `Bearer ${apiKey}`
@@ -1346,9 +1756,15 @@ export async function fetchProviderDiscoveredModels(
       resolvedHeaders.Authorization = 'Bearer $TOKEN$'
     }
 
+    const defaultBaseUrl =
+      input.providerId === 'meta'
+        ? 'https://api.meta.ai/v1'
+        : input.providerId === 'xai'
+          ? 'https://api.x.ai/v1'
+          : ''
     const payload = await runProviderModelApiCall(client, {
       authIndex,
-      url: buildV1ModelsEndpoint(input.baseUrl),
+      url: buildV1ModelsEndpoint(input.baseUrl || defaultBaseUrl),
       headers: resolvedHeaders,
     })
 

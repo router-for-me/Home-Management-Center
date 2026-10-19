@@ -1550,6 +1550,7 @@ export const ru = {
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
+        meta: 'Meta',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1639,6 +1640,7 @@ export const ru = {
         claude: 'Claude',
         codex: 'Codex',
         xai: 'xAI',
+        meta: 'Meta',
         vertex: 'Vertex',
         openaiCompatibility: 'OpenAI',
       },
@@ -1691,6 +1693,7 @@ export const ru = {
           kimi: 'Kimi',
           antigravity: 'Antigravity',
           xai: 'xAI',
+          meta: 'Meta',
         },
       },
       status: {
@@ -1727,6 +1730,24 @@ export const ru = {
         },
       },
       form: {
+        apiKeyEntryLabel: 'Ключ {{index}}',
+        claudeFingerprintProfileHint:
+          'Оставьте пустым, чтобы использовать профиль вызывающего клиента.',
+        claudeRebuildMidSystemMessageHint: 'Перестраивать сообщения system внутри диалога.',
+        claudeNativeToolSearchHint:
+          'Разрешить нативный поиск инструментов для этого сервера. Требуется глобальная настройка Claude tool-search.',
+        claudeExperimentalCchSigningHint:
+          'Настройка совместимости; для поддерживаемых прямых подключений подпись выполняется автоматически.',
+        modelIsCompatHint: 'Сохранять блоки рассуждений с пустыми подписями.',
+        modelSupportConfigUpdateHint: 'Разрешить Responses configuration_update для этой модели.',
+        modelImageSupportHint: 'Отмечать эту модель как модель изображений в каталоге.',
+        modelUseMaxCompletionTokensHint:
+          'Отправлять серверу max_completion_tokens вместо max_tokens.',
+        modelThinkingEnabled: 'Переопределить возможности рассуждения',
+        modelThinkingHint:
+          'Если выключено, используются настройки сервера. Если включено — только возможности, заданные ниже.',
+        requestScopedErrorAction: 'Действие',
+        requestScopedErrorRegex: 'Регулярные выражения (по одному в строке)',
         createEyebrow: 'Новый модельный ключ',
         editEyebrow: 'Изменить модельный ключ',
         name: 'Имя поставщика моделей',
@@ -1737,8 +1758,10 @@ export const ru = {
         baseUrlRequiredHint:
           'Для Codex, xAI и OpenAI-compatible providers требуется Base URL. Backend игнорирует записи с пустым Base URL.',
         proxyUrl: 'Proxy URL',
+        directProxyAction: 'Указать direct',
         prefix: 'Model prefix',
         priority: 'Приоритет',
+        weight: 'Вес (Weight)',
         requestRetry: 'Раунды повторов запроса',
         requestRetryPlaceholder: 'Оставьте пустым для глобального, 0 для отключения доп. раундов',
         requestRetryHint:
@@ -1747,9 +1770,30 @@ export const ru = {
         disabledHint: 'Отключенная запись не используется для upstream requests.',
         disableCooling: 'Отключить cooling',
         disableCoolingHint: 'Исключает модельный ключ из quota cooldown scheduling.',
+        disableCoolingModeInherit: 'Наследовать глобальный',
+        disableCoolingModeEnabled: 'Включено (отключить cooling)',
+        disableCoolingModeDisabled: 'Выключено (разрешить cooling)',
         websockets: 'Поддержка WebSocket',
         websocketsHint:
-          'Только для Codex и xAI. Использует upstream WebSocket transport для downstream WebSocket requests.',
+          'Для Codex, xAI и Meta. Использует upstream WebSocket transport для downstream WebSocket requests.',
+        codexOptionsSection: 'Параметры Codex',
+        disableCodexCloaking: 'Отключить Codex cloaking',
+        disableCodexCloakingHint: 'Отключает маскировку запросов по умолчанию для Codex.',
+        alphaSearch: 'Alpha Search',
+        alphaSearchHint: 'Включить поддержку Alpha Search для этой записи Codex.',
+        supportPromptCacheKey: 'Поддержка prompt_cache_key',
+        supportPromptCacheKeyHint:
+          'Передавать prompt_cache_key в этот OpenAI-compatible upstream endpoint.',
+        apiKeyEntriesSection: 'Дополнительные ключи API (keys[])',
+        apiKeyEntriesHint:
+          'Настройте несколько upstream-ключей, индивидуальные proxy URL и веса балансировки для этого OpenAI-compatible провайдера.',
+        addApiKeyEntry: 'Добавить ключ',
+        removeApiKeyEntry: 'Удалить ключ',
+        claudeOptionsSection: 'Параметры Claude',
+        claudeRebuildMidSystemMessage: 'Перестраивать промежуточные system-сообщения',
+        claudeNativeToolSearch: 'Нативный Tool Search',
+        claudeExperimentalCchSigning: 'Экспериментальная подпись CCH',
+        claudeFingerprintProfile: 'Профиль отпечатка (Fingerprint Profile)',
         cloakSection: 'Cloak configuration',
         cloakHint: 'Только Claude. Настройка request cloaking и обработки sensitive words.',
         cloakMode: 'Cloak mode',
@@ -1767,10 +1811,33 @@ export const ru = {
         modelDisplayNamePlaceholder: 'Читаемое имя в каталоге моделей',
         modelForceMapping: 'Принудительное отображение response model',
         modelForceMappingHint: 'Переписывает поле модели в upstream response в клиентский alias.',
+        modelAdvancedToggle: 'Расширенные параметры модели',
+        modelMaxContextLength: 'Макс. длина контекста (max-context-length)',
+        modelIsCompat: 'Режим совместимости (is-compat)',
+        modelSupportConfigUpdate:
+          'Поддержка обновления конфигурации (support-configuration-update)',
+        modelUseMaxCompletionTokens: 'Использовать max_completion_tokens',
+        modelInputModalities: 'Входные модальности (через запятую)',
+        modelOutputModalities: 'Выходные модальности (через запятую)',
+        modelThinkingLevels: 'Уровни рассуждения',
+        modelThinkingMin: 'Мин. бюджет Thinking',
+        modelThinkingMax: 'Макс. бюджет Thinking',
+        modelThinkingZeroAllowed: 'Разрешить нулевой Thinking (zero-allowed)',
+        modelThinkingDynamicAllowed: 'Разрешить динамический Thinking (dynamic-allowed)',
+        modelImageSupport: 'Модель изображений',
+        modelImageAspectRatio: 'Разрешить aspect-ratio',
+        modelImageSize: 'Разрешить image-size',
         addModel: 'Добавить модель',
         removeModel: 'Удалить модель',
         excludedModels: 'Исключенные модели',
         excludedModelsHint: 'Один model ID на строку, либо разделяйте model ID запятыми.',
+        requestScopedErrorsSection: 'Правила ошибок на уровне запроса (request-scoped-errors)',
+        requestScopedErrorsHint:
+          'Сопоставляйте HTTP-статус и любую из подстрок или регулярных выражений. Действие определяет повторы и охлаждение.',
+        addRequestScopedError: 'Добавить правило',
+        removeRequestScopedError: 'Удалить правило',
+        requestScopedErrorCode: 'HTTP-код',
+        requestScopedErrorKeywords: 'Подстроки (по одной в строке)',
         headersSection: 'Request Headers',
         headersHint: 'Добавьте upstream request headers для этого модельного ключа.',
         headerName: 'Имя Header',
@@ -1778,15 +1845,24 @@ export const ru = {
         addHeader: 'Добавить Header',
         removeHeader: 'Удалить Header',
         validation: {
+          modelOptionsInvalid:
+            'Длина контекста должна быть положительным целым числом, бюджеты рассуждения — неотрицательными целыми; минимум не должен превышать максимум.',
           nameRequired: 'Введите имя поставщика моделей перед сохранением.',
           apiKeyRequired: 'Введите ключ модельного сервиса перед сохранением.',
           baseUrlRequired:
             'Введите Base URL перед сохранением. Codex, xAI и OpenAI-compatible providers не могут использовать пустой Base URL.',
           modelNameRequired:
             'Введите model ID, если заданы alias, отображаемое имя или принудительное отображение.',
+          modelMaxContextInvalid:
+            'Максимальная длина контекста модели должна быть положительным целым числом.',
+          modelThinkingBudgetInvalid: 'Значения бюджета Thinking должны быть целыми числами.',
           headerNameRequired: 'Введите имя Header, если задано значение Header.',
           requestRetryInvalid:
             'Количество раундов повторов должно быть неотрицательным целым числом.',
+          weightInvalid: 'Вес должен быть целым числом от 0 до 1000000.',
+          proxyUrlInvalid: 'Proxy URL должен быть корректным URL http/https/socks5 или direct.',
+          requestScopedErrorInvalid:
+            'Укажите положительный HTTP-статус и хотя бы одну подстроку или регулярное выражение.',
         },
       },
       discovery: {
@@ -1874,8 +1950,12 @@ export const ru = {
         queued: 'В очередь сбора квоты добавлено учётных данных: {{count}}.',
         updated: 'Обнаружены новые результаты активной проверки, снапшоты квоты обновлены.',
         pending: 'Сбор квоты может продолжаться в фоне; страница будет обновляться автоматически.',
-        notQueued:
-          'Новые задания не добавлены; учётные данные могут не соответствовать условиям, находиться в периоде ожидания либо уже быть в очереди или выполняться.',
+        notQueued: 'Новое задание не добавлено. Читается текущее состояние.',
+        credentialPending:
+          'Новый результат сбора пока недоступен. Страница продолжит периодически обновляться.',
+        credentialPartial:
+          'Квота обновлена, но часть информации получить не удалось. Откройте сведения об учётных данных.',
+        credentialUpdated: 'Квота обновлена.',
         credentialQueued: 'Сбор квоты для {{name}} поставлен в очередь.',
         unavailable:
           'Бэкенд пока не поддерживает запуск сбора квоты; вместо этого снапшоты были перечитаны.',
@@ -1892,10 +1972,22 @@ export const ru = {
         unsupported: 'Не поддерживается',
       },
       quota: {
+        actions: {
+          collect: 'Собрать квоту',
+          refresh: 'Обновить квоту',
+          retry: 'Повторить сбор',
+          collecting: 'Сбор квоты',
+          disabled: 'Включите учётные данные для сбора квоты',
+          unsupported: 'Этот тип учётных данных не поддерживает сбор квоты',
+          unavailable: 'Бэкенд не поддерживает активный сбор',
+        },
+        updatedAt: 'Квота обновлена: {{time}}',
+        metaAuthorizationRequired:
+          'В учётных данных отсутствует информация авторизации для запроса квоты Meta. Повторно импортируйте учётные данные с полной информацией авторизации.',
         notCollected: 'Не собрано',
-        snapshotMiss: 'Вне снапшота',
+        snapshotMiss: 'Не загружено',
         snapshotMissHint:
-          'Снапшот квоты существует, но эта учётная запись не вошла в загруженную страницу, отсортированную по риску.',
+          'Эти учётные данные не входят в загруженный список снапшотов. Откройте сведения о квоте для чтения текущего состояния.',
         unsupported: 'Не поддерживается',
         unsupportedHint:
           'Сбор квоты недоступен для этого типа учётных данных (обычно для API-ключей поставщика).',
@@ -1911,7 +2003,7 @@ export const ru = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: 'Ещё {{count}}',
         truncated:
-          'Снапшоты квоты покрывают только первые {{count}} учётных данных по риску; остальные показывают «Не собрано».',
+          'Список квот загружает первые {{count}} учётных данных по риску. Для остальных откройте сведения о квоте.',
         antigravity: {
           gemini: 'Gemini',
           thirdParty: 'Claude + GPT',
@@ -2022,7 +2114,8 @@ export const ru = {
           unavailableTitle: 'Детали квоты не поддерживаются',
           unavailableDescription:
             'Management API не предоставляет детали снапшотов квоты; показаны только сводки списка.',
-          readOnlyNote: 'Квота — снапшот только для чтения, не инициирует проверки апстрима.',
+          readOnlyNote:
+            'Просмотр снапшотов не запускает проверки апстрима. Кнопки сбора и обновления запрашивают новую квоту.',
         },
       },
     },
@@ -2261,10 +2354,24 @@ export const ru = {
         },
       },
       form: {
+        proxyInherit: 'Наследовать прокси',
+        metadataLoading: 'Загрузка метаданных учётных данных',
+        headersIncomplete: 'Укажите имя и значение заголовка или удалите строку.',
+        customFieldsInvalid:
+          'Укажите корректный путь через точку. Идентификаторы учётных данных и параметры параллелизма нельзя изменять как метаданные.',
+        customFieldsWarning:
+          'Сохранение поля не гарантирует, что текущий провайдер его использует.',
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
+        proxyUrlDirectHint:
+          'Поддерживаются URL http/https/socks5 или direct для прямого подключения в обход глобального прокси.',
+        directProxyAction: 'Указать direct',
         priority: 'Приоритет',
         priorityInvalid: 'Приоритет должен быть целым числом.',
+        weight: 'Вес (Weight)',
+        weightHint:
+          'Весовой коэффициент балансировки среди учетных данных с одинаковым приоритетом (0–1000000, пусто — по умолчанию).',
+        weightInvalid: 'Вес должен быть целым числом от 0 до 1000000.',
         requestRetry: 'Раунды повторов запроса',
         requestRetryPlaceholder: 'Оставьте пустым для глобального, 0 для отключения доп. раундов',
         requestRetryHint:
@@ -2276,7 +2383,29 @@ export const ru = {
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
         coolingSchedule: 'Расписание охлаждения',
         coolingScheduleHint:
-          'При включении эти учётные данные участвуют в расписании охлаждения квот; при выключении исключаются из охлаждения.',
+          'Настройте, участвует ли эта учетная запись в расписании охлаждения квот или наследует глобальную политику.',
+        coolingModeInherit: 'Наследовать глобальную политику',
+        coolingModeEnabled: 'Участвовать в охлаждении (disable_cooling = false)',
+        coolingModeDisabled: 'Отключить охлаждение (disable_cooling = true)',
+        excludedModels: 'Исключенные модели (excluded_models)',
+        excludedModelsPlaceholder: 'По одному model ID на строку или через запятую',
+        excludedModelsHint:
+          'Непустой список заменяет глобальные исключения OAuth. Очистите его, чтобы снова наследовать глобальные правила.',
+        headersSection: 'Пользовательские заголовки (headers)',
+        headersHint: 'HTTP-заголовки, добавляемые к upstream-запросам с этой учетной записью.',
+        addHeader: 'Добавить Header',
+        removeHeader: 'Удалить Header',
+        headerNamePlaceholder: 'Имя Header',
+        headerValuePlaceholder: 'Значение Header',
+        headerNameRequired: 'Введите имя Header, если задано значение Header.',
+        customFieldsSection: 'Дополнительные поля метаданных',
+        customFieldsHint:
+          'Чтение и запись произвольных полей в JSON учетных данных по путям через точку (например custom.flag или nested.config). Поддерживаются JSON-значения и строки.',
+        addCustomField: 'Добавить поле',
+        removeCustomField: 'Удалить поле',
+        customFieldPathPlaceholder: 'Путь поля, напр. custom.field',
+        customFieldValuePlaceholder: 'Значение (JSON или текст)',
+        customFieldKeyRequired: 'Укажите путь поля, если задано значение.',
         note: 'Заметка',
       },
       concurrency: {
@@ -3001,10 +3130,10 @@ export const ru = {
           title: 'Провайдеры OAuth',
           shortTitle: 'Провайдеры',
           description:
-            'Настройка каталога OAuth auth, числа workers автообновления и переключателей уровня провайдера.',
+            'Настройка каталога учётных данных OAuth и параметров провайдеров Codex, Antigravity и Devin.',
         },
         liveMediaRelay: {
-          title: 'Ретрансляция живого медиа',
+          title: 'Codex · Ретрансляция живого медиа',
           shortTitle: 'Медиарелей',
           description:
             'Настройка ретрансляции живого медиа (аудио/видео) Codex: лимит сессий, публичный IP, диапазон UDP-портов и ICE-серверы.',
@@ -3021,16 +3150,11 @@ export const ru = {
           description:
             'Настройка outbound proxy для запросов сервера и passthrough заголовков запросов.',
         },
-        quota: {
-          title: 'Обработка квот',
-          shortTitle: 'Квоты',
-          description: 'Поведение при исчерпании квоты.',
-        },
         streaming: {
           title: 'Повторы и маршрутизация',
           shortTitle: 'Роутинг',
           description:
-            'Управление повторами запросов, совпадением prefix модели, стратегией маршрутизации, session affinity, сохранением cooldown и транспортным keepalive.',
+            'Управление повторами запросов, совпадением prefix модели, стратегией маршрутизации, session affinity и транспортным keepalive.',
         },
         credentialConcurrency: {
           title: 'Параллелизм учетных данных',
@@ -3130,15 +3254,6 @@ export const ru = {
           label: 'Отключить control panel',
           description: 'Отключить /management.html и синхронизацию panel.',
         },
-        remoteManagementDisableAutoUpdatePanel: {
-          label: 'Отключить автообновление panel',
-          description: 'Отключить периодические фоновые обновления panel assets.',
-        },
-        remoteManagementPanelGithubRepository: {
-          label: 'Panel repository URL',
-          description: 'GitHub repository URL или releases API URL для обновления panel assets.',
-          placeholder: 'https://github.com/org/repo',
-        },
         proxyUrl: {
           label: 'Outbound proxy URL',
           description:
@@ -3193,14 +3308,6 @@ export const ru = {
         routingStrategy: {
           label: 'Стратегия маршрутизации',
           description: 'Стратегия выбора при нескольких ключах или учетных данных.',
-        },
-        quotaSwitchProject: {
-          label: 'Переключать проект при квоте',
-          description: 'Пробовать другой проект при исчерпании квоты.',
-        },
-        quotaSwitchPreviewModel: {
-          label: 'Переключать preview model при квоте',
-          description: 'Пробовать доступную preview model при исчерпании квоты.',
         },
         oauthExcludedModelsJson: {
           label: 'Disabled models',
@@ -3466,20 +3573,15 @@ export const ru = {
           label: 'Session affinity для subagent',
           description: 'Включать запросы subagent в маршрутизацию session affinity.',
         },
-        saveCooldownStatus: {
-          label: 'Сохранять состояние cooldown',
-          description:
-            'Записывать состояние cooldown учетных данных на диск, чтобы оно переживало перезапуск.',
-        },
-        transientErrorCooldownSeconds: {
-          label: 'Cooldown временных ошибок (сек)',
-          description:
-            'Секунды cooldown после временной ошибки. -1 отключает этот cooldown; 0 использует значение backend 60s.',
-        },
         streamingKeepaliveSeconds: {
           label: 'Интервал keepalive потока (сек)',
           description:
             'Интервал отправки keepalive для потоковых ответов в секундах. 0 использует политику backend.',
+        },
+        streamingSendKeepaliveBeforeFt: {
+          label: 'Отправлять keepalive до первого токена',
+          description:
+            'Начинать отправку потоковых keepalive-сигналов клиенту до получения первого токена от upstream.',
         },
         streamingBootstrapRetries: {
           label: 'Повторы запуска потока',
@@ -3603,11 +3705,6 @@ export const ru = {
           description: 'Каталог хранения OAuth file credentials.',
           placeholder: '~/.cli-proxy-api',
         },
-        oauthAuthAutoRefreshWorkers: {
-          label: 'Потоки автообновления',
-          description:
-            'Параллельные worker для автообновления OAuth credentials. 0 использует политику backend.',
-        },
         oauthCodexHeaderUserAgent: {
           label: 'Codex User-Agent',
           description:
@@ -3655,11 +3752,6 @@ export const ru = {
           label: 'Обфускация чувствительных слов Devin',
           description:
             'Вставка символов нулевой ширины в совпадающие системные промпты Devin для снижения точного сопоставления ключевых слов на стороне upstream.',
-        },
-        aistudioWsAuth: {
-          label: 'WS auth AI Studio',
-          description:
-            'Переключатель аутентификации WebSocket AI Studio. Home принудительно отключает эту настройку; переключатель недоступен.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Правила ошибок request-scoped',
@@ -4040,6 +4132,7 @@ export const ru = {
           channel: 'Channel',
           name: 'Upstream model',
           alias: 'Client alias',
+          displayName: 'Отображаемое имя',
           fork: 'Fork',
           forceMapping: 'force-mapping',
           actions: 'Действия',
@@ -4048,6 +4141,7 @@ export const ru = {
           channel: 'Auth channel key, например claude, gemini или codex.',
           name: 'Model ID, который фактически отправляется upstream provider.',
           alias: 'Model alias, который может запросить клиент.',
+          displayName: 'Необязательное читаемое имя в каталоге моделей (display-name).',
           fork: 'Advanced option. API определяет это только как fork alias behavior; оставьте выключенным, если не нужно.',
           forceMapping:
             'Если включено, response model field записывается как mapped upstream model name.',
@@ -4056,6 +4150,7 @@ export const ru = {
           channel: 'claude',
           name: 'claude-sonnet-4',
           alias: 'sonnet',
+          displayName: 'Claude Sonnet 4',
         },
       },
       oauthExcluded: {
@@ -4079,6 +4174,7 @@ export const ru = {
           kimi: 'Kimi',
           antigravity: 'Antigravity',
           xai: 'xAI',
+          meta: 'Meta',
         },
       },
       diff: {
@@ -5349,10 +5445,38 @@ export const ru = {
         syncing: 'Синхронизация',
         clearFilters: 'Сбросить фильтры',
         details: 'Детали',
+        configure: 'Настроить плагин',
         install: 'Установить',
         update: 'Обновить',
         uninstall: 'Удалить',
         manageAuth: 'Аутентификация',
+      },
+      config: {
+        loading: 'Загрузка конфигурации плагина',
+        useDefault: 'Использовать значение плагина по умолчанию',
+        save: 'Сохранить изменения',
+        title: 'Настройка {{name}}',
+        enabledLabel: 'Включить плагин',
+        enabledDescription: 'Управляет тем, активен ли плагин во время выполнения.',
+        priorityLabel: 'Приоритет (priority)',
+        priorityDescription: 'Целое число, определяющее порядок выполнения между плагинами.',
+        loadInHomeLabel: 'Загружать в процессе Home (load-in-home)',
+        loadInHomeDescription: 'Разрешает загрузку этого плагина внутри процесса управления Home.',
+        declaredFieldsTitle: 'Объявленные параметры плагина',
+        customParamsTitle: 'Пользовательские параметры',
+        customParamsDescription:
+          'Дополнительные параметры плагина. Значения поддерживают JSON; заключайте строки вроде "123" в кавычки, чтобы сохранить тип.',
+        addParam: 'Добавить параметр',
+        removeParam: 'Удалить параметр',
+        paramValuePlaceholder: 'Значение (JSON или текст)',
+        saved: 'Конфигурация {{name}} сохранена',
+        validation: {
+          duplicateKey: 'Параметр {{name}} уже задан.',
+          priorityInvalid: 'Приоритет должен быть целым числом.',
+          paramInvalid: 'Некорректное значение параметра {{name}}.',
+          keyRequired: 'Укажите ключ параметра, если задано значение.',
+          reservedKey: '{{name}} — зарезервированное поле; используйте переключатели выше.',
+        },
       },
       auth: {
         title: 'Аутентификация магазина',

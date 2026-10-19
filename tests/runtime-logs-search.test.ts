@@ -1,6 +1,18 @@
 import axios, { type AxiosAdapter } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
+import {
+  hasOlderRuntimeLogs,
+  mergeIncomingTailRuntimeLogs,
+  mergeOlderRuntimeLogs,
+} from '../src/features/logs/use-logs-workbench'
+import {
+  formatDateTime,
+  isRuntimeLogScrollNearBottom,
+  isRuntimeLogScrollNearTop,
+  restoreRuntimeLogPrependScroll,
+  scrollRuntimeLogContainerToBottom,
+} from '../src/features/observability/observability-components'
 import { defaultRuntimeLogFilters, fetchRuntimeLogs } from '../src/lib/api/management/usage-logs'
 import { en } from '../src/lib/i18n/locales/en'
 import { ru } from '../src/lib/i18n/locales/ru'
@@ -121,6 +133,130 @@ describe('runtime log content search Management API integration', () => {
           searchUnsupported: locale.usageLogsPage.logs.searchUnsupported,
         }),
       ).toEqual(expected)
+    }
+  })
+
+  test('scrolls the runtime log container to the bottom when records load', () => {
+    const container = { scrollTop: 0, scrollHeight: 1280 }
+
+    scrollRuntimeLogContainerToBottom(container)
+    expect(container.scrollTop).toBe(1280)
+
+    scrollRuntimeLogContainerToBottom(null)
+  })
+
+  test('detects bottom/top scroll proximity and restores scroll anchor on upward history prepend', () => {
+    expect(
+      isRuntimeLogScrollNearBottom({ scrollTop: 980, scrollHeight: 1400, clientHeight: 400 }),
+    ).toBe(true)
+    expect(
+      isRuntimeLogScrollNearBottom({ scrollTop: 800, scrollHeight: 1400, clientHeight: 400 }),
+    ).toBe(false)
+    expect(isRuntimeLogScrollNearTop({ scrollTop: 12 })).toBe(true)
+    expect(isRuntimeLogScrollNearTop({ scrollTop: 48 })).toBe(false)
+
+    const container = { scrollTop: 10, scrollHeight: 1800 }
+    restoreRuntimeLogPrependScroll(container, { scrollTop: 10, scrollHeight: 1200 })
+    expect(container.scrollTop).toBe(610)
+  })
+
+  test('sends anchor_id, before_id, and after_id cursors and merges tail/older log snapshots cleanly', async () => {
+    const { requests, session } = createLogsAdapter({
+      logs: [
+        { id: 104, timestamp: '2026-05-29T01:02:04Z', line: 'line-104' },
+        { id: 103, timestamp: '2026-05-29T01:02:03Z', line: 'line-103' },
+      ],
+      total: 104,
+      limit: 2,
+      offset: 2,
+      anchor_id: 106,
+      before_id: 105,
+      after_id: 102,
+    })
+
+    const snapshot = await fetchRuntimeLogs(session, {
+      ...defaultRuntimeLogFilters,
+      limit: 2,
+      offset: 2,
+      anchorId: 106,
+      beforeId: 105,
+      afterId: 102,
+    })
+
+    expect(requests[0].params).toMatchObject({
+      limit: 2,
+      offset: 2,
+      anchor_id: 106,
+      before_id: 105,
+      after_id: 102,
+    })
+    expect(snapshot.anchorId).toBe(106)
+    expect(snapshot.beforeId).toBe(105)
+    expect(snapshot.afterId).toBe(102)
+
+    const incoming = {
+      ...snapshot,
+      records: [
+        { ...snapshot.records[0]!, id: '106', line: 'line-106' },
+        { ...snapshot.records[0]!, id: '105', line: 'line-105' },
+      ],
+    }
+    const tailMerged = mergeIncomingTailRuntimeLogs(snapshot, incoming, 3)
+    expect(tailMerged.records.map((r) => r.id)).toEqual(['106', '105', '104'])
+
+    const older = {
+      ...snapshot,
+      total: 2,
+      records: [
+        { ...snapshot.records[0]!, id: '102', line: 'line-102' },
+        { ...snapshot.records[0]!, id: '101', line: 'line-101' },
+      ],
+    }
+    const olderMerged = mergeOlderRuntimeLogs(snapshot, older, 10)
+    expect(olderMerged.records.map((r) => r.id)).toEqual(['104', '103', '102', '101'])
+    expect(olderMerged.total).toBe(104)
+    expect(olderMerged.lineCount).toBe(104)
+    expect(hasOlderRuntimeLogs(olderMerged, null)).toBe(true)
+    expect(mergeOlderRuntimeLogs(snapshot, { ...older, anchorId: 999 })).toBe(snapshot)
+  })
+
+  test('uses only the explicit ingestion ceiling, even when the latest record has a smaller ID', async () => {
+    const payload = {
+      logs: [{ id: 1, timestamp: '2026-05-29T01:02:04Z', line: 'latest' }],
+      total: 4,
+      limit: 1,
+      offset: 0,
+      anchor_id: 4,
+    }
+    const { session } = createLogsAdapter(payload)
+    const query = { ...defaultRuntimeLogFilters, limit: 1, offset: 0 }
+    const snapshot = await fetchRuntimeLogs(session, query)
+    expect(snapshot.anchorId).toBe(4)
+    expect(hasOlderRuntimeLogs(snapshot, null)).toBe(true)
+    expect(hasOlderRuntimeLogs(snapshot, 3)).toBe(true)
+    expect(hasOlderRuntimeLogs(snapshot, 1)).toBe(false)
+
+    createLogsAdapter({ ...payload, anchor_id: undefined })
+    const legacySnapshot = await fetchRuntimeLogs(session, query)
+    expect(legacySnapshot.anchorId).toBeNull()
+    expect(hasOlderRuntimeLogs(legacySnapshot, null)).toBe(false)
+
+    createLogsAdapter({ ...payload, anchor_id: Number.MAX_SAFE_INTEGER + 1 })
+    expect((await fetchRuntimeLogs(session, query)).anchorId).toBeNull()
+  })
+
+  test('formats runtime log timestamps completely across double-digit dates and all locales', () => {
+    const timestamp = '2026-10-15T00:12:08Z'
+
+    for (const language of ['zh-CN', 'zh-TW', 'en', 'ru']) {
+      const formatted = formatDateTime(timestamp, {
+        language,
+        resolvedLanguage: language,
+      } as Parameters<typeof formatDateTime>[1])
+
+      expect(formatted).toBeTruthy()
+      expect(formatted).toContain('2026')
+      expect(formatted).toContain('12')
     }
   })
 })

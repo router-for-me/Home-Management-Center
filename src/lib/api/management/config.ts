@@ -22,8 +22,6 @@ export type ConfigFieldKey =
   | 'remoteManagementAllowRemote'
   | 'remoteManagementSecretKey'
   | 'remoteManagementDisableControlPanel'
-  | 'remoteManagementDisableAutoUpdatePanel'
-  | 'remoteManagementPanelGithubRepository'
   | 'proxyUrl'
   | 'requestLog'
   | 'requestRetry'
@@ -32,8 +30,6 @@ export type ConfigFieldKey =
   | 'forceModelPrefix'
   | 'disableCooling'
   | 'routingStrategy'
-  | 'quotaSwitchProject'
-  | 'quotaSwitchPreviewModel'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
   | 'payloadRulesJson'
@@ -85,9 +81,8 @@ export type ConfigFieldKey =
   | 'sessionAffinity'
   | 'sessionAffinityTtl'
   | 'sessionAffinitySubagents'
-  | 'saveCooldownStatus'
-  | 'transientErrorCooldownSeconds'
   | 'streamingKeepaliveSeconds'
+  | 'streamingSendKeepaliveBeforeFt'
   | 'streamingBootstrapRetries'
   | 'passthroughHeaders'
   | 'nonstreamKeepaliveInterval'
@@ -112,7 +107,6 @@ export type ConfigFieldKey =
   | 'upstreamXaiInjectXSearch'
   | 'clientCodexOptimizeMultiAgentV2'
   | 'oauthAuthDir'
-  | 'oauthAuthAutoRefreshWorkers'
   | 'oauthCodexHeaderUserAgent'
   | 'oauthCodexHeaderBetaFeatures'
   | 'liveMediaRelayEnabled'
@@ -123,7 +117,6 @@ export type ConfigFieldKey =
   | 'liveMediaRelayPublicIp'
   | 'liveMediaRelayIceServersJson'
   | 'devinSensitiveWordsJson'
-  | 'aistudioWsAuth'
   | 'oauthRequestScopedErrorsJson'
   | 'antigravityCredits'
   | 'antigravitySignatureCacheEnabled'
@@ -378,7 +371,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const routing = toRecord(rawConfig.routing)
   const routingRetry = toRecord(routing.retry)
   const routingCooldown = toRecord(routing.cooldown)
-  const quotaExceeded = toRecord(rawConfig['quota-exceeded'])
   const observability = toRecord(rawConfig.observability)
   const observabilityLogs = toRecord(observability.logs)
   const observabilityUsage = toRecord(observability.usage)
@@ -401,7 +393,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const liveMediaRelay = toRecord(oauthCodex['live-media-relay'])
   const antigravity = toRecord(oauthProviders.antigravity)
   const antigravityConnPool = toRecord(antigravity['connection-pool'])
-  const aistudio = toRecord(oauthProviders.aistudio)
   const devin = toRecord(oauthProviders.devin)
   const multimedia = toRecord(rawConfig.multimedia)
 
@@ -421,8 +412,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     remoteManagementAllowRemote: readBoolean(management, 'allow-remote'),
     remoteManagementSecretKey: readString(management, 'secret-key'),
     remoteManagementDisableControlPanel: readBoolean(management, 'disable-control-panel'),
-    remoteManagementDisableAutoUpdatePanel: readBoolean(management, 'disable-auto-update-panel'),
-    remoteManagementPanelGithubRepository: readString(management, 'panel-github-repository'),
     proxyUrl: readString(requests, 'proxy-url'),
     requestLog: readBoolean(observabilityLogs, 'request-log'),
     requestRetry: readNumber(routingRetry, 'request-retry'),
@@ -431,8 +420,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     forceModelPrefix: readBoolean(routing, 'force-model-prefix'),
     disableCooling: readBoolean(routingCooldown, 'disable-cooling'),
     routingStrategy: readManagementRoutingStrategy(rawConfig),
-    quotaSwitchProject: readBoolean(quotaExceeded, 'switch-project'),
-    quotaSwitchPreviewModel: readBoolean(quotaExceeded, 'switch-preview-model'),
     oauthExcludedModelsJson: stringifyJsonObject(oauth['excluded-models']),
     oauthModelAliasJson: stringifyJsonObject(oauth['model-alias']),
     payloadRulesJson: stringifyPayload(requests.payload),
@@ -484,9 +471,8 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     sessionAffinity: readBoolean(routing, 'session-affinity'),
     sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
     sessionAffinitySubagents: readBoolean(routing, 'session-affinity-subagents'),
-    saveCooldownStatus: readBoolean(routingCooldown, 'save-cooldown-status'),
-    transientErrorCooldownSeconds: readNumber(routingCooldown, 'transient-error-cooldown-seconds'),
     streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
+    streamingSendKeepaliveBeforeFt: readBoolean(requestsStreaming, 'send-keepalive-before-ft'),
     streamingBootstrapRetries: readNumber(requestsStreaming, 'bootstrap-retries'),
     passthroughHeaders: readBoolean(requests, 'passthrough-headers'),
     nonstreamKeepaliveInterval: readNumber(requests, 'nonstream-keepalive-interval'),
@@ -520,7 +506,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     upstreamXaiInjectXSearch: readBoolean(upstreamXai, 'inject-x-search'),
     clientCodexOptimizeMultiAgentV2: readBoolean(clientCodex, 'optimize-multi-agent-v2'),
     oauthAuthDir: readString(oauth, 'auth-dir'),
-    oauthAuthAutoRefreshWorkers: readNumber(oauth, 'auth-auto-refresh-workers'),
     oauthCodexHeaderUserAgent: readString(oauthCodexHeaders, 'user-agent'),
     oauthCodexHeaderBetaFeatures: readString(oauthCodexHeaders, 'beta-features'),
     liveMediaRelayEnabled: readBoolean(liveMediaRelay, 'enabled'),
@@ -534,7 +519,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     liveMediaRelayPublicIp: readString(liveMediaRelay, 'public-ip'),
     liveMediaRelayIceServersJson: stringifyJsonArray(liveMediaRelay['ice-servers']),
     devinSensitiveWordsJson: stringifyJsonArray(devin['sensitive-words']),
-    aistudioWsAuth: readBoolean(aistudio, 'ws-auth'),
     oauthRequestScopedErrorsJson: stringifyJsonObject(oauth['request-scoped-errors']),
     antigravityCredits: readBoolean(antigravity, 'antigravity-credits'),
     antigravitySignatureCacheEnabled: readNullableBoolean(antigravity, 'signature-cache-enabled'),
@@ -628,14 +612,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
     path: 'management/disable-control-panel',
     kind: 'boolean',
   },
-  remoteManagementDisableAutoUpdatePanel: {
-    path: 'management/disable-auto-update-panel',
-    kind: 'boolean',
-  },
-  remoteManagementPanelGithubRepository: {
-    path: 'management/panel-github-repository',
-    kind: 'string',
-  },
   proxyUrl: { path: 'requests/proxy-url', kind: 'string' },
   requestLog: { path: 'observability/logs/request-log', kind: 'boolean' },
   requestRetry: { path: 'routing/retry/request-retry', kind: 'number' },
@@ -644,8 +620,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   forceModelPrefix: { path: 'routing/force-model-prefix', kind: 'boolean' },
   disableCooling: { path: 'routing/cooldown/disable-cooling', kind: 'boolean' },
   routingStrategy: { path: 'routing/strategy', kind: 'string' },
-  quotaSwitchProject: { path: 'quota-exceeded/switch-project', kind: 'boolean' },
-  quotaSwitchPreviewModel: { path: 'quota-exceeded/switch-preview-model', kind: 'boolean' },
   oauthExcludedModelsJson: { path: 'oauth/excluded-models', kind: 'jsonObject' },
   oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'jsonObject' },
   antigravitySensitiveWordsJson: {
@@ -715,12 +689,11 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   sessionAffinity: { path: 'routing/session-affinity', kind: 'boolean' },
   sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
   sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'boolean' },
-  saveCooldownStatus: { path: 'routing/cooldown/save-cooldown-status', kind: 'boolean' },
-  transientErrorCooldownSeconds: {
-    path: 'routing/cooldown/transient-error-cooldown-seconds',
-    kind: 'number',
-  },
   streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },
+  streamingSendKeepaliveBeforeFt: {
+    path: 'requests/streaming/send-keepalive-before-ft',
+    kind: 'boolean',
+  },
   streamingBootstrapRetries: { path: 'requests/streaming/bootstrap-retries', kind: 'number' },
   passthroughHeaders: { path: 'requests/passthrough-headers', kind: 'boolean' },
   nonstreamKeepaliveInterval: { path: 'requests/nonstream-keepalive-interval', kind: 'number' },
@@ -778,7 +751,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
     kind: 'boolean',
   },
   oauthAuthDir: { path: 'oauth/auth-dir', kind: 'string' },
-  oauthAuthAutoRefreshWorkers: { path: 'oauth/auth-auto-refresh-workers', kind: 'number' },
   oauthCodexHeaderUserAgent: {
     path: 'oauth/providers/codex/header-defaults/user-agent',
     kind: 'string',
@@ -816,7 +788,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
     kind: 'jsonArray',
   },
   devinSensitiveWordsJson: { path: 'oauth/providers/devin/sensitive-words', kind: 'stringList' },
-  aistudioWsAuth: { path: 'oauth/providers/aistudio/ws-auth', kind: 'boolean' },
   oauthRequestScopedErrorsJson: { path: 'oauth/request-scoped-errors', kind: 'jsonObject' },
   antigravityCredits: { path: 'oauth/providers/antigravity/antigravity-credits', kind: 'boolean' },
   antigravitySignatureCacheEnabled: {
@@ -854,6 +825,9 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
 
 export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
+  // Keep false/0/null as request bodies and JSON-looking strings as strings.
+  const putJson = (url: string, value: unknown) =>
+    client.put(url, JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
   const key = change.key
 
   if (key === 'payloadRulesJson') {
@@ -863,7 +837,7 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     )
 
     if (hasRules) {
-      await client.put('/config/requests/payload', payload)
+      await putJson('/config/requests/payload', payload)
       return
     }
 
@@ -879,7 +853,7 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       return
     }
 
-    await client.put('/config/multimedia/disable-image-generation', value)
+    await putJson('/config/multimedia/disable-image-generation', value)
     return
   }
 
@@ -888,13 +862,13 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
 
   switch (target.kind) {
     case 'boolean':
-      await client.put(url, change.nextValue)
+      await putJson(url, change.nextValue)
       return
     case 'number':
-      await client.put(url, Number(change.nextValue))
+      await putJson(url, Number(change.nextValue))
       return
     case 'nullableBoolean':
-      await client.put(url, change.nextValue === null ? null : Boolean(change.nextValue))
+      await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))
       return
     case 'string': {
       const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
@@ -902,21 +876,21 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
         await client.delete(url)
         return
       }
-      await client.put(url, value)
+      await putJson(url, value)
       return
     }
     case 'stringList': {
       const items = parseJsonArrayText(change.nextValue)
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter((item) => item.length > 0)
-      await client.put(url, items)
+      await putJson(url, items)
       return
     }
     case 'jsonObject':
-      await client.put(url, parseJsonObjectText(change.nextValue))
+      await putJson(url, parseJsonObjectText(change.nextValue))
       return
     case 'jsonArray':
-      await client.put(url, parseJsonArrayText(change.nextValue))
+      await putJson(url, parseJsonArrayText(change.nextValue))
       return
   }
 }

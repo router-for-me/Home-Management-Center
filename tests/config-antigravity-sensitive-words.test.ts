@@ -1,6 +1,7 @@
 import axios, { type AxiosAdapter, type AxiosRequestConfig } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
+import { sectionDefinitions } from '../src/features/config/config-workbench-page'
 import {
   applyConfigChange,
   fetchConfigSnapshot,
@@ -166,4 +167,91 @@ describe('Antigravity sensitive words configuration', () => {
       expect(config.antigravitySensitiveWords.count).toBeTruthy()
     }
   })
+
+  test('groups oauth.providers.codex and oauth.providers.antigravity under oauthProviders (#192)', () => {
+    const sectionIds = sectionDefinitions.map((section) => section.id)
+    expect(sectionIds).toContain('oauthProviders')
+    expect(sectionIds).not.toContain('liveMediaRelay')
+    expect(sectionIds).not.toContain('antigravity')
+    expect(sectionIds).not.toContain('quota')
+
+    const oauthProvidersSection = sectionDefinitions.find(
+      (section) => section.id === 'oauthProviders',
+    )
+    expect(oauthProvidersSection).toBeDefined()
+
+    const liveMediaRelayFields = oauthProvidersSection?.fields.filter(
+      (field) => field.groupId === 'liveMediaRelay',
+    )
+    const antigravityFields = oauthProvidersSection?.fields.filter(
+      (field) => field.groupId === 'antigravity',
+    )
+    expect(liveMediaRelayFields?.map((field) => field.key)).toEqual([
+      'liveMediaRelayEnabled',
+      'liveMediaRelayMaxSessions',
+      'liveMediaRelayDisablePrivateRemoteIps',
+      'liveMediaRelayPublicIp',
+      'liveMediaRelayUdpPortMin',
+      'liveMediaRelayUdpPortMax',
+      'liveMediaRelayIceServersJson',
+    ])
+    expect(antigravityFields?.map((field) => field.key)).toEqual([
+      'antigravitySensitiveWordsJson',
+      'antigravityCredits',
+      'antigravitySignatureCacheEnabled',
+      'antigravitySignatureBypassStrict',
+      'antigravityConnPoolEnabled',
+      'antigravityConnPoolIdleTimeout',
+      'antigravityConnPoolMaxIdleConnsPerHost',
+    ])
+  })
+
+  test('omits CPA settings that are invalid in Home mode (#194)', () => {
+    const removedFieldKeys = [
+      'remoteManagementDisableAutoUpdatePanel',
+      'remoteManagementPanelGithubRepository',
+      'saveCooldownStatus',
+      'transientErrorCooldownSeconds',
+      'oauthAuthAutoRefreshWorkers',
+      'aistudioWsAuth',
+      'quotaSwitchProject',
+      'quotaSwitchPreviewModel',
+    ]
+    const allDefinedKeys = sectionDefinitions.flatMap((section) =>
+      section.fields.map((field) => field.key),
+    )
+    const normalizedValues = normalizeConfigValues({}) as Record<string, unknown>
+
+    for (const key of removedFieldKeys) {
+      expect(allDefinedKeys).not.toContain(key)
+      expect(normalizedValues).not.toHaveProperty(key)
+    }
+  })
+
+  test('uses sticky session wording in Chinese locales and preserves configPage locale symmetry (#191)', () => {
+    expect(zhCN.common.configPage.fields.sessionAffinity.label).toBe('粘性会话')
+    expect(zhCN.common.configPage.fields.sessionAffinityTtl.label).toBe('粘性会话有效期')
+    expect(zhCN.common.configPage.fields.sessionAffinitySubagents.label).toBe('子代理粘性会话')
+    expect(zhCN.common.configPage.sections.streaming.description).toContain('粘性会话')
+
+    expect(zhTW.common.configPage.fields.sessionAffinity.label).toBe('粘性會話')
+    expect(zhTW.common.configPage.fields.sessionAffinityTtl.label).toBe('粘性會話有效期')
+    expect(zhTW.common.configPage.fields.sessionAffinitySubagents.label).toBe('子代理粘性會話')
+
+    const expectedKeys = flattenKeys(en.common.configPage)
+    for (const locale of [zhCN.common.configPage, zhTW.common.configPage, ru.common.configPage]) {
+      expect(flattenKeys(locale)).toEqual(expectedKeys)
+    }
+  })
 })
+
+function flattenKeys(value: unknown, prefix = '', output: string[] = []) {
+  if (value === null || typeof value !== 'object') {
+    output.push(prefix)
+    return output
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    flattenKeys(nested, prefix ? `${prefix}.${key}` : key, output)
+  }
+  return output.sort()
+}

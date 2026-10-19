@@ -252,6 +252,11 @@ export function LogsWorkbenchPage() {
         pendingItemCount={workbench.pendingRuntimeLogCount}
         pendingItemsTruncated={workbench.pendingRuntimeLogsTruncated}
         onAcceptPendingItems={workbench.acceptPendingRuntimeLogs}
+        isFollowingBottom={workbench.isFollowingBottom}
+        onFollowingBottomChange={workbench.setIsFollowingBottom}
+        canLoadOlderLogs={workbench.canLoadOlderLogs}
+        isLoadingOlderLogs={workbench.isLoadingOlderLogs}
+        onLoadOlderLogs={workbench.loadOlderRuntimeLogs}
         onDetailOpenChange={workbench.setRuntimeLogDetailOpen}
       />
 

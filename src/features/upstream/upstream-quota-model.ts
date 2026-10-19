@@ -7,9 +7,8 @@ export type UpstreamQuotaCellState =
   | { kind: 'capability-absent' }
   | { kind: 'loading' }
   | { kind: 'not-collected' }
-  // The credential is past the risk-sorted snapshot page the console fetched, so
-  // its quota exists on the backend but was not loaded — not the same as a
-  // credential that was never collected.
+  // A truncated snapshot list cannot tell whether an unloaded credential has
+  // already been collected; its detail endpoint supplies the current state.
   | { kind: 'snapshot-miss' }
   | { kind: 'entry'; entry: UpstreamQuotaEntry }
 
@@ -61,11 +60,17 @@ function isQuotaCollectionCandidate(entry: UpstreamQuotaEntry) {
   )
 }
 
-function hasNewActiveProbeResult(
+export function hasNewActiveProbeResult(
   entry: UpstreamQuotaEntry,
   baseline: UpstreamQuotaCollectionBaselineEntry | undefined,
 ) {
-  if (!baseline || entry.lastAttemptAt === baseline.lastAttemptAt) return false
+  if (!baseline || !entry.lastAttemptAt || entry.lastAttemptAt === baseline.lastAttemptAt)
+    return false
+  if (
+    baseline.lastAttemptAt &&
+    Date.parse(entry.lastAttemptAt) < Date.parse(baseline.lastAttemptAt)
+  )
+    return false
   if (entry.collectionStatus === 'collecting') return false
   if (
     entry.collectionStatus !== 'success' &&
@@ -177,14 +182,23 @@ export function resolveUpstreamQuotaCellState({
   resource: Pick<CredentialResource, 'authIndex' | 'id' | 'identifier' | 'name'>
 }): UpstreamQuotaCellState {
   if (!available) return { kind: 'capability-absent' }
-  if (loading) return { kind: 'loading' }
 
   const entry = findUpstreamQuotaEntry(map, resource)
   if (entry) return { kind: 'entry', entry }
+  if (loading) return { kind: 'loading' }
   return { kind: truncated ? 'snapshot-miss' : 'not-collected' }
 }
 
-const quotaCollectableProviders = new Set(['claude', 'antigravity', 'codex', 'kimi', 'xai', 'grok'])
+const quotaCollectableProviders = new Set([
+  'claude',
+  'antigravity',
+  'codex',
+  'kimi',
+  'xai',
+  'grok',
+  'meta',
+  'muse',
+])
 
 export function isCredentialQuotaCollectable(
   resource: Pick<CredentialResource, 'provider' | 'disabled' | 'status'>,
@@ -192,6 +206,39 @@ export function isCredentialQuotaCollectable(
   if (resource.disabled || resource.status === 'disabled') return false
   const provider = resource.provider.trim().toLowerCase()
   return quotaCollectableProviders.has(provider)
+}
+
+export function getCredentialQuotaId(
+  resource: Pick<CredentialResource, 'authIndex' | 'identifier'>,
+) {
+  return resource.authIndex ?? resource.identifier
+}
+
+export function resolveCredentialQuotaAction({
+  resource,
+  entry,
+  available,
+  collecting = false,
+}: {
+  resource: Pick<CredentialResource, 'provider' | 'disabled' | 'status'>
+  entry: UpstreamQuotaEntry | null
+  available: boolean
+  collecting?: boolean
+}) {
+  if (!available) return 'unavailable'
+  if (resource.disabled || resource.status === 'disabled' || entry?.credentialStatus === 'disabled')
+    return 'disabled'
+  if (
+    !isCredentialQuotaCollectable(resource) ||
+    entry?.status === 'unsupported' ||
+    entry?.collectionStatus === 'unsupported' ||
+    entry?.credentialType === 'provider_api_key'
+  )
+    return 'unsupported'
+  if (collecting || entry?.collectionStatus === 'collecting') return 'collecting'
+  if (entry?.collectionStatus === 'failed' || entry?.collectionStatus === 'partial') return 'retry'
+  if (!entry || (entry.freshness === 'never' && entry.lastAttemptAt === null)) return 'collect'
+  return 'refresh'
 }
 
 export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {

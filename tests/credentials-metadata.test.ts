@@ -2,6 +2,12 @@ import axios, { type AxiosAdapter, type AxiosRequestConfig } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import {
+  buildCredentialMetadataPatch,
+  createMetadataForm,
+  isValidCredentialWeightDraft,
+  isValidProxyUrl,
+} from '../src/features/credentials/credential-detail-drawer'
+import {
   type CredentialResource,
   fetchCredentialSnapshot,
   supportsCredentialWebsockets,
@@ -303,5 +309,77 @@ describe('updateCredentialMetadata websockets payload', () => {
       (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
     )
     expect(patch?.body).toMatchObject({ 'request-retry': null })
+  })
+
+  test('supports weight, tri-state disable-cooling, headers, excluded-models, direct proxy, and custom fields', async () => {
+    const { requests, session } = createManagementAdapter((method, pathname) => {
+      if (method === 'GET' && pathname.endsWith('/credentials')) {
+        return {
+          files: [
+            {
+              id: 'codex-01',
+              name: 'codex-01.json',
+              provider: 'codex',
+              type: 'codex',
+              weight: 50,
+              disable_cooling: true,
+              excluded_models: ['gpt-4o-mini'],
+              headers: { 'X-Custom': 'val' },
+            },
+          ],
+        }
+      }
+      return {}
+    })
+
+    expect(isValidProxyUrl('direct')).toBe(true)
+    expect(isValidProxyUrl('DIRECT')).toBe(true)
+    expect(isValidCredentialWeightDraft('')).toBe(true)
+    expect(isValidCredentialWeightDraft('100')).toBe(true)
+    expect(isValidCredentialWeightDraft('-1')).toBe(false)
+    expect(isValidCredentialWeightDraft('1000001')).toBe(false)
+
+    const snapshot = await fetchCredentialSnapshot(session)
+    const resource = snapshot.resources[0]!
+    expect(resource.weight).toBe(50)
+    expect(resource.disableCooling).toBe(true)
+    expect(resource.disableCoolingOverride).toBe(true)
+    expect(resource.excludedModels).toEqual(['gpt-4o-mini'])
+    expect(resource.headers).toEqual({ 'X-Custom': 'val' })
+
+    const form = createMetadataForm(resource, null, {
+      id: 'codex-01',
+      custom: { nested: 'initial', flag: true },
+    })
+    expect(form.disableCooling).toBe(true)
+
+    const patchInput = buildCredentialMetadataPatch(
+      resource,
+      {
+        ...form,
+        proxyUrl: 'direct',
+        weight: '',
+        disableCooling: null,
+        excludedModelsText: 'gpt-4.1\no3-mini',
+        headers: [{ key: 'X-Org', value: 'team-1' }],
+        customFields: [{ path: 'custom.nested', value: 'updated' }],
+      },
+      { id: 'codex-01', weight: 50 },
+    )
+
+    await updateCredentialMetadata(session, resource, patchInput)
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
+    )
+    expect(patch?.body).toMatchObject({
+      proxy_url: 'direct',
+      weight: null,
+      'disable-cooling': null,
+      disable_cooling: null,
+      excluded_models: ['gpt-4.1', 'o3-mini'],
+      headers: { 'X-Custom': '', 'X-Org': 'team-1' },
+      'custom.nested': 'updated',
+    })
   })
 })

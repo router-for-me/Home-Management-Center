@@ -19,6 +19,7 @@ type DashboardProviderId =
   | 'claude'
   | 'codex'
   | 'xai'
+  | 'meta'
   | 'vertex'
   | 'openaiCompatibility'
 
@@ -116,6 +117,10 @@ const dashboardProviderDescriptors: DashboardProviderDescriptor[] = [
   {
     id: 'xai',
     path: '/config/api-keys/xai',
+  },
+  {
+    id: 'meta',
+    path: '/config/api-keys/meta',
   },
   {
     id: 'vertex',

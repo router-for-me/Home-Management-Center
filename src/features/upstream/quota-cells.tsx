@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  getUpstreamQuotaErrorMessage,
   getUpstreamQuotaWindowDisplayLabel,
   getUpstreamQuotaWindowIdentityLabel,
 } from '@/features/upstream/quota-format'
@@ -266,7 +267,7 @@ function AntigravityQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
           <UpstreamQuotaCollectionBadge status="failed" />
         </div>
         <p className="text-destructive line-clamp-2 text-[11px] leading-4">
-          {entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')}
+          {getUpstreamQuotaErrorMessage(entry, t)}
         </p>
       </div>
     )
@@ -386,7 +387,7 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
     return <AntigravityQuotaCell entry={entry} />
   }
 
-  if (entry.status === 'error') {
+  if (entry.status === 'error' && entry.primaryWindows.length === 0 && entry.windows.length === 0) {
     return (
       <div className="grid min-w-40 gap-1">
         <div className="flex flex-wrap items-center gap-1">
@@ -397,9 +398,15 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
           <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
         </div>
         <p className="text-destructive line-clamp-2 text-[11px] leading-4">
-          {entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')}
+          {getUpstreamQuotaErrorMessage(entry, t)}
         </p>
       </div>
+    )
+  }
+
+  if (entry.freshness === 'never' && entry.collectionStatus === 'idle' && entry.windowCount === 0) {
+    return (
+      <span className="text-muted-foreground text-xs">{t('upstreamPage.quota.notCollected')}</span>
     )
   }
 
@@ -422,7 +429,7 @@ function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
   )
 }
 
-export function UpstreamQuotaCell({ state }: { state: UpstreamQuotaCellState }) {
+function QuotaCellContent({ state }: { state: UpstreamQuotaCellState }) {
   const { t } = useTranslation()
 
   if (state.kind === 'capability-absent') {
@@ -451,4 +458,48 @@ export function UpstreamQuotaCell({ state }: { state: UpstreamQuotaCellState }) 
   }
 
   return <UpstreamQuotaEntryCell entry={state.entry} />
+}
+
+export function UpstreamQuotaCell({
+  state,
+  collecting = false,
+  unavailableReason,
+}: {
+  state: UpstreamQuotaCellState
+  collecting?: boolean
+  unavailableReason?: string
+}) {
+  const { t, i18n } = useTranslation()
+  const observedAt = state.kind === 'entry' ? state.entry.observedAt : null
+  const observedTime = observedAt ? Date.parse(observedAt) : NaN
+  return (
+    <div className="grid gap-1.5">
+      <QuotaCellContent state={state} />
+      {state.kind === 'entry' &&
+      state.entry.lastError &&
+      (state.entry.primaryWindows.length > 0 || state.entry.windows.length > 0) ? (
+        <p className="text-warning-foreground dark:text-warning text-xs leading-5">
+          {getUpstreamQuotaErrorMessage(state.entry, t)}
+        </p>
+      ) : null}
+      {collecting ? (
+        <p className="text-muted-foreground text-xs" role="status">
+          {t('upstreamPage.quota.actions.collecting')}
+        </p>
+      ) : null}
+      {Number.isFinite(observedTime) ? (
+        <p className="text-muted-foreground text-[11px]">
+          {t('upstreamPage.quota.updatedAt', {
+            time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+              dateStyle: 'short',
+              timeStyle: 'medium',
+            }).format(observedTime),
+          })}
+        </p>
+      ) : null}
+      {unavailableReason ? (
+        <p className="text-muted-foreground text-[11px]">{unavailableReason}</p>
+      ) : null}
+    </div>
+  )
 }
