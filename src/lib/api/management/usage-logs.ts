@@ -959,12 +959,6 @@ function timestampToMilliseconds(value: string | null) {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-function parsePositiveRecordId(id: string | undefined): number | null {
-  if (!id || !/^\d+$/.test(id.trim())) return null
-  const parsed = Number(id.trim())
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
-}
-
 function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogSnapshot {
   const record = toRecord(responseData)
   const lines = record.lines
@@ -990,10 +984,9 @@ function normalizeRuntimeLogs(responseData: unknown, indexBase = 0): RuntimeLogS
     limit: readNumber(record, 'limit'),
     offset,
     anchorId:
-      explicitAnchorId ??
-      ((offset === null || offset === 0) && records.length > 0
-        ? parsePositiveRecordId(records[0]?.id)
-        : null),
+      explicitAnchorId !== null && Number.isSafeInteger(explicitAnchorId) && explicitAnchorId > 0
+        ? explicitAnchorId
+        : null,
     beforeId: readNumber(record, 'before_id') ?? readNumber(record, 'beforeId'),
     afterId: readNumber(record, 'after_id') ?? readNumber(record, 'afterId'),
     appliedSearch: readString(record, 'search'),

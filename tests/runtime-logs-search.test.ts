@@ -2,6 +2,7 @@ import axios, { type AxiosAdapter } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import {
+  hasOlderRuntimeLogs,
   mergeIncomingTailRuntimeLogs,
   mergeOlderRuntimeLogs,
 } from '../src/features/logs/use-logs-workbench'
@@ -170,6 +171,7 @@ describe('runtime log content search Management API integration', () => {
       offset: 2,
       anchor_id: 106,
       before_id: 105,
+      after_id: 102,
     })
 
     const snapshot = await fetchRuntimeLogs(session, {
@@ -178,6 +180,7 @@ describe('runtime log content search Management API integration', () => {
       offset: 2,
       anchorId: 106,
       beforeId: 105,
+      afterId: 102,
     })
 
     expect(requests[0].params).toMatchObject({
@@ -185,9 +188,11 @@ describe('runtime log content search Management API integration', () => {
       offset: 2,
       anchor_id: 106,
       before_id: 105,
+      after_id: 102,
     })
     expect(snapshot.anchorId).toBe(106)
     expect(snapshot.beforeId).toBe(105)
+    expect(snapshot.afterId).toBe(102)
 
     const incoming = {
       ...snapshot,
@@ -201,6 +206,7 @@ describe('runtime log content search Management API integration', () => {
 
     const older = {
       ...snapshot,
+      total: 2,
       records: [
         { ...snapshot.records[0]!, id: '102', line: 'line-102' },
         { ...snapshot.records[0]!, id: '101', line: 'line-101' },
@@ -208,6 +214,35 @@ describe('runtime log content search Management API integration', () => {
     }
     const olderMerged = mergeOlderRuntimeLogs(snapshot, older, 10)
     expect(olderMerged.records.map((r) => r.id)).toEqual(['104', '103', '102', '101'])
+    expect(olderMerged.total).toBe(104)
+    expect(olderMerged.lineCount).toBe(104)
+    expect(hasOlderRuntimeLogs(olderMerged, null)).toBe(true)
+    expect(mergeOlderRuntimeLogs(snapshot, { ...older, anchorId: 999 })).toBe(snapshot)
+  })
+
+  test('uses only the explicit ingestion ceiling, even when the latest record has a smaller ID', async () => {
+    const payload = {
+      logs: [{ id: 1, timestamp: '2026-05-29T01:02:04Z', line: 'latest' }],
+      total: 4,
+      limit: 1,
+      offset: 0,
+      anchor_id: 4,
+    }
+    const { session } = createLogsAdapter(payload)
+    const query = { ...defaultRuntimeLogFilters, limit: 1, offset: 0 }
+    const snapshot = await fetchRuntimeLogs(session, query)
+    expect(snapshot.anchorId).toBe(4)
+    expect(hasOlderRuntimeLogs(snapshot, null)).toBe(true)
+    expect(hasOlderRuntimeLogs(snapshot, 3)).toBe(true)
+    expect(hasOlderRuntimeLogs(snapshot, 1)).toBe(false)
+
+    createLogsAdapter({ ...payload, anchor_id: undefined })
+    const legacySnapshot = await fetchRuntimeLogs(session, query)
+    expect(legacySnapshot.anchorId).toBeNull()
+    expect(hasOlderRuntimeLogs(legacySnapshot, null)).toBe(false)
+
+    createLogsAdapter({ ...payload, anchor_id: Number.MAX_SAFE_INTEGER + 1 })
+    expect((await fetchRuntimeLogs(session, query)).anchorId).toBeNull()
   })
 
   test('formats runtime log timestamps completely across double-digit dates and all locales', () => {
