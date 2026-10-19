@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import type { i18n as I18nInstance, TFunction } from 'i18next'
 import {
@@ -309,6 +309,31 @@ export function scrollRuntimeLogContainerToBottom(
 ) {
   if (!container) return
   container.scrollTop = container.scrollHeight
+}
+
+export function isRuntimeLogScrollNearBottom(
+  container: Pick<HTMLElement, 'scrollTop' | 'scrollHeight' | 'clientHeight'> | null,
+  threshold = 24,
+) {
+  if (!container) return true
+  return container.scrollHeight - container.scrollTop - container.clientHeight <= threshold
+}
+
+export function isRuntimeLogScrollNearTop(
+  container: Pick<HTMLElement, 'scrollTop'> | null,
+  threshold = 24,
+) {
+  if (!container) return false
+  return container.scrollTop <= threshold
+}
+
+export function restoreRuntimeLogPrependScroll(
+  container: Pick<HTMLElement, 'scrollTop' | 'scrollHeight'> | null,
+  previous: { scrollHeight: number; scrollTop: number } | null,
+) {
+  if (!container || !previous) return
+  container.scrollTop =
+    previous.scrollTop + Math.max(0, container.scrollHeight - previous.scrollHeight)
 }
 
 export function isFileLoggingDisabledError(error: unknown) {
@@ -5173,6 +5198,11 @@ export function RuntimeLogViewer({
   pendingItemCount,
   pendingItemsTruncated,
   onAcceptPendingItems,
+  isFollowingBottom = true,
+  onFollowingBottomChange,
+  canLoadOlderLogs = false,
+  isLoadingOlderLogs = false,
+  onLoadOlderLogs,
   onDetailOpenChange,
 }: {
   runtimeLogs: RuntimeLogSnapshot | null
@@ -5212,6 +5242,11 @@ export function RuntimeLogViewer({
   pendingItemCount: number
   pendingItemsTruncated: boolean
   onAcceptPendingItems: () => void
+  isFollowingBottom?: boolean
+  onFollowingBottomChange?: (following: boolean) => void
+  canLoadOlderLogs?: boolean
+  isLoadingOlderLogs?: boolean
+  onLoadOlderLogs?: () => void
   onDetailOpenChange: (open: boolean) => void
 }) {
   const liveRefreshStatusId = 'runtime-log-live-refresh-status'
@@ -5219,6 +5254,9 @@ export function RuntimeLogViewer({
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
   const logTableContainerRef = useRef<HTMLDivElement | null>(null)
   const logLinesContainerRef = useRef<HTMLDivElement | null>(null)
+  const lastScrollTopRef = useRef(0)
+  const prependScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null)
+  const previousOffsetRef = useRef<number | null>(null)
   const records = runtimeLogs?.records ?? []
   const displayRecords = useMemo(() => [...records].reverse(), [records])
   const total = runtimeLogs?.total ?? runtimeLogs?.lineCount ?? 0
@@ -5230,7 +5268,7 @@ export function RuntimeLogViewer({
   const canGoNext = canRead && effectiveOffset + effectiveLimit < total
   const hasActiveFilters = hasActiveRuntimeLogFilters(filters)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!canRead || !runtimeLogs) return
     const container =
       runtimeLogs.records.length > 0
@@ -5238,8 +5276,69 @@ export function RuntimeLogViewer({
         : runtimeLogs.lines.length > 0
           ? logLinesContainerRef.current
           : null
-    scrollRuntimeLogContainerToBottom(container)
-  }, [canRead, runtimeLogs])
+    if (!container) return
+
+    if (prependScrollRef.current) {
+      restoreRuntimeLogPrependScroll(container, prependScrollRef.current)
+      prependScrollRef.current = null
+      lastScrollTopRef.current = container.scrollTop
+      previousOffsetRef.current = effectiveOffset
+      return
+    }
+
+    const offsetChanged = previousOffsetRef.current !== effectiveOffset
+    previousOffsetRef.current = effectiveOffset
+    if (offsetChanged || (effectiveOffset === 0 && isFollowingBottom)) {
+      scrollRuntimeLogContainerToBottom(container)
+      lastScrollTopRef.current = container.scrollTop
+    }
+  }, [canRead, effectiveOffset, isFollowingBottom, runtimeLogs])
+
+  useEffect(() => {
+    const container = logTableContainerRef.current ?? logLinesContainerRef.current
+    if (!container || !canRead) return
+
+    const handleScroll = () => {
+      const currentScrollTop = container.scrollTop
+      const scrollingUp = currentScrollTop < lastScrollTopRef.current
+      lastScrollTopRef.current = currentScrollTop
+
+      if (effectiveOffset !== 0) return
+
+      const nearBottom = isRuntimeLogScrollNearBottom(container)
+      onFollowingBottomChange?.(nearBottom)
+      if (nearBottom && pendingItemCount > 0) {
+        onAcceptPendingItems()
+      }
+
+      if (
+        scrollingUp &&
+        isRuntimeLogScrollNearTop(container) &&
+        canLoadOlderLogs &&
+        !isLoadingOlderLogs &&
+        onLoadOlderLogs
+      ) {
+        prependScrollRef.current = {
+          scrollHeight: container.scrollHeight,
+          scrollTop: container.scrollTop,
+        }
+        onLoadOlderLogs()
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [
+    canLoadOlderLogs,
+    canRead,
+    effectiveOffset,
+    isLoadingOlderLogs,
+    onAcceptPendingItems,
+    onFollowingBottomChange,
+    onLoadOlderLogs,
+    pendingItemCount,
+    records.length,
+  ])
 
   return (
     <TableSurface className="min-w-0 p-4">
