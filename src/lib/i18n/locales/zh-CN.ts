@@ -2687,6 +2687,8 @@ export const zhCN = {
         keyValue: '密钥值',
         owner: '所属用户',
         unassigned: '未分配',
+        ownerUnavailableHint:
+          '该用户已删除或不在当前可用列表中。保持所属用户不变可保存其他设置，也可重新选择用户。',
         emptyScopeHint: '不选择任何范围时，该密钥不额外限制凭证或模型范围。',
         empty: '当前没有客户端密钥。',
         key: '客户端密钥',

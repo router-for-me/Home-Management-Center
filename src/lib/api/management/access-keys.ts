@@ -254,7 +254,10 @@ export async function updateAccessKeyBindings(
 
   await client.patch('/access/api-keys', {
     ...(resource.numericId != null ? { id: resource.numericId } : { api_key: resource.value }),
-    user_id: input.userId ?? 0,
+    // Resending an unchanged owner revalidates soft-deleted users and blocks scope edits.
+    ...(input.userId === undefined || input.userId === resource.userId
+      ? {}
+      : { user_id: input.userId ?? 0 }),
     channels: input.channelGroupIds ?? [],
     model_groups: input.modelGroupIds ?? [],
   })

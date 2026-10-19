@@ -4,6 +4,7 @@ import {
   type KeyboardEvent,
   type SetStateAction,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -1018,6 +1019,7 @@ export function AccessKeyForm({
   }) => Promise<void>
 }) {
   const { t } = useTranslation()
+  const ownerUnavailableHintId = useId()
   const [value, setValue] = useState(() =>
     mode === 'edit' && accessKey ? accessKey.value : generateAccessKey(),
   )
@@ -1047,8 +1049,9 @@ export function AccessKeyForm({
       ),
     [userId, users],
   )
-  const hasSelectedUserOption =
-    userId === null || selectableUsers.some((user) => user.numericId === userId)
+  const selectedUser = selectableUsers.find((user) => user.numericId === userId)
+  const hasSelectedUserOption = userId === null || Boolean(selectedUser)
+  const ownerUnavailable = userId !== null && (!selectedUser || Boolean(selectedUser.deletedAt))
 
   const toggleChannelGroup = (id: number) => {
     setChannelGroupIds((current) =>
@@ -1113,7 +1116,7 @@ export function AccessKeyForm({
               }
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-describedby={ownerUnavailable ? ownerUnavailableHintId : undefined}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1128,6 +1131,14 @@ export function AccessKeyForm({
               ))}
             </SelectContent>
           </Select>
+          {ownerUnavailable ? (
+            <span
+              id={ownerUnavailableHintId}
+              className="text-muted-foreground text-meta font-normal"
+            >
+              {t('usersPage.keys.ownerUnavailableHint')}
+            </span>
+          ) : null}
         </label>
         <GroupCheckboxList
           label={t('usersPage.scopes.credential')}
