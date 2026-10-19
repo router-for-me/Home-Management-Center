@@ -379,6 +379,8 @@ export function usePluginWorkbench() {
   }
 }
 
+const EMPTY_PLUGIN_FIELDS: PluginConfigFieldDescriptor[] = []
+
 export function usePluginConfig(pluginId: string | null, open: boolean) {
   const { session, connected, connectedAt } = useManagementSession()
   const query = useQuery<{
@@ -401,8 +403,10 @@ export function usePluginConfig(pluginId: string | null, open: boolean) {
 
   return {
     config: query.data?.config ?? null,
-    fields: query.data?.fields ?? [],
+    fields: query.data?.fields ?? EMPTY_PLUGIN_FIELDS,
     isPending: query.isPending,
+    isFetching: query.isFetching,
+    sessionKey: JSON.stringify([session.baseUrl, connectedAt, pluginId]),
     errorMessage: query.error instanceof Error ? query.error.message : null,
     refetch: query.refetch,
   }

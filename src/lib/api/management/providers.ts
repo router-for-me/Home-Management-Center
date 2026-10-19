@@ -37,8 +37,6 @@ export const PROVIDER_THINKING_LEVELS = [
   'auto',
 ] as const
 
-export type ProviderThinkingLevel = (typeof PROVIDER_THINKING_LEVELS)[number]
-
 export const PROVIDER_ERROR_RULE_ACTIONS = [
   'stop',
   'stop-and-cooldown',
@@ -128,7 +126,7 @@ export type ProviderModelEntryInput = {
   outputModalitiesText?: string
   useMaxCompletionTokens?: boolean
   thinkingEnabled?: boolean
-  thinkingLevels?: ProviderThinkingLevel[]
+  thinkingLevels?: string[]
   thinkingMin?: string
   thinkingMax?: string
   thinkingZeroAllowed?: boolean
@@ -905,13 +903,8 @@ function buildModelThinkingPayload(
   delete nextThinking.dynamic_allowed
 
   if (entry.thinkingLevels !== undefined) {
-    const allowed = new Set<string>(PROVIDER_THINKING_LEVELS)
     const levels = Array.from(
-      new Set(
-        entry.thinkingLevels
-          .map((level) => level.trim().toLowerCase())
-          .filter((level) => allowed.has(level)),
-      ),
+      new Set(entry.thinkingLevels.map((level) => level.trim().toLowerCase()).filter(Boolean)),
     )
     if (levels.length > 0) {
       nextThinking.levels = levels
@@ -956,7 +949,8 @@ function buildModelThinkingPayload(
     }
   }
 
-  return Object.keys(nextThinking).length > 0 ? nextThinking : undefined
+  // An explicit empty object suppresses backend defaults; omission inherits them.
+  return nextThinking
 }
 
 function createModelPayload(
@@ -1144,7 +1138,16 @@ function appendProviderOptions(
 
   if (descriptor.id !== 'vertex' && input.requestScopedErrors !== undefined) {
     if (input.requestScopedErrors.length > 0) {
-      payload['request-scoped-errors'] = input.requestScopedErrors
+      payload['request-scoped-errors'] = input.requestScopedErrors.map((rule) => {
+        const match = rule.match?.map((item) => item.trim()).filter(Boolean) ?? []
+        const regexes = rule['match-regexr']?.map((item) => item.trim()).filter(Boolean) ?? []
+        return {
+          status: rule.status,
+          action: rule.action,
+          ...(match.length ? { match } : {}),
+          ...(regexes.length ? { 'match-regexr': regexes } : {}),
+        }
+      })
     } else {
       delete payload['request-scoped-errors']
     }
@@ -1315,17 +1318,22 @@ function createCompatibilityGroupPayload(
 function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: UnknownRecord[]) {
   if (input.apiKeyEntries !== undefined) {
     return input.apiKeyEntries
-      .map((entry, index) => {
-        const existing = existingKeys[index] ?? {}
-        const resolvedApiKey =
-          entry.apiKey.trim() ||
-          entry.existingApiKey?.trim() ||
-          readString(existing, 'api-key') ||
-          ''
+      .map((entry) => {
+        const entryId = entry.id?.trim()
+        const existingApiKey = entry.existingApiKey?.trim()
+        const existing = existingKeys.find((key) =>
+          entryId
+            ? (readString(key, 'id') ?? readString(key, 'uuid')) === entryId
+            : Boolean(existingApiKey) && readString(key, 'api-key') === existingApiKey,
+        )
+        if ((entryId || existingApiKey) && !existing) {
+          throw new Error('Provider credential not found')
+        }
+        const resolvedApiKey = entry.apiKey.trim() || readString(existing ?? {}, 'api-key') || ''
         if (!resolvedApiKey) return null
 
         const payload: UnknownRecord = {}
-        const id = entry.id?.trim() || readString(existing, 'id') || readString(existing, 'uuid')
+        const id = readString(existing ?? {}, 'id') ?? readString(existing ?? {}, 'uuid')
         if (id) payload.id = id
 
         payload['api-key'] = resolvedApiKey
@@ -1337,7 +1345,7 @@ function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: Un
             payload.weight = entry.weight
           }
         } else {
-          const weight = readNumber(existing, 'weight')
+          const weight = readNumber(existing ?? {}, 'weight')
           if (weight !== null) payload.weight = weight
         }
 

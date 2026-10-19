@@ -1730,6 +1730,24 @@ export const ru = {
         },
       },
       form: {
+        apiKeyEntryLabel: 'Ключ {{index}}',
+        claudeFingerprintProfileHint:
+          'Оставьте пустым, чтобы использовать профиль вызывающего клиента.',
+        claudeRebuildMidSystemMessageHint: 'Перестраивать сообщения system внутри диалога.',
+        claudeNativeToolSearchHint:
+          'Разрешить нативный поиск инструментов для этого сервера. Требуется глобальная настройка Claude tool-search.',
+        claudeExperimentalCchSigningHint:
+          'Настройка совместимости; для поддерживаемых прямых подключений подпись выполняется автоматически.',
+        modelIsCompatHint: 'Сохранять блоки рассуждений с пустыми подписями.',
+        modelSupportConfigUpdateHint: 'Разрешить Responses configuration_update для этой модели.',
+        modelImageSupportHint: 'Отмечать эту модель как модель изображений в каталоге.',
+        modelUseMaxCompletionTokensHint:
+          'Отправлять серверу max_completion_tokens вместо max_tokens.',
+        modelThinkingEnabled: 'Переопределить возможности рассуждения',
+        modelThinkingHint:
+          'Если выключено, используются настройки сервера. Если включено — только возможности, заданные ниже.',
+        requestScopedErrorAction: 'Действие',
+        requestScopedErrorRegex: 'Регулярные выражения (по одному в строке)',
         createEyebrow: 'Новый модельный ключ',
         editEyebrow: 'Изменить модельный ключ',
         name: 'Имя поставщика моделей',
@@ -1801,12 +1819,12 @@ export const ru = {
         modelUseMaxCompletionTokens: 'Использовать max_completion_tokens',
         modelInputModalities: 'Входные модальности (через запятую)',
         modelOutputModalities: 'Выходные модальности (через запятую)',
-        modelThinkingLevels: 'Уровни Thinking (через запятую)',
+        modelThinkingLevels: 'Уровни рассуждения',
         modelThinkingMin: 'Мин. бюджет Thinking',
         modelThinkingMax: 'Макс. бюджет Thinking',
         modelThinkingZeroAllowed: 'Разрешить нулевой Thinking (zero-allowed)',
         modelThinkingDynamicAllowed: 'Разрешить динамический Thinking (dynamic-allowed)',
-        modelImageSupport: 'Параметры генерации изображений (image)',
+        modelImageSupport: 'Модель изображений',
         modelImageAspectRatio: 'Разрешить aspect-ratio',
         modelImageSize: 'Разрешить image-size',
         addModel: 'Добавить модель',
@@ -1815,11 +1833,11 @@ export const ru = {
         excludedModelsHint: 'Один model ID на строку, либо разделяйте model ID запятыми.',
         requestScopedErrorsSection: 'Правила ошибок на уровне запроса (request-scoped-errors)',
         requestScopedErrorsHint:
-          'Ошибки с указанными HTTP-кодами и ключевыми словами завершают только текущий запрос без запуска cooldown учетных данных.',
+          'Сопоставляйте HTTP-статус и любую из подстрок или регулярных выражений. Действие определяет повторы и охлаждение.',
         addRequestScopedError: 'Добавить правило',
         removeRequestScopedError: 'Удалить правило',
         requestScopedErrorCode: 'HTTP-код',
-        requestScopedErrorKeywords: 'Ключевые слова (через запятую)',
+        requestScopedErrorKeywords: 'Подстроки (по одной в строке)',
         headersSection: 'Request Headers',
         headersHint: 'Добавьте upstream request headers для этого модельного ключа.',
         headerName: 'Имя Header',
@@ -1827,6 +1845,8 @@ export const ru = {
         addHeader: 'Добавить Header',
         removeHeader: 'Удалить Header',
         validation: {
+          modelOptionsInvalid:
+            'Длина контекста должна быть положительным целым числом, бюджеты рассуждения — неотрицательными целыми; минимум не должен превышать максимум.',
           nameRequired: 'Введите имя поставщика моделей перед сохранением.',
           apiKeyRequired: 'Введите ключ модельного сервиса перед сохранением.',
           baseUrlRequired:
@@ -1842,7 +1862,7 @@ export const ru = {
           weightInvalid: 'Вес должен быть целым числом от 0 до 1000000.',
           proxyUrlInvalid: 'Proxy URL должен быть корректным URL http/https/socks5 или direct.',
           requestScopedErrorInvalid:
-            'Правила ошибок на уровне запроса требуют положительный целый HTTP-код.',
+            'Укажите положительный HTTP-статус и хотя бы одну подстроку или регулярное выражение.',
         },
       },
       discovery: {
@@ -2334,6 +2354,13 @@ export const ru = {
         },
       },
       form: {
+        proxyInherit: 'Наследовать прокси',
+        metadataLoading: 'Загрузка метаданных учётных данных',
+        headersIncomplete: 'Укажите имя и значение заголовка или удалите строку.',
+        customFieldsInvalid:
+          'Укажите корректный путь через точку. Идентификаторы учётных данных и параметры параллелизма нельзя изменять как метаданные.',
+        customFieldsWarning:
+          'Сохранение поля не гарантирует, что текущий провайдер его использует.',
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         proxyUrlDirectHint:
@@ -2363,7 +2390,7 @@ export const ru = {
         excludedModels: 'Исключенные модели (excluded_models)',
         excludedModelsPlaceholder: 'По одному model ID на строку или через запятую',
         excludedModelsHint:
-          'Эта учетная запись не будет выбираться для запросов, соответствующих этим моделям или шаблонам.',
+          'Непустой список заменяет глобальные исключения OAuth. Очистите его, чтобы снова наследовать глобальные правила.',
         headersSection: 'Пользовательские заголовки (headers)',
         headersHint: 'HTTP-заголовки, добавляемые к upstream-запросам с этой учетной записью.',
         addHeader: 'Добавить Header',
@@ -5425,6 +5452,9 @@ export const ru = {
         manageAuth: 'Аутентификация',
       },
       config: {
+        loading: 'Загрузка конфигурации плагина',
+        useDefault: 'Использовать значение плагина по умолчанию',
+        save: 'Сохранить изменения',
         title: 'Настройка {{name}}',
         enabledLabel: 'Включить плагин',
         enabledDescription: 'Управляет тем, активен ли плагин во время выполнения.',
@@ -5435,12 +5465,13 @@ export const ru = {
         declaredFieldsTitle: 'Объявленные параметры плагина',
         customParamsTitle: 'Пользовательские параметры',
         customParamsDescription:
-          'Чтение и запись дополнительных ключей config.yaml для этого плагина (поддерживаются JSON-значения).',
+          'Дополнительные параметры плагина. Значения поддерживают JSON; заключайте строки вроде "123" в кавычки, чтобы сохранить тип.',
         addParam: 'Добавить параметр',
         removeParam: 'Удалить параметр',
         paramValuePlaceholder: 'Значение (JSON или текст)',
         saved: 'Конфигурация {{name}} сохранена',
         validation: {
+          duplicateKey: 'Параметр {{name}} уже задан.',
           priorityInvalid: 'Приоритет должен быть целым числом.',
           paramInvalid: 'Некорректное значение параметра {{name}}.',
           keyRequired: 'Укажите ключ параметра, если задано значение.',

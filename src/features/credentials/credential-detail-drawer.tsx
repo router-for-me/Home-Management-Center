@@ -79,6 +79,7 @@ import {
   type CredentialMetadataPatch,
   type CredentialResource,
   MAX_CREDENTIAL_WEIGHT,
+  isEditableCredentialMetadataPath,
   matchesCredentialBackendError,
   readCredentialDisableCoolingOverride,
   readCredentialExcludedModels,
@@ -215,6 +216,7 @@ export function buildCredentialMetadataPatch(
   resource: CredentialResource,
   form: CredentialMetadataForm,
   rawMetadata: Record<string, unknown> | null = null,
+  baseline: CredentialMetadataForm = createMetadataForm(resource, null, rawMetadata),
 ): CredentialMetadataPatch {
   const patch: CredentialMetadataPatch = {}
   const prefix = form.prefix.trim()
@@ -223,45 +225,42 @@ export function buildCredentialMetadataPatch(
   const requestRetry = form.requestRetry.trim()
   const note = form.note.trim()
 
-  if (prefix !== (resource.prefix ?? '')) patch.prefix = form.prefix
-  if (proxyUrl !== (resource.proxyUrl ?? '')) patch.proxyUrl = form.proxyUrl
-  if (priority !== (resource.priority == null ? '' : String(resource.priority))) {
+  if (prefix !== baseline.prefix.trim()) patch.prefix = form.prefix
+  if (proxyUrl !== baseline.proxyUrl.trim()) patch.proxyUrl = form.proxyUrl
+  if (priority !== baseline.priority.trim()) {
     patch.priority = priority === '' ? null : priority
   }
   if (form.weight !== undefined) {
-    const baselineWeight =
-      (rawMetadata ? readCredentialWeight(rawMetadata) : null) ?? resource.weight ?? null
+    const baselineWeight = baseline.weight?.trim() ? Number(baseline.weight) : null
     const nextWeightText = form.weight.trim()
     const nextWeight = nextWeightText === '' ? null : Number(nextWeightText)
     if (nextWeight !== baselineWeight) {
       patch.weight = nextWeight
     }
   }
-  if (requestRetry !== (resource.requestRetry == null ? '' : String(resource.requestRetry))) {
+  if (requestRetry !== baseline.requestRetry.trim()) {
     patch.requestRetry = requestRetry === '' ? null : requestRetry
   }
-  if (note !== (resource.note ?? '')) patch.note = form.note
+  if (note !== baseline.note.trim()) patch.note = form.note
   if (
     supportsCredentialWebsockets(resource) &&
     resource.metadataAvailability.websockets &&
-    form.websockets !== resource.websockets
+    form.websockets !== baseline.websockets
   ) {
     patch.websockets = form.websockets
   }
   if (form.disableCooling !== undefined) {
-    const rawCooling = rawMetadata ? readCredentialDisableCoolingOverride(rawMetadata) : null
-    const baselineCooling =
-      resource.disableCoolingOverride !== undefined && resource.disableCoolingOverride !== null
-        ? resource.disableCoolingOverride
-        : (rawCooling ?? resource.disableCoolingOverride ?? null)
+    const baselineCooling = baseline.disableCooling ?? null
     if (form.disableCooling !== baselineCooling) {
       patch.disableCooling = form.disableCooling
     }
   }
   if (form.headers !== undefined) {
-    const rawHeaders = rawMetadata ? readCredentialHeaders(rawMetadata) : {}
-    const baselineHeaders =
-      Object.keys(rawHeaders).length > 0 ? rawHeaders : (resource.headers ?? {})
+    const baselineHeaders = Object.fromEntries(
+      (baseline.headers ?? [])
+        .filter(({ key, value }) => key.trim() && value.trim())
+        .map(({ key, value }) => [key.trim(), value.trim()]),
+    )
     const nextHeaders: Record<string, string> = {}
     for (const entry of form.headers) {
       const key = entry.key.trim()
@@ -285,8 +284,7 @@ export function buildCredentialMetadataPatch(
     }
   }
   if (form.excludedModelsText !== undefined) {
-    const rawExcluded = rawMetadata ? readCredentialExcludedModels(rawMetadata) : []
-    const baselineExcluded = rawExcluded.length > 0 ? rawExcluded : (resource.excludedModels ?? [])
+    const baselineExcluded = parseExcludedModelsDraft(baseline.excludedModelsText ?? '')
     const nextExcluded = parseExcludedModelsDraft(form.excludedModelsText)
     if (JSON.stringify(nextExcluded) !== JSON.stringify(baselineExcluded)) {
       patch.excludedModels = nextExcluded
@@ -529,7 +527,8 @@ function MetadataTab({
   const credentialId = getCredentialInFlightId(resource)
   const previousCredentialId = useRef(credentialId)
   const previousPolicyVersion = useRef<CredentialMetadataPolicyVersion>('unobserved')
-  const rawMetadataHydratedForId = useRef<string | null>(null)
+  // Compare against the values actually shown, even if a background read completes later.
+  const baselineForm = useRef(form)
 
   useEffect(() => {
     const policyVersion = concurrencyPolicy === null ? null : concurrencyPolicy.version
@@ -551,8 +550,9 @@ function MetadataTab({
       previousPolicyVersion.current = policyVersion
     }
     if (refreshMode === 'reset') {
-      rawMetadataHydratedForId.current = rawMetadata ? credentialId : null
-      setForm(createMetadataForm(resource, concurrencyPolicy, rawMetadata))
+      const nextForm = createMetadataForm(resource, concurrencyPolicy, rawMetadata)
+      baselineForm.current = nextForm
+      setForm(nextForm)
       setLocalError(null)
       setFieldErrors({})
       return
@@ -564,28 +564,6 @@ function MetadataTab({
       )
     }
   }, [concurrencyPolicy, credentialId, open, rawMetadata, resource])
-
-  useEffect(() => {
-    if (!open || !rawMetadata || rawMetadataHydratedForId.current === credentialId) return
-    rawMetadataHydratedForId.current = credentialId
-    const weight = readCredentialWeight(rawMetadata) ?? resource.weight ?? null
-    const headersMap = readCredentialHeaders(rawMetadata)
-    const excludedModels = readCredentialExcludedModels(rawMetadata)
-    const coolingOverride =
-      resource.disableCoolingOverride !== undefined
-        ? resource.disableCoolingOverride
-        : readCredentialDisableCoolingOverride(rawMetadata)
-    setForm((current) => ({
-      ...current,
-      weight: current.weight || (weight === null ? '' : String(weight)),
-      disableCooling: current.disableCooling ?? coolingOverride,
-      headers:
-        current.headers && current.headers.length > 0
-          ? current.headers
-          : Object.entries(headersMap).map(([key, value]) => ({ key, value })),
-      excludedModelsText: current.excludedModelsText || excludedModels.join('\n'),
-    }))
-  }, [credentialId, open, rawMetadata, resource])
 
   const handleFormChange: Dispatch<SetStateAction<CredentialMetadataForm>> = (nextForm) => {
     setLocalError(null)
@@ -633,11 +611,8 @@ function MetadataTab({
     if (
       form.customFields?.some(
         (entry) =>
-          (!entry.path.trim() && entry.value.trim()) ||
-          entry.path
-            .trim()
-            .split('.')
-            .some((part) => !part.trim()),
+          (entry.path.trim() || entry.value.trim()) &&
+          !isEditableCredentialMetadataPath(entry.path),
       )
     ) {
       nextErrors.customFields = t('credentialsPage.form.customFieldsInvalid')
@@ -704,7 +679,12 @@ function MetadataTab({
       const concurrencyChanged =
         concurrencyEditable &&
         (normalizedMaxInFlight !== concurrencyPolicy?.maxInFlight || modelLimitsChanged)
-      const metadataPatch = buildCredentialMetadataPatch(resource, form, rawMetadata)
+      const metadataPatch = buildCredentialMetadataPatch(
+        resource,
+        form,
+        rawMetadata,
+        baselineForm.current,
+      )
       const input: CredentialMetadataPatch = {
         ...metadataPatch,
         ...(concurrencyChanged
@@ -720,6 +700,10 @@ function MetadataTab({
         return
       }
       await onUpdateMetadata(input)
+      if (previousCredentialId.current === credentialId) {
+        baselineForm.current = { ...form, customFields: [] }
+        setForm((current) => ({ ...current, customFields: [] }))
+      }
     } catch (error) {
       const versionConflict = matchesCredentialBackendError(
         error,
@@ -762,7 +746,7 @@ function MetadataTab({
           >
             {form.proxyUrl.trim().toLowerCase() === 'direct'
               ? t('credentialsPage.form.proxyInherit')
-              : t('credentialsPage.form.proxyDirect')}
+              : t('credentialsPage.form.directProxyAction')}
           </Button>
         </div>
         <Input
@@ -789,7 +773,7 @@ function MetadataTab({
           </span>
         ) : (
           <span className="text-muted-foreground text-xs leading-5 font-normal">
-            {t('credentialsPage.form.proxyUrlHint')}
+            {t('credentialsPage.form.proxyUrlDirectHint')}
           </span>
         )}
       </div>
@@ -966,13 +950,13 @@ function MetadataTab({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="inherit">
-                {t('credentialsPage.form.coolingOptions.inherit')}
+                {t('credentialsPage.form.coolingModeInherit')}
               </SelectItem>
               <SelectItem value="enabled">
-                {t('credentialsPage.form.coolingOptions.enabled')}
+                {t('credentialsPage.form.coolingModeEnabled')}
               </SelectItem>
               <SelectItem value="disabled">
-                {t('credentialsPage.form.coolingOptions.disabled')}
+                {t('credentialsPage.form.coolingModeDisabled')}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -996,7 +980,7 @@ function MetadataTab({
       <div className="grid gap-2 rounded-md border p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium">{t('credentialsPage.form.headersTitle')}</p>
+            <p className="text-sm font-medium">{t('credentialsPage.form.headersSection')}</p>
             <p className="text-muted-foreground mt-0.5 text-xs leading-5">
               {t('credentialsPage.form.headersHint')}
             </p>
@@ -1069,7 +1053,7 @@ function MetadataTab({
       <div className="grid gap-2 rounded-md border p-3">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-sm font-medium">{t('credentialsPage.form.customFieldsTitle')}</p>
+            <p className="text-sm font-medium">{t('credentialsPage.form.customFieldsSection')}</p>
             <p className="text-muted-foreground mt-0.5 text-xs leading-5">
               {t('credentialsPage.form.customFieldsHint')}
             </p>
@@ -1838,8 +1822,28 @@ export function CredentialDetailDrawer({
       <DrawerTabStrip activeTab={tab} showConcurrency={showConcurrency} onTabChange={onTabChange} />
       <DrawerScaffoldBody>
         {tab === 'overview' ? <OverviewTab resource={resource} quotaEntry={quotaEntry} /> : null}
-        {tab === 'metadata' ? (
+        {tab === 'metadata' && !resource.runtimeOnly && !rawMetadataQuery.rawMetadata ? (
+          rawMetadataQuery.errorMessage ? (
+            <div className="grid gap-3" role="alert">
+              <p className="text-destructive text-sm">{rawMetadataQuery.errorMessage}</p>
+              <Button variant="outline" onClick={() => void rawMetadataQuery.refetch()}>
+                {t('credentialsPage.error.retry')}
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="grid gap-3"
+              role="status"
+              aria-label={t('credentialsPage.form.metadataLoading')}
+            >
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          )
+        ) : tab === 'metadata' ? (
           <MetadataTab
+            key={resource.id}
             resource={resource}
             open={open}
             mutating={mutating}

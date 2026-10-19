@@ -91,7 +91,6 @@ import {
   type ProviderModelEntryInput,
   type ProviderRequestScopedErrorRule,
   type ProviderResource,
-  type ProviderThinkingLevel,
 } from '@/lib/api/management/providers'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
@@ -203,15 +202,13 @@ function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[] {
   const models = raw.models
   if (!Array.isArray(models)) return []
 
-  const allowedLevels = new Set<string>(PROVIDER_THINKING_LEVELS)
-
   return models.filter(isRecord).map((model) => {
     const thinking = isRecord(model.thinking) ? model.thinking : null
     const rawLevels = Array.isArray(thinking?.levels) ? thinking.levels : []
     const thinkingLevels = rawLevels
       .filter((item): item is string => typeof item === 'string')
       .map((item) => item.trim().toLowerCase())
-      .filter((item): item is ProviderThinkingLevel => allowedLevels.has(item))
+      .filter(Boolean)
     const inputModalities = Array.isArray(model['input-modalities'])
       ? model['input-modalities'].filter((item): item is string => typeof item === 'string')
       : []
@@ -344,7 +341,7 @@ function formatDateTime(value: string) {
   }).format(new Date(value))
 }
 
-function createFormState(
+export function createFormState(
   resource: ProviderResource | null,
   descriptor?: ProviderDescriptor,
 ): ProviderEntryFormInput {
@@ -628,7 +625,7 @@ export function validateProviderForm(
           (rule['match-regexr']?.filter((m) => m.trim()).length ?? 0) === 0),
     )
   ) {
-    generalError = t('providersPage.form.validation.errorRuleInvalid')
+    generalError = t('providersPage.form.validation.requestScopedErrorInvalid')
   }
 
   return { fieldErrors, generalError }
@@ -1213,7 +1210,7 @@ function ProviderModelCatalogSummary({
   )
 }
 
-function ProviderFormPanel({
+export function ProviderFormPanel({
   mode,
   descriptor,
   resource,
@@ -1395,6 +1392,7 @@ function ProviderFormPanel({
       [
         descriptor.id,
         form.apiKey,
+        resolvePrimaryFormApiKey(form),
         form.baseUrl,
         form.testModel ?? '',
         resource?.authIndex ?? '',
@@ -1406,7 +1404,16 @@ function ProviderFormPanel({
           )
           .join('|'),
       ].join('||'),
-    [descriptor.id, form.apiKey, form.baseUrl, form.headers, form.models, form.testModel, resource],
+    [
+      descriptor.id,
+      form.apiKey,
+      form.apiKeyEntries,
+      form.baseUrl,
+      form.headers,
+      form.models,
+      form.testModel,
+      resource,
+    ],
   )
 
   useEffect(() => {
@@ -1803,7 +1810,9 @@ function ProviderFormPanel({
           <div className="grid gap-3 rounded-md border p-3">
             <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm font-medium">{t('providersPage.form.apiKeyEntriesTitle')}</p>
+                <p className="text-sm font-medium">
+                  {t('providersPage.form.apiKeyEntriesSection')}
+                </p>
                 <p className="text-muted-foreground mt-0.5 text-xs leading-5">
                   {t('providersPage.form.apiKeyEntriesHint')}
                 </p>
@@ -1838,7 +1847,7 @@ function ProviderFormPanel({
                     aria-label={t('providersPage.form.removeApiKeyEntry')}
                     onClick={() => {
                       const next = (form.apiKeyEntries ?? []).filter((_, i) => i !== idx)
-                      updateField('apiKeyEntries', next.length ? next : [emptyApiKeyEntry()])
+                      updateField('apiKeyEntries', next)
                     }}
                   >
                     <X className="size-3.5" aria-hidden="true" />
@@ -1885,7 +1894,7 @@ function ProviderFormPanel({
                       >
                         {entry.proxyUrl.trim().toLowerCase() === 'direct'
                           ? t('credentialsPage.form.proxyInherit')
-                          : t('credentialsPage.form.proxyDirect')}
+                          : t('credentialsPage.form.directProxyAction')}
                       </Button>
                     </div>
                     <Input
@@ -2009,7 +2018,7 @@ function ProviderFormPanel({
               >
                 {form.proxyUrl.trim().toLowerCase() === 'direct'
                   ? t('credentialsPage.form.proxyInherit')
-                  : t('credentialsPage.form.proxyDirect')}
+                  : t('credentialsPage.form.directProxyAction')}
               </Button>
             </div>
             <Input
@@ -2035,7 +2044,7 @@ function ProviderFormPanel({
               </span>
             ) : (
               <span className="text-muted-foreground text-xs leading-5 font-normal">
-                {t('credentialsPage.form.proxyUrlHint')}
+                {t('credentialsPage.form.proxyUrlDirectHint')}
               </span>
             )}
           </div>
@@ -2295,13 +2304,13 @@ function ProviderFormPanel({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="inherit">
-                {t('credentialsPage.form.coolingOptions.inherit')}
+                {t('credentialsPage.form.coolingModeInherit')}
               </SelectItem>
               <SelectItem value="enabled">
-                {t('credentialsPage.form.coolingOptions.enabled')}
+                {t('credentialsPage.form.coolingModeEnabled')}
               </SelectItem>
               <SelectItem value="disabled">
-                {t('credentialsPage.form.coolingOptions.disabled')}
+                {t('credentialsPage.form.coolingModeDisabled')}
               </SelectItem>
             </SelectContent>
           </Select>
@@ -2332,7 +2341,7 @@ function ProviderFormPanel({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="inherit">
-                    {t('credentialsPage.form.coolingOptions.inherit')}
+                    {t('credentialsPage.form.coolingModeInherit')}
                   </SelectItem>
                   <SelectItem value="false">{t('providersPage.status.disabled')}</SelectItem>
                   <SelectItem value="true">{t('providersPage.status.enabled')}</SelectItem>
@@ -2362,7 +2371,7 @@ function ProviderFormPanel({
         {descriptor.id === 'claude' ? (
           <div className="grid gap-3 rounded-md border p-3">
             <label className={fieldClassName}>
-              <span>{t('providersPage.form.fingerprintProfile')}</span>
+              <span>{t('providersPage.form.claudeFingerprintProfile')}</span>
               <Input
                 value={form.fingerprintProfile ?? ''}
                 placeholder="claude-code-cli"
@@ -2371,7 +2380,7 @@ function ProviderFormPanel({
                 onChange={(event) => updateField('fingerprintProfile', event.target.value)}
               />
               <span className="text-muted-foreground text-xs leading-5 font-normal">
-                {t('providersPage.form.fingerprintProfileHint')}
+                {t('providersPage.form.claudeFingerprintProfileHint')}
               </span>
             </label>
             <label className="flex items-start gap-3 text-sm">
@@ -2385,10 +2394,10 @@ function ProviderFormPanel({
               />
               <span className="grid gap-1">
                 <span className="font-medium">
-                  {t('providersPage.form.rebuildMidSystemMessage')}
+                  {t('providersPage.form.claudeRebuildMidSystemMessage')}
                 </span>
                 <span className="text-muted-foreground text-xs leading-5">
-                  {t('providersPage.form.rebuildMidSystemMessageHint')}
+                  {t('providersPage.form.claudeRebuildMidSystemMessageHint')}
                 </span>
               </span>
             </label>
@@ -2400,9 +2409,11 @@ function ProviderFormPanel({
                 onCheckedChange={(checked) => updateField('nativeToolSearch', checked === true)}
               />
               <span className="grid gap-1">
-                <span className="font-medium">{t('providersPage.form.nativeToolSearch')}</span>
+                <span className="font-medium">
+                  {t('providersPage.form.claudeNativeToolSearch')}
+                </span>
                 <span className="text-muted-foreground text-xs leading-5">
-                  {t('providersPage.form.nativeToolSearchHint')}
+                  {t('providersPage.form.claudeNativeToolSearchHint')}
                 </span>
               </span>
             </label>
@@ -2417,10 +2428,10 @@ function ProviderFormPanel({
               />
               <span className="grid gap-1">
                 <span className="font-medium">
-                  {t('providersPage.form.experimentalCchSigning')}
+                  {t('providersPage.form.claudeExperimentalCchSigning')}
                 </span>
                 <span className="text-muted-foreground text-xs leading-5">
-                  {t('providersPage.form.experimentalCchSigningHint')}
+                  {t('providersPage.form.claudeExperimentalCchSigningHint')}
                 </span>
               </span>
             </label>
@@ -2814,10 +2825,10 @@ function ProviderFormPanel({
                       />
                       <span className="grid gap-1">
                         <span className="font-medium">
-                          {t('providersPage.form.modelSupportConfigurationUpdate')}
+                          {t('providersPage.form.modelSupportConfigUpdate')}
                         </span>
                         <span className="text-muted-foreground leading-5">
-                          {t('providersPage.form.modelSupportConfigurationUpdateHint')}
+                          {t('providersPage.form.modelSupportConfigUpdateHint')}
                         </span>
                       </span>
                     </label>
@@ -2835,9 +2846,11 @@ function ProviderFormPanel({
                           }
                         />
                         <span className="grid gap-1">
-                          <span className="font-medium">{t('providersPage.form.modelImage')}</span>
+                          <span className="font-medium">
+                            {t('providersPage.form.modelImageSupport')}
+                          </span>
                           <span className="text-muted-foreground leading-5">
-                            {t('providersPage.form.modelImageHint')}
+                            {t('providersPage.form.modelImageSupportHint')}
                           </span>
                         </span>
                       </label>
@@ -2898,6 +2911,9 @@ function ProviderFormPanel({
                     />
                     <span>{t('providersPage.form.modelThinkingEnabled')}</span>
                   </label>
+                  <p className="text-muted-foreground text-xs leading-5">
+                    {t('providersPage.form.modelThinkingHint')}
+                  </p>
                   {model.thinkingEnabled ? (
                     <div className="grid gap-2.5 pl-6">
                       <div className="grid gap-1.5">
@@ -2905,7 +2921,9 @@ function ProviderFormPanel({
                           {t('providersPage.form.modelThinkingLevels')}
                         </span>
                         <div className="flex flex-wrap gap-2">
-                          {PROVIDER_THINKING_LEVELS.map((level) => {
+                          {Array.from(
+                            new Set([...PROVIDER_THINKING_LEVELS, ...(model.thinkingLevels ?? [])]),
+                          ).map((level) => {
                             const selected = (model.thinkingLevels ?? []).includes(level)
                             return (
                               <label
@@ -2919,9 +2937,7 @@ function ProviderFormPanel({
                                     const current = model.thinkingLevels ?? []
                                     const next =
                                       checked === true
-                                        ? PROVIDER_THINKING_LEVELS.filter(
-                                            (item) => item === level || current.includes(item),
-                                          )
+                                        ? Array.from(new Set([...current, level]))
                                         : current.filter((item) => item !== level)
                                     updateModelField(index, 'thinkingLevels', next)
                                   }}
@@ -3097,9 +3113,9 @@ function ProviderFormPanel({
           <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
             <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">
               <span className="min-w-0">
-                <span className="block">{t('providersPage.form.errorRulesSection')}</span>
+                <span className="block">{t('providersPage.form.requestScopedErrorsSection')}</span>
                 <span className="text-muted-foreground mt-1 block text-xs leading-5 font-normal">
-                  {t('providersPage.form.errorRulesHint')}
+                  {t('providersPage.form.requestScopedErrorsHint')}
                 </span>
               </span>
               <ChevronDown
@@ -3112,7 +3128,7 @@ function ProviderFormPanel({
                 <div key={index} className="grid gap-2.5 rounded-md border p-3">
                   <div className="grid gap-2 sm:grid-cols-[7rem_1fr_auto] sm:items-end">
                     <label className="grid gap-1 text-xs font-medium">
-                      <span>{t('providersPage.form.errorRuleStatus')}</span>
+                      <span>{t('providersPage.form.requestScopedErrorCode')}</span>
                       <Input
                         type="number"
                         min={100}
@@ -3131,7 +3147,7 @@ function ProviderFormPanel({
                       />
                     </label>
                     <div className="grid gap-1 text-xs font-medium">
-                      <span>{t('providersPage.form.errorRuleAction')}</span>
+                      <span>{t('providersPage.form.requestScopedErrorAction')}</span>
                       <Select
                         value={rule.action}
                         disabled={mutating}
@@ -3141,7 +3157,9 @@ function ProviderFormPanel({
                           updateField('requestScopedErrors', next)
                         }}
                       >
-                        <SelectTrigger aria-label={t('providersPage.form.errorRuleAction')}>
+                        <SelectTrigger
+                          aria-label={t('providersPage.form.requestScopedErrorAction')}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -3158,7 +3176,7 @@ function ProviderFormPanel({
                       variant="ghost"
                       size="icon-md"
                       disabled={mutating}
-                      aria-label={t('providersPage.form.removeErrorRule')}
+                      aria-label={t('providersPage.form.removeRequestScopedError')}
                       onClick={() =>
                         updateField(
                           'requestScopedErrors',
@@ -3171,7 +3189,7 @@ function ProviderFormPanel({
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     <label className="grid gap-1 text-xs font-medium">
-                      <span>{t('providersPage.form.errorRuleMatch')}</span>
+                      <span>{t('providersPage.form.requestScopedErrorKeywords')}</span>
                       <Textarea
                         rows={2}
                         className="font-mono text-xs"
@@ -3180,10 +3198,7 @@ function ProviderFormPanel({
                         disabled={mutating}
                         onChange={(event) => {
                           const next = [...(form.requestScopedErrors ?? [])]
-                          const match = event.target.value
-                            .split(/\r?\n/)
-                            .map((item) => item.trim())
-                            .filter(Boolean)
+                          const match = event.target.value.split(/\r?\n/)
                           next[index] = {
                             ...rule,
                             match: match.length ? match : undefined,
@@ -3193,7 +3208,7 @@ function ProviderFormPanel({
                       />
                     </label>
                     <label className="grid gap-1 text-xs font-medium">
-                      <span>{t('providersPage.form.errorRuleMatchRegex')}</span>
+                      <span>{t('providersPage.form.requestScopedErrorRegex')}</span>
                       <Textarea
                         rows={2}
                         className="font-mono text-xs"
@@ -3202,10 +3217,7 @@ function ProviderFormPanel({
                         disabled={mutating}
                         onChange={(event) => {
                           const next = [...(form.requestScopedErrors ?? [])]
-                          const regexes = event.target.value
-                            .split(/\r?\n/)
-                            .map((item) => item.trim())
-                            .filter(Boolean)
+                          const regexes = event.target.value.split(/\r?\n/)
                           next[index] = {
                             ...rule,
                             'match-regexr': regexes.length ? regexes : undefined,
@@ -3231,7 +3243,7 @@ function ProviderFormPanel({
                 }
               >
                 <Plus className="size-4" aria-hidden="true" />
-                {t('providersPage.form.addErrorRule')}
+                {t('providersPage.form.addRequestScopedError')}
               </Button>
             </CollapsibleContent>
           </Collapsible>

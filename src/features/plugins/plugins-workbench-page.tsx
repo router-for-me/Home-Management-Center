@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   AlertTriangle,
@@ -654,9 +654,14 @@ function PluginDetailSheet({
 const RESERVED_PLUGIN_KEYS = new Set(['enabled', 'priority', 'load-in-home', 'store'])
 
 function formatPluginParamValue(value: unknown): string {
-  if (value === undefined || value === null) return ''
-  if (typeof value === 'string') return value
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (value === undefined) return ''
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      JSON.parse(value)
+    } catch {
+      return value
+    }
+  }
   try {
     return JSON.stringify(value)
   } catch {
@@ -674,7 +679,16 @@ function parsePluginCustomParamValue(raw: string): unknown {
   }
 }
 
-function PluginConfigSheet({
+function formatDeclaredPluginValue(field: PluginConfigFieldDescriptor, value: unknown) {
+  const type = field.type.trim().toLowerCase()
+  if (type === 'boolean') return typeof value === 'boolean' ? value : undefined
+  if (value === undefined) return undefined
+  return (type === 'string' || type === 'enum') && typeof value === 'string'
+    ? value
+    : formatPluginParamValue(value)
+}
+
+export function PluginConfigSheet({
   plugin,
   open,
   saving,
@@ -692,14 +706,26 @@ function PluginConfigSheet({
   const [enabled, setEnabled] = useState(true)
   const [priority, setPriority] = useState('0')
   const [loadInHome, setLoadInHome] = useState(false)
-  const [declaredValues, setDeclaredValues] = useState<Record<string, string | boolean>>({})
+  const [declaredValues, setDeclaredValues] = useState<
+    Record<string, string | boolean | undefined>
+  >({})
   const [customEntries, setCustomEntries] = useState<Array<{ key: string; value: string }>>([])
   const [baselineKeys, setBaselineKeys] = useState<string[]>([])
+  const [fields, setFields] = useState<PluginConfigFieldDescriptor[]>([])
   const [localError, setLocalError] = useState<string | null>(null)
+  const [readyFor, setReadyFor] = useState<string | null>(null)
+  const baselineConfig = useRef<Record<string, unknown>>({})
+  const ready = readyFor === configQuery.sessionKey
 
   useEffect(() => {
-    if (!open || !plugin) return
-    const cfg = configQuery.config ?? {}
+    if (!open || !plugin) {
+      setReadyFor(null)
+      return
+    }
+    if (ready || configQuery.isFetching || configQuery.errorMessage || !configQuery.config) return
+    const cfg = configQuery.config
+    baselineConfig.current = cfg
+    setFields(configQuery.fields)
     setEnabled(typeof cfg.enabled === 'boolean' ? cfg.enabled : plugin.enabled !== false)
     setPriority(
       typeof cfg.priority === 'number' && Number.isFinite(cfg.priority)
@@ -709,14 +735,9 @@ function PluginConfigSheet({
     setLoadInHome(cfg['load-in-home'] === true)
 
     const declaredFieldNames = new Set(configQuery.fields.map((field) => field.name))
-    const nextDeclared: Record<string, string | boolean> = {}
+    const nextDeclared: Record<string, string | boolean | undefined> = {}
     for (const field of configQuery.fields) {
-      const val = cfg[field.name]
-      if (field.type.trim().toLowerCase() === 'boolean') {
-        nextDeclared[field.name] = val === true
-      } else {
-        nextDeclared[field.name] = formatPluginParamValue(val)
-      }
+      nextDeclared[field.name] = formatDeclaredPluginValue(field, cfg[field.name])
     }
     setDeclaredValues(nextDeclared)
 
@@ -731,12 +752,23 @@ function PluginConfigSheet({
     setCustomEntries(custom)
     setBaselineKeys(existingParamKeys)
     setLocalError(null)
-  }, [configQuery.config, configQuery.fields, open, plugin])
+    setReadyFor(configQuery.sessionKey)
+  }, [
+    configQuery.config,
+    configQuery.fields,
+    configQuery.isFetching,
+    configQuery.errorMessage,
+    configQuery.sessionKey,
+    open,
+    plugin,
+    ready,
+  ])
 
   if (!plugin) return null
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!ready || saving) return
     setLocalError(null)
 
     const priorityText = priority.trim()
@@ -749,9 +781,17 @@ function PluginConfigSheet({
     }
 
     const params: Record<string, unknown> = {}
-    for (const field of configQuery.fields) {
+    for (const field of fields) {
       const fieldType = field.type.trim().toLowerCase()
       const rawValue = declaredValues[field.name]
+      const original = baselineConfig.current[field.name]
+      if (rawValue === formatDeclaredPluginValue(field, original)) {
+        if (Object.prototype.hasOwnProperty.call(baselineConfig.current, field.name)) {
+          params[field.name] = original
+        }
+        continue
+      }
+      if (rawValue === undefined) continue
       if (fieldType === 'boolean') {
         params[field.name] = rawValue === true
         continue
@@ -773,13 +813,21 @@ function PluginConfigSheet({
         params[field.name] = parsed
       } else if (fieldType === 'array' || fieldType === 'object') {
         try {
-          params[field.name] = JSON.parse(text) as unknown
+          const parsed: unknown = JSON.parse(text)
+          if (
+            fieldType === 'array'
+              ? !Array.isArray(parsed)
+              : !parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+          ) {
+            throw new Error('Invalid parameter type')
+          }
+          params[field.name] = parsed
         } catch {
           setLocalError(t('pluginPage.config.validation.paramInvalid', { name: field.name }))
           return
         }
       } else {
-        params[field.name] = text
+        params[field.name] = rawValue
       }
     }
 
@@ -792,6 +840,10 @@ function PluginConfigSheet({
       if (!key) continue
       if (RESERVED_PLUGIN_KEYS.has(key)) {
         setLocalError(t('pluginPage.config.validation.reservedKey', { name: key }))
+        return
+      }
+      if (Object.prototype.hasOwnProperty.call(params, key)) {
+        setLocalError(t('pluginPage.config.validation.duplicateKey', { name: key }))
         return
       }
       params[key] = parsePluginCustomParamValue(entry.value)
@@ -825,8 +877,20 @@ function PluginConfigSheet({
         </DrawerScaffoldHeader>
         <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
           <DrawerScaffoldBody className="grid gap-4">
-            {configQuery.isPending ? (
-              <div className="grid gap-3">
+            {!ready && configQuery.errorMessage ? (
+              <div className="grid gap-3" role="alert">
+                <p className="text-destructive text-sm">{configQuery.errorMessage}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={configQuery.isFetching}
+                  onClick={() => void configQuery.refetch()}
+                >
+                  {t('pluginPage.actions.refresh')}
+                </Button>
+              </div>
+            ) : !ready ? (
+              <div className="grid gap-3" role="status" aria-label={t('pluginPage.config.loading')}>
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-14 w-full" />
                 <Skeleton className="h-24 w-full" />
@@ -878,19 +942,16 @@ function PluginConfigSheet({
                   />
                 </div>
 
-                {configQuery.fields.length > 0 ? (
+                {fields.length > 0 ? (
                   <div className="grid gap-3 rounded-md border p-3">
                     <h3 className="text-sm font-medium">
                       {t('pluginPage.config.declaredFieldsTitle')}
                     </h3>
-                    {configQuery.fields.map((field: PluginConfigFieldDescriptor) => {
+                    {fields.map((field: PluginConfigFieldDescriptor) => {
                       const fieldType = field.type.trim().toLowerCase()
                       if (fieldType === 'boolean') {
                         return (
-                          <div
-                            key={field.name}
-                            className="flex items-start justify-between gap-4 rounded-md border px-3 py-2.5"
-                          >
+                          <div key={field.name} className={fieldClassName}>
                             <div className="min-w-0">
                               <p className="font-mono text-xs font-medium">{field.name}</p>
                               {field.description ? (
@@ -899,17 +960,31 @@ function PluginConfigSheet({
                                 </p>
                               ) : null}
                             </div>
-                            <Switch
-                              checked={declaredValues[field.name] === true}
+                            <Select
+                              value={
+                                declaredValues[field.name] === undefined
+                                  ? 'unset'
+                                  : String(declaredValues[field.name])
+                              }
                               disabled={saving}
-                              onCheckedChange={(checked) =>
+                              onValueChange={(value) =>
                                 setDeclaredValues((current) => ({
                                   ...current,
-                                  [field.name]: checked,
+                                  [field.name]: value === 'unset' ? undefined : value === 'true',
                                 }))
                               }
-                              aria-label={field.name}
-                            />
+                            >
+                              <SelectTrigger aria-label={field.name}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unset">
+                                  {t('pluginPage.config.useDefault')}
+                                </SelectItem>
+                                <SelectItem value="true">true</SelectItem>
+                                <SelectItem value="false">false</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         )
                       }
@@ -918,18 +993,28 @@ function PluginConfigSheet({
                           <div key={field.name} className={fieldClassName}>
                             <span className="font-mono text-xs">{field.name}</span>
                             <Select
-                              value={String(declaredValues[field.name] ?? '')}
+                              value={
+                                declaredValues[field.name] === undefined
+                                  ? 'unset'
+                                  : `value:${declaredValues[field.name]}`
+                              }
                               disabled={saving}
                               onValueChange={(val) =>
-                                setDeclaredValues((current) => ({ ...current, [field.name]: val }))
+                                setDeclaredValues((current) => ({
+                                  ...current,
+                                  [field.name]: val === 'unset' ? undefined : val.slice(6),
+                                }))
                               }
                             >
                               <SelectTrigger aria-label={field.name}>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
+                                <SelectItem value="unset">
+                                  {t('pluginPage.config.useDefault')}
+                                </SelectItem>
                                 {field.enumValues.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>
+                                  <SelectItem key={opt} value={`value:${opt}`}>
                                     {opt}
                                   </SelectItem>
                                 ))}
@@ -1054,9 +1139,9 @@ function PluginConfigSheet({
             <Button type="button" variant="outline" disabled={saving} onClick={onClose}>
               {t('common.cancel')}
             </Button>
-            <Button type="submit" disabled={saving || configQuery.isPending}>
+            <Button type="submit" disabled={saving || !ready}>
               {saving ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
-              {t('common.save')}
+              {t('pluginPage.config.save')}
             </Button>
           </DrawerScaffoldFooter>
         </DrawerScaffoldForm>

@@ -508,6 +508,8 @@ export function useCredentialRawMetadata(resource: CredentialResource | null, en
   return {
     rawMetadata: query.data ?? null,
     isPending: query.isPending,
+    errorMessage: query.error instanceof Error ? query.error.message : null,
+    refetch: query.refetch,
   }
 }
 

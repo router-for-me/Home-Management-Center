@@ -9,6 +9,25 @@ export type CredentialStatusFilter = 'all' | 'active' | 'disabled' | 'unavailabl
 
 export const MAX_CREDENTIAL_WEIGHT = 1_000_000
 
+const RESERVED_METADATA_FIELDS = new Set([
+  'id',
+  'uuid',
+  'auth_index',
+  'authindex',
+  'index',
+  'name',
+  'file',
+  'filename',
+  'version',
+  'max_in_flight',
+  'max_in_flight_by_model',
+])
+
+export function isEditableCredentialMetadataPath(path: string) {
+  const parts = path.split('.').map((part) => part.trim())
+  return parts.every(Boolean) && !RESERVED_METADATA_FIELDS.has(parts[0].toLowerCase())
+}
+
 export type CredentialMetadataInput = {
   prefix: string
   proxyUrl: string
@@ -1275,6 +1294,9 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
     for (const [rawPath, value] of Object.entries(input.customFields)) {
       const path = rawPath.trim()
       if (!path) continue
+      if (!isEditableCredentialMetadataPath(path)) {
+        throw new Error('Credential selectors and concurrency fields cannot be edited as metadata')
+      }
       payload[path] = value
     }
   }
@@ -1641,14 +1663,12 @@ export async function fetchCredentialRawMetadata(
     params: createDownloadParams(resource),
   })
   if (typeof response.data === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(response.data)
-      return isRecord(parsed) ? parsed : {}
-    } catch {
-      return {}
-    }
+    const parsed: unknown = JSON.parse(response.data)
+    if (isRecord(parsed)) return parsed
+  } else if (isRecord(response.data)) {
+    return response.data
   }
-  return isRecord(response.data) ? response.data : {}
+  throw new Error('Credential metadata must be a JSON object')
 }
 
 export async function downloadCredentialResource(

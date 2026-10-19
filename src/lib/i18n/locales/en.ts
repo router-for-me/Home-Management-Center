@@ -1731,6 +1731,23 @@ export const en = {
         },
       },
       form: {
+        apiKeyEntryLabel: 'Key {{index}}',
+        claudeFingerprintProfileHint: 'Leave blank to use the caller’s fingerprint profile.',
+        claudeRebuildMidSystemMessageHint: 'Rebuild system messages inside the conversation.',
+        claudeNativeToolSearchHint:
+          'Trust this upstream for native tool search. Requires the global Claude tool-search setting.',
+        claudeExperimentalCchSigningHint:
+          'Compatibility setting; signing is automatic for supported direct upstreams.',
+        modelIsCompatHint: 'Retain thinking blocks with empty signatures.',
+        modelSupportConfigUpdateHint: 'Allow Responses configuration_update for this model.',
+        modelImageSupportHint: 'Publish this model as an image model in the model catalog.',
+        modelUseMaxCompletionTokensHint:
+          'Send max_completion_tokens instead of max_tokens to the upstream.',
+        modelThinkingEnabled: 'Override thinking capabilities',
+        modelThinkingHint:
+          'When off, use backend defaults. When on, use only the capabilities configured below.',
+        requestScopedErrorAction: 'Action',
+        requestScopedErrorRegex: 'Regular expressions (one per line)',
         createEyebrow: 'New model key',
         editEyebrow: 'Edit model key',
         name: 'Model provider name',
@@ -1802,12 +1819,12 @@ export const en = {
         modelUseMaxCompletionTokens: 'Use max_completion_tokens',
         modelInputModalities: 'Input modalities (comma-separated)',
         modelOutputModalities: 'Output modalities (comma-separated)',
-        modelThinkingLevels: 'Thinking levels (comma-separated)',
+        modelThinkingLevels: 'Thinking levels',
         modelThinkingMin: 'Thinking min budget',
         modelThinkingMax: 'Thinking max budget',
         modelThinkingZeroAllowed: 'Allow zero thinking budget (zero-allowed)',
         modelThinkingDynamicAllowed: 'Allow dynamic thinking budget (dynamic-allowed)',
-        modelImageSupport: 'Image generation options (image)',
+        modelImageSupport: 'Image model',
         modelImageAspectRatio: 'Allow aspect-ratio override (aspect-ratio)',
         modelImageSize: 'Allow image-size override (image-size)',
         addModel: 'Add model',
@@ -1816,11 +1833,11 @@ export const en = {
         excludedModelsHint: 'Enter one model ID per line, or separate model IDs with commas.',
         requestScopedErrorsSection: 'Request-scoped errors (request-scoped-errors)',
         requestScopedErrorsHint:
-          'Errors matching these HTTP status codes and keywords fail only the active request without triggering credential cooldown.',
+          'Match the HTTP status and any listed substring or regular expression. The action controls retries and cooling.',
         addRequestScopedError: 'Add rule',
         removeRequestScopedError: 'Remove rule',
         requestScopedErrorCode: 'HTTP status code',
-        requestScopedErrorKeywords: 'Keywords (comma-separated)',
+        requestScopedErrorKeywords: 'Substrings (one per line)',
         headersSection: 'Request headers',
         headersHint: 'Attach upstream request headers for this model key.',
         headerName: 'Header name',
@@ -1828,6 +1845,8 @@ export const en = {
         addHeader: 'Add header',
         removeHeader: 'Remove header',
         validation: {
+          modelOptionsInvalid:
+            'Enter a positive integer context length and non-negative integer thinking budgets; the minimum cannot exceed the maximum.',
           nameRequired: 'Enter a model provider name before saving.',
           apiKeyRequired: 'Enter a model service key before saving.',
           baseUrlRequired:
@@ -1841,7 +1860,7 @@ export const en = {
           weightInvalid: 'Weight must be an integer between 0 and 1000000.',
           proxyUrlInvalid: 'Proxy URL must be a valid http/https/socks5 URL or direct.',
           requestScopedErrorInvalid:
-            'Request-scoped error rules require a positive integer HTTP status code.',
+            'Enter a positive HTTP status and at least one substring or regular expression.',
         },
       },
       discovery: {
@@ -2332,6 +2351,12 @@ export const en = {
         },
       },
       form: {
+        proxyInherit: 'Use inherited proxy',
+        metadataLoading: 'Loading credential metadata',
+        headersIncomplete: 'Enter both a header name and value, or remove the row.',
+        customFieldsInvalid:
+          'Use a non-empty dot path. Credential selectors and concurrency fields must use their dedicated controls.',
+        customFieldsWarning: 'Saving a field does not guarantee that the current provider uses it.',
         prefix: 'Prefix',
         proxyUrl: 'Proxy URL',
         proxyUrlDirectHint:
@@ -2360,7 +2385,7 @@ export const en = {
         excludedModels: 'Excluded models (excluded_models)',
         excludedModelsPlaceholder: 'One model ID per line, or comma-separated',
         excludedModelsHint:
-          'This credential will not be selected for requests matching these models or wildcard patterns.',
+          'A non-empty list overrides global OAuth exclusions. Clear it to inherit the global rules again.',
         headersSection: 'Custom headers (headers)',
         headersHint: 'HTTP headers attached to upstream requests made with this credential.',
         addHeader: 'Add header',
@@ -5393,6 +5418,9 @@ export const en = {
         manageAuth: 'Manage store auth',
       },
       config: {
+        loading: 'Loading plugin configuration',
+        useDefault: 'Use plugin default',
+        save: 'Save changes',
         title: 'Configure {{name}}',
         enabledLabel: 'Enable plugin',
         enabledDescription: 'Control whether this plugin is enabled at runtime.',
@@ -5403,12 +5431,13 @@ export const en = {
         declaredFieldsTitle: 'Declared plugin parameters',
         customParamsTitle: 'Custom parameters',
         customParamsDescription:
-          'Read or write additional config.yaml keys under this plugin entry (supports JSON literals).',
+          'Edit extra plugin parameters. Values accept JSON; quote strings such as "123" to keep their type.',
         addParam: 'Add parameter',
         removeParam: 'Remove parameter',
         paramValuePlaceholder: 'Value (JSON or text)',
         saved: 'Saved configuration for {{name}}',
         validation: {
+          duplicateKey: 'Parameter {{name}} is already configured.',
           priorityInvalid: 'Priority must be an integer.',
           paramInvalid: 'Parameter {{name}} has an invalid value.',
           keyRequired: 'Enter a parameter key when a parameter value is set.',
