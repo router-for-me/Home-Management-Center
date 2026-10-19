@@ -1684,8 +1684,9 @@ function scrollToSection(sectionId: ConfigSectionId) {
   scrollElementIntoShell(`config-section-${sectionId}`)
 }
 
-function scrollToField(key: ConfigFieldKey) {
-  scrollToSection(fieldDefinitionByKey[key].sectionId)
+export function scrollToField(key: ConfigFieldKey) {
+  const field = fieldDefinitionByKey[key]
+  scrollElementIntoShell(`config-section-${field.groupId ?? field.sectionId}`)
 }
 
 function scrollToPayloadSection(sectionKey: PayloadSectionKey) {

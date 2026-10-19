@@ -819,6 +819,9 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
 
 export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
+  // Keep false/0/null as request bodies and JSON-looking strings as strings.
+  const putJson = (url: string, value: unknown) =>
+    client.put(url, JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
   const key = change.key
 
   if (key === 'payloadRulesJson') {
@@ -828,7 +831,7 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     )
 
     if (hasRules) {
-      await client.put('/config/requests/payload', payload)
+      await putJson('/config/requests/payload', payload)
       return
     }
 
@@ -844,7 +847,7 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       return
     }
 
-    await client.put('/config/multimedia/disable-image-generation', value)
+    await putJson('/config/multimedia/disable-image-generation', value)
     return
   }
 
@@ -853,13 +856,13 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
 
   switch (target.kind) {
     case 'boolean':
-      await client.put(url, change.nextValue)
+      await putJson(url, change.nextValue)
       return
     case 'number':
-      await client.put(url, Number(change.nextValue))
+      await putJson(url, Number(change.nextValue))
       return
     case 'nullableBoolean':
-      await client.put(url, change.nextValue === null ? null : Boolean(change.nextValue))
+      await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))
       return
     case 'string': {
       const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
@@ -867,21 +870,21 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
         await client.delete(url)
         return
       }
-      await client.put(url, value)
+      await putJson(url, value)
       return
     }
     case 'stringList': {
       const items = parseJsonArrayText(change.nextValue)
         .map((item) => (typeof item === 'string' ? item.trim() : ''))
         .filter((item) => item.length > 0)
-      await client.put(url, items)
+      await putJson(url, items)
       return
     }
     case 'jsonObject':
-      await client.put(url, parseJsonObjectText(change.nextValue))
+      await putJson(url, parseJsonObjectText(change.nextValue))
       return
     case 'jsonArray':
-      await client.put(url, parseJsonArrayText(change.nextValue))
+      await putJson(url, parseJsonArrayText(change.nextValue))
       return
   }
 }
