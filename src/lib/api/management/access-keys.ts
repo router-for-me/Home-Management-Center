@@ -121,6 +121,8 @@ export function normalizeAccessKey(value: unknown, index: number): AccessKeyReso
   const numericId = record ? readNumber(record, ['id', 'api_key_id', 'api-key-id']) : null
   const identifier = numericId != null ? `api-key-${numericId}` : null
   const displayName = record ? readString(record, ['display_name']) : null
+  const rawUserId = record ? readNumber(record, ['user_id', 'user-id']) : null
+  const userId = rawUserId !== null && rawUserId > 0 ? rawUserId : null
 
   return {
     id: numericId != null ? String(numericId) : `${index}:${trimmed}`,
@@ -133,7 +135,7 @@ export function normalizeAccessKey(value: unknown, index: number): AccessKeyReso
     prefix: trimmed.slice(0, 6),
     suffix: trimmed.slice(-4),
     length: trimmed.length,
-    userId: record ? readNumber(record, ['user_id', 'user-id']) : null,
+    userId,
     channelGroupIds: record ? readNumberArray(record, ['channels']) : [],
     modelGroupIds: record ? readNumberArray(record, ['model_groups', 'model-groups']) : [],
     raw: value,
