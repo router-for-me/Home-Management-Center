@@ -44,6 +44,7 @@ import {
   UpstreamQuotaPlanBadge,
   UpstreamQuotaStatusBadge,
 } from '@/features/upstream/quota-cells'
+import { getUpstreamQuotaErrorMessage } from '@/features/upstream/quota-format'
 import {
   type AntigravityQuotaGroup,
   type UpstreamQuotaEntry,
@@ -51,6 +52,7 @@ import {
   findXaiOnDemandWindow,
   findXaiWeeklyWindow,
   resolveAntigravityQuotaPresentation,
+  resolveCredentialQuotaAction,
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
@@ -972,7 +974,7 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
           )}
         >
           {antigravityPresentation.kind === 'failed'
-            ? (item.lastError?.message ?? t('upstreamPage.quota.collectFailed'))
+            ? getUpstreamQuotaErrorMessage(item, t)
             : antigravityPresentation.kind === 'collecting'
               ? t('upstreamPage.quota.antigravity.upgrading')
               : antigravityPresentation.kind === 'legacy'
@@ -987,7 +989,9 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
         </div>
       ) : (
         <p className="text-muted-foreground rounded-md border px-3 py-2.5 text-sm">
-          {item.lastError?.message ?? t('upstreamPage.quota.detail.noWindowsTitle')}
+          {item.lastError
+            ? getUpstreamQuotaErrorMessage(item, t)
+            : t('upstreamPage.quota.detail.noWindowsTitle')}
         </p>
       )}
 
@@ -1037,7 +1041,7 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
               <div className="min-w-0">
                 <p className="text-sm font-medium">{t('upstreamPage.quota.detail.lastError')}</p>
                 <p className="text-muted-foreground mt-1 text-sm leading-6 break-words">
-                  {item.lastError.message}
+                  {getUpstreamQuotaErrorMessage(item, t)}
                 </p>
                 {item.lastError.code ? (
                   <p className="text-muted-foreground mt-1 font-mono text-xs">
@@ -1056,12 +1060,20 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
 function CredentialQuotaTab({
   resource,
   quotaEntry,
+  quotaRecollectAvailable,
+  quotaCollecting,
+  mutating,
+  onCollectQuota,
 }: {
   resource: CredentialResource
   quotaEntry: UpstreamQuotaEntry | null
+  quotaRecollectAvailable: boolean
+  quotaCollecting: boolean
+  mutating: boolean
+  onCollectQuota: () => void
 }) {
   const { t } = useTranslation()
-  const credentialId = quotaEntry?.id ?? resource.authIndex ?? resource.name ?? resource.identifier
+  const credentialId = quotaEntry?.id ?? resource.authIndex ?? resource.identifier
   const detail = useUpstreamQuotaCredentialDetail(credentialId)
 
   if (!detail.available) {
@@ -1085,7 +1097,7 @@ function CredentialQuotaTab({
     )
   }
 
-  if (detail.isError || !detail.item) {
+  if (!detail.item) {
     return (
       <div className="border-warning/30 bg-warning/10 rounded-md border p-3 text-sm">
         <p className="font-medium">{t('upstreamPage.quota.detail.loadError')}</p>
@@ -1096,10 +1108,42 @@ function CredentialQuotaTab({
     )
   }
 
+  const action = resolveCredentialQuotaAction({
+    resource,
+    entry: detail.item,
+    available: quotaRecollectAvailable,
+    collecting: quotaCollecting,
+  })
+  const blocked = ['disabled', 'unsupported', 'unavailable'].includes(action)
   const isXai = detail.item.provider.trim().toLowerCase() === 'xai'
 
   return (
     <div className="grid gap-4">
+      <div className="flex items-center justify-end">
+        {blocked ? (
+          <p className="text-muted-foreground text-sm">
+            {t(`upstreamPage.quota.actions.${action}`)}
+          </p>
+        ) : (
+          <Button
+            variant="outline"
+            disabled={mutating || action === 'collecting'}
+            onClick={onCollectQuota}
+          >
+            {action === 'collecting' ? (
+              <Loader2 className="animate-spin" aria-hidden="true" />
+            ) : (
+              <RefreshCw aria-hidden="true" />
+            )}
+            {t(`upstreamPage.quota.actions.${action}`)}
+          </Button>
+        )}
+      </div>
+      {detail.isError ? (
+        <p role="status" className="text-warning-foreground text-sm">
+          {t('upstreamPage.quota.detail.loadError')}
+        </p>
+      ) : null}
       {isXai ? <GrokQuotaDetail entry={detail.item} /> : <UpstreamQuotaDetail item={detail.item} />}
       <p className="text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
         {t('upstreamPage.drawer.quota.readOnlyNote')}
@@ -1290,6 +1334,9 @@ export function CredentialDetailDrawer({
   mutating,
   models,
   quotaEntry,
+  quotaRecollectAvailable,
+  quotaCollecting,
+  onCollectQuota,
   showConcurrency,
   observationAvailable,
   canEditConcurrency,
@@ -1316,6 +1363,9 @@ export function CredentialDetailDrawer({
     ownedBy: string | null
   }> | null
   quotaEntry: UpstreamQuotaEntry | null
+  quotaRecollectAvailable: boolean
+  quotaCollecting: boolean
+  onCollectQuota: () => void
   showConcurrency: boolean
   observationAvailable: boolean
   canEditConcurrency: boolean
@@ -1371,7 +1421,14 @@ export function CredentialDetailDrawer({
           />
         ) : null}
         {tab === 'quota' ? (
-          <CredentialQuotaTab resource={resource} quotaEntry={quotaEntry} />
+          <CredentialQuotaTab
+            resource={resource}
+            quotaEntry={quotaEntry}
+            quotaRecollectAvailable={quotaRecollectAvailable}
+            quotaCollecting={quotaCollecting}
+            mutating={mutating}
+            onCollectQuota={onCollectQuota}
+          />
         ) : null}
         {tab === 'concurrency' && showConcurrency ? (
           <ConcurrencyTab

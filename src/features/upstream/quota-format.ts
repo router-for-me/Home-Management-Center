@@ -1,6 +1,6 @@
 import type { TFunction } from 'i18next'
 
-import type { QuotaWindow } from '@/lib/api/management/quota'
+import type { QuotaCredential, QuotaWindow } from '@/lib/api/management/quota'
 
 export function getUpstreamQuotaWindowIdentityLabel(window: QuotaWindow, t: TFunction) {
   const label = window.label?.trim()
@@ -41,4 +41,13 @@ export function getUpstreamQuotaWindowDisplayLabel(
     unitDisplay: 'long',
     maximumFractionDigits: 2,
   }).format(periodValue)
+}
+
+export function getUpstreamQuotaErrorMessage(
+  entry: Pick<QuotaCredential, 'lastError'>,
+  t: TFunction,
+) {
+  if (entry.lastError?.code === 'DCA_TOKEN_UNAVAILABLE')
+    return t('upstreamPage.quota.metaAuthorizationRequired')
+  return entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')
 }
