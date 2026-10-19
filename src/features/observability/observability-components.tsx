@@ -5255,6 +5255,8 @@ export function RuntimeLogViewer({
   const logTableContainerRef = useRef<HTMLDivElement | null>(null)
   const logLinesContainerRef = useRef<HTMLDivElement | null>(null)
   const lastScrollTopRef = useRef(0)
+  const isFollowingBottomRef = useRef(isFollowingBottom)
+  isFollowingBottomRef.current = isFollowingBottom
   const prependScrollRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null)
   const previousOffsetRef = useRef<number | null>(null)
   const records = runtimeLogs?.records ?? []
@@ -5267,6 +5269,12 @@ export function RuntimeLogViewer({
   const canGoPrevious = canRead && effectiveOffset > 0
   const canGoNext = canRead && effectiveOffset + effectiveLimit < total
   const hasActiveFilters = hasActiveRuntimeLogFilters(filters)
+
+  useEffect(() => {
+    if (!isLoadingOlderLogs && prependScrollRef.current) {
+      prependScrollRef.current = null
+    }
+  }, [isLoadingOlderLogs])
 
   useLayoutEffect(() => {
     if (!canRead || !runtimeLogs) return
@@ -5288,11 +5296,11 @@ export function RuntimeLogViewer({
 
     const offsetChanged = previousOffsetRef.current !== effectiveOffset
     previousOffsetRef.current = effectiveOffset
-    if (offsetChanged || (effectiveOffset === 0 && isFollowingBottom)) {
+    if (offsetChanged || (effectiveOffset === 0 && isFollowingBottomRef.current)) {
       scrollRuntimeLogContainerToBottom(container)
       lastScrollTopRef.current = container.scrollTop
     }
-  }, [canRead, effectiveOffset, isFollowingBottom, runtimeLogs])
+  }, [canRead, effectiveOffset, runtimeLogs])
 
   useEffect(() => {
     const container = logTableContainerRef.current ?? logLinesContainerRef.current
@@ -5303,7 +5311,7 @@ export function RuntimeLogViewer({
       const scrollingUp = currentScrollTop < lastScrollTopRef.current
       lastScrollTopRef.current = currentScrollTop
 
-      if (effectiveOffset !== 0) return
+      if (effectiveOffset !== 0 || isLoadingOlderLogs) return
 
       const nearBottom = isRuntimeLogScrollNearBottom(container)
       onFollowingBottomChange?.(nearBottom)
@@ -5312,10 +5320,10 @@ export function RuntimeLogViewer({
       }
 
       if (
+        !nearBottom &&
         scrollingUp &&
         isRuntimeLogScrollNearTop(container) &&
         canLoadOlderLogs &&
-        !isLoadingOlderLogs &&
         onLoadOlderLogs
       ) {
         prependScrollRef.current = {
@@ -5338,6 +5346,7 @@ export function RuntimeLogViewer({
     onLoadOlderLogs,
     pendingItemCount,
     records.length,
+    runtimeLogs?.lines.length,
   ])
 
   return (

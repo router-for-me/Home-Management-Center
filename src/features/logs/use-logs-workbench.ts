@@ -93,6 +93,7 @@ export function useLogsWorkbench() {
   )
   const { limit: runtimeLogLimit, offset: runtimeLogOffset } = runtimeLogPagination
   const [runtimeLogAnchorId, setRuntimeLogAnchorId] = useState<number | null>(null)
+  const [exhaustedBeforeId, setExhaustedBeforeId] = useState<number | null>(null)
   const [isFollowingBottom, setIsFollowingBottomState] = useState(true)
   const isFollowingBottomRef = useRef(true)
   const [runtimeLogDetailOpen, setRuntimeLogDetailOpen] = useState(false)
@@ -104,6 +105,12 @@ export function useLogsWorkbench() {
     isFollowingBottomRef.current = nextFollowing
     setIsFollowingBottomState(nextFollowing)
   }
+
+  useEffect(() => {
+    setRuntimeLogAnchorId(null)
+    setExhaustedBeforeId(null)
+    setIsFollowingBottom(true)
+  }, [session.baseUrl, connectedAt])
 
   const canQueryContext = connected && capabilityReady && Boolean(session.managementKey)
   const settingsQuery = useQuery({
@@ -298,6 +305,7 @@ export function useLogsWorkbench() {
 
   useEffect(() => {
     setPendingRuntimeLogs(null)
+    setExhaustedBeforeId(null)
   }, [runtimeLogFilters, runtimeLogLimit, runtimeLogOffset])
 
   useEffect(() => {
@@ -305,7 +313,12 @@ export function useLogsWorkbench() {
   }, [liveRefresh.enabled])
 
   const loadOlderLogsMutation = useMutation({
-    mutationFn: async (beforeId: number) => {
+    mutationFn: async ({
+      beforeId,
+    }: {
+      beforeId: number
+      queryKey: typeof runtimeLogsQueryKey
+    }) => {
       try {
         return await fetchRuntimeLogs(session, {
           ...runtimeLogFilters,
@@ -317,7 +330,17 @@ export function useLogsWorkbench() {
         throw toLogsApiError(error)
       }
     },
-    onSuccess: (olderSnapshot) => {
+    onSuccess: (olderSnapshot, variables) => {
+      if (JSON.stringify(variables.queryKey) !== JSON.stringify(runtimeLogsQueryKey)) {
+        return
+      }
+      if (olderSnapshot.records.length < runtimeLogLimit) {
+        const oldestReturnedId = parsePositiveLogId(
+          olderSnapshot.records[olderSnapshot.records.length - 1]?.id,
+        )
+        setExhaustedBeforeId(oldestReturnedId ?? variables.beforeId)
+      }
+      if (olderSnapshot.records.length === 0) return
       const current = queryClient.getQueryData<RuntimeLogSnapshot>(runtimeLogsQueryKey)
       if (!current) return
       queryClient.setQueryData(runtimeLogsQueryKey, mergeOlderRuntimeLogs(current, olderSnapshot))
@@ -341,12 +364,14 @@ export function useLogsWorkbench() {
   const setRuntimeLogLimit = (nextLimit: number) => {
     if (!runtimeLogPageSizeOptions.includes(nextLimit)) return
     setRuntimeLogAnchorId(null)
+    setExhaustedBeforeId(null)
     setIsFollowingBottom(true)
     setRuntimeLogPagination({ limit: nextLimit, offset: 0 })
   }
 
   const setRuntimeLogFilters = (nextFilters: Partial<RuntimeLogFilters>) => {
     setRuntimeLogAnchorId(null)
+    setExhaustedBeforeId(null)
     setIsFollowingBottom(true)
     setRuntimeLogFiltersState((currentFilters) => applyFilterPatch(currentFilters, nextFilters))
     setRuntimeLogPagination((current) =>
@@ -356,6 +381,7 @@ export function useLogsWorkbench() {
 
   const clearRuntimeLogFilters = () => {
     setRuntimeLogAnchorId(null)
+    setExhaustedBeforeId(null)
     setIsFollowingBottom(true)
     setRuntimeLogFiltersState((currentFilters) =>
       applyFilterPatch(currentFilters, defaultRuntimeLogFilters),
@@ -384,6 +410,9 @@ export function useLogsWorkbench() {
       })
     },
     onSuccess: async () => {
+      setRuntimeLogAnchorId(null)
+      setExhaustedBeforeId(null)
+      setIsFollowingBottom(true)
       setRuntimeLogPagination((current) => ({ ...current, offset: 0 }))
       queryClient.removeQueries({
         queryKey: ['management-runtime-logs-live', session.baseUrl, connectedAt],
@@ -467,6 +496,7 @@ export function useLogsWorkbench() {
     runtimeLogOffset === 0 &&
     oldestLoadedRecordId !== null &&
     oldestLoadedRecordId > 1 &&
+    (exhaustedBeforeId === null || oldestLoadedRecordId > exhaustedBeforeId) &&
     currentRecords.length < totalRuntimeLogs &&
     currentRecords.length < maxBufferedRuntimeLogs
 
@@ -497,6 +527,7 @@ export function useLogsWorkbench() {
     refetch: () => {
       if (runtimeLogOffset === 0) {
         setRuntimeLogAnchorId(null)
+        setExhaustedBeforeId(null)
         setIsFollowingBottom(true)
       }
       const queries: Array<Promise<unknown>> = [settingsQuery.refetch()]
@@ -538,7 +569,10 @@ export function useLogsWorkbench() {
       if (!canLoadOlderLogs || oldestLoadedRecordId === null || loadOlderLogsMutation.isPending) {
         return
       }
-      loadOlderLogsMutation.mutate(oldestLoadedRecordId)
+      loadOlderLogsMutation.mutate({
+        beforeId: oldestLoadedRecordId,
+        queryKey: runtimeLogsQueryKey,
+      })
     },
     setRuntimeLogDetailOpen,
     clearLogs: clearLogsMutation.mutateAsync,
