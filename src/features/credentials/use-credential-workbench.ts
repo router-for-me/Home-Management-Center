@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -98,7 +98,14 @@ export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetai
 export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
+  const [modelsByCredentialId, setModelsByCredentialId] = useState<
+    Record<string, Awaited<ReturnType<typeof fetchCredentialModels>>>
+  >({})
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
+
+  useEffect(() => {
+    setModelsByCredentialId({})
+  }, [session.baseUrl, connectedAt])
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
   const credentialConcurrencyLimits = useCapabilityStore(
     (state) => state.capabilities.credentialConcurrencyLimits,
@@ -280,6 +287,12 @@ export function useCredentialWorkbench() {
         throw toCredentialApiError(error)
       }
     },
+    onSuccess: (data, resource) => {
+      setModelsByCredentialId((current) => ({
+        ...current,
+        [resource.id]: data,
+      }))
+    },
   })
 
   const oauthMutation = useMutation({
@@ -368,6 +381,10 @@ export function useCredentialWorkbench() {
     submitOAuthCallback: oauthCallbackMutation.mutateAsync,
     importVertexCredential: vertexImportMutation.mutateAsync,
     models: modelsMutation.data ?? null,
+    modelsByCredentialId,
+    getModelsForCredential: (resource: CredentialResource | null | undefined) =>
+      resource ? (modelsByCredentialId[resource.id] ?? null) : null,
+    modelsLoading: modelsMutation.isPending,
     oauthResult: oauthMutation.data ?? null,
     oauthStatus: oauthStatusMutation.data ?? null,
     vertexImportResult: vertexImportMutation.data ?? null,

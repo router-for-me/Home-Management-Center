@@ -1,12 +1,22 @@
-import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react'
+import {
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import {
   AlertTriangle,
+  ChevronDown,
   CircleGauge,
   Download,
   Loader2,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
   X,
 } from 'lucide-react'
@@ -21,6 +31,7 @@ import {
 import { fieldClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -493,28 +504,303 @@ type CredentialFormField =
   | 'customFields'
 type CredentialFieldErrors = Partial<Record<CredentialFormField, string>>
 
+function matchExcludedModelPattern(pattern: string, modelId: string): boolean {
+  const trimmed = pattern.trim()
+  if (!trimmed) return false
+  if (trimmed.includes('*')) {
+    const regexSource = trimmed
+      .split('*')
+      .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')
+    return new RegExp(`^${regexSource}$`, 'i').test(modelId)
+  }
+  return trimmed.toLowerCase() === modelId.toLowerCase()
+}
+
+function getExcludedModelMatchState(
+  rules: readonly string[],
+  modelId: string,
+): { excluded: false } | { excluded: true; by: 'exact' | 'wildcard'; rule: string } {
+  const lowerId = modelId.toLowerCase()
+  const exactRule = rules.find((rule) => !rule.includes('*') && rule.toLowerCase() === lowerId)
+  if (exactRule) {
+    return { excluded: true, by: 'exact', rule: exactRule }
+  }
+  const wildcardRule = rules.find(
+    (rule) => rule.includes('*') && matchExcludedModelPattern(rule, modelId),
+  )
+  if (wildcardRule) {
+    return { excluded: true, by: 'wildcard', rule: wildcardRule }
+  }
+  return { excluded: false }
+}
+
+type CredentialModelEntry = {
+  id: string
+  displayName: string | null
+  type: string | null
+  ownedBy: string | null
+}
+
+function CredentialExcludedModelsField({
+  value,
+  disabled,
+  models,
+  modelsLoading,
+  onFetchModels,
+  onChange,
+}: {
+  value: string
+  disabled: boolean
+  models: CredentialModelEntry[] | null
+  modelsLoading: boolean
+  onFetchModels: () => Promise<void>
+  onChange: (nextValue: string) => void
+}) {
+  const { t } = useTranslation()
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const rules = useMemo(() => parseExcludedModelsDraft(value), [value])
+
+  const candidates = useMemo(() => {
+    const byLowerId = new Map<string, { id: string; displayName: string | null }>()
+    for (const model of models ?? []) {
+      const id = model.id.trim()
+      if (!id) continue
+      byLowerId.set(id.toLowerCase(), { id, displayName: model.displayName })
+    }
+    for (const rule of rules) {
+      if (rule.includes('*')) continue
+      const lower = rule.toLowerCase()
+      if (!byLowerId.has(lower)) {
+        byLowerId.set(lower, { id: rule, displayName: null })
+      }
+    }
+    return [...byLowerId.values()].sort((left, right) =>
+      left.id.localeCompare(right.id, undefined, { sensitivity: 'base' }),
+    )
+  }, [models, rules])
+
+  const stats = useMemo(() => {
+    let excluded = 0
+    for (const item of candidates) {
+      if (getExcludedModelMatchState(rules, item.id).excluded) {
+        excluded += 1
+      }
+    }
+    return {
+      total: candidates.length,
+      excluded,
+      available: Math.max(0, candidates.length - excluded),
+    }
+  }, [candidates, rules])
+
+  const filteredCandidates = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) return candidates
+    return candidates.filter(
+      (item) =>
+        item.id.toLowerCase().includes(query) ||
+        (item.displayName?.toLowerCase().includes(query) ?? false),
+    )
+  }, [candidates, search])
+
+  const toggleExactRule = (modelId: string, nextChecked: boolean) => {
+    const lowerId = modelId.toLowerCase()
+    const withoutTarget = rules.filter((rule) => rule.toLowerCase() !== lowerId)
+    const nextRules = nextChecked ? [...withoutTarget, modelId] : withoutTarget
+    onChange(nextRules.join('\n'))
+  }
+
+  const handleSelectAll = () => {
+    const nextRules = parseExcludedModelsDraft(
+      [...rules, ...filteredCandidates.map((item) => item.id)].join('\n'),
+    )
+    onChange(nextRules.join('\n'))
+  }
+
+  const handleClearExact = () => {
+    const wildcardOnly = rules.filter((rule) => rule.includes('*'))
+    onChange(wildcardOnly.join('\n'))
+  }
+
+  const summaryText = modelsLoading
+    ? t('credentialsPage.form.excludedModelsLoading')
+    : candidates.length > 0
+      ? stats.excluded === 0 && rules.length === 0
+        ? t('credentialsPage.form.excludedModelsEmpty')
+        : t('credentialsPage.form.excludedModelsSummary', {
+            excluded: stats.excluded,
+            available: stats.available,
+          })
+      : rules.length === 0
+        ? t('credentialsPage.form.excludedModelsEmpty')
+        : t('credentialsPage.form.excludedModelsRulesSummary', { count: rules.length })
+
+  return (
+    <div className={fieldClassName}>
+      <span>{t('credentialsPage.form.excludedModels')}</span>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-expanded={open}
+        className="control-bordered border-input bg-background text-foreground flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-xs shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={() => {
+          const nextOpen = !open
+          setOpen(nextOpen)
+          if (nextOpen && !models && !modelsLoading) {
+            void onFetchModels()
+          }
+        }}
+      >
+        <span className="flex min-w-0 items-center gap-2 truncate">
+          {modelsLoading ? <Loader2 className="size-3.5 shrink-0 animate-spin" /> : null}
+          <span className="truncate">{summaryText}</span>
+        </span>
+        <ChevronDown
+          className={cn(
+            'text-muted-foreground size-4 shrink-0 transition-transform',
+            open && 'rotate-180',
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open ? (
+        <div className="bg-muted/20 grid gap-2.5 rounded-md border p-2.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-44 flex-1">
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
+                aria-hidden="true"
+              />
+              <Input
+                size="sm"
+                value={search}
+                disabled={disabled}
+                placeholder={t('credentialsPage.form.excludedModelsSearchPlaceholder')}
+                className="pl-8"
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled || filteredCandidates.length === 0}
+                onClick={handleSelectAll}
+              >
+                {t('credentialsPage.form.excludedModelsSelectAll')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled || rules.length === 0}
+                onClick={handleClearExact}
+              >
+                {t('credentialsPage.form.excludedModelsClear')}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-md"
+                disabled={disabled || modelsLoading}
+                aria-label={t('credentialsPage.actions.reloadModels')}
+                onClick={() => void onFetchModels()}
+              >
+                <RefreshCw
+                  className={cn('size-3.5', modelsLoading && 'animate-spin')}
+                  aria-hidden="true"
+                />
+              </Button>
+            </div>
+          </div>
+
+          {filteredCandidates.length > 0 ? (
+            <div className="bg-background grid max-h-52 gap-1 overflow-y-auto rounded-md border p-1.5">
+              {filteredCandidates.map((item) => {
+                const matchState = getExcludedModelMatchState(rules, item.id)
+                const isWildcard = matchState.excluded && matchState.by === 'wildcard'
+                return (
+                  <label
+                    key={item.id}
+                    className="hover:bg-accent/50 flex cursor-pointer items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-xs"
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Checkbox
+                        checked={matchState.excluded}
+                        disabled={disabled || isWildcard}
+                        onCheckedChange={(checked) => toggleExactRule(item.id, checked === true)}
+                      />
+                      <span className="truncate font-mono">{item.id}</span>
+                    </span>
+                    {isWildcard ? (
+                      <span className="bg-muted text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 font-mono text-[10px]">
+                        {matchState.rule}
+                      </span>
+                    ) : item.displayName && item.displayName !== item.id ? (
+                      <span className="text-muted-foreground max-w-40 truncate text-[11px]">
+                        {item.displayName}
+                      </span>
+                    ) : null}
+                  </label>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-muted-foreground px-1 py-2 text-center text-xs">
+              {modelsLoading
+                ? t('credentialsPage.form.excludedModelsLoading')
+                : t('credentialsPage.detail.noModels')}
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      <Textarea
+        className="min-h-20 font-mono text-xs"
+        value={value}
+        placeholder={'model-a\nmodel-b*'}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <span className="text-muted-foreground text-xs leading-5 font-normal">
+        {t('credentialsPage.form.excludedModelsHint')}
+      </span>
+    </div>
+  )
+}
+
 function MetadataTab({
   resource,
   open,
   mutating,
+  models,
+  modelsLoading,
   rawMetadata,
   canEditConcurrency,
   concurrencyPolicy,
   concurrencyPolicyPending,
   concurrencyPolicyError,
   inFlightSummary,
+  onFetchModels,
   onUpdateMetadata,
   onToggleStatus,
 }: {
   resource: CredentialResource
   open: boolean
   mutating: boolean
+  models: CredentialModelEntry[] | null
+  modelsLoading: boolean
   rawMetadata: Record<string, unknown> | null
   canEditConcurrency: boolean
   concurrencyPolicy: CredentialConcurrencyPolicy | null
   concurrencyPolicyPending: boolean
   concurrencyPolicyError: string | null
   inFlightSummary: CredentialInFlightSummary | null
+  onFetchModels: () => Promise<void>
   onUpdateMetadata: (input: CredentialMetadataPatch) => Promise<void>
   onToggleStatus: () => Promise<void>
 }) {
@@ -963,19 +1249,14 @@ function MetadataTab({
         </div>
       </div>
 
-      <label className={fieldClassName}>
-        <span>{t('credentialsPage.form.excludedModels')}</span>
-        <Textarea
-          className="min-h-20 font-mono text-xs"
-          value={form.excludedModelsText ?? ''}
-          placeholder={'model-a\nmodel-b*'}
-          disabled={mutating}
-          onChange={(event) => updateField('excludedModelsText', event.target.value)}
-        />
-        <span className="text-muted-foreground text-xs leading-5 font-normal">
-          {t('credentialsPage.form.excludedModelsHint')}
-        </span>
-      </label>
+      <CredentialExcludedModelsField
+        value={form.excludedModelsText ?? ''}
+        disabled={mutating}
+        models={models}
+        modelsLoading={modelsLoading}
+        onFetchModels={onFetchModels}
+        onChange={(nextValue) => updateField('excludedModelsText', nextValue)}
+      />
 
       <div className="grid gap-2 rounded-md border p-3">
         <div className="flex items-center justify-between gap-2">
@@ -1291,7 +1572,13 @@ function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCre
   )
 }
 
-export function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
+export function GrokQuotaDetail({
+  entry,
+  headerAction,
+}: {
+  entry: UpstreamQuotaEntry
+  headerAction?: ReactNode
+}) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
@@ -1300,12 +1587,19 @@ export function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
 
   return (
     <div className="grid gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-        </UpstreamQuotaMetaBadge>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ProviderLogo providerId={entry.provider} size="lg" />
+          {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
+          <UpstreamQuotaStatusBadge status={entry.status} />
+          <UpstreamQuotaMetaBadge>
+            {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
+          </UpstreamQuotaMetaBadge>
+          <UpstreamQuotaMetaBadge>
+            {t(`upstreamPage.quota.source.${entry.source}`)}
+          </UpstreamQuotaMetaBadge>
+        </div>
+        {headerAction}
       </div>
       {monthlyWindow ? (
         <div className="grid gap-2 rounded-md border p-4">
@@ -1345,11 +1639,16 @@ export function GrokQuotaDetail({ entry }: { entry: UpstreamQuotaEntry }) {
   )
 }
 
-export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
+export function UpstreamQuotaDetail({
+  item,
+  headerAction,
+}: {
+  item: QuotaCredential
+  headerAction?: ReactNode
+}) {
   const { t } = useTranslation()
   const windows = item.windows.length > 0 ? item.windows : item.primaryWindows
   const isAntigravity = item.provider.trim().toLowerCase() === 'antigravity'
-  const isCodex = item.provider.trim().toLowerCase() === 'codex'
   const antigravityPresentation = isAntigravity
     ? resolveAntigravityQuotaPresentation(item, windows)
     : null
@@ -1360,21 +1659,24 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <ProviderLogo providerId={item.provider} size="lg" />
-        {item.plan ? <UpstreamQuotaPlanBadge plan={item.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={displayStatus} />
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.freshness.${displayFreshness}`)}
-        </UpstreamQuotaMetaBadge>
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.source.${item.source}`)}
-        </UpstreamQuotaMetaBadge>
-        {isAntigravity && item.collectionStatus !== 'success' ? (
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ProviderLogo providerId={item.provider} size="lg" />
+          {item.plan ? <UpstreamQuotaPlanBadge plan={item.plan} /> : null}
+          <UpstreamQuotaStatusBadge status={displayStatus} />
           <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.collection.${item.collectionStatus}`)}
+            {t(`upstreamPage.quota.freshness.${displayFreshness}`)}
           </UpstreamQuotaMetaBadge>
-        ) : null}
+          <UpstreamQuotaMetaBadge>
+            {t(`upstreamPage.quota.source.${item.source}`)}
+          </UpstreamQuotaMetaBadge>
+          {isAntigravity && item.collectionStatus !== 'success' ? (
+            <UpstreamQuotaMetaBadge>
+              {t(`upstreamPage.quota.collection.${item.collectionStatus}`)}
+            </UpstreamQuotaMetaBadge>
+          ) : null}
+        </div>
+        {headerAction}
       </div>
 
       {antigravityPresentation?.kind === 'windows' ? (
@@ -1410,9 +1712,7 @@ export function UpstreamQuotaDetail({ item }: { item: QuotaCredential }) {
         </p>
       )}
 
-      {isCodex && item.resetCredits ? (
-        <CodexResetCreditsDetail resetCredits={item.resetCredits} />
-      ) : null}
+      {item.resetCredits ? <CodexResetCreditsDetail resetCredits={item.resetCredits} /> : null}
 
       <section>
         <h3 className="text-sm font-semibold">{t('upstreamPage.quota.detail.collection')}</h3>
@@ -1531,35 +1831,35 @@ function CredentialQuotaTab({
   })
   const blocked = ['disabled', 'unsupported', 'unavailable'].includes(action)
   const isXai = detail.item.provider.trim().toLowerCase() === 'xai'
+  const headerAction = blocked ? (
+    <p className="text-muted-foreground text-sm">{t(`upstreamPage.quota.actions.${action}`)}</p>
+  ) : (
+    <Button
+      variant="outline"
+      disabled={mutating || action === 'collecting'}
+      onClick={onCollectQuota}
+    >
+      {action === 'collecting' ? (
+        <Loader2 className="animate-spin" aria-hidden="true" />
+      ) : (
+        <RefreshCw aria-hidden="true" />
+      )}
+      {t(`upstreamPage.quota.actions.${action}`)}
+    </Button>
+  )
 
   return (
     <div className="grid gap-4">
-      <div className="flex items-center justify-end">
-        {blocked ? (
-          <p className="text-muted-foreground text-sm">
-            {t(`upstreamPage.quota.actions.${action}`)}
-          </p>
-        ) : (
-          <Button
-            variant="outline"
-            disabled={mutating || action === 'collecting'}
-            onClick={onCollectQuota}
-          >
-            {action === 'collecting' ? (
-              <Loader2 className="animate-spin" aria-hidden="true" />
-            ) : (
-              <RefreshCw aria-hidden="true" />
-            )}
-            {t(`upstreamPage.quota.actions.${action}`)}
-          </Button>
-        )}
-      </div>
       {detail.isError ? (
         <p role="status" className="text-warning-foreground text-sm">
           {t('upstreamPage.quota.detail.loadError')}
         </p>
       ) : null}
-      {isXai ? <GrokQuotaDetail entry={detail.item} /> : <UpstreamQuotaDetail item={detail.item} />}
+      {isXai ? (
+        <GrokQuotaDetail entry={detail.item} headerAction={headerAction} />
+      ) : (
+        <UpstreamQuotaDetail item={detail.item} headerAction={headerAction} />
+      )}
       <p className="text-muted-foreground rounded-md border px-3 py-2 text-xs leading-5">
         {t('upstreamPage.drawer.quota.readOnlyNote')}
       </p>
@@ -1748,6 +2048,7 @@ export function CredentialDetailDrawer({
   tab,
   mutating,
   models,
+  modelsLoading = false,
   quotaEntry,
   quotaRecollectAvailable,
   quotaCollecting,
@@ -1771,12 +2072,8 @@ export function CredentialDetailDrawer({
   open: boolean
   tab: CredentialDrawerTab
   mutating: boolean
-  models: Array<{
-    id: string
-    displayName: string | null
-    type: string | null
-    ownedBy: string | null
-  }> | null
+  models: CredentialModelEntry[] | null
+  modelsLoading?: boolean
   quotaEntry: UpstreamQuotaEntry | null
   quotaRecollectAvailable: boolean
   quotaCollecting: boolean
@@ -1847,12 +2144,15 @@ export function CredentialDetailDrawer({
             resource={resource}
             open={open}
             mutating={mutating}
+            models={models}
+            modelsLoading={modelsLoading}
             rawMetadata={rawMetadataQuery.rawMetadata}
             canEditConcurrency={canEditConcurrency}
             concurrencyPolicy={concurrencyPolicyQuery.policy}
             concurrencyPolicyPending={concurrencyPolicyQuery.isPending}
             concurrencyPolicyError={concurrencyPolicyQuery.errorMessage}
             inFlightSummary={inFlightSummary}
+            onFetchModels={onFetchModels}
             onUpdateMetadata={onUpdateMetadata}
             onToggleStatus={onToggleStatus}
           />

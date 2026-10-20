@@ -180,12 +180,14 @@ describe('Antigravity sensitive words configuration', () => {
     )
     expect(oauthProvidersSection).toBeDefined()
 
+    const devinFields = oauthProvidersSection?.fields.filter((field) => field.groupId === 'devin')
     const liveMediaRelayFields = oauthProvidersSection?.fields.filter(
       (field) => field.groupId === 'liveMediaRelay',
     )
     const antigravityFields = oauthProvidersSection?.fields.filter(
       (field) => field.groupId === 'antigravity',
     )
+    expect(devinFields?.map((field) => field.key)).toEqual(['devinSensitiveWordsJson'])
     expect(liveMediaRelayFields?.map((field) => field.key)).toEqual([
       'liveMediaRelayEnabled',
       'liveMediaRelayMaxSessions',

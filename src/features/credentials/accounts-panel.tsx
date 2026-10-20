@@ -1510,7 +1510,8 @@ export function AccountsPanel({
               open={detailSheetOpen}
               tab={drawerTab}
               mutating={workbench.mutating}
-              models={workbench.models}
+              models={workbench.getModelsForCredential(selectedResource)}
+              modelsLoading={workbench.modelsLoading}
               quotaEntry={findUpstreamQuotaEntry(resolvedQuotaMap, selectedResource)}
               quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
               quotaCollecting={

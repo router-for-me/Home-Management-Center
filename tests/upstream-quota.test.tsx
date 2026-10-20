@@ -1001,8 +1001,13 @@ describe('GrokQuotaDetail rendering', () => {
       windowCount: 1,
     })
 
-    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    const markup = renderWithI18n(
+      <GrokQuotaDetail entry={entry} headerAction={<button type="button">Refresh quota</button>} />,
+    )
+    expect(markup).toContain('grok.svg')
     expect(markup).toContain('SuperGrok')
+    expect(markup).toContain('Refresh quota')
+    expect(markup).toContain('Response header')
     expect(markup).toContain('On-demand')
     expect(markup).toContain('Disabled')
     expect(markup).not.toContain('Not provided')
