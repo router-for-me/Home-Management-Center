@@ -987,6 +987,35 @@ describe('UpstreamQuotaDetail rendering', () => {
     expect(markup).toContain('Reset credit 1')
     expect(markup).toContain('1 more reset credits')
   })
+
+  test('shows Claude reset counts separately from plan multipliers', async () => {
+    await testI18n.changeLanguage('en')
+    const item = createQuotaEntry({
+      provider: 'claude',
+      plan: { name: 'Max 20x', premium: true },
+      resetCredits: {
+        availableCount: 3,
+        observedAt: '2026-10-20T00:00:00Z',
+        credits: [],
+      },
+    })
+    const markup = renderWithI18n(<UpstreamQuotaDetail item={item} />)
+    expect(markup).toContain('Max 20x')
+    expect(markup).toContain('Remaining limit resets')
+    expect(markup).toContain('3 remaining')
+    expect(markup).not.toContain('expiry details')
+    expect(markup).not.toContain('Reset credit 1')
+
+    const unknown = renderWithI18n(<UpstreamQuotaDetail item={{ ...item, resetCredits: null }} />)
+    expect(unknown).toContain('Remaining limit resets are not available')
+    expect(unknown).not.toContain('0 remaining')
+    const zero = renderWithI18n(
+      <UpstreamQuotaDetail
+        item={{ ...item, resetCredits: { ...item.resetCredits!, availableCount: 0 } }}
+      />,
+    )
+    expect(zero).toContain('0 remaining')
+  })
 })
 
 describe('GrokQuotaDetail rendering', () => {
@@ -1001,8 +1030,13 @@ describe('GrokQuotaDetail rendering', () => {
       windowCount: 1,
     })
 
-    const markup = renderWithI18n(<GrokQuotaDetail entry={entry} />)
+    const markup = renderWithI18n(
+      <GrokQuotaDetail entry={entry} headerAction={<button type="button">Refresh quota</button>} />,
+    )
+    expect(markup).toContain('grok.svg')
     expect(markup).toContain('SuperGrok')
+    expect(markup).toContain('Refresh quota')
+    expect(markup).toContain('Response header')
     expect(markup).toContain('On-demand')
     expect(markup).toContain('Disabled')
     expect(markup).not.toContain('Not provided')

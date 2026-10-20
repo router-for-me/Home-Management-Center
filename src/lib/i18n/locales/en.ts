@@ -2010,6 +2010,13 @@ export const en = {
           legacy:
             'Stored Antigravity quota uses an older or unrecognized format. Collect again to refresh it.',
         },
+        claude: {
+          resetCreditsUnavailable: 'Remaining limit resets are not available for this observation.',
+          resetCredits: 'Remaining limit resets',
+          remainingResets: '{{count}} remaining',
+          resetCreditsHint:
+            'Provider-reported resets that have not expired or been paused. Whether you can use one now depends on your current usage limits.',
+        },
         codex: {
           resetCredits: 'Rate-limit reset credits',
           availableResetCredits: '{{count}} available',
@@ -2386,6 +2393,15 @@ export const en = {
         excludedModelsPlaceholder: 'One model ID per line, or comma-separated',
         excludedModelsHint:
           'A non-empty list overrides global OAuth exclusions. Clear it to inherit the global rules again.',
+        excludedModelsLoading: 'Loading models...',
+        excludedModelsEmpty: 'No models excluded (select from model list)',
+        excludedModelsSummary: '{{excluded}} excluded · {{available}} available',
+        excludedModelsRulesSummary: '{{count}} exclusion rules (click to load model list)',
+        excludedModelsUnavailable:
+          'Exclusion candidates are unavailable for this credential. You can still edit rules below; update Home if you are using an older version.',
+        excludedModelsSearchPlaceholder: 'Search models...',
+        excludedModelsSelectAll: 'Select all',
+        excludedModelsClear: 'Clear',
         headersSection: 'Custom headers (headers)',
         headersHint: 'HTTP headers attached to upstream requests made with this credential.',
         addHeader: 'Add header',
@@ -3122,6 +3138,12 @@ export const en = {
           shortTitle: 'Providers',
           description:
             'Configure the OAuth credential directory and provider-specific settings for Codex, Antigravity, and Devin.',
+        },
+        devin: {
+          title: 'Devin',
+          shortTitle: 'Devin',
+          description:
+            'Configure system-prompt sensitive-word obfuscation rules for the Devin OAuth provider.',
         },
         liveMediaRelay: {
           title: 'Codex · Live media relay',
