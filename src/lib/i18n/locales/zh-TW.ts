@@ -1924,6 +1924,13 @@ export const zhTW = {
           upgrading: '正在將 Antigravity 額度刷新為分組格式。',
           legacy: '已儲存的 Antigravity 額度使用舊版或無法識別的格式，請重新採集。',
         },
+        claude: {
+          resetCreditsUnavailable: '本次採集未取得可用的剩餘限額重置次數。',
+          resetCredits: '剩餘限額重置次數',
+          remainingResets: '剩餘 {{count}} 次',
+          resetCreditsHint:
+            '上游回報的未過期、未暫停的剩餘重置次數。目前能否使用，取決於帳號的限額狀態。',
+        },
         codex: {
           resetCredits: '額度重設機會',
           availableResetCredits: '可用 {{count}} 次',
@@ -2294,6 +2301,8 @@ export const zhTW = {
         excludedModelsEmpty: '未排除任何模型（點擊從模型清單選擇）',
         excludedModelsSummary: '已排除 {{excluded}} · {{available}} 可用',
         excludedModelsRulesSummary: '已設定 {{count}} 條排除規則（點擊載入模型清單）',
+        excludedModelsUnavailable:
+          '此憑據的排除候選模型無法使用，仍可在下方手動編輯規則。如果 Home 版本較舊，請先更新。',
         excludedModelsSearchPlaceholder: '搜尋模型...',
         excludedModelsSelectAll: '全選',
         excludedModelsClear: '清空',

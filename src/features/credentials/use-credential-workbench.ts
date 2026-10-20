@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -98,14 +98,7 @@ export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetai
 export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
-  const [modelsByCredentialId, setModelsByCredentialId] = useState<
-    Record<string, Awaited<ReturnType<typeof fetchCredentialModels>>>
-  >({})
   const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
-
-  useEffect(() => {
-    setModelsByCredentialId({})
-  }, [session.baseUrl, connectedAt])
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
   const credentialConcurrencyLimits = useCapabilityStore(
     (state) => state.capabilities.credentialConcurrencyLimits,
@@ -160,6 +153,9 @@ export function useCredentialWorkbench() {
   const invalidate = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
+      queryClient.invalidateQueries({
+        queryKey: ['management-credential-models', session.baseUrl, connectedAt],
+      }),
       queryClient.invalidateQueries({ queryKey: inFlightQueryKey }),
       queryClient.invalidateQueries({ queryKey: concurrencyQueryKey }),
       queryClient.invalidateQueries({
@@ -279,22 +275,6 @@ export function useCredentialWorkbench() {
     },
   })
 
-  const modelsMutation = useMutation({
-    mutationFn: async (resource: CredentialResource) => {
-      try {
-        return await fetchCredentialModels(session, resource)
-      } catch (error) {
-        throw toCredentialApiError(error)
-      }
-    },
-    onSuccess: (data, resource) => {
-      setModelsByCredentialId((current) => ({
-        ...current,
-        [resource.id]: data,
-      }))
-    },
-  })
-
   const oauthMutation = useMutation({
     mutationFn: async (input: CredentialOAuthStartInput) => {
       try {
@@ -375,16 +355,10 @@ export function useCredentialWorkbench() {
     },
     refreshCredentials: invalidate,
     downloadCredential: downloadMutation.mutateAsync,
-    fetchModels: modelsMutation.mutateAsync,
     startOAuth: oauthMutation.mutateAsync,
     checkOAuthStatus: oauthStatusMutation.mutateAsync,
     submitOAuthCallback: oauthCallbackMutation.mutateAsync,
     importVertexCredential: vertexImportMutation.mutateAsync,
-    models: modelsMutation.data ?? null,
-    modelsByCredentialId,
-    getModelsForCredential: (resource: CredentialResource | null | undefined) =>
-      resource ? (modelsByCredentialId[resource.id] ?? null) : null,
-    modelsLoading: modelsMutation.isPending,
     oauthResult: oauthMutation.data ?? null,
     oauthStatus: oauthStatusMutation.data ?? null,
     vertexImportResult: vertexImportMutation.data ?? null,
@@ -397,12 +371,27 @@ export function useCredentialWorkbench() {
       bulkStatusMutation.isPending ||
       bulkDeleteMutation.isPending ||
       downloadMutation.isPending ||
-      modelsMutation.isPending ||
       oauthMutation.isPending ||
       oauthStatusMutation.isPending ||
       oauthCallbackMutation.isPending ||
       vertexImportMutation.isPending,
   }
+}
+
+export function useCredentialModels(resource: CredentialResource | null, enabled: boolean) {
+  const { session, connected, connectedAt } = useManagementSession()
+  return useQuery({
+    queryKey: ['management-credential-models', session.baseUrl, connectedAt, resource?.id],
+    enabled: connected && Boolean(session.managementKey) && resource !== null && enabled,
+    queryFn: async ({ signal }) => {
+      if (!resource) throw new Error('Credential is required')
+      try {
+        return await fetchCredentialModels(session, resource, signal)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+  })
 }
 
 export function useCredentialInFlightDetail(credentialId: string | null, enabled: boolean) {

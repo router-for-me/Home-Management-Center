@@ -2010,6 +2010,13 @@ export const en = {
           legacy:
             'Stored Antigravity quota uses an older or unrecognized format. Collect again to refresh it.',
         },
+        claude: {
+          resetCreditsUnavailable: 'Remaining limit resets are not available for this observation.',
+          resetCredits: 'Remaining limit resets',
+          remainingResets: '{{count}} remaining',
+          resetCreditsHint:
+            'Provider-reported resets that have not expired or been paused. Whether you can use one now depends on your current usage limits.',
+        },
         codex: {
           resetCredits: 'Rate-limit reset credits',
           availableResetCredits: '{{count}} available',
@@ -2390,6 +2397,8 @@ export const en = {
         excludedModelsEmpty: 'No models excluded (select from model list)',
         excludedModelsSummary: '{{excluded}} excluded · {{available}} available',
         excludedModelsRulesSummary: '{{count}} exclusion rules (click to load model list)',
+        excludedModelsUnavailable:
+          'Exclusion candidates are unavailable for this credential. You can still edit rules below; update Home if you are using an older version.',
         excludedModelsSearchPlaceholder: 'Search models...',
         excludedModelsSelectAll: 'Select all',
         excludedModelsClear: 'Clear',

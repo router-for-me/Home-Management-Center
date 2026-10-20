@@ -2011,6 +2011,13 @@ export const ru = {
           legacy:
             'Сохранённая квота Antigravity имеет старый или неизвестный формат. Запустите сбор повторно.',
         },
+        claude: {
+          resetCreditsUnavailable: 'Число оставшихся сбросов лимитов недоступно в этом наблюдении.',
+          resetCredits: 'Оставшиеся сбросы лимитов',
+          remainingResets: 'Осталось: {{count}}',
+          resetCreditsHint:
+            'Оставшиеся сбросы по данным провайдера, без истёкших и приостановленных. Возможность использовать сброс сейчас зависит от текущих лимитов.',
+        },
         codex: {
           resetCredits: 'Кредиты сброса лимита',
           availableResetCredits: 'Доступно: {{count}}',
@@ -2395,6 +2402,8 @@ export const ru = {
         excludedModelsEmpty: 'Модели не исключены (выберите из списка)',
         excludedModelsSummary: 'Исключено: {{excluded}} · доступно: {{available}}',
         excludedModelsRulesSummary: 'Правил исключения: {{count}} (нажмите для загрузки списка)',
+        excludedModelsUnavailable:
+          'Список моделей для исключения недоступен для этих учётных данных. Правила можно изменить вручную ниже. Если используется старая версия Home, обновите её.',
         excludedModelsSearchPlaceholder: 'Поиск моделей...',
         excludedModelsSelectAll: 'Выбрать все',
         excludedModelsClear: 'Очистить',

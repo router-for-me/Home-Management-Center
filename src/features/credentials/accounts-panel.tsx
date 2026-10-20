@@ -91,7 +91,10 @@ import {
   WebsocketsCell,
 } from '@/features/credentials/credential-inline-cells'
 import { findCredentialRouteResource } from '@/features/credentials/credential-route'
-import { useCredentialWorkbench } from '@/features/credentials/use-credential-workbench'
+import {
+  useCredentialModels,
+  useCredentialWorkbench,
+} from '@/features/credentials/use-credential-workbench'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
@@ -864,6 +867,10 @@ export function AccountsPanel({
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     resources.find((resource) => resource.id === selectedResourceId) ??
     null
+  const modelsQuery = useCredentialModels(
+    selectedResource,
+    detailSheetOpen && (drawerTab === 'metadata' || drawerTab === 'models'),
+  )
   const selectedResources = resources.filter((resource) => selectedResourceIds.has(resource.id))
   const selectedDisabledCount = selectedResources.filter((resource) => resource.disabled).length
   const selectedEnabledCount = selectedResources.length - selectedDisabledCount
@@ -1235,7 +1242,7 @@ export function AccountsPanel({
     if (!selectedResource) return
 
     try {
-      await workbench.fetchModels(selectedResource)
+      await modelsQuery.refetch({ throwOnError: true })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -1510,8 +1517,10 @@ export function AccountsPanel({
               open={detailSheetOpen}
               tab={drawerTab}
               mutating={workbench.mutating}
-              models={workbench.getModelsForCredential(selectedResource)}
-              modelsLoading={workbench.modelsLoading}
+              models={modelsQuery.data?.models ?? null}
+              exclusionModels={modelsQuery.data?.exclusionModels ?? null}
+              modelsLoading={modelsQuery.isFetching}
+              modelsError={modelsQuery.error?.message ?? null}
               quotaEntry={findUpstreamQuotaEntry(resolvedQuotaMap, selectedResource)}
               quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
               quotaCollecting={

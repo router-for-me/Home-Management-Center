@@ -1924,6 +1924,13 @@ export const zhCN = {
           upgrading: '正在将 Antigravity 额度刷新为分组格式。',
           legacy: '已存储的 Antigravity 额度使用旧版或无法识别的格式，请重新采集。',
         },
+        claude: {
+          resetCreditsUnavailable: '本次采集未获得可用的剩余限额重置次数。',
+          resetCredits: '剩余限额重置次数',
+          remainingResets: '剩余 {{count}} 次',
+          resetCreditsHint:
+            '上游报告的未过期、未暂停的剩余重置次数。当前能否使用，取决于账号的限额状态。',
+        },
         codex: {
           resetCredits: '额度重置机会',
           availableResetCredits: '可用 {{count}} 次',
@@ -2294,6 +2301,8 @@ export const zhCN = {
         excludedModelsEmpty: '未排除任何模型（点击从模型列表选择）',
         excludedModelsSummary: '已排除 {{excluded}} · {{available}} 可用',
         excludedModelsRulesSummary: '已配置 {{count}} 条排除规则（点击加载模型列表）',
+        excludedModelsUnavailable:
+          '此凭据的排除候选模型不可用，仍可在下方手动编辑规则。如果 Home 版本较旧，请先更新。',
         excludedModelsSearchPlaceholder: '搜索模型...',
         excludedModelsSelectAll: '全选',
         excludedModelsClear: '清空',

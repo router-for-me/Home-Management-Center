@@ -547,6 +547,8 @@ function CredentialExcludedModelsField({
   disabled,
   models,
   modelsLoading,
+  modelsLoaded,
+  modelsError,
   onFetchModels,
   onChange,
 }: {
@@ -554,6 +556,8 @@ function CredentialExcludedModelsField({
   disabled: boolean
   models: CredentialModelEntry[] | null
   modelsLoading: boolean
+  modelsLoaded: boolean
+  modelsError: string | null
   onFetchModels: () => Promise<void>
   onChange: (nextValue: string) => void
 }) {
@@ -562,6 +566,16 @@ function CredentialExcludedModelsField({
   const [search, setSearch] = useState('')
   const rules = useMemo(() => parseExcludedModelsDraft(value), [value])
 
+  const [knownRules, setKnownRules] = useState(() => rules.filter((rule) => !rule.includes('*')))
+  const rememberRules = () => {
+    setKnownRules((current) => {
+      const next = parseExcludedModelsDraft([...current, ...rules].join('\n')).filter(
+        (rule) => !rule.includes('*'),
+      )
+      return next.length === current.length ? current : next
+    })
+  }
+
   const candidates = useMemo(() => {
     const byLowerId = new Map<string, { id: string; displayName: string | null }>()
     for (const model of models ?? []) {
@@ -569,7 +583,7 @@ function CredentialExcludedModelsField({
       if (!id) continue
       byLowerId.set(id.toLowerCase(), { id, displayName: model.displayName })
     }
-    for (const rule of rules) {
+    for (const rule of [...knownRules, ...rules]) {
       if (rule.includes('*')) continue
       const lower = rule.toLowerCase()
       if (!byLowerId.has(lower)) {
@@ -579,7 +593,7 @@ function CredentialExcludedModelsField({
     return [...byLowerId.values()].sort((left, right) =>
       left.id.localeCompare(right.id, undefined, { sensitivity: 'base' }),
     )
-  }, [models, rules])
+  }, [models, knownRules, rules])
 
   const stats = useMemo(() => {
     let excluded = 0
@@ -606,6 +620,7 @@ function CredentialExcludedModelsField({
   }, [candidates, search])
 
   const toggleExactRule = (modelId: string, nextChecked: boolean) => {
+    rememberRules()
     const lowerId = modelId.toLowerCase()
     const withoutTarget = rules.filter((rule) => rule.toLowerCase() !== lowerId)
     const nextRules = nextChecked ? [...withoutTarget, modelId] : withoutTarget
@@ -619,14 +634,9 @@ function CredentialExcludedModelsField({
     onChange(nextRules.join('\n'))
   }
 
-  const handleClearExact = () => {
-    const wildcardOnly = rules.filter((rule) => rule.includes('*'))
-    onChange(wildcardOnly.join('\n'))
-  }
-
   const summaryText = modelsLoading
     ? t('credentialsPage.form.excludedModelsLoading')
-    : candidates.length > 0
+    : models !== null && candidates.length > 0
       ? stats.excluded === 0 && rules.length === 0
         ? t('credentialsPage.form.excludedModelsEmpty')
         : t('credentialsPage.form.excludedModelsSummary', {
@@ -644,11 +654,11 @@ function CredentialExcludedModelsField({
         type="button"
         disabled={disabled}
         aria-expanded={open}
-        className="control-bordered border-input bg-background text-foreground flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-xs shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+        className="control-bordered border-input bg-background text-foreground flex w-full items-center justify-between gap-2 rounded-md border px-3 py-2 text-left text-xs shadow-xs disabled:cursor-not-allowed disabled:opacity-50"
         onClick={() => {
           const nextOpen = !open
           setOpen(nextOpen)
-          if (nextOpen && !models && !modelsLoading) {
+          if (nextOpen && !modelsLoaded && !modelsLoading) {
             void onFetchModels()
           }
         }}
@@ -698,7 +708,10 @@ function CredentialExcludedModelsField({
                 variant="outline"
                 size="sm"
                 disabled={disabled || rules.length === 0}
-                onClick={handleClearExact}
+                onClick={() => {
+                  rememberRules()
+                  onChange('')
+                }}
               >
                 {t('credentialsPage.form.excludedModelsClear')}
               </Button>
@@ -717,6 +730,16 @@ function CredentialExcludedModelsField({
               </Button>
             </div>
           </div>
+
+          {modelsError ? (
+            <p role="alert" className="text-destructive text-xs">
+              {modelsError}
+            </p>
+          ) : modelsLoaded && models === null ? (
+            <p className="text-muted-foreground text-xs">
+              {t('credentialsPage.form.excludedModelsUnavailable')}
+            </p>
+          ) : null}
 
           {filteredCandidates.length > 0 ? (
             <div className="bg-background grid max-h-52 gap-1 overflow-y-auto rounded-md border p-1.5">
@@ -778,7 +801,9 @@ function MetadataTab({
   open,
   mutating,
   models,
+  modelsLoaded,
   modelsLoading,
+  modelsError,
   rawMetadata,
   canEditConcurrency,
   concurrencyPolicy,
@@ -794,6 +819,8 @@ function MetadataTab({
   mutating: boolean
   models: CredentialModelEntry[] | null
   modelsLoading: boolean
+  modelsLoaded: boolean
+  modelsError: string | null
   rawMetadata: Record<string, unknown> | null
   canEditConcurrency: boolean
   concurrencyPolicy: CredentialConcurrencyPolicy | null
@@ -1254,6 +1281,8 @@ function MetadataTab({
         disabled={mutating}
         models={models}
         modelsLoading={modelsLoading}
+        modelsLoaded={modelsLoaded}
+        modelsError={modelsError}
         onFetchModels={onFetchModels}
         onChange={(nextValue) => updateField('excludedModelsText', nextValue)}
       />
@@ -1507,7 +1536,13 @@ function AntigravityQuotaGroups({ groups }: { groups: AntigravityQuotaGroup[] })
   )
 }
 
-function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCredits }) {
+function ResetCreditsDetail({
+  resetCredits,
+  countOnly,
+}: {
+  resetCredits: QuotaResetCredits
+  countOnly: boolean
+}) {
   const { t } = useTranslation()
   const unavailableDetailCount = Math.max(
     0,
@@ -1517,11 +1552,22 @@ function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCre
   return (
     <section className="overflow-hidden rounded-md border">
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-        <h3 className="text-sm font-semibold">{t('upstreamPage.quota.codex.resetCredits')}</h3>
+        <h3 className="text-sm font-semibold">
+          {t(
+            countOnly
+              ? 'upstreamPage.quota.claude.resetCredits'
+              : 'upstreamPage.quota.codex.resetCredits',
+          )}
+        </h3>
         <span className="bg-muted/60 text-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium tabular-nums">
-          {t('upstreamPage.quota.codex.availableResetCredits', {
-            count: resetCredits.availableCount,
-          })}
+          {t(
+            countOnly
+              ? 'upstreamPage.quota.claude.remainingResets'
+              : 'upstreamPage.quota.codex.availableResetCredits',
+            {
+              count: resetCredits.availableCount,
+            },
+          )}
         </span>
       </div>
 
@@ -1551,11 +1597,17 @@ function CodexResetCreditsDetail({ resetCredits }: { resetCredits: QuotaResetCre
         </p>
       ) : null}
 
-      {unavailableDetailCount > 0 ? (
+      {!countOnly && unavailableDetailCount > 0 ? (
         <p className="text-muted-foreground border-t px-4 py-3 text-sm leading-6">
           {t('upstreamPage.quota.codex.resetCreditDetailsUnavailable', {
             count: unavailableDetailCount,
           })}
+        </p>
+      ) : null}
+
+      {countOnly ? (
+        <p className="text-muted-foreground border-t px-4 py-3 text-sm leading-6">
+          {t('upstreamPage.quota.claude.resetCreditsHint')}
         </p>
       ) : null}
 
@@ -1712,7 +1764,16 @@ export function UpstreamQuotaDetail({
         </p>
       )}
 
-      {item.resetCredits ? <CodexResetCreditsDetail resetCredits={item.resetCredits} /> : null}
+      {item.resetCredits ? (
+        <ResetCreditsDetail
+          resetCredits={item.resetCredits}
+          countOnly={item.provider === 'claude'}
+        />
+      ) : item.provider === 'claude' ? (
+        <p className="text-muted-foreground rounded-md border px-4 py-3 text-sm">
+          {t('upstreamPage.quota.claude.resetCreditsUnavailable')}
+        </p>
+      ) : null}
 
       <section>
         <h3 className="text-sm font-semibold">{t('upstreamPage.quota.detail.collection')}</h3>
@@ -1914,6 +1975,7 @@ function ConcurrencyTab({
 function ModelsTab({
   mutating,
   models,
+  error,
   onFetchModels,
 }: {
   mutating: boolean
@@ -1923,6 +1985,7 @@ function ModelsTab({
     type: string | null
     ownedBy: string | null
   }> | null
+  error: string | null
   onFetchModels: () => Promise<void>
 }) {
   const { t } = useTranslation()
@@ -1956,6 +2019,11 @@ function ModelsTab({
               : t('credentialsPage.actions.viewModels')}
           </Button>
         </div>
+        {error ? (
+          <p role="alert" className="text-destructive mt-3 text-xs">
+            {error}
+          </p>
+        ) : null}
         {models ? (
           <div className="bg-background/70 mt-3 max-h-96 overflow-y-auto rounded-md border p-2 text-xs">
             {models.length > 0 ? (
@@ -2048,6 +2116,8 @@ export function CredentialDetailDrawer({
   tab,
   mutating,
   models,
+  exclusionModels = null,
+  modelsError = null,
   modelsLoading = false,
   quotaEntry,
   quotaRecollectAvailable,
@@ -2074,6 +2144,8 @@ export function CredentialDetailDrawer({
   mutating: boolean
   models: CredentialModelEntry[] | null
   modelsLoading?: boolean
+  exclusionModels?: CredentialModelEntry[] | null
+  modelsError?: string | null
   quotaEntry: UpstreamQuotaEntry | null
   quotaRecollectAvailable: boolean
   quotaCollecting: boolean
@@ -2144,8 +2216,10 @@ export function CredentialDetailDrawer({
             resource={resource}
             open={open}
             mutating={mutating}
-            models={models}
+            models={exclusionModels}
+            modelsLoaded={models !== null}
             modelsLoading={modelsLoading}
+            modelsError={modelsError}
             rawMetadata={rawMetadataQuery.rawMetadata}
             canEditConcurrency={canEditConcurrency}
             concurrencyPolicy={concurrencyPolicyQuery.policy}
@@ -2179,7 +2253,12 @@ export function CredentialDetailDrawer({
           />
         ) : null}
         {tab === 'models' ? (
-          <ModelsTab mutating={mutating} models={models} onFetchModels={onFetchModels} />
+          <ModelsTab
+            mutating={mutating || modelsLoading}
+            models={models}
+            error={modelsError}
+            onFetchModels={onFetchModels}
+          />
         ) : null}
         {tab === 'danger' ? (
           <DangerTab mutating={mutating} onDownload={onDownload} onDelete={onDelete} />
