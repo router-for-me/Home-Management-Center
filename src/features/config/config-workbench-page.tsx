@@ -103,7 +103,7 @@ type ConfigSectionId =
   | 'payload'
   | 'multimedia'
 
-type ConfigSubgroupId = 'liveMediaRelay' | 'antigravity'
+type ConfigSubgroupId = 'devin' | 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
   | 'boolean'
@@ -476,7 +476,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'oauthProviders',
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
-      { key: 'devinSensitiveWordsJson', kind: 'jsonArray', sectionId: 'oauthProviders' },
+      {
+        key: 'devinSensitiveWordsJson',
+        kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'devin',
+      },
       {
         key: 'liveMediaRelayEnabled',
         kind: 'boolean',

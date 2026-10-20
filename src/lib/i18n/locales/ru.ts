@@ -2011,6 +2011,13 @@ export const ru = {
           legacy:
             'Сохранённая квота Antigravity имеет старый или неизвестный формат. Запустите сбор повторно.',
         },
+        claude: {
+          resetCreditsUnavailable: 'Число оставшихся сбросов лимитов недоступно в этом наблюдении.',
+          resetCredits: 'Оставшиеся сбросы лимитов',
+          remainingResets: 'Осталось: {{count}}',
+          resetCreditsHint:
+            'Оставшиеся сбросы по данным провайдера, без истёкших и приостановленных. Возможность использовать сброс сейчас зависит от текущих лимитов.',
+        },
         codex: {
           resetCredits: 'Кредиты сброса лимита',
           availableResetCredits: 'Доступно: {{count}}',
@@ -2391,6 +2398,15 @@ export const ru = {
         excludedModelsPlaceholder: 'По одному model ID на строку или через запятую',
         excludedModelsHint:
           'Непустой список заменяет глобальные исключения OAuth. Очистите его, чтобы снова наследовать глобальные правила.',
+        excludedModelsLoading: 'Загрузка моделей...',
+        excludedModelsEmpty: 'Модели не исключены (выберите из списка)',
+        excludedModelsSummary: 'Исключено: {{excluded}} · доступно: {{available}}',
+        excludedModelsRulesSummary: 'Правил исключения: {{count}} (нажмите для загрузки списка)',
+        excludedModelsUnavailable:
+          'Список моделей для исключения недоступен для этих учётных данных. Правила можно изменить вручную ниже. Если используется старая версия Home, обновите её.',
+        excludedModelsSearchPlaceholder: 'Поиск моделей...',
+        excludedModelsSelectAll: 'Выбрать все',
+        excludedModelsClear: 'Очистить',
         headersSection: 'Пользовательские заголовки (headers)',
         headersHint: 'HTTP-заголовки, добавляемые к upstream-запросам с этой учетной записью.',
         addHeader: 'Добавить Header',
@@ -3133,6 +3149,12 @@ export const ru = {
           shortTitle: 'Провайдеры',
           description:
             'Настройка каталога учётных данных OAuth и параметров провайдеров Codex, Antigravity и Devin.',
+        },
+        devin: {
+          title: 'Devin',
+          shortTitle: 'Devin',
+          description:
+            'Настройка правил обфускации чувствительных слов системного промпта для OAuth-провайдера Devin.',
         },
         liveMediaRelay: {
           title: 'Codex · Ретрансляция живого медиа',

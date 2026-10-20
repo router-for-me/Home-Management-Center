@@ -171,6 +171,7 @@ type VertexImportResponse = {
 
 type CredentialModelResponse = {
   models?: unknown[]
+  exclusion_models?: unknown[] | null
 }
 
 type CredentialUploadResponse = {
@@ -1687,25 +1688,42 @@ export async function downloadCredentialResource(
   }
 }
 
+function normalizeCredentialModels(models: unknown): CredentialModel[] {
+  return Array.isArray(models)
+    ? models.filter(isRecord).flatMap((record) => {
+        const id = readString(record, 'id')?.trim()
+        return id
+          ? [
+              {
+                id,
+                displayName: readString(record, 'display_name'),
+                type: readString(record, 'type'),
+                ownedBy: readString(record, 'owned_by'),
+              },
+            ]
+          : []
+      })
+    : []
+}
+
 export async function fetchCredentialModels(
   session: ManagementSessionInput,
   resource: CredentialResource,
-): Promise<CredentialModel[]> {
+  signal?: AbortSignal,
+) {
   const client = createManagementClient(session)
   const response = await client.get<CredentialModelResponse>('/credentials/models', {
-    params: {
-      name: getStatusSelector(resource),
-    },
+    params: { name: getStatusSelector(resource) },
+    signal,
   })
 
-  return Array.isArray(response.data.models)
-    ? response.data.models.filter(isRecord).map((record) => ({
-        id: readString(record, 'id') ?? 'unknown',
-        displayName: readString(record, 'display_name'),
-        type: readString(record, 'type'),
-        ownedBy: readString(record, 'owned_by'),
-      }))
-    : []
+  return {
+    models: normalizeCredentialModels(response.data.models),
+    // Older servers return only routed IDs, which cannot safely become exclusion rules.
+    exclusionModels: Array.isArray(response.data.exclusion_models)
+      ? normalizeCredentialModels(response.data.exclusion_models)
+      : null,
+  }
 }
 
 export async function startCredentialOAuth(
