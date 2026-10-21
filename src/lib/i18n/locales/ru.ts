@@ -3246,11 +3246,6 @@ export const ru = {
           label: 'Файлы error logs',
           description: 'Ограничение числа сохраняемых файлов error logs.',
         },
-        usageStatisticsEnabled: {
-          label: 'Статистика usage',
-          description:
-            'Записывать usage по клиентским ключам и запросам. Home принудительно включает эту настройку; переключатель недоступен.',
-        },
         tlsEnable: {
           label: 'Включить HTTPS',
           description: 'Обслуживать внешний трафик по HTTPS с настроенным TLS сертификатом.',

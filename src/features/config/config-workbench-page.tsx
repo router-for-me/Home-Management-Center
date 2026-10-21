@@ -314,7 +314,6 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'debug', kind: 'boolean', sectionId: 'system' },
       { key: 'requestLog', kind: 'boolean', sectionId: 'system' },
-      { key: 'usageStatisticsEnabled', kind: 'boolean', sectionId: 'system' },
       { key: 'loggingToFile', kind: 'boolean', sectionId: 'system' },
       { key: 'logsMaxTotalSizeMb', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'errorLogsMaxFiles', kind: 'number', sectionId: 'system', min: 0 },
@@ -661,8 +660,6 @@ const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
   'concurrencyLifecycleConfigRevision',
   'concurrencyObservationBarrierRevision',
 ])
-
-const forcedDisabledConfigFieldKeys = new Set<ConfigFieldKey>(['usageStatisticsEnabled'])
 
 const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
 
@@ -1998,8 +1995,7 @@ function ConfigField({
 }) {
   const { t, i18n } = useTranslation()
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
-  const locked =
-    readOnlyConfigFieldKeys.has(field.key) || forcedDisabledConfigFieldKeys.has(field.key)
+  const locked = readOnlyConfigFieldKeys.has(field.key)
   const controlDisabled = disabled || locked
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined

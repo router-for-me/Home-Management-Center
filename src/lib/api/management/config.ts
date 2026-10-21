@@ -15,7 +15,6 @@ export type ConfigFieldKey =
   | 'loggingToFile'
   | 'logsMaxTotalSizeMb'
   | 'errorLogsMaxFiles'
-  | 'usageStatisticsEnabled'
   | 'tlsEnable'
   | 'tlsCert'
   | 'tlsKey'
@@ -405,7 +404,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     loggingToFile: readBoolean(observabilityLogs, 'logging-to-file'),
     logsMaxTotalSizeMb: readNumber(observabilityLogs, 'logs-max-total-size-mb'),
     errorLogsMaxFiles: readNumber(observabilityLogs, 'error-logs-max-files', 10),
-    usageStatisticsEnabled: readBoolean(observabilityUsage, 'usage-statistics-enabled'),
     tlsEnable: readBoolean(serverTls, 'enable'),
     tlsCert: readString(serverTls, 'cert'),
     tlsKey: readString(serverTls, 'key'),
@@ -599,10 +597,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   loggingToFile: { path: 'observability/logs/logging-to-file', kind: 'boolean' },
   logsMaxTotalSizeMb: { path: 'observability/logs/logs-max-total-size-mb', kind: 'number' },
   errorLogsMaxFiles: { path: 'observability/logs/error-logs-max-files', kind: 'number' },
-  usageStatisticsEnabled: {
-    path: 'observability/usage/usage-statistics-enabled',
-    kind: 'boolean',
-  },
   tlsEnable: { path: 'server/tls/enable', kind: 'boolean' },
   tlsCert: { path: 'server/tls/cert', kind: 'string' },
   tlsKey: { path: 'server/tls/key', kind: 'string' },

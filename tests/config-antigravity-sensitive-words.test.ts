@@ -218,6 +218,7 @@ describe('Antigravity sensitive words configuration', () => {
       'aistudioWsAuth',
       'quotaSwitchProject',
       'quotaSwitchPreviewModel',
+      'usageStatisticsEnabled',
     ]
     const allDefinedKeys = sectionDefinitions.flatMap((section) =>
       section.fields.map((field) => field.key),
