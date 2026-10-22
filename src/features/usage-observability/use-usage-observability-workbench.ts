@@ -25,6 +25,7 @@ import {
   fetchUsageRuntimeSettings,
   getUsageOptionFilters,
   hasActiveUsageDropdownFilter,
+  isUsageDateRangeValid,
   toUsageApiError,
 } from '@/lib/api/management/usage'
 import { applyFilterPatch } from '@/lib/filter-patch'
@@ -134,9 +135,11 @@ export function useUsageObservabilityWorkbench() {
   const optionFilters = getUsageOptionFilters(filters)
   const dropdownFiltersActive = hasActiveUsageDropdownFilter(filters)
 
+  const dateRangeValid = isUsageDateRangeValid(filters)
   const canQuery = connected && capabilityReady && Boolean(session.managementKey)
+  const canQueryScoped = canQuery && dateRangeValid
   const autoRefreshEligible =
-    canQuery && filters.range !== 'yesterday' && filters.range !== 'custom'
+    canQueryScoped && filters.range !== 'yesterday' && filters.range !== 'custom'
   const recordsAutoRefreshEligible =
     autoRefreshEligible &&
     filters.offset === 0 &&
@@ -147,7 +150,11 @@ export function useUsageObservabilityWorkbench() {
     defaultEnabled: false,
     eligible: autoRefreshEligible,
     detailOpen: selectedRecordId !== null,
-    ineligibleReason: canQuery ? 'historicalRange' : 'unavailable',
+    ineligibleReason: !canQuery
+      ? 'unavailable'
+      : !dateRangeValid
+        ? 'invalidFilters'
+        : 'historicalRange',
   })
 
   const settingsQuery = useQuery({
@@ -179,7 +186,7 @@ export function useUsageObservabilityWorkbench() {
       scopedCapabilities.usageTokenBreakdownV2,
       aggregateFilters,
     ],
-    enabled: canQuery && scopedCapabilities.usageOverview,
+    enabled: canQueryScoped && scopedCapabilities.usageOverview,
     placeholderData: keepPreviousData,
     retry: false,
     staleTime: 0,
@@ -208,7 +215,7 @@ export function useUsageObservabilityWorkbench() {
       scopedCapabilities.usageTokenBreakdownV2,
       filters,
     ],
-    enabled: canQuery && scopedCapabilities.usageRecords,
+    enabled: canQueryScoped && scopedCapabilities.usageRecords,
     placeholderData: keepPreviousData,
     retry: false,
     staleTime: 0,
@@ -239,12 +246,7 @@ export function useUsageObservabilityWorkbench() {
       rankingMetric,
       rankingLimit,
     ],
-    enabled:
-      connected &&
-      capabilityReady &&
-      Boolean(session.managementKey) &&
-      rankingDetailOpen &&
-      scopedCapabilities.usageAggregates,
+    enabled: canQueryScoped && rankingDetailOpen && scopedCapabilities.usageAggregates,
     placeholderData: keepPreviousData,
     retry: false,
     staleTime: 0,
@@ -283,11 +285,7 @@ export function useUsageObservabilityWorkbench() {
       credentialUsageLimit,
       credentialUsageOffset,
     ],
-    enabled:
-      connected &&
-      capabilityReady &&
-      Boolean(session.managementKey) &&
-      scopedCapabilities.usageAggregates,
+    enabled: canQueryScoped && scopedCapabilities.usageAggregates,
     placeholderData: keepPreviousData,
     retry: false,
     staleTime: 0,
@@ -329,7 +327,7 @@ export function useUsageObservabilityWorkbench() {
       optionFilters,
     ],
     enabled:
-      canQuery &&
+      canQueryScoped &&
       dropdownFiltersActive &&
       (scopedCapabilities.usageOverview || scopedCapabilities.usageRecords),
     placeholderData: keepPreviousData,

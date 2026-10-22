@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
@@ -45,7 +46,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -458,26 +458,19 @@ function RequestEventsFiltersToolbar({
           onSelectValueChange={handleSearchFieldChange}
           onInputCommit={(value) => onChange(getNextSearchFieldPatch(activeSearchField, value))}
         />
-        <Select
-          value={filters.range}
+        <DateTimeRangePicker
+          from={filters.customFrom}
+          to={filters.customTo}
+          preset={filters.range}
           disabled={disabled}
-          onValueChange={(range) =>
-            onChange({ range: range as RequestEventFilters['range'], offset: 0 })
+          presets={(['4h', '12h', '24h', 'today', 'yesterday', '7d', '30d', '90d'] as const).map(
+            (value) => ({ value, label: t(`requestEventsPage.filters.ranges.${value}`) }),
+          )}
+          onPresetChange={(range) => onChange({ range, offset: 0 })}
+          onChange={({ from, to }) =>
+            onChange({ range: 'custom', customFrom: from, customTo: to, offset: 0 })
           }
-        >
-          <SelectTrigger size="md">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(
-              ['4h', '12h', '24h', 'today', 'yesterday', '7d', '30d', '90d', 'custom'] as const
-            ).map((range) => (
-              <SelectItem key={range} value={range}>
-                {t(`requestEventsPage.filters.ranges.${range}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
         <Select
           value={filters.status}
           disabled={disabled}
@@ -531,26 +524,6 @@ function RequestEventsFiltersToolbar({
           </SelectContent>
         </Select>
       </div>
-      {filters.range === 'custom' ? (
-        <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
-          <Input
-            size="md"
-            type="datetime-local"
-            value={filters.customFrom}
-            disabled={disabled}
-            aria-label={t('requestEventsPage.filters.customFrom')}
-            onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
-          />
-          <Input
-            size="md"
-            type="datetime-local"
-            value={filters.customTo}
-            disabled={disabled}
-            aria-label={t('requestEventsPage.filters.customTo')}
-            onChange={(event) => onChange({ customTo: event.target.value, offset: 0 })}
-          />
-        </div>
-      ) : null}
       <CollapsibleContent>
         <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
           <Select
@@ -1478,6 +1451,24 @@ function RequestEventsTable({
             }
           />
         )
+      ) : !filtersValid ? (
+        <TableEmptyState
+          kind="filtered-empty"
+          title={t('requestEventsPage.table.emptyTitle')}
+          description={t('requestEventsPage.filters.dateRangeInvalid')}
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              disabled={mutating}
+              onClick={onClearFilters}
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              {t('requestEventsPage.table.clearFilters')}
+            </Button>
+          }
+        />
       ) : errorMessage ? (
         <TableEmptyState
           kind="error"
@@ -1582,7 +1573,12 @@ export function RequestEventsPage({
   if (workbench.isPending && workbench.capabilities.requestEvents) {
     return renderState(<ObservabilityLoadingState />)
   }
-  if (workbench.isError && !workbench.events) {
+  if (
+    workbench.isError &&
+    !workbench.events &&
+    !hasActiveFilters(workbench.filters) &&
+    workbench.filtersValid
+  ) {
     return renderState(
       <ObservabilityErrorState
         copyKey="requestEventsPage"

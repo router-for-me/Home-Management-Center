@@ -1,5 +1,11 @@
-import { describe, expect, test } from 'bun:test'
+import { createElement } from 'react'
 
+import { describe, expect, test } from 'bun:test'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import { Input, clampDateInputYear } from '@/components/ui/input'
+import { isRequestEventDateRangeValid } from '@/lib/api/management/request-events'
+import { isUsageDateRangeValid } from '@/lib/api/management/usage-logs'
 import { en } from '@/lib/i18n/locales/en'
 import { ru } from '@/lib/i18n/locales/ru'
 import { zhCN } from '@/lib/i18n/locales/zh-CN'
@@ -79,6 +85,56 @@ describe('request events copy', () => {
       ])
       expect([language, locale.caller]).toEqual([language, undefined])
     }
+  })
+
+  test('bounds date and datetime-local inputs to 4-digit years and validates custom date ranges (#213)', () => {
+    const dateMarkup = renderToStaticMarkup(createElement(Input, { type: 'date' }))
+    expect(dateMarkup).toContain('min="1970-01-01"')
+    expect(dateMarkup).toContain('max="9999-12-31"')
+
+    const dateTimeMarkup = renderToStaticMarkup(createElement(Input, { type: 'datetime-local' }))
+    expect(dateTimeMarkup).toContain('min="1970-01-01T00:00"')
+    expect(dateTimeMarkup).toContain('max="9999-12-31T23:59"')
+
+    expect(clampDateInputYear('202222-10-15T08:30')).toBe('2022-10-15T08:30')
+    expect(clampDateInputYear('2026-10-15')).toBe('2026-10-15')
+
+    expect(
+      isRequestEventDateRangeValid({
+        range: 'custom',
+        customFrom: '2026-10-20T10:00',
+        customTo: '2026-10-22T10:00',
+      }),
+    ).toBe(true)
+    expect(
+      isRequestEventDateRangeValid({
+        range: 'custom',
+        customFrom: '2026-10-22T10:00',
+        customTo: '2026-10-20T10:00',
+      }),
+    ).toBe(false)
+    expect(
+      isRequestEventDateRangeValid({
+        range: 'custom',
+        customFrom: '202222-10-20T10:00',
+        customTo: '',
+      }),
+    ).toBe(false)
+
+    expect(
+      isUsageDateRangeValid({
+        range: 'custom',
+        customFrom: '2026-10-20',
+        customTo: '2026-10-22',
+      }),
+    ).toBe(true)
+    expect(
+      isUsageDateRangeValid({
+        range: 'custom',
+        customFrom: '2026-10-22',
+        customTo: '2026-10-20',
+      }),
+    ).toBe(false)
   })
 })
 

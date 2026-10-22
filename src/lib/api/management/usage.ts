@@ -14,6 +14,7 @@ export {
   fetchUsageRecordDetail,
   getUsageOptionFilters,
   hasActiveUsageDropdownFilter,
+  isUsageDateRangeValid,
   toUsageLogsApiError as toUsageApiError,
 } from '@/lib/api/management/usage-logs'
 export type {
