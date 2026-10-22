@@ -99,6 +99,7 @@ import type {
 } from '@/lib/api/management/request-events'
 import {
   defaultRequestEventFilters,
+  isRequestEventDateRangeValid,
   isRequestEventLatencyRangeValid,
 } from '@/lib/api/management/request-events'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
@@ -427,6 +428,7 @@ function RequestEventsFiltersToolbar({
       }) satisfies SelectInputGroupOption,
   )
 
+  const dateRangeInvalid = !isRequestEventDateRangeValid(filters)
   const latencyRangeInvalid = !isRequestEventLatencyRangeValid(filters)
 
   const handleSearchFieldChange = (nextField: string, carriedValue: string) => {
@@ -532,23 +534,32 @@ function RequestEventsFiltersToolbar({
         </Select>
       </div>
       {filters.range === 'custom' ? (
-        <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
-          <Input
-            size="md"
-            type="datetime-local"
-            value={filters.customFrom}
-            disabled={disabled}
-            aria-label={t('requestEventsPage.filters.customFrom')}
-            onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
-          />
-          <Input
-            size="md"
-            type="datetime-local"
-            value={filters.customTo}
-            disabled={disabled}
-            aria-label={t('requestEventsPage.filters.customTo')}
-            onChange={(event) => onChange({ customTo: event.target.value, offset: 0 })}
-          />
+        <div className="mt-3 border-t pt-3">
+          <div className={filterGridClassName}>
+            <Input
+              size="md"
+              type="datetime-local"
+              value={filters.customFrom}
+              disabled={disabled}
+              aria-invalid={dateRangeInvalid || undefined}
+              aria-label={t('requestEventsPage.filters.customFrom')}
+              onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
+            />
+            <Input
+              size="md"
+              type="datetime-local"
+              value={filters.customTo}
+              disabled={disabled}
+              aria-invalid={dateRangeInvalid || undefined}
+              aria-label={t('requestEventsPage.filters.customTo')}
+              onChange={(event) => onChange({ customTo: event.target.value, offset: 0 })}
+            />
+          </div>
+          {dateRangeInvalid ? (
+            <p className="text-destructive mt-2 text-xs">
+              {t('requestEventsPage.filters.dateRangeInvalid')}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <CollapsibleContent>
@@ -1478,6 +1489,24 @@ function RequestEventsTable({
             }
           />
         )
+      ) : !filtersValid ? (
+        <TableEmptyState
+          kind="filtered-empty"
+          title={t('requestEventsPage.table.emptyTitle')}
+          description={t('requestEventsPage.filters.dateRangeInvalid')}
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              disabled={mutating}
+              onClick={onClearFilters}
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              {t('requestEventsPage.table.clearFilters')}
+            </Button>
+          }
+        />
       ) : errorMessage ? (
         <TableEmptyState
           kind="error"
@@ -1582,7 +1611,12 @@ export function RequestEventsPage({
   if (workbench.isPending && workbench.capabilities.requestEvents) {
     return renderState(<ObservabilityLoadingState />)
   }
-  if (workbench.isError && !workbench.events) {
+  if (
+    workbench.isError &&
+    !workbench.events &&
+    !hasActiveFilters(workbench.filters) &&
+    workbench.filtersValid
+  ) {
     return renderState(
       <ObservabilityErrorState
         copyKey="requestEventsPage"

@@ -112,7 +112,11 @@ import {
 } from '@/features/observability/live-refresh-control'
 import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
 import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
-import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
+import {
+  defaultRuntimeLogFilters,
+  defaultUsageFilters,
+  isUsageDateRangeValid,
+} from '@/lib/api/management/usage-logs'
 import type {
   RequestErrorLogFile,
   RequestLogIndex,
@@ -619,6 +623,8 @@ export function UsageFiltersToolbar({
     }
   }
 
+  const dateRangeInvalid = !isUsageDateRangeValid(filters)
+
   const handleRangeChange = (range: UsageFilters['range']) => {
     if (range === 'custom' && !filters.customFrom && !filters.customTo) {
       onChange({ range, ...getDefaultCustomRange() })
@@ -682,25 +688,34 @@ export function UsageFiltersToolbar({
         </Select>
       </div>
       {filters.range === 'custom' ? (
-        <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
-          <label className="grid gap-1.5 text-xs font-medium">
-            <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
-            <Input
-              size="md"
-              type="date"
-              value={filters.customFrom}
-              onChange={(event) => onChange({ customFrom: event.target.value })}
-            />
-          </label>
-          <label className="grid gap-1.5 text-xs font-medium">
-            <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
-            <Input
-              size="md"
-              type="date"
-              value={filters.customTo}
-              onChange={(event) => onChange({ customTo: event.target.value })}
-            />
-          </label>
+        <div className="mt-3 border-t pt-3">
+          <div className={narrowFilterGridClassName}>
+            <label className="grid gap-1.5 text-xs font-medium">
+              <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
+              <Input
+                size="md"
+                type="date"
+                value={filters.customFrom}
+                aria-invalid={dateRangeInvalid || undefined}
+                onChange={(event) => onChange({ customFrom: event.target.value })}
+              />
+            </label>
+            <label className="grid gap-1.5 text-xs font-medium">
+              <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
+              <Input
+                size="md"
+                type="date"
+                value={filters.customTo}
+                aria-invalid={dateRangeInvalid || undefined}
+                onChange={(event) => onChange({ customTo: event.target.value })}
+              />
+            </label>
+          </div>
+          {dateRangeInvalid ? (
+            <p className="text-destructive mt-2 text-xs">
+              {t('usageLogsPage.filters.dateRangeInvalid')}
+            </p>
+          ) : null}
         </div>
       ) : null}
       <CollapsibleContent>

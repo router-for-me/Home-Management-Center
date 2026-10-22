@@ -259,6 +259,19 @@ export function isRequestEventLatencyRangeValid(
   return Number(minLatencyMs) <= Number(maxLatencyMs)
 }
 
+export function isRequestEventDateRangeValid(
+  filters: Pick<RequestEventFilters, 'range' | 'customFrom' | 'customTo'>,
+) {
+  if (filters.range !== 'custom') return true
+  const customFrom = filters.customFrom.trim()
+  const customTo = filters.customTo.trim()
+  const from = customFrom ? parseDateOnly(customFrom, 'start') : null
+  const to = customTo ? parseDateOnly(customTo, 'end') : null
+  if ((customFrom && !from) || (customTo && !to)) return false
+  if (from && to && from.getTime() > to.getTime()) return false
+  return true
+}
+
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -335,6 +348,7 @@ function getTimeZone() {
 function parseDateOnly(value: string, mode: 'start' | 'end') {
   const trimmed = value.trim()
   if (!trimmed) return null
+  if (!/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return null
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     const date = new Date(`${trimmed}T00:00:00`)

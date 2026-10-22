@@ -1743,6 +1743,19 @@ function parseDateOnly(value: string, boundary: 'start' | 'end') {
   return date
 }
 
+export function isUsageDateRangeValid(
+  filters: Pick<UsageFilters, 'range' | 'customFrom' | 'customTo'>,
+) {
+  if (filters.range !== 'custom') return true
+  const customFrom = filters.customFrom.trim()
+  const customTo = filters.customTo.trim()
+  const from = customFrom ? parseDateOnly(customFrom, 'start') : null
+  const to = customTo ? parseDateOnly(customTo, 'end') : null
+  if ((customFrom && !from) || (customTo && !to)) return false
+  if (from && to && from.getTime() > to.getTime()) return false
+  return true
+}
+
 function getDateRange(filters: UsageFilters) {
   const now = new Date()
   const range = filters.range

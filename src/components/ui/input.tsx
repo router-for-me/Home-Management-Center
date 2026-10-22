@@ -7,10 +7,21 @@ type InputProps = Omit<React.ComponentProps<'input'>, 'size'> & {
   size?: ControlSize
 }
 
+export function clampDateInputYear(value: string): string {
+  return value.replace(/^(\d{4})\d+(?=-\d{2}-\d{2})/, '$1')
+}
+
 function Input({ className, type, size = 'lg', ...props }: InputProps) {
+  const isDate = type === 'date'
+  const isDateTimeLocal = type === 'datetime-local'
+  const defaultMin = isDate ? '1970-01-01' : isDateTimeLocal ? '1970-01-01T00:00' : undefined
+  const defaultMax = isDate ? '9999-12-31' : isDateTimeLocal ? '9999-12-31T23:59' : undefined
+
   return (
     <input
       type={type}
+      min={defaultMin}
+      max={defaultMax}
       data-slot="input"
       data-size={size}
       className={cn(
@@ -21,6 +32,19 @@ function Input({ className, type, size = 'lg', ...props }: InputProps) {
         className,
       )}
       {...props}
+      onChange={
+        props.onChange
+          ? (event) => {
+              if ((isDate || isDateTimeLocal) && event.target.value) {
+                const clamped = clampDateInputYear(event.target.value)
+                if (clamped !== event.target.value) {
+                  event.target.value = clamped
+                }
+              }
+              props.onChange?.(event)
+            }
+          : undefined
+      }
     />
   )
 }
