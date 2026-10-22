@@ -5,6 +5,8 @@ type UnknownRecord = Record<string, unknown>
 
 export type ManagementModelScope = 'available' | 'static'
 
+type BillingModelTarget = { provider: string; model: string }
+
 export type ModelResource = {
   id: string
   displayName: string
@@ -12,6 +14,7 @@ export type ModelResource = {
   ownedBy: string | null
   type: string | null
   providers: string[]
+  billingModels: BillingModelTarget[] | null
   channel: string | null
   scope: ManagementModelScope
   object: string | null
@@ -66,6 +69,18 @@ function readStringArray(record: UnknownRecord, key: string) {
   return result
 }
 
+function readBillingModels(record: UnknownRecord): BillingModelTarget[] | null {
+  if (!Object.hasOwn(record, 'billing_models')) return null
+  if (!Array.isArray(record.billing_models)) return []
+
+  return record.billing_models.flatMap((value) => {
+    if (!isRecord(value)) return []
+    const provider = readString(value, ['provider'])?.trim().toLowerCase()
+    const model = readString(value, ['model'])?.trim()
+    return provider && model ? [{ provider, model }] : []
+  })
+}
+
 function normalizeModelResource(
   record: UnknownRecord,
   scope: ManagementModelScope,
@@ -83,6 +98,7 @@ function normalizeModelResource(
     ownedBy: readString(record, ['owned_by', 'ownedBy', 'owner']),
     type: readString(record, ['type']),
     providers: readStringArray(record, 'providers'),
+    billingModels: readBillingModels(record),
     channel: channel ?? readString(record, ['channel', 'provider']),
     scope,
     object: readString(record, ['object']),
@@ -121,8 +137,11 @@ export function normalizeModelsSnapshotResponse(
   const resources = readModelEntries(responseData, scope)
   return {
     resources,
-    missingProviderMetadataCount: resources.filter((resource) => resource.providers.length === 0)
-      .length,
+    missingProviderMetadataCount: resources.filter((resource) =>
+      resource.billingModels === null
+        ? resource.providers.length === 0
+        : resource.billingModels.length === 0,
+    ).length,
   }
 }
 

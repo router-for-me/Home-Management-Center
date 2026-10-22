@@ -20,6 +20,7 @@ function modelResource(
     ownedBy: 'openai',
     type: 'openai',
     providers,
+    billingModels: null,
     channel: null,
     scope,
     object: 'model',
@@ -75,5 +76,66 @@ describe('Billing model provider contract', () => {
     ])
     expect(candidates.some((candidate) => candidate.provider === 'openai')).toBe(false)
     expect(candidates.some((candidate) => candidate.model === 'legacy-openai')).toBe(false)
+  })
+})
+
+describe('Billing alias execution identities', () => {
+  test('prices each upstream target and keeps aliases searchable after deduplication', () => {
+    const snapshot = normalizeModelsSnapshotResponse(
+      {
+        models: [
+          {
+            id: 'team/MY-MODEL',
+            name: 'merged-name-is-not-authoritative',
+            providers: ['z-ai', 'another-provider'],
+            billing_models: [
+              { provider: ' Z-AI ', model: 'glm-5.3-flash' },
+              { provider: 'z-ai', model: 'glm-next' },
+              { provider: 'another-provider', model: 'other-upstream' },
+              { provider: 'z-ai', model: 'glm-5.3-flash' },
+            ],
+          },
+        ],
+      },
+      'available',
+    )
+    const candidates = createModelPriceCandidates(snapshot.resources, [
+      modelResource('glm-5.3-flash', 'static', ['z-ai']),
+    ])
+    expect(candidates.map(({ provider, model }) => [provider, model])).toEqual([
+      ['another-provider', 'other-upstream'],
+      ['z-ai', 'glm-5.3-flash'],
+      ['z-ai', 'glm-next'],
+    ])
+    expect(candidates.every(({ description }) => description.includes('team/MY-MODEL'))).toBe(true)
+    expect(candidates.find(({ model }) => model === 'glm-5.3-flash')?.scopes).toEqual([
+      'static',
+      'available',
+    ])
+    expect(snapshot.missingProviderMetadataCount).toBe(0)
+  })
+
+  test('does not invent alias prices when billing targets are empty or malformed', () => {
+    const snapshot = normalizeModelsSnapshotResponse(
+      {
+        models: [
+          { id: 'empty', providers: ['z-ai'], billing_models: [] },
+          { id: 'invalid', providers: ['z-ai'], billing_models: null },
+          {
+            id: 'malformed',
+            providers: ['z-ai'],
+            billing_models: [
+              null,
+              {},
+              { provider: '', model: 'glm' },
+              { provider: 'z-ai', model: 1 },
+            ],
+          },
+        ],
+      },
+      'available',
+    )
+    expect(createModelPriceCandidates(snapshot.resources, [])).toEqual([])
+    expect(snapshot.missingProviderMetadataCount).toBe(3)
   })
 })

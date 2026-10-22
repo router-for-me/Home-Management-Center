@@ -16,12 +16,16 @@ export function createBillingModelPriceCandidateId(provider: string, model: stri
 }
 
 function createCandidatesForResource(resource: ModelResource): BillingModelPriceCandidate[] {
-  return resource.providers.map((provider) => ({
-    id: createBillingModelPriceCandidateId(provider, resource.id),
+  const targets =
+    resource.billingModels ??
+    resource.providers.map((provider) => ({ provider, model: resource.id }))
+
+  return targets.map(({ provider, model }) => ({
+    id: createBillingModelPriceCandidateId(provider, model),
     provider,
-    model: resource.id,
+    model,
     label: resource.displayName,
-    description: resource.name ?? resource.id,
+    description: [resource.id, resource.name].filter(Boolean).join(' '),
     ownedBy: resource.ownedBy,
     type: resource.type,
     scopes: [resource.scope],
@@ -49,7 +53,9 @@ export function createModelPriceCandidates(
       }
 
       existing.label = existing.label || candidate.label
-      existing.description = existing.description || candidate.description
+      existing.description = [...new Set([existing.description, candidate.description])]
+        .filter(Boolean)
+        .join(' ')
       existing.ownedBy = existing.ownedBy ?? candidate.ownedBy
       existing.type = existing.type ?? candidate.type
     }
