@@ -3,10 +3,10 @@ import { useState } from 'react'
 import { BarChart3, RefreshCcw, WalletCards } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { TablePaginationStatus, tableHeaderClassName } from '@/components/shared/table-surface'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -192,35 +192,23 @@ export function UserBillingReport() {
         </Button>
       </div>
 
-      <div className="grid gap-3 border-b p-4 md:grid-cols-[150px_1fr_1fr]">
-        <Select
-          value={preset}
-          onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="today">{t('userWorkspace.billing.filters.today')}</SelectItem>
-            <SelectItem value="7d">{t('userWorkspace.billing.filters.last7d')}</SelectItem>
-            <SelectItem value="30d">{t('userWorkspace.billing.filters.last30d')}</SelectItem>
-            <SelectItem value="custom">{t('userWorkspace.billing.filters.custom')}</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input
-          type="date"
-          value={filters.from}
-          onChange={(event) => {
+      <div className="border-b p-4">
+        <DateTimeRangePicker
+          precision="date"
+          size="lg"
+          className="sm:w-44"
+          from={filters.from}
+          to={filters.to}
+          preset={preset}
+          presets={[
+            { value: 'today', label: t('userWorkspace.billing.filters.today') },
+            { value: '7d', label: t('userWorkspace.billing.filters.last7d') },
+            { value: '30d', label: t('userWorkspace.billing.filters.last30d') },
+          ]}
+          onPresetChange={handlePresetChange}
+          onChange={(range) => {
             setPreset('custom')
-            updateFilters({ from: event.target.value })
-          }}
-        />
-        <Input
-          type="date"
-          value={filters.to}
-          onChange={(event) => {
-            setPreset('custom')
-            updateFilters({ to: event.target.value })
+            updateFilters(range)
           }}
         />
       </div>

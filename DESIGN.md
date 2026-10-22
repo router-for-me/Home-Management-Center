@@ -247,6 +247,17 @@ Interaction states:
 - `.control-bordered` lives in the utilities layer, not the components layer. A layer beats specificity outright, so from the components layer it lost to every `bg-*` a primitive already set. Anything that must override it needs higher specificity, not a later rule.
 - The class owns the transition too. Do not add a `transition-*` utility to a bordered control: it replaces the property list and silently stops the border and background from animating.
 
+Time range filters:
+
+- Use `DateTimeRangePicker` for every date or time range, with `precision="date"` for calendar-day reports and `precision="datetime"` for events and logs.
+- Keep one trigger in the filter row. Presets and the custom calendar share its popover; choosing custom changes the panel in place, without adding another filter row or native date fields.
+- Let the page's filter layout own the trigger width, stable across presets and custom ranges. Usage overview and request records keep the same equal-width grid columns as their neighboring filters. Billing gives all four filter items the same flex basis and growth so they share each row equally. User reports use a compact 11rem trigger, while runtime logs reserve 22rem for the complete pair of date-and-time values. Below 40rem, triggers fill their available row width.
+- Size the preset list to its trigger and content; size the calendar popover independently, without spanning extra filter columns to fit it. Truncate applied ranges only when the available column or viewport cannot fit them, and retain their full accessible label and title.
+- Presets apply immediately. Custom edits stay in a draft until Apply; Cancel, Escape and dismissal discard the draft. Clear empties the draft and resets selection to the start date.
+- The endpoint the user edits wins. Align the opposite endpoint when necessary, including time edits and date reselection on the same day. Disable calendar dates outside the active endpoint's bounds.
+- Show the applied timezone. Keep API-specific date expansion and timestamp conversion in adapters.
+- Below 40rem show one month. Constrain the popover to the viewport, scroll its body and keep its actions visible. Calendar days use the control step and support arrow keys, Home/End and Page Up/Down.
+
 Data states:
 
 - Loading uses skeletons with subtle shimmer.

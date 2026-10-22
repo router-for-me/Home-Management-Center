@@ -602,32 +602,6 @@ export function UsageFiltersToolbar({
   const credentialTypes = appendSelectedOption(options.credentialTypes, filters.credentialType)
   const homeIps = appendSelectedOption(options.homeIps, filters.homeIp)
   const endpoints = appendSelectedOption(options.endpoints, filters.endpoint)
-  const getDefaultCustomRange = () => {
-    const to = new Date()
-    const from = new Date(to)
-    from.setDate(to.getDate() - 6)
-    const formatDateInput = (date: Date) => {
-      const year = date.getFullYear()
-      const month = String(date.getMonth() + 1).padStart(2, '0')
-      const day = String(date.getDate()).padStart(2, '0')
-      return `${year}-${month}-${day}`
-    }
-
-    return {
-      customFrom: formatDateInput(from),
-      customTo: formatDateInput(to),
-    }
-  }
-
-  const handleRangeChange = (range: UsageFilters['range']) => {
-    if (range === 'custom' && !filters.customFrom && !filters.customTo) {
-      onChange({ range, ...getDefaultCustomRange() })
-      return
-    }
-
-    onChange({ range })
-  }
-
   return (
     <Collapsible
       open={advancedOpen}
@@ -635,25 +609,24 @@ export function UsageFiltersToolbar({
       className="bg-card rounded-lg border p-3 shadow-sm"
     >
       <div className={narrowFilterGridClassName}>
-        <Select
-          value={filters.range}
-          onValueChange={(range) => handleRangeChange(range as UsageFilters['range'])}
-        >
-          <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.range')}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="4h">{t('usageLogsPage.filters.ranges.last4h')}</SelectItem>
-            <SelectItem value="12h">{t('usageLogsPage.filters.ranges.last12h')}</SelectItem>
-            <SelectItem value="24h">{t('usageLogsPage.filters.ranges.last24h')}</SelectItem>
-            <SelectItem value="today">{t('usageLogsPage.filters.ranges.today')}</SelectItem>
-            <SelectItem value="yesterday">{t('usageLogsPage.filters.ranges.yesterday')}</SelectItem>
-            <SelectItem value="7d">{t('usageLogsPage.filters.ranges.last7d')}</SelectItem>
-            <SelectItem value="30d">{t('usageLogsPage.filters.ranges.last30d')}</SelectItem>
-            <SelectItem value="90d">{t('usageLogsPage.filters.ranges.last90d')}</SelectItem>
-            <SelectItem value="custom">{t('usageLogsPage.filters.ranges.custom')}</SelectItem>
-          </SelectContent>
-        </Select>
+        <DateTimeRangePicker
+          precision="date"
+          from={filters.customFrom}
+          to={filters.customTo}
+          preset={filters.range}
+          presets={[
+            { value: '4h', label: t('usageLogsPage.filters.ranges.last4h') },
+            { value: '12h', label: t('usageLogsPage.filters.ranges.last12h') },
+            { value: '24h', label: t('usageLogsPage.filters.ranges.last24h') },
+            { value: 'today', label: t('usageLogsPage.filters.ranges.today') },
+            { value: 'yesterday', label: t('usageLogsPage.filters.ranges.yesterday') },
+            { value: '7d', label: t('usageLogsPage.filters.ranges.last7d') },
+            { value: '30d', label: t('usageLogsPage.filters.ranges.last30d') },
+            { value: '90d', label: t('usageLogsPage.filters.ranges.last90d') },
+          ]}
+          onPresetChange={(range) => onChange({ range })}
+          onChange={({ from, to }) => onChange({ range: 'custom', customFrom: from, customTo: to })}
+        />
         <Select value={filters.provider} onValueChange={(provider) => onChange({ provider })}>
           <SelectTrigger size="md" aria-label={t('usageLogsPage.filters.provider')}>
             <SelectValue />
@@ -681,28 +654,6 @@ export function UsageFiltersToolbar({
           </SelectContent>
         </Select>
       </div>
-      {filters.range === 'custom' ? (
-        <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
-          <label className="grid gap-1.5 text-xs font-medium">
-            <span className="text-muted-foreground">{t('usageLogsPage.filters.customFrom')}</span>
-            <Input
-              size="md"
-              type="date"
-              value={filters.customFrom}
-              onChange={(event) => onChange({ customFrom: event.target.value })}
-            />
-          </label>
-          <label className="grid gap-1.5 text-xs font-medium">
-            <span className="text-muted-foreground">{t('usageLogsPage.filters.customTo')}</span>
-            <Input
-              size="md"
-              type="date"
-              value={filters.customTo}
-              onChange={(event) => onChange({ customTo: event.target.value })}
-            />
-          </label>
-        </div>
-      ) : null}
       <CollapsibleContent>
         <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
           <Select
@@ -5056,7 +5007,7 @@ function RuntimeLogFiltersToolbar({
   onChange: (nextFilters: Partial<RuntimeLogFilters>) => void
   onClear: () => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [searchField, setSearchField] = useState<RuntimeLogSearchField>(() =>
     getActiveRuntimeLogSearchField(filters),
   )
@@ -5141,14 +5092,8 @@ function RuntimeLogFiltersToolbar({
         <DateTimeRangePicker
           from={filters.after}
           to={filters.before}
-          label={t('usageLogsPage.logs.filters.dateRange')}
-          fromLabel={t('usageLogsPage.logs.filters.after')}
-          toLabel={t('usageLogsPage.logs.filters.before')}
-          separatorLabel={t('usageLogsPage.logs.filters.dateRangeSeparator')}
-          placeholder={t('usageLogsPage.logs.filters.dateRangePlaceholder')}
-          clearLabel={t('usageLogsPage.logs.filters.clearDateRange')}
+          className="sm:w-[22rem]"
           disabled={disabled}
-          locale={getDateTimeLocale(i18n)}
           onChange={(range) => onChange({ after: range.from, before: range.to })}
         />
       </div>

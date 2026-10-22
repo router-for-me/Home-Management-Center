@@ -18,6 +18,7 @@ import {
   fetchRequestEventFilterOptions,
   fetchRequestEvents,
   getRequestEventOptionFilters,
+  isRequestEventDateRangeValid,
   isRequestEventLatencyRangeValid,
   toRequestEventsApiError,
 } from '@/lib/api/management/request-events'
@@ -80,7 +81,8 @@ export function useRequestEventsWorkbench() {
   // switches dropdown filters — those are excluded from the option scope.
   const optionFilters = getRequestEventOptionFilters(filters)
 
-  const filtersValid = isRequestEventLatencyRangeValid(filters)
+  const filtersValid =
+    isRequestEventDateRangeValid(filters) && isRequestEventLatencyRangeValid(filters)
   const requestEventsAvailable =
     connected && capabilityReady && Boolean(session.managementKey) && capabilities.requestEvents
   const canQueryEvents = requestEventsAvailable && filtersValid
