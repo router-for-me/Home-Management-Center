@@ -17,6 +17,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
@@ -45,7 +46,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -404,7 +404,7 @@ function RequestEventsFiltersToolbar({
   options: RequestEventFilterOptions | null
   onChange: (nextFilters: Partial<RequestEventFilters>) => void
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [searchField, setSearchField] = useState<RequestEventSearchField>('requestId')
   const eventTypes = appendSelectedOption(options?.eventTypes ?? [], filters.eventType)
@@ -535,26 +535,21 @@ function RequestEventsFiltersToolbar({
       </div>
       {filters.range === 'custom' ? (
         <div className="mt-3 border-t pt-3">
-          <div className={filterGridClassName}>
-            <Input
-              size="md"
-              type="datetime-local"
-              value={filters.customFrom}
-              disabled={disabled}
-              aria-invalid={dateRangeInvalid || undefined}
-              aria-label={t('requestEventsPage.filters.customFrom')}
-              onChange={(event) => onChange({ customFrom: event.target.value, offset: 0 })}
-            />
-            <Input
-              size="md"
-              type="datetime-local"
-              value={filters.customTo}
-              disabled={disabled}
-              aria-invalid={dateRangeInvalid || undefined}
-              aria-label={t('requestEventsPage.filters.customTo')}
-              onChange={(event) => onChange({ customTo: event.target.value, offset: 0 })}
-            />
-          </div>
+          <DateTimeRangePicker
+            from={filters.customFrom}
+            to={filters.customTo}
+            label={t('usageLogsPage.logs.filters.dateRange')}
+            fromLabel={t('requestEventsPage.filters.customFrom')}
+            toLabel={t('requestEventsPage.filters.customTo')}
+            separatorLabel={t('usageLogsPage.logs.filters.dateRangeSeparator')}
+            placeholder={t('usageLogsPage.logs.filters.dateRangePlaceholder')}
+            clearLabel={t('usageLogsPage.logs.filters.clearDateRange')}
+            disabled={disabled}
+            locale={i18n.resolvedLanguage ?? i18n.language}
+            onChange={(range) =>
+              onChange({ customFrom: range.from, customTo: range.to, offset: 0 })
+            }
+          />
           {dateRangeInvalid ? (
             <p className="text-destructive mt-2 text-xs">
               {t('requestEventsPage.filters.dateRangeInvalid')}

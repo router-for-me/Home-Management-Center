@@ -696,8 +696,17 @@ export function UsageFiltersToolbar({
                 size="md"
                 type="date"
                 value={filters.customFrom}
+                max={filters.customTo || '9999-12-31'}
                 aria-invalid={dateRangeInvalid || undefined}
-                onChange={(event) => onChange({ customFrom: event.target.value })}
+                onChange={(event) => {
+                  const nextFrom = event.target.value
+                  onChange({
+                    customFrom: nextFrom,
+                    ...(nextFrom && filters.customTo && nextFrom > filters.customTo
+                      ? { customTo: nextFrom }
+                      : {}),
+                  })
+                }}
               />
             </label>
             <label className="grid gap-1.5 text-xs font-medium">
@@ -706,8 +715,17 @@ export function UsageFiltersToolbar({
                 size="md"
                 type="date"
                 value={filters.customTo}
+                min={filters.customFrom || '1970-01-01'}
                 aria-invalid={dateRangeInvalid || undefined}
-                onChange={(event) => onChange({ customTo: event.target.value })}
+                onChange={(event) => {
+                  const nextTo = event.target.value
+                  onChange({
+                    customTo: nextTo,
+                    ...(nextTo && filters.customFrom && nextTo < filters.customFrom
+                      ? { customFrom: nextTo }
+                      : {}),
+                  })
+                }}
               />
             </label>
           </div>

@@ -86,6 +86,7 @@ function DateTimeRangeCalendarMonth({
   locale,
   fromDate,
   toDate,
+  activeBoundary,
   today,
   onSelectDate,
 }: {
@@ -93,6 +94,7 @@ function DateTimeRangeCalendarMonth({
   locale?: string
   fromDate: string
   toDate: string
+  activeBoundary: DateBoundary
   today: string
   onSelectDate: (date: string) => void
 }) {
@@ -122,6 +124,8 @@ function DateTimeRangeCalendarMonth({
 
           const isStart = date === fromDate
           const isEnd = date === toDate
+          const isDisabled =
+            activeBoundary === 'to' && Boolean(fromDate) && compareDateKeys(date, fromDate) < 0
           const inRange =
             Boolean(fromDate && toDate) &&
             compareDateKeys(date, fromDate) > 0 &&
@@ -132,8 +136,9 @@ function DateTimeRangeCalendarMonth({
             <button
               key={date}
               type="button"
+              disabled={isDisabled}
               className={cn(
-                'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring/50 flex size-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors outline-none focus-visible:ring-[3px]',
+                'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring/50 flex size-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-35',
                 inRange && 'bg-primary/10 text-primary',
                 isToday && 'border-primary/40 border',
                 (isStart || isEnd) && 'bg-primary text-primary-foreground hover:bg-primary/90',
@@ -193,16 +198,18 @@ export function DateTimeRangePicker({
   const today = useMemo(getTodayDateKey, [])
 
   const updateFrom = (nextParts: Partial<DateTimeParts>) => {
+    const nextFrom = joinDateTime({ ...fromParts, ...nextParts })
     onChange({
-      from: joinDateTime({ ...fromParts, ...nextParts }),
-      to,
+      from: nextFrom,
+      to: to && nextFrom && nextFrom > to ? nextFrom : to,
     })
   }
 
   const updateTo = (nextParts: Partial<DateTimeParts>) => {
+    const nextTo = joinDateTime({ ...toParts, ...nextParts })
     onChange({
       from,
-      to: joinDateTime({ ...toParts, ...nextParts }),
+      to: from && nextTo && nextTo < from ? from : nextTo,
     })
   }
 
@@ -217,17 +224,18 @@ export function DateTimeRangePicker({
     }
 
     if (fromParts.date && compareDateKeys(date, fromParts.date) < 0) {
-      onChange({
-        from: joinDateTime({ date, time: fromParts.time || '00:00' }),
-        to: '',
-      })
-      setActiveBoundary('to')
       return
     }
 
+    const rawToTime = toParts.time || '23:59'
+    const clampedToTime =
+      fromParts.date === date && fromParts.time && rawToTime < fromParts.time
+        ? fromParts.time
+        : rawToTime
+
     onChange({
       from,
-      to: joinDateTime({ date, time: toParts.time || '23:59' }),
+      to: joinDateTime({ date, time: clampedToTime }),
     })
   }
 
@@ -321,6 +329,7 @@ export function DateTimeRangePicker({
                 locale={locale}
                 fromDate={fromParts.date}
                 toDate={toParts.date}
+                activeBoundary={activeBoundary}
                 today={today}
                 onSelectDate={handleSelectDate}
               />
@@ -329,6 +338,7 @@ export function DateTimeRangePicker({
                 locale={locale}
                 fromDate={fromParts.date}
                 toDate={toParts.date}
+                activeBoundary={activeBoundary}
                 today={today}
                 onSelectDate={handleSelectDate}
               />
@@ -341,6 +351,11 @@ export function DateTimeRangePicker({
                 id={fromTimeId}
                 type="time"
                 value={fromParts.time}
+                max={
+                  toParts.date && fromParts.date === toParts.date
+                    ? toParts.time || undefined
+                    : undefined
+                }
                 disabled={!fromParts.date}
                 aria-label={`${fromLabel} time`}
                 onChange={(event) => updateFrom({ time: event.target.value })}
@@ -352,6 +367,11 @@ export function DateTimeRangePicker({
                 id={toTimeId}
                 type="time"
                 value={toParts.time}
+                min={
+                  fromParts.date && fromParts.date === toParts.date
+                    ? fromParts.time || undefined
+                    : undefined
+                }
                 disabled={!toParts.date}
                 aria-label={`${toLabel} time`}
                 onChange={(event) => updateTo({ time: event.target.value })}

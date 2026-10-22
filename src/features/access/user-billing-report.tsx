@@ -210,17 +210,27 @@ export function UserBillingReport() {
         <Input
           type="date"
           value={filters.from}
+          max={filters.to || '9999-12-31'}
           onChange={(event) => {
+            const nextFrom = event.target.value
             setPreset('custom')
-            updateFilters({ from: event.target.value })
+            updateFilters({
+              from: nextFrom,
+              ...(nextFrom && filters.to && nextFrom > filters.to ? { to: nextFrom } : {}),
+            })
           }}
         />
         <Input
           type="date"
           value={filters.to}
+          min={filters.from || '1970-01-01'}
           onChange={(event) => {
+            const nextTo = event.target.value
             setPreset('custom')
-            updateFilters({ to: event.target.value })
+            updateFilters({
+              to: nextTo,
+              ...(nextTo && filters.from && nextTo < filters.from ? { from: nextTo } : {}),
+            })
           }}
         />
       </div>
