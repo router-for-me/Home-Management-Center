@@ -3088,10 +3088,6 @@ export const zhTW = {
           label: '錯誤日誌檔案數',
           description: '限制錯誤日誌保留檔案數量。',
         },
-        usageStatisticsEnabled: {
-          label: '用量統計',
-          description: '記錄用戶端金鑰和請求維度的用量資料。Home 強制歸一為開啟，此開關不可修改。',
-        },
         tlsEnable: {
           label: '啟用 HTTPS',
           description: '開啟後服務端使用 TLS 憑證對外提供 HTTPS 存取。',

@@ -3234,11 +3234,6 @@ export const en = {
           label: 'Error log files',
           description: 'Limit the number of retained error log files.',
         },
-        usageStatisticsEnabled: {
-          label: 'Usage statistics',
-          description:
-            'Record usage data by client key and request. Home normalizes this to enabled; the switch cannot be changed.',
-        },
         tlsEnable: {
           label: 'Enable HTTPS',
           description: 'Serve external traffic over HTTPS with the configured TLS certificate.',

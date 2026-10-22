@@ -3088,10 +3088,6 @@ export const zhCN = {
           label: '错误日志文件数',
           description: '限制错误日志保留文件数量。',
         },
-        usageStatisticsEnabled: {
-          label: '用量统计',
-          description: '记录客户端密钥和请求维度的用量数据。Home 强制归一为开启，此开关不可修改。',
-        },
         tlsEnable: {
           label: '启用 HTTPS',
           description: '开启后服务端使用 TLS 证书对外提供 HTTPS 访问。',
