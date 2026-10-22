@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
+import { parseCalendarDate } from '@/lib/date-range'
 
 type UnknownRecord = Record<string, unknown>
 export type UsageLogIssueScope =
@@ -1726,21 +1727,8 @@ function startOfLocalDay(date: Date) {
   return next
 }
 
-function parseDateOnly(value: string, boundary: 'start' | 'end') {
-  const trimmed = value.trim()
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed)
-  if (!match) return null
-
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
-  if (Number.isNaN(date.getTime())) return null
-
-  if (boundary === 'end') {
-    date.setHours(23, 59, 59, 999)
-  } else {
-    date.setHours(0, 0, 0, 0)
-  }
-
-  return date
+function parseDateOnly(value: string) {
+  return parseCalendarDate(value.trim())
 }
 
 export function isUsageDateRangeValid(
@@ -1749,8 +1737,8 @@ export function isUsageDateRangeValid(
   if (filters.range !== 'custom') return true
   const customFrom = filters.customFrom.trim()
   const customTo = filters.customTo.trim()
-  const from = customFrom ? parseDateOnly(customFrom, 'start') : null
-  const to = customTo ? parseDateOnly(customTo, 'end') : null
+  const from = customFrom ? parseDateOnly(customFrom) : null
+  const to = customTo ? parseDateOnly(customTo) : null
   if ((customFrom && !from) || (customTo && !to)) return false
   if (from && to && from.getTime() > to.getTime()) return false
   return true
@@ -1761,12 +1749,11 @@ function getDateRange(filters: UsageFilters) {
   const range = filters.range
 
   if (range === 'custom') {
-    const from = parseDateOnly(filters.customFrom, 'start')
-    const to = parseDateOnly(filters.customTo, 'end')
-
+    // Date-only boundaries let the backend include the entire ending day in
+    // the supplied timezone, including days shortened or extended by DST.
     return {
-      from: from?.toISOString(),
-      to: to?.toISOString(),
+      from: parseDateOnly(filters.customFrom) ? filters.customFrom.trim() : undefined,
+      to: parseDateOnly(filters.customTo) ? filters.customTo.trim() : undefined,
     }
   }
 

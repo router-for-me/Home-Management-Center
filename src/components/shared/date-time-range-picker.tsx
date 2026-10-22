@@ -1,384 +1,380 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Check, ChevronDown, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
+import { DateRangeCalendar } from '@/components/shared/date-range-calendar'
 import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
+import type { ControlSize } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  type DateRange,
+  type DateRangeBoundary,
+  type DateRangePrecision,
+  calendarMonth,
+  createDateRangeDraft,
+  isCalendarDateInBounds,
+  isDateRangeValid,
+  isDateRangeValueValid,
+  maximumCalendarDate,
+  minimumCalendarDate,
+  sanitizeCalendarDateInput,
+  splitDateRangeValue,
+  todayCalendarDate,
+  updateDateRangeBoundary,
+} from '@/lib/date-range'
 import { cn } from '@/lib/utils'
 
-type DateTimeParts = {
-  date: string
-  time: string
-}
-
-type DateBoundary = 'from' | 'to'
-
-function splitDateTime(value: string): DateTimeParts {
-  const [date = '', time = ''] = value.split('T')
-  return {
-    date,
-    time: time.slice(0, 5),
-  }
-}
-
-function getTodayDateKey() {
-  return toDateKey(new Date())
-}
-
-function toDateKey(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function parseDateKey(value: string) {
-  if (!value) return null
-  const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) return null
-  return new Date(year, month - 1, day)
-}
-
-function compareDateKeys(a: string, b: string) {
-  return a.localeCompare(b)
-}
-
-function addMonths(date: Date, amount: number) {
-  return new Date(date.getFullYear(), date.getMonth() + amount, 1)
-}
-
-function getCalendarMonth(value: string) {
-  return parseDateKey(value) ?? new Date()
-}
-
-function getMonthDays(monthDate: Date) {
-  const year = monthDate.getFullYear()
-  const month = monthDate.getMonth()
-  const firstDay = new Date(year, month, 1)
-  const dayOffset = (firstDay.getDay() + 6) % 7
-  const totalDays = new Date(year, month + 1, 0).getDate()
-  const cells: Array<string | null> = Array.from({ length: dayOffset }, () => null)
-
-  for (let day = 1; day <= totalDays; day += 1) {
-    cells.push(toDateKey(new Date(year, month, day)))
-  }
-
-  while (cells.length % 7 !== 0) {
-    cells.push(null)
-  }
-
-  return cells
-}
-
-function formatDateTimeValue(value: string, fallback: string) {
-  return value ? value.replace('T', ' ') : fallback
-}
-
-function joinDateTime(parts: DateTimeParts) {
-  if (!parts.date && !parts.time) return ''
-  return `${parts.date || ''}${parts.time ? `T${parts.time}` : ''}`
-}
-
-function DateTimeRangeCalendarMonth({
-  monthDate,
-  locale,
-  fromDate,
-  toDate,
-  activeBoundary,
-  today,
-  onSelectDate,
-}: {
-  monthDate: Date
-  locale?: string
-  fromDate: string
-  toDate: string
-  activeBoundary: DateBoundary
-  today: string
-  onSelectDate: (date: string) => void
-}) {
-  const monthLabel = new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'long',
-  }).format(monthDate)
-  const weekDays = Array.from({ length: 7 }, (_, index) => {
-    const base = new Date(2024, 0, 1 + index)
-    return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(base)
-  })
-  const days = getMonthDays(monthDate)
-
-  return (
-    <div className="min-w-0">
-      <p className="text-center text-sm font-medium">{monthLabel}</p>
-      <div className="text-muted-foreground mt-3 grid grid-cols-7 gap-1 text-center text-[11px]">
-        {weekDays.map((day) => (
-          <span key={day}>{day}</span>
-        ))}
-      </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {days.map((date, index) => {
-          if (!date) {
-            return <span key={`empty-${index}`} className="size-8" aria-hidden="true" />
-          }
-
-          const isStart = date === fromDate
-          const isEnd = date === toDate
-          const isDisabled =
-            activeBoundary === 'to' && Boolean(fromDate) && compareDateKeys(date, fromDate) < 0
-          const inRange =
-            Boolean(fromDate && toDate) &&
-            compareDateKeys(date, fromDate) > 0 &&
-            compareDateKeys(date, toDate) < 0
-          const isToday = date === today
-
-          return (
-            <button
-              key={date}
-              type="button"
-              disabled={isDisabled}
-              className={cn(
-                'hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring/50 flex size-8 items-center justify-center rounded-md text-xs tabular-nums transition-colors outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-35',
-                inRange && 'bg-primary/10 text-primary',
-                isToday && 'border-primary/40 border',
-                (isStart || isEnd) && 'bg-primary text-primary-foreground hover:bg-primary/90',
-              )}
-              onClick={() => onSelectDate(date)}
-            >
-              {Number(date.slice(-2))}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-export function DateTimeRangePicker({
+export function DateTimeRangePicker<Preset extends string = string>({
   from,
   to,
-  label,
-  fromLabel,
-  toLabel,
-  separatorLabel,
-  placeholder,
-  clearLabel,
+  precision = 'datetime',
+  preset,
+  presets = [],
+  onPresetChange,
+  timeZone,
   disabled,
+  size = 'md',
   className,
-  locale,
   onChange,
 }: {
   from: string
   to: string
-  label: string
-  fromLabel: string
-  toLabel: string
-  separatorLabel: string
-  placeholder: string
-  clearLabel: string
+  precision?: DateRangePrecision
+  preset?: Preset | 'custom'
+  presets?: readonly { value: Preset; label: string }[]
+  onPresetChange?: (preset: Preset) => void
+  timeZone?: string
   disabled?: boolean
+  size?: ControlSize
   className?: string
-  locale?: string
-  onChange: (nextRange: { from: string; to: string }) => void
+  onChange: (range: DateRange) => void
 }) {
-  const fromTimeId = useId()
-  const toTimeId = useId()
-  const fromParts = useMemo(() => splitDateTime(from), [from])
-  const toParts = useMemo(() => splitDateTime(to), [to])
-  const [activeBoundary, setActiveBoundary] = useState<DateBoundary>(() =>
-    fromParts.date && !toParts.date ? 'to' : 'from',
+  const { t, i18n } = useTranslation()
+  const id = useId()
+  const fromInput = useRef<HTMLInputElement>(null)
+  const toInput = useRef<HTMLInputElement>(null)
+  const presetList = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const [custom, setCustom] = useState(false)
+  const [draft, setDraft] = useState<DateRange>({ from, to })
+  const [activeBoundary, setActiveBoundary] = useState<DateRangeBoundary>('from')
+  const zone = timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone
+  const today = todayCalendarDate(zone)
+  const [month, setMonth] = useState(() => calendarMonth(today))
+  const hasPresets = presets.length > 0 && Boolean(onPresetChange)
+  const appliedPreset = presets.find((option) => option.value === preset)
+  const label = t(precision === 'date' ? 'dateRangePicker.dateLabel' : 'dateRangePicker.timeLabel')
+  const fromParts = splitDateRangeValue(draft.from)
+  const toParts = splitDateRangeValue(draft.to)
+  const min =
+    activeBoundary === 'to' && isCalendarDateInBounds(fromParts.date)
+      ? fromParts.date
+      : minimumCalendarDate
+  const max =
+    activeBoundary === 'from' && isCalendarDateInBounds(toParts.date)
+      ? toParts.date
+      : maximumCalendarDate
+  const valid = isDateRangeValid(draft, precision)
+  const hasInvalidDate = [fromParts.date, toParts.date].some(
+    (value) => value && !isCalendarDateInBounds(value),
   )
-  const [visibleMonth, setVisibleMonth] = useState(() =>
-    getCalendarMonth(fromParts.date || toParts.date),
-  )
-  const hasValue = Boolean(from || to)
-  const rangeText = hasValue
-    ? `${formatDateTimeValue(from, fromLabel)} ${separatorLabel} ${formatDateTimeValue(to, toLabel)}`
-    : placeholder
-  const today = useMemo(getTodayDateKey, [])
+  const error = !valid
+    ? t(hasInvalidDate ? 'dateRangePicker.invalidDate' : 'dateRangePicker.invalidRange')
+    : ''
+  const formatValue = (value: string) => value.replace('T', ' ')
+  const rangeText =
+    appliedPreset?.label ||
+    (from && to
+      ? `${formatValue(from)} ${t('dateRangePicker.separator')} ${formatValue(to)}`
+      : from
+        ? t('dateRangePicker.fromOnly', { date: formatValue(from) })
+        : to
+          ? t('dateRangePicker.toOnly', { date: formatValue(to) })
+          : t('dateRangePicker.placeholder'))
 
-  const updateFrom = (nextParts: Partial<DateTimeParts>) => {
-    const nextFrom = joinDateTime({ ...fromParts, ...nextParts })
-    onChange({
-      from: nextFrom,
-      to: to && nextFrom && nextFrom > to ? nextFrom : to,
-    })
+  const focusBoundary = (boundary: DateRangeBoundary) => {
+    requestAnimationFrame(() => (boundary === 'from' ? fromInput : toInput).current?.focus())
   }
 
-  const updateTo = (nextParts: Partial<DateTimeParts>) => {
-    const nextTo = joinDateTime({ ...toParts, ...nextParts })
-    onChange({
-      from,
-      to: from && nextTo && nextTo < from ? from : nextTo,
-    })
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      const next = createDateRangeDraft({ from, to }, precision)
+      const start = splitDateRangeValue(next.from || next.to).date
+      setDraft(next)
+      setActiveBoundary('from')
+      setMonth(calendarMonth(isCalendarDateInBounds(start) ? start : today))
+      setCustom(!hasPresets || preset === 'custom')
+    }
+    setOpen(nextOpen)
   }
 
-  const handleSelectDate = (date: string) => {
+  const updateDate = (boundary: DateRangeBoundary, date: string) => {
+    setDraft((current) => {
+      const { time } = splitDateRangeValue(current[boundary])
+      const value = !date
+        ? ''
+        : precision === 'date'
+          ? date
+          : `${date}T${time || (boundary === 'from' ? '00:00' : '23:59')}`
+      return updateDateRangeBoundary(current, boundary, value, precision)
+    })
+    if (isCalendarDateInBounds(date)) setMonth(calendarMonth(date))
+  }
+
+  const selectDate = (date: string) => {
+    updateDate(activeBoundary, date)
     if (activeBoundary === 'from') {
-      onChange({
-        from: joinDateTime({ date, time: fromParts.time || '00:00' }),
-        to: toParts.date && compareDateKeys(date, toParts.date) <= 0 ? to : '',
-      })
       setActiveBoundary('to')
-      return
+      focusBoundary('to')
     }
+  }
 
-    if (fromParts.date && compareDateKeys(date, fromParts.date) < 0) {
-      return
-    }
-
-    const rawToTime = toParts.time || '23:59'
-    const clampedToTime =
-      fromParts.date === date && fromParts.time && rawToTime < fromParts.time
-        ? fromParts.time
-        : rawToTime
-
-    onChange({
-      from,
-      to: joinDateTime({ date, time: clampedToTime }),
-    })
+  const clearDraft = () => {
+    setDraft({ from: '', to: '' })
+    setActiveBoundary('from')
+    setMonth(calendarMonth(today))
+    focusBoundary('from')
   }
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
-          size="md"
-          className={cn(
-            'w-full justify-start gap-2 px-3 font-normal sm:w-[21rem]',
-            !hasValue && 'text-muted-foreground',
-            className,
-          )}
+          size={size}
           disabled={disabled}
-          aria-label={label}
+          className={cn('w-full max-w-full min-w-0 justify-start', className)}
+          aria-label={`${label}: ${rangeText}`}
+          title={rangeText}
         >
-          <CalendarDays className="size-4 shrink-0" aria-hidden="true" />
-          <span className="min-w-0 truncate text-left">{rangeText}</span>
+          <CalendarDays aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate text-left">{rangeText}</span>
+          <ChevronDown aria-hidden="true" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(calc(100vw-2rem),40rem)] p-3" align="start">
-        <div className="grid gap-3">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium">{label}</p>
+      <PopoverContent
+        align="start"
+        collisionPadding={8}
+        aria-labelledby={`${id}-heading`}
+        aria-describedby={`${id}-timezone`}
+        className={cn(
+          'flex max-h-[min(calc(100dvh-1rem),var(--radix-popover-content-available-height))] flex-col overflow-hidden p-0',
+          custom
+            ? 'w-[min(calc(100vw-1rem),42rem)]'
+            : 'w-max max-w-[calc(100vw-1rem)] min-w-(--radix-popover-trigger-width)',
+        )}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault()
+          if (custom) fromInput.current?.focus()
+          else {
+            const selected =
+              presetList.current?.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
+            const first = presetList.current?.querySelector<HTMLButtonElement>('button')
+            ;(selected || first)?.focus()
+          }
+        }}
+      >
+        <div className="flex shrink-0 items-center gap-2 border-b px-2 py-1.5">
+          {custom && hasPresets ? (
             <Button
               type="button"
               variant="ghost"
-              size="sm"
-              className="px-2"
-              disabled={!hasValue}
-              onClick={() => onChange({ from: '', to: '' })}
+              size="icon-md"
+              aria-label={t('dateRangePicker.presets')}
+              onClick={() => {
+                setCustom(false)
+                requestAnimationFrame(() =>
+                  presetList.current?.querySelector<HTMLButtonElement>('button')?.focus(),
+                )
+              }}
             >
-              <X className="size-3.5" aria-hidden="true" />
-              {clearLabel}
+              <ArrowLeft aria-hidden="true" />
+            </Button>
+          ) : null}
+          <h2 id={`${id}-heading`} className="text-label flex-1">
+            {custom ? t('dateRangePicker.custom') : label}
+          </h2>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-md"
+            aria-label={t('close')}
+            onClick={() => setOpen(false)}
+          >
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+        <div className="min-h-0 overflow-y-auto overscroll-contain p-2 sm:p-3">
+          {custom ? (
+            <div className="space-y-3">
+              <div className={formGridClassName}>
+                {(['from', 'to'] as const).map((boundary) => {
+                  const parts = boundary === 'from' ? fromParts : toParts
+                  return (
+                    <label key={boundary} className={fieldClassName}>
+                      <span>
+                        {t(
+                          boundary === 'from'
+                            ? 'dateRangePicker.fromDate'
+                            : 'dateRangePicker.toDate',
+                        )}
+                      </span>
+                      <Input
+                        ref={boundary === 'from' ? fromInput : toInput}
+                        size="md"
+                        type="text"
+                        autoComplete="off"
+                        placeholder={t('dateRangePicker.datePlaceholder')}
+                        value={parts.date}
+                        aria-invalid={
+                          (Boolean(parts.date) && !isCalendarDateInBounds(parts.date)) || undefined
+                        }
+                        aria-describedby={`${id}-hint${error ? ` ${id}-error` : ''}`}
+                        className={cn(activeBoundary === boundary && 'border-primary')}
+                        onFocus={() => {
+                          setActiveBoundary(boundary)
+                          if (isCalendarDateInBounds(parts.date))
+                            setMonth(calendarMonth(parts.date))
+                        }}
+                        onChange={(event) =>
+                          updateDate(boundary, sanitizeCalendarDateInput(event.target.value))
+                        }
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+              <p id={`${id}-hint`} className="text-muted-foreground text-meta">
+                {t('dateRangePicker.dateHint')}
+              </p>
+              <p className="text-label" aria-live="polite">
+                {t(
+                  activeBoundary === 'from'
+                    ? 'dateRangePicker.selectStart'
+                    : 'dateRangePicker.selectEnd',
+                )}
+              </p>
+              <DateRangeCalendar
+                from={isCalendarDateInBounds(fromParts.date) ? fromParts.date : ''}
+                to={isCalendarDateInBounds(toParts.date) ? toParts.date : ''}
+                month={month}
+                today={today}
+                min={min}
+                max={max}
+                locale={i18n.resolvedLanguage || i18n.language}
+                onMonthChange={setMonth}
+                onSelect={selectDate}
+              />
+              {precision === 'datetime' ? (
+                <div className={formGridClassName}>
+                  {(['from', 'to'] as const).map((boundary) => {
+                    const parts = boundary === 'from' ? fromParts : toParts
+                    return (
+                      <label key={boundary} className={fieldClassName}>
+                        <span>
+                          {t(
+                            boundary === 'from'
+                              ? 'dateRangePicker.fromTime'
+                              : 'dateRangePicker.toTime',
+                          )}
+                        </span>
+                        <Input
+                          size="md"
+                          type="time"
+                          step={60}
+                          value={parts.time}
+                          disabled={!isCalendarDateInBounds(parts.date)}
+                          aria-invalid={
+                            !isDateRangeValueValid(draft[boundary], precision) || undefined
+                          }
+                          aria-describedby={error ? `${id}-error` : undefined}
+                          onChange={(event) => {
+                            const value = `${parts.date}T${event.target.value}`
+                            setDraft((current) =>
+                              updateDateRangeBoundary(current, boundary, value, precision),
+                            )
+                          }}
+                        />
+                      </label>
+                    )
+                  })}
+                </div>
+              ) : null}
+              {error ? (
+                <p id={`${id}-error`} className="text-destructive text-meta" role="status">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div ref={presetList} className="flex flex-col gap-1">
+              {presets.map((option) => (
+                <Button
+                  key={option.value}
+                  type="button"
+                  variant="ghost"
+                  size="md"
+                  className="justify-between"
+                  aria-pressed={preset === option.value}
+                  onClick={() => {
+                    onPresetChange?.(option.value)
+                    setOpen(false)
+                  }}
+                >
+                  {option.label}
+                  {preset === option.value ? <Check aria-hidden="true" /> : null}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                className="justify-start"
+                onClick={() => {
+                  setCustom(true)
+                  focusBoundary('from')
+                }}
+              >
+                <CalendarDays aria-hidden="true" />
+                {t('dateRangePicker.custom')}
+              </Button>
+            </div>
+          )}
+          <p id={`${id}-timezone`} className="text-muted-foreground text-meta mt-3 break-words">
+            {t('dateRangePicker.timezone', { timezone: zone })}
+          </p>
+        </div>
+        {custom ? (
+          <div className="flex shrink-0 flex-col gap-2 border-t p-2 sm:flex-row sm:justify-end sm:p-3">
+            <Button
+              type="button"
+              size="md"
+              variant="text"
+              className="sm:mr-auto"
+              onClick={clearDraft}
+            >
+              {t('dateRangePicker.clear')}
+            </Button>
+            <Button type="button" size="md" variant="outline" onClick={() => setOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="button"
+              size="md"
+              disabled={!valid}
+              onClick={() => {
+                onChange(draft)
+                setOpen(false)
+              }}
+            >
+              {t('dateRangePicker.apply')}
             </Button>
           </div>
-          <div className={formGridClassName}>
-            {(
-              [
-                ['from', fromLabel, formatDateTimeValue(from, fromLabel)],
-                ['to', toLabel, formatDateTimeValue(to, toLabel)],
-              ] as const
-            ).map(([boundary, boundaryLabel, value]) => (
-              <button
-                key={boundary}
-                type="button"
-                className={cn(
-                  'rounded-md border px-3 py-2 text-left transition-colors',
-                  activeBoundary === boundary
-                    ? 'border-primary bg-primary/5'
-                    : 'border-input hover:bg-accent/60',
-                )}
-                onClick={() => setActiveBoundary(boundary)}
-              >
-                <span className="text-muted-foreground block text-xs font-medium">
-                  {boundaryLabel}
-                </span>
-                <span className="mt-1 block truncate text-sm">{value}</span>
-              </button>
-            ))}
-          </div>
-          <div className="border-input rounded-md border p-3">
-            <div className="mb-3 flex items-center justify-between">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="px-2"
-                onClick={() => setVisibleMonth((month) => addMonths(month, -1))}
-              >
-                <ChevronLeft className="size-4" aria-hidden="true" />
-              </Button>
-              <div className="text-muted-foreground text-xs">
-                {fromLabel} {separatorLabel} {toLabel}
-              </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="px-2"
-                onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
-              >
-                <ChevronRight className="size-4" aria-hidden="true" />
-              </Button>
-            </div>
-            <div className={formGridClassName}>
-              <DateTimeRangeCalendarMonth
-                monthDate={visibleMonth}
-                locale={locale}
-                fromDate={fromParts.date}
-                toDate={toParts.date}
-                activeBoundary={activeBoundary}
-                today={today}
-                onSelectDate={handleSelectDate}
-              />
-              <DateTimeRangeCalendarMonth
-                monthDate={addMonths(visibleMonth, 1)}
-                locale={locale}
-                fromDate={fromParts.date}
-                toDate={toParts.date}
-                activeBoundary={activeBoundary}
-                today={today}
-                onSelectDate={handleSelectDate}
-              />
-            </div>
-          </div>
-          <div className={formGridClassName}>
-            <label className={fieldClassName}>
-              <span className="text-muted-foreground text-xs font-medium">{fromLabel}</span>
-              <Input
-                id={fromTimeId}
-                type="time"
-                value={fromParts.time}
-                max={
-                  toParts.date && fromParts.date === toParts.date
-                    ? toParts.time || undefined
-                    : undefined
-                }
-                disabled={!fromParts.date}
-                aria-label={`${fromLabel} time`}
-                onChange={(event) => updateFrom({ time: event.target.value })}
-              />
-            </label>
-            <label className={fieldClassName}>
-              <span className="text-muted-foreground text-xs font-medium">{toLabel}</span>
-              <Input
-                id={toTimeId}
-                type="time"
-                value={toParts.time}
-                min={
-                  fromParts.date && fromParts.date === toParts.date
-                    ? fromParts.time || undefined
-                    : undefined
-                }
-                disabled={!toParts.date}
-                aria-label={`${toLabel} time`}
-                onChange={(event) => updateTo({ time: event.target.value })}
-              />
-            </label>
-          </div>
-        </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   )

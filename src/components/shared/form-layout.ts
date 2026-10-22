@@ -34,4 +34,15 @@ const filterGridClassName = 'grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-co
 /** A filter row with fewer, wider controls, such as a date range plus one select. */
 const narrowFilterGridClassName = 'grid gap-2 sm:grid-cols-2 xl:grid-cols-3'
 
-export { fieldClassName, filterGridClassName, formGridClassName, narrowFilterGridClassName }
+/** Equal-width filter slots: apply flex to unpadded wrappers, not their controls. */
+const filterRowClassName = 'flex flex-col gap-2 sm:flex-row sm:items-center'
+const flexibleFilterFieldClassName = 'min-w-0 sm:flex-1'
+
+export {
+  fieldClassName,
+  filterGridClassName,
+  filterRowClassName,
+  flexibleFilterFieldClassName,
+  formGridClassName,
+  narrowFilterGridClassName,
+}

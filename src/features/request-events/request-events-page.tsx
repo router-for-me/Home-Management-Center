@@ -99,7 +99,6 @@ import type {
 } from '@/lib/api/management/request-events'
 import {
   defaultRequestEventFilters,
-  isRequestEventDateRangeValid,
   isRequestEventLatencyRangeValid,
 } from '@/lib/api/management/request-events'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
@@ -404,7 +403,7 @@ function RequestEventsFiltersToolbar({
   options: RequestEventFilterOptions | null
   onChange: (nextFilters: Partial<RequestEventFilters>) => void
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [searchField, setSearchField] = useState<RequestEventSearchField>('requestId')
   const eventTypes = appendSelectedOption(options?.eventTypes ?? [], filters.eventType)
@@ -428,7 +427,6 @@ function RequestEventsFiltersToolbar({
       }) satisfies SelectInputGroupOption,
   )
 
-  const dateRangeInvalid = !isRequestEventDateRangeValid(filters)
   const latencyRangeInvalid = !isRequestEventLatencyRangeValid(filters)
 
   const handleSearchFieldChange = (nextField: string, carriedValue: string) => {
@@ -460,26 +458,19 @@ function RequestEventsFiltersToolbar({
           onSelectValueChange={handleSearchFieldChange}
           onInputCommit={(value) => onChange(getNextSearchFieldPatch(activeSearchField, value))}
         />
-        <Select
-          value={filters.range}
+        <DateTimeRangePicker
+          from={filters.customFrom}
+          to={filters.customTo}
+          preset={filters.range}
           disabled={disabled}
-          onValueChange={(range) =>
-            onChange({ range: range as RequestEventFilters['range'], offset: 0 })
+          presets={(['4h', '12h', '24h', 'today', 'yesterday', '7d', '30d', '90d'] as const).map(
+            (value) => ({ value, label: t(`requestEventsPage.filters.ranges.${value}`) }),
+          )}
+          onPresetChange={(range) => onChange({ range, offset: 0 })}
+          onChange={({ from, to }) =>
+            onChange({ range: 'custom', customFrom: from, customTo: to, offset: 0 })
           }
-        >
-          <SelectTrigger size="md">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(
-              ['4h', '12h', '24h', 'today', 'yesterday', '7d', '30d', '90d', 'custom'] as const
-            ).map((range) => (
-              <SelectItem key={range} value={range}>
-                {t(`requestEventsPage.filters.ranges.${range}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        />
         <Select
           value={filters.status}
           disabled={disabled}
@@ -533,30 +524,6 @@ function RequestEventsFiltersToolbar({
           </SelectContent>
         </Select>
       </div>
-      {filters.range === 'custom' ? (
-        <div className="mt-3 border-t pt-3">
-          <DateTimeRangePicker
-            from={filters.customFrom}
-            to={filters.customTo}
-            label={t('usageLogsPage.logs.filters.dateRange')}
-            fromLabel={t('requestEventsPage.filters.customFrom')}
-            toLabel={t('requestEventsPage.filters.customTo')}
-            separatorLabel={t('usageLogsPage.logs.filters.dateRangeSeparator')}
-            placeholder={t('usageLogsPage.logs.filters.dateRangePlaceholder')}
-            clearLabel={t('usageLogsPage.logs.filters.clearDateRange')}
-            disabled={disabled}
-            locale={i18n.resolvedLanguage ?? i18n.language}
-            onChange={(range) =>
-              onChange({ customFrom: range.from, customTo: range.to, offset: 0 })
-            }
-          />
-          {dateRangeInvalid ? (
-            <p className="text-destructive mt-2 text-xs">
-              {t('requestEventsPage.filters.dateRangeInvalid')}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
       <CollapsibleContent>
         <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
           <Select

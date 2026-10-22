@@ -2,6 +2,7 @@ import { createManagementClient, toManagementApiError } from '@/lib/api/manageme
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 import { parseUsageTokenBreakdown } from '@/lib/api/management/usage-logs'
 import type { UsageTokenBreakdown } from '@/lib/api/management/usage-logs'
+import { parseCalendarDate } from '@/lib/date-range'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -348,12 +349,13 @@ function getTimeZone() {
 function parseDateOnly(value: string, mode: 'start' | 'end') {
   const trimmed = value.trim()
   if (!trimmed) return null
-  if (!/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return null
+  if (!parseCalendarDate(trimmed.slice(0, 10))) return null
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    const date = new Date(`${trimmed}T00:00:00`)
-    if (Number.isNaN(date.getTime())) return null
+    const date = parseCalendarDate(trimmed)
+    if (!date) return null
     if (mode === 'end') date.setHours(23, 59, 59, 999)
+    else date.setHours(0, 0, 0, 0)
     return date
   }
 
@@ -371,11 +373,15 @@ function getDateRange(filters: RequestEventFilters) {
   const now = new Date()
 
   if (filters.range === 'custom') {
-    const from = parseDateOnly(filters.customFrom, 'start')
-    const to = parseDateOnly(filters.customTo, 'end')
+    const boundary = (value: string, mode: 'start' | 'end') => {
+      const date = parseDateOnly(value, mode)
+      if (!date) return undefined
+      // Calendar dates include the whole ending day; timestamps stay exact.
+      return /^\d{4}-\d{2}-\d{2}$/.test(value.trim()) ? value.trim() : date.toISOString()
+    }
     return {
-      from: from?.toISOString(),
-      to: to?.toISOString(),
+      from: boundary(filters.customFrom, 'start'),
+      to: boundary(filters.customTo, 'end'),
     }
   }
 

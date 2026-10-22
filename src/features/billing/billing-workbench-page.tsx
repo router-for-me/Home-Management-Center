@@ -29,6 +29,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import {
   DrawerScaffoldBody,
   DrawerScaffoldContent,
@@ -37,7 +38,11 @@ import {
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
-import { formGridClassName } from '@/components/shared/form-layout'
+import {
+  filterRowClassName,
+  flexibleFilterFieldClassName,
+  formGridClassName,
+} from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
@@ -2747,12 +2752,6 @@ export function BillingWorkbenchPage() {
     workbench.billingSettingsLoading ||
     Boolean(workbench.billingSettingsError) ||
     !workbench.reportTimezone
-  const reportTimezoneContext = workbench.reportTimezone
-    ? t('billingPage.filters.reportTimezoneMenuNote', {
-        timezone: workbench.reportTimezone,
-      })
-    : null
-
   const closeSheet = () => {
     if (sheetMode?.type === 'model-price-import' && modelPriceImportApplying) return
     setSheetMode(null)
@@ -2793,84 +2792,47 @@ export function BillingWorkbenchPage() {
 
         {activeTab !== 'modelPrices' ? (
           <div className="bg-card rounded-lg border p-4 shadow-sm">
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[160px_180px_180px_minmax(140px,1fr)_minmax(140px,1fr)_minmax(180px,1fr)]">
-              <div className="min-w-0">
-                <Select
-                  value={datePreset}
+            <div className={filterRowClassName}>
+              <div className={flexibleFilterFieldClassName}>
+                <DateTimeRangePicker
+                  precision="date"
+                  size="lg"
+                  from={filters.from}
+                  to={filters.to}
+                  preset={datePreset}
                   disabled={dateFiltersDisabled}
-                  onValueChange={(value) => handlePresetChange(value as DateRangePreset)}
-                >
-                  <SelectTrigger
-                    aria-describedby={
-                      reportTimezoneContext ? 'billing-report-timezone-context' : undefined
-                    }
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">{t('billingPage.filters.today')}</SelectItem>
-                    <SelectItem value="7d">{t('billingPage.filters.last7d')}</SelectItem>
-                    <SelectItem value="30d">{t('billingPage.filters.last30d')}</SelectItem>
-                    <SelectItem value="custom">{t('billingPage.filters.custom')}</SelectItem>
-                    {reportTimezoneContext ? (
-                      <div
-                        aria-hidden="true"
-                        className="text-muted-foreground mt-1 max-w-64 border-t px-2 pt-2 pb-1 text-xs leading-4 whitespace-normal"
-                      >
-                        {reportTimezoneContext}
-                      </div>
-                    ) : null}
-                  </SelectContent>
-                </Select>
-                {reportTimezoneContext ? (
-                  <span id="billing-report-timezone-context" className="sr-only">
-                    {reportTimezoneContext}
-                  </span>
-                ) : null}
+                  timeZone={workbench.reportTimezone || undefined}
+                  presets={[
+                    { value: 'today', label: t('billingPage.filters.today') },
+                    { value: '7d', label: t('billingPage.filters.last7d') },
+                    { value: '30d', label: t('billingPage.filters.last30d') },
+                  ]}
+                  onPresetChange={handlePresetChange}
+                  onChange={(range) => {
+                    setDatePreset('custom')
+                    updateFilters(range)
+                  }}
+                />
               </div>
-              <Input
-                type="date"
-                value={filters.from}
-                max={filters.to || '9999-12-31'}
-                disabled={dateFiltersDisabled}
-                onChange={(event) => {
-                  const nextFrom = event.target.value
-                  setDatePreset('custom')
-                  updateFilters({
-                    from: nextFrom,
-                    ...(nextFrom && filters.to && nextFrom > filters.to ? { to: nextFrom } : {}),
-                  })
-                }}
-              />
-              <Input
-                type="date"
-                value={filters.to}
-                min={filters.from || '1970-01-01'}
-                disabled={dateFiltersDisabled}
-                onChange={(event) => {
-                  const nextTo = event.target.value
-                  setDatePreset('custom')
-                  updateFilters({
-                    to: nextTo,
-                    ...(nextTo && filters.from && nextTo < filters.from ? { from: nextTo } : {}),
-                  })
-                }}
-              />
-              <Input
-                value={textFilters.user}
-                placeholder={t('billingPage.filters.user')}
-                onChange={(event) =>
-                  setTextFilters((current) => ({ ...current, user: event.target.value }))
-                }
-              />
-              <Input
-                value={textFilters.model}
-                placeholder={t('billingPage.filters.model')}
-                onChange={(event) =>
-                  setTextFilters((current) => ({ ...current, model: event.target.value }))
-                }
-              />
-              <div className="relative">
+              <div className={flexibleFilterFieldClassName}>
+                <Input
+                  value={textFilters.user}
+                  placeholder={t('billingPage.filters.user')}
+                  onChange={(event) =>
+                    setTextFilters((current) => ({ ...current, user: event.target.value }))
+                  }
+                />
+              </div>
+              <div className={flexibleFilterFieldClassName}>
+                <Input
+                  value={textFilters.model}
+                  placeholder={t('billingPage.filters.model')}
+                  onChange={(event) =>
+                    setTextFilters((current) => ({ ...current, model: event.target.value }))
+                  }
+                />
+              </div>
+              <div className={cn('relative', flexibleFilterFieldClassName)}>
                 <Search className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4" />
                 <Input
                   className="pl-9"
