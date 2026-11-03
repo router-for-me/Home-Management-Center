@@ -39,12 +39,25 @@ export class ModelPriceImportError extends Error {
   }
 }
 
+const catalogSourceSchema = z.enum(['models.dev', 'openrouter', 'litellm', 'auto'])
+
 const costSchema = z.object({
   input: z.number().nonnegative(),
   output: z.number().nonnegative(),
   cache_read: z.number().nonnegative(),
   cache_write: z.number().nonnegative(),
   request: z.number().nonnegative(),
+  cache_write_30m: z.number().nonnegative().optional(),
+  cache_write_1h: z.number().nonnegative().optional(),
+  cache_write_12h: z.number().nonnegative().optional(),
+  reasoning: z.number().nonnegative().optional(),
+  image_input: z.number().nonnegative().optional(),
+  image_output: z.number().nonnegative().optional(),
+  audio_input: z.number().nonnegative().optional(),
+  audio_output: z.number().nonnegative().optional(),
+  web_search: z.number().nonnegative().optional(),
+  image: z.number().nonnegative().optional(),
+  pricing_expr: z.string().optional(),
 })
 
 const reasonSchema = z.object({
@@ -126,7 +139,7 @@ const previewSchema = z.object({
   generated_at: z.string().min(1),
   expires_at: z.string().nullable().optional(),
   atomic: z.boolean(),
-  source: z.literal('models.dev'),
+  source: catalogSourceSchema,
   source_url: z.string().min(1),
   source_fetched_at: z.string().min(1),
   source_version: z.string().nullable().optional(),
@@ -177,6 +190,17 @@ function normalizeCost(value: z.infer<typeof costSchema>) {
     cacheRead: value.cache_read,
     cacheWrite: value.cache_write,
     request: value.request,
+    ...(value.cache_write_30m !== undefined ? { cacheWrite30m: value.cache_write_30m } : {}),
+    ...(value.cache_write_1h !== undefined ? { cacheWrite1h: value.cache_write_1h } : {}),
+    ...(value.cache_write_12h !== undefined ? { cacheWrite12h: value.cache_write_12h } : {}),
+    ...(value.reasoning !== undefined ? { reasoning: value.reasoning } : {}),
+    ...(value.image_input !== undefined ? { imageInput: value.image_input } : {}),
+    ...(value.image_output !== undefined ? { imageOutput: value.image_output } : {}),
+    ...(value.audio_input !== undefined ? { audioInput: value.audio_input } : {}),
+    ...(value.audio_output !== undefined ? { audioOutput: value.audio_output } : {}),
+    ...(value.web_search !== undefined ? { webSearch: value.web_search } : {}),
+    ...(value.image !== undefined ? { image: value.image } : {}),
+    ...(value.pricing_expr ? { pricingExpr: value.pricing_expr } : {}),
   }
 }
 
@@ -360,6 +384,18 @@ function assertPreviewRowState(row: ModelPriceImportPreviewRow) {
   }
 }
 
+function isAllowedCatalogSourceHostname(hostname: string) {
+  return (
+    hostname === 'models.dev' ||
+    hostname.endsWith('.models.dev') ||
+    hostname === 'openrouter.ai' ||
+    hostname.endsWith('.openrouter.ai') ||
+    hostname === 'raw.githubusercontent.com' ||
+    hostname === 'github.com' ||
+    hostname === 'catalog.json'
+  )
+}
+
 function assertProvenance(row: ModelPriceImportPreviewRow) {
   if (!row.writeRule || !row.matchedProvider || !row.matchedModel) return
   if (row.writeRule.source !== 'sync') {
@@ -368,7 +404,10 @@ function assertProvenance(row: ModelPriceImportPreviewRow) {
   const note = row.writeRule.note?.toLowerCase() ?? ''
   const provider = row.matchedProvider.toLowerCase()
   const model = row.matchedModel.toLowerCase()
-  if (!note.includes('models.dev') || !note.includes(provider) || !note.includes(model)) {
+  const hasKnownSource = ['models.dev', 'openrouter', 'litellm', 'auto'].some((src) =>
+    note.includes(src),
+  )
+  if (!hasKnownSource || !note.includes(provider) || !note.includes(model)) {
     invalidResponse(`row ${row.key} provenance note does not identify the models.dev source`)
   }
 }
@@ -411,14 +450,23 @@ export function normalizeModelPriceImportPreview(
   if (!parsed.data.expires_at) invalidResponse('preview expiry is missing')
   const expiresAt = parseResponseTime(parsed.data.expires_at, 'expires_at')
   if (expiresAt <= generatedAt) invalidResponse('preview expiry is not after generation time')
-  let sourceUrl: URL
-  try {
-    sourceUrl = new URL(parsed.data.source_url)
-  } catch (error) {
-    invalidResponse('source_url is not a valid URL', error)
+  const sourceUrls = parsed.data.source_url
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (sourceUrls.length === 0) {
+    invalidResponse('source_url is empty')
   }
-  if (sourceUrl.hostname !== 'models.dev' && !sourceUrl.hostname.endsWith('.models.dev')) {
-    invalidResponse('source_url is not a models.dev URL')
+  for (const rawUrl of sourceUrls) {
+    let sourceUrl: URL
+    try {
+      sourceUrl = new URL(rawUrl)
+    } catch (error) {
+      invalidResponse('source_url is not a valid URL', error)
+    }
+    if (!isAllowedCatalogSourceHostname(sourceUrl.hostname)) {
+      invalidResponse('source_url is not from a supported catalog source')
+    }
   }
 
   for (const row of rows) {
@@ -505,7 +553,7 @@ export function normalizeModelPriceImportPreview(
     generatedAt: parsed.data.generated_at,
     expiresAt: parsed.data.expires_at ?? null,
     atomic: parsed.data.atomic,
-    source: 'models.dev',
+    source: parsed.data.source,
     sourceUrl: parsed.data.source_url,
     sourceFetchedAt: parsed.data.source_fetched_at,
     sourceVersion: parsed.data.source_version ?? null,
@@ -716,7 +764,7 @@ function classifyError(error: unknown, operationAccepted = false) {
 
 export function toModelPriceImportPreviewPayload(input: ModelPriceImportPreviewInput) {
   return {
-    source: 'models.dev',
+    source: input.source ?? 'models.dev',
     targets: input.targets.map((target) => ({
       provider: target.provider,
       model: target.model,

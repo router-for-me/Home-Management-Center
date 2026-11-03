@@ -1115,6 +1115,13 @@ export const zhCN = {
           previewPolicySummaryTitle: '本次预览使用的策略',
           targetsTitle: '导入目标',
           targetsHint: '在执行匹配和定价策略前，先限制哪些 Home 模型进入预览。',
+          catalogSource: '价格数据源',
+          catalogSources: {
+            auto: '自动合并 (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: '供应商',
           allProviders: '全部供应商',
           targetFilter: '目标集合',

@@ -1115,6 +1115,13 @@ export const zhTW = {
           previewPolicySummaryTitle: '本次預覽使用的策略',
           targetsTitle: '匯入目標',
           targetsHint: '在執行匹配與定價策略前，先限制哪些 Home 模型進入預覽。',
+          catalogSource: '價格資料來源',
+          catalogSources: {
+            auto: '自動合併 (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: '供應商',
           allProviders: '全部供應商',
           targetFilter: '目標集合',

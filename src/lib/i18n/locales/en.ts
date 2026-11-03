@@ -1161,6 +1161,13 @@ export const en = {
           targetsTitle: 'Import targets',
           targetsHint:
             'Limit which Home models enter the preview before matching and pricing rules are evaluated.',
+          catalogSource: 'Catalog source',
+          catalogSources: {
+            auto: 'Auto (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: 'Provider',
           allProviders: 'All providers',
           targetFilter: 'Target set',

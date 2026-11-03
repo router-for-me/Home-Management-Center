@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import type {
+  ModelPriceImportCatalogSource,
   ModelPriceImportOverwriteMode,
   ModelPriceImportPolicy,
   ModelPriceImportTargetFilter,
@@ -8,6 +9,8 @@ import type {
 import { createDefaultImportPolicy } from './models-dev-match'
 
 const STORAGE_PREFIX = 'hmc.billing.model-price-import.preferences:'
+
+const catalogSourceSchema = z.enum(['models.dev', 'openrouter', 'litellm', 'auto'])
 
 const ruleSchema = z.object({
   id: z.string().min(1),
@@ -25,6 +28,7 @@ const aliasSchema = z.object({
 
 const preferencesSchema = z.object({
   version: z.literal(1),
+  source: catalogSourceSchema.optional(),
   policy: z.object({
     defaultMultiplier: z.number().positive(),
     rules: z.array(ruleSchema),
@@ -37,6 +41,7 @@ const preferencesSchema = z.object({
 })
 
 type ModelPriceImportPreferences = {
+  source?: ModelPriceImportCatalogSource
   policy: ModelPriceImportPolicy
   overwriteMode: ModelPriceImportOverwriteMode
   targetFilter: ModelPriceImportTargetFilter
@@ -62,6 +67,7 @@ export function readModelPriceImportPreferences(scope: string): ModelPriceImport
     if (!raw) return fallback
     const parsed = preferencesSchema.parse(JSON.parse(raw))
     return {
+      ...(parsed.source ? { source: parsed.source } : {}),
       overwriteMode: parsed.overwriteMode,
       targetFilter: parsed.targetFilter,
       policy: {
@@ -84,6 +90,7 @@ export function writeModelPriceImportPreferences(
       storageKey(scope),
       JSON.stringify({
         version: 1,
+        ...(preferences.source ? { source: preferences.source } : {}),
         overwriteMode: preferences.overwriteMode,
         targetFilter: preferences.targetFilter,
         policy: {

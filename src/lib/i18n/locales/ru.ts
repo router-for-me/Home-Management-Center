@@ -1161,6 +1161,13 @@ export const ru = {
           targetsTitle: 'Цели импорта',
           targetsHint:
             'Ограничьте модели Home, которые попадут в предпросмотр до сопоставления и расчета цен.',
+          catalogSource: 'Источник цен',
+          catalogSources: {
+            auto: 'Авто (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: 'Провайдер',
           allProviders: 'Все провайдеры',
           targetFilter: 'Набор целей',

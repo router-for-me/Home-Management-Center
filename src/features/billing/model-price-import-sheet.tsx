@@ -72,6 +72,7 @@ import type {
   ModelPriceImportApplyInput,
   ModelPriceImportApplyItem,
   ModelPriceImportApplyResult,
+  ModelPriceImportCatalogSource,
   ModelPriceImportMatchOverride,
   ModelPriceImportMultiplierRule,
   ModelPriceImportOverwriteMode,
@@ -107,6 +108,7 @@ type Props = {
   onApplyingChange: (applying: boolean) => void
   onRetryCandidates: () => void
   onPreview: (input: {
+    source?: ModelPriceImportCatalogSource
     targets: ModelPriceImportTarget[]
     overwriteMode: ModelPriceImportOverwriteMode
     policy: ModelPriceImportPolicy
@@ -348,6 +350,9 @@ export function ModelPriceImportSheet({
     [preferenceScope],
   )
   const defaultPreferences = useMemo(() => createDefaultModelPriceImportPreferences(), [])
+  const [source, setSource] = useState<ModelPriceImportCatalogSource>(
+    storedPreferences.source ?? 'auto',
+  )
   const [policy, setPolicy] = useState<ModelPriceImportPolicy>(storedPreferences.policy)
   const [overwriteMode, setOverwriteMode] = useState<ModelPriceImportOverwriteMode>(
     initialOverwriteMode ?? storedPreferences.overwriteMode,
@@ -408,6 +413,7 @@ export function ModelPriceImportSheet({
     [defaultPreferences.policy, policy],
   )
   const importPreferencesModified =
+    source !== 'auto' ||
     advancedPolicyModified ||
     policy.defaultMultiplier !== defaultPreferences.policy.defaultMultiplier ||
     overwriteMode !== effectiveDefaultOverwriteMode ||
@@ -432,11 +438,12 @@ export function ModelPriceImportSheet({
 
   useEffect(() => {
     writeModelPriceImportPreferences(preferenceScope, {
+      source,
       policy,
       overwriteMode: entryIntent === 'import' ? overwriteMode : storedPreferences.overwriteMode,
       targetFilter: entryIntent === 'import' ? targetFilter : storedPreferences.targetFilter,
     })
-  }, [entryIntent, overwriteMode, policy, preferenceScope, storedPreferences, targetFilter])
+  }, [entryIntent, overwriteMode, policy, preferenceScope, source, storedPreferences, targetFilter])
 
   useEffect(() => {
     onApplyingChange(applying)
@@ -493,8 +500,8 @@ export function ModelPriceImportSheet({
   }, [baseExistingByTarget, candidates, providerFilter, selectedTargetKeys, targetFilter])
 
   const previewInput = useMemo(
-    () => ({ targets, overwriteMode, policy, matchOverrides }),
-    [matchOverrides, overwriteMode, policy, targets],
+    () => ({ source, targets, overwriteMode, policy, matchOverrides }),
+    [matchOverrides, overwriteMode, policy, source, targets],
   )
   const previewSignature = useMemo(() => JSON.stringify(previewInput), [previewInput])
 
@@ -954,6 +961,7 @@ export function ModelPriceImportSheet({
   }
 
   const resetPreferences = () => {
+    setSource('auto')
     setPolicy(defaultPreferences.policy)
     setOverwriteMode(effectiveDefaultOverwriteMode)
     setTargetFilter(effectiveDefaultTargetFilter)
@@ -1102,6 +1110,36 @@ export function ModelPriceImportSheet({
             </p>
           </div>
           <div className={formGridClassName}>
+            {serverEnabled ? (
+              <label className="grid gap-1.5 text-xs">
+                <span className="text-muted-foreground">
+                  {t('billingPage.prices.import.catalogSource')}
+                </span>
+                <Select
+                  value={source}
+                  onValueChange={(value) => setSource(value as ModelPriceImportCatalogSource)}
+                  disabled={busy}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">
+                      {t('billingPage.prices.import.catalogSources.auto')}
+                    </SelectItem>
+                    <SelectItem value="openrouter">
+                      {t('billingPage.prices.import.catalogSources.openrouter')}
+                    </SelectItem>
+                    <SelectItem value="litellm">
+                      {t('billingPage.prices.import.catalogSources.litellm')}
+                    </SelectItem>
+                    <SelectItem value="models.dev">
+                      {t('billingPage.prices.import.catalogSources.modelsDev')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </label>
+            ) : null}
             <label className="grid gap-1.5 text-xs">
               <span className="text-muted-foreground">
                 {t('billingPage.prices.import.providerFilter')}
