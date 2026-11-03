@@ -124,7 +124,16 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
 
       if (effectiveSource === 'same-origin') {
-        return detectedState
+        if (state.managementKey) {
+          return detectedState
+        }
+
+        return {
+          ...detectedState,
+          baseUrl: SAME_ORIGIN_MANAGEMENT_BASE_URL,
+          status: 'disconnected',
+          error: null,
+        }
       }
 
       return {

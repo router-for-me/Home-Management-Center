@@ -22,6 +22,10 @@ export default defineConfig(({ command }) => {
     server: {
       publicDir: false,
       proxy: {
+        '/v8/management': {
+          target: managementProxyTarget,
+          changeOrigin: true,
+        },
         '/v0/management': {
           target: managementProxyTarget,
           changeOrigin: true,

@@ -19,9 +19,14 @@ function getCandidateSource(baseUrl: string | undefined): ManagementRuntimeDisco
 
 function getCandidateBaseUrls() {
   const envBaseUrl = import.meta.env.PUBLIC_MANAGEMENT_BASE_URL
+  const sameOriginCandidate = {
+    baseUrl: typeof window === 'undefined' ? null : window.location.origin,
+    source: 'same-origin' as const,
+  }
   const devCandidates = CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT
     ? [
         { baseUrl: envBaseUrl, source: getCandidateSource(envBaseUrl) },
+        sameOriginCandidate,
         { baseUrl: 'http://127.0.0.1:8327', source: 'runtime' },
         { baseUrl: 'http://localhost:8327', source: 'runtime' },
         { baseUrl: 'http://127.0.0.1:8317', source: 'runtime' },
@@ -30,13 +35,7 @@ function getCandidateBaseUrls() {
         { baseUrl: 'http://localhost:8137', source: 'runtime' },
       ]
     : []
-  const candidates = [
-    ...devCandidates,
-    {
-      baseUrl: typeof window === 'undefined' ? null : window.location.origin,
-      source: 'same-origin',
-    },
-  ].filter(
+  const candidates = [...devCandidates, sameOriginCandidate].filter(
     (candidate): candidate is { baseUrl: string; source: ManagementRuntimeDiscoverySource } =>
       Boolean(candidate.baseUrl),
   )
@@ -50,19 +49,34 @@ function getCandidateBaseUrls() {
   })
 }
 
+function hasManagementServerHeaders(response: Response) {
+  const exposeHeaders = (response.headers.get('access-control-expose-headers') ?? '').toLowerCase()
+  if (exposeHeaders.includes('x-cpa-version') || exposeHeaders.includes('x-server-version')) {
+    return true
+  }
+  return Boolean(
+    response.headers.get('x-cpa-version') ||
+      response.headers.get('x-cpa-home-version') ||
+      response.headers.get('x-server-version'),
+  )
+}
+
 function isManagementResponse(response: Response) {
   const allowedMethods = response.headers.get('access-control-allow-methods') ?? ''
 
   return response.ok && allowedMethods.split(',').some((method) => method.trim() === 'GET')
 }
 
-function isDiscoverableManagementResponse(
-  candidate: Pick<ManagementRuntimeDiscoveryResult, 'source'>,
-  response: Response,
-) {
-  if (!response.ok) return false
-  if (candidate.source === 'runtime') return true
-  return isManagementResponse(response)
+async function verifySameOriginProxyBackend(baseUrl: string, signal: AbortSignal) {
+  try {
+    const response = await window.fetch(`${baseUrl}/config`, {
+      method: 'GET',
+      signal,
+    })
+    return (response.ok || response.status === 401 || response.status === 403) && hasManagementServerHeaders(response)
+  } catch {
+    return false
+  }
 }
 
 async function probeManagementBaseUrl(
@@ -77,8 +91,23 @@ async function probeManagementBaseUrl(
       signal: controller.signal,
     })
 
-    if (!isDiscoverableManagementResponse(candidate, response)) {
+    if (!response.ok) {
       return null
+    }
+
+    if (candidate.source === 'same-origin') {
+      if (!isManagementResponse(response)) {
+        return null
+      }
+      // Dev servers such as Rsbuild answer OPTIONS locally before hitting proxy rules;
+      // verify that the proxied backend actually responds with CPA/Home headers when OPTIONS lacks them.
+      if (
+        CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT &&
+        !hasManagementServerHeaders(response) &&
+        !(await verifySameOriginProxyBackend(candidate.baseUrl, controller.signal))
+      ) {
+        return null
+      }
     }
 
     return {
