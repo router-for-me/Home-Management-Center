@@ -783,10 +783,10 @@ export const zhTW = {
         capabilityDetails: '查看價格規則能力詳情',
         schemaVersionTechnical: '後端價格規則能力版本：Rule schema v{{version}}。',
         currentRuntimeSource: '目前使用「{{source}}」選擇價格規則',
-        runtimeContextDescription: '決定後續扣款優先使用用戶端請求模型 ID 或上游回應模型 ID 比對價格規則。',
+        runtimeContextDescription: '決定後續扣款使用請求 Tier 或回應 Tier 比對價格規則。',
         configure: '設定比對方式',
-        dialogTitle: '設定全域模型比對方式',
-        dialogDescription: '選擇計費時優先按請求模型 ID 或上游回應模型 ID 比對價格規則。此設定套用於後續所有扣款請求。',
+        dialogTitle: '設定全域 Tier 比對方式',
+        dialogDescription: '選擇計費時從請求或最終回應取得 Tier。此設定套用於後續所有扣款請求。',
         defaultBadge: '預設',
         requestOptionDescription:
           '使用用戶端請求攜帶的 Tier，行為穩定且相容未回傳回應 Tier 的供應商。',

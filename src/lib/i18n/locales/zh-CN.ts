@@ -782,11 +782,11 @@ export const zhCN = {
         capabilityDetails: '查看价格规则能力详情',
         schemaVersionTechnical: '后端价格规则能力版本：Rule schema v{{version}}。',
         currentRuntimeSource: '当前使用「{{source}}」选择价格规则',
-        runtimeContextDescription: '决定后续扣款优先使用客户端请求模型 ID 还是上游响应模型 ID 匹配价格规则。',
+        runtimeContextDescription: '决定后续扣款使用请求 Tier 还是响应 Tier 匹配价格规则。',
         configure: '配置匹配方式',
-        dialogTitle: '配置全局模型匹配方式',
+        dialogTitle: '配置全局 Tier 匹配方式',
         dialogDescription:
-          '选择计费时优先按请求模型 ID 还是上游响应模型 ID 匹配价格规则。该设置应用于后续所有扣款请求。',
+          '选择计费时从请求还是最终响应中取得 Tier。该设置应用于后续所有扣款请求。',
         defaultBadge: '默认',
         requestOptionDescription:
           '使用客户端请求携带的 Tier，行为稳定且兼容未返回响应 Tier 的提供商。',

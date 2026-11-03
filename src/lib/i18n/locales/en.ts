@@ -811,11 +811,11 @@ export const en = {
         schemaVersionTechnical: 'Backend price-rule capability: Rule schema v{{version}}.',
         currentRuntimeSource: 'Price rules currently use the {{source}}',
         runtimeContextDescription:
-          'Determines whether future charges match price rules using the request model ID or response model ID first.',
+          'Determines whether future charges match price rules using the request Tier or response Tier.',
         configure: 'Configure matching',
-        dialogTitle: 'Configure global model matching',
+        dialogTitle: 'Configure global Tier matching',
         dialogDescription:
-          'Choose whether billing matches price rules using the request model ID or the upstream response model ID first.',
+          'Choose whether billing obtains the Tier from the request or the final response. This applies to every future charge.',
         defaultBadge: 'Default',
         requestOptionDescription:
           'Use the Tier sent by the client. This is stable and works with providers that do not return a response Tier.',
