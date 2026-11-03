@@ -1133,9 +1133,7 @@ function ModelPricesTab({
   const showSecondary = useSecondaryColumns()
   const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
   const [modelSourceDraft, setModelSourceDraft] = useState<'request' | 'response'>('request')
-  const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
   const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
-  const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [priceSearch, setPriceSearch] = useState('')
   const [tierFilter, setTierFilter] = useState<'all' | '*' | 'standard' | 'flex' | 'priority'>(
@@ -1144,14 +1142,8 @@ function ModelPricesTab({
   const [sourceFilter, setSourceFilter] = useState<'all' | ModelPriceSource>('all')
   const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
   const savedModelSource = workbench.billingSettings?.modelSource ?? 'request'
-  const savedTierSource = workbench.billingSettings?.serviceTierSource ?? 'request'
   const modelSourceDirty = modelSourceDraft !== savedModelSource
-  const tierSourceDirty = tierSourceDraft !== savedTierSource
-  const settingsDirty = modelSourceDirty || tierSourceDirty
-  const responseTierDiagnosticsUnavailable =
-    Boolean(workbench.billingTierDiagnosticsError) ||
-    workbench.billingTierDiagnostics?.supported === false ||
-    (!workbench.billingTierDiagnosticsFetching && !workbench.billingTierDiagnostics)
+  const settingsDirty = modelSourceDirty
   const hasPriceFilters =
     Boolean(priceSearch.trim()) ||
     tierFilter !== 'all' ||
@@ -1183,20 +1175,17 @@ function ModelPricesTab({
 
   useEffect(() => {
     setModelSourceDraft(savedModelSource)
-    setTierSourceDraft(savedTierSource)
     setSettingsError(null)
-  }, [savedModelSource, savedTierSource])
+  }, [savedModelSource])
 
   const saveTierSource = async () => {
     setSettingsError(null)
     try {
       await workbench.updateBillingSettings({
         modelSource: modelSourceDraft,
-        serviceTierSource: tierSourceDraft,
       })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
-      setConfirmTierSourceChange(false)
     } catch (error) {
       const message = error instanceof Error ? error.message : t('billingPage.toast.actionFailed')
       setSettingsError(message)
@@ -1205,22 +1194,11 @@ function ModelPricesTab({
   }
 
   const requestTierSourceSave = () => {
-    if (
-      tierSourceDirty &&
-      tierSourceDraft === 'response' &&
-      (responseTierDiagnosticsUnavailable ||
-        (workbench.billingTierDiagnostics?.supported &&
-          workbench.billingTierDiagnostics.fallbackRequests > 0))
-    ) {
-      setConfirmTierSourceChange(true)
-      return
-    }
     void saveTierSource()
   }
 
   const cancelTierSourceEdit = () => {
     setModelSourceDraft(savedModelSource)
-    setTierSourceDraft(savedTierSource)
     setSettingsError(null)
     setTierPolicyDialogOpen(false)
   }
@@ -1288,7 +1266,7 @@ function ModelPricesTab({
               </div>
               <p className="text-foreground mt-1 text-sm font-medium">
                 {t('billingPage.settings.currentRuntimeSource', {
-                  source: `${t(`billingPage.settings.model_${savedModelSource}`)} / ${t(`billingPage.settings.${savedTierSource}`)}`,
+                  source: t(`billingPage.settings.model_${savedModelSource}`),
                 })}
               </p>
               <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
@@ -1306,7 +1284,6 @@ function ModelPricesTab({
               disabled={workbench.billingSettingsLoading || Boolean(workbench.billingSettingsError)}
               onClick={() => {
                 setModelSourceDraft(savedModelSource)
-                setTierSourceDraft(savedTierSource)
                 setSettingsError(null)
                 setTierPolicyDialogOpen(true)
               }}
@@ -1661,97 +1638,15 @@ function ModelPricesTab({
             </RadioGroup>
           </div>
 
-          <div className="grid gap-2">
-            <span className="text-xs font-semibold">{t('billingPage.settings.serviceTierSource')}</span>
-            <RadioGroup
-              value={tierSourceDraft}
-              disabled={workbench.mutating || workbench.billingSettingsLoading}
-              aria-label={t('billingPage.settings.serviceTierSource')}
-              onValueChange={(value) => {
-                if (value === 'request' || value === 'response') setTierSourceDraft(value)
-              }}
-            >
-            {(['request', 'response'] as const).map((source) => (
-              <label
-                key={source}
-                className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
-                  tierSourceDraft === source
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-border hover:bg-muted/40',
-                  workbench.mutating && 'cursor-not-allowed opacity-60',
-                )}
-              >
-                <RadioGroupItem value={source} className="mt-0.5" />
-                <span className="grid min-w-0 gap-1">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    {t(`billingPage.settings.${source}`)}
-                    {source === 'request' ? (
-                      <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
-                        {t('billingPage.settings.defaultBadge')}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-muted-foreground text-xs leading-5">
-                    {source === 'request'
-                      ? t('billingPage.settings.requestOptionDescription')
-                      : t('billingPage.settings.responseOptionDescription')}
-                  </span>
-                </span>
-              </label>
-            ))}
-            </RadioGroup>
-          </div>
-
           {settingsDirty ? (
             <p className="bg-muted/40 rounded-md px-3 py-2 text-xs leading-5">
               <span className="text-muted-foreground">
                 {t('billingPage.settings.proposedValue')}{' '}
               </span>
-              <span className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</span>
+              <span className="font-medium">{t(`billingPage.settings.model_${modelSourceDraft}`)}</span>
             </p>
           ) : null}
 
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          workbench.billingTierDiagnosticsFetching ? (
-            <p className="text-muted-foreground text-xs leading-5" role="status">
-              {t('billingPage.settings.diagnosticsLoading')}
-            </p>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          !workbench.billingTierDiagnosticsError &&
-          workbench.billingTierDiagnostics?.supported ? (
-            <div
-              role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
-              className={cn(
-                'rounded-md border px-3 py-2 text-xs leading-5',
-                workbench.billingTierDiagnostics.fallbackRequests > 0
-                  ? 'border-warning/30 bg-warning/10 text-warning'
-                  : 'border-border bg-muted/30 text-muted-foreground',
-              )}
-            >
-              {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
-              workbench.billingTierDiagnostics.eligibleRequests > 0
-                ? t('billingPage.settings.noResponseTierWarningProposed', {
-                    count: workbench.billingTierDiagnostics.eligibleRequests,
-                  })
-                : t('billingPage.settings.fallbackSummaryProposed', {
-                    fallback: workbench.billingTierDiagnostics.fallbackRequests,
-                    total: workbench.billingTierDiagnostics.eligibleRequests,
-                  })}
-            </div>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          responseTierDiagnosticsUnavailable ? (
-            <p className="text-warning text-xs leading-5">
-              {t('billingPage.settings.diagnosticsUnavailable')}
-            </p>
-          ) : null}
           {settingsError || workbench.billingSettingsError ? (
             <p className="text-destructive text-xs" role="alert">
               {settingsError || workbench.billingSettingsError}
@@ -1769,13 +1664,7 @@ function ModelPricesTab({
             </Button>
             <Button
               type="button"
-              disabled={
-                workbench.mutating ||
-                !settingsDirty ||
-                (tierSourceDirty &&
-                  tierSourceDraft === 'response' &&
-                  workbench.billingTierDiagnosticsFetching)
-              }
+              disabled={workbench.mutating || !settingsDirty}
               onClick={requestTierSourceSave}
             >
               {workbench.mutating ? (
@@ -1788,28 +1677,6 @@ function ModelPricesTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={confirmTierSourceChange} onOpenChange={setConfirmTierSourceChange}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('billingPage.settings.confirmResponseTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {responseTierDiagnosticsUnavailable
-                ? t('billingPage.settings.confirmResponseUnknownDescription')
-                : t('billingPage.settings.confirmResponseDescription', {
-                    fallback: workbench.billingTierDiagnostics?.fallbackRequests ?? 0,
-                    total: workbench.billingTierDiagnostics?.eligibleRequests ?? 0,
-                  })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void saveTierSource()}>
-              {t('billingPage.settings.confirmResponseAction')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }
@@ -1845,18 +1712,7 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
       false,
     ],
     [t('billingPage.chargeDetail.requestedTier'), record.priceSnapshot.requestedServiceTier, false],
-    [t('billingPage.chargeDetail.responseTier'), record.priceSnapshot.responseServiceTier, false],
-    [t('billingPage.chargeDetail.tierSource'), record.priceSnapshot.serviceTierSource, false],
     [t('billingPage.chargeDetail.effectiveTier'), record.priceSnapshot.effectiveServiceTier, false],
-    [
-      t('billingPage.chargeDetail.responseTierFallback'),
-      record.priceSnapshot.responseServiceTierFallback == null
-        ? null
-        : record.priceSnapshot.responseServiceTierFallback
-          ? t('billingPage.common.yes')
-          : t('billingPage.common.no'),
-      false,
-    ],
     [
       t('billingPage.chargeDetail.amount'),
       formatSignedDetailedCreditAmount(-Math.abs(record.amount)),
@@ -3057,7 +2913,7 @@ export function BillingWorkbenchPage() {
                   candidatesIssue={modelPriceCandidatesIssue}
                   existingPrices={workbench.modelPrices}
                   schemaVersion={workbench.modelPriceSchemaVersion}
-                  tierSource={workbench.billingSettings?.serviceTierSource ?? null}
+                  tierSource="request"
                   entryIntent={sheetMode.intent}
                   serverEnabled={workbench.modelPriceImportServerEnabled}
                   preferenceScope={workbench.modelPriceImportPreferenceScope}
@@ -3175,7 +3031,7 @@ export function BillingWorkbenchPage() {
                   candidatesError={workbench.modelPriceCandidatesError}
                   candidatesIssue={modelPriceCandidatesIssue}
                   schemaVersion={workbench.modelPriceSchemaVersion}
-                  tierSource={workbench.billingSettings?.serviceTierSource ?? null}
+                  tierSource="request"
                   mutating={workbench.mutating}
                   onCancel={closeSheet}
                   onRetryCandidates={() => {
