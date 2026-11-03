@@ -1132,6 +1132,7 @@ function ModelPricesTab({
    */
   const showSecondary = useSecondaryColumns()
   const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
+  const [modelSourceDraft, setModelSourceDraft] = useState<'request' | 'response'>('request')
   const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
   const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
   const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
@@ -1142,8 +1143,11 @@ function ModelPricesTab({
   )
   const [sourceFilter, setSourceFilter] = useState<'all' | ModelPriceSource>('all')
   const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
+  const savedModelSource = workbench.billingSettings?.modelSource ?? 'request'
   const savedTierSource = workbench.billingSettings?.serviceTierSource ?? 'request'
+  const modelSourceDirty = modelSourceDraft !== savedModelSource
   const tierSourceDirty = tierSourceDraft !== savedTierSource
+  const settingsDirty = modelSourceDirty || tierSourceDirty
   const responseTierDiagnosticsUnavailable =
     Boolean(workbench.billingTierDiagnosticsError) ||
     workbench.billingTierDiagnostics?.supported === false ||
@@ -1178,14 +1182,18 @@ function ModelPricesTab({
   )
 
   useEffect(() => {
+    setModelSourceDraft(savedModelSource)
     setTierSourceDraft(savedTierSource)
     setSettingsError(null)
-  }, [savedTierSource])
+  }, [savedModelSource, savedTierSource])
 
   const saveTierSource = async () => {
     setSettingsError(null)
     try {
-      await workbench.updateBillingSettings({ serviceTierSource: tierSourceDraft })
+      await workbench.updateBillingSettings({
+        modelSource: modelSourceDraft,
+        serviceTierSource: tierSourceDraft,
+      })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
       setConfirmTierSourceChange(false)
@@ -1198,6 +1206,7 @@ function ModelPricesTab({
 
   const requestTierSourceSave = () => {
     if (
+      tierSourceDirty &&
       tierSourceDraft === 'response' &&
       (responseTierDiagnosticsUnavailable ||
         (workbench.billingTierDiagnostics?.supported &&
@@ -1210,6 +1219,7 @@ function ModelPricesTab({
   }
 
   const cancelTierSourceEdit = () => {
+    setModelSourceDraft(savedModelSource)
     setTierSourceDraft(savedTierSource)
     setSettingsError(null)
     setTierPolicyDialogOpen(false)
@@ -1278,7 +1288,7 @@ function ModelPricesTab({
               </div>
               <p className="text-foreground mt-1 text-sm font-medium">
                 {t('billingPage.settings.currentRuntimeSource', {
-                  source: t(`billingPage.settings.${savedTierSource}`),
+                  source: `${t(`billingPage.settings.model_${savedModelSource}`)} / ${t(`billingPage.settings.${savedTierSource}`)}`,
                 })}
               </p>
               <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
@@ -1295,6 +1305,7 @@ function ModelPricesTab({
               className="shrink-0"
               disabled={workbench.billingSettingsLoading || Boolean(workbench.billingSettingsError)}
               onClick={() => {
+                setModelSourceDraft(savedModelSource)
                 setTierSourceDraft(savedTierSource)
                 setSettingsError(null)
                 setTierPolicyDialogOpen(true)
@@ -1608,14 +1619,58 @@ function ModelPricesTab({
             <DialogDescription>{t('billingPage.settings.dialogDescription')}</DialogDescription>
           </DialogHeader>
 
-          <RadioGroup
-            value={tierSourceDraft}
-            disabled={workbench.mutating || workbench.billingSettingsLoading}
-            aria-label={t('billingPage.settings.serviceTierSource')}
-            onValueChange={(value) => {
-              if (value === 'request' || value === 'response') setTierSourceDraft(value)
-            }}
-          >
+          <div className="grid gap-2">
+            <span className="text-xs font-semibold">{t('billingPage.settings.modelSource')}</span>
+            <RadioGroup
+              value={modelSourceDraft}
+              disabled={workbench.mutating || workbench.billingSettingsLoading}
+              aria-label={t('billingPage.settings.modelSource')}
+              onValueChange={(value) => {
+                if (value === 'request' || value === 'response') setModelSourceDraft(value)
+              }}
+            >
+              {(['request', 'response'] as const).map((source) => (
+                <label
+                  key={`model-${source}`}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
+                    modelSourceDraft === source
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border hover:bg-muted/40',
+                    workbench.mutating && 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  <RadioGroupItem value={source} className="mt-0.5" />
+                  <span className="grid min-w-0 gap-1">
+                    <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                      {t(`billingPage.settings.model_${source}`)}
+                      {source === 'request' ? (
+                        <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                          {t('billingPage.settings.defaultBadge')}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-muted-foreground text-xs leading-5">
+                      {source === 'request'
+                        ? t('billingPage.settings.modelRequestOptionDescription')
+                        : t('billingPage.settings.modelResponseOptionDescription')}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="grid gap-2">
+            <span className="text-xs font-semibold">{t('billingPage.settings.serviceTierSource')}</span>
+            <RadioGroup
+              value={tierSourceDraft}
+              disabled={workbench.mutating || workbench.billingSettingsLoading}
+              aria-label={t('billingPage.settings.serviceTierSource')}
+              onValueChange={(value) => {
+                if (value === 'request' || value === 'response') setTierSourceDraft(value)
+              }}
+            >
             {(['request', 'response'] as const).map((source) => (
               <label
                 key={source}
@@ -1645,9 +1700,10 @@ function ModelPricesTab({
                 </span>
               </label>
             ))}
-          </RadioGroup>
+            </RadioGroup>
+          </div>
 
-          {tierSourceDirty ? (
+          {settingsDirty ? (
             <p className="bg-muted/40 rounded-md px-3 py-2 text-xs leading-5">
               <span className="text-muted-foreground">
                 {t('billingPage.settings.proposedValue')}{' '}
@@ -1715,8 +1771,10 @@ function ModelPricesTab({
               type="button"
               disabled={
                 workbench.mutating ||
-                !tierSourceDirty ||
-                (tierSourceDraft === 'response' && workbench.billingTierDiagnosticsFetching)
+                !settingsDirty ||
+                (tierSourceDirty &&
+                  tierSourceDraft === 'response' &&
+                  workbench.billingTierDiagnosticsFetching)
               }
               onClick={requestTierSourceSave}
             >

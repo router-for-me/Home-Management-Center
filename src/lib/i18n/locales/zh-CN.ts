@@ -768,6 +768,13 @@ export const zhCN = {
         legacy: '旧版',
       },
       settings: {
+        modelSource: '计费模型 ID 来源',
+        model_request: '请求模型 ID',
+        model_response: '响应模型 ID',
+        modelRequestOptionDescription:
+          '默认优先按客户端请求/路由模型 ID 匹配价格规则，未命中时回退到上游 response_model。',
+        modelResponseOptionDescription:
+          '优先按上游实际返回的 response_model 匹配价格规则，未返回或未命中时回退到请求模型 ID。',
         serviceTierSource: '计费 tier 来源',
         runtimeContextTitle: '运行时计费上下文',
         globalBadge: '全局',

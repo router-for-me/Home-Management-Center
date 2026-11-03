@@ -769,6 +769,13 @@ export const zhTW = {
         legacy: '舊版',
       },
       settings: {
+        modelSource: '計費模型 ID 來源',
+        model_request: '請求模型 ID',
+        model_response: '回應模型 ID',
+        modelRequestOptionDescription:
+          '預設優先按用戶端請求/路由模型 ID 比對價格規則，未命中時回退到上游 response_model。',
+        modelResponseOptionDescription:
+          '優先按上游實際回傳的 response_model 比對價格規則，未回傳或未命中時回退到請求模型 ID。',
         serviceTierSource: '計費 tier 來源',
         runtimeContextTitle: '執行時計費上下文',
         globalBadge: '全域',

@@ -47,6 +47,8 @@ export type ModelPriceSnapshot = {
   cacheReadPricePerMillion: number
   cacheWritePricePerMillion: number
   requestPrice: number
+  modelSource: BillingModelSource | null
+  priceModelSource: string | null
   requestedServiceTier: string | null
   responseServiceTier: string | null
   serviceTierSource: BillingServiceTierSource | null
@@ -143,9 +145,11 @@ export type BillingFilters = {
   model: string
 }
 
+export type BillingModelSource = 'request' | 'response'
 export type BillingServiceTierSource = 'request' | 'response'
 
 export type BillingSettings = {
+  modelSource: BillingModelSource
   serviceTierSource: BillingServiceTierSource
   reportTimezone: string
   supported: boolean
@@ -153,6 +157,7 @@ export type BillingSettings = {
 }
 
 export type BillingSettingsUpdate = {
+  modelSource?: BillingModelSource
   serviceTierSource?: BillingServiceTierSource
   reportTimezone?: string
 }

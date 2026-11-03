@@ -796,6 +796,13 @@ export const ru = {
         legacy: 'legacy',
       },
       settings: {
+        modelSource: 'Источник ID модели для биллинга',
+        model_request: 'ID модели запроса',
+        model_response: 'ID модели ответа',
+        modelRequestOptionDescription:
+          'По умолчанию сопоставлять правила цены по ID модели запроса с откатом к response_model.',
+        modelResponseOptionDescription:
+          'Сопоставлять правила цены по response_model ответа с откатом к модели запроса.',
         serviceTierSource: 'Источник tier для биллинга',
         runtimeContextTitle: 'Контекст биллинга во время выполнения',
         globalBadge: 'Глобально',

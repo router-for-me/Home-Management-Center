@@ -796,6 +796,13 @@ export const en = {
         legacy: 'legacy',
       },
       settings: {
+        modelSource: 'Billing model ID source',
+        model_request: 'Request model ID',
+        model_response: 'Response model ID',
+        modelRequestOptionDescription:
+          'Match price rules using the requested/routed model ID first (default), falling back to upstream response_model.',
+        modelResponseOptionDescription:
+          'Match price rules using the upstream response_model first, falling back to the request model ID when absent.',
         serviceTierSource: 'Billing tier source',
         runtimeContextTitle: 'Runtime billing context',
         globalBadge: 'Global',
