@@ -2335,6 +2335,8 @@ export const zhCN = {
         requestRetryInvalid: '请求重试轮数必须是非负整数。',
         websockets: 'WebSocket 支持',
         websocketsHint: '仅适用于 Codex 凭证。开启后，该凭证可参与需要 WebSocket 的 Codex 请求。',
+        usingApi: '使用官方 API（using_api）',
+        usingApiHint: '开启后使用 xAI 官方 API；关闭时使用 Grok CLI chat-proxy。',
         coolingSchedule: '冷却调度',
         coolingScheduleHint: '配置该凭证在配额受限时是否参与冷却调度，或继承全局策略。',
         coolingModeInherit: '继承全局策略',

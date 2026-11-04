@@ -2429,6 +2429,9 @@ export const en = {
         websockets: 'WebSocket support',
         websocketsHint:
           'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
+        usingApi: 'Use official API (using_api)',
+        usingApiHint:
+          'Use the official xAI API when enabled; use Grok CLI chat-proxy when disabled.',
         coolingSchedule: 'Cooling schedule',
         coolingScheduleHint:
           'Configure whether this credential participates in quota cooldown scheduling or inherits the global policy.',

@@ -2335,6 +2335,8 @@ export const zhTW = {
         requestRetryInvalid: '請求重試輪數必須是非負整數。',
         websockets: 'WebSocket 支援',
         websocketsHint: '僅適用於 Codex 憑證。開啟後，該憑證可參與需要 WebSocket 的 Codex 請求。',
+        usingApi: '使用官方 API（using_api）',
+        usingApiHint: '開啟後使用 xAI 官方 API；關閉時使用 Grok CLI chat-proxy。',
         coolingSchedule: '冷卻排程',
         coolingScheduleHint: '配置該憑證在配額受限時是否參與冷卻排程，或繼承全域策略。',
         coolingModeInherit: '繼承全域策略',

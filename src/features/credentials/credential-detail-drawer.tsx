@@ -98,7 +98,9 @@ import {
   readCredentialDisableCoolingOverride,
   readCredentialExcludedModels,
   readCredentialHeaders,
+  readCredentialUsingApi,
   readCredentialWeight,
+  supportsCredentialUsingApi,
   supportsCredentialWebsockets,
 } from '@/lib/api/management/credentials'
 import type { QuotaCredential, QuotaResetCredits, QuotaWindow } from '@/lib/api/management/quota'
@@ -141,6 +143,14 @@ export function createMetadataForm(
     resource?.disableCoolingOverride !== undefined && resource.disableCoolingOverride !== null
       ? resource.disableCoolingOverride
       : (rawCooling ?? resource?.disableCoolingOverride ?? null)
+  const rawUsingApi =
+    rawMetadata &&
+    (Object.prototype.hasOwnProperty.call(rawMetadata, 'using_api') ||
+      Object.prototype.hasOwnProperty.call(rawMetadata, 'using-api') ||
+      Object.prototype.hasOwnProperty.call(rawMetadata, 'usingApi'))
+      ? readCredentialUsingApi(rawMetadata)
+      : null
+  const usingApi = rawUsingApi ?? resource?.usingApi ?? false
 
   return applyCredentialConcurrencyPolicyToForm(
     {
@@ -156,6 +166,7 @@ export function createMetadataForm(
           ? ''
           : String(resource.requestRetry),
       websockets: resource?.websockets ?? false,
+      usingApi,
       disableCooling: disableCoolingOverride,
       headers: Object.entries(headersMap).map(([key, value]) => ({ key, value })),
       excludedModelsText: excludedModels.join('\n'),
@@ -262,6 +273,13 @@ export function buildCredentialMetadataPatch(
     form.websockets !== baseline.websockets
   ) {
     patch.websockets = form.websockets
+  }
+  if (
+    supportsCredentialUsingApi(resource) &&
+    form.usingApi !== undefined &&
+    form.usingApi !== (baseline.usingApi ?? false)
+  ) {
+    patch.usingApi = form.usingApi
   }
   if (form.disableCooling !== undefined) {
     const baselineCooling = baseline.disableCooling ?? null
@@ -897,6 +915,7 @@ function MetadataTab({
 
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const websocketsAvailable = resource.metadataAvailability.websockets
+  const usingApiSupported = supportsCredentialUsingApi(resource)
   const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
   const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
@@ -1236,6 +1255,27 @@ function MetadataTab({
           )}
         </div>
       </div>
+
+      {usingApiSupported ? (
+        <div className="bg-muted/35 rounded-md border px-3 py-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t('credentialsPage.form.usingApi')}</p>
+              <p className="text-muted-foreground mt-1 text-xs leading-5">
+                {t('credentialsPage.form.usingApiHint')}
+              </p>
+            </div>
+            <Switch
+              checked={Boolean(form.usingApi)}
+              disabled={mutating}
+              onCheckedChange={(checked) =>
+                handleFormChange((current) => ({ ...current, usingApi: checked }))
+              }
+              aria-label={t('credentialsPage.form.usingApi')}
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="bg-muted/35 rounded-md border px-3 py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

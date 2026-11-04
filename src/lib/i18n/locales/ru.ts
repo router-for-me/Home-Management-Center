@@ -2434,6 +2434,9 @@ export const ru = {
         websockets: 'Поддержка WebSocket',
         websocketsHint:
           'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
+        usingApi: 'Использовать официальный API (using_api)',
+        usingApiHint:
+          'Если включено, используется официальный API xAI; если выключено — Grok CLI chat-proxy.',
         coolingSchedule: 'Расписание охлаждения',
         coolingScheduleHint:
           'Настройте, участвует ли эта учетная запись в расписании охлаждения квот или наследует глобальную политику.',

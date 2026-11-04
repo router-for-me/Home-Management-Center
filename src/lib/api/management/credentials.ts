@@ -39,6 +39,7 @@ export type CredentialMetadataInput = {
   requestRetry?: string | null
   note: string
   websockets?: boolean
+  usingApi?: boolean
   // null clears the override and inherits the global setting.
   disableCooling?: boolean | null
   headers?: Record<string, string>
@@ -133,6 +134,7 @@ export type CredentialResource = {
   prefix: string | null
   proxyUrl: string | null
   websockets: boolean
+  usingApi?: boolean
   disableCooling: boolean
   disableCoolingOverride?: boolean | null
   headers?: Record<string, string>
@@ -511,6 +513,13 @@ export function supportsCredentialWebsockets(
   )
 }
 
+export function supportsCredentialUsingApi(
+  resource: Pick<CredentialResource, 'provider' | 'type'>,
+) {
+  const candidates = [resource.provider, resource.type].map(normalizeCredentialProvider)
+  return candidates.some((value) => value === 'xai')
+}
+
 function readNestedFlexibleBoolean(record: UnknownRecord, rootKey: string, key: string) {
   const nested = record[rootKey]
   return isRecord(nested) ? readFlexibleBoolean(nested, key) : null
@@ -537,6 +546,19 @@ function readCredentialWebsockets(record: UnknownRecord) {
     readFlexibleBoolean(record, 'websocket') ??
     readNestedFlexibleBoolean(record, 'attributes', 'websockets') ??
     readNestedFlexibleBoolean(record, 'metadata', 'websockets') ??
+    false
+  )
+}
+
+export function readCredentialUsingApi(record: UnknownRecord) {
+  return (
+    readFlexibleBoolean(record, 'using_api') ??
+    readFlexibleBoolean(record, 'using-api') ??
+    readFlexibleBoolean(record, 'usingApi') ??
+    readNestedFlexibleBoolean(record, 'attributes', 'using_api') ??
+    readNestedFlexibleBoolean(record, 'attributes', 'using-api') ??
+    readNestedFlexibleBoolean(record, 'metadata', 'using_api') ??
+    readNestedFlexibleBoolean(record, 'metadata', 'using-api') ??
     false
   )
 }
@@ -770,6 +792,7 @@ export function normalizeCredentialResource(
       readNestedString(record, 'metadata', 'proxy_url') ??
       readNestedString(record, 'metadata', 'proxy-url'),
     websockets: readCredentialWebsockets(record),
+    usingApi: readCredentialUsingApi(record),
     disableCooling: readCredentialDisableCooling(record),
     disableCoolingOverride: readCredentialDisableCoolingOverride(record),
     headers: readCredentialHeaders(record),
@@ -1274,6 +1297,10 @@ function createFieldsPayload(resource: CredentialResource, input: CredentialMeta
 
   if (supportsCredentialWebsockets(resource) && typeof input.websockets === 'boolean') {
     payload.websockets = input.websockets
+  }
+
+  if (supportsCredentialUsingApi(resource) && typeof input.usingApi === 'boolean') {
+    payload.using_api = input.usingApi
   }
 
   if (input.disableCooling === null) {
