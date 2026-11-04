@@ -121,11 +121,32 @@ export type RequestEventError = {
   bodyPreview: string | null
 }
 
+export type RequestEventCostBreakdownItem = {
+  tokens: number
+  pricePerMillion: number
+  cost: number
+}
+
+export type RequestEventCostBreakdown = {
+  request: number
+  surcharges: number
+  baseTotal: number
+  billingMultiplier: number
+  total: number
+  reasoningEffort: string | null
+  reasoningEffortMultiplier: number | null
+  pricingExpr: string | null
+  items: Record<string, RequestEventCostBreakdownItem>
+}
+
 export type RequestEventBilling = {
   amount: number | null
+  baseAmount?: number | null
+  billingMultiplier?: number | null
   currency: string | null
   chargeId: string | null
   matchedPriceRule: string | null
+  costBreakdown?: RequestEventCostBreakdown | null
 }
 
 export type RequestEventRelated = {
@@ -600,13 +621,44 @@ function normalizeError(value: unknown): RequestEventError | null {
   return error
 }
 
+function normalizeCostBreakdown(value: unknown): RequestEventCostBreakdown | null {
+  if (!isRecord(value)) return null
+  const rawItems = isRecord(value.items) ? value.items : {}
+  const items: Record<string, RequestEventCostBreakdownItem> = {}
+  for (const [key, itemVal] of Object.entries(rawItems)) {
+    if (!isRecord(itemVal)) continue
+    items[key] = {
+      tokens: readNumber(itemVal, 'tokens') ?? 0,
+      pricePerMillion: readNumberFromKeys(itemVal, ['price_per_million', 'pricePerMillion']) ?? 0,
+      cost: readNumber(itemVal, 'cost') ?? 0,
+    }
+  }
+  return {
+    request: readNumber(value, 'request') ?? 0,
+    surcharges: readNumber(value, 'surcharges') ?? 0,
+    baseTotal: readNumberFromKeys(value, ['base_total', 'baseTotal']) ?? 0,
+    billingMultiplier: readNumberFromKeys(value, ['billing_multiplier', 'billingMultiplier']) ?? 1,
+    total: readNumber(value, 'total') ?? 0,
+    reasoningEffort: readStringFromKeys(value, ['reasoning_effort', 'reasoningEffort']),
+    reasoningEffortMultiplier: readNumberFromKeys(value, [
+      'reasoning_effort_multiplier',
+      'reasoningEffortMultiplier',
+    ]),
+    pricingExpr: readStringFromKeys(value, ['pricing_expr', 'pricingExpr']),
+    items,
+  }
+}
+
 function normalizeBilling(value: unknown): RequestEventBilling | null {
   if (!isRecord(value)) return null
   return {
     amount: readNumber(value, 'amount'),
+    baseAmount: readNumberFromKeys(value, ['base_amount', 'baseAmount']),
+    billingMultiplier: readNumberFromKeys(value, ['billing_multiplier', 'billingMultiplier']),
     currency: readString(value, 'currency'),
     chargeId: readStringFromKeys(value, ['charge_id', 'chargeId']),
     matchedPriceRule: readStringFromKeys(value, ['matched_price_rule', 'matchedPriceRule']),
+    costBreakdown: normalizeCostBreakdown(value.cost_breakdown ?? value.costBreakdown),
   }
 }
 

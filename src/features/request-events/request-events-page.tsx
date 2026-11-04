@@ -98,6 +98,7 @@ import { UsageWorkspaceShell } from '@/features/usage-observability/usage-worksp
 import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import type {
   RequestEvent,
+  RequestEventBilling,
   RequestEventDetail,
   RequestEventFilterOptions,
   RequestEventFilters,
@@ -316,6 +317,199 @@ type ToolUsageFieldKey =
   | 'googleMapsChunks'
   | 'numSourcesUsed'
   | 'imageGenerationCalls'
+
+const COST_ITEM_KEY_TO_I18N: Record<string, { i18nKey: string; isUnit?: boolean }> = {
+  input: { i18nKey: 'input' },
+  'expr:p': { i18nKey: 'input' },
+  image_input: { i18nKey: 'imageInput' },
+  'expr:pi': { i18nKey: 'imageInput' },
+  audio_input: { i18nKey: 'audioInput' },
+  'expr:pa': { i18nKey: 'audioInput' },
+  video_input: { i18nKey: 'videoInput' },
+  'expr:pv': { i18nKey: 'videoInput' },
+  file_input: { i18nKey: 'fileInput' },
+  'expr:pf': { i18nKey: 'fileInput' },
+  cache_read: { i18nKey: 'cacheRead' },
+  'expr:cr': { i18nKey: 'cacheRead' },
+  cached_text: { i18nKey: 'cachedText' },
+  'expr:ct': { i18nKey: 'cachedText' },
+  image_cache_read: { i18nKey: 'imageCacheRead' },
+  'expr:cri': { i18nKey: 'imageCacheRead' },
+  audio_cache_read: { i18nKey: 'audioCacheRead' },
+  'expr:cra': { i18nKey: 'audioCacheRead' },
+  cache_write: { i18nKey: 'cacheWrite' },
+  'expr:cw': { i18nKey: 'cacheWrite' },
+  cache_write_30m: { i18nKey: 'cacheWrite30m' },
+  'expr:cw30m': { i18nKey: 'cacheWrite30m' },
+  cache_write_1h: { i18nKey: 'cacheWrite1h' },
+  'expr:cw1h': { i18nKey: 'cacheWrite1h' },
+  cache_write_12h: { i18nKey: 'cacheWrite12h' },
+  'expr:cw12h': { i18nKey: 'cacheWrite12h' },
+  output: { i18nKey: 'output' },
+  'expr:c': { i18nKey: 'output' },
+  reasoning: { i18nKey: 'reasoning' },
+  'expr:r': { i18nKey: 'reasoning' },
+  image_output: { i18nKey: 'imageOutput' },
+  'expr:ci': { i18nKey: 'imageOutput' },
+  audio_output: { i18nKey: 'audioOutput' },
+  'expr:ca': { i18nKey: 'audioOutput' },
+  video_output: { i18nKey: 'videoOutput' },
+  'expr:cv': { i18nKey: 'videoOutput' },
+  web_search_calls: { i18nKey: 'webSearch', isUnit: true },
+  'expr:ws': { i18nKey: 'webSearch', isUnit: true },
+  'expr:wsq': { i18nKey: 'webSearchQuery', isUnit: true },
+  'expr:wf': { i18nKey: 'webFetch', isUnit: true },
+  'expr:xs': { i18nKey: 'xSearch', isUnit: true },
+  'expr:ce': { i18nKey: 'codeExecution', isUnit: true },
+  'expr:fs': { i18nKey: 'fileSearch', isUnit: true },
+  'expr:ds': { i18nKey: 'documentSearch', isUnit: true },
+  'expr:mcp': { i18nKey: 'mcp', isUnit: true },
+  'expr:maps': { i18nKey: 'googleMaps', isUnit: true },
+  'expr:src': { i18nKey: 'sourcesUsed', isUnit: true },
+  'expr:st': { i18nKey: 'serverTools', isUnit: true },
+  images: { i18nKey: 'images', isUnit: true },
+}
+
+const COST_ITEM_ORDER = [
+  'input',
+  'expr:p',
+  'image_input',
+  'expr:pi',
+  'audio_input',
+  'expr:pa',
+  'video_input',
+  'expr:pv',
+  'file_input',
+  'expr:pf',
+  'cache_read',
+  'expr:cr',
+  'cached_text',
+  'expr:ct',
+  'image_cache_read',
+  'expr:cri',
+  'audio_cache_read',
+  'expr:cra',
+  'cache_write',
+  'expr:cw',
+  'cache_write_30m',
+  'expr:cw30m',
+  'cache_write_1h',
+  'expr:cw1h',
+  'cache_write_12h',
+  'expr:cw12h',
+  'output',
+  'expr:c',
+  'reasoning',
+  'expr:r',
+  'image_output',
+  'expr:ci',
+  'audio_output',
+  'expr:ca',
+  'video_output',
+  'expr:cv',
+  'web_search_calls',
+  'expr:ws',
+  'expr:wsq',
+  'expr:wf',
+  'expr:xs',
+  'expr:ce',
+  'expr:fs',
+  'expr:ds',
+  'expr:mcp',
+  'expr:maps',
+  'expr:src',
+  'expr:st',
+  'images',
+]
+
+function buildCostTooltipRows(
+  billing: RequestEventBilling | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): Array<{ label: string; value: string }> {
+  if (!billing || billing.amount === null) return []
+  const totalFormatted = formatAmount(billing.amount, billing.currency)
+  if (!totalFormatted) return []
+
+  const rows: Array<{ label: string; value: string }> = [
+    {
+      label: t('requestEventsPage.detail.costBreakdown.total'),
+      value: totalFormatted,
+    },
+  ]
+
+  const bd = billing.costBreakdown
+  if (bd) {
+    const entries = Object.entries(bd.items).filter(([key, item]) => {
+      if (key === 'expression') return false
+      if (key === 'expr:wsq' && (bd.items['expr:ws']?.tokens ?? 0) > 0 && item.cost <= 0) {
+        return false
+      }
+      if (key === 'expr:st' && item.cost <= 0) return false
+      return item.cost > 0 || item.tokens > 0
+    })
+
+    entries.sort(([a], [b]) => {
+      const idxA = COST_ITEM_ORDER.indexOf(a)
+      const idxB = COST_ITEM_ORDER.indexOf(b)
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB)
+    })
+
+    for (const [key, item] of entries) {
+      const meta = COST_ITEM_KEY_TO_I18N[key]
+      const baseLabel = meta
+        ? t(`requestEventsPage.detail.costBreakdown.${meta.i18nKey}`)
+        : key.replace(/^expr:/, '')
+      const countSuffix =
+        item.tokens > 0
+          ? meta?.isUnit
+            ? ` (×${formatNumber(item.tokens)})`
+            : ` (${formatNumber(item.tokens)})`
+          : ''
+      const valueText =
+        item.cost > 0
+          ? (formatAmount(item.cost, billing.currency) ?? '$0')
+          : formatNumber(item.tokens)
+      rows.push({
+        label: `${baseLabel}${countSuffix}`,
+        value: valueText,
+      })
+    }
+
+    if (bd.request > 0) {
+      rows.push({
+        label: t('requestEventsPage.detail.costBreakdown.requestFee'),
+        value: formatAmount(bd.request, billing.currency) ?? '$0',
+      })
+    }
+
+    if (
+      bd.reasoningEffort &&
+      bd.reasoningEffortMultiplier !== null &&
+      bd.reasoningEffortMultiplier !== 1
+    ) {
+      rows.push({
+        label: `${t('requestEventsPage.detail.costBreakdown.effortMultiplier')} (${bd.reasoningEffort})`,
+        value: `×${bd.reasoningEffortMultiplier}`,
+      })
+    }
+
+    if (bd.billingMultiplier && bd.billingMultiplier !== 1) {
+      rows.push({
+        label: t('requestEventsPage.detail.costBreakdown.billingMultiplier'),
+        value: `×${bd.billingMultiplier}`,
+      })
+    }
+  }
+
+  if (billing.matchedPriceRule) {
+    rows.push({
+      label: t('requestEventsPage.detail.costBreakdown.matchedRule'),
+      value: billing.matchedPriceRule,
+    })
+  }
+
+  return rows
+}
 
 function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined): Array<{
   key: ToolUsageFieldKey
@@ -1805,18 +1999,55 @@ function RequestEventsTable({
                           </TableCell>
                         ) : null}
                         {isColumnRendered('cost') ? (
-                          <TableCell className="text-right tabular-nums">
-                            <p className="font-medium">
-                              {formatAmount(
-                                event.billing?.amount ?? null,
-                                event.billing?.currency,
-                              ) ?? <EmptyValue />}
-                            </p>
-                            {event.billing?.matchedPriceRule ? (
-                              <p className="text-muted-foreground truncate text-xs">
-                                {event.billing.matchedPriceRule}
-                              </p>
-                            ) : null}
+                          <TableCell className="min-w-0 overflow-hidden text-right tabular-nums">
+                            {(() => {
+                              const costTooltipRows = buildCostTooltipRows(event.billing, t)
+                              const cellContent = (
+                                <div
+                                  tabIndex={costTooltipRows.length > 0 ? 0 : undefined}
+                                  className="outline-hidden"
+                                >
+                                  <p className="font-medium">
+                                    {formatAmount(
+                                      event.billing?.amount ?? null,
+                                      event.billing?.currency,
+                                    ) ?? <EmptyValue />}
+                                  </p>
+                                  {event.billing?.matchedPriceRule ? (
+                                    <p className="text-muted-foreground truncate text-xs">
+                                      {event.billing.matchedPriceRule}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              )
+                              if (costTooltipRows.length === 0) return cellContent
+                              return (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>{cellContent}</TooltipTrigger>
+                                  <TooltipContent
+                                    side="top"
+                                    align="end"
+                                    className="min-w-56 px-3 py-2"
+                                  >
+                                    <div className="grid gap-1 tabular-nums">
+                                      <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 font-semibold">
+                                        <span>{costTooltipRows[0]?.label}</span>
+                                        <span>{costTooltipRows[0]?.value}</span>
+                                      </div>
+                                      {costTooltipRows.slice(1).map((row) => (
+                                        <div
+                                          key={row.label}
+                                          className="flex items-center justify-between gap-4 text-[11px]"
+                                        >
+                                          <span className="opacity-80">{row.label}</span>
+                                          <span className="font-mono font-medium">{row.value}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )
+                            })()}
                           </TableCell>
                         ) : null}
                         {isColumnRendered('client') ? (
