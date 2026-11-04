@@ -141,7 +141,8 @@ export type ProviderHeaderEntryInput = {
 
 export type ProviderDiscoveredModel = {
   name: string
-  alias: string | null
+  /** The provider's readable name for the model, for the model's display-name. */
+  displayName: string | null
   description: string | null
 }
 
@@ -531,7 +532,10 @@ function normalizeNativeKeyResource(
   const record = { ...group, ...key }
   delete record.keys
 
-  const authIndex = readAuthIndex(key) ?? readAuthIndex(group)
+  // Older Home versions return only the credential ID, which /requests/api-call
+  // also accepts. Explicit auth indexes from Home and CPA take precedence.
+  const authIndex =
+    readAuthIndex(key) ?? readAuthIndex(group) ?? readString(key, 'id') ?? readString(key, 'uuid')
   const name = readString(record, 'name')
   const id =
     readString(key, 'id') ?? readString(key, 'uuid') ?? authIndex ?? `${descriptor.id}-${index + 1}`
@@ -571,9 +575,19 @@ function normalizeCompatibilityResource(
   record: UnknownRecord,
   index: number,
 ): ProviderResource {
-  const authIndex = readAuthIndex(record)
+  const keys = readGroupKeys(record)
+  const firstKey = keys[0] ?? {}
+  // A multi-key group has no single credential binding. Only promote the key's
+  // selector when the group represents one credential, including legacy Home.
+  const credential = keys.length === 1 ? firstKey : keys.length === 0 ? record : null
+  const authIndex =
+    readAuthIndex(record) ??
+    (credential
+      ? (readAuthIndex(credential) ??
+        readString(credential, 'id') ??
+        readString(credential, 'uuid'))
+      : null)
   const name = readString(record, 'name')
-  const firstKey = readGroupKeys(record)[0] ?? {}
   const id =
     readString(record, 'id') ??
     readString(record, 'uuid') ??
@@ -753,7 +767,7 @@ function stripGeminiModelResourceName(value: string) {
 function normalizeDiscoveredModels(payload: unknown, { dedupe = true } = {}) {
   const toModel = (entry: unknown): ProviderDiscoveredModel | null => {
     if (typeof entry === 'string' && entry.trim()) {
-      return { name: entry.trim(), alias: null, description: null }
+      return { name: entry.trim(), displayName: null, description: null }
     }
     if (!isRecord(entry)) return null
 
@@ -764,16 +778,24 @@ function normalizeDiscoveredModels(payload: unknown, { dedupe = true } = {}) {
       readString(entry, 'value')
     if (!name) return null
 
-    const alias =
-      readString(entry, 'alias') ??
+    /*
+     * A catalog's readable name is a display name, not an alias. Home publishes a
+     * configured alias as the model's ID in place of the upstream name, so reading
+     * display_name into alias renamed every imported model: gpt-6.1-sol became
+     * "GPT-6.1 Sol", and clients still asking for gpt-6.1-sol got auth_not_found.
+     * An upstream `alias` field only feeds the display name for the same reason;
+     * renaming a model stays an explicit edit.
+     */
+    const displayName =
       readString(entry, 'display_name') ??
-      readString(entry, 'displayName')
+      readString(entry, 'displayName') ??
+      readString(entry, 'alias')
     const description =
       readString(entry, 'description') ?? readString(entry, 'note') ?? readString(entry, 'comment')
 
     return {
       name,
-      alias: alias && alias !== name ? alias : null,
+      displayName: displayName && displayName !== name ? displayName : null,
       description,
     }
   }
@@ -1716,7 +1738,7 @@ export async function fetchProviderDiscoveredModels(
         collected.push({
           ...model,
           name,
-          alias: model.alias === name ? null : model.alias,
+          displayName: model.displayName === name ? null : model.displayName,
         })
       })
 
