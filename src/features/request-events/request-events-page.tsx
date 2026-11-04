@@ -153,7 +153,7 @@ const requestEventColumns: RequestEventColumn[] = [
   { key: 'event', width: 210 },
   { key: 'model', width: 250 },
   { key: 'credential', width: 220 },
-  { key: 'tokens', width: 210, align: 'right' },
+  { key: 'tokens', width: 235, align: 'right' },
   { key: 'latency', width: 165, align: 'right' },
   { key: 'cost', width: 130, align: 'right' },
   { key: 'client', width: 200 },
@@ -1569,6 +1569,10 @@ function RequestEventsTable({
                       })),
                     ]
                     const toolUsageEntries = getToolUsageEntries(event.toolUsage)
+                    const totalToolCalls = toolUsageEntries.reduce(
+                      (sum, item) => sum + item.count,
+                      0,
+                    )
 
                     return (
                       <TableRow
@@ -1686,7 +1690,7 @@ function RequestEventsTable({
                           </TableCell>
                         ) : null}
                         {isColumnRendered('tokens') ? (
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className="min-w-0 overflow-hidden text-right tabular-nums">
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
@@ -1749,17 +1753,13 @@ function RequestEventsTable({
                                         </span>
                                       </span>
                                     ) : null}
-                                    {toolUsageEntries.length > 0 ? (
-                                      <span className="text-primary inline-flex items-center gap-0.5 text-[11px]">
-                                        <Wrench className="size-3 shrink-0" aria-hidden="true" />
-                                        <span>
-                                          {toolUsageEntries
-                                            .map(
-                                              (item) =>
-                                                `${t(`requestEventsPage.detail.toolFields.${item.key}`)}×${item.count}`,
-                                            )
-                                            .join(' · ')}
-                                        </span>
+                                    {totalToolCalls > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5">
+                                        <Wrench
+                                          className="text-primary size-3 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        <span>{formatCompactNumber(totalToolCalls)}</span>
                                       </span>
                                     ) : null}
                                   </div>
