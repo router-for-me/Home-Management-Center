@@ -528,19 +528,38 @@ describe('UpstreamQuotaCell rendering', () => {
 
   test('renders the weekly limit with a disabled on-demand row when only the weekly window exists', () => {
     const weekly = createXaiWeeklyWindow()
+    const productWindow = createWindow({
+      id: 'xai-product-grokbuild',
+      label: 'GrokBuild',
+      scope: 'account',
+      scopeId: 'xai-product-usage',
+      mode: 'fixed',
+      status: 'healthy',
+      unit: 'percentage',
+      used: 1,
+      remaining: 99,
+      limit: 100,
+      usedRatio: 0.01,
+      remainingRatio: 0.99,
+      periodUnit: 'week',
+      periodValue: 1,
+      priority: 20,
+    })
     const entry = createQuotaEntry({
       id: 'xai-01',
       authIndex: 'xai-01',
       provider: 'xai',
       plan: { name: 'SuperGrok', premium: false },
-      primaryWindows: [weekly],
-      windows: [weekly],
-      windowCount: 1,
+      primaryWindows: [weekly, productWindow],
+      windows: [weekly, productWindow],
+      windowCount: 2,
     })
     const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('Weekly limit')
     expect(markup).toContain('84%')
+    expect(markup).toContain('Usage breakdown (shared quota)')
+    expect(markup).toContain('GrokBuild usage: 1%')
     expect(markup).toContain('On-demand')
     expect(markup).toContain('Disabled')
     expect(markup).not.toContain('Monthly')
