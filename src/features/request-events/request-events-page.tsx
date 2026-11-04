@@ -439,9 +439,25 @@ function buildCostTooltipRows(
 
   const bd = billing.costBreakdown
   if (bd) {
-    const entries = Object.entries(bd.items).filter(([key, item]) => {
+    const mergedItems: Record<string, { tokens: number; pricePerMillion: number; cost: number }> =
+      {}
+    for (const [rawKey, item] of Object.entries(bd.items)) {
+      const key = rawKey === 'reasoning' ? 'output' : rawKey === 'expr:r' ? 'expr:c' : rawKey
+      const prev = mergedItems[key]
+      if (prev) {
+        mergedItems[key] = {
+          tokens: prev.tokens + item.tokens,
+          pricePerMillion: prev.pricePerMillion || item.pricePerMillion,
+          cost: Number((prev.cost + item.cost).toFixed(8)),
+        }
+      } else {
+        mergedItems[key] = { ...item }
+      }
+    }
+
+    const entries = Object.entries(mergedItems).filter(([key, item]) => {
       if (key === 'expression') return false
-      if (key === 'expr:wsq' && (bd.items['expr:ws']?.tokens ?? 0) > 0 && item.cost <= 0) {
+      if (key === 'expr:wsq' && (mergedItems['expr:ws']?.tokens ?? 0) > 0 && item.cost <= 0) {
         return false
       }
       if (key === 'expr:st' && item.cost <= 0) return false

@@ -125,15 +125,6 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
   const components: { key: string; label: string; value: number | null; suffix?: string }[] = [
     { key: 'input', label: t('userModels.price.input'), value: rung.inputPricePerMillion },
     { key: 'output', label: t('userModels.price.output'), value: rung.outputPricePerMillion },
-    ...(rung.reasoningPricePerMillion !== null && rung.reasoningPricePerMillion !== undefined
-      ? [
-          {
-            key: 'reasoning',
-            label: t('userModels.price.reasoning'),
-            value: rung.reasoningPricePerMillion,
-          },
-        ]
-      : []),
     {
       key: 'cacheRead',
       label: t('userModels.price.cacheRead'),
