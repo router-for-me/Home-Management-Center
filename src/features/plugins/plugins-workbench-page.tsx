@@ -36,10 +36,10 @@ import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -70,14 +70,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { PluginStoreAuthSheet } from '@/features/plugins/plugin-store-auth-sheet'
 import {
   type PluginStatusFilter,
@@ -1566,8 +1559,8 @@ export function PluginsWorkbenchPage() {
               }
             />
           ) : (
-            <Table
-              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            <ContainedTable
+              containerClassName="rounded-md border"
               className={cn(!showSecondary && 'table-fixed')}
             >
               <TableHeader>
@@ -1765,7 +1758,7 @@ export function PluginsWorkbenchPage() {
                   )
                 })}
               </TableBody>
-            </Table>
+            </ContainedTable>
           )}
         </TableSurfaceContent>
       </TableSurface>

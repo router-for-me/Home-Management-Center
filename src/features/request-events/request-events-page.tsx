@@ -4,8 +4,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  ChevronsDown,
-  ChevronsUp,
   CircleHelp,
   Columns3,
   Download,
@@ -17,22 +15,27 @@ import {
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { AdvancedFiltersToggle } from '@/components/shared/advanced-filters-toggle'
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { CallerUser, EmptyValue, emptyValueText } from '@/components/shared/empty-value'
-import { filterGridClassName } from '@/components/shared/form-layout'
+import {
+  filterActionsClassName,
+  filterGridClassName,
+  filterGridWithActionsClassName,
+} from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import type { SelectInputGroupOption } from '@/components/shared/select-input-group'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TablePaginationStatus,
   TableSurface,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import { TableSpacerRow, useVirtualTableRows } from '@/components/shared/virtual-table-rows'
@@ -60,14 +63,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
 import {
   LiveRefreshControl,
@@ -436,12 +432,9 @@ function RequestEventsFiltersToolbar({
   }
 
   return (
-    <Collapsible
-      open={advancedOpen}
-      onOpenChange={setAdvancedOpen}
-      className="bg-card rounded-lg border p-3 shadow-sm"
-    >
-      <div className={filterGridClassName}>
+    // Not a card: it already sits inside the table's surface.
+    <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+      <div className={filterGridWithActionsClassName}>
         <SelectInputGroup
           selectValue={activeSearchField}
           inputValue={searchValue}
@@ -523,6 +516,15 @@ function RequestEventsFiltersToolbar({
             ))}
           </SelectContent>
         </Select>
+        <div className={filterActionsClassName}>
+          <CollapsibleTrigger asChild>
+            <AdvancedFiltersToggle
+              open={advancedOpen}
+              activeCount={activeHiddenFilterCount}
+              label={t('requestEventsPage.filters.advanced')}
+            />
+          </CollapsibleTrigger>
+        </div>
       </div>
       <CollapsibleContent>
         <div className={cn(filterGridClassName, 'mt-3 border-t pt-3')}>
@@ -632,33 +634,6 @@ function RequestEventsFiltersToolbar({
           {t('requestEventsPage.filters.rangeInvalid')}
         </p>
       ) : null}
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="control-bordered border-border/80 bg-muted/20 text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
-          aria-label={
-            advancedOpen
-              ? t('requestEventsPage.filters.hideAdvanced')
-              : t('requestEventsPage.filters.advanced')
-          }
-        >
-          <span>
-            {advancedOpen
-              ? t('requestEventsPage.filters.hideAdvanced')
-              : t('requestEventsPage.filters.advanced')}
-          </span>
-          {activeHiddenFilterCount > 0 ? (
-            <span className="border-border bg-background text-foreground rounded-md border px-1.5 py-0.5 font-mono text-[11px] leading-none">
-              {activeHiddenFilterCount}
-            </span>
-          ) : null}
-          {advancedOpen ? (
-            <ChevronsUp className="text-primary size-5 stroke-[2.4]" aria-hidden="true" />
-          ) : (
-            <ChevronsDown className="text-primary size-5 stroke-[2.4]" aria-hidden="true" />
-          )}
-        </button>
-      </CollapsibleTrigger>
     </Collapsible>
   )
 }
@@ -722,7 +697,8 @@ function NumberRangeInputGroup({
   return (
     <div
       className={cn(
-        'border-input bg-background focus-within:ring-ring flex min-w-0 items-center rounded-md border shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
+        // The inputs fill the group, so the group carries the md step's height.
+        'control-md border-input bg-background focus-within:ring-ring flex min-w-0 items-center gap-0 border px-0 shadow-xs transition-[color,box-shadow] focus-within:ring-[3px]',
         invalid && 'border-destructive focus-within:ring-destructive/20',
         disabled && 'pointer-events-none opacity-50',
         className,
@@ -1143,17 +1119,102 @@ function RequestEventsTable({
   // The spacers have to span the row, action column included.
   const tableColumnCount = visibleColumnConfigs.length + 1
 
+  // Export, the column menu and the clear action all act on a result, so they
+  // wait for one; an empty result carries its own clear action instead.
+  const hasRows = Boolean(events) && rows.length > 0
+
   return (
     <TableSurface className="min-w-0">
+      {/*
+        The collection's tools share the title row rather than a toolbar row of
+        their own under the filters, which cost the first screen 53px.
+      */}
       <TableSurfaceHeader
         title={t('requestEventsPage.table.title')}
+        /*
+          Up to five tools share this row. Where they do not fit beside the title
+          they wrap under it, right-aligned, instead of folding the title onto two
+          lines - Russian at 1024px with the clear action showing.
+        */
+        titleClassName="md:shrink-0"
+        actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center md:min-w-0 md:shrink md:justify-end"
         actions={
-          <LiveRefreshControl
-            enabled={liveRefresh.enabled}
-            disabled={!liveRefresh.available}
-            describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
-            onEnabledChange={liveRefresh.setEnabled}
-          />
+          <>
+            <NewItemsNotice
+              count={pendingItemCount}
+              truncated={pendingItemsTruncated}
+              onAccept={onAcceptPendingItems}
+            />
+            <LiveRefreshControl
+              enabled={liveRefresh.enabled}
+              disabled={!liveRefresh.available}
+              describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+              onEnabledChange={liveRefresh.setEnabled}
+            />
+            {hasRows ? (
+              <>
+                {/*
+                  Not in the filter row: there it widened the row's own track, and
+                  in Russian at 1536px left the search input 50px wide.
+                */}
+                {activeFilters ? (
+                  <Button
+                    type="button"
+                    variant="text"
+                    size="md"
+                    disabled={mutating}
+                    onClick={onClearFilters}
+                  >
+                    <RefreshCw className="size-4" aria-hidden="true" />
+                    {t('requestEventsPage.table.clearFilters')}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  disabled={!canExport || !filtersValid || isExporting || mutating}
+                  onClick={onExport}
+                >
+                  {isExporting ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Download className="size-4" aria-hidden="true" />
+                  )}
+                  {canExport
+                    ? t('requestEventsPage.actions.export')
+                    : t('requestEventsPage.actions.exportUnsupported')}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="md">
+                      <Columns3 className="size-4" aria-hidden="true" />
+                      {t('actions.customizeColumns')}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      {t('requestEventsPage.table.columnsMenu')}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {requestEventColumns.map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.key}
+                        checked={isColumnVisible(column.key)}
+                        disabled={column.required}
+                        onSelect={(event) => event.preventDefault()}
+                        onCheckedChange={(checked) =>
+                          setColumnVisible(column.key, Boolean(checked))
+                        }
+                      >
+                        {t(`requestEventsPage.table.columns.${column.key}`)}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : null}
+          </>
         }
       />
 
@@ -1177,82 +1238,12 @@ function RequestEventsTable({
         />
       </div>
 
-      {events && rows.length > 0 ? (
-        <div className="border-border/80 bg-muted/20 flex flex-col gap-2 border-b px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {activeFilters ? (
-              <Button
-                type="button"
-                variant="text"
-                size="md"
-                disabled={mutating}
-                onClick={onClearFilters}
-              >
-                <RefreshCw className="size-4" aria-hidden="true" />
-                {t('requestEventsPage.table.clearFilters')}
-              </Button>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={!canExport || !filtersValid || rows.length === 0 || isExporting || mutating}
-              onClick={onExport}
-            >
-              {isExporting ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Download className="size-4" aria-hidden="true" />
-              )}
-              {canExport
-                ? t('requestEventsPage.actions.export')
-                : t('requestEventsPage.actions.exportUnsupported')}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="outline" size="md">
-                  <Columns3 className="size-4" aria-hidden="true" />
-                  {t('actions.customizeColumns')}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>{t('requestEventsPage.table.columnsMenu')}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {requestEventColumns.map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.key}
-                    checked={isColumnVisible(column.key)}
-                    disabled={column.required}
-                    onSelect={(event) => event.preventDefault()}
-                    onCheckedChange={(checked) => setColumnVisible(column.key, Boolean(checked))}
-                  >
-                    {t(`requestEventsPage.table.columns.${column.key}`)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      ) : null}
-
-      <NewItemsNotice
-        count={pendingItemCount}
-        truncated={pendingItemsTruncated}
-        className="mx-3 mt-3"
-        onAccept={onAcceptPendingItems}
-      />
-
       {events ? (
         rows.length > 0 ? (
           <div className="px-3 py-3">
-            <Table
+            <ContainedTable
               containerRef={tableContainerRef}
-              containerClassName={cn(
-                containedTableContainerClassName,
-                'max-h-[min(680px,calc(100vh-250px))] rounded-md border',
-              )}
+              containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
               className="table-fixed"
               style={showSecondary ? { minWidth: tableWidth } : undefined}
               /*
@@ -1428,7 +1419,7 @@ function RequestEventsTable({
                 })}
                 <TableSpacerRow height={virtualRows.paddingBottom} colSpan={tableColumnCount} />
               </TableBody>
-            </Table>
+            </ContainedTable>
           </div>
         ) : (
           <TableEmptyState

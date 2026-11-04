@@ -4392,7 +4392,6 @@ export const en = {
           'Latency range must use non-negative integers, and minimum latency must not exceed maximum latency.',
         sort: 'Sort',
         advanced: 'Advanced filters',
-        hideAdvanced: 'Hide advanced filters',
         ranges: {
           '4h': 'Last 4 hours',
           '12h': 'Last 12 hours',
@@ -4698,7 +4697,6 @@ export const en = {
         minAmount: 'Min spend',
         maxAmount: 'Max spend',
         advanced: 'Advanced filters',
-        hideAdvanced: 'Hide advanced filters',
         searchPlaceholder: 'Search request / user / model',
         minLatencyPlaceholder: 'Min latency ms',
         maxLatencyPlaceholder: 'Max latency ms',

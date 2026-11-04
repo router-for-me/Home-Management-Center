@@ -21,10 +21,10 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -56,14 +56,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
@@ -481,8 +474,8 @@ function CredentialList({
   }
 
   return (
-    <Table
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+    <ContainedTable
+      containerClassName="rounded-md border"
       className="table-fixed sm:min-w-[1350px]"
     >
       {/*
@@ -737,7 +730,7 @@ function CredentialList({
           )
         })}
       </TableBody>
-    </Table>
+    </ContainedTable>
   )
 }
 

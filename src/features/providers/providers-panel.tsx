@@ -25,10 +25,10 @@ import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -60,14 +60,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
@@ -826,8 +819,8 @@ function ProviderResourceTable({
   }
 
   return (
-    <Table
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+    <ContainedTable
+      containerClassName="rounded-md border"
       className="table-fixed sm:min-w-[1080px]"
     >
       <colgroup>
@@ -943,7 +936,7 @@ function ProviderResourceTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ContainedTable>
   )
 }
 

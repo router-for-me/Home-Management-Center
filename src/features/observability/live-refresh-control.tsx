@@ -26,7 +26,9 @@ export function LiveRefreshControl({
   return (
     <label
       className={cn(
-        'flex h-8 shrink-0 items-center gap-2 rounded-md border px-2.5 text-sm font-medium whitespace-nowrap',
+        // The md step, so it lines up with the md buttons it sits beside and takes
+        // their 40px touch floor on a phone.
+        'control-md flex shrink-0 items-center border font-medium whitespace-nowrap',
         disabled
           ? 'cursor-not-allowed opacity-60'
           : 'hover:bg-muted/50 cursor-pointer transition-colors',
@@ -145,38 +147,48 @@ export function LiveRefreshStatusNotice({
   )
 }
 
+/*
+ * Sits beside the LiveRefreshControl that produced it, in the same header row.
+ * As a banner above the table it pushed the rows 66px down whenever it appeared,
+ * which on a 1080p first screen cost one of the four rows there was room for,
+ * and pulled them back up once accepted.
+ *
+ * The live region outlives the button so that a count arriving is announced:
+ * a region inserted together with its text is not reliably read.
+ */
 export function NewItemsNotice({
   count,
   truncated,
-  className,
   onAccept,
 }: {
   count: number
   truncated: boolean
-  className?: string
   onAccept: () => void
 }) {
   const { t } = useTranslation()
-  if (count <= 0) return null
+  const pending = count > 0
 
   return (
-    <div
-      className={cn(
-        'border-primary/25 bg-primary/5 flex flex-col gap-2 rounded-md border px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between',
-        className,
-      )}
-    >
-      <div className="flex min-w-0 items-start gap-2.5">
-        <RadioTower className="text-primary mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        <p className="text-sm font-medium" role="status" aria-live="polite" aria-atomic="true">
-          {t(truncated ? 'observabilityRefresh.newItemsAtLeast' : 'observabilityRefresh.newItems', {
-            count,
-          })}
-        </p>
-      </div>
-      <Button type="button" variant="outline" size="md" onClick={onAccept}>
-        {t('observabilityRefresh.showNew')}
-      </Button>
-    </div>
+    <>
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {pending
+          ? t(
+              truncated ? 'observabilityRefresh.newItemsAtLeast' : 'observabilityRefresh.newItems',
+              {
+                count,
+              },
+            )
+          : null}
+      </span>
+      {pending ? (
+        <Button type="button" variant="outline" size="md" onClick={onAccept}>
+          <RadioTower className="text-primary" aria-hidden="true" />
+          {t('observabilityRefresh.showNew')}
+          <span className="bg-primary text-primary-foreground rounded-md px-1.5 py-0.5 font-mono text-[11px] leading-none tabular-nums">
+            {truncated ? `${count}+` : count}
+          </span>
+        </Button>
+      ) : null}
+    </>
   )
 }
