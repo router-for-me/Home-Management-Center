@@ -1,15 +1,23 @@
 import { type ReactNode, useRef, useState } from 'react'
 
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Brain,
+  Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
   Columns3,
+  Copy,
+  Database,
   Download,
   Eye,
+  FileText,
   Loader2,
   RefreshCw,
+  Waves,
   XCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -64,6 +72,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
 import {
   LiveRefreshControl,
@@ -116,6 +125,7 @@ type RequestEventColumnKey =
   | 'model'
   | 'runtime'
   | 'client'
+  | 'userAgent'
   | 'credential'
   | 'tokens'
   | 'latency'
@@ -136,18 +146,19 @@ type RequestEventColumn = {
 }
 
 const requestEventColumns: RequestEventColumn[] = [
-  { key: 'time', width: 216, required: true, compact: true },
-  { key: 'event', width: 150 },
-  { key: 'status', width: 130, compact: true },
-  { key: 'model', width: 240 },
-  { key: 'runtime', width: 210 },
-  { key: 'client', width: 220 },
-  { key: 'credential', width: 230 },
-  { key: 'tokens', width: 150, align: 'right' },
-  { key: 'latency', width: 140, align: 'right' },
+  { key: 'time', width: 148, required: true, compact: true },
+  { key: 'status', width: 132, compact: true },
+  { key: 'event', width: 210 },
+  { key: 'model', width: 250 },
+  { key: 'credential', width: 220 },
+  { key: 'tokens', width: 210, align: 'right' },
+  { key: 'latency', width: 165, align: 'right' },
   { key: 'cost', width: 130, align: 'right' },
-  { key: 'request', width: 260 },
-  { key: 'error', width: 260 },
+  { key: 'client', width: 200 },
+  { key: 'userAgent', width: 220 },
+  { key: 'runtime', width: 195 },
+  { key: 'request', width: 240 },
+  { key: 'error', width: 250 },
 ]
 
 const defaultVisibleColumns: RequestEventColumnKey[] = [
@@ -157,6 +168,7 @@ const defaultVisibleColumns: RequestEventColumnKey[] = [
   'model',
   'runtime',
   'client',
+  'userAgent',
   'credential',
   'tokens',
   'latency',
@@ -190,6 +202,147 @@ const requestEventAdvancedFilterKeys: Array<keyof RequestEventFilters> = [
   'maxLatencyMs',
   'sort',
 ]
+
+const requestEndpointAliases = new Map<string, string>([
+  ['/backend-api/codex/responses', '/v1/responses'],
+  ['/backend-api/codex/responses/compact', '/v1/responses/compact'],
+  ['/backend-api/codex/alpha/search', '/v1/alpha/search'],
+  ['/v1/tts', '/v1/audio/speech'],
+  ['/v1/videos', '/v1/videos/generations'],
+])
+
+function parseRequestEndpoint(rawEndpoint: string | null): {
+  requestType: 'SSE' | 'WS' | null
+  method: string | null
+  endpoint: string | null
+} {
+  const raw = String(rawEndpoint ?? '')
+    .trim()
+    .replace(/\s+/g, ' ')
+  if (!raw) return { requestType: null, method: null, endpoint: null }
+  const [first, ...rest] = raw.split(' ')
+  const upperMethod = first.toUpperCase()
+  const hasMethod =
+    upperMethod === 'GET' ||
+    upperMethod === 'POST' ||
+    upperMethod === 'PUT' ||
+    upperMethod === 'PATCH' ||
+    upperMethod === 'DELETE'
+  const requestType = upperMethod === 'POST' ? 'SSE' : upperMethod === 'GET' ? 'WS' : null
+  const path = hasMethod ? rest.join(' ').trim() : raw
+  const normalizedPath = requestEndpointAliases.get(path) ?? (path || null)
+  return {
+    requestType,
+    method: hasMethod ? upperMethod : null,
+    endpoint: normalizedPath,
+  }
+}
+
+function formatStackedTimestamp(timestamp: string): { time: string; date: string } | null {
+  const parsed = new Date(timestamp)
+  if (!Number.isNaN(parsed.getTime())) {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return {
+      time: `${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`,
+      date: `${parsed.getFullYear()}/${pad(parsed.getMonth() + 1)}/${pad(parsed.getDate())}`,
+    }
+  }
+  const match = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/)
+  if (!match) return null
+  return {
+    time: `${match[4]}:${match[5]}:${match[6]}`,
+    date: `${match[1]}/${match[2]}/${match[3]}`,
+  }
+}
+
+function getEffectiveTokenCounts(event: RequestEvent) {
+  const breakdown = event.tokenBreakdown
+  const rawCached =
+    event.tokens.cacheReadTokens > 0 ? event.tokens.cacheReadTokens : event.tokens.cachedTokens
+  if (breakdown && breakdown.quality === 'complete') {
+    const cachedTokens = Math.max(breakdown.input.cacheReadTokens, rawCached)
+    const cacheCreationTokens = Math.max(
+      breakdown.input.cacheWriteTokens,
+      event.tokens.cacheCreationTokens,
+    )
+    const inputAllTokens = Math.max(
+      breakdown.input.totalTokens,
+      breakdown.input.uncachedTokens + cachedTokens + cacheCreationTokens,
+    )
+    return {
+      inputTokens: inputAllTokens,
+      outputTokens: breakdown.output.totalTokens,
+      reasoningTokens: breakdown.output.reasoningTokens,
+      cacheReadTokens: cachedTokens,
+      cacheCreationTokens,
+      totalTokens: breakdown.totalTokens,
+    }
+  }
+  const cacheCreationTokens = event.tokens.cacheCreationTokens
+  const inputAllTokens = Math.max(event.tokens.inputTokens, rawCached + cacheCreationTokens)
+  return {
+    inputTokens: inputAllTokens,
+    outputTokens: event.tokens.outputTokens,
+    reasoningTokens: event.tokens.reasoningTokens,
+    cacheReadTokens: rawCached,
+    cacheCreationTokens,
+    totalTokens: event.tokens.totalTokens,
+  }
+}
+
+function formatCacheHitRate(cacheReadTokens: number, inputTokens: number): string | null {
+  if (inputTokens <= 0) return null
+  const safeCacheRead = Math.max(0, cacheReadTokens)
+  const rate = Math.min(100, Math.max(0, (safeCacheRead / inputTokens) * 100))
+  return `${rate.toFixed(2)}%`
+}
+
+function formatSpeedTps(tps: number | null): string | null {
+  if (tps === null || !Number.isFinite(tps) || tps <= 0) return null
+  return `${tps.toFixed(1)} t/s`
+}
+
+const REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH = 48
+
+function truncateUserAgent(value: string, maxLength = REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH) {
+  const chars = Array.from(value)
+  return chars.length <= maxLength ? value : `${chars.slice(0, maxLength).join('')}...`
+}
+
+function UserAgentCopyButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    } catch {
+      // Ignore clipboard failures in restricted contexts.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors',
+        copied && 'text-success',
+      )}
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation()
+        void handleCopy()
+      }}
+    >
+      {copied ? (
+        <Check className="size-3" aria-hidden="true" />
+      ) : (
+        <Copy className="size-3" aria-hidden="true" />
+      )}
+    </button>
+  )
+}
 
 function formatDuration(value: number | null) {
   if (value === null || !Number.isFinite(value)) return null
@@ -638,35 +791,55 @@ function RequestEventsFiltersToolbar({
   )
 }
 
-function RequestEventStatusBadge({ event }: { event: RequestEvent }) {
+function RequestEventStatusBadge({
+  event,
+  onInspect,
+}: {
+  event: RequestEvent
+  onInspect?: () => void
+}) {
   const { t } = useTranslation()
   const success = event.status === 'success'
   const failed = event.status === 'failed'
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium',
-        success
-          ? 'border-success/30 bg-success/10 text-success'
-          : failed
-            ? 'border-destructive/30 bg-destructive/10 text-destructive'
-            : 'border-muted-foreground/25 bg-muted text-muted-foreground',
-      )}
-    >
-      {success ? (
-        <CheckCircle2 className="size-3.5" aria-hidden="true" />
-      ) : failed ? (
-        <XCircle className="size-3.5" aria-hidden="true" />
-      ) : (
-        <CircleHelp className="size-3.5" aria-hidden="true" />
-      )}
-      {success
-        ? t('requestEventsPage.status.success')
-        : failed
-          ? t('requestEventsPage.status.failed')
-          : t('requestEventsPage.status.unknown')}
-    </span>
+  const hasLog = event.related?.requestLog?.available === true
+  const badgeClassName = cn(
+    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors',
+    success
+      ? 'border-success/30 bg-success/10 text-success'
+      : failed
+        ? 'border-destructive/30 bg-destructive/10 text-destructive'
+        : 'border-muted-foreground/25 bg-muted text-muted-foreground',
+    onInspect && 'hover:bg-accent/60 cursor-pointer',
   )
+  const content = (
+    <>
+      {success ? (
+        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+      ) : failed ? (
+        <XCircle className="size-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <CircleHelp className="size-3.5 shrink-0" aria-hidden="true" />
+      )}
+      <span>
+        {success
+          ? t('requestEventsPage.status.success')
+          : failed
+            ? t('requestEventsPage.status.failed')
+            : t('requestEventsPage.status.unknown')}
+      </span>
+      {hasLog ? <FileText className="size-3 shrink-0 opacity-75" aria-hidden="true" /> : null}
+    </>
+  )
+
+  if (onInspect) {
+    return (
+      <button type="button" className={badgeClassName} onClick={onInspect}>
+        {content}
+      </button>
+    )
+  }
+
+  return <span className={badgeClassName}>{content}</span>
 }
 
 function NumberRangeInputGroup({
@@ -864,6 +1037,16 @@ function RequestEventDetailSheet({
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.clientKey')}>
                   {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? <EmptyValue />}
+                </DiagnosticDetailField>
+                <DiagnosticDetailField
+                  className="sm:col-span-2"
+                  label={t('requestEventsPage.detail.fields.userAgent')}
+                  copyValue={event.client?.userAgent ?? null}
+                  copyLabel={copyLabel}
+                  copiedLabel={copiedLabel}
+                  mono
+                >
+                  {event.client?.userAgent ?? <EmptyValue />}
                 </DiagnosticDetailField>
                 <DiagnosticDetailField label={t('requestEventsPage.detail.fields.credential')}>
                   {event.credential?.label ?? event.credential?.authIndex ?? <EmptyValue />}
@@ -1124,43 +1307,547 @@ function RequestEventsTable({
   const hasRows = Boolean(events) && rows.length > 0
 
   return (
-    <TableSurface className="min-w-0">
-      {/*
+    <TooltipProvider delayDuration={120}>
+      <TableSurface className="min-w-0">
+        {/*
         The collection's tools share the title row rather than a toolbar row of
         their own under the filters, which cost the first screen 53px.
       */}
-      <TableSurfaceHeader
-        title={t('requestEventsPage.table.title')}
-        /*
+        <TableSurfaceHeader
+          title={t('requestEventsPage.table.title')}
+          /*
           Up to five tools share this row. Where they do not fit beside the title
           they wrap under it, right-aligned, instead of folding the title onto two
           lines - Russian at 1024px with the clear action showing.
         */
-        titleClassName="md:shrink-0"
-        actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center md:min-w-0 md:shrink md:justify-end"
-        actions={
-          <>
-            <NewItemsNotice
-              count={pendingItemCount}
-              truncated={pendingItemsTruncated}
-              onAccept={onAcceptPendingItems}
-            />
-            <LiveRefreshControl
-              enabled={liveRefresh.enabled}
-              disabled={!liveRefresh.available}
-              describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
-              onEnabledChange={liveRefresh.setEnabled}
-            />
-            {hasRows ? (
-              <>
-                {/*
+          titleClassName="md:shrink-0"
+          actionsClassName="w-full flex-col sm:w-auto sm:flex-row sm:items-center md:min-w-0 md:shrink md:justify-end"
+          actions={
+            <>
+              <NewItemsNotice
+                count={pendingItemCount}
+                truncated={pendingItemsTruncated}
+                onAccept={onAcceptPendingItems}
+              />
+              <LiveRefreshControl
+                enabled={liveRefresh.enabled}
+                disabled={!liveRefresh.available}
+                describedBy={!liveRefresh.available ? liveRefreshStatusId : undefined}
+                onEnabledChange={liveRefresh.setEnabled}
+              />
+              {hasRows ? (
+                <>
+                  {/*
                   Not in the filter row: there it widened the row's own track, and
                   in Russian at 1536px left the search input 50px wide.
                 */}
-                {activeFilters ? (
+                  {activeFilters ? (
+                    <Button
+                      type="button"
+                      variant="text"
+                      size="md"
+                      disabled={mutating}
+                      onClick={onClearFilters}
+                    >
+                      <RefreshCw className="size-4" aria-hidden="true" />
+                      {t('requestEventsPage.table.clearFilters')}
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
-                    variant="text"
+                    variant="outline"
+                    size="md"
+                    disabled={!canExport || !filtersValid || isExporting || mutating}
+                    onClick={onExport}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Download className="size-4" aria-hidden="true" />
+                    )}
+                    {canExport
+                      ? t('requestEventsPage.actions.export')
+                      : t('requestEventsPage.actions.exportUnsupported')}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="md">
+                        <Columns3 className="size-4" aria-hidden="true" />
+                        {t('actions.customizeColumns')}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>
+                        {t('requestEventsPage.table.columnsMenu')}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {requestEventColumns.map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column.key}
+                          checked={isColumnVisible(column.key)}
+                          disabled={column.required}
+                          onSelect={(event) => event.preventDefault()}
+                          onCheckedChange={(checked) =>
+                            setColumnVisible(column.key, Boolean(checked))
+                          }
+                        >
+                          {t(`requestEventsPage.table.columns.${column.key}`)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : null}
+            </>
+          }
+        />
+
+        <LiveRefreshStatusNotice
+          id={liveRefreshStatusId}
+          enabled={liveRefresh.enabled}
+          active={liveRefresh.active}
+          pauseReason={liveRefresh.pauseReason}
+          intervalMs={liveRefreshIntervalMs}
+          hasError={liveRefreshError}
+          lastSuccessAt={liveRefreshLastSuccessAt}
+          className="mx-3 mt-3"
+        />
+
+        <div className="border-b px-3 py-3">
+          <RequestEventsFiltersToolbar
+            disabled={mutating}
+            filters={filters}
+            options={filterOptions}
+            onChange={onFilterChange}
+          />
+        </div>
+
+        {events ? (
+          rows.length > 0 ? (
+            <div className="px-3 py-3">
+              <ContainedTable
+                containerRef={tableContainerRef}
+                containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
+                className="table-fixed"
+                style={showSecondary ? { minWidth: tableWidth } : undefined}
+                /*
+                The rows outside the window are not in the DOM, so the table has
+                to state how many there really are; the head counts as row one.
+              */
+                aria-rowcount={rows.length + 1}
+              >
+                <TableHeader className={stickyTableHeaderClassName}>
+                  <TableRow variant="static" aria-rowindex={1}>
+                    {visibleColumnConfigs.map((column, index) => (
+                      <TableHead
+                        key={column.key}
+                        className={cn(column.align === 'right' && 'text-right')}
+                        /*
+                        Fixed layout takes the sum of the declared widths, so a
+                        column set that adds up past the viewport still scrolls.
+                        The identity column gives up its width below 40rem and
+                        takes the remainder instead.
+                      */
+                        style={!showSecondary && index === 0 ? undefined : { width: column.width }}
+                      >
+                        {t(`requestEventsPage.table.columns.${column.key}`)}
+                      </TableHead>
+                    ))}
+                    <TableHead className="table-sticky-action-head table-action-column-1 text-right">
+                      {t('requestEventsPage.table.columns.actions')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableSpacerRow height={virtualRows.paddingTop} colSpan={tableColumnCount} />
+                  {virtualRows.items.map(({ index, key }) => {
+                    const event = rows[index]
+                    const stackedTime = formatStackedTimestamp(event.timestamp)
+                    const fullTime = formatDateTime(event.timestamp, i18n) ?? event.timestamp
+                    const parsedEndpoint = parseRequestEndpoint(event.endpoint)
+                    const tokenCounts = getEffectiveTokenCounts(event)
+                    const cacheHitRate = formatCacheHitRate(
+                      tokenCounts.cacheReadTokens,
+                      tokenCounts.inputTokens,
+                    )
+                    const speedLabel = formatSpeedTps(event.performance.tps)
+                    const showErrorStatusCode =
+                      event.statusCode !== null &&
+                      (!event.failed || event.statusCode >= 400) &&
+                      event.statusCode !== 200
+                    const tokenTooltipRows = [
+                      {
+                        label: t('requestEventsPage.detail.tokenFields.totalTokens'),
+                        value: formatNumber(tokenCounts.totalTokens),
+                      },
+                      {
+                        label: t('requestEventsPage.detail.tokenFields.inputTokens'),
+                        value: formatNumber(tokenCounts.inputTokens),
+                      },
+                      {
+                        label: t('requestEventsPage.detail.tokenFields.cachedTokens'),
+                        value: `${formatNumber(tokenCounts.cacheReadTokens)}${cacheHitRate ? ` (${cacheHitRate})` : ''}`,
+                      },
+                      ...(tokenCounts.cacheCreationTokens > 0
+                        ? [
+                            {
+                              label: t('requestEventsPage.detail.tokenFields.cacheCreationTokens'),
+                              value: formatNumber(tokenCounts.cacheCreationTokens),
+                            },
+                          ]
+                        : []),
+                      {
+                        label: t('requestEventsPage.detail.tokenFields.outputTokens'),
+                        value: formatNumber(tokenCounts.outputTokens),
+                      },
+                      {
+                        label: t('requestEventsPage.detail.tokenFields.reasoningTokens'),
+                        value: formatNumber(tokenCounts.reasoningTokens),
+                      },
+                    ]
+
+                    return (
+                      <TableRow
+                        key={key}
+                        variant="resource"
+                        data-index={index}
+                        aria-rowindex={index + 2}
+                        ref={virtualRows.measureRow}
+                      >
+                        {isColumnRendered('time') ? (
+                          <TableCell className="tabular-nums" title={fullTime}>
+                            {stackedTime ? (
+                              <>
+                                <p className="truncate font-medium">{stackedTime.time}</p>
+                                <p className="text-muted-foreground truncate text-xs">
+                                  {stackedTime.date}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-muted-foreground truncate">{fullTime}</p>
+                            )}
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('status') ? (
+                          <TableCell>
+                            <RequestEventStatusBadge
+                              event={event}
+                              onInspect={() => onInspect(event)}
+                            />
+                            {showErrorStatusCode ? (
+                              <p className="text-muted-foreground mt-1 font-mono text-xs">
+                                HTTP {event.statusCode}
+                              </p>
+                            ) : event.failed && (event.error?.message ?? event.error?.reason) ? (
+                              <p
+                                className="text-destructive/80 mt-1 truncate text-xs"
+                                title={event.error?.message ?? event.error?.reason ?? undefined}
+                              >
+                                {event.error?.message ?? event.error?.reason}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('event') ? (
+                          <TableCell
+                            className="min-w-0"
+                            title={
+                              [
+                                event.endpoint ? `Endpoint: ${event.endpoint}` : null,
+                                event.eventType ? `Event: ${event.eventType}` : null,
+                                event.executorType ? `Executor: ${event.executorType}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join('\n') || undefined
+                            }
+                          >
+                            <div className="flex items-center gap-1.5 truncate font-medium">
+                              {parsedEndpoint.requestType ? (
+                                <span className="bg-muted text-foreground inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                  {parsedEndpoint.requestType}
+                                  <Waves className="size-3 opacity-70" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                              <span className="truncate font-mono text-xs">
+                                {parsedEndpoint.endpoint ?? event.eventType ?? <EmptyValue />}
+                              </span>
+                            </div>
+                            <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                              {event.executorType ?? event.eventType ?? <EmptyValue />}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('model') ? (
+                          <TableCell
+                            className="min-w-0"
+                            title={
+                              [
+                                event.model ? `Model: ${event.model}` : null,
+                                event.modelAlias ? `Alias: ${event.modelAlias}` : null,
+                                event.provider ? `Provider: ${event.provider}` : null,
+                                event.reasoningEffort ? `Effort: ${event.reasoningEffort}` : null,
+                                event.serviceTier ? `Tier: ${event.serviceTier}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join('\n') || undefined
+                            }
+                          >
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="truncate font-medium">
+                                {event.model ?? <EmptyValue />}
+                              </span>
+                              {event.reasoningEffort ? (
+                                <span className="border-border bg-muted/60 text-muted-foreground py-0.2 shrink-0 rounded border px-1 text-[10px] font-medium uppercase">
+                                  {event.reasoningEffort}
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {event.provider ?? <EmptyValue />}
+                              {event.modelAlias && event.modelAlias !== event.model
+                                ? ` · ↳ ${event.modelAlias}`
+                                : ''}
+                              {event.serviceTier ? ` · ${event.serviceTier}` : ''}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('credential') ? (
+                          <TableCell
+                            className="min-w-0"
+                            title={event.credential?.label ?? event.source ?? undefined}
+                          >
+                            <p className="truncate font-medium">
+                              {event.credential?.label ?? event.source ?? <EmptyValue />}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('tokens') ? (
+                          <TableCell className="text-right tabular-nums">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  tabIndex={0}
+                                  className="inline-flex max-w-full cursor-default flex-col items-end outline-hidden"
+                                >
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <span className="font-semibold">
+                                      {formatCompactNumber(tokenCounts.totalTokens)}
+                                    </span>
+                                    {cacheHitRate ? (
+                                      <span
+                                        className={cn(
+                                          'py-0.2 inline-flex items-center gap-0.5 rounded border px-1.5 text-[10px] font-medium',
+                                          tokenCounts.cacheReadTokens > 0
+                                            ? 'border-info/30 bg-info/10 text-info'
+                                            : 'border-border bg-muted/60 text-muted-foreground',
+                                        )}
+                                      >
+                                        <Database
+                                          className="size-2.5 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        {cacheHitRate}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-muted-foreground mt-0.5 flex items-center justify-end gap-2 text-xs">
+                                    <span className="inline-flex items-center gap-0.5">
+                                      <ArrowUpFromLine
+                                        className="text-info size-3 shrink-0"
+                                        aria-hidden="true"
+                                      />
+                                      <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5">
+                                      <Database
+                                        className="text-info/80 size-3 shrink-0"
+                                        aria-hidden="true"
+                                      />
+                                      <span>
+                                        {formatCompactNumber(tokenCounts.cacheReadTokens)}
+                                      </span>
+                                    </span>
+                                    <span className="inline-flex items-center gap-0.5">
+                                      <ArrowDownToLine
+                                        className="text-success size-3 shrink-0"
+                                        aria-hidden="true"
+                                      />
+                                      <span>{formatCompactNumber(tokenCounts.outputTokens)}</span>
+                                    </span>
+                                    {tokenCounts.reasoningTokens > 0 ? (
+                                      <span className="inline-flex items-center gap-0.5">
+                                        <Brain
+                                          className="text-warning size-3 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        <span>
+                                          {formatCompactNumber(tokenCounts.reasoningTokens)}
+                                        </span>
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" align="end" className="min-w-48 px-3 py-2">
+                                <div className="grid gap-1 tabular-nums">
+                                  <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 font-semibold">
+                                    <span>{tokenTooltipRows[0]?.label}</span>
+                                    <span>{tokenTooltipRows[0]?.value}</span>
+                                  </div>
+                                  {tokenTooltipRows.slice(1).map((row) => (
+                                    <div
+                                      key={row.label}
+                                      className="flex items-center justify-between gap-4 text-[11px]"
+                                    >
+                                      <span className="opacity-80">{row.label}</span>
+                                      <span className="font-medium">{row.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('latency') ? (
+                          <TableCell className="text-right tabular-nums">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <span className="font-medium">
+                                {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
+                              </span>
+                              {speedLabel ? (
+                                <span className="text-muted-foreground text-[11px]">
+                                  ({speedLabel})
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="text-muted-foreground text-xs">
+                              {t('requestEventsPage.table.ttft', {
+                                value: formatDuration(event.performance.ttftMs) ?? emptyValueText,
+                              })}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('cost') ? (
+                          <TableCell className="text-right tabular-nums">
+                            <p className="font-medium">
+                              {formatAmount(
+                                event.billing?.amount ?? null,
+                                event.billing?.currency,
+                              ) ?? <EmptyValue />}
+                            </p>
+                            {event.billing?.matchedPriceRule ? (
+                              <p className="text-muted-foreground truncate text-xs">
+                                {event.billing.matchedPriceRule}
+                              </p>
+                            ) : null}
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('client') ? (
+                          <TableCell className="min-w-0">
+                            <p className="truncate">
+                              <CallerUser
+                                username={event.client?.username ?? null}
+                                keyResolved={event.client?.clientKeyId != null}
+                              />
+                            </p>
+                            <p className="text-muted-foreground truncate font-mono text-xs">
+                              {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
+                                <EmptyValue />
+                              )}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('userAgent') ? (
+                          <TableCell className="min-w-0">
+                            {event.client?.userAgent ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    tabIndex={0}
+                                    className="inline-flex max-w-full items-center gap-1 outline-hidden"
+                                  >
+                                    <span className="truncate font-mono text-xs">
+                                      {truncateUserAgent(event.client.userAgent)}
+                                    </span>
+                                    <UserAgentCopyButton
+                                      value={event.client.userAgent}
+                                      label={t('requestEventsPage.detail.actions.copy')}
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent
+                                  side="top"
+                                  align="start"
+                                  className="max-w-md font-mono text-[11px] break-all"
+                                >
+                                  {event.client.userAgent}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <EmptyValue />
+                            )}
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('runtime') ? (
+                          <TableCell className="min-w-0">
+                            <p className="truncate">
+                              {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {getRuntimeNodeLabel(event) ?? <EmptyValue />}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('request') ? (
+                          <TableCell className="min-w-0">
+                            <p className="truncate font-mono text-xs">
+                              {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
+                            </p>
+                            <p className="text-muted-foreground truncate font-mono text-xs">
+                              {event.upstreamRequestId ?? <EmptyValue />}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        {isColumnRendered('error') ? (
+                          <TableCell className="min-w-0">
+                            <p className="truncate text-xs">
+                              {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {event.error?.bodyPreview ?? <EmptyValue />}
+                            </p>
+                          </TableCell>
+                        ) : null}
+                        <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
+                          <RowActions
+                            menuLabel={fullTime}
+                            actions={[
+                              {
+                                id: 'inspect',
+                                label: t('requestEventsPage.actions.viewDetail'),
+                                icon: Eye,
+                                onSelect: () => onInspect(event),
+                              },
+                            ]}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                  <TableSpacerRow height={virtualRows.paddingBottom} colSpan={tableColumnCount} />
+                </TableBody>
+              </ContainedTable>
+            </div>
+          ) : (
+            <TableEmptyState
+              kind={activeFilters ? 'filtered-empty' : 'empty'}
+              title={t('requestEventsPage.table.emptyTitle')}
+              description={t('requestEventsPage.table.emptyDescription')}
+              action={
+                activeFilters ? (
+                  <Button
+                    type="button"
+                    variant="outline"
                     size="md"
                     disabled={mutating}
                     onClick={onClearFilters}
@@ -1168,375 +1855,106 @@ function RequestEventsTable({
                     <RefreshCw className="size-4" aria-hidden="true" />
                     {t('requestEventsPage.table.clearFilters')}
                   </Button>
-                ) : null}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  disabled={!canExport || !filtersValid || isExporting || mutating}
-                  onClick={onExport}
-                >
-                  {isExporting ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Download className="size-4" aria-hidden="true" />
-                  )}
-                  {canExport
-                    ? t('requestEventsPage.actions.export')
-                    : t('requestEventsPage.actions.exportUnsupported')}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" size="md">
-                      <Columns3 className="size-4" aria-hidden="true" />
-                      {t('actions.customizeColumns')}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>
-                      {t('requestEventsPage.table.columnsMenu')}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {requestEventColumns.map((column) => (
-                      <DropdownMenuCheckboxItem
-                        key={column.key}
-                        checked={isColumnVisible(column.key)}
-                        disabled={column.required}
-                        onSelect={(event) => event.preventDefault()}
-                        onCheckedChange={(checked) =>
-                          setColumnVisible(column.key, Boolean(checked))
-                        }
-                      >
-                        {t(`requestEventsPage.table.columns.${column.key}`)}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            ) : null}
-          </>
-        }
-      />
-
-      <LiveRefreshStatusNotice
-        id={liveRefreshStatusId}
-        enabled={liveRefresh.enabled}
-        active={liveRefresh.active}
-        pauseReason={liveRefresh.pauseReason}
-        intervalMs={liveRefreshIntervalMs}
-        hasError={liveRefreshError}
-        lastSuccessAt={liveRefreshLastSuccessAt}
-        className="mx-3 mt-3"
-      />
-
-      <div className="border-b px-3 py-3">
-        <RequestEventsFiltersToolbar
-          disabled={mutating}
-          filters={filters}
-          options={filterOptions}
-          onChange={onFilterChange}
-        />
-      </div>
-
-      {events ? (
-        rows.length > 0 ? (
-          <div className="px-3 py-3">
-            <ContainedTable
-              containerRef={tableContainerRef}
-              containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
-              className="table-fixed"
-              style={showSecondary ? { minWidth: tableWidth } : undefined}
-              /*
-                The rows outside the window are not in the DOM, so the table has
-                to state how many there really are; the head counts as row one.
-              */
-              aria-rowcount={rows.length + 1}
-            >
-              <TableHeader className={stickyTableHeaderClassName}>
-                <TableRow variant="static" aria-rowindex={1}>
-                  {visibleColumnConfigs.map((column, index) => (
-                    <TableHead
-                      key={column.key}
-                      className={cn(column.align === 'right' && 'text-right')}
-                      /*
-                        Fixed layout takes the sum of the declared widths, so a
-                        column set that adds up past the viewport still scrolls.
-                        The identity column gives up its width below 40rem and
-                        takes the remainder instead.
-                      */
-                      style={!showSecondary && index === 0 ? undefined : { width: column.width }}
-                    >
-                      {t(`requestEventsPage.table.columns.${column.key}`)}
-                    </TableHead>
-                  ))}
-                  <TableHead className="table-sticky-action-head table-action-column-1 text-right">
-                    {t('requestEventsPage.table.columns.actions')}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableSpacerRow height={virtualRows.paddingTop} colSpan={tableColumnCount} />
-                {virtualRows.items.map(({ index, key }) => {
-                  const event = rows[index]
-                  return (
-                    <TableRow
-                      key={key}
-                      variant="resource"
-                      data-index={index}
-                      aria-rowindex={index + 2}
-                      ref={virtualRows.measureRow}
-                    >
-                      {isColumnRendered('time') ? (
-                        <TableCell className="text-muted-foreground truncate tabular-nums">
-                          {formatDateTime(event.timestamp, i18n) ?? event.timestamp}
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('event') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate font-medium">
-                            {event.eventType ?? <EmptyValue />}
-                          </p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {event.executorType ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('status') ? (
-                        <TableCell>
-                          <RequestEventStatusBadge event={event} />
-                          <p className="text-muted-foreground mt-1 text-xs">
-                            {event.statusCode ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('model') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate font-medium">{event.model ?? <EmptyValue />}</p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {event.provider ?? <EmptyValue />}
-                            {event.modelAlias ? ` / ${event.modelAlias}` : ''}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('runtime') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate">
-                            {getHomeNodeLabel(event) ?? t('requestEventsPage.status.localHome')}
-                          </p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {getRuntimeNodeLabel(event) ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('client') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate">
-                            <CallerUser
-                              username={event.client?.username ?? null}
-                              keyResolved={event.client?.clientKeyId != null}
-                            />
-                          </p>
-                          <p className="text-muted-foreground truncate font-mono text-xs">
-                            {event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? (
-                              <EmptyValue />
-                            )}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('credential') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate">{event.credential?.label ?? <EmptyValue />}</p>
-                          <p className="text-muted-foreground truncate font-mono text-xs">
-                            {event.credential?.authIndex ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('tokens') ? (
-                        <TableCell className="text-right">
-                          <p className="font-medium">
-                            {formatCompactNumber(event.tokens.totalTokens)}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {formatCompactNumber(event.tokens.inputTokens)} /{' '}
-                            {formatCompactNumber(event.tokens.outputTokens)}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('latency') ? (
-                        <TableCell className="text-right">
-                          <p className="font-medium">
-                            {formatDuration(event.performance.latencyMs) ?? <EmptyValue />}
-                          </p>
-                          <p className="text-muted-foreground text-xs">
-                            {t('requestEventsPage.table.ttft', {
-                              value: formatDuration(event.performance.ttftMs) ?? emptyValueText,
-                            })}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('cost') ? (
-                        <TableCell className="text-right">
-                          {formatAmount(event.billing?.amount ?? null, event.billing?.currency) ?? (
-                            <EmptyValue />
-                          )}
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('request') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate font-mono text-xs">
-                            {event.requestId ?? t('requestEventsPage.status.unknownRequest')}
-                          </p>
-                          <p className="text-muted-foreground truncate font-mono text-xs">
-                            {event.upstreamRequestId ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      {isColumnRendered('error') ? (
-                        <TableCell className="min-w-0">
-                          <p className="truncate text-xs">
-                            {event.error?.message ?? event.error?.reason ?? <EmptyValue />}
-                          </p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {event.error?.bodyPreview ?? <EmptyValue />}
-                          </p>
-                        </TableCell>
-                      ) : null}
-                      <TableCell className="table-sticky-action-cell table-action-column-1 text-right transition-colors">
-                        <RowActions
-                          menuLabel={formatDateTime(event.timestamp, i18n) ?? event.timestamp}
-                          actions={[
-                            {
-                              id: 'inspect',
-                              label: t('requestEventsPage.actions.viewDetail'),
-                              icon: Eye,
-                              onSelect: () => onInspect(event),
-                            },
-                          ]}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-                <TableSpacerRow height={virtualRows.paddingBottom} colSpan={tableColumnCount} />
-              </TableBody>
-            </ContainedTable>
-          </div>
-        ) : (
+                ) : null
+              }
+            />
+          )
+        ) : !filtersValid ? (
           <TableEmptyState
-            kind={activeFilters ? 'filtered-empty' : 'empty'}
+            kind="filtered-empty"
             title={t('requestEventsPage.table.emptyTitle')}
-            description={t('requestEventsPage.table.emptyDescription')}
+            description={t('requestEventsPage.filters.dateRangeInvalid')}
             action={
-              activeFilters ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  disabled={mutating}
-                  onClick={onClearFilters}
-                >
-                  <RefreshCw className="size-4" aria-hidden="true" />
-                  {t('requestEventsPage.table.clearFilters')}
-                </Button>
-              ) : null
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                disabled={mutating}
+                onClick={onClearFilters}
+              >
+                <RefreshCw className="size-4" aria-hidden="true" />
+                {t('requestEventsPage.table.clearFilters')}
+              </Button>
             }
           />
-        )
-      ) : !filtersValid ? (
-        <TableEmptyState
-          kind="filtered-empty"
-          title={t('requestEventsPage.table.emptyTitle')}
-          description={t('requestEventsPage.filters.dateRangeInvalid')}
-          action={
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              disabled={mutating}
-              onClick={onClearFilters}
-            >
-              <RefreshCw className="size-4" aria-hidden="true" />
-              {t('requestEventsPage.table.clearFilters')}
-            </Button>
-          }
-        />
-      ) : errorMessage ? (
-        <TableEmptyState
-          kind="error"
-          title={t('requestEventsPage.table.errorTitle')}
-          description={errorMessage}
-        />
-      ) : (
-        <TableEmptyState
-          kind="unsupported"
-          title={t('requestEventsPage.table.unsupportedTitle')}
-          description={t('requestEventsPage.table.unsupportedDescription')}
-        />
-      )}
-
-      {events && total > 0 ? (
-        <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <TablePaginationStatus
-            text={t('requestEventsPage.table.range', {
-              start: formatNumber(start),
-              end: formatNumber(end),
-              total: formatNumber(total),
-            })}
-            announcementKey={JSON.stringify(filters)}
-            busy={fetching || mutating}
+        ) : errorMessage ? (
+          <TableEmptyState
+            kind="error"
+            title={t('requestEventsPage.table.errorTitle')}
+            description={errorMessage}
           />
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground text-sm">
-                {t('requestEventsPage.table.pageSize')}
-              </span>
-              <Select
-                value={String(filters.limit)}
-                disabled={mutating}
-                onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
-              >
-                <SelectTrigger
-                  className={cn('w-24')}
-                  size="md"
-                  aria-label={t('requestEventsPage.table.pageSize')}
+        ) : (
+          <TableEmptyState
+            kind="unsupported"
+            title={t('requestEventsPage.table.unsupportedTitle')}
+            description={t('requestEventsPage.table.unsupportedDescription')}
+          />
+        )}
+
+        {events && total > 0 ? (
+          <div className="border-border/80 bg-muted/20 flex flex-col gap-3 border-t px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <TablePaginationStatus
+              text={t('requestEventsPage.table.range', {
+                start: formatNumber(start),
+                end: formatNumber(end),
+                total: formatNumber(total),
+              })}
+              announcementKey={JSON.stringify(filters)}
+              busy={fetching || mutating}
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-sm">
+                  {t('requestEventsPage.table.pageSize')}
+                </span>
+                <Select
+                  value={String(filters.limit)}
+                  disabled={mutating}
+                  onValueChange={(nextValue) => onLimitChange(Number(nextValue))}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {pageSizeOptions.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {formatNumber(option)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={!canGoPrevious || mutating}
-                onClick={() => onOffsetChange(Math.max(0, filters.offset - filters.limit))}
-              >
-                <ChevronLeft className="size-4" aria-hidden="true" />
-                {t('requestEventsPage.table.previous')}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                disabled={!canGoNext || mutating}
-                onClick={() => onOffsetChange(filters.offset + filters.limit)}
-              >
-                {t('requestEventsPage.table.next')}
-                <ChevronRight className="size-4" aria-hidden="true" />
-              </Button>
+                  <SelectTrigger
+                    className={cn('w-24')}
+                    size="md"
+                    aria-label={t('requestEventsPage.table.pageSize')}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pageSizeOptions.map((option) => (
+                      <SelectItem key={option} value={String(option)}>
+                        {formatNumber(option)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  disabled={!canGoPrevious || mutating}
+                  onClick={() => onOffsetChange(Math.max(0, filters.offset - filters.limit))}
+                >
+                  <ChevronLeft className="size-4" aria-hidden="true" />
+                  {t('requestEventsPage.table.previous')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  disabled={!canGoNext || mutating}
+                  onClick={() => onOffsetChange(filters.offset + filters.limit)}
+                >
+                  {t('requestEventsPage.table.next')}
+                  <ChevronRight className="size-4" aria-hidden="true" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
-    </TableSurface>
+        ) : null}
+      </TableSurface>
+    </TooltipProvider>
   )
 }
 

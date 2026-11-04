@@ -56,8 +56,8 @@ function hasManagementServerHeaders(response: Response) {
   }
   return Boolean(
     response.headers.get('x-cpa-version') ||
-      response.headers.get('x-cpa-home-version') ||
-      response.headers.get('x-server-version'),
+    response.headers.get('x-cpa-home-version') ||
+    response.headers.get('x-server-version'),
   )
 }
 
@@ -73,7 +73,10 @@ async function verifySameOriginProxyBackend(baseUrl: string, signal: AbortSignal
       method: 'GET',
       signal,
     })
-    return (response.ok || response.status === 401 || response.status === 403) && hasManagementServerHeaders(response)
+    return (
+      (response.ok || response.status === 401 || response.status === 403) &&
+      hasManagementServerHeaders(response)
+    )
   } catch {
     return false
   }

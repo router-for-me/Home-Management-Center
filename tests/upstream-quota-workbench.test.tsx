@@ -36,6 +36,7 @@ const globals = {
   Node: browser.Node,
   MutationObserver: browser.MutationObserver,
   ResizeObserver: browser.ResizeObserver,
+  IntersectionObserver: browser.IntersectionObserver,
   CustomEvent: browser.CustomEvent,
   Event: browser.Event,
   getComputedStyle: browser.getComputedStyle.bind(browser),

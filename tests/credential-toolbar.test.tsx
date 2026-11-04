@@ -78,7 +78,8 @@ describe('credential toolbar', () => {
     const expectedListKeys = Object.keys(en.common.credentialsPage.list).sort()
     const expectedQuickFilterKeys = Object.keys(en.common.upstreamPage.quotaChips).sort()
 
-    expect(expectedListKeys).not.toContain('inFlight')
+    expect(expectedListKeys).toContain('inFlight')
+    expect(expectedListKeys).toContain('weight')
 
     for (const locale of locales) {
       expect(Object.keys(locale.common.credentialsPage.actions).sort()).toEqual(expectedActionKeys)

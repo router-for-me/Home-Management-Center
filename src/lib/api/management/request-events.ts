@@ -95,6 +95,7 @@ export type RequestEventClient = {
   clientKeyLabel: string | null
   clientKeyMasked: string | null
   clientIp: string | null
+  userAgent: string | null
 }
 
 export type RequestEventError = {
@@ -530,30 +531,33 @@ function normalizeCredential(value: unknown, root: UnknownRecord): RequestEventC
   }
 }
 
-function normalizeClient(value: unknown): RequestEventClient | null {
-  if (!isRecord(value)) return null
+function normalizeClient(value: unknown, root?: UnknownRecord): RequestEventClient | null {
+  const record = isRecord(value) ? value : {}
+  const rootUserAgent = root ? readStringFromKeys(root, ['user_agent', 'userAgent']) : null
+  if (!isRecord(value) && !rootUserAgent) return null
   return {
-    userId: readNumberFromKeys(value, ['user_id', 'userId']),
-    username: readString(value, 'username'),
-    clientKeyId: readNumberFromKeys(value, [
+    userId: readNumberFromKeys(record, ['user_id', 'userId']),
+    username: readString(record, 'username'),
+    clientKeyId: readNumberFromKeys(record, [
       'client_key_id',
       'clientKeyId',
       'api_key_id',
       'apiKeyId',
     ]),
-    clientKeyLabel: readStringFromKeys(value, [
+    clientKeyLabel: readStringFromKeys(record, [
       'client_key_label',
       'clientKeyLabel',
       'api_key_label',
       'apiKeyLabel',
     ]),
-    clientKeyMasked: readStringFromKeys(value, [
+    clientKeyMasked: readStringFromKeys(record, [
       'client_key_masked',
       'clientKeyMasked',
       'api_key_masked',
       'apiKeyMasked',
     ]),
-    clientIp: readStringFromKeys(value, ['client_ip', 'clientIp']),
+    clientIp: readStringFromKeys(record, ['client_ip', 'clientIp']),
+    userAgent: readStringFromKeys(record, ['user_agent', 'userAgent']) ?? rootUserAgent,
   }
 }
 
@@ -662,7 +666,7 @@ function normalizeRequestEvent(
     reasoningEffort: readStringFromKeys(record, ['reasoning_effort', 'reasoningEffort']),
     runtime: normalizeRuntime(record.runtime, record),
     credential: normalizeCredential(record.credential, record),
-    client: normalizeClient(record.client),
+    client: normalizeClient(record.client, record),
     error,
     tokens: normalizeTokens(record.tokens),
     tokenBreakdown: normalizeTokenBreakdown(

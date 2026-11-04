@@ -58,6 +58,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
   type CreateCredentialMode,
@@ -387,6 +388,102 @@ export function AccountsToolbar({
  * still differ, but the column no longer has to be tailored to them, and below
  * 40rem there are no labels in it at all.
  */
+function formatInFlightLimit(limit: number | null | undefined) {
+  return typeof limit === 'number' && Number.isFinite(limit) && limit > 0 ? String(limit) : '♾️'
+}
+
+function CredentialInFlightCell({
+  resource,
+  summary,
+  onInspectConcurrency,
+}: {
+  resource: CredentialResource
+  summary: CredentialInFlightSummary | null
+  onInspectConcurrency: () => void
+}) {
+  const { t } = useTranslation()
+  const [pinnedOpen, setPinnedOpen] = useState(false)
+  const totalInFlight = Math.max(0, summary?.observedInFlight ?? 0, summary?.admittedInFlight ?? 0)
+  const totalLimit = summary?.maxInFlight ?? resource.maxInFlight ?? null
+  const totalLabel = `${totalInFlight}/${formatInFlightLimit(totalLimit)}`
+
+  const activeModels = useMemo(() => {
+    const models = summary?.models ?? []
+    return models
+      .map((item) => {
+        const inFlight = Math.max(0, item.observedInFlight ?? 0, item.admittedInFlight ?? 0)
+        const modelLimit = item.maxInFlight ?? resource.maxInFlightByModel?.[item.model] ?? null
+        return {
+          model: item.model,
+          inFlight,
+          limitLabel: formatInFlightLimit(modelLimit),
+          saturated: item.saturated,
+        }
+      })
+      .filter((item) => item.inFlight > 0)
+      .sort((a, b) => b.inFlight - a.inFlight || a.model.localeCompare(b.model))
+  }, [resource.maxInFlightByModel, summary?.models])
+
+  const saturated = Boolean(summary?.totalSaturated || (summary?.saturatedModelCount ?? 0) > 0)
+
+  const badge = (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation()
+        if (activeModels.length > 0) {
+          setPinnedOpen((prev) => !prev)
+        } else {
+          onInspectConcurrency()
+        }
+      }}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-xs font-medium tabular-nums transition-colors',
+        saturated
+          ? 'border-warning/45 bg-warning/12 text-warning-foreground dark:text-warning'
+          : totalInFlight > 0
+            ? 'border-info/35 bg-info/10 text-info hover:bg-info/15'
+            : 'border-border bg-muted/50 text-muted-foreground hover:text-foreground',
+      )}
+    >
+      <span>{totalLabel}</span>
+    </button>
+  )
+
+  if (activeModels.length === 0) {
+    return badge
+  }
+
+  return (
+    <Tooltip open={pinnedOpen ? true : undefined} onOpenChange={setPinnedOpen}>
+      <TooltipTrigger asChild>{badge}</TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="center"
+        className="min-w-56 px-3 py-2"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="grid gap-1 tabular-nums">
+          <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 text-[11px] font-semibold">
+            <span>{t('credentialsPage.list.inFlight')}</span>
+            <span className="font-mono">{totalLabel}</span>
+          </div>
+          {activeModels.map((item) => (
+            <div key={item.model} className="flex items-center justify-between gap-4 text-[11px]">
+              <span className="max-w-48 truncate font-mono opacity-90">{item.model}</span>
+              <span
+                className={cn('font-mono font-medium', item.saturated ? 'text-warning' : undefined)}
+              >
+                {item.inFlight}/{item.limitLabel}
+              </span>
+            </div>
+          ))}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 function CredentialList({
   resources,
   selectedResourceId,
@@ -400,6 +497,7 @@ function CredentialList({
   quotaTruncated,
   quotaMap,
   quotaCollectingIds,
+  inFlightByCredentialId,
   emptyState,
   onClearFilters,
   onClearCooldown,
@@ -424,6 +522,7 @@ function CredentialList({
   quotaTruncated: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
   quotaCollectingIds: Set<string>
+  inFlightByCredentialId: Map<string, CredentialInFlightSummary>
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
   onClearCooldown: (resource: CredentialResource) => void
@@ -474,263 +573,293 @@ function CredentialList({
   }
 
   return (
-    <ContainedTable
-      containerClassName="rounded-md border"
-      className="table-fixed sm:min-w-[1350px]"
-    >
-      {/*
+    <TooltipProvider delayDuration={120}>
+      <ContainedTable
+        containerClassName="rounded-md border"
+        className="table-fixed sm:min-w-[1480px]"
+      >
+        {/*
         The identity column is the one given `auto`: in a fixed layout the
         remaining width lands on it, so the table fits any viewport without a
         min-width floor and the cell still truncates. Status keeps a fixed width
         so the two do not split the remainder between them.
       */}
-      <colgroup>
-        <col className="w-[44px]" />
-        <col className={showSecondary ? 'w-[250px]' : undefined} />
-        {showSecondary ? (
-          <>
-            <col className="w-[118px]" />
-            <col className="w-[150px]" />
-          </>
-        ) : (
-          /* Status carries a switch as well as a badge, so it cannot go as narrow
-             as a label. Below 40rem the two stack instead of sitting side by side,
-             which trades a little height for the width the identity column needs. */
-          <col className="w-24" />
-        )}
-        {showSecondary ? (
-          <>
-            <col className="w-[232px]" />
-            <col className="w-[96px]" />
-            <col className="w-[120px]" />
-            <col className="w-[112px]" />
-          </>
-        ) : null}
-        <col className="table-action-column-3" />
-      </colgroup>
-      <TableHeader className={stickyTableHeaderClassName}>
-        <TableRow variant="static">
-          <TableHead>
-            <Checkbox
-              checked={partiallySelected ? 'indeterminate' : allSelected}
-              aria-label={t('credentialsPage.bulk.selectAll')}
-              disabled={mutating}
-              onCheckedChange={onToggleAll}
-            />
-          </TableHead>
-          <TableHead>{t('credentialsPage.list.credential')}</TableHead>
-          {showSecondary ? <TableHead>{t('credentialsPage.list.provider')}</TableHead> : null}
-          <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
+        <colgroup>
+          <col className="w-[44px]" />
+          <col className={showSecondary ? 'w-[240px]' : undefined} />
           {showSecondary ? (
             <>
-              <TableHead>{t('credentialsPage.list.quota')}</TableHead>
-              <TableHead>{t('credentialsPage.list.ws')}</TableHead>
-              <TableHead>{t('credentialsPage.list.cooling')}</TableHead>
-              <TableHead>{t('credentialsPage.list.priority')}</TableHead>
+              <col className="w-[118px]" />
+              <col className="w-[145px]" />
+            </>
+          ) : (
+            /* Status carries a switch as well as a badge, so it cannot go as narrow
+             as a label. Below 40rem the two stack instead of sitting side by side,
+             which trades a little height for the width the identity column needs. */
+            <col className="w-24" />
+          )}
+          {showSecondary ? (
+            <>
+              <col className="w-[224px]" />
+              <col className="w-[112px]" />
+              <col className="w-[90px]" />
+              <col className="w-[116px]" />
+              <col className="w-[88px]" />
+              <col className="w-[88px]" />
             </>
           ) : null}
-          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
-            {t('credentialsPage.list.actions')}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {resources.map((resource) => {
-          const statusTone = getCredentialStatusTone(resource)
-          const displayName = getCredentialDisplayName(resource)
-          const providerLabel = getCredentialProviderLabel(t, resource.provider)
-          const quotaAction = resolveCredentialQuotaAction({
-            resource,
-            entry: findUpstreamQuotaEntry(quotaMap, resource),
-            available: quotaAvailable && quotaRecollectAvailable,
-            collecting: quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(resource)),
-          })
-          const quotaBlocked = ['disabled', 'unsupported', 'unavailable'].includes(quotaAction)
+          <col className="table-action-column-3" />
+        </colgroup>
+        <TableHeader className={stickyTableHeaderClassName}>
+          <TableRow variant="static">
+            <TableHead>
+              <Checkbox
+                checked={partiallySelected ? 'indeterminate' : allSelected}
+                aria-label={t('credentialsPage.bulk.selectAll')}
+                disabled={mutating}
+                onCheckedChange={onToggleAll}
+              />
+            </TableHead>
+            <TableHead>{t('credentialsPage.list.credential')}</TableHead>
+            {showSecondary ? <TableHead>{t('credentialsPage.list.provider')}</TableHead> : null}
+            <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
+            {showSecondary ? (
+              <>
+                <TableHead>{t('credentialsPage.list.quota')}</TableHead>
+                <TableHead>{t('credentialsPage.list.inFlight')}</TableHead>
+                <TableHead>{t('credentialsPage.list.ws')}</TableHead>
+                <TableHead>{t('credentialsPage.list.cooling')}</TableHead>
+                <TableHead>{t('credentialsPage.list.priority')}</TableHead>
+                <TableHead>{t('credentialsPage.list.weight')}</TableHead>
+              </>
+            ) : null}
+            <TableHead className="table-sticky-action-head table-action-column-3 text-right">
+              {t('credentialsPage.list.actions')}
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {resources.map((resource) => {
+            const statusTone = getCredentialStatusTone(resource)
+            const displayName = getCredentialDisplayName(resource)
+            const providerLabel = getCredentialProviderLabel(t, resource.provider)
+            const quotaAction = resolveCredentialQuotaAction({
+              resource,
+              entry: findUpstreamQuotaEntry(quotaMap, resource),
+              available: quotaAvailable && quotaRecollectAvailable,
+              collecting: quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(resource)),
+            })
+            const quotaBlocked = ['disabled', 'unsupported', 'unavailable'].includes(quotaAction)
 
-          return (
-            <TableRow
-              key={resource.id}
-              className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
-              variant="resource"
-            >
-              <TableCell>
-                <Checkbox
-                  checked={selectedResourceIds.has(resource.id)}
-                  aria-label={t('credentialsPage.bulk.selectOne', {
-                    name: displayName,
-                  })}
-                  disabled={mutating}
-                  onCheckedChange={() => onToggleSelection(resource)}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
-                    <FileJson className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{displayName}</p>
-                    <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                      {resource.name ?? resource.authIndex ?? resource.identifier}
-                    </p>
-                    {resource.note ? (
-                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                        {resource.note}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </TableCell>
-              {showSecondary ? (
+            return (
+              <TableRow
+                key={resource.id}
+                className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                variant="resource"
+              >
                 <TableCell>
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-                      {providerLabel}
-                    </span>
-                    {resource.type ? (
-                      <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
-                        {resource.type}
-                      </span>
-                    ) : null}
-                  </div>
-                </TableCell>
-              ) : null}
-              <TableCell>
-                <div
-                  className={cn(
-                    'flex min-w-0 gap-2',
-                    showSecondary ? 'items-center' : 'flex-col items-start',
-                  )}
-                >
-                  <Switch
-                    checked={!resource.disabled}
-                    disabled={mutating}
-                    aria-label={t('credentialsPage.list.toggleStatus', {
+                  <Checkbox
+                    checked={selectedResourceIds.has(resource.id)}
+                    aria-label={t('credentialsPage.bulk.selectOne', {
                       name: displayName,
                     })}
-                    onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+                    disabled={mutating}
+                    onCheckedChange={() => onToggleSelection(resource)}
                     onClick={(event) => event.stopPropagation()}
                   />
-                  <span
+                </TableCell>
+                <TableCell>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
+                      <FileJson className="size-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{displayName}</p>
+                      <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
+                        {resource.name ?? resource.authIndex ?? resource.identifier}
+                      </p>
+                      {resource.note ? (
+                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                          {resource.note}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                </TableCell>
+                {showSecondary ? (
+                  <TableCell>
+                    <div className="flex flex-col items-start gap-1">
+                      <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
+                        {providerLabel}
+                      </span>
+                      {resource.type ? (
+                        <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
+                          {resource.type}
+                        </span>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                ) : null}
+                <TableCell>
+                  <div
                     className={cn(
-                      'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
-                      statusTone === 'positive'
-                        ? 'border-primary/30 bg-primary/10 text-primary'
-                        : statusTone === 'warning'
-                          ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-                          : 'border-border bg-muted text-muted-foreground',
+                      'flex min-w-0 gap-2',
+                      showSecondary ? 'items-center' : 'flex-col items-start',
                     )}
                   >
-                    {statusTone === 'warning' ? (
-                      <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-                    ) : (
-                      <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
-                    )}
-                    <span className="truncate">
-                      {resource.disabled
-                        ? t('credentialsPage.status.disabled')
-                        : resource.unavailable
-                          ? t('credentialsPage.status.unavailable')
-                          : t(`credentialsPage.status.${resource.status}`, {
-                              defaultValue: resource.status,
-                            })}
-                    </span>
-                  </span>
-                </div>
-              </TableCell>
-              {showSecondary ? (
-                <>
-                  <TableCell>
-                    <UpstreamQuotaCell
-                      collecting={quotaAction === 'collecting'}
-                      unavailableReason={
-                        quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
-                      }
-                      state={resolveUpstreamQuotaCellState({
-                        available: quotaAvailable,
-                        loading: quotaLoading,
-                        truncated: quotaTruncated,
-                        map: quotaMap,
-                        resource,
+                    <Switch
+                      checked={!resource.disabled}
+                      disabled={mutating}
+                      aria-label={t('credentialsPage.list.toggleStatus', {
+                        name: displayName,
                       })}
+                      onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+                      onClick={(event) => event.stopPropagation()}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-                  </TableCell>
-                  <TableCell>
-                    <CoolingCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-                  </TableCell>
-                  <TableCell>
-                    {resource.priority === null ? (
-                      <span className="text-muted-foreground text-xs">
-                        {t('credentialsPage.status.notSet')}
+                    <span
+                      className={cn(
+                        'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
+                        statusTone === 'positive'
+                          ? 'border-primary/30 bg-primary/10 text-primary'
+                          : statusTone === 'warning'
+                            ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+                            : 'border-border bg-muted text-muted-foreground',
+                      )}
+                    >
+                      {statusTone === 'warning' ? (
+                        <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
+                      ) : (
+                        <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
+                      )}
+                      <span className="truncate">
+                        {resource.disabled
+                          ? t('credentialsPage.status.disabled')
+                          : resource.unavailable
+                            ? t('credentialsPage.status.unavailable')
+                            : t(`credentialsPage.status.${resource.status}`, {
+                                defaultValue: resource.status,
+                              })}
                       </span>
-                    ) : (
-                      <span className="font-mono text-xs font-medium tabular-nums">
-                        {resource.priority}
-                      </span>
-                    )}
-                  </TableCell>
-                </>
-              ) : null}
-              <TableCell className="table-sticky-action-cell table-action-column-3 pl-4 text-right transition-colors">
-                <RowActions
-                  menuLabel={displayName}
-                  actions={[
-                    {
-                      id: 'detail',
-                      label: t('credentialsPage.actions.detail'),
-                      icon: Eye,
-                      onSelect: () => onOpenDrawer(resource, 'overview'),
-                    },
-                    {
-                      id: 'download',
-                      label: t('credentialsPage.actions.download'),
-                      icon: Download,
-                      disabled: mutating,
-                      onSelect: () => onDownloadResource(resource),
-                    },
-                    !quotaBlocked
-                      ? {
-                          id: 'collect-quota',
-                          label: t(`upstreamPage.quota.actions.${quotaAction}`),
-                          ariaLabel: `${t(`upstreamPage.quota.actions.${quotaAction}`)}: ${displayName}`,
-                          icon: RefreshCw,
-                          busy: quotaAction === 'collecting',
-                          disabled: mutating,
-                          onSelect: () => onCollectQuota(resource),
+                    </span>
+                  </div>
+                </TableCell>
+                {showSecondary ? (
+                  <>
+                    <TableCell>
+                      <UpstreamQuotaCell
+                        collecting={quotaAction === 'collecting'}
+                        unavailableReason={
+                          quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
                         }
-                      : null,
-                    cooldownResetSupported && getCredentialCooldownId(resource) !== null
-                      ? {
-                          id: 'clear-cooldown',
-                          label: t('credentialsPage.actions.clearCooldown'),
-                          ariaLabel: t('credentialsPage.actions.clearCooldownFor', {
-                            name: displayName,
-                          }),
-                          icon: TimerReset,
-                          disabled: mutating,
-                          onSelect: () => onClearCooldown(resource),
+                        state={resolveUpstreamQuotaCellState({
+                          available: quotaAvailable,
+                          loading: quotaLoading,
+                          truncated: quotaTruncated,
+                          map: quotaMap,
+                          resource,
+                        })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CredentialInFlightCell
+                        resource={resource}
+                        summary={
+                          inFlightByCredentialId.get(getCredentialInFlightId(resource)) ?? null
                         }
-                      : null,
-                    {
-                      id: 'delete',
-                      label: t('credentialsPage.actions.delete'),
-                      icon: Trash2,
-                      tone: 'destructive',
-                      disabled: mutating,
-                      onSelect: () => onDeleteResource(resource),
-                    },
-                  ]}
-                />
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </ContainedTable>
+                        onInspectConcurrency={() => onOpenDrawer(resource, 'concurrency')}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <WebsocketsCell
+                        resource={resource}
+                        mutating={mutating}
+                        onSave={onSaveInline}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CoolingCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                    </TableCell>
+                    <TableCell>
+                      {resource.priority === null ? (
+                        <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                          0
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs font-medium tabular-nums">
+                          {resource.priority}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {resource.weight === null || resource.weight === undefined ? (
+                        <span className="text-muted-foreground font-mono text-xs tabular-nums">
+                          1
+                        </span>
+                      ) : (
+                        <span className="font-mono text-xs font-medium tabular-nums">
+                          {resource.weight}
+                        </span>
+                      )}
+                    </TableCell>
+                  </>
+                ) : null}
+                <TableCell className="table-sticky-action-cell table-action-column-3 pl-4 text-right transition-colors">
+                  <RowActions
+                    menuLabel={displayName}
+                    actions={[
+                      {
+                        id: 'detail',
+                        label: t('credentialsPage.actions.detail'),
+                        icon: Eye,
+                        onSelect: () => onOpenDrawer(resource, 'overview'),
+                      },
+                      {
+                        id: 'download',
+                        label: t('credentialsPage.actions.download'),
+                        icon: Download,
+                        disabled: mutating,
+                        onSelect: () => onDownloadResource(resource),
+                      },
+                      !quotaBlocked
+                        ? {
+                            id: 'collect-quota',
+                            label: t(`upstreamPage.quota.actions.${quotaAction}`),
+                            ariaLabel: `${t(`upstreamPage.quota.actions.${quotaAction}`)}: ${displayName}`,
+                            icon: RefreshCw,
+                            busy: quotaAction === 'collecting',
+                            disabled: mutating,
+                            onSelect: () => onCollectQuota(resource),
+                          }
+                        : null,
+                      cooldownResetSupported && getCredentialCooldownId(resource) !== null
+                        ? {
+                            id: 'clear-cooldown',
+                            label: t('credentialsPage.actions.clearCooldown'),
+                            ariaLabel: t('credentialsPage.actions.clearCooldownFor', {
+                              name: displayName,
+                            }),
+                            icon: TimerReset,
+                            disabled: mutating,
+                            onSelect: () => onClearCooldown(resource),
+                          }
+                        : null,
+                      {
+                        id: 'delete',
+                        label: t('credentialsPage.actions.delete'),
+                        icon: Trash2,
+                        tone: 'destructive',
+                        disabled: mutating,
+                        onSelect: () => onDeleteResource(resource),
+                      },
+                    ]}
+                  />
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </ContainedTable>
+    </TooltipProvider>
   )
 }
 
@@ -1474,6 +1603,7 @@ export function AccountsPanel({
             quotaTruncated={quotaTruncated}
             quotaMap={resolvedQuotaMap}
             quotaCollectingIds={quotaCollectingIds}
+            inFlightByCredentialId={inFlightByCredentialId}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
             onCollectQuota={(resource) => void onCollectQuota?.(resource)}
