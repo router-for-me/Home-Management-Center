@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import {
   baseRung,
   collectProviders,
+  extractRungToolPrices,
   formatPercent,
   preferredTier,
   pricingEntryPoint,
@@ -223,6 +224,35 @@ describe('price ladder presentation', () => {
 
     expect(baseRung(rungs)?.minInputTokens).toBe(0)
     expect(baseRung([])).toBeNull()
+  })
+
+  test('extracts server-side tool prices from pricing_expr and web_search_price_per_call', () => {
+    const exprRung = rung({
+      inputPricePerMillion: 2,
+      outputPricePerMillion: 10,
+      pricingExpr:
+        'v1:2 * p + 0.5 * cr + 10 * (c + r) + ws * usd(0.005) + xs * usd(0.005) + ce * usd(0.005)',
+    })
+    expect(extractRungToolPrices(exprRung)).toEqual([
+      { key: 'webSearch', pricePerCall: 0.005 },
+      { key: 'xSearch', pricePerCall: 0.005 },
+      { key: 'codeExecution', pricePerCall: 0.005 },
+    ])
+
+    const entry = pricingEntryPoint({
+      status: 'published',
+      providers: [
+        {
+          provider: 'xai',
+          tiers: [{ serviceTier: '*', isDefault: true, rungs: [exprRung] }],
+        },
+      ],
+    })
+    expect(entry?.toolPrices).toEqual([
+      { key: 'webSearch', pricePerCall: 0.005 },
+      { key: 'xSearch', pricePerCall: 0.005 },
+      { key: 'codeExecution', pricePerCall: 0.005 },
+    ])
   })
 })
 
