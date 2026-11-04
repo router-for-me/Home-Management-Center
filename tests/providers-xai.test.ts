@@ -216,7 +216,7 @@ describe('xAI provider Management API integration', () => {
     })
     expect(resource).toMatchObject({
       identifier: 'xai-auth-id',
-      authIndex: null,
+      authIndex: 'xai-auth-id',
       disableCooling: true,
       websockets: true,
       selector: { id: 'xai-auth-id' },

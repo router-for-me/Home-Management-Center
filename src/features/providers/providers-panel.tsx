@@ -1427,7 +1427,9 @@ export function ProviderFormPanel({
     if (!query) return modelDiscoveryModels
 
     return modelDiscoveryModels.filter((model) =>
-      `${model.name} ${model.alias ?? ''} ${model.description ?? ''}`.toLowerCase().includes(query),
+      `${model.name} ${model.displayName ?? ''} ${model.description ?? ''}`
+        .toLowerCase()
+        .includes(query),
     )
   }, [modelDiscoveryModels, modelDiscoverySearch])
   const selectableDiscoveredModels = useMemo(
@@ -1615,7 +1617,8 @@ export function ProviderFormPanel({
       ...selectedModels.map((model) => ({
         ...emptyModelEntry(),
         name: model.name,
-        alias: model.alias ?? '',
+        // The upstream ID stays the routable one; see normalizeDiscoveredModels.
+        displayName: model.displayName ?? '',
       })),
     ])
     setModelDiscoverySelected(new Set())
@@ -2646,9 +2649,9 @@ export function ProviderFormPanel({
                                   />
                                   <span className="min-w-0 flex-1">
                                     <span className="block font-mono break-all">{model.name}</span>
-                                    {model.alias || model.description ? (
-                                      <span className="text-muted-foreground mt-1 block leading-5">
-                                        {model.alias ?? model.description}
+                                    {model.displayName || model.description ? (
+                                      <span className="text-muted-foreground mt-1 block leading-5 [overflow-wrap:anywhere]">
+                                        {model.displayName ?? model.description}
                                       </span>
                                     ) : null}
                                   </span>
