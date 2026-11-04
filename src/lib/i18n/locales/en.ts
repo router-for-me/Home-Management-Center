@@ -2037,6 +2037,11 @@ export const en = {
         onDemandEnabled: 'Enabled',
         onDemandUnknown: 'Not provided',
         onDemandDisabled: 'Disabled',
+        xai: {
+          usageBreakdown: 'Usage breakdown (shared quota)',
+          productUsage: '{{product}} usage',
+          usageUnavailable: 'Usage unavailable from xAI',
+        },
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',

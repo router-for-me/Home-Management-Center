@@ -38,6 +38,8 @@ type UpstreamQuotaCollectionBaselineEntry = {
 
 const xaiOnDemandWindowId = 'xai-on-demand'
 const xaiWeeklyWindowId = 'xai-weekly-usage'
+const xaiProductUsageScopeId = 'xai-product-usage'
+const xaiProductWindowIdPrefix = 'xai-product-'
 
 const antigravityQuotaGroupOrder: AntigravityQuotaGroupId[] = ['gemini', 'third-party']
 
@@ -241,6 +243,13 @@ export function resolveCredentialQuotaAction({
   return 'refresh'
 }
 
+export function isXaiProductUsageWindow(window: Pick<QuotaWindow, 'id' | 'scopeId'>) {
+  return (
+    window.scopeId?.trim().toLowerCase() === xaiProductUsageScopeId ||
+    window.id.trim().toLowerCase().startsWith(xaiProductWindowIdPrefix)
+  )
+}
+
 export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return (
@@ -256,6 +265,17 @@ export function findXaiOnDemandWindow(entry: UpstreamQuotaEntry): QuotaWindow | 
 export function findXaiWeeklyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return windows.find((window) => window.id === xaiWeeklyWindowId) ?? null
+}
+
+export function findXaiProductUsageWindows(entry: UpstreamQuotaEntry): QuotaWindow[] {
+  const seen = new Set<string>()
+  const result: QuotaWindow[] = []
+  for (const window of [...entry.primaryWindows, ...entry.windows]) {
+    if (!isXaiProductUsageWindow(window) || seen.has(window.id)) continue
+    seen.add(window.id)
+    result.push(window)
+  }
+  return result
 }
 
 function normalizeAntigravityQuotaGroupId(

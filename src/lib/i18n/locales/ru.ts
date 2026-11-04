@@ -2038,6 +2038,11 @@ export const ru = {
         onDemandEnabled: 'Включено',
         onDemandUnknown: 'Не предоставлено',
         onDemandDisabled: 'Отключено',
+        xai: {
+          usageBreakdown: 'Распределение использования (общая квота)',
+          productUsage: 'Использование {{product}}',
+          usageUnavailable: 'Данные об использовании недоступны от xAI',
+        },
         remaining: 'Остаток',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: 'Ещё {{count}}',

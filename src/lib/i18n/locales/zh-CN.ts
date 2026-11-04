@@ -1953,6 +1953,11 @@ export const zhCN = {
         onDemandEnabled: '已启用',
         onDemandUnknown: '未提供',
         onDemandDisabled: '未启用',
+        xai: {
+          usageBreakdown: '用量明细（共享配额）',
+          productUsage: '{{product}} 使用',
+          usageUnavailable: 'xAI 用量暂不可用',
+        },
         remaining: '剩余',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} 更多',

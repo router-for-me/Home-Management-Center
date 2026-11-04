@@ -1953,6 +1953,11 @@ export const zhTW = {
         onDemandEnabled: '已啟用',
         onDemandUnknown: '未提供',
         onDemandDisabled: '未啟用',
+        xai: {
+          usageBreakdown: '用量明細（共用配額）',
+          productUsage: '{{product}} 使用',
+          usageUnavailable: 'xAI 用量暫不可用',
+        },
         remaining: '剩餘',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} 更多',

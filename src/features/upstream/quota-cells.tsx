@@ -19,6 +19,7 @@ import {
   type UpstreamQuotaEntry,
   findCurrencyWindow,
   findXaiOnDemandWindow,
+  findXaiProductUsageWindows,
   findXaiWeeklyWindow,
   resolveAntigravityQuotaPresentation,
 } from './upstream-quota-model'
@@ -327,12 +328,25 @@ function AntigravityQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   )
 }
 
+export function formatXaiProductUsedPercent(window: QuotaWindow): string | null {
+  if (window.used !== null && Number.isFinite(window.used)) {
+    return `${Math.round(Math.max(0, Math.min(100, window.used)))}%`
+  }
+  if (window.usedRatio !== null && Number.isFinite(window.usedRatio)) {
+    return `${Math.round(Math.max(0, Math.min(100, window.usedRatio * 100)))}%`
+  }
+  return null
+}
+
 function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
   const weeklyWindow = findXaiWeeklyWindow(entry)
-  const hasKnownWindows = Boolean(monthlyWindow || onDemandWindow || weeklyWindow)
+  const productUsageWindows = findXaiProductUsageWindows(entry)
+  const hasKnownWindows = Boolean(
+    monthlyWindow || onDemandWindow || weeklyWindow || productUsageWindows.length > 0,
+  )
 
   return (
     <div className="grid min-w-44 gap-1.5">
@@ -347,6 +361,22 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
       {!hasKnownWindows ? <GenericWindowsCell entry={entry} /> : null}
       {weeklyWindow ? (
         <InlineWindowBar window={weeklyWindow} label={t('upstreamPage.quota.weekly')} />
+      ) : null}
+      {productUsageWindows.length > 0 ? (
+        <div className="text-muted-foreground grid gap-0.5 text-[11px] leading-4">
+          <p>{t('upstreamPage.quota.xai.usageBreakdown')}</p>
+          {productUsageWindows.map((window) => {
+            const product = window.label?.trim() || window.id.replace(/^xai-product-/, '')
+            const usedPercent = formatXaiProductUsedPercent(window)
+            return (
+              <p key={window.id} className="tabular-nums">
+                {t('upstreamPage.quota.xai.productUsage', { product })}
+                {': '}
+                {usedPercent ?? t('upstreamPage.quota.xai.usageUnavailable')}
+              </p>
+            )
+          })}
+        </div>
       ) : null}
       {monthlyWindow ? (
         <>

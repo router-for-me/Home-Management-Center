@@ -71,6 +71,7 @@ import {
   UpstreamQuotaMetaBadge,
   UpstreamQuotaPlanBadge,
   UpstreamQuotaStatusBadge,
+  formatXaiProductUsedPercent,
 } from '@/features/upstream/quota-cells'
 import { getUpstreamQuotaErrorMessage } from '@/features/upstream/quota-format'
 import {
@@ -78,7 +79,9 @@ import {
   type UpstreamQuotaEntry,
   findCurrencyWindow,
   findXaiOnDemandWindow,
+  findXaiProductUsageWindows,
   findXaiWeeklyWindow,
+  isXaiProductUsageWindow,
   resolveAntigravityQuotaPresentation,
   resolveCredentialQuotaAction,
 } from '@/features/upstream/upstream-quota-model'
@@ -1635,7 +1638,11 @@ export function GrokQuotaDetail({
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
   const weeklyWindow = findXaiWeeklyWindow(entry)
-  const hasKnownWindows = Boolean(monthlyWindow || onDemandWindow || weeklyWindow)
+  const productUsageWindows = findXaiProductUsageWindows(entry)
+  const detailWindows = entry.windows.filter((window) => !isXaiProductUsageWindow(window))
+  const hasKnownWindows = Boolean(
+    monthlyWindow || onDemandWindow || weeklyWindow || productUsageWindows.length > 0,
+  )
 
   return (
     <div className="grid gap-3">
@@ -1653,6 +1660,24 @@ export function GrokQuotaDetail({
         </div>
         {headerAction}
       </div>
+      {productUsageWindows.length > 0 ? (
+        <div className="grid gap-1.5 rounded-md border p-4">
+          <p className="text-sm font-medium">{t('upstreamPage.quota.xai.usageBreakdown')}</p>
+          <div className="text-muted-foreground grid gap-1 text-xs tabular-nums">
+            {productUsageWindows.map((window) => {
+              const product = window.label?.trim() || window.id.replace(/^xai-product-/, '')
+              const usedPercent = formatXaiProductUsedPercent(window)
+              return (
+                <p key={window.id}>
+                  {t('upstreamPage.quota.xai.productUsage', { product })}
+                  {': '}
+                  {usedPercent ?? t('upstreamPage.quota.xai.usageUnavailable')}
+                </p>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
       {monthlyWindow ? (
         <div className="grid gap-2 rounded-md border p-4">
           <div className="flex items-center justify-between gap-3">
@@ -1680,9 +1705,9 @@ export function GrokQuotaDetail({
           <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.remaining')} />
         ) : null}
       </div>
-      {entry.windows.length > 0 ? (
+      {detailWindows.length > 0 ? (
         <div className="grid gap-3">
-          {entry.windows.map((window) => (
+          {detailWindows.map((window) => (
             <QuotaWindowDetailCard key={window.id} window={window} />
           ))}
         </div>
