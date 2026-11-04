@@ -1,8 +1,32 @@
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react'
 
+import { Table } from '@/components/ui/table'
+import { useScrollDock } from '@/hooks/use-scroll-dock'
 import { cn } from '@/lib/utils'
 
 const containedTableContainerClassName = 'max-h-[min(640px,calc(100vh-280px))] overflow-auto'
+
+/**
+ * A table that scrolls inside its own bounded box, so a long page of rows keeps
+ * its header and action column in view. The box only takes vertical scrolling
+ * once all of it is on screen; until then the page scrolls (see useScrollDock).
+ * `containerClassName` may replace the default height bound.
+ */
+function ContainedTable({
+  containerRef,
+  containerClassName,
+  ...props
+}: ComponentProps<typeof Table>) {
+  const scrollRef = useScrollDock(containerRef)
+
+  return (
+    <Table
+      {...props}
+      containerRef={scrollRef}
+      containerClassName={cn(containedTableContainerClassName, containerClassName)}
+    />
+  )
+}
 /*
  * One header background, because the sticky action column has to paint an opaque
  * copy of it and can only match one value. Headers written at 70% and 40% opacity
@@ -33,12 +57,14 @@ function TableSurfaceHeader({
   description,
   actions,
   className,
+  titleClassName,
   actionsClassName,
 }: {
   title: ReactNode
   description?: ReactNode
   actions?: ReactNode
   className?: string
+  titleClassName?: string
   actionsClassName?: string
 }) {
   return (
@@ -48,7 +74,7 @@ function TableSurfaceHeader({
         className,
       )}
     >
-      <div className="min-w-0">
+      <div className={cn('min-w-0', titleClassName)}>
         <h2 className="text-base font-semibold">{title}</h2>
         {description ? (
           <p className="text-muted-foreground mt-1 text-sm leading-6">{description}</p>
@@ -101,11 +127,11 @@ function TablePaginationStatus({
 }
 
 export {
+  ContainedTable,
   TablePaginationStatus,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
   tableHeaderClassName,
 }

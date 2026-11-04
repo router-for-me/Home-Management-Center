@@ -13,10 +13,7 @@ import {
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
-import {
-  containedTableContainerClassName,
-  stickyTableHeaderClassName,
-} from '@/components/shared/table-surface'
+import { ContainedTable, stickyTableHeaderClassName } from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,14 +36,7 @@ import {
 import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { useProxyPoolsWorkbench } from '@/features/config/use-proxy-pools-workbench'
 import type { ProxyPoolInput, ProxyPoolItem } from '@/lib/api/management/proxy-pools'
@@ -470,10 +460,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
       ) : null}
       {!workbench.loading && !workbench.errorMessage && workbench.items.length > 0 ? (
         <div className="overflow-hidden rounded-md border">
-          <Table
-            className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[980px]')}
-            containerClassName={containedTableContainerClassName}
-          >
+          <ContainedTable className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[980px]')}>
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead>{t('configPage.proxyPools.columns.name')}</TableHead>
@@ -604,7 +591,7 @@ export function ProxyPoolsPanel({ enabled }: { enabled: boolean }) {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </div>
       ) : null}
 

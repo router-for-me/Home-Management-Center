@@ -10,9 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
-  ChevronsDown,
   ChevronsLeft,
-  ChevronsUp,
   ChevronsUpDown,
   CircleDollarSign,
   CirclePile,
@@ -42,15 +40,18 @@ import {
   usePlotArea,
 } from 'recharts'
 
+import { AdvancedFiltersToggle } from '@/components/shared/advanced-filters-toggle'
 import { DateTimeRangePicker } from '@/components/shared/date-time-range-picker'
 import { DebouncedFilterInput } from '@/components/shared/debounced-filter-input'
 import { DiagnosticDetailField, TechnicalTextViewer } from '@/components/shared/diagnostic-detail'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { EmptyValue, emptyValueText } from '@/components/shared/empty-value'
 import {
+  filterActionsClassName,
   filterGridClassName,
   formGridClassName,
   narrowFilterGridClassName,
+  narrowFilterGridWithActionsClassName,
 } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { ProviderLogo, resolveProviderLogoId } from '@/components/shared/provider-logo'
@@ -58,10 +59,10 @@ import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TablePaginationStatus,
   TableSurface,
   TableSurfaceContent,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -95,14 +96,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { LiveRefreshPauseReason } from '@/features/observability/live-refresh'
 import {
@@ -112,6 +106,7 @@ import {
 } from '@/features/observability/live-refresh-control'
 import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
 import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
+import { useScrollDock } from '@/hooks/use-scroll-dock'
 import { defaultRuntimeLogFilters, defaultUsageFilters } from '@/lib/api/management/usage-logs'
 import type {
   RequestErrorLogFile,
@@ -608,7 +603,7 @@ export function UsageFiltersToolbar({
       onOpenChange={setAdvancedOpen}
       className="bg-card rounded-lg border p-3 shadow-sm"
     >
-      <div className={narrowFilterGridClassName}>
+      <div className={narrowFilterGridWithActionsClassName}>
         <DateTimeRangePicker
           precision="date"
           from={filters.customFrom}
@@ -653,6 +648,14 @@ export function UsageFiltersToolbar({
             ))}
           </SelectContent>
         </Select>
+        <div className={filterActionsClassName}>
+          <CollapsibleTrigger asChild>
+            <AdvancedFiltersToggle
+              open={advancedOpen}
+              label={t('usageLogsPage.filters.advanced')}
+            />
+          </CollapsibleTrigger>
+        </div>
       </div>
       <CollapsibleContent>
         <div className={cn(narrowFilterGridClassName, 'mt-3 border-t pt-3')}>
@@ -702,28 +705,6 @@ export function UsageFiltersToolbar({
           </Select>
         </div>
       </CollapsibleContent>
-      <CollapsibleTrigger asChild>
-        <button
-          type="button"
-          className="control-bordered border-border/80 bg-muted/20 text-muted-foreground hover:text-foreground focus-visible:ring-ring mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed text-xs font-medium focus-visible:ring-2 focus-visible:outline-none sm:h-9 sm:min-h-9"
-          aria-label={
-            advancedOpen
-              ? t('usageLogsPage.filters.hideAdvanced')
-              : t('usageLogsPage.filters.advanced')
-          }
-        >
-          <span>
-            {advancedOpen
-              ? t('usageLogsPage.filters.hideAdvanced')
-              : t('usageLogsPage.filters.advanced')}
-          </span>
-          {advancedOpen ? (
-            <ChevronsUp className="text-primary size-5 stroke-[2.4]" aria-hidden="true" />
-          ) : (
-            <ChevronsDown className="text-primary size-5 stroke-[2.4]" aria-hidden="true" />
-          )}
-        </button>
-      </CollapsibleTrigger>
     </Collapsible>
   )
 }
@@ -2352,8 +2333,8 @@ export function RankingGrid({
                   ))}
                 </div>
               ) : aggregate && aggregate.items.length > 0 ? (
-                <Table
-                  containerClassName="max-h-[min(640px,calc(100vh-260px))] overflow-auto rounded-md border"
+                <ContainedTable
+                  containerClassName="max-h-[min(640px,calc(100vh-260px))] rounded-md border"
                   className="table-fixed"
                   style={{ minWidth: visibleRankingTableWidth }}
                 >
@@ -2415,7 +2396,7 @@ export function RankingGrid({
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                </ContainedTable>
               ) : (
                 <p className="text-muted-foreground rounded-md border px-3 py-8 text-sm">
                   {t('usageLogsPage.rankings.empty')}
@@ -3003,11 +2984,8 @@ export function RequestRecordsTable({
       {records ? (
         rows.length > 0 ? (
           <div className="px-3 py-3">
-            <Table
-              containerClassName={cn(
-                containedTableContainerClassName,
-                'max-h-[min(660px,calc(100vh-260px))] rounded-md border',
-              )}
+            <ContainedTable
+              containerClassName="max-h-[min(660px,calc(100vh-260px))] rounded-md border"
               className="table-fixed"
               style={showSecondary ? { minWidth: visibleTableWidth } : undefined}
             >
@@ -3135,7 +3113,7 @@ export function RequestRecordsTable({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ContainedTable>
           </div>
         ) : (
           <TableEmptyState
@@ -3410,10 +3388,7 @@ export function RequestLogIndexTable({
       </div>
       {totalRows > 0 ? (
         <TableSurfaceContent>
-          <Table
-            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-            className="min-w-[1080px]"
-          >
+          <ContainedTable containerClassName="rounded-md border" className="min-w-[1080px]">
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead
@@ -3548,7 +3523,7 @@ export function RequestLogIndexTable({
                 )
               })}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </TableSurfaceContent>
       ) : (
         <TableEmptyState
@@ -4422,8 +4397,8 @@ export function CredentialUsageTable({
       ) : response ? (
         rows.length > 0 ? (
           <div className="px-3 py-3">
-            <Table
-              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            <ContainedTable
+              containerClassName="rounded-md border"
               className="table-fixed"
               style={{ minWidth: visibleTableWidth }}
             >
@@ -4549,7 +4524,7 @@ export function CredentialUsageTable({
                   )
                 })}
               </TableBody>
-            </Table>
+            </ContainedTable>
           </div>
         ) : (
           <TableEmptyState
@@ -4822,8 +4797,8 @@ function UsageHealthMiniTable({
       </div>
       {response ? (
         rows.length > 0 ? (
-          <Table
-            containerClassName="h-[420px] overflow-auto rounded-md border"
+          <ContainedTable
+            containerClassName="h-[420px] max-h-none rounded-md border"
             className="min-w-[760px] table-fixed"
           >
             <TableHeader className={stickyTableHeaderClassName}>
@@ -4914,7 +4889,7 @@ function UsageHealthMiniTable({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ContainedTable>
         ) : (
           <TableEmptyState
             kind="empty"
@@ -5199,6 +5174,7 @@ export function RuntimeLogViewer({
   const [selectedLog, setSelectedLog] = useState<RuntimeLogRecord | null>(null)
   const logTableContainerRef = useRef<HTMLDivElement | null>(null)
   const logLinesContainerRef = useRef<HTMLDivElement | null>(null)
+  const logLinesScrollRef = useScrollDock(logLinesContainerRef)
   const lastScrollTopRef = useRef(0)
   const isFollowingBottomRef = useRef(isFollowingBottom)
   isFollowingBottomRef.current = isFollowingBottom
@@ -5298,7 +5274,12 @@ export function RuntimeLogViewer({
     <TableSurface className="min-w-0 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <SectionHeader title={t('usageLogsPage.logs.title')} />
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <NewItemsNotice
+            count={pendingItemCount}
+            truncated={pendingItemsTruncated}
+            onAccept={onAcceptPendingItems}
+          />
           <LiveRefreshControl
             enabled={liveRefresh.enabled}
             disabled={!liveRefresh.available}
@@ -5384,12 +5365,6 @@ export function RuntimeLogViewer({
           </div>
         </div>
       ) : null}
-      <NewItemsNotice
-        count={pendingItemCount}
-        truncated={pendingItemsTruncated}
-        className="mt-3"
-        onAccept={onAcceptPendingItems}
-      />
       <div className="mt-3 overflow-hidden rounded-md border">
         {!canRead ? (
           <TableEmptyState
@@ -5408,9 +5383,8 @@ export function RuntimeLogViewer({
           />
         ) : records.length > 0 ? (
           <>
-            <Table
+            <ContainedTable
               containerRef={logTableContainerRef}
-              containerClassName={containedTableContainerClassName}
               className="w-full min-w-[900px] table-fixed"
             >
               <TableHeader className={stickyTableHeaderClassName}>
@@ -5439,7 +5413,7 @@ export function RuntimeLogViewer({
                   />
                 ))}
               </TableBody>
-            </Table>
+            </ContainedTable>
             <RuntimeLogPagination
               pageSizeOptions={pageSizeOptions}
               pageSize={pageSize}
@@ -5458,7 +5432,10 @@ export function RuntimeLogViewer({
             />
           </>
         ) : runtimeLogs?.lines.length ? (
-          <div ref={logLinesContainerRef} className="bg-muted/40 max-h-[360px] overflow-auto p-3">
+          <div
+            ref={logLinesScrollRef}
+            className="bg-muted/40 max-h-[360px] [scrollbar-gutter:stable] overflow-auto p-3"
+          >
             <pre className="text-foreground font-mono text-xs leading-5 break-words whitespace-pre-wrap">
               {runtimeLogs.lines.join('\n')}
             </pre>
@@ -5883,10 +5860,7 @@ export function ErrorLogFilesPanel({
             description={t('usageLogsPage.errorLogs.unavailable')}
           />
         ) : rows.length > 0 ? (
-          <Table
-            containerClassName={containedTableContainerClassName}
-            className="min-w-[680px] table-fixed"
-          >
+          <ContainedTable className="min-w-[680px] table-fixed">
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
                 <TableHead className="w-[260px]">
@@ -5939,7 +5913,7 @@ export function ErrorLogFilesPanel({
                 )
               })}
             </TableBody>
-          </Table>
+          </ContainedTable>
         ) : (
           <TableEmptyState
             kind="empty"

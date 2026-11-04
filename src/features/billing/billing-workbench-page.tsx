@@ -48,11 +48,11 @@ import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TablePaginationStatus,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -86,14 +86,7 @@ import {
 import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -842,9 +835,9 @@ function ChargeRecordsTab({
         <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
         <TableSurfaceContent>
-          <Table
+          <ContainedTable
             className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1160px]')}
-            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            containerClassName="rounded-md border"
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
@@ -951,7 +944,7 @@ function ChargeRecordsTab({
                 )
               })}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </TableSurfaceContent>
       )}
     </TableSurface>
@@ -1004,9 +997,9 @@ function BalanceRecordsTab({
         <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (
         <TableSurfaceContent>
-          <Table
+          <ContainedTable
             className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1120px]')}
-            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            containerClassName="rounded-md border"
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
@@ -1100,7 +1093,7 @@ function BalanceRecordsTab({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </TableSurfaceContent>
       )}
     </TableSurface>
@@ -1452,10 +1445,7 @@ function ModelPricesTab({
               }
             />
           ) : (
-            <Table
-              className="min-w-[1260px]"
-              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-            >
+            <ContainedTable className="min-w-[1260px]" containerClassName="rounded-md border">
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
                   {showSecondary ? (
@@ -1594,7 +1584,7 @@ function ModelPricesTab({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ContainedTable>
           )}
         </TableSurfaceContent>
       </TableSurface>
@@ -1662,7 +1652,9 @@ function ModelPricesTab({
           </div>
 
           <div className="grid gap-2">
-            <span className="text-xs font-semibold">{t('billingPage.settings.serviceTierSource')}</span>
+            <span className="text-xs font-semibold">
+              {t('billingPage.settings.serviceTierSource')}
+            </span>
             <RadioGroup
               value={tierSourceDraft}
               disabled={workbench.mutating || workbench.billingSettingsLoading}
@@ -1671,35 +1663,35 @@ function ModelPricesTab({
                 if (value === 'request' || value === 'response') setTierSourceDraft(value)
               }}
             >
-            {(['request', 'response'] as const).map((source) => (
-              <label
-                key={source}
-                className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
-                  tierSourceDraft === source
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-border hover:bg-muted/40',
-                  workbench.mutating && 'cursor-not-allowed opacity-60',
-                )}
-              >
-                <RadioGroupItem value={source} className="mt-0.5" />
-                <span className="grid min-w-0 gap-1">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    {t(`billingPage.settings.${source}`)}
-                    {source === 'request' ? (
-                      <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
-                        {t('billingPage.settings.defaultBadge')}
-                      </span>
-                    ) : null}
+              {(['request', 'response'] as const).map((source) => (
+                <label
+                  key={source}
+                  className={cn(
+                    'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
+                    tierSourceDraft === source
+                      ? 'border-primary/40 bg-primary/5'
+                      : 'border-border hover:bg-muted/40',
+                    workbench.mutating && 'cursor-not-allowed opacity-60',
+                  )}
+                >
+                  <RadioGroupItem value={source} className="mt-0.5" />
+                  <span className="grid min-w-0 gap-1">
+                    <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                      {t(`billingPage.settings.${source}`)}
+                      {source === 'request' ? (
+                        <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                          {t('billingPage.settings.defaultBadge')}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="text-muted-foreground text-xs leading-5">
+                      {source === 'request'
+                        ? t('billingPage.settings.requestOptionDescription')
+                        : t('billingPage.settings.responseOptionDescription')}
+                    </span>
                   </span>
-                  <span className="text-muted-foreground text-xs leading-5">
-                    {source === 'request'
-                      ? t('billingPage.settings.requestOptionDescription')
-                      : t('billingPage.settings.responseOptionDescription')}
-                  </span>
-                </span>
-              </label>
-            ))}
+                </label>
+              ))}
             </RadioGroup>
           </div>
 

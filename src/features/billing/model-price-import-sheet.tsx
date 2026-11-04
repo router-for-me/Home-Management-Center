@@ -24,6 +24,7 @@ import { toast } from 'sonner'
 import { DrawerScaffoldBody, DrawerScaffoldFooter } from '@/components/shared/drawer-scaffold'
 import { formGridClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
+import { ContainedTable } from '@/components/shared/table-surface'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1844,252 +1845,247 @@ export function ModelPriceImportSheet({
             </Button>
           </div>
 
-          <div className="max-h-[460px] overflow-auto rounded-md border">
-            <Table className="min-w-[1580px] table-fixed">
-              <TableHeader>
+          <ContainedTable
+            containerClassName="max-h-[460px] rounded-md border"
+            className="min-w-[1580px] table-fixed"
+          >
+            <TableHeader>
+              <TableRow variant="static">
+                <TableHead className="w-12" />
+                <TableHead className="w-[100px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.columns.provider')} />
+                </TableHead>
+                <TableHead className="w-[160px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.columns.model')} />
+                </TableHead>
+                <TableHead className="w-[220px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.status')} />
+                </TableHead>
+                <TableHead className="w-[100px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.action')} />
+                </TableHead>
+                <TableHead className="w-[180px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.sourceModel')} />
+                </TableHead>
+                <TableHead className="w-[100px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.official')} />
+                </TableHead>
+                <TableHead className="w-[120px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.multiplier')} />
+                </TableHead>
+                <TableHead className="w-[220px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.writeFields')} />
+                </TableHead>
+                <TableHead className="w-[220px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.writeRule')} />
+                </TableHead>
+                <TableHead className="w-[112px] overflow-hidden">
+                  <OverflowTooltipText value={t('billingPage.prices.import.columns.existing')} />
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRows.length === 0 ? (
                 <TableRow variant="static">
-                  <TableHead className="w-12" />
-                  <TableHead className="w-[100px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.columns.provider')} />
-                  </TableHead>
-                  <TableHead className="w-[160px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.columns.model')} />
-                  </TableHead>
-                  <TableHead className="w-[220px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.import.columns.status')} />
-                  </TableHead>
-                  <TableHead className="w-[100px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.import.columns.action')} />
-                  </TableHead>
-                  <TableHead className="w-[180px] overflow-hidden">
-                    <OverflowTooltipText
-                      value={t('billingPage.prices.import.columns.sourceModel')}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[100px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.import.columns.official')} />
-                  </TableHead>
-                  <TableHead className="w-[120px] overflow-hidden">
-                    <OverflowTooltipText
-                      value={t('billingPage.prices.import.columns.multiplier')}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[220px] overflow-hidden">
-                    <OverflowTooltipText
-                      value={t('billingPage.prices.import.columns.writeFields')}
-                    />
-                  </TableHead>
-                  <TableHead className="w-[220px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.import.columns.writeRule')} />
-                  </TableHead>
-                  <TableHead className="w-[112px] overflow-hidden">
-                    <OverflowTooltipText value={t('billingPage.prices.import.columns.existing')} />
-                  </TableHead>
+                  <TableCell
+                    colSpan={11}
+                    className="text-muted-foreground py-8 text-center text-sm"
+                  >
+                    {busy
+                      ? t('billingPage.prices.import.loadingPreview')
+                      : candidatesError
+                        ? t('billingPage.prices.import.candidateFailedEmpty')
+                        : t('billingPage.prices.import.emptyPreview')}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.length === 0 ? (
-                  <TableRow variant="static">
-                    <TableCell
-                      colSpan={11}
-                      className="text-muted-foreground py-8 text-center text-sm"
-                    >
-                      {busy
-                        ? t('billingPage.prices.import.loadingPreview')
-                        : candidatesError
-                          ? t('billingPage.prices.import.candidateFailedEmpty')
-                          : t('billingPage.prices.import.emptyPreview')}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredRows.map((row) => {
-                    const reason = formatReason(t, row)
-                    const tierLabel =
-                      row.serviceTier === '*'
-                        ? t('billingPage.prices.tiers.wildcard')
-                        : row.serviceTier
-                    const bandLabel =
-                      row.minInputTokens === 0
-                        ? t('billingPage.prices.scope.baseContext')
-                        : t('billingPage.prices.scope.fromTokens', {
-                            count: row.minInputTokens,
-                          })
-                    const scopeLabel = `${tierLabel} · ${bandLabel}`
-                    const override = matchOverrides.find(
-                      (item) =>
-                        item.targetProvider === row.provider && item.targetModel === row.model,
-                    )
-                    return (
-                      <TableRow key={row.key} variant="resource">
-                        <TableCell className="align-top">
-                          <Checkbox
-                            checked={selectedKeys.has(row.key)}
-                            disabled={!row.applicable || busy || applyBlocked}
-                            onCheckedChange={(checked) => toggleRow(row, checked === true)}
-                            aria-label={t('billingPage.prices.import.selectRow', {
-                              model: row.model,
-                              tier: tierLabel,
-                              band: bandLabel,
-                            })}
-                          />
-                        </TableCell>
-                        <TableCell className="w-[100px] overflow-hidden align-top font-mono text-xs">
-                          <OverflowTooltipText value={row.provider} />
-                        </TableCell>
-                        <TableCell className="w-[160px] overflow-hidden align-top text-xs">
-                          <div className="min-w-0 space-y-1">
-                            <OverflowTooltipText value={row.model} className="font-mono" />
-                            <OverflowTooltipText
-                              value={scopeLabel}
-                              className="text-muted-foreground"
-                            />
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[220px] overflow-hidden align-top">
-                          <div className="min-w-0 space-y-1">
-                            <OverflowTooltipText
-                              value={t(`billingPage.prices.import.status.${row.status}`, {
-                                defaultValue: row.status,
-                              })}
-                              className={cn(
-                                'w-fit max-w-full rounded-full px-2 py-0.5 text-[11px] font-medium',
-                                row.status === 'matched' && 'bg-success/10 text-success',
-                                row.status === 'ambiguous' && 'bg-warning/10 text-warning',
-                                row.status === 'zero_cost' && 'bg-info/10 text-info',
-                                ['unmatched', 'unsupported'].includes(row.status) &&
-                                  'bg-muted text-muted-foreground',
-                                ['conflict', 'invalid'].includes(row.status) &&
-                                  'bg-destructive/10 text-destructive',
-                              )}
-                            />
-                            {reason ? (
-                              <OverflowTooltipText
-                                value={reason}
-                                className="text-muted-foreground text-xs leading-4"
-                                tooltipClassName="max-w-md whitespace-normal"
-                              />
-                            ) : null}
-                            {row.status === 'ambiguous' && row.reasons[0]?.candidates.length ? (
-                              <div className="grid gap-1">
-                                <Select
-                                  value={
-                                    override
-                                      ? `${override.sourceProvider}/${override.sourceModel}`
-                                      : '__unresolved__'
-                                  }
-                                  onValueChange={(value) => setMatchOverride(row, value)}
-                                  disabled={busy}
-                                >
-                                  <SelectTrigger size="md" className="min-w-[190px]">
-                                    <SelectValue
-                                      placeholder={t(
-                                        'billingPage.prices.import.resolveMatchPlaceholder',
-                                      )}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__unresolved__" disabled>
-                                      {t('billingPage.prices.import.resolveMatchPlaceholder')}
-                                    </SelectItem>
-                                    {row.reasons[0].candidates.map((candidate) => (
-                                      <SelectItem key={candidate} value={candidate}>
-                                        {candidate}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                {serverEnabled ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="md"
-                                    disabled={!override || busy}
-                                    onClick={() =>
-                                      void requestServerPreview([...selectedKeys, row.key])
-                                    }
-                                  >
-                                    <RefreshCw className="size-3.5" />
-                                    {t('billingPage.prices.import.applyMatchOverride')}
-                                  </Button>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="w-[100px] overflow-hidden align-top">
+              ) : (
+                filteredRows.map((row) => {
+                  const reason = formatReason(t, row)
+                  const tierLabel =
+                    row.serviceTier === '*'
+                      ? t('billingPage.prices.tiers.wildcard')
+                      : row.serviceTier
+                  const bandLabel =
+                    row.minInputTokens === 0
+                      ? t('billingPage.prices.scope.baseContext')
+                      : t('billingPage.prices.scope.fromTokens', {
+                          count: row.minInputTokens,
+                        })
+                  const scopeLabel = `${tierLabel} · ${bandLabel}`
+                  const override = matchOverrides.find(
+                    (item) =>
+                      item.targetProvider === row.provider && item.targetModel === row.model,
+                  )
+                  return (
+                    <TableRow key={row.key} variant="resource">
+                      <TableCell className="align-top">
+                        <Checkbox
+                          checked={selectedKeys.has(row.key)}
+                          disabled={!row.applicable || busy || applyBlocked}
+                          onCheckedChange={(checked) => toggleRow(row, checked === true)}
+                          aria-label={t('billingPage.prices.import.selectRow', {
+                            model: row.model,
+                            tier: tierLabel,
+                            band: bandLabel,
+                          })}
+                        />
+                      </TableCell>
+                      <TableCell className="w-[100px] overflow-hidden align-top font-mono text-xs">
+                        <OverflowTooltipText value={row.provider} />
+                      </TableCell>
+                      <TableCell className="w-[160px] overflow-hidden align-top text-xs">
+                        <div className="min-w-0 space-y-1">
+                          <OverflowTooltipText value={row.model} className="font-mono" />
                           <OverflowTooltipText
-                            value={t(`billingPage.prices.import.actions.${row.action}`)}
+                            value={scopeLabel}
+                            className="text-muted-foreground"
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[220px] overflow-hidden align-top">
+                        <div className="min-w-0 space-y-1">
+                          <OverflowTooltipText
+                            value={t(`billingPage.prices.import.status.${row.status}`, {
+                              defaultValue: row.status,
+                            })}
                             className={cn(
-                              'w-fit max-w-full rounded-md px-2 py-1 text-[11px] font-medium',
-                              row.action === 'create' && 'bg-success/10 text-success',
-                              row.action === 'update_sync' && 'bg-info/10 text-info',
-                              row.action === 'overwrite' && 'bg-warning/10 text-warning',
-                              ['skip', 'review'].includes(row.action) &&
+                              'w-fit max-w-full rounded-full px-2 py-0.5 text-[11px] font-medium',
+                              row.status === 'matched' && 'bg-success/10 text-success',
+                              row.status === 'ambiguous' && 'bg-warning/10 text-warning',
+                              row.status === 'zero_cost' && 'bg-info/10 text-info',
+                              ['unmatched', 'unsupported'].includes(row.status) &&
                                 'bg-muted text-muted-foreground',
+                              ['conflict', 'invalid'].includes(row.status) &&
+                                'bg-destructive/10 text-destructive',
                             )}
                           />
-                        </TableCell>
-                        <TableCell className="w-[180px] overflow-hidden align-top font-mono text-xs">
-                          <OverflowTooltipText
-                            value={
-                              row.matchedProvider && row.matchedModel
-                                ? `${row.matchedProvider}/${row.matchedModel}`
-                                : '—'
-                            }
-                          />
-                        </TableCell>
-                        <TableCell className="align-top text-xs tabular-nums">
-                          {row.official
-                            ? `${formatPrice(row.official.input, i18n.language)} / ${formatPrice(row.official.output, i18n.language)}`
-                            : '—'}
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <Input
-                            size="md"
-                            className="w-24 font-mono text-xs"
-                            type="number"
-                            min="0.01"
-                            step="0.1"
-                            value={policy.rowMultipliers[row.key] ?? row.multiplier}
-                            disabled={busy || !row.official}
-                            aria-label={t('billingPage.prices.import.rowMultiplier', {
-                              model: row.model,
-                              tier: tierLabel,
-                              band: bandLabel,
-                            })}
-                            onChange={(event) => setRowMultiplier(row, Number(event.target.value))}
-                          />
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <PriceFieldList row={row} locale={i18n.language} t={t} />
-                        </TableCell>
-                        <TableCell className="align-top">
-                          <RuleMetadata row={row} t={t} />
-                        </TableCell>
-                        <TableCell className="w-[112px] overflow-hidden align-top text-xs">
-                          {row.existing ? (
-                            <div className="min-w-0 space-y-1">
-                              <OverflowTooltipText
-                                value={t('billingPage.prices.import.existingRule', {
-                                  source: t(`billingPage.prices.sources.${row.existing.source}`),
-                                })}
-                              />
-                              <OverflowTooltipText
-                                value={`${row.existing.serviceTier} · ${row.existing.minInputTokens}`}
-                                className="text-muted-foreground font-mono"
-                              />
+                          {reason ? (
+                            <OverflowTooltipText
+                              value={reason}
+                              className="text-muted-foreground text-xs leading-4"
+                              tooltipClassName="max-w-md whitespace-normal"
+                            />
+                          ) : null}
+                          {row.status === 'ambiguous' && row.reasons[0]?.candidates.length ? (
+                            <div className="grid gap-1">
+                              <Select
+                                value={
+                                  override
+                                    ? `${override.sourceProvider}/${override.sourceModel}`
+                                    : '__unresolved__'
+                                }
+                                onValueChange={(value) => setMatchOverride(row, value)}
+                                disabled={busy}
+                              >
+                                <SelectTrigger size="md" className="min-w-[190px]">
+                                  <SelectValue
+                                    placeholder={t(
+                                      'billingPage.prices.import.resolveMatchPlaceholder',
+                                    )}
+                                  />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__unresolved__" disabled>
+                                    {t('billingPage.prices.import.resolveMatchPlaceholder')}
+                                  </SelectItem>
+                                  {row.reasons[0].candidates.map((candidate) => (
+                                    <SelectItem key={candidate} value={candidate}>
+                                      {candidate}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {serverEnabled ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="md"
+                                  disabled={!override || busy}
+                                  onClick={() =>
+                                    void requestServerPreview([...selectedKeys, row.key])
+                                  }
+                                >
+                                  <RefreshCw className="size-3.5" />
+                                  {t('billingPage.prices.import.applyMatchOverride')}
+                                </Button>
+                              ) : null}
                             </div>
-                          ) : (
-                            t('billingPage.prices.import.noExisting')
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[100px] overflow-hidden align-top">
+                        <OverflowTooltipText
+                          value={t(`billingPage.prices.import.actions.${row.action}`)}
+                          className={cn(
+                            'w-fit max-w-full rounded-md px-2 py-1 text-[11px] font-medium',
+                            row.action === 'create' && 'bg-success/10 text-success',
+                            row.action === 'update_sync' && 'bg-info/10 text-info',
+                            row.action === 'overwrite' && 'bg-warning/10 text-warning',
+                            ['skip', 'review'].includes(row.action) &&
+                              'bg-muted text-muted-foreground',
                           )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                        />
+                      </TableCell>
+                      <TableCell className="w-[180px] overflow-hidden align-top font-mono text-xs">
+                        <OverflowTooltipText
+                          value={
+                            row.matchedProvider && row.matchedModel
+                              ? `${row.matchedProvider}/${row.matchedModel}`
+                              : '—'
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="align-top text-xs tabular-nums">
+                        {row.official
+                          ? `${formatPrice(row.official.input, i18n.language)} / ${formatPrice(row.official.output, i18n.language)}`
+                          : '—'}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <Input
+                          size="md"
+                          className="w-24 font-mono text-xs"
+                          type="number"
+                          min="0.01"
+                          step="0.1"
+                          value={policy.rowMultipliers[row.key] ?? row.multiplier}
+                          disabled={busy || !row.official}
+                          aria-label={t('billingPage.prices.import.rowMultiplier', {
+                            model: row.model,
+                            tier: tierLabel,
+                            band: bandLabel,
+                          })}
+                          onChange={(event) => setRowMultiplier(row, Number(event.target.value))}
+                        />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <PriceFieldList row={row} locale={i18n.language} t={t} />
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <RuleMetadata row={row} t={t} />
+                      </TableCell>
+                      <TableCell className="w-[112px] overflow-hidden align-top text-xs">
+                        {row.existing ? (
+                          <div className="min-w-0 space-y-1">
+                            <OverflowTooltipText
+                              value={t('billingPage.prices.import.existingRule', {
+                                source: t(`billingPage.prices.sources.${row.existing.source}`),
+                              })}
+                            />
+                            <OverflowTooltipText
+                              value={`${row.existing.serviceTier} · ${row.existing.minInputTokens}`}
+                              className="text-muted-foreground font-mono"
+                            />
+                          </div>
+                        ) : (
+                          t('billingPage.prices.import.noExisting')
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </ContainedTable>
         </section>
 
         {applying && progress ? (

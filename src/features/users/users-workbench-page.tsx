@@ -43,9 +43,9 @@ import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
   tableHeaderClassName,
 } from '@/components/shared/table-surface'
@@ -2342,9 +2342,9 @@ function UsersTable({
   }
 
   return (
-    <Table
+    <ContainedTable
       containerRef={tableContainerRef}
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+      containerClassName="rounded-md border"
       /*
        * Fixed at every width, not just below 40rem. Virtualised rows mean the
        * layout only ever sees a window of the page, and an auto layout sizes its
@@ -2522,7 +2522,7 @@ function UsersTable({
         })}
         <TableSpacerRow height={virtualRows.paddingBottom} colSpan={userTableColumnCount} />
       </TableBody>
-    </Table>
+    </ContainedTable>
   )
 }
 
@@ -2553,8 +2553,8 @@ function AccessKeysTable({
   }
 
   return (
-    <Table
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+    <ContainedTable
+      containerClassName="rounded-md border"
       className={cn(!showSecondaryKeyColumns && 'table-fixed', 'sm:min-w-[920px]')}
     >
       <TableHeader className={stickyTableHeaderClassName}>
@@ -2629,7 +2629,7 @@ function AccessKeysTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ContainedTable>
   )
 }
 

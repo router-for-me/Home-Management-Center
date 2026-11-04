@@ -4170,7 +4170,6 @@ export const zhCN = {
         rangeInvalid: '延迟范围需为非负整数，且最小延迟不能大于最大延迟。',
         sort: '排序',
         advanced: '高级筛选',
-        hideAdvanced: '收起高级筛选',
         ranges: {
           '4h': '最近 4 小时',
           '12h': '最近 12 小时',
@@ -4462,7 +4461,6 @@ export const zhCN = {
         minAmount: '最低消费',
         maxAmount: '最高消费',
         advanced: '高级筛选',
-        hideAdvanced: '收起高级筛选',
         searchPlaceholder: '搜索请求 / 用户 / 模型',
         minLatencyPlaceholder: '最低延迟 ms',
         maxLatencyPlaceholder: '最高延迟 ms',

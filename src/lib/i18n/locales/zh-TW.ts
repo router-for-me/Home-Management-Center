@@ -4171,7 +4171,6 @@ export const zhTW = {
         rangeInvalid: '延遲範圍需為非負整數，且最低延遲不能大於最高延遲。',
         sort: '排序',
         advanced: '進階篩選',
-        hideAdvanced: '收起進階篩選',
         ranges: {
           '4h': '最近 4 小時',
           '12h': '最近 12 小時',
@@ -4463,7 +4462,6 @@ export const zhTW = {
         minAmount: '最低消費',
         maxAmount: '最高消費',
         advanced: '進階篩選',
-        hideAdvanced: '收起進階篩選',
         searchPlaceholder: '搜尋請求 / 使用者 / 模型',
         minLatencyPlaceholder: '最低延遲 ms',
         maxLatencyPlaceholder: '最高延遲 ms',
