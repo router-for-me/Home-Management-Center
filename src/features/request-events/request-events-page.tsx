@@ -317,23 +317,8 @@ type ToolUsageFieldKey =
   | 'numSourcesUsed'
   | 'imageGenerationCalls'
 
-const TOOL_USAGE_SHORT_CODES: Record<ToolUsageFieldKey, string> = {
-  webSearchCalls: 'ws',
-  webSearchQueries: 'wsq',
-  xSearchCalls: 'xs',
-  codeExecutionCalls: 'ce',
-  fileSearchCalls: 'fs',
-  documentSearchCalls: 'ds',
-  webFetchCalls: 'wf',
-  mcpCalls: 'mcp',
-  googleMapsChunks: 'maps',
-  numSourcesUsed: 'src',
-  imageGenerationCalls: 'img',
-}
-
 function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined): Array<{
   key: ToolUsageFieldKey
-  shortCode: string
   count: number
 }> {
   if (!toolUsage) return []
@@ -346,14 +331,15 @@ function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined
     'webFetchCalls',
     'mcpCalls',
     'googleMapsChunks',
-    'webSearchQueries',
+    ...(toolUsage.webSearchCalls > 0
+      ? ([] as ToolUsageFieldKey[])
+      : (['webSearchQueries'] as ToolUsageFieldKey[])),
     'numSourcesUsed',
     'imageGenerationCalls',
   ]
   return keys
     .map((key) => ({
       key,
-      shortCode: TOOL_USAGE_SHORT_CODES[key],
       count: toolUsage[key] ?? 0,
     }))
     .filter((entry) => entry.count > 0)
@@ -1764,12 +1750,15 @@ function RequestEventsTable({
                                       </span>
                                     ) : null}
                                     {toolUsageEntries.length > 0 ? (
-                                      <span className="text-primary inline-flex items-center gap-0.5 font-mono text-[11px]">
+                                      <span className="text-primary inline-flex items-center gap-0.5 text-[11px]">
                                         <Wrench className="size-3 shrink-0" aria-hidden="true" />
                                         <span>
                                           {toolUsageEntries
-                                            .map((item) => `${item.shortCode}×${item.count}`)
-                                            .join('·')}
+                                            .map(
+                                              (item) =>
+                                                `${t(`requestEventsPage.detail.toolFields.${item.key}`)}×${item.count}`,
+                                            )
+                                            .join(' · ')}
                                         </span>
                                       </span>
                                     ) : null}
