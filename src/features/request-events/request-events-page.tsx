@@ -18,6 +18,7 @@ import {
   Loader2,
   RefreshCw,
   Waves,
+  Wrench,
   XCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -100,6 +101,7 @@ import type {
   RequestEventDetail,
   RequestEventFilterOptions,
   RequestEventFilters,
+  RequestEventToolUsage,
   RequestEventsPage as RequestEventsPageData,
 } from '@/lib/api/management/request-events'
 import {
@@ -300,6 +302,61 @@ function formatCacheHitRate(cacheReadTokens: number, inputTokens: number): strin
 function formatSpeedTps(tps: number | null): string | null {
   if (tps === null || !Number.isFinite(tps) || tps <= 0) return null
   return `${tps.toFixed(1)} t/s`
+}
+
+type ToolUsageFieldKey =
+  | 'webSearchCalls'
+  | 'webSearchQueries'
+  | 'xSearchCalls'
+  | 'codeExecutionCalls'
+  | 'fileSearchCalls'
+  | 'documentSearchCalls'
+  | 'webFetchCalls'
+  | 'mcpCalls'
+  | 'googleMapsChunks'
+  | 'numSourcesUsed'
+  | 'imageGenerationCalls'
+
+const TOOL_USAGE_SHORT_CODES: Record<ToolUsageFieldKey, string> = {
+  webSearchCalls: 'ws',
+  webSearchQueries: 'wsq',
+  xSearchCalls: 'xs',
+  codeExecutionCalls: 'ce',
+  fileSearchCalls: 'fs',
+  documentSearchCalls: 'ds',
+  webFetchCalls: 'wf',
+  mcpCalls: 'mcp',
+  googleMapsChunks: 'maps',
+  numSourcesUsed: 'src',
+  imageGenerationCalls: 'img',
+}
+
+function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined): Array<{
+  key: ToolUsageFieldKey
+  shortCode: string
+  count: number
+}> {
+  if (!toolUsage) return []
+  const keys: ToolUsageFieldKey[] = [
+    'webSearchCalls',
+    'xSearchCalls',
+    'codeExecutionCalls',
+    'fileSearchCalls',
+    'documentSearchCalls',
+    'webFetchCalls',
+    'mcpCalls',
+    'googleMapsChunks',
+    'webSearchQueries',
+    'numSourcesUsed',
+    'imageGenerationCalls',
+  ]
+  return keys
+    .map((key) => ({
+      key,
+      shortCode: TOOL_USAGE_SHORT_CODES[key],
+      count: toolUsage[key] ?? 0,
+    }))
+    .filter((entry) => entry.count > 0)
 }
 
 const REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH = 48
@@ -1092,6 +1149,22 @@ function RequestEventDetailSheet({
                 </div>
               )}
 
+              {getToolUsageEntries(event.toolUsage).length > 0 ? (
+                <div>
+                  <h3 className="text-sm font-medium">{t('requestEventsPage.detail.toolUsage')}</h3>
+                  <div className="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-3">
+                    {getToolUsageEntries(event.toolUsage).map((item) => (
+                      <DiagnosticDetailField
+                        key={item.key}
+                        label={t(`requestEventsPage.detail.toolFields.${item.key}`)}
+                      >
+                        {formatNumber(item.count)}
+                      </DiagnosticDetailField>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {event.error ? (
                 <div>
                   <h3 className="text-sm font-medium">{t('requestEventsPage.detail.error')}</h3>
@@ -1504,7 +1577,12 @@ function RequestEventsTable({
                         label: t('requestEventsPage.detail.tokenFields.reasoningTokens'),
                         value: formatNumber(tokenCounts.reasoningTokens),
                       },
+                      ...getToolUsageEntries(event.toolUsage).map((item) => ({
+                        label: t(`requestEventsPage.detail.toolFields.${item.key}`),
+                        value: formatNumber(item.count),
+                      })),
                     ]
+                    const toolUsageEntries = getToolUsageEntries(event.toolUsage)
 
                     return (
                       <TableRow
@@ -1682,6 +1760,16 @@ function RequestEventsTable({
                                         />
                                         <span>
                                           {formatCompactNumber(tokenCounts.reasoningTokens)}
+                                        </span>
+                                      </span>
+                                    ) : null}
+                                    {toolUsageEntries.length > 0 ? (
+                                      <span className="text-primary inline-flex items-center gap-0.5 font-mono text-[11px]">
+                                        <Wrench className="size-3 shrink-0" aria-hidden="true" />
+                                        <span>
+                                          {toolUsageEntries
+                                            .map((item) => `${item.shortCode}×${item.count}`)
+                                            .join('·')}
                                         </span>
                                       </span>
                                     ) : null}

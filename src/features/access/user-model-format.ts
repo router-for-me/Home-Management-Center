@@ -92,6 +92,73 @@ export function baseRung(rungs: UserModelPriceRung[]): UserModelPriceRung | null
  * that number is the whole story or only the first step of a ladder — a buyer
  * who is shown one number for a laddered price has been misinformed.
  */
+export type UserModelToolPriceKey =
+  | 'webSearch'
+  | 'webSearchQuery'
+  | 'webFetch'
+  | 'xSearch'
+  | 'codeExecution'
+  | 'fileSearch'
+  | 'documentSearch'
+  | 'mcp'
+  | 'googleMaps'
+  | 'sourcesUsed'
+  | 'serverTools'
+
+export type UserModelToolPrice = {
+  key: UserModelToolPriceKey
+  pricePerCall: number
+}
+
+const TOOL_EXPR_VAR_TO_KEY: Array<[string, UserModelToolPriceKey]> = [
+  ['ws', 'webSearch'],
+  ['wsq', 'webSearchQuery'],
+  ['wf', 'webFetch'],
+  ['xs', 'xSearch'],
+  ['ce', 'codeExecution'],
+  ['fs', 'fileSearch'],
+  ['ds', 'documentSearch'],
+  ['mcp', 'mcp'],
+  ['maps', 'googleMaps'],
+  ['src', 'sourcesUsed'],
+  ['st', 'serverTools'],
+]
+
+export function extractRungToolPrices(rung: UserModelPriceRung): UserModelToolPrice[] {
+  const byKey = new Map<UserModelToolPriceKey, number>()
+  const expr = rung.pricingExpr?.trim() ?? ''
+
+  if (expr) {
+    for (const [varName, key] of TOOL_EXPR_VAR_TO_KEY) {
+      const forward = new RegExp(
+        `(?:^|[^a-zA-Z0-9_])${varName}\\s*\\*\\s*(?:usd\\(\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\)|([0-9]+(?:\\.[0-9]+)?))`,
+      )
+      const reverse = new RegExp(
+        `(?:usd\\(\\s*([0-9]+(?:\\.[0-9]+)?)\\s*\\)|([0-9]+(?:\\.[0-9]+)?))\\s*\\*\\s*${varName}(?:$|[^a-zA-Z0-9_])`,
+      )
+      const match = expr.match(forward) ?? expr.match(reverse)
+      const rawNum = match?.[1] ?? match?.[2]
+      if (rawNum !== undefined) {
+        const parsed = Number(rawNum)
+        if (Number.isFinite(parsed) && parsed >= 0) {
+          byKey.set(key, parsed)
+        }
+      }
+    }
+  }
+
+  if (
+    rung.webSearchPricePerCall !== null &&
+    rung.webSearchPricePerCall !== undefined &&
+    Number.isFinite(rung.webSearchPricePerCall) &&
+    !byKey.has('webSearch')
+  ) {
+    byKey.set('webSearch', rung.webSearchPricePerCall)
+  }
+
+  return Array.from(byKey.entries()).map(([key, pricePerCall]) => ({ key, pricePerCall }))
+}
+
 export type PriceEntryPoint = {
   input: number | null
   output: number | null
@@ -99,6 +166,7 @@ export type PriceEntryPoint = {
   maxRungCount: number
   providerCount: number
   serviceTiers: string[]
+  toolPrices: UserModelToolPrice[]
 }
 
 function lowest(current: number | null, candidate: number | null) {
@@ -114,6 +182,7 @@ export function pricingEntryPoint(pricing: UserModelPricing | null): PriceEntryP
   let output: number | null = null
   let maxRungCount = 0
   const serviceTiers = new Set<string>()
+  const toolPriceMap = new Map<UserModelToolPriceKey, number>()
 
   for (const provider of pricing.providers) {
     for (const tier of provider.tiers) {
@@ -127,6 +196,11 @@ export function pricingEntryPoint(pricing: UserModelPricing | null): PriceEntryP
 
     input = lowest(input, rung.inputPricePerMillion)
     output = lowest(output, rung.outputPricePerMillion)
+    for (const toolPrice of extractRungToolPrices(rung)) {
+      const prev = toolPriceMap.get(toolPrice.key) ?? null
+      const next = lowest(prev, toolPrice.pricePerCall)
+      if (next !== null) toolPriceMap.set(toolPrice.key, next)
+    }
   }
 
   if (input === null && output === null && maxRungCount === 0) return null
@@ -138,6 +212,10 @@ export function pricingEntryPoint(pricing: UserModelPricing | null): PriceEntryP
     maxRungCount,
     providerCount: pricing.providers.length,
     serviceTiers: [...serviceTiers],
+    toolPrices: Array.from(toolPriceMap.entries()).map(([key, pricePerCall]) => ({
+      key,
+      pricePerCall,
+    })),
   }
 }
 

@@ -62,6 +62,21 @@ export type RequestEventTokens = {
   totalTokens: number
 }
 
+export type RequestEventToolUsage = {
+  webSearchCalls: number
+  webSearchQueries: number
+  webFetchCalls: number
+  xSearchCalls: number
+  codeExecutionCalls: number
+  fileSearchCalls: number
+  documentSearchCalls: number
+  mcpCalls: number
+  googleMapsChunks: number
+  numSourcesUsed: number
+  numServerSideToolsUsed: number
+  imageGenerationCalls: number
+}
+
 export type RequestEventPerformance = {
   latencyMs: number | null
   ttftMs: number | null
@@ -149,6 +164,7 @@ export type RequestEvent = {
   error: RequestEventError | null
   tokens: RequestEventTokens
   tokenBreakdown: UsageTokenBreakdown | null
+  toolUsage?: RequestEventToolUsage | null
   performance: RequestEventPerformance
   billing: RequestEventBilling | null
   related: RequestEventRelated | null
@@ -673,6 +689,9 @@ function normalizeRequestEvent(
       record.token_breakdown ?? record.tokenBreakdown,
       tokenBreakdownV2,
     ),
+    toolUsage: normalizeToolUsage(
+      record.tool_usage ?? record.toolUsage ?? record.tool_usage_details ?? record.toolUsageDetails,
+    ),
     performance: normalizePerformance(record.performance, record),
     billing: normalizeBilling(record.billing),
     related: normalizeRelated(record.related),
@@ -684,6 +703,35 @@ function normalizeRequestEvent(
 // /request-events gained the field one release later — a capable backend can
 // still omit it here, so an unparseable payload degrades to the flat counters
 // instead of failing the whole query.
+function normalizeToolUsage(value: unknown): RequestEventToolUsage | null {
+  if (!isRecord(value)) return null
+  const out: RequestEventToolUsage = {
+    webSearchCalls:
+      readNumberFromKeys(value, ['web_search_calls', 'webSearchCalls', 'web_search_requests']) ?? 0,
+    webSearchQueries: readNumberFromKeys(value, ['web_search_queries', 'webSearchQueries']) ?? 0,
+    webFetchCalls: readNumberFromKeys(value, ['web_fetch_calls', 'webFetchCalls']) ?? 0,
+    xSearchCalls: readNumberFromKeys(value, ['x_search_calls', 'xSearchCalls']) ?? 0,
+    codeExecutionCalls:
+      readNumberFromKeys(value, [
+        'code_execution_calls',
+        'codeExecutionCalls',
+        'code_interpreter_calls',
+      ]) ?? 0,
+    fileSearchCalls: readNumberFromKeys(value, ['file_search_calls', 'fileSearchCalls']) ?? 0,
+    documentSearchCalls:
+      readNumberFromKeys(value, ['document_search_calls', 'documentSearchCalls']) ?? 0,
+    mcpCalls: readNumberFromKeys(value, ['mcp_calls', 'mcpCalls']) ?? 0,
+    googleMapsChunks: readNumberFromKeys(value, ['google_maps_chunks', 'googleMapsChunks']) ?? 0,
+    numSourcesUsed: readNumberFromKeys(value, ['num_sources_used', 'numSourcesUsed']) ?? 0,
+    numServerSideToolsUsed:
+      readNumberFromKeys(value, ['num_server_side_tools_used', 'numServerSideToolsUsed']) ?? 0,
+    imageGenerationCalls:
+      readNumberFromKeys(value, ['image_generation_calls', 'imageGenerationCalls']) ?? 0,
+  }
+  const hasAny = Object.values(out).some((count) => count > 0)
+  return hasAny ? out : null
+}
+
 function normalizeTokenBreakdown(value: unknown, enabled: boolean): UsageTokenBreakdown | null {
   if (!enabled) return null
   try {

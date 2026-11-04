@@ -26,6 +26,7 @@ import { formatModelPrice } from '@/lib/billing/amount-format'
 import type { UserCatalogModel } from './use-user-model-catalog'
 import {
   capabilityBadgeVariant,
+  extractRungToolPrices,
   formatExactNumber,
   formatMilliseconds,
   formatPercent,
@@ -120,9 +121,19 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
 
-  const components: { key: string; label: string; value: number | null }[] = [
+  const toolPrices = extractRungToolPrices(rung)
+  const components: { key: string; label: string; value: number | null; suffix?: string }[] = [
     { key: 'input', label: t('userModels.price.input'), value: rung.inputPricePerMillion },
     { key: 'output', label: t('userModels.price.output'), value: rung.outputPricePerMillion },
+    ...(rung.reasoningPricePerMillion !== null && rung.reasoningPricePerMillion !== undefined
+      ? [
+          {
+            key: 'reasoning',
+            label: t('userModels.price.reasoning'),
+            value: rung.reasoningPricePerMillion,
+          },
+        ]
+      : []),
     {
       key: 'cacheRead',
       label: t('userModels.price.cacheRead'),
@@ -134,6 +145,12 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
       value: rung.cacheWritePricePerMillion,
     },
     { key: 'request', label: t('userModels.price.request'), value: rung.requestPrice },
+    ...toolPrices.map((item) => ({
+      key: `tool:${item.key}`,
+      label: t(`userModels.price.tools.${item.key}`),
+      value: item.pricePerCall,
+      suffix: t('userModels.price.perCall'),
+    })),
   ]
 
   return (
@@ -155,12 +172,23 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
               {component.value === null ? (
                 <UnreportedValue />
               ) : (
-                formatModelPrice(component.value, locale)
+                <>
+                  {formatModelPrice(component.value, locale)}
+                  {component.suffix ? (
+                    <span className="text-muted-foreground text-xs">{component.suffix}</span>
+                  ) : null}
+                </>
               )}
             </dd>
           </div>
         ))}
       </dl>
+      {rung.pricingExpr ? (
+        <div className="border-border/60 bg-muted/30 border-t px-3 py-1.5 text-xs">
+          <span className="text-muted-foreground">{t('userModels.price.pricingExpr')}</span>{' '}
+          <code className="font-mono break-all">{rung.pricingExpr}</code>
+        </div>
+      ) : null}
     </div>
   )
 }

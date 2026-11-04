@@ -257,27 +257,40 @@ function CardPriceSummary({
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <p className="min-w-0 text-xs">
-        <span className="text-muted-foreground">{t('userModels.price.from')}</span>{' '}
-        <span className="text-foreground font-semibold tabular-nums">
-          {entryPoint.input === null
-            ? t('userModels.value.unreported')
-            : formatModelPrice(entryPoint.input, locale)}
-        </span>{' '}
-        <span className="text-muted-foreground">{t('userModels.price.inSuffix')}</span>{' '}
-        <span className="text-muted-foreground">/</span>{' '}
-        <span className="text-foreground font-semibold tabular-nums">
-          {entryPoint.output === null
-            ? t('userModels.value.unreported')
-            : formatModelPrice(entryPoint.output, locale)}
-        </span>{' '}
-        <span className="text-muted-foreground">{t('userModels.price.outSuffix')}</span>
-      </p>
-      {entryPoint.tiered ? (
-        <Badge variant="info">
-          {t('userModels.price.tiered', { rungs: entryPoint.maxRungCount })}
-        </Badge>
+    <div className="grid gap-1">
+      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="min-w-0 text-xs">
+          <span className="text-muted-foreground">{t('userModels.price.from')}</span>{' '}
+          <span className="text-foreground font-semibold tabular-nums">
+            {entryPoint.input === null
+              ? t('userModels.value.unreported')
+              : formatModelPrice(entryPoint.input, locale)}
+          </span>{' '}
+          <span className="text-muted-foreground">{t('userModels.price.inSuffix')}</span>{' '}
+          <span className="text-muted-foreground">/</span>{' '}
+          <span className="text-foreground font-semibold tabular-nums">
+            {entryPoint.output === null
+              ? t('userModels.value.unreported')
+              : formatModelPrice(entryPoint.output, locale)}
+          </span>{' '}
+          <span className="text-muted-foreground">{t('userModels.price.outSuffix')}</span>
+        </p>
+        {entryPoint.tiered ? (
+          <Badge variant="info">
+            {t('userModels.price.tiered', { rungs: entryPoint.maxRungCount })}
+          </Badge>
+        ) : null}
+      </div>
+      {entryPoint.toolPrices.length > 0 ? (
+        <p className="text-muted-foreground truncate text-[11px] tabular-nums">
+          {t('userModels.price.toolsSummary')}{' '}
+          {entryPoint.toolPrices
+            .map(
+              (item) =>
+                `${t(`userModels.price.tools.${item.key}`)} ${formatModelPrice(item.pricePerCall, locale)}${t('userModels.price.perCall')}`,
+            )
+            .join(' · ')}
+        </p>
       ) : null}
     </div>
   )
