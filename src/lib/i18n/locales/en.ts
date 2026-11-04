@@ -830,6 +830,9 @@ export const en = {
         runtimeContextDescription:
           'Determines whether future charges match price rules using the request Tier or response Tier.',
         configure: 'Configure matching',
+        publicModelPricing: 'Show model catalog pricing when signed out',
+        publicModelPricingDescription:
+          'When enabled, anonymous visitors can view model price ladders, tool pricing, and availability metrics on the public model catalog without signing in.',
         dialogTitle: 'Configure global Tier matching',
         dialogDescription:
           'Choose whether billing obtains the Tier from the request or the final response. This applies to every future charge.',

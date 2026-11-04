@@ -152,6 +152,7 @@ export type BillingSettings = {
   modelSource: BillingModelSource
   serviceTierSource: BillingServiceTierSource
   reportTimezone: string
+  publicModelPricing?: boolean
   supported: boolean
   raw: unknown
 }
@@ -160,6 +161,7 @@ export type BillingSettingsUpdate = {
   modelSource?: BillingModelSource
   serviceTierSource?: BillingServiceTierSource
   reportTimezone?: string
+  publicModelPricing?: boolean
 }
 
 export type BillingTierDiagnostics = {

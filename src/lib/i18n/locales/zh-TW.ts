@@ -802,6 +802,9 @@ export const zhTW = {
         currentRuntimeSource: '目前使用「{{source}}」選擇價格規則',
         runtimeContextDescription: '決定後續扣款使用請求 Tier 或回應 Tier 比對價格規則。',
         configure: '設定比對方式',
+        publicModelPricing: '未登入公開模型廣場價格',
+        publicModelPricingDescription:
+          '開啟後，未登入訪客可在模型廣場直接查看模型價格階梯、工具計費與可用性指標；關閉時需登入使用者帳號後查看。',
         dialogTitle: '設定全域 Tier 比對方式',
         dialogDescription: '選擇計費時從請求或最終回應取得 Tier。此設定套用於後續所有扣款請求。',
         defaultBadge: '預設',

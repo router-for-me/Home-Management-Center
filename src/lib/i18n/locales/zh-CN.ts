@@ -801,6 +801,9 @@ export const zhCN = {
         currentRuntimeSource: '当前使用「{{source}}」选择价格规则',
         runtimeContextDescription: '决定后续扣款使用请求 Tier 还是响应 Tier 匹配价格规则。',
         configure: '配置匹配方式',
+        publicModelPricing: '未登录公开模型广场价格',
+        publicModelPricingDescription:
+          '开启后，未登录访客可在模型广场直接查看模型价格阶梯、工具计费与可用性指标；关闭时需登录用户账号后查看。',
         dialogTitle: '配置全局 Tier 匹配方式',
         dialogDescription:
           '选择计费时从请求还是最终响应中取得 Tier。该设置应用于后续所有扣款请求。',
