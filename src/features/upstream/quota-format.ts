@@ -51,3 +51,27 @@ export function getUpstreamQuotaErrorMessage(
     return t('upstreamPage.quota.metaAuthorizationRequired')
   return entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')
 }
+
+export function formatUpstreamQuotaRelativeTime(
+  timestampMs: number,
+  locale?: string,
+  nowMs = Date.now(),
+) {
+  const diffSeconds = Math.round((timestampMs - nowMs) / 1000)
+  const absSeconds = Math.abs(diffSeconds)
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
+
+  if (absSeconds < 60) {
+    return rtf.format(diffSeconds, 'second')
+  }
+  const diffMinutes = Math.round(diffSeconds / 60)
+  if (Math.abs(diffMinutes) < 60) {
+    return rtf.format(diffMinutes, 'minute')
+  }
+  const diffHours = Math.round(diffSeconds / 3600)
+  if (Math.abs(diffHours) < 24) {
+    return rtf.format(diffHours, 'hour')
+  }
+  const diffDays = Math.round(diffSeconds / 86400)
+  return rtf.format(diffDays, 'day')
+}

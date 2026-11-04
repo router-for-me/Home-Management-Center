@@ -503,13 +503,17 @@ describe('Antigravity quota grouping', () => {
 
 describe('UpstreamQuotaCell rendering', () => {
   test('renders grok plan and on-demand rows from real backend fields', () => {
-    const entry = createXaiEntry()
+    const entry: UpstreamQuotaEntry = {
+      ...createXaiEntry(),
+      observedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+    }
     const markup = renderWithI18n(<UpstreamQuotaCell state={{ kind: 'entry', entry }} />)
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('$42.00')
     expect(markup).toContain('$150.00')
     expect(markup).toContain('$38.00')
     expect(markup).toContain('$50.00')
+    expect(markup).toContain('Quota updated: 5 min. ago')
   })
 
   test('degrades to the currency window without plan or on-demand fields', () => {

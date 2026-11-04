@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  formatUpstreamQuotaRelativeTime,
   getUpstreamQuotaErrorMessage,
   getUpstreamQuotaWindowDisplayLabel,
   getUpstreamQuotaWindowIdentityLabel,
@@ -518,12 +519,18 @@ export function UpstreamQuotaCell({
         </p>
       ) : null}
       {Number.isFinite(observedTime) ? (
-        <p className="text-muted-foreground text-[11px]">
+        <p
+          className="text-muted-foreground text-[11px]"
+          title={new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+            dateStyle: 'short',
+            timeStyle: 'medium',
+          }).format(observedTime)}
+        >
           {t('upstreamPage.quota.updatedAt', {
-            time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
-              dateStyle: 'short',
-              timeStyle: 'medium',
-            }).format(observedTime),
+            time: formatUpstreamQuotaRelativeTime(
+              observedTime,
+              i18n.resolvedLanguage ?? i18n.language,
+            ),
           })}
         </p>
       ) : null}
