@@ -501,13 +501,6 @@ function buildCostTooltipRows(
     }
   }
 
-  if (billing.matchedPriceRule) {
-    rows.push({
-      label: t('requestEventsPage.detail.costBreakdown.matchedRule'),
-      value: billing.matchedPriceRule,
-    })
-  }
-
   return rows
 }
 
@@ -2013,11 +2006,6 @@ function RequestEventsTable({
                                       event.billing?.currency,
                                     ) ?? <EmptyValue />}
                                   </p>
-                                  {event.billing?.matchedPriceRule ? (
-                                    <p className="text-muted-foreground truncate text-xs">
-                                      {event.billing.matchedPriceRule}
-                                    </p>
-                                  ) : null}
                                 </div>
                               )
                               if (costTooltipRows.length === 0) return cellContent
