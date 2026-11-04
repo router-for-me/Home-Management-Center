@@ -469,8 +469,9 @@ test('the real credential row offers collection for a backend never-collected en
   await mountAccounts()
   const menu = container.querySelector('tbody button[aria-haspopup="menu"]')
   expect(menu).not.toBeNull()
-  // With collection enabled the fourth row action is placed in the overflow menu.
-  // The old null-entry gate rendered only View, Download and Delete inline.
+  // With collection enabled, Collect quota sits inline next to View (before Download),
+  // while Download and Delete are placed in the overflow menu.
+  expect(container.querySelector('tbody')?.textContent).toContain('Collect quota')
   expect(container.querySelector('tbody')?.textContent).not.toContain('Delete')
   const { promise } = await begin()
   await reply(take(detailPath), success())

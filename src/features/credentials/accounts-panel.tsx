@@ -813,13 +813,6 @@ function CredentialList({
                         icon: Eye,
                         onSelect: () => onOpenDrawer(resource, 'overview'),
                       },
-                      {
-                        id: 'download',
-                        label: t('credentialsPage.actions.download'),
-                        icon: Download,
-                        disabled: mutating,
-                        onSelect: () => onDownloadResource(resource),
-                      },
                       !quotaBlocked
                         ? {
                             id: 'collect-quota',
@@ -831,6 +824,13 @@ function CredentialList({
                             onSelect: () => onCollectQuota(resource),
                           }
                         : null,
+                      {
+                        id: 'download',
+                        label: t('credentialsPage.actions.download'),
+                        icon: Download,
+                        disabled: mutating,
+                        onSelect: () => onDownloadResource(resource),
+                      },
                       cooldownResetSupported && getCredentialCooldownId(resource) !== null
                         ? {
                             id: 'clear-cooldown',
