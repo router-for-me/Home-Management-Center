@@ -204,16 +204,22 @@ function PricingSection({
 }) {
   const { t } = useTranslation()
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.signedOutDetail')}</p>
-  }
+  if (!pricing) {
+    if (!authenticated) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.price.signedOutDetail')}</p>
+      )
+    }
 
-  if (accessible === false) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.notCoveredDetail')}</p>
-  }
+    if (accessible === false) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.price.notCoveredDetail')}</p>
+      )
+    }
 
-  if (accessible === null) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.unavailable')}</p>
+    if (accessible === null) {
+      return <p className="text-muted-foreground text-sm">{t('userModels.price.unavailable')}</p>
+    }
   }
 
   if (!pricing || pricing.status !== 'published' || pricing.providers.length === 0) {
@@ -267,14 +273,18 @@ function AvailabilitySection({
   const { t, i18n } = useTranslation()
   const locale = i18n.language
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.availability.signedOut')}</p>
-  }
+  if (!availability) {
+    if (!authenticated) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.availability.signedOut')}</p>
+      )
+    }
 
-  if (accessible === false) {
-    return (
-      <p className="text-muted-foreground text-sm">{t('userModels.availability.notCovered')}</p>
-    )
+    if (accessible === false) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.availability.notCovered')}</p>
+      )
+    }
   }
 
   if (!availability) {

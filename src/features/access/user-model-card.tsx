@@ -213,6 +213,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
         <CardPriceSummary
           authenticated={authenticated}
           accessible={model.accessible}
+          hasPricing={model.pricing !== null}
           published={model.pricing?.status === 'published'}
           entryPoint={entryPoint}
           locale={locale}
@@ -225,28 +226,32 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
 function CardPriceSummary({
   authenticated,
   accessible,
+  hasPricing,
   published,
   entryPoint,
   locale,
 }: {
   authenticated: boolean
   accessible: boolean | null
+  hasPricing: boolean
   published: boolean
   entryPoint: ReturnType<typeof pricingEntryPoint>
   locale: string
 }) {
   const { t } = useTranslation()
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.signedOut')}</p>
-  }
+  if (!hasPricing) {
+    if (!authenticated) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.signedOut')}</p>
+    }
 
-  if (accessible === false) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.notCovered')}</p>
-  }
+    if (accessible === false) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.notCovered')}</p>
+    }
 
-  if (accessible === null) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.unavailable')}</p>
+    if (accessible === null) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.unavailable')}</p>
+    }
   }
 
   // A published ladder with no readable entry rung, or no ladder at all, is the
