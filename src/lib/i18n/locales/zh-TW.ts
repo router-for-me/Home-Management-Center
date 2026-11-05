@@ -2622,7 +2622,6 @@ export const zhTW = {
       },
       list: {
         title: '存取金鑰',
-        description: '這些金鑰供用戶端存取 Home Center 服務端使用，不是模型供應商金鑰。',
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
         index: '序號',

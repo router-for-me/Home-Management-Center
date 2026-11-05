@@ -162,7 +162,6 @@ function AccessKeysLoadingState() {
       <TableSurface>
         <TableSurfaceHeader
           title={t('accessKeysPage.list.title')}
-          description={t('accessKeysPage.list.description')}
           actions={
             <>
               <Skeleton className="h-9 w-28 rounded-md" />
@@ -1168,7 +1167,6 @@ export function AccessKeysWorkbenchPage() {
       <TableSurface className="min-w-0">
         <TableSurfaceHeader
           title={t('accessKeysPage.list.title')}
-          description={t('accessKeysPage.list.description')}
           actions={
             <>
               <Button

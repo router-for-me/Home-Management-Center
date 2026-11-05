@@ -2622,7 +2622,6 @@ export const zhCN = {
       },
       list: {
         title: '访问密钥',
-        description: '这里的密钥用于客户端访问 Home Center 服务端，不是模型供应商密钥。',
         filterPlaceholder: '筛选密钥',
         empty: '当前筛选条件下没有访问密钥。',
         index: '序号',

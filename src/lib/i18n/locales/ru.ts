@@ -2754,8 +2754,6 @@ export const ru = {
       },
       list: {
         title: 'Access keys',
-        description:
-          'Эти ключи дают клиентам доступ к серверу Home Center; это не ключи провайдеров моделей.',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
         index: 'N',

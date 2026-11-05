@@ -2751,8 +2751,6 @@ export const en = {
       },
       list: {
         title: 'Access keys',
-        description:
-          'These keys grant clients access to the Home Center server; they are not model provider keys.',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
         index: 'No.',
