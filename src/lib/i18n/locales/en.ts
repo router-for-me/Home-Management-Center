@@ -2028,7 +2028,7 @@ export const en = {
       quota: {
         actions: {
           collect: 'Collect quota',
-          refresh: 'Refresh quota',
+          refresh: 'Recollect quota',
           retry: 'Retry collection',
           collecting: 'Collecting',
           disabled: 'Enable this credential to collect quota',
@@ -2042,7 +2042,7 @@ export const en = {
         snapshotMiss: 'Not loaded',
         snapshotMissHint:
           'This credential is outside the loaded snapshot list. Open quota details to read its current status.',
-        unsupported: 'Unsupported',
+        unsupported: 'Query unsupported',
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
@@ -2057,10 +2057,126 @@ export const en = {
           usageBreakdown: 'Usage breakdown (shared quota)',
           productUsage: '{{product}} usage',
           usageUnavailable: 'Usage unavailable from xAI',
+          usageSummary: 'Product usage ({{count}})',
         },
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
         more: '+{{count}} more',
+        summary: {
+          plan: '{{name}} plan',
+          historical: 'Recollect needed',
+          statusHint:
+            'Reported quota status includes periods hidden from this preview. It does not confirm that the credential is currently reachable.',
+          viewAll: 'Quota details ({{count}} windows)',
+          viewDetails: 'Quota details',
+          viewAllShort: 'All {{count}}',
+          viewDetailsShort: 'Details',
+          windowCount: '{{count}} quota windows',
+          sharedProducts: 'Products sharing quota: {{count}}',
+          updating: 'Collecting',
+          partial: 'Partial collection',
+          historicalDescription:
+            'These collected values are outside their validity period. Recollect for current quota. Bar colors still describe the remaining quota at that observation.',
+          retainedDescription:
+            'This query did not update the data. The last valid observations are retained.',
+          partialDescription:
+            'Some information could not be updated. Reported quota remains available; other information may come from an earlier observation.',
+          technicalDetails: 'Technical details',
+          originalError: 'Original upstream error',
+          errorCode: 'Error code',
+          httpStatus: 'HTTP status',
+          requestId: 'Request ID',
+          errorTime: 'Error time',
+          quotaStatus: 'Last observed quota status',
+          freshness: 'Data freshness',
+
+          noData: 'No data yet',
+          unknownHint: 'The quota status is not confirmed. Check the collected data in details.',
+          historicalHint:
+            'These are previous values outside their validity period. Recollect quota to update them.',
+          noDataHint:
+            'No usable quota values are available. Open details to review collection status.',
+          observedAgo: 'Collected {{time}}',
+          observedAtHint: 'Collected at: {{time}}',
+          queryScope: 'This describes the quota query only, not the outcome of model calls.',
+          queryIssueHint: 'About this quota query',
+          queryIssueLabel: '{{reason}}. Show explanation',
+
+          scope: 'Quota group',
+          account: 'Account',
+          unlimited: 'Unlimited',
+          periodUnavailable:
+            'The {{period}} quota for {{group}} is not available here. Check the full details.',
+          nextReset: 'Resets {{time}}',
+          resetUnconfirmed: 'Reset time unknown',
+          resetHint: 'Reset time: {{time}}',
+          pastResetHint: 'Recorded reset time has passed: {{time}}',
+          validUntil: 'This observation was valid until {{time}}.',
+
+          detailReadLabel: 'Quota periods',
+          detailReadFailed: 'Some details could not be loaded',
+
+          validUntilLabel: 'Data valid until',
+
+          labels: 'Quota labels',
+          queryFailed: 'Quota query failed',
+          collectingHint:
+            'Collecting the latest quota. Existing values remain visible until a valid result arrives.',
+          unsupportedHint: 'Quota queries are not supported for this credential type.',
+          capabilityAbsentHint:
+            'The connected backend does not provide the quota snapshot query capability.',
+          readFailed: 'Quota read failed',
+          readFailedHint:
+            'The latest quota records could not be read. Sync the data or open details to retry.',
+          recordMissing: 'No quota record',
+          recordMissingHint:
+            'This list has no quota record for the credential. Open details to read it.',
+          notCollectedHint: 'There is no collected quota yet. Use “{{action}}” to retrieve it.',
+          resetUnknownHint: 'Reset time unavailable',
+          observedUnknown: 'Collection time unknown',
+          noCollectionResult: 'No collection result',
+          notYetCollected: 'Not collected yet',
+          noCollectionResultHint: 'Last attempt: {{time}}',
+          hiddenRisk: {
+            low: 'Another quota window is low',
+            exhausted: 'Another quota window is exhausted',
+          },
+
+          historicalReadOnlyHint:
+            'These values are outside their validity period. The previous collection is shown.',
+          notCollectedReadOnlyHint: 'No valid quota collection is available yet.',
+        },
+        errors: {
+          authorization: {
+            title: 'Quota query unauthorized',
+            description:
+              'Authorization failed for this quota request. Check the credential’s access to the quota endpoint.',
+          },
+          rateLimited: {
+            title: 'Quota query rate limited',
+            description: 'The upstream limited quota queries. Wait before collecting again.',
+          },
+          invalidResponse: {
+            title: 'Quota query incomplete',
+            description:
+              'The quota endpoint did not return complete, usable data. Try collecting again later.',
+          },
+          missingAuthorization: {
+            title: 'Quota query authorization missing',
+            description:
+              'This credential lacks authorization for the Meta quota endpoint. Check its query permissions.',
+          },
+          unavailable: {
+            title: 'Quota query failed',
+            description:
+              'The quota endpoint could not be read. Check query permissions or upstream service status.',
+          },
+          unknown: {
+            title: 'Quota query failed',
+            description:
+              'The latest quota could not be retrieved. Open quota details for technical information.',
+          },
+        },
         truncated:
           'The quota list loads the first {{count}} credentials by risk. Open quota details for the remaining credentials.',
         antigravity: {
@@ -2087,11 +2203,11 @@ export const en = {
           observedAt: 'Observed {{time}}',
         },
         status: {
-          healthy: 'Healthy',
+          healthy: 'Quota healthy',
           low: 'Low quota',
           exhausted: 'Exhausted',
-          unknown: 'Unknown',
-          error: 'Query failed',
+          unknown: 'Quota unconfirmed',
+          error: 'Quota query failed',
           unsupported: 'Unsupported',
         },
         freshness: {
