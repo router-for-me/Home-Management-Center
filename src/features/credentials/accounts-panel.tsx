@@ -620,21 +620,31 @@ function CredentialList({
                 onCheckedChange={onToggleAll}
               />
             </TableHead>
-            <TableHead>{t('credentialsPage.list.credential')}</TableHead>
-            {showSecondary ? <TableHead>{t('credentialsPage.list.provider')}</TableHead> : null}
+            <TableHead className="whitespace-normal">
+              {t('credentialsPage.list.credential')}
+            </TableHead>
+            {showSecondary ? (
+              <TableHead className="whitespace-normal">
+                {t('credentialsPage.list.provider')}
+              </TableHead>
+            ) : null}
             <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
             {showSecondary ? (
               <>
                 <TableHead>{t('credentialsPage.list.quota')}</TableHead>
                 <TableHead>{t('credentialsPage.list.inFlight')}</TableHead>
                 <TableHead>{t('credentialsPage.list.ws')}</TableHead>
-                <TableHead>{t('credentialsPage.list.cooling')}</TableHead>
+                <TableHead className="whitespace-normal">
+                  {t('credentialsPage.list.cooling')}
+                </TableHead>
                 <TableHead>{t('credentialsPage.list.priority')}</TableHead>
                 <TableHead>{t('credentialsPage.list.weight')}</TableHead>
               </>
             ) : null}
             <TableHead className="table-sticky-action-head table-action-column-3 text-right">
-              {t('credentialsPage.list.actions')}
+              <span className={showSecondary ? undefined : 'sr-only'}>
+                {t('credentialsPage.list.actions')}
+              </span>
             </TableHead>
           </TableRow>
         </TableHeader>

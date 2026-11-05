@@ -57,7 +57,7 @@ export function WebsocketsCell({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col items-start gap-1">
       <Switch
         checked={resource.websockets}
         disabled={mutating}
@@ -65,7 +65,14 @@ export function WebsocketsCell({
         onCheckedChange={(checked) => void handleToggle(checked)}
         onClick={(event) => event.stopPropagation()}
       />
-      <span className="text-muted-foreground text-xs">
+      <span
+        className="text-muted-foreground text-meta max-w-full truncate"
+        title={
+          resource.websockets
+            ? t('credentialsPage.status.enabled')
+            : t('credentialsPage.status.disabled')
+        }
+      >
         {resource.websockets
           ? t('credentialsPage.status.enabled')
           : t('credentialsPage.status.disabled')}
