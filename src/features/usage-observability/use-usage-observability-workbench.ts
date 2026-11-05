@@ -5,6 +5,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { getAdaptiveRefreshInterval } from '@/features/observability/live-refresh'
 import { useLiveRefresh } from '@/features/observability/use-live-refresh'
 import { useManagementSession } from '@/features/observability/use-management-session'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
 import { usePersistentPagination } from '@/hooks/use-persistent-pagination'
 import { downloadRequestLogById, toLogsApiError } from '@/lib/api/management/logs'
 import {
@@ -29,9 +30,11 @@ import {
   toUsageApiError,
 } from '@/lib/api/management/usage'
 import { applyFilterPatch } from '@/lib/filter-patch'
-import { uiPreferenceKeys } from '@/lib/ui-preferences'
+import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const recordPageSizeOptions = [25, 50, 100, 200]
+const persistentUsageRanges = ['24h', '7d', '30d', 'all'] as const
+const normalizeUsageRange = createChoicePreferenceNormalizer(persistentUsageRanges)
 const credentialUsagePageSizeOptions = [10, 20, 50, 100]
 const usageRecordsRefreshMs = 30_000
 const usageSummaryRefreshMs = 60_000
@@ -80,11 +83,26 @@ export function useUsageObservabilityWorkbench() {
     usageRealtime: false,
     requestLogIndex: false,
   }
+  const [storedRange, setStoredRange] = useLocalStoragePreference(
+    uiPreferenceKeys.usageRange,
+    defaultUsageFilters.range as (typeof persistentUsageRanges)[number],
+    normalizeUsageRange,
+  )
   const [filters, setFilters] = usePersistentPagination(
     uiPreferenceKeys.usageRecordPageSize,
-    defaultUsageFilters,
+    {
+      ...defaultUsageFilters,
+      range: storedRange,
+    },
     recordPageSizeOptions,
   )
+
+  useEffect(() => {
+    const normalizedRange = normalizeUsageRange(filters.range)
+    if (normalizedRange) {
+      setStoredRange(normalizedRange)
+    }
+  }, [filters.range, setStoredRange])
   const [manualRefreshing, setManualRefreshing] = useState(false)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [rankingGroup, setRankingGroup] = useState<UsageAggregateGroupBy>(
