@@ -2021,8 +2021,8 @@ export const ru = {
         providerKeys: 'Ключи поставщиков',
         attention: 'Требуют внимания',
         attentionHint: 'Показать учётные данные с квотой, требующей внимания',
-        websockets: 'WebSocket вкл.',
-        websocketsHint: 'Codex / Grok',
+        websockets: 'WebSocket включён',
+        websocketsHint: 'Codex / xAI (Grok)',
         pending: 'Загрузка',
         unsupported: 'Не поддерживается',
       },
@@ -2278,8 +2278,6 @@ export const ru = {
         metadata: {
           priorityPlaceholder: 'например, 10 или -1',
           priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
-          websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
-          websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
         },
         danger: {
@@ -2469,7 +2467,7 @@ export const ru = {
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
         inFlight: 'В работе',
-        ws: 'WS',
+        ws: 'WebSocket',
         cooling: 'Расписание охлаждения',
         priority: 'Приоритет',
         weight: 'Вес',
@@ -2477,9 +2475,14 @@ export const ru = {
       },
       inline: {
         saved: 'Сохранено.',
-        websocketsLabel: 'Переключить WebSocket',
-        websocketsUnsupported: 'WebSocket не поддерживается для этого поставщика',
-        notApplicable: 'n/a',
+        websocketsLabel: 'Переключить WebSocket для {{name}}',
+        websocketsUnsupported:
+          'Настройка транспорта WebSocket доступна только для учётных данных Codex и xAI (Grok).',
+        websocketsEnabled: 'Включён',
+        websocketsDisabled: 'Выключен',
+        websocketsUnknown: 'Неизвестно',
+        websocketsMissing: 'Сервер не вернул настройку WebSocket для этих учётных данных.',
+        notApplicable: 'Неприменимо',
       },
       bulk: {
         selectAll: 'Выбрать все credentials в текущем списке',
@@ -2527,7 +2530,7 @@ export const ru = {
           size: 'Размер',
           priority: 'Приоритет',
           requestRetry: 'Раунды повторов запроса',
-          websockets: 'WebSocket',
+          websockets: 'Транспорт WebSocket',
           cooling: 'Расписание охлаждения',
           success: 'Успешно',
           failed: 'Ошибки',
@@ -2564,9 +2567,9 @@ export const ru = {
           'Количество дополнительных раундов повторных попыток после сбоя всех учетных данных в начальном раунде. 0 отключает дополнительные раунды; пустое или отрицательное значение наследует глобальную настройку.',
         requestRetryInvalid:
           'Количество раундов повторов должно быть неотрицательным целым числом.',
-        websockets: 'Поддержка WebSocket',
+        websockets: 'Транспорт WebSocket',
         websocketsHint:
-          'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
+          'Включает или отключает транспорт WebSocket к поставщику. Доступно для Codex и xAI (Grok).',
         usingApi: 'Использовать официальный API (using_api)',
         usingApiHint:
           'Если включено, используется официальный API xAI; если выключено — Grok CLI chat-proxy.',

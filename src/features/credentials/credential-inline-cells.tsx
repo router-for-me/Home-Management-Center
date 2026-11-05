@@ -101,22 +101,24 @@ export function WebsocketsCell({
 }) {
   const { t } = useTranslation()
 
-  if (!supportsCredentialWebsockets(resource)) {
-    return (
-      <span
-        className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-1 text-xs"
-        title={t('credentialsPage.inline.websocketsUnsupported')}
-      >
-        {t('credentialsPage.inline.notApplicable')}
-      </span>
-    )
-  }
+  const supported = supportsCredentialWebsockets(resource)
 
-  if (!resource.metadataAvailability.websockets) {
+  if (!supported || !resource.metadataAvailability.websockets) {
     return (
-      <span className="text-muted-foreground text-xs">
-        {t('credentialsPage.status.notAvailable')}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-muted-foreground text-body cursor-pointer" tabIndex={0}>
+            {supported
+              ? t('credentialsPage.inline.websocketsUnknown')
+              : t('credentialsPage.inline.notApplicable')}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal">
+          {supported
+            ? t('credentialsPage.inline.websocketsMissing')
+            : t('credentialsPage.inline.websocketsUnsupported')}
+        </TooltipContent>
+      </Tooltip>
     )
   }
 
@@ -134,7 +136,9 @@ export function WebsocketsCell({
       <Switch
         checked={resource.websockets}
         disabled={mutating}
-        aria-label={t('credentialsPage.inline.websocketsLabel')}
+        aria-label={t('credentialsPage.inline.websocketsLabel', {
+          name: getCredentialDisplayName(resource),
+        })}
         onCheckedChange={(checked) => void handleToggle(checked)}
         onClick={(event) => event.stopPropagation()}
       />
@@ -142,13 +146,13 @@ export function WebsocketsCell({
         className="text-muted-foreground text-meta max-w-full truncate"
         title={
           resource.websockets
-            ? t('credentialsPage.status.enabled')
-            : t('credentialsPage.status.disabled')
+            ? t('credentialsPage.inline.websocketsEnabled')
+            : t('credentialsPage.inline.websocketsDisabled')
         }
       >
         {resource.websockets
-          ? t('credentialsPage.status.enabled')
-          : t('credentialsPage.status.disabled')}
+          ? t('credentialsPage.inline.websocketsEnabled')
+          : t('credentialsPage.inline.websocketsDisabled')}
       </span>
     </div>
   )

@@ -2020,8 +2020,8 @@ export const en = {
         providerKeys: 'Provider keys',
         attention: 'Quota attention',
         attentionHint: 'Show credentials whose quota needs attention',
-        websockets: 'WebSocket on',
-        websocketsHint: 'Codex / Grok',
+        websockets: 'WebSocket enabled',
+        websocketsHint: 'Codex / xAI (Grok)',
         pending: 'Loading',
         unsupported: 'Not supported',
       },
@@ -2277,8 +2277,6 @@ export const en = {
         metadata: {
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values have higher scheduling priority.',
-          websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
-          websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
         },
         danger: {
@@ -2467,7 +2465,7 @@ export const en = {
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
         inFlight: 'In-flight',
-        ws: 'WS',
+        ws: 'WebSocket',
         cooling: 'Cooling schedule',
         priority: 'Priority',
         weight: 'Weight',
@@ -2475,9 +2473,14 @@ export const en = {
       },
       inline: {
         saved: 'Saved.',
-        websocketsLabel: 'Toggle WebSocket',
-        websocketsUnsupported: 'WebSocket is not supported for this provider',
-        notApplicable: 'n/a',
+        websocketsLabel: 'Toggle WebSocket for {{name}}',
+        websocketsUnsupported:
+          'Only Codex and xAI (Grok) credentials support configuring WebSocket transport.',
+        websocketsEnabled: 'Enabled',
+        websocketsDisabled: 'Disabled',
+        websocketsUnknown: 'Unknown',
+        websocketsMissing: 'The backend did not return the WebSocket setting for this credential.',
+        notApplicable: 'Not applicable',
       },
       bulk: {
         selectAll: 'Select all credentials in the current list',
@@ -2525,7 +2528,7 @@ export const en = {
           size: 'Size',
           priority: 'Priority',
           requestRetry: 'Request retry rounds',
-          websockets: 'WebSocket',
+          websockets: 'WebSocket transport',
           cooling: 'Cooling schedule',
           success: 'Success',
           failed: 'Failed',
@@ -2560,9 +2563,9 @@ export const en = {
         requestRetryHint:
           'Additional retry rounds allowed after all credentials fail in the initial attempt round. 0 disables additional rounds; blank or negative values inherit the global setting.',
         requestRetryInvalid: 'Request retry rounds must be a non-negative integer.',
-        websockets: 'WebSocket support',
+        websockets: 'WebSocket transport',
         websocketsHint:
-          'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
+          'Enable or disable upstream WebSocket transport for this credential. Applies to Codex and xAI (Grok).',
         usingApi: 'Use official API (using_api)',
         usingApiHint:
           'Use the official xAI API when enabled; use Grok CLI chat-proxy when disabled.',

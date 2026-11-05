@@ -97,6 +97,7 @@ describe('credential toolbar', () => {
     const expectedFilterKeys = Object.keys(en.common.credentialsPage.filters).sort()
     const expectedListKeys = Object.keys(en.common.credentialsPage.list).sort()
     const expectedQuickFilterKeys = Object.keys(en.common.upstreamPage.quotaChips).sort()
+    const expectedInlineKeys = Object.keys(en.common.credentialsPage.inline).sort()
 
     expect(expectedListKeys).toContain('inFlight')
     expect(expectedListKeys).toContain('weight')
@@ -105,6 +106,8 @@ describe('credential toolbar', () => {
       expect(Object.keys(locale.common.credentialsPage.actions).sort()).toEqual(expectedActionKeys)
       expect(Object.keys(locale.common.credentialsPage.filters).sort()).toEqual(expectedFilterKeys)
       expect(Object.keys(locale.common.credentialsPage.list).sort()).toEqual(expectedListKeys)
+      expect(Object.keys(locale.common.credentialsPage.inline).sort()).toEqual(expectedInlineKeys)
+      expect(locale.common.credentialsPage.list.ws).toBe('WebSocket')
       expect(Object.keys(locale.common.upstreamPage.quotaChips).sort()).toEqual(
         expectedQuickFilterKeys,
       )

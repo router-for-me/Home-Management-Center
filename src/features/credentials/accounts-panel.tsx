@@ -60,7 +60,7 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
   type CreateCredentialMode,
@@ -526,7 +526,7 @@ function CredentialList({
             <>
               <col className="w-[22rem]" />
               <col className="w-[112px]" />
-              <col className="w-[112px]" />
+              <col className="w-[9rem]" />
               <col className="w-[116px]" />
               <col className="w-[6.5rem]" />
               <col className="w-[5.5rem]" />
@@ -557,7 +557,18 @@ function CredentialList({
               <>
                 <TableHead>{t('credentialsPage.list.quota')}</TableHead>
                 <TableHead>{t('credentialsPage.list.inFlight')}</TableHead>
-                <TableHead>{t('credentialsPage.list.ws')}</TableHead>
+                <TableHead>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-pointer" tabIndex={0}>
+                        {t('credentialsPage.list.ws')}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal">
+                      {t('credentialsPage.form.websocketsHint')}
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
                 <TableHead className="whitespace-normal">
                   {t('credentialsPage.list.cooling')}
                 </TableHead>

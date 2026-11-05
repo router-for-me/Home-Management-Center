@@ -462,9 +462,9 @@ function OverviewTab({
             websocketsSupported
               ? resource.metadataAvailability.websockets
                 ? resource.websockets
-                  ? t('credentialsPage.status.enabled')
-                  : t('credentialsPage.status.disabled')
-                : t('credentialsPage.status.notAvailable')
+                  ? t('credentialsPage.inline.websocketsEnabled')
+                  : t('credentialsPage.inline.websocketsDisabled')
+                : t('credentialsPage.inline.websocketsUnknown')
               : t('credentialsPage.inline.notApplicable'),
           ],
           [
@@ -917,7 +917,6 @@ function MetadataTab({
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const websocketsAvailable = resource.metadataAvailability.websockets
   const usingApiSupported = supportsCredentialUsingApi(resource)
-  const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
   const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
   const validateDraft = (): CredentialFieldErrors => {
@@ -1226,17 +1225,13 @@ function MetadataTab({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium">{t('credentialsPage.form.websockets')}</p>
-            {websocketsSupported && websocketsAvailable ? (
-              <p className="text-muted-foreground mt-1 text-xs leading-5">
-                {isXaiCredential
-                  ? t('upstreamPage.drawer.metadata.websocketsXaiHint')
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {!websocketsSupported
+                ? t('credentialsPage.inline.websocketsUnsupported')
+                : !websocketsAvailable
+                  ? t('credentialsPage.inline.websocketsMissing')
                   : t('credentialsPage.form.websocketsHint')}
-              </p>
-            ) : !websocketsSupported ? (
-              <p className="text-muted-foreground mt-1 text-xs leading-5">
-                {t('upstreamPage.drawer.metadata.websocketsUnsupported')}
-              </p>
-            ) : null}
+            </p>
           </div>
           {websocketsSupported && websocketsAvailable ? (
             <Switch
@@ -1250,7 +1245,7 @@ function MetadataTab({
           ) : (
             <span className="border-border bg-muted text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
               {websocketsSupported
-                ? t('credentialsPage.status.notAvailable')
+                ? t('credentialsPage.inline.websocketsUnknown')
                 : t('credentialsPage.inline.notApplicable')}
             </span>
           )}
