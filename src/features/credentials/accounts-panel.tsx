@@ -19,6 +19,7 @@ import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
@@ -498,7 +499,7 @@ function CredentialList({
           <col className={showSecondary ? 'w-[240px]' : undefined} />
           {showSecondary ? (
             <>
-              <col className="w-[118px]" />
+              <col className="w-[144px]" />
               <col className="w-[145px]" />
             </>
           ) : (
@@ -618,15 +619,13 @@ function CredentialList({
                 </TableCell>
                 {showSecondary ? (
                   <TableCell>
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-                        {providerLabel}
-                      </span>
-                      {resource.type ? (
-                        <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
-                          {resource.type}
-                        </span>
-                      ) : null}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ProviderLogo providerId={resource.provider} size="xs" />
+                      <OverflowTooltipText
+                        value={providerLabel}
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
                     </div>
                   </TableCell>
                 ) : null}
