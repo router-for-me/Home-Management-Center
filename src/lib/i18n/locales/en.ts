@@ -2502,6 +2502,8 @@ export const en = {
         enabled: 'Enabled',
         disabled: 'Disabled',
         unavailable: 'Unavailable',
+        error: 'Credential error',
+        unknown: 'Status unknown',
         notSet: 'Not set',
         inherited: 'Inherit global',
         notAvailable: 'N/A',

@@ -57,7 +57,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -75,7 +74,6 @@ import {
 import {
   getCredentialDisplayName,
   getCredentialProviderLabel,
-  getCredentialStatusTone,
 } from '@/features/credentials/credential-display'
 import {
   filterCredentialResources,
@@ -87,6 +85,7 @@ import {
 } from '@/features/credentials/credential-in-flight-cell'
 import {
   CoolingCell,
+  CredentialEnabledCell,
   type InlineMetadataSave,
   WebsocketsCell,
 } from '@/features/credentials/credential-inline-cells'
@@ -500,12 +499,9 @@ function CredentialList({
           {showSecondary ? (
             <>
               <col className="w-[144px]" />
-              <col className="w-[145px]" />
+              <col className="w-24" />
             </>
           ) : (
-            /* Status carries a switch as well as a badge, so it cannot go as narrow
-             as a label. Below 40rem the two stack instead of sitting side by side,
-             which trades a little height for the width the identity column needs. */
             <col className="w-24" />
           )}
           {showSecondary ? (
@@ -560,7 +556,6 @@ function CredentialList({
         </TableHeader>
         <TableBody>
           {resources.map((resource) => {
-            const statusTone = getCredentialStatusTone(resource)
             const displayName = getCredentialDisplayName(resource)
             const providerLabel = getCredentialProviderLabel(t, resource.provider)
             const quotaAction = resolveCredentialQuotaAction({
@@ -630,47 +625,12 @@ function CredentialList({
                   </TableCell>
                 ) : null}
                 <TableCell>
-                  <div
-                    className={cn(
-                      'flex min-w-0 gap-2',
-                      showSecondary ? 'items-center' : 'flex-col items-start',
-                    )}
-                  >
-                    <Switch
-                      checked={!resource.disabled}
-                      disabled={mutating}
-                      aria-label={t('credentialsPage.list.toggleStatus', {
-                        name: displayName,
-                      })}
-                      onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
-                      onClick={(event) => event.stopPropagation()}
-                    />
-                    <span
-                      className={cn(
-                        'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
-                        statusTone === 'positive'
-                          ? 'border-primary/30 bg-primary/10 text-primary'
-                          : statusTone === 'warning'
-                            ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-                            : 'border-border bg-muted text-muted-foreground',
-                      )}
-                    >
-                      {statusTone === 'warning' ? (
-                        <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-                      ) : (
-                        <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
-                      )}
-                      <span className="truncate">
-                        {resource.disabled
-                          ? t('credentialsPage.status.disabled')
-                          : resource.unavailable
-                            ? t('credentialsPage.status.unavailable')
-                            : t(`credentialsPage.status.${resource.status}`, {
-                                defaultValue: resource.status,
-                              })}
-                      </span>
-                    </span>
-                  </div>
+                  <CredentialEnabledCell
+                    resource={resource}
+                    mutating={mutating}
+                    onToggleStatus={onToggleStatus}
+                    onInspect={() => onOpenDrawer(resource, 'overview')}
+                  />
                 </TableCell>
                 {showSecondary ? (
                   <>

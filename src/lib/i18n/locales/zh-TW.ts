@@ -2395,6 +2395,8 @@ export const zhTW = {
         enabled: '已啟用',
         disabled: '停用',
         unavailable: '不可用',
+        error: '憑證異常',
+        unknown: '狀態未知',
         notSet: '未設定',
         inherited: '繼承全域',
         notAvailable: '不可用',

@@ -2504,6 +2504,8 @@ export const ru = {
         enabled: 'Включено',
         disabled: 'Отключено',
         unavailable: 'Недоступно',
+        error: 'Ошибка учётных данных',
+        unknown: 'Статус неизвестен',
         notSet: 'Не задано',
         inherited: 'Наследовать глобальный',
         notAvailable: 'Н/Д',

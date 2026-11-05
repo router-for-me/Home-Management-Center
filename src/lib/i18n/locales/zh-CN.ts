@@ -2394,6 +2394,8 @@ export const zhCN = {
         enabled: '已启用',
         disabled: '禁用',
         unavailable: '不可用',
+        error: '凭证异常',
+        unknown: '状态未知',
         notSet: '未设置',
         inherited: '继承全局',
         notAvailable: '不可用',
