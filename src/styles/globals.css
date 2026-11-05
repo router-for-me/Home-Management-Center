@@ -3,6 +3,7 @@
 @import './theme-tokens.css';
 @import './control-tokens.css';
 @import './effects.css';
+@import './quota-plan.css';
 @import './credential-table.css';
 
 @layer base {
