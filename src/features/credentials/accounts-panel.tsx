@@ -79,6 +79,7 @@ import {
 import {
   filterCredentialResources,
   hasCredentialFilters,
+  isCredentialWebsocketEnabled,
 } from '@/features/credentials/credential-filters'
 import {
   type CredentialInFlightAvailability,
@@ -974,7 +975,7 @@ export function AccountsPanel({
       active: resources.filter((resource) => !resource.disabled && !resource.unavailable).length,
       disabled: resources.filter((resource) => resource.disabled).length,
       unavailable: resources.filter((resource) => resource.unavailable).length,
-      websockets: resources.filter((resource) => resource.websockets).length,
+      websockets: resources.filter(isCredentialWebsocketEnabled).length,
       attention: countUpstreamQuotaAttentionResources(resources, resolvedQuotaMap),
     })
   }, [onStatsChange, resolvedQuotaMap, resources, workbench.snapshot])
