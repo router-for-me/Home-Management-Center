@@ -2020,7 +2020,7 @@ export const ru = {
         accountsMeta: '{{active}} активных · {{disabled}} отключено · {{unavailable}} недоступно',
         providerKeys: 'Ключи поставщиков',
         attention: 'Требуют внимания',
-        attentionHint: 'Нажмите для фильтра low / exhausted / error',
+        attentionHint: 'Показать учётные данные с квотой, требующей внимания',
         websockets: 'WebSocket вкл.',
         websocketsHint: 'Codex / Grok',
         pending: 'Загрузка',
@@ -2262,8 +2262,8 @@ export const ru = {
         noWindows: 'Нет окон квоты',
       },
       quotaChips: {
-        attention: 'Внимание',
-        ws: 'Только WS',
+        attention: 'Только проблемы с квотой',
+        ws: 'Только с включённым WebSocket',
       },
       drawer: {
         tabs: {
@@ -2330,7 +2330,7 @@ export const ru = {
         status: 'Статус',
         provider: 'Поставщик моделей',
         allProviders: 'Все поставщики моделей',
-        quickFilters: 'Быстрые фильтры',
+        quickFilters: 'Фильтры учётных данных',
         resultCount: 'Показано: {{visible}} из {{total}}',
         clear: 'Сбросить фильтры',
       },

@@ -2019,7 +2019,7 @@ export const en = {
         accountsMeta: '{{active}} active · {{disabled}} disabled · {{unavailable}} unavailable',
         providerKeys: 'Provider keys',
         attention: 'Quota attention',
-        attentionHint: 'Click to filter low / exhausted / error',
+        attentionHint: 'Show credentials whose quota needs attention',
         websockets: 'WebSocket on',
         websocketsHint: 'Codex / Grok',
         pending: 'Loading',
@@ -2261,8 +2261,8 @@ export const en = {
         noWindows: 'No quota windows',
       },
       quotaChips: {
-        attention: 'Attention',
-        ws: 'WS only',
+        attention: 'Quota alerts only',
+        ws: 'Only with WebSocket enabled',
       },
       drawer: {
         tabs: {
@@ -2329,7 +2329,7 @@ export const en = {
         status: 'Status',
         provider: 'Model provider',
         allProviders: 'All model providers',
-        quickFilters: 'Quick filters',
+        quickFilters: 'Credential filters',
         resultCount: 'Showing {{visible}} of {{total}} credentials',
         clear: 'Clear filters',
       },

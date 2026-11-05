@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { filterRowClassName } from '@/components/shared/form-layout'
 import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { controlSizeClassNames } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -58,7 +60,6 @@ import {
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
@@ -221,6 +222,36 @@ function CredentialErrorState({
   )
 }
 
+function CredentialQuickFilter({
+  checked,
+  label,
+  onCheckedChange,
+}: {
+  checked: boolean
+  label: string
+  onCheckedChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={cn(
+        'control-bordered border-input bg-background dark:bg-input/30 flex w-full min-w-0 cursor-pointer items-center border shadow-xs sm:w-auto sm:max-w-[min(18rem,100%)] sm:shrink-0',
+        controlSizeClassNames.xl,
+      )}
+    >
+      <Checkbox
+        checked={checked}
+        aria-label={label}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+      />
+      <OverflowTooltipText
+        value={label}
+        overflowClassName="cursor-pointer"
+        tooltipClassName={credentialCellTooltipClassName}
+      />
+    </label>
+  )
+}
+
 export function AccountsToolbar({
   resources,
   search,
@@ -264,10 +295,6 @@ export function AccountsToolbar({
     }))
     .sort((left, right) => providerCollator.compare(left.label, right.label))
   const statusFilters: CredentialStatusFilter[] = ['all', 'active', 'disabled', 'unavailable']
-  const activeQuickFilters = [
-    ...(quotaAvailable && attentionOnly ? ['attention'] : []),
-    ...(websocketOnly ? ['ws'] : []),
-  ]
   const hasActiveFilters = hasCredentialFilters({
     search,
     statusFilter,
@@ -278,37 +305,41 @@ export function AccountsToolbar({
   })
 
   return (
-    <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center">
-      <div className="relative w-full min-w-0 lg:max-w-80 lg:flex-1">
-        <Search
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          size="xl"
-          className="pl-9"
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={t('credentialsPage.list.filterPlaceholder')}
-          aria-label={t('credentialsPage.list.filterPlaceholder')}
-        />
-      </div>
-      <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
+    <TooltipProvider delayDuration={120}>
+      <div
+        className={cn(filterRowClassName, 'border-b px-4 py-3 sm:flex-wrap')}
+        role="group"
+        aria-label={t('credentialsPage.filters.quickFilters')}
+      >
+        <div className="relative w-full min-w-0 sm:max-w-80 sm:min-w-[min(13rem,100%)] sm:flex-1">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            size="xl"
+            className="pl-9"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder={t('credentialsPage.list.filterPlaceholder')}
+            aria-label={t('credentialsPage.list.filterPlaceholder')}
+          />
+        </div>
         <Select
           value={statusFilter}
           onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
           <SelectTrigger
             size="xl"
-            className="w-full sm:w-40"
+            className="w-full max-w-full sm:w-40"
             aria-label={t('credentialsPage.filters.status')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {statusFilters.map((filter) => (
-              <SelectItem key={filter} value={filter} className="min-h-11 sm:min-h-10">
+              <SelectItem key={filter} value={filter}>
                 {t(`credentialsPage.statusFilters.${filter}`)}
               </SelectItem>
             ))}
@@ -318,49 +349,37 @@ export function AccountsToolbar({
         <Select value={providerFilter} onValueChange={onProviderFilterChange}>
           <SelectTrigger
             size="xl"
-            className="w-full sm:w-52"
+            className="w-full max-w-full sm:w-52"
             aria-label={t('credentialsPage.filters.provider')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="min-h-11 sm:min-h-10">
-              {t('credentialsPage.filters.allProviders')}
-            </SelectItem>
+            <SelectItem value="all">{t('credentialsPage.filters.allProviders')}</SelectItem>
             {providers.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id} className="min-h-11 sm:min-h-10">
+              <SelectItem key={provider.id} value={provider.id}>
                 {provider.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <ToggleGroup
-          type="multiple"
-          value={activeQuickFilters}
-          variant="outline"
-          size="xl"
-          className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
-          aria-label={t('credentialsPage.filters.quickFilters')}
-          onValueChange={(values) => {
-            onAttentionOnlyChange(quotaAvailable && values.includes('attention'))
-            onWebsocketOnlyChange(values.includes('ws'))
-          }}
-        >
-          {quotaAvailable ? (
-            <ToggleGroupItem
-              value="attention"
-              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
-            >
-              {t('upstreamPage.quotaChips.attention')}
-            </ToggleGroupItem>
-          ) : null}
-          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
-        </ToggleGroup>
+        {quotaAvailable ? (
+          <CredentialQuickFilter
+            checked={attentionOnly}
+            label={t('upstreamPage.quotaChips.attention')}
+            onCheckedChange={onAttentionOnlyChange}
+          />
+        ) : null}
+        <CredentialQuickFilter
+          checked={websocketOnly}
+          label={t('upstreamPage.quotaChips.ws')}
+          onCheckedChange={onWebsocketOnlyChange}
+        />
 
-        <div className="col-span-full flex min-h-10 min-w-0 items-center justify-between gap-2 sm:ml-auto">
+        <div className="flex w-full max-w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:shrink-0">
           <p
-            className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
+            className="text-muted-foreground text-meta min-w-0 tabular-nums"
             role="status"
             aria-live="polite"
           >
@@ -369,20 +388,18 @@ export function AccountsToolbar({
               total: resources.length,
             })}
           </p>
-          {hasActiveFilters ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xl"
-              className="px-2.5"
-              onClick={onClearFilters}
-            >
-              {t('credentialsPage.filters.clear')}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="text"
+            size="xl"
+            disabled={!hasActiveFilters}
+            onClick={onClearFilters}
+          >
+            {t('credentialsPage.filters.clear')}
+          </Button>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 

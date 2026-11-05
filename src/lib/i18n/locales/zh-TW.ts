@@ -1937,7 +1937,7 @@ export const zhTW = {
         accountsMeta: '{{active}} 活躍 · {{disabled}} 停用 · {{unavailable}} 不可用',
         providerKeys: '模型供應商金鑰',
         attention: '額度需關注',
-        attentionHint: '點擊篩選 low / exhausted / error',
+        attentionHint: '篩選額度需要關注的憑證',
         websockets: 'WebSocket 已開',
         websocketsHint: 'Codex / Grok',
         pending: '載入中',
@@ -2159,8 +2159,8 @@ export const zhTW = {
         noWindows: '暫無額度視窗',
       },
       quotaChips: {
-        attention: '需關注',
-        ws: '僅 WS',
+        attention: '僅額度需關注',
+        ws: '僅 WebSocket 已啟用',
       },
       drawer: {
         tabs: {
@@ -2224,7 +2224,7 @@ export const zhTW = {
         status: '狀態',
         provider: '模型供應商',
         allProviders: '全部模型供應商',
-        quickFilters: '快速篩選',
+        quickFilters: '憑證篩選',
         resultCount: '顯示 {{visible}} / {{total}} 個憑證',
         clear: '清除篩選',
       },

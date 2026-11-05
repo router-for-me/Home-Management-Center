@@ -1936,7 +1936,7 @@ export const zhCN = {
         accountsMeta: '{{active}} 活跃 · {{disabled}} 禁用 · {{unavailable}} 不可用',
         providerKeys: '模型供应商密钥',
         attention: '额度需关注',
-        attentionHint: '点击筛选 low / exhausted / error',
+        attentionHint: '筛选额度需要关注的凭证',
         websockets: 'WebSocket 已开',
         websocketsHint: 'Codex / Grok',
         pending: '加载中',
@@ -2158,8 +2158,8 @@ export const zhCN = {
         noWindows: '暂无额度窗口',
       },
       quotaChips: {
-        attention: '需关注',
-        ws: '仅 WS',
+        attention: '仅额度需关注',
+        ws: '仅 WebSocket 已启用',
       },
       drawer: {
         tabs: {
@@ -2223,7 +2223,7 @@ export const zhCN = {
         status: '状态',
         provider: '模型供应商',
         allProviders: '全部模型供应商',
-        quickFilters: '快捷筛选',
+        quickFilters: '凭证筛选',
         resultCount: '显示 {{visible}} / {{total}} 个凭证',
         clear: '清除筛选',
       },
