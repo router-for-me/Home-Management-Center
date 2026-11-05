@@ -48,6 +48,7 @@ import {
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import { TableSpacerRow, useVirtualTableRows } from '@/components/shared/virtual-table-rows'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -845,23 +846,16 @@ function RequestEventStatusBadge({
   const success = event.status === 'success'
   const failed = event.status === 'failed'
   const hasLog = event.related?.requestLog?.available === true
-  const badgeClassName = cn(
-    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors',
-    success
-      ? 'border-success/30 bg-success/10 text-success'
-      : failed
-        ? 'border-destructive/30 bg-destructive/10 text-destructive'
-        : 'border-muted-foreground/25 bg-muted text-muted-foreground',
-    onInspect && 'hover:bg-accent/60 cursor-pointer',
-  )
+  const variant = success ? 'success' : failed ? 'destructive' : 'unknown'
+  const statusClassName = success ? 'text-success' : failed ? 'text-destructive' : undefined
   const content = (
     <>
       {success ? (
-        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+        <CheckCircle2 className={statusClassName} aria-hidden="true" />
       ) : failed ? (
-        <XCircle className="size-3.5 shrink-0" aria-hidden="true" />
+        <XCircle className={statusClassName} aria-hidden="true" />
       ) : (
-        <CircleHelp className="size-3.5 shrink-0" aria-hidden="true" />
+        <CircleHelp aria-hidden="true" />
       )}
       <span>
         {success
@@ -870,19 +864,19 @@ function RequestEventStatusBadge({
             ? t('requestEventsPage.status.failed')
             : t('requestEventsPage.status.unknown')}
       </span>
-      {hasLog ? <FileText className="size-3 shrink-0 opacity-75" aria-hidden="true" /> : null}
+      {hasLog ? <FileText className="opacity-75" aria-hidden="true" /> : null}
     </>
   )
 
   if (onInspect) {
     return (
-      <button type="button" className={badgeClassName} onClick={onInspect}>
+      <Button type="button" variant="text" size="sm" onClick={onInspect}>
         {content}
-      </button>
+      </Button>
     )
   }
 
-  return <span className={badgeClassName}>{content}</span>
+  return <Badge variant={variant}>{content}</Badge>
 }
 
 function NumberRangeInputGroup({
