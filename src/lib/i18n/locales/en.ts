@@ -2753,11 +2753,11 @@ export const en = {
         title: 'Access keys',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
-        index: 'No.',
         identity: 'Name / key',
-        identifierTooltip:
-          'The display name is an editable label and does not affect authentication. The stable identifier (api-key-N) survives renames and key rotations, and links the same key across usage, billing, and request records.',
-        identifierUnavailable: 'No stable identifier',
+        identifier: 'Key ID',
+        identifierHint:
+          'Used in usage and billing records. Unchanged by renaming or rotating the key.',
+        key: 'Key',
         owner: 'Owner',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2786,6 +2786,8 @@ export const en = {
         noName: 'No display name',
         fields: {
           name: 'Display name',
+          identifier: 'Key identifier',
+          status: 'Status',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',

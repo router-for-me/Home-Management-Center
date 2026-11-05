@@ -2624,11 +2624,10 @@ export const zhCN = {
         title: '访问密钥',
         filterPlaceholder: '筛选密钥',
         empty: '当前筛选条件下没有访问密钥。',
-        index: '序号',
         identity: '名称 / 密钥',
-        identifierTooltip:
-          '名称仅用于识别，可随时修改，不影响鉴权；稳定标识（api-key-N）在改名和轮换后保持不变，用于在用量、计费、请求记录中关联同一密钥。',
-        identifierUnavailable: '无稳定标识',
+        identifier: '标识',
+        identifierHint: '用于关联用量和计费记录；改名或轮换密钥后保持不变。',
+        key: '密钥',
         owner: '所属用户',
         credentialScope: '凭证范围',
         modelScope: '模型范围',
@@ -2657,6 +2656,8 @@ export const zhCN = {
         noName: '未设置展示名称',
         fields: {
           name: '展示名称',
+          identifier: '密钥标识',
+          status: '状态',
           prefix: '前缀',
           suffix: '后缀',
           length: '长度',

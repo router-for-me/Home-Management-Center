@@ -2756,11 +2756,11 @@ export const ru = {
         title: 'Access keys',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
-        index: 'N',
         identity: 'Имя / ключ',
-        identifierTooltip:
-          'Отображаемое имя — редактируемая метка, не влияющая на аутентификацию. Стабильный идентификатор (api-key-N) не меняется при переименовании и ротации и связывает один и тот же ключ в использовании, биллинге и записях запросов.',
-        identifierUnavailable: 'Нет стабильного идентификатора',
+        identifier: 'ID ключа',
+        identifierHint:
+          'Идентификатор в записях об использовании и оплате. Не меняется при переименовании или ротации ключа.',
+        key: 'Ключ',
         owner: 'Владелец',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2789,6 +2789,8 @@ export const ru = {
         noName: 'Без отображаемого имени',
         fields: {
           name: 'Отображаемое имя',
+          identifier: 'Идентификатор ключа',
+          status: 'Статус',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',

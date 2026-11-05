@@ -2624,11 +2624,10 @@ export const zhTW = {
         title: '存取金鑰',
         filterPlaceholder: '篩選金鑰',
         empty: '目前篩選條件下沒有存取金鑰。',
-        index: '序號',
         identity: '名稱 / 金鑰',
-        identifierTooltip:
-          '名稱僅用於識別，可隨時修改，不影響鑑權；穩定識別碼（api-key-N）在改名和輪換後保持不變，用於在用量、計費、請求記錄中關聯同一金鑰。',
-        identifierUnavailable: '無穩定識別碼',
+        identifier: '識別碼',
+        identifierHint: '用於關聯用量與計費紀錄；重新命名或輪換金鑰後保持不變。',
+        key: '金鑰',
         owner: '所屬使用者',
         credentialScope: '憑證範圍',
         modelScope: '模型範圍',
@@ -2657,6 +2656,8 @@ export const zhTW = {
         noName: '未設定顯示名稱',
         fields: {
           name: '顯示名稱',
+          identifier: '金鑰識別碼',
+          status: '狀態',
           prefix: '前綴',
           suffix: '後綴',
           length: '長度',
