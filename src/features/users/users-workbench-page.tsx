@@ -3371,9 +3371,10 @@ export function UsersWorkbenchPage() {
     : ''
 
   return (
-    <section className="grid gap-5">
+    <section className="grid min-w-0 grid-cols-1 gap-5">
       <PageHeader
         title={t('usersPage.header.title')}
+        className="[&>div]:flex-wrap"
         actions={
           <>
             <Button
@@ -3410,8 +3411,9 @@ export function UsersWorkbenchPage() {
       <TableSurface className="min-w-0">
         <TableSurfaceHeader
           title={t('usersPage.workspace.title')}
+          className="md:flex-wrap"
           actions={
-            <div className="relative min-w-0 lg:w-80">
+            <div className="relative max-w-full min-w-0 lg:w-80">
               <Search
                 className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
                 aria-hidden="true"
@@ -3424,7 +3426,7 @@ export function UsersWorkbenchPage() {
               />
             </div>
           }
-          actionsClassName="w-full lg:w-auto"
+          actionsClassName="w-full min-w-0 max-w-full lg:w-auto"
         />
         <Tabs
           value={activeTab}
