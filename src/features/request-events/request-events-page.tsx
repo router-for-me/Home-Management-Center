@@ -345,13 +345,6 @@ function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined
     .filter((entry) => entry.count > 0)
 }
 
-const REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH = 48
-
-function truncateUserAgent(value: string, maxLength = REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH) {
-  const chars = Array.from(value)
-  return chars.length <= maxLength ? value : `${chars.slice(0, maxLength).join('')}...`
-}
-
 function UserAgentCopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -366,24 +359,35 @@ function UserAgentCopyButton({ value, label }: { value: string; label: string })
   }
 
   return (
-    <button
-      type="button"
-      className={cn(
-        'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors',
-        copied && 'text-success',
-      )}
-      aria-label={label}
-      onClick={(event) => {
-        event.stopPropagation()
-        void handleCopy()
-      }}
-    >
-      {copied ? (
-        <Check className="size-3" aria-hidden="true" />
-      ) : (
-        <Copy className="size-3" aria-hidden="true" />
-      )}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          className="w-full min-w-0 justify-start"
+          aria-label={label}
+          onClick={(event) => {
+            event.stopPropagation()
+            void handleCopy()
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate font-mono">{value}</span>
+          {copied ? (
+            <Check className="text-success" aria-hidden="true" />
+          ) : (
+            <Copy aria-hidden="true" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="start"
+        className="max-w-[min(28rem,calc(100vw-2rem))] font-mono break-all"
+      >
+        {value}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -1800,29 +1804,10 @@ function RequestEventsTable({
                         {isColumnRendered('userAgent') ? (
                           <TableCell className="min-w-0">
                             {event.client?.userAgent ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    tabIndex={0}
-                                    className="inline-flex max-w-full items-center gap-1 outline-hidden"
-                                  >
-                                    <span className="truncate font-mono text-xs">
-                                      {truncateUserAgent(event.client.userAgent)}
-                                    </span>
-                                    <UserAgentCopyButton
-                                      value={event.client.userAgent}
-                                      label={t('requestEventsPage.detail.actions.copy')}
-                                    />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-md font-mono text-[11px] break-all"
-                                >
-                                  {event.client.userAgent}
-                                </TooltipContent>
-                              </Tooltip>
+                              <UserAgentCopyButton
+                                value={event.client.userAgent}
+                                label={`${t('requestEventsPage.detail.actions.copy')}: ${t('requestEventsPage.detail.fields.userAgent')}`}
+                              />
                             ) : (
                               <EmptyValue />
                             )}
