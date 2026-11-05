@@ -1977,7 +1977,6 @@ export const zhTW = {
         },
         remaining: '剩餘',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: '+{{count}} 更多',
         summary: {
           plan: '{{name}} 套餐',
           historical: '需重新擷取',

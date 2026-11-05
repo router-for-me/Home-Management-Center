@@ -83,15 +83,6 @@ export function getUpstreamQuotaErrorSummary(
   }
 }
 
-export function getUpstreamQuotaErrorMessage(
-  entry: Pick<QuotaCredential, 'lastError'>,
-  t: TFunction,
-) {
-  if (entry.lastError?.code === 'DCA_TOKEN_UNAVAILABLE')
-    return t('upstreamPage.quota.metaAuthorizationRequired')
-  return entry.lastError?.message ?? t('upstreamPage.quota.collectFailed')
-}
-
 export function formatUpstreamQuotaRelativeTime(
   timestampMs: number,
   locale?: string,

@@ -2062,7 +2062,6 @@ export const ru = {
         },
         remaining: 'Остаток',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: 'Ещё {{count}}',
         summary: {
           plan: '{{name}} тариф',
           historical: 'Нужен новый сбор',

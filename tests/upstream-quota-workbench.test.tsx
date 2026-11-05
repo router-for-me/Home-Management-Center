@@ -14,6 +14,7 @@ import { createInstance } from 'i18next'
 import { type Root, createRoot } from 'react-dom/client'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { AccountsPanel } from '@/features/credentials/accounts-panel'
 import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
 import { resolveUpstreamQuotaCellState } from '@/features/upstream/upstream-quota-model'
@@ -134,7 +135,7 @@ function Harness() {
   showDetail = () => setOpened(true)
   showAccounts = () => setAccounts(true)
   return (
-    <>
+    <TooltipProvider>
       <UpstreamQuotaCell
         collecting={quota.collectingIds.has(credentialId)}
         state={resolveUpstreamQuotaCellState({
@@ -160,7 +161,7 @@ function Harness() {
           }}
         />
       ) : null}
-    </>
+    </TooltipProvider>
   )
 }
 
@@ -343,8 +344,10 @@ test('cached success is not completion and a failed probe keeps the previous win
   expect(result?.completion).toBe('settled')
   expect(result?.item?.collectionStatus).toBe('failed')
   expect(container.textContent).toContain('98%')
-  expect(container.textContent).toContain('Collection failed')
-  expect(container.textContent).toContain('Import the credential again')
+  expect(container.textContent).not.toContain('Recollect needed')
+  expect(container.textContent).not.toContain('Quota healthy')
+  expect(container.textContent).toContain('Quota query failed')
+  expect(container.textContent).not.toContain('Credential DCA token is unavailable.')
 })
 
 test('a credential outside the first snapshot page gets its own result without changing pagination totals', async () => {
@@ -486,7 +489,7 @@ test('the real credential row hides active collection when the backend capabilit
   await mount()
   await mountAccounts()
   expect(container.querySelector('tbody button[aria-haspopup="menu"]')).toBeNull()
-  expect(container.textContent).toContain('This backend does not support active collection')
+  expect(container.querySelector('tbody')?.textContent).not.toContain('Collect quota')
 })
 
 test('a late POST response from an old connection cannot show a queued notification', async () => {

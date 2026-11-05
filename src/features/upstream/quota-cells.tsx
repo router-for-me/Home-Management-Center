@@ -1,20 +1,23 @@
+import { ChevronRight, LoaderCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  formatUpstreamQuotaRelativeTime,
-  getUpstreamQuotaErrorMessage,
   getUpstreamQuotaWindowDisplayLabel,
   getUpstreamQuotaWindowIdentityLabel,
 } from '@/features/upstream/quota-format'
-import type {
-  QuotaCollectionStatus,
-  QuotaPlan,
-  QuotaStatus,
-  QuotaWindow,
-} from '@/lib/api/management/quota'
+import type { QuotaPlan, QuotaStatus, QuotaWindow } from '@/lib/api/management/quota'
 import { cn } from '@/lib/utils'
 
+import { QuotaFooter } from './quota-footer'
+import { resolveQuotaPlanTier } from './quota-plan-tier'
+import { QuotaPreviewGrid } from './quota-preview-grid'
+import { buildQuotaPreviewGrid } from './quota-preview-model'
+import { QuotaQueryIssue } from './quota-query-issue'
+import { QuotaTooltip, QuotaWindowTooltip } from './quota-tooltip'
 import {
   type UpstreamQuotaCellState,
   type UpstreamQuotaEntry,
@@ -23,16 +26,9 @@ import {
   findXaiProductUsageWindows,
   findXaiWeeklyWindow,
   resolveAntigravityQuotaPresentation,
+  resolveQuotaLabelState,
+  resolveQuotaSnapshotDisplay,
 } from './upstream-quota-model'
-
-const upstreamQuotaStatusClassNames: Record<QuotaStatus, string> = {
-  healthy: 'border-success/30 bg-success/10 text-success',
-  low: 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
-  exhausted: 'border-destructive/30 bg-destructive/10 text-destructive',
-  error: 'border-destructive/30 bg-destructive/10 text-destructive',
-  unknown: 'border-border bg-muted/50 text-muted-foreground',
-  unsupported: 'border-info/25 bg-info/10 text-info',
-}
 
 const upstreamQuotaProgressClassNames: Record<QuotaStatus, string> = {
   healthy: 'bg-success',
@@ -43,58 +39,131 @@ const upstreamQuotaProgressClassNames: Record<QuotaStatus, string> = {
   unsupported: 'bg-info/60',
 }
 
-export function UpstreamQuotaStatusBadge({ status }: { status: QuotaStatus }) {
+const quotaWindowRowClassName =
+  'grid min-w-0 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_2.25rem] items-center gap-2'
+
+function UpstreamQuotaPlanBadge({ provider, plan }: { provider: string; plan: QuotaPlan }) {
   const { t } = useTranslation()
+  const label = t('upstreamPage.quota.summary.plan', { name: plan.name })
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium',
-        upstreamQuotaStatusClassNames[status],
-      )}
+    <Badge
+      variant="outline"
+      className="quota-plan-badge max-w-full min-w-0 shrink"
+      data-plan-tier={resolveQuotaPlanTier(provider, plan)}
+      aria-label={label}
     >
-      {t(`upstreamPage.quota.status.${status}`)}
-    </span>
+      <OverflowTooltipText
+        value={label}
+        tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
+      />
+    </Badge>
   )
 }
 
-export function UpstreamQuotaMetaBadge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
-      {children}
-    </span>
-  )
-}
+const quotaLabelMeta = {
+  unsupported: {
+    label: 'upstreamPage.quota.unsupported',
+    hint: 'upstreamPage.quota.summary.unsupportedHint',
+    variant: 'unsupported',
+  },
+  collecting: {
+    label: 'upstreamPage.quota.summary.updating',
+    hint: 'upstreamPage.quota.summary.collectingHint',
+    variant: 'info',
+  },
+  'read-error': {
+    label: 'upstreamPage.quota.summary.readFailed',
+    hint: 'upstreamPage.quota.summary.readFailedHint',
+    variant: 'destructive',
+  },
+  outdated: {
+    label: 'upstreamPage.quota.summary.historical',
+    hint: 'upstreamPage.quota.summary.historicalHint',
+    variant: 'muted',
+  },
+  'not-collected': {
+    label: 'upstreamPage.quota.notCollected',
+    hint: 'upstreamPage.quota.summary.notCollectedHint',
+    variant: 'unknown',
+  },
+  'no-data': {
+    label: 'upstreamPage.quota.summary.noData',
+    hint: 'upstreamPage.quota.summary.noDataHint',
+    variant: 'unknown',
+  },
+  unknown: {
+    label: 'upstreamPage.quota.status.unknown',
+    hint: 'upstreamPage.quota.summary.unknownHint',
+    variant: 'unknown',
+  },
+} as const
 
-function UpstreamQuotaCollectionBadge({ status }: { status: QuotaCollectionStatus }) {
-  const { t } = useTranslation()
-  if (status !== 'partial' && status !== 'failed') return null
-
+export function QuotaSnapshotBadges({
+  entry,
+  collecting = false,
+  readFailed = false,
+  unavailableReason,
+}: {
+  entry: UpstreamQuotaEntry
+  collecting?: boolean
+  readFailed?: boolean
+  unavailableReason?: string
+}) {
+  const { t, i18n } = useTranslation()
+  const state = resolveQuotaLabelState(entry, { collecting, readFailed })
+  const meta = state && state !== 'failed' && state !== 'partial' ? quotaLabelMeta[state] : null
+  const expiresAt = Date.parse(entry.expiresAt ?? '')
+  const hint = meta
+    ? [
+        t(
+          unavailableReason && state === 'outdated'
+            ? 'upstreamPage.quota.summary.historicalReadOnlyHint'
+            : unavailableReason && state === 'not-collected'
+              ? 'upstreamPage.quota.summary.notCollectedReadOnlyHint'
+              : meta.hint,
+          { action: t('upstreamPage.quota.actions.collect') },
+        ),
+        state === 'outdated' && Number.isFinite(expiresAt)
+          ? t('upstreamPage.quota.summary.validUntil', {
+              time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              }).format(expiresAt),
+            })
+          : null,
+        unavailableReason,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    : ''
+  if (!entry.plan && !state) return null
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium',
-        status === 'failed'
-          ? 'border-destructive/30 bg-destructive/10 text-destructive'
-          : 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
-      )}
+    <div
+      role="group"
+      aria-label={t('upstreamPage.quota.summary.labels')}
+      className="flex min-w-0 items-center gap-1.5"
     >
-      {t(`upstreamPage.quota.collection.${status}`)}
-    </span>
-  )
-}
-
-export function UpstreamQuotaPlanBadge({ plan }: { plan: QuotaPlan }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-semibold',
-        plan.premium
-          ? 'border-warning/40 bg-warning/15 text-warning-foreground dark:text-warning'
-          : 'bg-foreground text-background border-transparent',
-      )}
-    >
-      {plan.name}
-    </span>
+      {entry.plan ? <UpstreamQuotaPlanBadge provider={entry.provider} plan={entry.plan} /> : null}
+      {state ? (
+        <div className={cn('min-w-0 shrink-0', entry.plan ? 'max-w-[65%]' : 'max-w-full')}>
+          {state === 'failed' || state === 'partial' ? (
+            <QuotaQueryIssue entry={entry} />
+          ) : meta ? (
+            <QuotaTooltip content={hint}>
+              <Badge tabIndex={0} variant={meta.variant} className="max-w-full min-w-0">
+                {state === 'collecting' ? (
+                  <LoaderCircle
+                    className="animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                ) : null}
+                <span className="min-w-0 truncate">{t(meta.label)}</span>
+              </Badge>
+            </QuotaTooltip>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -112,7 +181,15 @@ function formatInlineMoney(value: number | null, currency: string | null) {
   }
 }
 
-export function InlineWindowBar({ window, label }: { window: QuotaWindow; label?: string }) {
+export function InlineWindowBar({
+  window,
+  label,
+  historical = false,
+}: {
+  window: QuotaWindow
+  label?: string
+  historical?: boolean
+}) {
   const { t, i18n } = useTranslation()
   const percentage = window.remainingRatio === null ? null : Math.round(window.remainingRatio * 100)
   const periodLabel = getUpstreamQuotaWindowDisplayLabel(
@@ -125,31 +202,48 @@ export function InlineWindowBar({ window, label }: { window: QuotaWindow; label?
   const ariaLabel = identityLabel ? `${identityLabel}, ${periodLabel}` : displayLabel
 
   return (
-    <div className="grid min-w-0 gap-1">
-      <div className="grid grid-cols-[minmax(6.5rem,9rem)_minmax(2.5rem,1fr)_2.25rem] items-center gap-2">
-        <span className="min-w-0 text-[11px] font-medium" title={ariaLabel}>
-          <span className={cn('block truncate', !identityLabel && 'text-muted-foreground')}>
-            {displayLabel}
-          </span>
+    <div className="grid min-w-0 grid-cols-1 gap-1">
+      <div className={quotaWindowRowClassName}>
+        <div className="min-w-0 text-[11px] font-medium">
+          <OverflowTooltipText
+            value={displayLabel}
+            className={!identityLabel ? 'text-muted-foreground' : undefined}
+            tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
+          />
           {identityLabel ? (
-            <span className="text-muted-foreground block truncate text-[10px]">{periodLabel}</span>
+            <QuotaTooltip content={periodLabel}>
+              <span className="text-muted-foreground block truncate text-[10px]">
+                {periodLabel}
+              </span>
+            </QuotaTooltip>
           ) : null}
-        </span>
-        <div
-          className="bg-muted h-1.5 overflow-hidden rounded-full"
-          role="progressbar"
-          aria-label={ariaLabel}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={percentage ?? 0}
-        >
-          {percentage === null ? null : (
-            <div
-              className={cn('h-full rounded-full', upstreamQuotaProgressClassNames[window.status])}
-              style={{ width: `${percentage}%` }}
-            />
-          )}
         </div>
+        <QuotaWindowTooltip window={window} label={ariaLabel}>
+          <div
+            className="bg-muted h-1.5 overflow-hidden rounded-full"
+            role="progressbar"
+            aria-label={`${ariaLabel}: ${t('upstreamPage.quota.remaining')}`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={percentage ?? undefined}
+            aria-valuetext={
+              percentage === null ? t('upstreamPage.quota.common.notAvailable') : undefined
+            }
+            aria-description={
+              historical ? t('upstreamPage.quota.summary.historicalHint') : undefined
+            }
+          >
+            {percentage === null ? null : (
+              <div
+                className={cn(
+                  'h-full rounded-full',
+                  upstreamQuotaProgressClassNames[window.status],
+                )}
+                style={{ width: `${percentage}%` }}
+              />
+            )}
+          </div>
+        </QuotaWindowTooltip>
         <span className="text-muted-foreground text-right text-[11px] tabular-nums">
           {percentage === null ? '—' : `${percentage}%`}
         </span>
@@ -165,80 +259,29 @@ function InlineWindowMoneyLine({ window }: { window: QuotaWindow }) {
   if (!remaining || !limit) return null
 
   return (
-    <p className="text-muted-foreground truncate pl-14 text-[11px] tabular-nums">
+    <p className="text-muted-foreground truncate text-[11px] tabular-nums">
       {t('upstreamPage.quota.moneyRemaining', { remaining, limit })}
     </p>
   )
 }
 
 function GenericWindowsCell({ entry }: { entry: UpstreamQuotaEntry }) {
-  const { t } = useTranslation()
-  const windows = entry.primaryWindows.length > 0 ? entry.primaryWindows : entry.windows.slice(0, 2)
-  const shown = windows.slice(0, 2)
-  const additionalCount = Math.max(0, entry.windowCount - shown.length)
-
-  if (shown.length === 0) {
+  const windows = entry.primaryWindows.length > 0 ? entry.primaryWindows : entry.windows
+  const historical = resolveQuotaSnapshotDisplay(entry).historical
+  const grid = buildQuotaPreviewGrid(entry)
+  if (grid)
     return (
-      <span className="text-muted-foreground text-xs">{t('upstreamPage.quota.noWindows')}</span>
+      <QuotaPreviewGrid
+        grid={grid}
+        historical={historical}
+        progressClassNames={upstreamQuotaProgressClassNames}
+      />
     )
-  }
-
   return (
-    <div className="grid min-w-52 gap-1.5">
-      {shown.map((window) => (
-        <InlineWindowBar key={window.id} window={window} />
+    <div className="grid min-w-0 grid-cols-1 gap-1.5">
+      {windows.slice(0, 2).map((window) => (
+        <InlineWindowBar key={window.id} window={window} historical={historical} />
       ))}
-      {additionalCount > 0 ? (
-        <p className="text-muted-foreground text-[11px]">
-          {t('upstreamPage.quota.more', { count: additionalCount })}
-        </p>
-      ) : null}
-    </div>
-  )
-}
-
-function AntigravityWindowRow({
-  groupId,
-  window,
-}: {
-  groupId: 'gemini' | 'third-party'
-  window: QuotaWindow
-}) {
-  const { t, i18n } = useTranslation()
-  const percentage = window.remainingRatio === null ? null : Math.round(window.remainingRatio * 100)
-  const periodLabel = getUpstreamQuotaWindowDisplayLabel(
-    window,
-    t,
-    i18n.resolvedLanguage ?? i18n.language,
-  )
-  const groupLabel = t(
-    `upstreamPage.quota.antigravity.${groupId === 'gemini' ? 'gemini' : 'thirdParty'}`,
-  )
-
-  return (
-    <div className="grid grid-cols-[minmax(6.5rem,9rem)_minmax(2.5rem,1fr)_2.25rem] items-center gap-2">
-      <div className="min-w-0">
-        <p className="truncate text-[11px] font-medium">{groupLabel}</p>
-        <p className="text-muted-foreground truncate text-[10px]">{periodLabel}</p>
-      </div>
-      <div
-        className="bg-muted h-1.5 overflow-hidden rounded-full"
-        role="progressbar"
-        aria-label={`${groupLabel}, ${periodLabel}`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percentage ?? 0}
-      >
-        {percentage === null ? null : (
-          <div
-            className={cn('h-full rounded-full', upstreamQuotaProgressClassNames[window.status])}
-            style={{ width: `${percentage}%` }}
-          />
-        )}
-      </div>
-      <span className="text-muted-foreground text-right text-[11px] tabular-nums">
-        {percentage === null ? '—' : `${percentage}%`}
-      </span>
     </div>
   )
 }
@@ -249,83 +292,24 @@ function AntigravityQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
     ...entry.primaryWindows,
     ...entry.windows,
   ])
-
-  if (presentation.kind === 'not-collected') {
+  const grid = buildQuotaPreviewGrid(entry)
+  if (presentation.kind === 'windows' && grid) {
     return (
-      <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
-        {t('upstreamPage.quota.notCollected')}
-      </span>
+      <QuotaPreviewGrid
+        grid={grid}
+        historical={resolveQuotaSnapshotDisplay(entry).historical}
+        progressClassNames={upstreamQuotaProgressClassNames}
+      />
     )
   }
-
-  if (presentation.kind === 'failed') {
-    return (
-      <div className="grid min-w-40 gap-1">
-        <div className="flex flex-wrap items-center gap-1">
-          <UpstreamQuotaStatusBadge status="error" />
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-          </UpstreamQuotaMetaBadge>
-          <UpstreamQuotaCollectionBadge status="failed" />
-        </div>
-        <p className="text-destructive line-clamp-2 text-[11px] leading-4">
-          {getUpstreamQuotaErrorMessage(entry, t)}
-        </p>
-      </div>
-    )
-  }
-
-  if (presentation.kind === 'collecting' || presentation.kind === 'legacy') {
-    return (
-      <div className="grid min-w-52 gap-1">
-        <div className="flex flex-wrap items-center gap-1">
-          <UpstreamQuotaStatusBadge status="unknown" />
-          <UpstreamQuotaMetaBadge>
-            {t(
-              presentation.kind === 'collecting'
-                ? 'upstreamPage.quota.collection.collecting'
-                : 'upstreamPage.quota.freshness.stale',
-            )}
-          </UpstreamQuotaMetaBadge>
-          <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
-        </div>
-        <p className="text-muted-foreground text-[11px] leading-4">
-          {t(
-            presentation.kind === 'collecting'
-              ? 'upstreamPage.quota.antigravity.upgrading'
-              : 'upstreamPage.quota.antigravity.legacy',
-          )}
-        </p>
-      </div>
-    )
-  }
-
-  const additionalCount = Math.max(0, Math.min(entry.windowCount, 4) - presentation.groups.length)
-
   return (
-    <div className="grid min-w-52 gap-1.5">
-      <div className="flex flex-wrap items-center gap-1">
-        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-        </UpstreamQuotaMetaBadge>
-        <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
-      </div>
-      <div className="grid gap-1.5">
-        {presentation.groups.map((group) => {
-          const window = group.windows[0]
-          return window ? (
-            <AntigravityWindowRow key={group.id} groupId={group.id} window={window} />
-          ) : null
-        })}
-      </div>
-      {additionalCount > 0 ? (
-        <p className="text-muted-foreground text-[11px]">
-          {t('upstreamPage.quota.more', { count: additionalCount })}
-        </p>
-      ) : null}
-    </div>
+    <p className="text-muted-foreground text-meta">
+      {presentation.kind === 'collecting'
+        ? t('upstreamPage.quota.antigravity.upgrading')
+        : presentation.kind === 'legacy'
+          ? t('upstreamPage.quota.antigravity.legacy')
+          : t('upstreamPage.quota.noWindows')}
+    </p>
   )
 }
 
@@ -344,198 +328,172 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
   const weeklyWindow = findXaiWeeklyWindow(entry)
-  const productUsageWindows = findXaiProductUsageWindows(entry)
-  const hasKnownWindows = Boolean(
-    monthlyWindow || onDemandWindow || weeklyWindow || productUsageWindows.length > 0,
-  )
-
+  const products = findXaiProductUsageWindows(entry)
+  const historical = resolveQuotaSnapshotDisplay(entry).historical
+  const windows = [weeklyWindow, monthlyWindow, onDemandWindow]
+    .filter((window): window is QuotaWindow => window !== null)
+    .slice(0, 2)
+  if (windows.length === 0) {
+    return products.length > 0 ? (
+      <p className="text-muted-foreground text-meta">
+        {t('upstreamPage.quota.summary.sharedProducts', { count: products.length })}
+      </p>
+    ) : (
+      <GenericWindowsCell entry={entry} />
+    )
+  }
   return (
-    <div className="grid min-w-44 gap-1.5">
-      <div className="flex flex-wrap items-center gap-1">
-        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-        </UpstreamQuotaMetaBadge>
-        <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
-      </div>
-      {!hasKnownWindows ? <GenericWindowsCell entry={entry} /> : null}
-      {weeklyWindow ? (
-        <InlineWindowBar window={weeklyWindow} label={t('upstreamPage.quota.weekly')} />
-      ) : null}
-      {productUsageWindows.length > 0 ? (
-        <div className="text-muted-foreground grid gap-0.5 text-[11px] leading-4">
-          <p>{t('upstreamPage.quota.xai.usageBreakdown')}</p>
-          {productUsageWindows.map((window) => {
-            const product = window.label?.trim() || window.id.replace(/^xai-product-/, '')
-            const usedPercent = formatXaiProductUsedPercent(window)
-            return (
-              <p key={window.id} className="tabular-nums">
-                {t('upstreamPage.quota.xai.productUsage', { product })}
-                {': '}
-                {usedPercent ?? t('upstreamPage.quota.xai.usageUnavailable')}
-              </p>
-            )
-          })}
+    <div className="grid min-w-0 grid-cols-1 gap-1.5">
+      {windows.map((window) => (
+        <div key={window.id} className="grid min-w-0 grid-cols-1 gap-1">
+          <InlineWindowBar
+            window={window}
+            historical={historical}
+            label={t(
+              window.id === weeklyWindow?.id
+                ? 'upstreamPage.quota.weekly'
+                : window.id === monthlyWindow?.id
+                  ? 'upstreamPage.quota.monthly'
+                  : 'upstreamPage.quota.onDemand',
+            )}
+          />
+          {window.unit === 'currency' ? <InlineWindowMoneyLine window={window} /> : null}
         </div>
-      ) : null}
-      {monthlyWindow ? (
-        <>
-          <InlineWindowBar window={monthlyWindow} label={t('upstreamPage.quota.monthly')} />
-          <InlineWindowMoneyLine window={monthlyWindow} />
-        </>
-      ) : null}
-      {onDemandWindow ? (
-        <>
-          <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.onDemand')} />
-          <InlineWindowMoneyLine window={onDemandWindow} />
-        </>
-      ) : hasKnownWindows ? (
-        <p className="text-muted-foreground text-[11px]">
-          {t('upstreamPage.quota.onDemand')}: {t('upstreamPage.quota.onDemandDisabled')}
+      ))}
+      <p className="text-muted-foreground text-meta">
+        {t('upstreamPage.quota.onDemand')}:{' '}
+        {t(
+          onDemandWindow
+            ? 'upstreamPage.quota.onDemandEnabled'
+            : 'upstreamPage.quota.onDemandDisabled',
+        )}
+      </p>
+      {products.length > 0 ? (
+        <p className="text-muted-foreground text-meta">
+          {t('upstreamPage.quota.summary.sharedProducts', { count: products.length })}
         </p>
       ) : null}
     </div>
   )
 }
 
-function UpstreamQuotaEntryCell({ entry }: { entry: UpstreamQuotaEntry }) {
+function QuotaPreview({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const provider = entry.provider.trim().toLowerCase()
-
-  if (entry.status === 'unsupported') {
-    return (
-      <div className="grid min-w-40 gap-1">
-        <UpstreamQuotaStatusBadge status="unsupported" />
-        <p className="text-muted-foreground text-[11px] leading-4">
-          {t('upstreamPage.quota.unsupportedHint')}
-        </p>
-      </div>
-    )
+  if (entry.status === 'unsupported') return null
+  if (provider === 'antigravity') return <AntigravityQuotaCell entry={entry} />
+  if (!resolveQuotaSnapshotDisplay(entry).hasWindows) {
+    return <p className="text-muted-foreground text-meta">{t('upstreamPage.quota.noWindows')}</p>
   }
-
-  if (provider === 'antigravity') {
-    return <AntigravityQuotaCell entry={entry} />
-  }
-
-  if (entry.status === 'error' && entry.primaryWindows.length === 0 && entry.windows.length === 0) {
-    return (
-      <div className="grid min-w-40 gap-1">
-        <div className="flex flex-wrap items-center gap-1">
-          <UpstreamQuotaStatusBadge status="error" />
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-          </UpstreamQuotaMetaBadge>
-          <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
-        </div>
-        <p className="text-destructive line-clamp-2 text-[11px] leading-4">
-          {getUpstreamQuotaErrorMessage(entry, t)}
-        </p>
-      </div>
-    )
-  }
-
-  if (entry.freshness === 'never' && entry.collectionStatus === 'idle' && entry.windowCount === 0) {
-    return (
-      <span className="text-muted-foreground text-xs">{t('upstreamPage.quota.notCollected')}</span>
-    )
-  }
-
-  if (provider === 'xai') {
-    return <GrokQuotaCell entry={entry} />
-  }
-
-  return (
-    <div className="grid min-w-52 gap-1.5">
-      <div className="flex flex-wrap items-center gap-1">
-        {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
-        <UpstreamQuotaStatusBadge status={entry.status} />
-        <UpstreamQuotaMetaBadge>
-          {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-        </UpstreamQuotaMetaBadge>
-        <UpstreamQuotaCollectionBadge status={entry.collectionStatus} />
-      </div>
-      <GenericWindowsCell entry={entry} />
-    </div>
-  )
-}
-
-function QuotaCellContent({ state }: { state: UpstreamQuotaCellState }) {
-  const { t } = useTranslation()
-
-  if (state.kind === 'capability-absent') {
-    return (
-      <span className="text-muted-foreground text-xs">{t('upstreamPage.quota.unsupported')}</span>
-    )
-  }
-
-  if (state.kind === 'loading') {
-    return <Skeleton className="h-8 w-40 rounded-md" />
-  }
-
-  if (state.kind === 'not-collected' || state.kind === 'snapshot-miss') {
-    return (
-      <span
-        className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium"
-        title={
-          state.kind === 'snapshot-miss' ? t('upstreamPage.quota.snapshotMissHint') : undefined
-        }
-      >
-        {state.kind === 'snapshot-miss'
-          ? t('upstreamPage.quota.snapshotMiss')
-          : t('upstreamPage.quota.notCollected')}
-      </span>
-    )
-  }
-
-  return <UpstreamQuotaEntryCell entry={state.entry} />
+  if (provider === 'xai') return <GrokQuotaCell entry={entry} />
+  return <GenericWindowsCell entry={entry} />
 }
 
 export function UpstreamQuotaCell({
   state,
   collecting = false,
   unavailableReason,
+  onInspect,
+  detailLoading = false,
+  detailFailed = false,
 }: {
   state: UpstreamQuotaCellState
   collecting?: boolean
   unavailableReason?: string
+  onInspect?: () => void
+  detailLoading?: boolean
+  detailFailed?: boolean
 }) {
-  const { t, i18n } = useTranslation()
-  const observedAt = state.kind === 'entry' ? state.entry.observedAt : null
-  const observedTime = observedAt ? Date.parse(observedAt) : NaN
+  const { t } = useTranslation()
+  if (state.kind === 'loading') return <Skeleton className="h-8 w-full max-w-40 rounded-md" />
+  if (state.kind !== 'entry') {
+    const label = t(
+      state.kind === 'capability-absent'
+        ? 'upstreamPage.quota.unsupported'
+        : state.kind === 'read-error'
+          ? 'upstreamPage.quota.summary.readFailed'
+          : state.kind === 'snapshot-miss'
+            ? 'upstreamPage.quota.snapshotMiss'
+            : 'upstreamPage.quota.summary.recordMissing',
+    )
+    const hint = t(
+      state.kind === 'capability-absent'
+        ? 'upstreamPage.quota.summary.capabilityAbsentHint'
+        : state.kind === 'read-error'
+          ? 'upstreamPage.quota.summary.readFailedHint'
+          : 'upstreamPage.quota.summary.recordMissingHint',
+    )
+    return (
+      <div className="flex min-w-0 items-center justify-between gap-2">
+        <QuotaTooltip content={hint}>
+          <Badge
+            tabIndex={0}
+            variant={
+              state.kind === 'read-error'
+                ? 'destructive'
+                : state.kind === 'capability-absent'
+                  ? 'unsupported'
+                  : 'unknown'
+            }
+            className="max-w-full min-w-0"
+          >
+            <span className="truncate">{label}</span>
+          </Badge>
+        </QuotaTooltip>
+        {onInspect && state.kind !== 'capability-absent' ? (
+          <Button
+            type="button"
+            variant="text"
+            size="xs"
+            onClick={onInspect}
+            aria-label={t('upstreamPage.quota.summary.viewDetails')}
+          >
+            {t('upstreamPage.quota.summary.viewDetailsShort')}
+            <ChevronRight aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
+  const { entry, readFailed } = state
+  const display = resolveQuotaSnapshotDisplay(entry)
+  const unsupported = entry.status === 'unsupported' || entry.collectionStatus === 'unsupported'
+  const total = Math.max(entry.windowCount, entry.windows.length, entry.primaryWindows.length)
+  const grid = entry.provider.trim().toLowerCase() === 'xai' ? null : buildQuotaPreviewGrid(entry)
+  const shownWindows = grid
+    ? grid.groups
+        .flatMap((group) => group.values)
+        .filter((window): window is QuotaWindow => window !== null)
+    : entry.provider.trim().toLowerCase() === 'xai'
+      ? [findXaiWeeklyWindow(entry), findCurrencyWindow(entry), findXaiOnDemandWindow(entry)]
+          .filter((window): window is QuotaWindow => window !== null)
+          .slice(0, 2)
+      : (entry.primaryWindows.length ? entry.primaryWindows : entry.windows).slice(0, 2)
+  const hiddenRisk =
+    entry.status === 'exhausted' && !shownWindows.some((window) => window.status === 'exhausted')
+      ? 'exhausted'
+      : entry.status === 'low' &&
+          !shownWindows.some((window) => window.status === 'low' || window.status === 'exhausted')
+        ? 'low'
+        : null
   return (
-    <div className="grid gap-1.5">
-      <QuotaCellContent state={state} />
-      {state.kind === 'entry' &&
-      state.entry.lastError &&
-      (state.entry.primaryWindows.length > 0 || state.entry.windows.length > 0) ? (
-        <p className="text-warning-foreground dark:text-warning text-xs leading-5">
-          {getUpstreamQuotaErrorMessage(state.entry, t)}
-        </p>
-      ) : null}
-      {collecting ? (
-        <p className="text-muted-foreground text-xs" role="status">
-          {t('upstreamPage.quota.actions.collecting')}
-        </p>
-      ) : null}
-      {Number.isFinite(observedTime) ? (
-        <p
-          className="text-muted-foreground text-[11px]"
-          title={new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
-            dateStyle: 'short',
-            timeStyle: 'medium',
-          }).format(observedTime)}
-        >
-          {t('upstreamPage.quota.updatedAt', {
-            time: formatUpstreamQuotaRelativeTime(
-              observedTime,
-              i18n.resolvedLanguage ?? i18n.language,
-            ),
-          })}
-        </p>
-      ) : null}
-      {unavailableReason ? (
-        <p className="text-muted-foreground text-[11px]">{unavailableReason}</p>
+    <div className="grid min-w-0 grid-cols-1 gap-1.5 wrap-anywhere whitespace-normal">
+      <QuotaSnapshotBadges
+        entry={entry}
+        collecting={collecting}
+        readFailed={readFailed}
+        unavailableReason={unavailableReason}
+      />
+      {!unsupported && display.hasWindows ? <QuotaPreview entry={entry} /> : null}
+      {!unsupported ? (
+        <QuotaFooter
+          entry={entry}
+          onInspect={onInspect}
+          total={total}
+          detailLoading={detailLoading}
+          detailFailed={detailFailed}
+          hiddenRisk={hiddenRisk}
+        />
       ) : null}
     </div>
   )

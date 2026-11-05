@@ -2061,7 +2061,6 @@ export const en = {
         },
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: '+{{count}} more',
         summary: {
           plan: '{{name}} plan',
           historical: 'Recollect needed',

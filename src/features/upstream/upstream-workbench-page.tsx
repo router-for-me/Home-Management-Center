@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AccountsPanel } from '@/features/credentials/accounts-panel'
 import { getCredentialDisplayName } from '@/features/credentials/credential-display'
 import { ProvidersPanel } from '@/features/providers/providers-panel'
-import { getUpstreamQuotaErrorMessage } from '@/features/upstream/quota-format'
+import { getUpstreamQuotaErrorSummary } from '@/features/upstream/quota-format'
 import {
   type UpstreamAccountsStats,
   type UpstreamProvidersStats,
@@ -123,7 +123,7 @@ export function UpstreamWorkbenchPage({
         toast.info(t('upstreamPage.sync.credentialPending'))
       } else if (result.completion === 'settled' && result.item) {
         if (result.item.collectionStatus === 'failed') {
-          toast.error(getUpstreamQuotaErrorMessage(result.item, t))
+          toast.error(getUpstreamQuotaErrorSummary(result.item, t).title)
         } else if (result.item.collectionStatus === 'partial') {
           toast.warning(t('upstreamPage.sync.credentialPartial'))
         } else {

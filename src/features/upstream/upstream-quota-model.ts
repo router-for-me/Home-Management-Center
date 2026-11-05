@@ -7,10 +7,11 @@ export type UpstreamQuotaCellState =
   | { kind: 'capability-absent' }
   | { kind: 'loading' }
   | { kind: 'not-collected' }
+  | { kind: 'read-error' }
   // A truncated snapshot list cannot tell whether an unloaded credential has
   // already been collected; its detail endpoint supplies the current state.
   | { kind: 'snapshot-miss' }
-  | { kind: 'entry'; entry: UpstreamQuotaEntry }
+  | { kind: 'entry'; entry: UpstreamQuotaEntry; readFailed?: boolean }
 
 export type AntigravityQuotaGroupId = 'gemini' | 'third-party'
 
@@ -176,18 +177,22 @@ export function resolveUpstreamQuotaCellState({
   truncated,
   map,
   resource,
+  readFailed = false,
 }: {
   available: boolean
   loading: boolean
   truncated: boolean
   map: Map<string, UpstreamQuotaEntry>
   resource: Pick<CredentialResource, 'authIndex' | 'id' | 'identifier' | 'name'>
+  readFailed?: boolean
 }): UpstreamQuotaCellState {
   if (!available) return { kind: 'capability-absent' }
 
   const entry = findUpstreamQuotaEntry(map, resource)
-  if (entry) return { kind: 'entry', entry }
+  if (entry)
+    return readFailed ? { kind: 'entry', entry, readFailed: true } : { kind: 'entry', entry }
   if (loading) return { kind: 'loading' }
+  if (readFailed) return { kind: 'read-error' }
   return { kind: truncated ? 'snapshot-miss' : 'not-collected' }
 }
 

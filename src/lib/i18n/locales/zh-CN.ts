@@ -1976,7 +1976,6 @@ export const zhCN = {
         },
         remaining: '剩余',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: '+{{count}} 更多',
         summary: {
           plan: '{{name}} 套餐',
           historical: '需重新采集',
