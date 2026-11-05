@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CircleHelp } from 'lucide-react'
+import { Activity, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
@@ -81,7 +81,7 @@ export function CredentialInFlightCell({
     : '—'
   const saturated = summary?.totalSaturated || (summary?.saturatedModelCount ?? 0) > 0
   const StatusIcon =
-    stale || availability.errorMessage || saturated ? AlertTriangle : known ? Activity : CircleHelp
+    stale || availability.errorMessage || saturated ? AlertTriangle : known ? Activity : null
   const activeModels = (summary?.models ?? [])
     .map((item) => ({
       ...item,
@@ -97,27 +97,29 @@ export function CredentialInFlightCell({
           type="button"
           variant="text"
           size="sm"
-          className="max-w-full min-w-0 justify-start tabular-nums"
+          className="max-w-full min-w-0 cursor-pointer justify-start tabular-nums"
           aria-label={`${t('credentialsPage.list.inFlight')}: ${stateLabel ?? totalLabel}`}
           onClick={(event) => {
             event.stopPropagation()
             onInspect()
           }}
         >
-          <StatusIcon
-            className={
-              stale || availability.errorMessage || saturated
-                ? 'text-warning-foreground dark:text-warning'
-                : undefined
-            }
-            aria-hidden="true"
-          />
           <span className="min-w-0 truncate font-mono">{totalLabel}</span>
+          {StatusIcon ? (
+            <StatusIcon
+              className={
+                stale || availability.errorMessage || saturated
+                  ? 'text-warning-foreground dark:text-warning'
+                  : undefined
+              }
+              aria-hidden="true"
+            />
+          ) : null}
         </Button>
       </TooltipTrigger>
       <TooltipContent
         side="top"
-        className="grid max-w-[calc(100vw-2rem)] min-w-48 gap-1 px-3 py-2 whitespace-normal"
+        className="grid max-h-[calc(100dvh-2rem)] max-w-[calc(100vw-2rem)] min-w-48 gap-1 overflow-y-auto px-3 py-2 whitespace-normal"
       >
         <p className="font-semibold">
           {t('credentialsPage.list.inFlight')}: {totalLabel}
