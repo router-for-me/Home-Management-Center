@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
@@ -385,6 +386,9 @@ export function AccountsToolbar({
   )
 }
 
+const credentialCellTooltipClassName =
+  'max-h-[calc(100dvh-2rem)] max-w-[min(24rem,calc(100vw-2rem))] overflow-y-auto wrap-anywhere whitespace-normal'
+
 function CredentialList({
   resources,
   selectedResourceId,
@@ -588,15 +592,26 @@ function CredentialList({
                     <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
                       <FileJson className="size-4" aria-hidden="true" />
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{displayName}</p>
-                      <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                        {resource.name ?? resource.authIndex ?? resource.identifier}
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <OverflowTooltipText
+                        value={displayName}
+                        className="font-medium"
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
+                      <OverflowTooltipText
+                        value={resource.name ?? resource.authIndex ?? resource.identifier}
+                        className="text-muted-foreground mt-1 font-mono text-xs"
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
                       {resource.note ? (
-                        <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                          {resource.note}
-                        </p>
+                        <OverflowTooltipText
+                          value={resource.note}
+                          className="text-muted-foreground mt-0.5 text-xs"
+                          overflowClassName="cursor-pointer"
+                          tooltipClassName={credentialCellTooltipClassName}
+                        />
                       ) : null}
                     </div>
                   </div>
