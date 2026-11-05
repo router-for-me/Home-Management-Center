@@ -1396,7 +1396,7 @@ describe('GrokQuotaDetail rendering', () => {
     const markup = renderWithI18n(
       <GrokQuotaDetail entry={entry} headerAction={<button type="button">Refresh quota</button>} />,
     )
-    expect(markup).toContain('grok.svg')
+    expect(markup).toContain('data-provider-icon="xai"')
     expect(markup).toContain('SuperGrok')
     expect(markup).toContain('Refresh quota')
     expect(markup).toContain('Response header')

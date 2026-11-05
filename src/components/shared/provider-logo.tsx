@@ -1,83 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import ampLogo from '@/assets/icons/amp.svg'
-import antigravityLogo from '@/assets/icons/antigravity.svg'
-import claudeLogo from '@/assets/icons/claude.svg'
-import codexLogo from '@/assets/icons/codex.svg'
-import deepseekLogo from '@/assets/icons/deepseek.svg'
-import geminiLogo from '@/assets/icons/gemini.svg'
-import glmLogo from '@/assets/icons/glm.svg'
-import grokLogo from '@/assets/icons/grok.svg'
 import iflowLogo from '@/assets/icons/iflow.svg'
-import kimiDarkLogo from '@/assets/icons/kimi-dark.svg'
-import kimiLightLogo from '@/assets/icons/kimi-light.svg'
-import metaLogo from '@/assets/icons/meta.svg'
-import minimaxLogo from '@/assets/icons/minimax.svg'
-import openaiDarkLogo from '@/assets/icons/openai-dark.svg'
-import openaiLightLogo from '@/assets/icons/openai-light.svg'
-import qwenLogo from '@/assets/icons/qwen.svg'
-import vertexLogo from '@/assets/icons/vertex.svg'
 import { cn } from '@/lib/utils'
-
-/**
- * Brand marks, keyed by a resolved brand id.
- *
- * The table serves two different questions — "which provider served this?" and
- * "who built this model?" — which is why some keys name a product (`codex`,
- * `vertex`, `antigravity`) and others name a company (`openai`, `glm`). The two
- * are resolved by `resolveProviderLogoId` and `resolveModelVendorId`
- * respectively and must not be substituted for one another.
- */
-const brandLogos: Record<string, { src: string; darkSrc?: string; className?: string }> = {
-  gemini: { src: geminiLogo },
-  claude: { src: claudeLogo },
-  codex: { src: codexLogo },
-  vertex: { src: vertexLogo },
-  antigravity: { src: antigravityLogo },
-  kimi: { src: kimiLightLogo, darkSrc: kimiDarkLogo },
-  meta: { src: metaLogo },
-  openai: { src: openaiLightLogo, darkSrc: openaiDarkLogo },
-  xai: { src: grokLogo, className: 'p-0.5 dark:invert' },
-  deepseek: { src: deepseekLogo },
-  glm: { src: glmLogo },
-  qwen: { src: qwenLogo },
-  minimax: { src: minimaxLogo },
-  iflow: { src: iflowLogo },
-  amp: { src: ampLogo },
-}
-
-const brandMarks: Record<
-  string,
-  {
-    label: string
-    className: string
-  }
-> = {
-  gemini: {
-    label: 'G',
-    className: 'border-blue-500/25 bg-blue-500/10 text-blue-700 dark:text-blue-300',
-  },
-  claude: {
-    label: 'C',
-    className: 'border-orange-500/25 bg-orange-500/10 text-orange-700 dark:text-orange-300',
-  },
-  codex: {
-    label: 'Cx',
-    className: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
-  },
-  vertex: {
-    label: 'V',
-    className: 'border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300',
-  },
-  openai: {
-    label: 'AI',
-    className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-  },
-  xai: {
-    label: 'xAI',
-    className: 'border-zinc-500/25 bg-zinc-500/10 text-zinc-700 dark:text-zinc-300',
-  },
-}
 
 /**
  * Provider aliases, tried in order.
@@ -152,7 +76,6 @@ export function resolveProviderLogoId(value: string | null | undefined) {
   for (const [brandId, matches] of providerAliases) {
     if (matches.test(normalized)) return brandId
   }
-  if (Object.hasOwn(brandLogos, normalized)) return normalized
 
   // Usage reporting groups by model as readily as by provider, so a model ID
   // reaches this function too. Falling through to the vendor rules puts a
@@ -190,6 +113,45 @@ const sizeClassNames = {
 
 type ProviderLogoSize = keyof typeof sizeClassNames
 
+type IconSource = { src: string; monochrome: boolean }
+
+const iconSources = new Map<string, IconSource | null>()
+const libraryAliases: Record<string, string> = { vertex: 'vertexai', glm: 'zai' }
+
+function getLibraryIcon(brandId: string): IconSource | null {
+  const iconId = libraryAliases[brandId] ?? brandId
+  const cached = iconSources.get(iconId)
+  if (cached !== undefined) return cached
+
+  let icon: IconSource | null = null
+  // Asset contexts pick up new library slugs without a per-brand import list.
+  try {
+    // Kimi's colored SVG mixes currentColor with blue; an img cannot inherit the theme.
+    if (iconId !== 'kimi') {
+      icon = {
+        src: String(
+          new URL(`@lobehub/icons-static-svg/icons/${iconId}-color.svg?url`, import.meta.url),
+        ),
+        monochrome: false,
+      }
+    }
+  } catch {
+    // Not every brand provides a color variant.
+  }
+  if (!icon) {
+    try {
+      icon = {
+        src: String(new URL(`@lobehub/icons-static-svg/icons/${iconId}.svg?url`, import.meta.url)),
+        monochrome: true,
+      }
+    } catch {
+      // Unknown private providers keep the console's neutral monogram fallback.
+    }
+  }
+  iconSources.set(iconId, icon)
+  return icon
+}
+
 export function ProviderLogo({
   providerId,
   size = 'md',
@@ -199,54 +161,26 @@ export function ProviderLogo({
   size?: ProviderLogoSize
   className?: string
 }) {
-  // Resolution happens here rather than at the call site so every surface that
-  // shows a provider agrees on what `openai-compatibility` looks like.
   const brandId = resolveProviderLogoId(providerId) ?? providerId
-  const logo = brandLogos[brandId]
+  // Keep the existing iFlow mark until the community collection includes it.
+  const icon =
+    getLibraryIcon(brandId) ?? (brandId === 'iflow' ? { src: iflowLogo, monochrome: false } : null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     setFailed(false)
-  }, [providerId])
+  }, [providerId, icon?.src])
 
-  if (logo && !failed) {
-    if (logo.darkSrc) {
-      return (
-        <>
-          <img
-            src={logo.src}
-            alt=""
-            className={cn(
-              'shrink-0 rounded-md object-contain dark:hidden',
-              sizeClassNames[size],
-              className,
-            )}
-            aria-hidden="true"
-            onError={() => setFailed(true)}
-          />
-          <img
-            src={logo.darkSrc}
-            alt=""
-            className={cn(
-              'hidden shrink-0 rounded-md object-contain dark:block',
-              sizeClassNames[size],
-              className,
-            )}
-            aria-hidden="true"
-            onError={() => setFailed(true)}
-          />
-        </>
-      )
-    }
-
+  if (icon && !failed) {
     return (
       <img
-        src={logo.src}
+        src={icon.src}
         alt=""
+        data-provider-icon={brandId}
         className={cn(
-          'shrink-0 rounded-md object-contain',
+          'shrink-0 object-contain',
+          icon.monochrome && 'dark:invert',
           sizeClassNames[size],
-          logo.className,
           className,
         )}
         aria-hidden="true"
@@ -255,22 +189,16 @@ export function ProviderLogo({
     )
   }
 
-  const mark = brandMarks[brandId] ?? {
-    label: brandId.slice(0, 2).toUpperCase(),
-    className: 'border-border bg-muted text-muted-foreground',
-  }
-
   return (
     <span
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-md border font-semibold',
+        'border-border bg-muted text-muted-foreground flex shrink-0 items-center justify-center rounded-md border font-semibold',
         sizeClassNames[size],
-        mark.className,
         className,
       )}
       aria-hidden="true"
     >
-      {mark.label}
+      {brandId.slice(0, 2).toUpperCase()}
     </span>
   )
 }

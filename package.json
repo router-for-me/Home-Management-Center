@@ -22,6 +22,7 @@
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",
     "@hookform/resolvers": "^5.0.0",
+    "@lobehub/icons-static-svg": "^1.102.0",
     "@radix-ui/react-slot": "^1.0.0",
     "@tanstack/react-query": "^5.0.0",
     "@tanstack/react-router": "^1.0.0",
