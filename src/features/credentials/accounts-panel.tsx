@@ -93,7 +93,7 @@ import {
   useCredentialModels,
   useCredentialWorkbench,
 } from '@/features/credentials/use-credential-workbench'
-import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
+import { CredentialQuotaSummary } from '@/features/upstream/credential-quota-summary'
 import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
@@ -393,6 +393,7 @@ function CredentialList({
   cooldownResetSupported,
   quotaAvailable,
   quotaLoading,
+  quotaReadFailed,
   quotaRecollectAvailable,
   quotaSyncing,
   quotaTruncated,
@@ -419,6 +420,7 @@ function CredentialList({
   cooldownResetSupported: boolean
   quotaAvailable: boolean
   quotaLoading: boolean
+  quotaReadFailed: boolean
   quotaRecollectAvailable: boolean
   quotaSyncing: boolean
   quotaTruncated: boolean
@@ -503,9 +505,9 @@ function CredentialList({
           )}
           {showSecondary ? (
             <>
-              <col className="w-[224px]" />
+              <col className="w-[22rem]" />
               <col className="w-[112px]" />
-              <col className="w-[90px]" />
+              <col className="w-[112px]" />
               <col className="w-[116px]" />
               <col className="w-[88px]" />
               <col className="w-[88px]" />
@@ -659,7 +661,8 @@ function CredentialList({
                 {showSecondary ? (
                   <>
                     <TableCell>
-                      <UpstreamQuotaCell
+                      <CredentialQuotaSummary
+                        onInspect={() => onOpenDrawer(resource, 'quota')}
                         collecting={quotaAction === 'collecting'}
                         unavailableReason={
                           quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
@@ -667,6 +670,7 @@ function CredentialList({
                         state={resolveUpstreamQuotaCellState({
                           available: quotaAvailable,
                           loading: quotaLoading,
+                          readFailed: quotaReadFailed,
                           truncated: quotaTruncated,
                           map: quotaMap,
                           resource,
@@ -787,6 +791,7 @@ export function AccountsPanel({
   onWebsocketOnlyChange,
   quotaAvailable = false,
   quotaLoading = false,
+  quotaReadFailed = false,
   quotaTruncated = false,
   quotaMap,
   quotaRecollectAvailable = false,
@@ -804,6 +809,7 @@ export function AccountsPanel({
   onWebsocketOnlyChange?: (websocketOnly: boolean) => void
   quotaAvailable?: boolean
   quotaLoading?: boolean
+  quotaReadFailed?: boolean
   quotaTruncated?: boolean
   quotaMap?: Map<string, UpstreamQuotaEntry>
   quotaRecollectAvailable?: boolean
@@ -814,6 +820,7 @@ export function AccountsPanel({
 }) {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const detailTriggerRef = useRef<HTMLElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
   const [providerFilter, setProviderFilter] = useState('all')
@@ -1512,6 +1519,7 @@ export function AccountsPanel({
             cooldownResetSupported={workbench.credentialCooldownReset}
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
+            quotaReadFailed={quotaReadFailed}
             quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
             quotaSyncing={quotaSyncing}
             quotaTruncated={quotaTruncated}
@@ -1543,6 +1551,8 @@ export function AccountsPanel({
             }}
             onDownloadResource={(resource) => void handleDownload(resource)}
             onOpenDrawer={(resource, tab) => {
+              detailTriggerRef.current =
+                document.activeElement instanceof HTMLElement ? document.activeElement : null
               setSelectedResourceId(resource.id)
               setDrawerTab(tab)
               setDetailSheetOpen(true)
@@ -1563,7 +1573,15 @@ export function AccountsPanel({
       </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
-        <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <SheetContent
+          className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
+          onCloseAutoFocus={(event) => {
+            const trigger = detailTriggerRef.current
+            if (!trigger?.isConnected) return
+            event.preventDefault()
+            trigger.focus({ preventScroll: true })
+          }}
+        >
           {selectedResource ? (
             <CredentialDetailDrawer
               resource={selectedResource}

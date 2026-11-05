@@ -192,6 +192,7 @@ export function UpstreamWorkbenchPage({
             onWebsocketOnlyChange={setWebsocketOnly}
             quotaAvailable={quota.available}
             quotaLoading={quota.isPending}
+            quotaReadFailed={quota.isError}
             quotaTruncated={quota.truncated}
             quotaMap={quota.map}
             quotaRecollectAvailable={quota.capabilities.quotaRecollect}
