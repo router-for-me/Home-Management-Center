@@ -510,8 +510,8 @@ function CredentialList({
               <col className="w-[112px]" />
               <col className="w-[112px]" />
               <col className="w-[116px]" />
-              <col className="w-[88px]" />
-              <col className="w-[88px]" />
+              <col className="w-[6.5rem]" />
+              <col className="w-[5.5rem]" />
             </>
           ) : null}
           <col className="table-action-column-3" />
@@ -673,22 +673,18 @@ function CredentialList({
                     </TableCell>
                     <TableCell>
                       {resource.priority === null ? (
-                        <span className="text-muted-foreground font-mono text-xs tabular-nums">
-                          0
-                        </span>
+                        <span className="text-muted-foreground text-body tabular-nums">0</span>
                       ) : (
-                        <span className="font-mono text-xs font-medium tabular-nums">
+                        <span className="text-body font-medium tabular-nums">
                           {resource.priority}
                         </span>
                       )}
                     </TableCell>
                     <TableCell>
                       {resource.weight === null || resource.weight === undefined ? (
-                        <span className="text-muted-foreground font-mono text-xs tabular-nums">
-                          1
-                        </span>
+                        <span className="text-muted-foreground text-body tabular-nums">1</span>
                       ) : (
-                        <span className="font-mono text-xs font-medium tabular-nums">
+                        <span className="text-body font-medium tabular-nums">
                           {resource.weight}
                         </span>
                       )}
