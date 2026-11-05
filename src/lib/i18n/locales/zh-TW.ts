@@ -2259,7 +2259,7 @@ export const zhTW = {
         provider: '模型供應商',
         toggleStatus: '切換憑證 {{name}} 的啟用狀態',
         enabled: '啟用',
-        inFlight: '並行 (In-Flight)',
+        inFlight: '並行',
         ws: 'WS',
         cooling: '冷卻排程',
         priority: '優先順序',
@@ -2447,6 +2447,12 @@ export const zhTW = {
           modelLimit: '{{model}} 的上限必須是非負整數。',
           duplicateModel: '模型 {{model}} 設定重複。',
         },
+
+        cellUnsupported: '不支援',
+        cellLoading: '正在載入並行資料',
+        cellUnknown: '尚無並行快照。',
+        cellUnavailable: '並行資料載入失敗，請開啟詳情重試。',
+        cellStale: '快照已過期、不完整或更新失敗；顯示上次已知值。',
       },
       delete: {
         title: '刪除憑證？',

@@ -2555,6 +2555,13 @@ export const en = {
           modelLimit: 'The limit for {{model}} must be a non-negative integer.',
           duplicateModel: 'Model {{model}} is configured more than once.',
         },
+
+        cellUnsupported: 'Unsupported',
+        cellLoading: 'Loading in-flight data',
+        cellUnknown: 'No in-flight snapshot is available yet.',
+        cellUnavailable: 'In-flight data could not be loaded. Open details to retry.',
+        cellStale:
+          'The snapshot is stale, incomplete, or could not be refreshed. Showing the last known counts.',
       },
       delete: {
         title: 'Delete credential?',

@@ -2258,7 +2258,7 @@ export const zhCN = {
         provider: '模型供应商',
         toggleStatus: '切换凭证 {{name}} 的启用状态',
         enabled: '启用',
-        inFlight: '并发 (In-Flight)',
+        inFlight: '并发',
         ws: 'WS',
         cooling: '冷却调度',
         priority: '优先级',
@@ -2446,6 +2446,12 @@ export const zhCN = {
           modelLimit: '{{model}} 的上限必须是非负整数。',
           duplicateModel: '模型 {{model}} 配置重复。',
         },
+
+        cellUnsupported: '不支持',
+        cellLoading: '正在加载并发数据',
+        cellUnknown: '尚无并发快照。',
+        cellUnavailable: '并发数据加载失败，请打开详情重试。',
+        cellStale: '快照已过期、不完整或刷新失败；显示上次已知值。',
       },
       delete: {
         title: '删除凭证？',

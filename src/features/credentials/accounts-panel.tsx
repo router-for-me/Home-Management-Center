@@ -58,7 +58,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
   type CreateCredentialMode,
@@ -79,6 +79,10 @@ import {
   filterCredentialResources,
   hasCredentialFilters,
 } from '@/features/credentials/credential-filters'
+import {
+  type CredentialInFlightAvailability,
+  CredentialInFlightCell,
+} from '@/features/credentials/credential-in-flight-cell'
 import {
   CoolingCell,
   type InlineMetadataSave,
@@ -381,109 +385,6 @@ export function AccountsToolbar({
   )
 }
 
-/*
- * The action column used to be measured per locale — 224px for Chinese, 260 for
- * English, 284 for Russian — because three labelled buttons only fit if you know
- * how long the labels are. A shared reserved width replaces the table: the labels
- * still differ, but the column no longer has to be tailored to them, and below
- * 40rem there are no labels in it at all.
- */
-function formatInFlightLimit(limit: number | null | undefined) {
-  return typeof limit === 'number' && Number.isFinite(limit) && limit > 0 ? String(limit) : '♾️'
-}
-
-function CredentialInFlightCell({
-  resource,
-  summary,
-  onInspectConcurrency,
-}: {
-  resource: CredentialResource
-  summary: CredentialInFlightSummary | null
-  onInspectConcurrency: () => void
-}) {
-  const { t } = useTranslation()
-  const [pinnedOpen, setPinnedOpen] = useState(false)
-  const totalInFlight = Math.max(0, summary?.observedInFlight ?? 0, summary?.admittedInFlight ?? 0)
-  const totalLimit = summary?.maxInFlight ?? resource.maxInFlight ?? null
-  const totalLabel = `${totalInFlight}/${formatInFlightLimit(totalLimit)}`
-
-  const activeModels = useMemo(() => {
-    const models = summary?.models ?? []
-    return models
-      .map((item) => {
-        const inFlight = Math.max(0, item.observedInFlight ?? 0, item.admittedInFlight ?? 0)
-        const modelLimit = item.maxInFlight ?? resource.maxInFlightByModel?.[item.model] ?? null
-        return {
-          model: item.model,
-          inFlight,
-          limitLabel: formatInFlightLimit(modelLimit),
-          saturated: item.saturated,
-        }
-      })
-      .filter((item) => item.inFlight > 0)
-      .sort((a, b) => b.inFlight - a.inFlight || a.model.localeCompare(b.model))
-  }, [resource.maxInFlightByModel, summary?.models])
-
-  const saturated = Boolean(summary?.totalSaturated || (summary?.saturatedModelCount ?? 0) > 0)
-
-  const badge = (
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation()
-        if (activeModels.length > 0) {
-          setPinnedOpen((prev) => !prev)
-        } else {
-          onInspectConcurrency()
-        }
-      }}
-      className={cn(
-        'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-xs font-medium tabular-nums transition-colors',
-        saturated
-          ? 'border-warning/45 bg-warning/12 text-warning-foreground dark:text-warning'
-          : totalInFlight > 0
-            ? 'border-info/35 bg-info/10 text-info hover:bg-info/15'
-            : 'border-border bg-muted/50 text-muted-foreground hover:text-foreground',
-      )}
-    >
-      <span>{totalLabel}</span>
-    </button>
-  )
-
-  if (activeModels.length === 0) {
-    return badge
-  }
-
-  return (
-    <Tooltip open={pinnedOpen ? true : undefined} onOpenChange={setPinnedOpen}>
-      <TooltipTrigger asChild>{badge}</TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="center"
-        className="min-w-56 px-3 py-2"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="grid gap-1 tabular-nums">
-          <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 text-[11px] font-semibold">
-            <span>{t('credentialsPage.list.inFlight')}</span>
-            <span className="font-mono">{totalLabel}</span>
-          </div>
-          {activeModels.map((item) => (
-            <div key={item.model} className="flex items-center justify-between gap-4 text-[11px]">
-              <span className="max-w-48 truncate font-mono opacity-90">{item.model}</span>
-              <span
-                className={cn('font-mono font-medium', item.saturated ? 'text-warning' : undefined)}
-              >
-                {item.inFlight}/{item.limitLabel}
-              </span>
-            </div>
-          ))}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 function CredentialList({
   resources,
   selectedResourceId,
@@ -498,6 +399,7 @@ function CredentialList({
   quotaMap,
   quotaCollectingIds,
   inFlightByCredentialId,
+  inFlightAvailability,
   emptyState,
   onClearFilters,
   onClearCooldown,
@@ -523,6 +425,7 @@ function CredentialList({
   quotaMap: Map<string, UpstreamQuotaEntry>
   quotaCollectingIds: Set<string>
   inFlightByCredentialId: Map<string, CredentialInFlightSummary>
+  inFlightAvailability: CredentialInFlightAvailability
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
   onClearCooldown: (resource: CredentialResource) => void
@@ -776,7 +679,8 @@ function CredentialList({
                         summary={
                           inFlightByCredentialId.get(getCredentialInFlightId(resource)) ?? null
                         }
-                        onInspectConcurrency={() => onOpenDrawer(resource, 'concurrency')}
+                        availability={inFlightAvailability}
+                        onInspect={() => onOpenDrawer(resource, 'concurrency')}
                       />
                     </TableCell>
                     <TableCell>
@@ -1614,6 +1518,22 @@ export function AccountsPanel({
             quotaMap={resolvedQuotaMap}
             quotaCollectingIds={quotaCollectingIds}
             inFlightByCredentialId={inFlightByCredentialId}
+            inFlightAvailability={{
+              available: workbench.credentialInFlight || workbench.credentialConcurrencyLimits,
+              pending:
+                (workbench.credentialInFlight && workbench.inFlightPending) ||
+                (workbench.credentialConcurrencyLimits && workbench.concurrencyPending),
+              stale:
+                workbench.inFlightStale ||
+                workbench.concurrencyStale ||
+                Boolean(workbench.inFlightSnapshot?.stale) ||
+                Boolean(
+                  workbench.inFlightSnapshot &&
+                  (!workbench.inFlightSnapshot.coverageComplete ||
+                    !workbench.inFlightSnapshot.aggregatesComplete),
+                ),
+              errorMessage: concurrencyErrorMessage || null,
+            }}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
             onCollectQuota={(resource) => void onCollectQuota?.(resource)}

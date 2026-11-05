@@ -2353,7 +2353,7 @@ export const ru = {
         provider: 'Поставщик моделей',
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
-        inFlight: 'In-flight',
+        inFlight: 'В работе',
         ws: 'WS',
         cooling: 'Расписание охлаждения',
         priority: 'Приоритет',
@@ -2559,6 +2559,13 @@ export const ru = {
           modelLimit: 'Лимит для {{model}} должен быть неотрицательным целым числом.',
           duplicateModel: 'Модель {{model}} настроена несколько раз.',
         },
+
+        cellUnsupported: 'Не поддерживается',
+        cellLoading: 'Загрузка данных о запросах в работе',
+        cellUnknown: 'Снимок запросов в работе пока отсутствует.',
+        cellUnavailable: 'Не удалось загрузить данные. Откройте подробности и повторите попытку.',
+        cellStale:
+          'Снимок устарел, неполон или не обновлён. Показаны последние известные значения.',
       },
       delete: {
         title: 'Удалить credential?',
