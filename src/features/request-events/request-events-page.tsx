@@ -3,7 +3,6 @@ import { type ReactNode, useRef, useState } from 'react'
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  Brain,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -1685,30 +1684,29 @@ function RequestEventsTable({
                               <TooltipTrigger asChild>
                                 <div
                                   tabIndex={0}
-                                  className="inline-flex max-w-full cursor-default flex-col items-end outline-hidden"
+                                  className="focus-visible:ring-ring/50 grid min-w-0 gap-0.5 rounded-sm outline-none focus-visible:ring-3"
                                 >
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    <span className="font-semibold">
+                                  <div className="flex min-w-0 items-center justify-end gap-1.5">
+                                    <span className="min-w-0 truncate font-semibold">
                                       {formatCompactNumber(tokenCounts.totalTokens)}
                                     </span>
                                     {cacheHitRate ? (
-                                      <span
-                                        className={cn(
-                                          'py-0.2 inline-flex items-center gap-0.5 rounded border px-1.5 text-[10px] font-medium',
-                                          tokenCounts.cacheReadTokens > 0
-                                            ? 'border-info/30 bg-info/10 text-info'
-                                            : 'border-border bg-muted/60 text-muted-foreground',
-                                        )}
+                                      <Badge
+                                        variant={tokenCounts.cacheReadTokens > 0 ? 'info' : 'muted'}
                                       >
-                                        <Database
-                                          className="size-2.5 shrink-0"
-                                          aria-hidden="true"
-                                        />
+                                        <Database aria-hidden="true" />
                                         {cacheHitRate}
-                                      </span>
+                                      </Badge>
+                                    ) : null}
+                                    {toolUsageEntries.length > 0 ? (
+                                      <Wrench
+                                        className="text-primary size-3 shrink-0"
+                                        role="img"
+                                        aria-label={t('requestEventsPage.detail.toolUsage')}
+                                      />
                                     ) : null}
                                   </div>
-                                  <div className="text-muted-foreground mt-0.5 flex items-center justify-end gap-2 text-xs">
+                                  <div className="text-muted-foreground flex min-w-0 items-center justify-end gap-2 overflow-hidden text-xs">
                                     <span className="inline-flex items-center gap-0.5">
                                       <ArrowUpFromLine
                                         className="text-info size-3 shrink-0"
@@ -1717,49 +1715,20 @@ function RequestEventsTable({
                                       <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
                                     </span>
                                     <span className="inline-flex items-center gap-0.5">
-                                      <Database
-                                        className="text-info/80 size-3 shrink-0"
-                                        aria-hidden="true"
-                                      />
-                                      <span>
-                                        {formatCompactNumber(tokenCounts.cacheReadTokens)}
-                                      </span>
-                                    </span>
-                                    <span className="inline-flex items-center gap-0.5">
                                       <ArrowDownToLine
                                         className="text-success size-3 shrink-0"
                                         aria-hidden="true"
                                       />
                                       <span>{formatCompactNumber(tokenCounts.outputTokens)}</span>
                                     </span>
-                                    {tokenCounts.reasoningTokens > 0 ? (
-                                      <span className="inline-flex items-center gap-0.5">
-                                        <Brain
-                                          className="text-warning size-3 shrink-0"
-                                          aria-hidden="true"
-                                        />
-                                        <span>
-                                          {formatCompactNumber(tokenCounts.reasoningTokens)}
-                                        </span>
-                                      </span>
-                                    ) : null}
-                                    {toolUsageEntries.length > 0 ? (
-                                      <span className="text-primary inline-flex items-center gap-0.5 text-[11px]">
-                                        <Wrench className="size-3 shrink-0" aria-hidden="true" />
-                                        <span>
-                                          {toolUsageEntries
-                                            .map(
-                                              (item) =>
-                                                `${t(`requestEventsPage.detail.toolFields.${item.key}`)}×${item.count}`,
-                                            )
-                                            .join(' · ')}
-                                        </span>
-                                      </span>
-                                    ) : null}
                                   </div>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="top" align="end" className="min-w-48 px-3 py-2">
+                              <TooltipContent
+                                side="top"
+                                align="end"
+                                className="max-w-[calc(100vw-2rem)] min-w-48 px-3 py-2 whitespace-normal"
+                              >
                                 <div className="grid gap-1 tabular-nums">
                                   <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 font-semibold">
                                     <span>{tokenTooltipRows[0]?.label}</span>
@@ -1768,10 +1737,10 @@ function RequestEventsTable({
                                   {tokenTooltipRows.slice(1).map((row) => (
                                     <div
                                       key={row.label}
-                                      className="flex items-center justify-between gap-4 text-[11px]"
+                                      className="text-meta flex items-start justify-between gap-4"
                                     >
-                                      <span className="opacity-80">{row.label}</span>
-                                      <span className="font-medium">{row.value}</span>
+                                      <span className="min-w-0 opacity-80">{row.label}</span>
+                                      <span className="shrink-0 font-medium">{row.value}</span>
                                     </div>
                                   ))}
                                 </div>
