@@ -54,6 +54,7 @@ function UpstreamQuotaPlanBadge({ provider, plan }: { provider: string; plan: Qu
     >
       <OverflowTooltipText
         value={label}
+        overflowClassName="cursor-pointer"
         tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
       />
     </Badge>
@@ -207,6 +208,7 @@ export function InlineWindowBar({
         <div className="min-w-0 text-[11px] font-medium">
           <OverflowTooltipText
             value={displayLabel}
+            overflowClassName="cursor-pointer"
             className={!identityLabel ? 'text-muted-foreground' : undefined}
             tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
           />
@@ -445,6 +447,7 @@ export function UpstreamQuotaCell({
             type="button"
             variant="text"
             size="xs"
+            className="cursor-pointer"
             onClick={onInspect}
             aria-label={t('upstreamPage.quota.summary.viewDetails')}
           >

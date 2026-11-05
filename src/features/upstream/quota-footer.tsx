@@ -101,7 +101,7 @@ export function QuotaFooter({
       type="button"
       variant="text"
       size="xs"
-      className="max-w-full min-w-0"
+      className="max-w-full min-w-0 cursor-pointer"
       onClick={onInspect}
       aria-busy={detailLoading || undefined}
       aria-label={detailsNotice ? `${detailsLabel}. ${detailsNotice}` : detailsLabel}
@@ -144,7 +144,11 @@ export function QuotaFooter({
           )}
         </QuotaTooltip>
       ) : (
-        <OverflowTooltipText value={observedLabel} className="text-muted-foreground text-meta" />
+        <OverflowTooltipText
+          value={observedLabel}
+          className="text-muted-foreground text-meta"
+          overflowClassName="cursor-pointer"
+        />
       )}
       {detailsNotice && detailsButton ? (
         <QuotaTooltip content={detailsNotice}>{detailsButton}</QuotaTooltip>

@@ -59,6 +59,7 @@ export function QuotaPreviewGrid({
           <div key={group.id} className={cn('grid min-w-0 items-center gap-2', columns)}>
             <OverflowTooltipText
               value={groupLabel}
+              overflowClassName="cursor-pointer"
               className="text-meta font-medium"
               tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
             />

@@ -14,7 +14,9 @@ export function QuotaTooltip({
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger asChild className="cursor-pointer">
+        {children}
+      </TooltipTrigger>
       <TooltipContent
         side="top"
         sideOffset={4}
