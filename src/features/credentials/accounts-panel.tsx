@@ -480,7 +480,7 @@ function CredentialList({
   return (
     <TooltipProvider delayDuration={120}>
       <ContainedTable
-        containerClassName="rounded-md border"
+        containerClassName="credential-quota-table rounded-md border"
         className="table-fixed sm:min-w-[1480px]"
       >
         {/*
