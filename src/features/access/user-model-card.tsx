@@ -21,7 +21,7 @@ import {
 type UserModelCardProps = {
   model: UserCatalogModel
   authenticated: boolean
-  onOpenDetails: (model: UserCatalogModel) => void
+  onOpenDetails: (model: UserCatalogModel, section?: 'pricing') => void
 }
 
 function CapabilityBadge({
@@ -217,6 +217,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
           published={model.pricing?.status === 'published'}
           entryPoint={entryPoint}
           locale={locale}
+          onOpenPricing={() => onOpenDetails(model, 'pricing')}
         />
       </div>
     </article>
@@ -230,6 +231,7 @@ function CardPriceSummary({
   published,
   entryPoint,
   locale,
+  onOpenPricing,
 }: {
   authenticated: boolean
   accessible: boolean | null
@@ -237,6 +239,7 @@ function CardPriceSummary({
   published: boolean
   entryPoint: ReturnType<typeof pricingEntryPoint>
   locale: string
+  onOpenPricing: () => void
 }) {
   const { t } = useTranslation()
 
@@ -287,15 +290,25 @@ function CardPriceSummary({
         ) : null}
       </div>
       {entryPoint.toolPrices.length > 0 ? (
-        <p className="text-muted-foreground truncate text-[11px] tabular-nums">
-          {t('userModels.price.toolsSummary')}{' '}
-          {entryPoint.toolPrices
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          className="max-w-full min-w-0 justify-start"
+          onClick={onOpenPricing}
+          title={entryPoint.toolPrices
             .map(
               (item) =>
                 `${t(`userModels.price.tools.${item.key}`)} ${formatModelPrice(item.pricePerCall, locale)}${t('userModels.price.perCall')}`,
             )
             .join(' · ')}
-        </p>
+        >
+          <Wrench aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            {t('userModels.price.toolsDetails', { count: entryPoint.toolPrices.length })}
+          </span>
+          <ChevronRight aria-hidden="true" />
+        </Button>
       ) : null}
     </div>
   )

@@ -98,6 +98,7 @@ export function UserModelCatalogPage() {
   const navigate = useNavigate({ from: CATALOG_PATH })
   const routeSearch = useSearch({ from: CATALOG_PATH })
   const [selected, setSelected] = useState<UserCatalogModel | null>(null)
+  const [detailSection, setDetailSection] = useState<'specs' | 'pricing'>('specs')
   const triggerRef = useRef<HTMLElement | null>(null)
 
   const query = routeSearch.q ?? ''
@@ -125,12 +126,13 @@ export function UserModelCatalogPage() {
     })
   }
 
-  const openDetails = (model: UserCatalogModel) => {
+  const openDetails = (model: UserCatalogModel, section: 'specs' | 'pricing' = 'specs') => {
     // Remember the control the buyer opened the sheet from so closing it puts
     // the keyboard back on that card instead of at the top of the document.
     triggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
     setSelected(model)
+    setDetailSection(section)
   }
 
   const { models, authenticated } = catalog
@@ -511,6 +513,7 @@ export function UserModelCatalogPage() {
       <UserModelDetailSheet
         model={selected}
         authenticated={authenticated}
+        initialSection={detailSection}
         onOpenChange={(open) => {
           if (!open) setSelected(null)
         }}

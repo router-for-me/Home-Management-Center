@@ -495,7 +495,7 @@ export const zhCN = {
         cacheWrite: '缓存写入',
         request: '按次计费',
         perCall: '/次',
-        toolsSummary: '工具：',
+        toolsDetails: '查看工具价格（{{count}}）',
         pricingExpr: '计费算式：',
         tools: {
           webSearch: '网页搜索',

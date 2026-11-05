@@ -496,7 +496,7 @@ export const zhTW = {
         cacheWrite: '快取寫入',
         request: '依次計費',
         perCall: '/次',
-        toolsSummary: '工具：',
+        toolsDetails: '查看工具價格（{{count}}）',
         pricingExpr: '計費算式：',
         tools: {
           webSearch: '網頁搜尋',

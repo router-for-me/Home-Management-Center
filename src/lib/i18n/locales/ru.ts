@@ -513,7 +513,7 @@ export const ru = {
         cacheWrite: 'Запись кеша',
         request: 'За запрос',
         perCall: '/вызов',
-        toolsSummary: 'Инструменты:',
+        toolsDetails: 'Цены инструментов ({{count}})',
         pricingExpr: 'Формула тарификации:',
         tools: {
           webSearch: 'Веб-поиск',

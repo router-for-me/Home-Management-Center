@@ -514,7 +514,7 @@ export const en = {
         cacheWrite: 'Cache write',
         request: 'Per request',
         perCall: '/call',
-        toolsSummary: 'Tools:',
+        toolsDetails: 'Tool prices ({{count}})',
         pricingExpr: 'Pricing formula:',
         tools: {
           webSearch: 'Web search',
