@@ -315,7 +315,6 @@ type ToolUsageFieldKey =
   | 'webFetchCalls'
   | 'mcpCalls'
   | 'googleMapsChunks'
-  | 'numSourcesUsed'
   | 'imageGenerationCalls'
 
 const COST_ITEM_KEY_TO_I18N: Record<string, { i18nKey: string; isUnit?: boolean }> = {
@@ -464,7 +463,7 @@ function buildCostTooltipRows(
       if (key === 'expr:wsq' && (mergedItems['expr:ws']?.tokens ?? 0) > 0 && item.cost <= 0) {
         return false
       }
-      if (key === 'expr:st' && item.cost <= 0) return false
+      if ((key === 'expr:st' || key === 'expr:src') && item.cost <= 0) return false
       return item.cost > 0 || item.tokens > 0
     })
 
@@ -541,7 +540,6 @@ function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined
     ...(toolUsage.webSearchCalls > 0
       ? ([] as ToolUsageFieldKey[])
       : (['webSearchQueries'] as ToolUsageFieldKey[])),
-    'numSourcesUsed',
     'imageGenerationCalls',
   ]
   return keys
