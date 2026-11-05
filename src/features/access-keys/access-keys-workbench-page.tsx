@@ -102,10 +102,12 @@ const accessKeyTooltipClassName =
 function AccessKeyIdentity({
   resource,
   onCopy,
+  onCopyIdentifier,
   compact,
 }: {
   resource: AccessKeyResource
   onCopy: (resource: AccessKeyResource) => void
+  onCopyIdentifier: (resource: AccessKeyResource) => void
   compact: boolean
 }) {
   const { t } = useTranslation()
@@ -147,23 +149,46 @@ function AccessKeyIdentity({
       </div>
       {compact ? (
         <div className="mt-1">
-          <AccessKeyIdentifier resource={resource} />
+          <AccessKeyIdentifier resource={resource} onCopy={onCopyIdentifier} />
         </div>
       ) : null}
     </div>
   )
 }
 
-function AccessKeyIdentifier({ resource }: { resource: AccessKeyResource }) {
+function AccessKeyIdentifier({
+  resource,
+  onCopy,
+}: {
+  resource: AccessKeyResource
+  onCopy: (resource: AccessKeyResource) => void
+}) {
+  const { t } = useTranslation()
+
   if (!resource.identifier) return <span className="text-muted-foreground">—</span>
 
   return (
-    <OverflowTooltipText
-      value={resource.identifier}
-      className="text-code font-medium tabular-nums"
-      overflowClassName="cursor-pointer"
-      tooltipClassName={accessKeyTooltipClassName}
-    />
+    <div className="flex min-w-0 items-center gap-1.5">
+      <OverflowTooltipText
+        value={resource.identifier}
+        className="text-code font-medium tabular-nums"
+        overflowClassName="cursor-pointer"
+        tooltipClassName={accessKeyTooltipClassName}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-md"
+        className="-my-1"
+        aria-label={t('accessKeysPage.actions.copyIdentifier', { identifier: resource.identifier })}
+        onClick={(event) => {
+          event.stopPropagation()
+          onCopy(resource)
+        }}
+      >
+        <Copy className="size-3.5" aria-hidden="true" />
+      </Button>
+    </div>
   )
 }
 
@@ -396,12 +421,17 @@ export function AccessKeyList({
               />
             </TableCell>
             <TableCell className={showSecondary ? 'w-[220px] max-w-[220px]' : 'max-w-0'}>
-              <AccessKeyIdentity resource={resource} onCopy={onCopy} compact={!showSecondary} />
+              <AccessKeyIdentity
+                resource={resource}
+                onCopy={onCopy}
+                onCopyIdentifier={onCopyIdentifier}
+                compact={!showSecondary}
+              />
             </TableCell>
             {showSecondary ? (
               <>
                 <TableCell>
-                  <AccessKeyIdentifier resource={resource} />
+                  <AccessKeyIdentifier resource={resource} onCopy={onCopyIdentifier} />
                 </TableCell>
                 <TableCell>
                   {userLabel(users, resource.userId) ?? (
@@ -464,16 +494,6 @@ export function AccessKeyList({
                     icon: Pencil,
                     onSelect: () => onEditKey(resource),
                   },
-                  ...(resource.identifier
-                    ? [
-                        {
-                          id: 'copy-identifier',
-                          label: t('accessKeysPage.actions.copyIdentifier'),
-                          icon: Copy,
-                          onSelect: () => onCopyIdentifier(resource),
-                        },
-                      ]
-                    : []),
                   {
                     id: 'delete',
                     label: t('accessKeysPage.actions.delete'),

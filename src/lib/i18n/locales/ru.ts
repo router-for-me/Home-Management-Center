@@ -2746,7 +2746,7 @@ export const ru = {
         delete: 'Удалить',
         copy: 'Копировать',
         copyKey: 'Копировать ключ {{key}}',
-        copyIdentifier: 'Копировать идентификатор',
+        copyIdentifier: 'Копировать идентификатор {{identifier}}',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',

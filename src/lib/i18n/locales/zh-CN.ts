@@ -2614,7 +2614,7 @@ export const zhCN = {
         delete: '删除',
         copy: '复制',
         copyKey: '复制密钥 {{key}}',
-        copyIdentifier: '复制标识',
+        copyIdentifier: '复制标识 {{identifier}}',
         reveal: '显示',
         hide: '隐藏',
         generate: '生成密钥',

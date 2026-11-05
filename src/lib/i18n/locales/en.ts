@@ -2743,7 +2743,7 @@ export const en = {
         delete: 'Delete',
         copy: 'Copy',
         copyKey: 'Copy key {{key}}',
-        copyIdentifier: 'Copy identifier',
+        copyIdentifier: 'Copy identifier {{identifier}}',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',

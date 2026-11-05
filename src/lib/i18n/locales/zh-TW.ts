@@ -2614,7 +2614,7 @@ export const zhTW = {
         delete: '刪除',
         copy: '複製',
         copyKey: '複製金鑰 {{key}}',
-        copyIdentifier: '複製識別碼',
+        copyIdentifier: '複製識別碼 {{identifier}}',
         reveal: '顯示',
         hide: '隱藏',
         generate: '產生金鑰',

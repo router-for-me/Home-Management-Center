@@ -102,6 +102,7 @@ describe('access-key list identity disclosure', () => {
       )
       expect(copy.list.identifier).toBeTruthy()
       expect(copy.list.identifierHint).toBeTruthy()
+      expect(copy.actions.copyIdentifier).toContain('{{identifier}}')
       expect(copy.detail.fields.identifier).toBeTruthy()
       expect(copy.detail.fields.status).toBeTruthy()
     }
