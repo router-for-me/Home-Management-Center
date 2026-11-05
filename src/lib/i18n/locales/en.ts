@@ -828,19 +828,19 @@ export const en = {
         schemaVersionTechnical: 'Backend price-rule capability: Rule schema v{{version}}.',
         currentRuntimeSource: 'Price rules currently use the {{source}}',
         runtimeContextDescription:
-          'Determines whether future charges match price rules using the request Tier or response Tier.',
+          'The model ID source and Tier source determine how future requests match price rules.',
         configure: 'Configure matching',
-        dialogTitle: 'Configure global Tier matching',
+        dialogTitle: 'Configure global billing matching',
         dialogDescription:
-          'Choose whether billing obtains the Tier from the request or the final response. This applies to every future charge.',
+          'Choose the sources for the billing model ID and Tier separately. Changes apply only to new charges after saving.',
         defaultBadge: 'Default',
         requestOptionDescription:
           'Use the Tier sent by the client. This is stable and works with providers that do not return a response Tier.',
         responseOptionDescription:
           'Use the final response Tier. Missing response Tiers fall back to the request Tier and are recorded in the price snapshot.',
-        policyTitle: 'Global Tier matching policy',
+        policyTitle: 'Global billing matching policy',
         policyDescription:
-          'Determines whether future charges match price rules using the request Tier or response Tier.',
+          'The model ID source and Tier source determine how future requests match price rules.',
         currentValue: 'Current policy',
         proposedValue: 'After saving:',
         change: 'Change',
@@ -854,8 +854,8 @@ export const en = {
         schemaVersion: 'Rule schema v{{version}}',
         legacyModeHint:
           'This backend exposes flat-price rules only. Tier, context-band, and tier-source controls are hidden.',
-        unsupported: 'This backend does not expose the Billing tier-source setting.',
-        saved: 'Billing tier source saved.',
+        unsupported: 'This backend does not expose billing matching source settings.',
+        saved: 'Billing matching settings saved.',
         noResponseTierWarning:
           'The latest {{count}} eligible requests contain no response-tier data. Response mode would fall back to the request tier for all of them.',
         fallbackSummary:
