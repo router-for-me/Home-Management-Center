@@ -1643,6 +1643,9 @@ export function ModelPriceImportSheet({
               {preview ? (
                 <p className="text-muted-foreground mt-1 text-[11px]">
                   {t('billingPage.prices.import.catalogReady', {
+                    source: t(
+                      `billingPage.prices.import.catalogSources.${preview.source === 'models.dev' ? 'modelsDev' : preview.source}`,
+                    ),
                     count: preview.sourceModelCount,
                     time: new Date(preview.sourceFetchedAt).toLocaleString(i18n.language),
                   })}
