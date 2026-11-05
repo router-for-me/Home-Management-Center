@@ -372,14 +372,14 @@ export const en = {
         retry: 'Try again',
       },
       signedOut: {
-        title: 'Pricing and availability are visible after you sign in.',
+        title: 'Sign in to see which models your keys can access.',
         signIn: 'Sign in',
         register: 'Create account',
       },
       accessibleError: {
         title: 'Your account view could not be loaded',
         description:
-          'The public catalog is shown without pricing, availability, or key coverage. Reported cause: {{message}}',
+          'Showing the public catalog. Model access for your account keys is unavailable. Reason: {{message}}',
       },
       access: {
         noApiKeys: {
@@ -492,8 +492,7 @@ export const en = {
         outSuffix: 'out / 1M tokens',
         tiered: '{{rungs}}-step ladder',
         signedOut: 'Sign in to see pricing',
-        signedOutDetail:
-          'This cluster publishes pricing to signed-in accounts only. Sign in to see the full ladder for this model.',
+        signedOutDetail: 'Sign in to view the complete price ladder available to your account.',
         notCovered: 'Not covered by your keys',
         notCoveredDetail:
           'This model is outside the model groups your keys can reach, so no price applies to your account yet.',

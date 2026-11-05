@@ -358,13 +358,13 @@ export const zhCN = {
         retry: '重试',
       },
       signedOut: {
-        title: '价格与可用性登录后可见。',
+        title: '登录查看你的密钥可访问的模型。',
         signIn: '登录',
         register: '创建账号',
       },
       accessibleError: {
         title: '账号视图加载失败',
-        description: '当前只展示公开目录，不含价格、可用性和密钥覆盖范围。报告的原因：{{message}}',
+        description: '当前展示公开目录，账号密钥的模型访问范围暂不可用。原因：{{message}}',
       },
       access: {
         noApiKeys: {
@@ -475,7 +475,7 @@ export const zhCN = {
         outSuffix: '输出 / 每百万 token',
         tiered: '{{rungs}} 档阶梯价',
         signedOut: '登录后查看价格',
-        signedOutDetail: '本集群的价格只对登录账号公开。登录后可以看到该模型的完整价格阶梯。',
+        signedOutDetail: '登录后可查看账号适用的完整价格阶梯。',
         notCovered: '密钥不覆盖该模型',
         notCoveredDetail: '这个模型不在密钥可达的模型组内，因此当前账号还没有适用的价格。',
         unavailable: '价格暂不可用',

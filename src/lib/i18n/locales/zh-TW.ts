@@ -359,13 +359,13 @@ export const zhTW = {
         retry: '重試',
       },
       signedOut: {
-        title: '價格與可用性登入後可見。',
+        title: '登入查看你的金鑰可存取的模型。',
         signIn: '登入',
         register: '建立帳號',
       },
       accessibleError: {
         title: '帳號檢視載入失敗',
-        description: '目前只顯示公開目錄，不含價格、可用性和金鑰涵蓋範圍。回報的原因：{{message}}',
+        description: '目前顯示公開目錄，帳號金鑰的模型存取範圍暫時無法取得。原因：{{message}}',
       },
       access: {
         noApiKeys: {
@@ -476,7 +476,7 @@ export const zhTW = {
         outSuffix: '輸出 / 每百萬 token',
         tiered: '{{rungs}} 階梯價',
         signedOut: '登入後查看價格',
-        signedOutDetail: '本叢集的價格只對登入帳號公開。登入後可以看到該模型的完整價格階梯。',
+        signedOutDetail: '登入後可查看帳號適用的完整價格階梯。',
         notCovered: '金鑰未涵蓋該模型',
         notCoveredDetail: '這個模型不在金鑰可達的模型群組內，因此目前帳號還沒有適用的價格。',
         unavailable: '價格暫不可用',
