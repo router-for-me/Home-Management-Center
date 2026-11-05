@@ -501,11 +501,17 @@ export function normalizeBillingSettingsResponse(
   const modelSource = readString(record, ['model_source', 'modelSource'])
   const source = readString(record, ['service_tier_source', 'serviceTierSource'])
   const reportTimezone = readString(record, ['report_timezone', 'reportTimezone'])
+  const publicModelPricing = readBoolean(
+    record,
+    ['public_model_pricing', 'publicModelPricing'],
+    false,
+  )
   if (!reportTimezone) throw new Error('billing_settings_contract_invalid')
   return {
     modelSource: modelSource === 'response' ? 'response' : 'request',
     serviceTierSource: source === 'response' ? 'response' : 'request',
     reportTimezone,
+    publicModelPricing,
     supported: true,
     raw,
   }
@@ -520,6 +526,9 @@ export async function updateBillingSettings(
     ...(input.modelSource ? { model_source: input.modelSource } : {}),
     ...(input.serviceTierSource ? { service_tier_source: input.serviceTierSource } : {}),
     ...(input.reportTimezone ? { report_timezone: input.reportTimezone.trim() } : {}),
+    ...(input.publicModelPricing !== undefined
+      ? { public_model_pricing: input.publicModelPricing }
+      : {}),
   })
   const record = toRecord(response.data)
   return normalizeBillingSettingsResponse(record, response.data)

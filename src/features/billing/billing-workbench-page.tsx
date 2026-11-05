@@ -1127,6 +1127,7 @@ function ModelPricesTab({
   const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
   const [modelSourceDraft, setModelSourceDraft] = useState<'request' | 'response'>('request')
   const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
+  const [publicModelPricingDraft, setPublicModelPricingDraft] = useState(false)
   const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
   const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
@@ -1138,9 +1139,11 @@ function ModelPricesTab({
   const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
   const savedModelSource = workbench.billingSettings?.modelSource ?? 'request'
   const savedTierSource = workbench.billingSettings?.serviceTierSource ?? 'request'
+  const savedPublicModelPricing = workbench.billingSettings?.publicModelPricing ?? false
   const modelSourceDirty = modelSourceDraft !== savedModelSource
   const tierSourceDirty = tierSourceDraft !== savedTierSource
-  const settingsDirty = modelSourceDirty || tierSourceDirty
+  const publicModelPricingDirty = publicModelPricingDraft !== savedPublicModelPricing
+  const settingsDirty = modelSourceDirty || tierSourceDirty || publicModelPricingDirty
   const responseTierDiagnosticsUnavailable =
     Boolean(workbench.billingTierDiagnosticsError) ||
     workbench.billingTierDiagnostics?.supported === false ||
@@ -1177,8 +1180,9 @@ function ModelPricesTab({
   useEffect(() => {
     setModelSourceDraft(savedModelSource)
     setTierSourceDraft(savedTierSource)
+    setPublicModelPricingDraft(savedPublicModelPricing)
     setSettingsError(null)
-  }, [savedModelSource, savedTierSource])
+  }, [savedModelSource, savedTierSource, savedPublicModelPricing])
 
   const saveTierSource = async () => {
     setSettingsError(null)
@@ -1186,6 +1190,7 @@ function ModelPricesTab({
       await workbench.updateBillingSettings({
         modelSource: modelSourceDraft,
         serviceTierSource: tierSourceDraft,
+        publicModelPricing: publicModelPricingDraft,
       })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
@@ -1650,6 +1655,23 @@ function ModelPricesTab({
                   </label>
                 ))}
               </RadioGroup>
+            </div>
+
+            <div className="border-border flex items-start justify-between gap-3 rounded-md border px-3 py-3">
+              <div className="grid min-w-0 gap-1">
+                <span className="text-sm font-medium">
+                  {t('billingPage.settings.publicModelPricing')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('billingPage.settings.publicModelPricingDescription')}
+                </span>
+              </div>
+              <Switch
+                checked={publicModelPricingDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.publicModelPricing')}
+                onCheckedChange={setPublicModelPricingDraft}
+              />
             </div>
 
             <div className="grid gap-2">
