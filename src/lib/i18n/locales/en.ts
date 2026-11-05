@@ -2101,6 +2101,7 @@ export const en = {
           queryIssueHint: 'About this quota query',
           queryIssueLabel: '{{reason}}. Show explanation',
 
+          model: 'Model',
           scope: 'Quota group',
           account: 'Account',
           unlimited: 'Unlimited',

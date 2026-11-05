@@ -2011,6 +2011,7 @@ export const zhCN = {
           queryIssueHint: '查看额度查询说明',
           queryIssueLabel: '{{reason}}，查看说明',
 
+          model: '模型',
           scope: '模型 / 额度',
           account: '账号',
           unlimited: '不限量',

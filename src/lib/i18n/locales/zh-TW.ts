@@ -2012,6 +2012,7 @@ export const zhTW = {
           queryIssueHint: '查看額度查詢說明',
           queryIssueLabel: '{{reason}}，查看說明',
 
+          model: '模型',
           scope: '模型 / 額度',
           account: '帳號',
           unlimited: '不限量',

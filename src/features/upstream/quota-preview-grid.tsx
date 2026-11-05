@@ -30,7 +30,7 @@ export function QuotaPreviewGrid({
   return (
     <div className="grid min-w-0 gap-1.5">
       <div className={`text-muted-foreground text-meta grid min-w-0 items-center gap-2 ${columns}`}>
-        <span className="min-w-0 truncate">{t('upstreamPage.quota.summary.scope')}</span>
+        <span className="min-w-0 truncate">{t('upstreamPage.quota.summary.model')}</span>
         {grid.periods.map((period) => (
           <QuotaTooltip
             key={period.id}

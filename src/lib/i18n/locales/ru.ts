@@ -2103,6 +2103,7 @@ export const ru = {
           queryIssueHint: 'О запросе квоты',
           queryIssueLabel: '{{reason}}. Показать пояснение',
 
+          model: 'Модель',
           scope: 'Группа квот',
           account: 'Аккаунт',
           unlimited: 'Без ограничений',
