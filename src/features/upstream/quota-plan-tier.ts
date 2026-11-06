@@ -28,6 +28,7 @@ const knownPlanTiers: Record<string, Record<string, QuotaPlanTier>> = {
     'max 20x': 'flagship',
   },
   xai: { supergrok: 'gold', 'supergrok heavy': 'flagship' },
+  devin: { free: 'standard', pro: 'silver', teams: 'silver', enterprise: 'gold' },
   grok: { supergrok: 'gold', 'supergrok heavy': 'flagship' },
   kimi: { moderato: 'silver', andante: 'silver', allegretto: 'gold', allegro: 'flagship' },
 }

@@ -70,13 +70,17 @@ export function getUpstreamQuotaErrorSummary(
       ? 'authorization'
       : error?.code === 'UPSTREAM_RATE_LIMITED' || error?.upstreamStatusCode === 429
         ? 'rateLimited'
-        : error?.code === 'UPSTREAM_RESPONSE_INVALID'
-          ? 'invalidResponse'
-          : error?.code === 'DCA_TOKEN_UNAVAILABLE'
-            ? 'missingAuthorization'
-            : error?.code === 'UPSTREAM_UNAVAILABLE'
-              ? 'unavailable'
-              : 'unknown'
+        : error?.code === 'UPSTREAM_CLIENT_OUTDATED' || error?.upstreamStatusCode === 426
+          ? 'clientOutdated'
+          : error?.code === 'UPSTREAM_RESPONSE_INVALID'
+            ? 'invalidResponse'
+            : error?.code === 'AUTH_TOKEN_UNAVAILABLE'
+              ? 'missingToken'
+              : error?.code === 'DCA_TOKEN_UNAVAILABLE'
+                ? 'missingAuthorization'
+                : error?.code === 'UPSTREAM_UNAVAILABLE'
+                  ? 'unavailable'
+                  : 'unknown'
   return {
     title: t(`upstreamPage.quota.errors.${key}.title`),
     description: t(`upstreamPage.quota.errors.${key}.description`),
