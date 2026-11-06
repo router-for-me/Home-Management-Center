@@ -608,6 +608,15 @@ function formatAmount(value: number | null, currency?: string | null) {
   return `${formatUsageAmount(value)} ${unit}`
 }
 
+function formatTableCostAmount(value: number | null, currency?: string | null) {
+  if (value === null || !Number.isFinite(value)) return null
+  const unit = currency?.trim()
+  if (!unit || unit.toLowerCase() === 'credits') {
+    return formatUsageAmount(value)
+  }
+  return `${formatUsageAmount(value)} ${unit}`
+}
+
 function getRuntimeNodeLabel(event: RequestEvent) {
   const cpa = event.runtime.cpaLabel ?? event.runtime.cpaNodeId ?? event.runtime.cpaIp
   if (cpa) return cpa
@@ -1995,7 +2004,7 @@ function RequestEventsTable({
                                   className="outline-hidden"
                                 >
                                   <p className="font-medium">
-                                    {formatAmount(
+                                    {formatTableCostAmount(
                                       event.billing?.amount ?? null,
                                       event.billing?.currency,
                                     ) ?? <EmptyValue />}

@@ -4371,7 +4371,7 @@ export const zhTW = {
           credential: '憑證',
           tokens: 'Token',
           latency: '延遲',
-          cost: '成本',
+          cost: '成本 (credits)',
           request: 'Request ID',
           error: '錯誤',
           actions: '操作',

@@ -4613,7 +4613,7 @@ export const en = {
           credential: 'Credential',
           tokens: 'Tokens',
           latency: 'Latency',
-          cost: 'Cost',
+          cost: 'Cost (credits)',
           request: 'Request ID',
           error: 'Error',
           actions: 'Actions',

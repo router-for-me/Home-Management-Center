@@ -4640,7 +4640,7 @@ export const ru = {
           credential: 'Учетные данные',
           tokens: 'Токены',
           latency: 'Задержка',
-          cost: 'Стоимость',
+          cost: 'Стоимость (credits)',
           request: 'Request ID',
           error: 'Ошибка',
           actions: 'Действия',

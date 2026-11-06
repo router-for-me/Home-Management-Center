@@ -4369,7 +4369,7 @@ export const zhCN = {
           credential: '凭证',
           tokens: 'Token',
           latency: '延迟',
-          cost: '成本',
+          cost: '成本 (credits)',
           request: '请求 ID',
           error: '错误',
           actions: '操作',
