@@ -1771,6 +1771,10 @@ function RequestEventsTable({
                       })),
                     ]
                     const toolUsageEntries = getToolUsageEntries(event.toolUsage)
+                    const totalToolCalls = toolUsageEntries.reduce(
+                      (sum, item) => sum + item.count,
+                      0,
+                    )
 
                     return (
                       <TableRow
@@ -1907,13 +1911,6 @@ function RequestEventsTable({
                                         {cacheHitRate}
                                       </Badge>
                                     ) : null}
-                                    {toolUsageEntries.length > 0 ? (
-                                      <Wrench
-                                        className="text-primary size-3 shrink-0"
-                                        role="img"
-                                        aria-label={t('requestEventsPage.detail.toolUsage')}
-                                      />
-                                    ) : null}
                                   </div>
                                   <div className="text-muted-foreground flex min-w-0 items-center justify-end gap-2 overflow-hidden text-xs">
                                     <span className="inline-flex items-center gap-0.5">
@@ -1930,6 +1927,18 @@ function RequestEventsTable({
                                       />
                                       <span>{formatCompactNumber(tokenCounts.outputTokens)}</span>
                                     </span>
+                                    {totalToolCalls > 0 ? (
+                                      <span
+                                        className="inline-flex items-center gap-0.5"
+                                        title={t('requestEventsPage.detail.toolUsage')}
+                                      >
+                                        <Wrench
+                                          className="text-primary size-3 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        <span>{formatCompactNumber(totalToolCalls)}</span>
+                                      </span>
+                                    ) : null}
                                   </div>
                                 </div>
                               </TooltipTrigger>
