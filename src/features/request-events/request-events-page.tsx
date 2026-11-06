@@ -1,24 +1,20 @@
-import { type ReactNode, useRef, useState } from 'react'
+import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Columns3,
   Copy,
   Database,
   Download,
   Eye,
-  FileText,
   Loader2,
   RefreshCw,
   Waves,
   Wrench,
-  XCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -95,6 +91,7 @@ import {
 import { useRequestEventsWorkbench } from '@/features/request-events/use-request-events-workbench'
 import type { UsageWorkspaceView } from '@/features/usage-observability/usage-route'
 import { UsageWorkspaceShell } from '@/features/usage-observability/usage-workspace-shell'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
 import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import type {
   RequestEvent,
@@ -112,7 +109,7 @@ import {
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 import { formatUsageAmount } from '@/lib/billing/amount-format'
 import { formatCompactNumber, formatNumber } from '@/lib/number-format'
-import { uiPreferenceKeys } from '@/lib/ui-preferences'
+import { type PreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 
 type RequestEventsVerdict = 'ready' | 'empty' | 'partial' | 'unsupported'
@@ -139,6 +136,8 @@ type RequestEventColumnKey =
 type RequestEventColumn = {
   key: RequestEventColumnKey
   width: number
+  minWidth: number
+  maxWidth: number
   align?: 'right'
   required?: boolean
   /*
@@ -149,20 +148,37 @@ type RequestEventColumn = {
 }
 
 const requestEventColumns: RequestEventColumn[] = [
-  { key: 'time', width: 148, required: true, compact: true },
-  { key: 'status', width: 132, compact: true },
-  { key: 'event', width: 210 },
-  { key: 'model', width: 250 },
-  { key: 'credential', width: 220 },
-  { key: 'tokens', width: 235, align: 'right' },
-  { key: 'latency', width: 165, align: 'right' },
-  { key: 'cost', width: 130, align: 'right' },
-  { key: 'client', width: 200 },
-  { key: 'userAgent', width: 220 },
-  { key: 'runtime', width: 195 },
-  { key: 'request', width: 240 },
-  { key: 'error', width: 250 },
+  { key: 'time', width: 112, minWidth: 96, maxWidth: 220, required: true, compact: true },
+  { key: 'status', width: 76, minWidth: 68, maxWidth: 180, compact: true },
+  { key: 'event', width: 195, minWidth: 140, maxWidth: 420 },
+  { key: 'model', width: 220, minWidth: 140, maxWidth: 420 },
+  { key: 'credential', width: 200, minWidth: 130, maxWidth: 420 },
+  { key: 'tokens', width: 210, minWidth: 165, maxWidth: 340, align: 'right' },
+  { key: 'latency', width: 145, minWidth: 115, maxWidth: 260, align: 'right' },
+  { key: 'cost', width: 120, minWidth: 96, maxWidth: 220, align: 'right' },
+  { key: 'client', width: 136, minWidth: 105, maxWidth: 320 },
+  { key: 'userAgent', width: 180, minWidth: 120, maxWidth: 380 },
+  { key: 'runtime', width: 170, minWidth: 125, maxWidth: 320 },
+  { key: 'request', width: 210, minWidth: 140, maxWidth: 420 },
+  { key: 'error', width: 220, minWidth: 140, maxWidth: 480 },
 ]
+
+type RequestEventColumnWidthOverrides = Partial<Record<RequestEventColumnKey, number>>
+
+const normalizeColumnWidthOverrides: PreferenceNormalizer<RequestEventColumnWidthOverrides> = (
+  value,
+) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const raw = value as Record<string, unknown>
+  const out: RequestEventColumnWidthOverrides = {}
+  for (const col of requestEventColumns) {
+    const w = raw[col.key]
+    if (typeof w === 'number' && Number.isFinite(w)) {
+      out[col.key] = Math.round(Math.min(col.maxWidth, Math.max(col.minWidth, w)))
+    }
+  }
+  return out
+}
 
 const defaultVisibleColumns: RequestEventColumnKey[] = [
   'time',
@@ -602,9 +618,83 @@ function formatDuration(value: number | null) {
   return `${(value / 1000).toFixed(2)} s`
 }
 
+function formatExecutorName(executorType: string | null | undefined): string | null {
+  if (!executorType) return null
+  const trimmed = executorType.trim()
+  if (!trimmed) return null
+  return trimmed.replace(/Executor$/i, '') || trimmed
+}
+
+function estimateAutoColumnWidths(rows: RequestEvent[]): Record<RequestEventColumnKey, number> {
+  const defaults = Object.fromEntries(
+    requestEventColumns.map((col) => [col.key, col.width]),
+  ) as Record<RequestEventColumnKey, number>
+  if (rows.length === 0) return defaults
+
+  const maxChars: Partial<Record<RequestEventColumnKey, number>> = {}
+  const bump = (key: RequestEventColumnKey, len: number) => {
+    if (len > (maxChars[key] ?? 0)) maxChars[key] = len
+  }
+
+  for (const event of rows) {
+    const parsedEndpoint = parseRequestEndpoint(event.endpoint)
+    const endpointLen = (parsedEndpoint.endpoint ?? event.eventType ?? '').length + 6
+    const execLen =
+      (formatExecutorName(event.executorType) ?? event.eventType ?? '').length +
+      (event.stream !== null && event.stream !== undefined ? 6 : 0)
+    bump('event', Math.max(endpointLen, execLen))
+
+    const modelLine1 =
+      (event.model ?? '').length + (event.reasoningEffort ? event.reasoningEffort.length + 3 : 0)
+    const modelLine2 =
+      (event.modelAlias && event.modelAlias !== event.model ? event.modelAlias.length + 2 : 0) +
+      (event.serviceTier ? event.serviceTier.length + 3 : 0)
+    bump('model', Math.max(modelLine1, modelLine2))
+
+    const credLabel = event.credential?.label ?? event.source ?? ''
+    bump('credential', credLabel.length)
+
+    const userLen = (event.client?.username ?? '').length
+    const keyLen = (event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? '').length
+    bump('client', Math.max(userLen, keyLen))
+
+    const uaLen = Math.min(28, (event.client?.userAgent ?? '').length)
+    bump('userAgent', uaLen)
+
+    const homeLen = (getHomeNodeLabel(event) ?? '').length
+    const cpaLen = (getRuntimeNodeLabel(event) ?? '').length
+    bump('runtime', Math.max(homeLen, cpaLen))
+
+    const reqLen = Math.max((event.requestId ?? '').length, (event.upstreamRequestId ?? '').length)
+    bump('request', Math.min(32, reqLen))
+  }
+
+  const clamp = (col: RequestEventColumn, estimatedPx: number) =>
+    Math.round(Math.min(col.maxWidth, Math.max(col.minWidth, estimatedPx)))
+
+  for (const col of requestEventColumns) {
+    const chars = maxChars[col.key]
+    if (chars !== undefined && chars > 0) {
+      // ~7.4px per character + 26px cell horizontal padding
+      defaults[col.key] = clamp(col, chars * 7.4 + 26)
+    }
+  }
+
+  return defaults
+}
+
 function formatAmount(value: number | null, currency?: string | null) {
   if (value === null || !Number.isFinite(value)) return null
   const unit = currency?.trim() || 'credits'
+  return `${formatUsageAmount(value)} ${unit}`
+}
+
+function formatTableCostAmount(value: number | null, currency?: string | null) {
+  if (value === null || !Number.isFinite(value)) return null
+  const unit = currency?.trim()
+  if (!unit || unit.toLowerCase() === 'credits') {
+    return formatUsageAmount(value)
+  }
   return `${formatUsageAmount(value)} ${unit}`
 }
 
@@ -1051,40 +1141,38 @@ function RequestEventStatusBadge({
   onInspect?: () => void
 }) {
   const { t } = useTranslation()
-  const success = event.status === 'success'
-  const failed = event.status === 'failed'
-  const hasLog = event.related?.requestLog?.available === true
+  const statusCode = event.statusCode ?? event.error?.statusCode ?? event.upstreamStatusCode
+  const success =
+    event.status === 'success' ||
+    (!event.failed && statusCode !== null && statusCode >= 200 && statusCode < 400)
+  const failed = event.status === 'failed' || (statusCode !== null && statusCode >= 400)
   const variant = success ? 'success' : failed ? 'destructive' : 'unknown'
-  const statusClassName = success ? 'text-success' : failed ? 'text-destructive' : undefined
-  const content = (
-    <>
-      {success ? (
-        <CheckCircle2 className={statusClassName} aria-hidden="true" />
-      ) : failed ? (
-        <XCircle className={statusClassName} aria-hidden="true" />
-      ) : (
-        <CircleHelp aria-hidden="true" />
-      )}
-      <span>
-        {success
-          ? t('requestEventsPage.status.success')
-          : failed
-            ? t('requestEventsPage.status.failed')
-            : t('requestEventsPage.status.unknown')}
-      </span>
-      {hasLog ? <FileText className="opacity-75" aria-hidden="true" /> : null}
-    </>
-  )
+  const fallbackLabel = success
+    ? t('requestEventsPage.status.success')
+    : failed
+      ? t('requestEventsPage.status.failed')
+      : t('requestEventsPage.status.unknown')
+  const label = statusCode !== null ? String(statusCode) : fallbackLabel
 
   if (onInspect) {
     return (
-      <Button type="button" variant="text" size="sm" onClick={onInspect}>
-        {content}
-      </Button>
+      <Badge
+        asChild
+        variant={variant}
+        className="cursor-pointer font-mono tabular-nums hover:opacity-85"
+      >
+        <button type="button" onClick={onInspect} title={fallbackLabel}>
+          {label}
+        </button>
+      </Badge>
     )
   }
 
-  return <Badge variant={variant}>{content}</Badge>
+  return (
+    <Badge variant={variant} className="font-mono tabular-nums" title={fallbackLabel}>
+      {label}
+    </Badge>
+  )
 }
 
 function NumberRangeInputGroup({
@@ -1519,7 +1607,68 @@ function RequestEventsTable({
     columns: requestEventColumns,
     defaultVisibleColumns,
   })
+  const [columnWidthOverrides, setColumnWidthOverrides] = useLocalStoragePreference(
+    uiPreferenceKeys.requestEventColumnWidths,
+    {},
+    normalizeColumnWidthOverrides,
+  )
   const rows = events?.items ?? []
+  const autoColumnWidths = useMemo(() => estimateAutoColumnWidths(rows), [rows])
+  const getColumnWidth = (column: RequestEventColumn) =>
+    columnWidthOverrides[column.key] ?? autoColumnWidths[column.key] ?? column.width
+
+  const headerRefs = useRef<Partial<Record<RequestEventColumnKey, HTMLTableCellElement | null>>>({})
+
+  const handleResizeStart = (
+    event: React.MouseEvent<HTMLDivElement>,
+    column: RequestEventColumn,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const startX = event.clientX
+    const snapshotWidths: RequestEventColumnWidthOverrides = {}
+    for (const col of visibleColumnConfigs) {
+      snapshotWidths[col.key] = getColumnWidth(col)
+    }
+    const startWidth = snapshotWidths[column.key] ?? getColumnWidth(column)
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX
+      const nextWidth = Math.round(
+        Math.min(column.maxWidth, Math.max(column.minWidth, startWidth + delta)),
+      )
+      setColumnWidthOverrides({
+        ...snapshotWidths,
+        [column.key]: nextWidth,
+      })
+    }
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.removeProperty('cursor')
+      document.body.style.removeProperty('user-select')
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
+  const handleResizeReset = (
+    event: React.MouseEvent<HTMLDivElement>,
+    column: RequestEventColumn,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setColumnWidthOverrides((prev) => {
+      if (!(column.key in prev)) return prev
+      const next = { ...prev }
+      delete next[column.key]
+      return next
+    })
+  }
   const total = events?.total ?? 0
   const start = total > 0 ? filters.offset + 1 : 0
   const end = Math.min(filters.offset + rows.length, total)
@@ -1546,7 +1695,7 @@ function RequestEventsTable({
    * sum stops at the data columns and defers the last term to CSS.
    */
   const tableWidth = `calc(${
-    visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
+    visibleColumnConfigs.reduce((width, column) => width + getColumnWidth(column), 0) + 16
   }px + var(--table-action-column-1))`
   const tableContainerRef = useRef<HTMLDivElement>(null)
   // Two stacked lines per cell, both truncated, so every row measures the same.
@@ -1689,29 +1838,65 @@ function RequestEventsTable({
               <ContainedTable
                 containerRef={tableContainerRef}
                 containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
-                className="table-fixed"
-                style={showSecondary ? { minWidth: tableWidth } : undefined}
+                className="w-auto table-fixed"
+                style={showSecondary ? { width: tableWidth } : undefined}
                 /*
                 The rows outside the window are not in the DOM, so the table has
                 to state how many there really are; the head counts as row one.
               */
                 aria-rowcount={rows.length + 1}
               >
+                <colgroup>
+                  {visibleColumnConfigs.map((column, index) => (
+                    <col
+                      key={column.key}
+                      style={
+                        !showSecondary && index === 0
+                          ? undefined
+                          : { width: getColumnWidth(column) }
+                      }
+                    />
+                  ))}
+                  <col />
+                </colgroup>
                 <TableHeader className={stickyTableHeaderClassName}>
                   <TableRow variant="static" aria-rowindex={1}>
                     {visibleColumnConfigs.map((column, index) => (
                       <TableHead
                         key={column.key}
-                        className={cn(column.align === 'right' && 'text-right')}
+                        ref={(el) => {
+                          headerRefs.current[column.key] = el
+                        }}
+                        className={cn(
+                          'group/head relative select-none',
+                          column.align === 'right' && 'text-right',
+                        )}
                         /*
                         Fixed layout takes the sum of the declared widths, so a
                         column set that adds up past the viewport still scrolls.
                         The identity column gives up its width below 40rem and
                         takes the remainder instead.
                       */
-                        style={!showSecondary && index === 0 ? undefined : { width: column.width }}
+                        style={
+                          !showSecondary && index === 0
+                            ? undefined
+                            : { width: getColumnWidth(column) }
+                        }
                       >
-                        {t(`requestEventsPage.table.columns.${column.key}`)}
+                        <span className="block truncate">
+                          {t(`requestEventsPage.table.columns.${column.key}`)}
+                        </span>
+                        {showSecondary ? (
+                          <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            onMouseDown={(e) => handleResizeStart(e, column)}
+                            onDoubleClick={(e) => handleResizeReset(e, column)}
+                            className="group/resizer absolute top-0 -right-1 z-10 flex h-full w-2.5 cursor-col-resize items-center justify-center"
+                          >
+                            <span className="bg-border/80 group-hover/resizer:bg-primary group-active/resizer:bg-primary h-3.5 w-px transition-all group-hover/resizer:h-full group-hover/resizer:w-0.5 group-active/resizer:h-full group-active/resizer:w-0.5" />
+                          </div>
+                        ) : null}
                       </TableHead>
                     ))}
                     <TableHead className="table-sticky-action-head table-action-column-1 text-right">
@@ -1732,10 +1917,6 @@ function RequestEventsTable({
                       tokenCounts.inputTokens,
                     )
                     const speedLabel = formatSpeedTps(event.performance.tps)
-                    const showErrorStatusCode =
-                      event.statusCode !== null &&
-                      (!event.failed || event.statusCode >= 400) &&
-                      event.statusCode !== 200
                     const tokenTooltipRows = [
                       {
                         label: t('requestEventsPage.detail.tokenFields.totalTokens'),
@@ -1771,6 +1952,10 @@ function RequestEventsTable({
                       })),
                     ]
                     const toolUsageEntries = getToolUsageEntries(event.toolUsage)
+                    const totalToolCalls = toolUsageEntries.reduce(
+                      (sum, item) => sum + item.count,
+                      0,
+                    )
 
                     return (
                       <TableRow
@@ -1800,11 +1985,7 @@ function RequestEventsTable({
                               event={event}
                               onInspect={() => onInspect(event)}
                             />
-                            {showErrorStatusCode ? (
-                              <p className="text-muted-foreground mt-1 font-mono text-xs">
-                                HTTP {event.statusCode}
-                              </p>
-                            ) : event.failed && (event.error?.message ?? event.error?.reason) ? (
+                            {event.failed && (event.error?.message ?? event.error?.reason) ? (
                               <p
                                 className="text-destructive/80 mt-1 truncate text-xs"
                                 title={event.error?.message ?? event.error?.reason ?? undefined}
@@ -1815,32 +1996,81 @@ function RequestEventsTable({
                           </TableCell>
                         ) : null}
                         {isColumnRendered('event') ? (
-                          <TableCell
-                            className="min-w-0"
-                            title={
-                              [
-                                event.endpoint ? `Endpoint: ${event.endpoint}` : null,
-                                event.eventType ? `Event: ${event.eventType}` : null,
-                                event.executorType ? `Executor: ${event.executorType}` : null,
-                              ]
-                                .filter(Boolean)
-                                .join('\n') || undefined
-                            }
-                          >
-                            <div className="flex items-center gap-1.5 truncate font-medium">
-                              {parsedEndpoint.requestType ? (
-                                <span className="bg-muted text-foreground inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold">
-                                  {parsedEndpoint.requestType}
-                                  <Waves className="size-3 opacity-70" aria-hidden="true" />
-                                </span>
-                              ) : null}
-                              <span className="truncate font-mono text-xs">
-                                {parsedEndpoint.endpoint ?? event.eventType ?? <EmptyValue />}
-                              </span>
-                            </div>
-                            <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                              {event.executorType ?? event.eventType ?? <EmptyValue />}
-                            </p>
+                          <TableCell className="min-w-0">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  tabIndex={0}
+                                  className="focus-visible:ring-ring/50 min-w-0 rounded-sm outline-none focus-visible:ring-3"
+                                >
+                                  <div className="flex items-center gap-1.5 truncate font-medium">
+                                    {parsedEndpoint.requestType ? (
+                                      <span className="bg-muted text-foreground inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                        {parsedEndpoint.requestType}
+                                        <Waves className="size-3 opacity-70" aria-hidden="true" />
+                                      </span>
+                                    ) : null}
+                                    <span className="truncate font-mono text-xs">
+                                      {parsedEndpoint.endpoint ?? event.eventType ?? <EmptyValue />}
+                                    </span>
+                                  </div>
+                                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                    {formatExecutorName(event.executorType) ?? event.eventType ?? (
+                                      <EmptyValue />
+                                    )}
+                                    {event.stream !== null && event.stream !== undefined
+                                      ? ` · ${event.stream ? t('requestEventsPage.status.streaming') : t('requestEventsPage.status.nonStreaming')}`
+                                      : ''}
+                                  </p>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                align="start"
+                                className="max-w-[calc(100vw-2rem)] min-w-48 px-3 py-2 whitespace-normal"
+                              >
+                                <div className="grid gap-1 text-xs">
+                                  {event.endpoint ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">Endpoint</span>
+                                      <span className="font-mono font-medium">
+                                        {event.endpoint}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.stream !== null && event.stream !== undefined ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">
+                                        {t('requestEventsPage.detail.payloadFields.stream')}
+                                      </span>
+                                      <span className="font-medium">
+                                        {event.stream
+                                          ? t('requestEventsPage.status.yes')
+                                          : t('requestEventsPage.status.no')}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.eventType ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">
+                                        {t('requestEventsPage.detail.fields.eventType')}
+                                      </span>
+                                      <span className="font-mono font-medium">
+                                        {event.eventType}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.executorType ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">Executor</span>
+                                      <span className="font-mono font-medium">
+                                        {event.executorType}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
                         ) : null}
                         {isColumnRendered('model') ? (
@@ -1869,11 +2099,14 @@ function RequestEventsTable({
                               ) : null}
                             </div>
                             <p className="text-muted-foreground truncate text-xs">
-                              {event.provider ?? <EmptyValue />}
-                              {event.modelAlias && event.modelAlias !== event.model
-                                ? ` · ↳ ${event.modelAlias}`
-                                : ''}
-                              {event.serviceTier ? ` · ${event.serviceTier}` : ''}
+                              {[
+                                event.modelAlias && event.modelAlias !== event.model
+                                  ? `↳ ${event.modelAlias}`
+                                  : null,
+                                event.serviceTier ?? null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ') || <EmptyValue />}
                             </p>
                           </TableCell>
                         ) : null}
@@ -1899,29 +2132,41 @@ function RequestEventsTable({
                                     <span className="min-w-0 truncate font-semibold">
                                       {formatCompactNumber(tokenCounts.totalTokens)}
                                     </span>
-                                    {cacheHitRate ? (
-                                      <Badge
-                                        variant={tokenCounts.cacheReadTokens > 0 ? 'info' : 'muted'}
+                                    {totalToolCalls > 0 ? (
+                                      <span
+                                        className="border-primary/30 bg-primary/10 text-primary inline-flex shrink-0 items-center gap-0.5 rounded border px-1 py-0 text-[10px] font-medium"
+                                        title={t('requestEventsPage.detail.toolUsage')}
                                       >
-                                        <Database aria-hidden="true" />
-                                        {cacheHitRate}
-                                      </Badge>
-                                    ) : null}
-                                    {toolUsageEntries.length > 0 ? (
-                                      <Wrench
-                                        className="text-primary size-3 shrink-0"
-                                        role="img"
-                                        aria-label={t('requestEventsPage.detail.toolUsage')}
-                                      />
+                                        <Wrench className="size-2.5 shrink-0" aria-hidden="true" />
+                                        <span>{formatCompactNumber(totalToolCalls)}</span>
+                                      </span>
                                     ) : null}
                                   </div>
                                   <div className="text-muted-foreground flex min-w-0 items-center justify-end gap-2 overflow-hidden text-xs">
-                                    <span className="inline-flex items-center gap-0.5">
-                                      <ArrowUpFromLine
-                                        className="text-info size-3 shrink-0"
-                                        aria-hidden="true"
-                                      />
-                                      <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-0.5">
+                                        <ArrowUpFromLine
+                                          className="text-info size-3 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
+                                      </span>
+                                      {cacheHitRate ? (
+                                        <span
+                                          className={cn(
+                                            'inline-flex items-center gap-0.5 rounded border px-1 py-0 text-[10px] font-medium',
+                                            tokenCounts.cacheReadTokens > 0
+                                              ? 'border-info/30 bg-info/10 text-info'
+                                              : 'border-border bg-muted/60 text-muted-foreground',
+                                          )}
+                                        >
+                                          <Database
+                                            className="size-2.5 shrink-0"
+                                            aria-hidden="true"
+                                          />
+                                          {cacheHitRate}
+                                        </span>
+                                      ) : null}
                                     </span>
                                     <span className="inline-flex items-center gap-0.5">
                                       <ArrowDownToLine
@@ -1986,7 +2231,7 @@ function RequestEventsTable({
                                   className="outline-hidden"
                                 >
                                   <p className="font-medium">
-                                    {formatAmount(
+                                    {formatTableCostAmount(
                                       event.billing?.amount ?? null,
                                       event.billing?.currency,
                                     ) ?? <EmptyValue />}

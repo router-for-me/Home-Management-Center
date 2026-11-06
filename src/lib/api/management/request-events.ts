@@ -175,6 +175,7 @@ export type RequestEvent = {
   originalModel: string | null
   modelAlias: string | null
   endpoint: string | null
+  stream: boolean | null
   source: string | null
   executorType: string | null
   serviceTier: string | null
@@ -728,6 +729,7 @@ function normalizeRequestEvent(
     originalModel: readStringFromKeys(record, ['original_model', 'originalModel']),
     modelAlias: readStringFromKeys(record, ['model_alias', 'modelAlias', 'alias']),
     endpoint: readString(record, 'endpoint'),
+    stream: readBoolean(record, 'stream'),
     source: readString(record, 'source'),
     executorType: readStringFromKeys(record, ['executor_type', 'executorType']),
     serviceTier: readStringFromKeys(record, ['service_tier', 'serviceTier']),
