@@ -1605,174 +1605,189 @@ function ModelPricesTab({
         }}
       >
         <DialogContent
-          className="max-w-xl"
+          className="flex max-h-[calc(100dvh-2rem)] max-w-xl flex-col gap-0 overflow-hidden p-0"
           closeLabel={t('close')}
           showCloseButton={!workbench.mutating}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0 border-b p-5 pr-12">
             <DialogTitle>{t('billingPage.settings.dialogTitle')}</DialogTitle>
             <DialogDescription>{t('billingPage.settings.dialogDescription')}</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-2">
-            <span className="text-xs font-semibold">{t('billingPage.settings.modelSource')}</span>
-            <RadioGroup
-              value={modelSourceDraft}
-              disabled={workbench.mutating || workbench.billingSettingsLoading}
-              aria-label={t('billingPage.settings.modelSource')}
-              onValueChange={(value) => {
-                if (value === 'request' || value === 'response') setModelSourceDraft(value)
-              }}
-            >
-              {(['request', 'response'] as const).map((source) => (
-                <label
-                  key={`model-${source}`}
-                  className={cn(
-                    'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
-                    modelSourceDraft === source
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border hover:bg-muted/40',
-                    workbench.mutating && 'cursor-not-allowed opacity-60',
-                  )}
-                >
-                  <RadioGroupItem value={source} className="mt-0.5" />
-                  <span className="grid min-w-0 gap-1">
-                    <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                      {t(`billingPage.settings.model_${source}`)}
-                      {source === 'request' ? (
-                        <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
-                          {t('billingPage.settings.defaultBadge')}
-                        </span>
-                      ) : null}
+          <div className="grid min-h-0 gap-5 overflow-y-auto p-5">
+            <div className="grid gap-2">
+              <span className="text-xs font-semibold">{t('billingPage.settings.modelSource')}</span>
+              <RadioGroup
+                value={modelSourceDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.modelSource')}
+                onValueChange={(value) => {
+                  if (value === 'request' || value === 'response') setModelSourceDraft(value)
+                }}
+              >
+                {(['request', 'response'] as const).map((source) => (
+                  <label
+                    key={`model-${source}`}
+                    className={cn(
+                      'control-bordered flex min-w-0 cursor-pointer items-start gap-3 rounded-md border px-3 py-3',
+                      modelSourceDraft === source
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-background',
+                      workbench.mutating && 'cursor-not-allowed opacity-60',
+                    )}
+                  >
+                    <RadioGroupItem value={source} className="mt-0.5" />
+                    <span className="grid min-w-0 gap-1">
+                      <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {t(`billingPage.settings.model_${source}`)}
+                        {source === 'request' ? (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                            {t('billingPage.settings.defaultBadge')}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-muted-foreground text-xs leading-5">
+                        {source === 'request'
+                          ? t('billingPage.settings.modelRequestOptionDescription')
+                          : t('billingPage.settings.modelResponseOptionDescription')}
+                      </span>
                     </span>
-                    <span className="text-muted-foreground text-xs leading-5">
-                      {source === 'request'
-                        ? t('billingPage.settings.modelRequestOptionDescription')
-                        : t('billingPage.settings.modelResponseOptionDescription')}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          <div className="border-border flex items-start justify-between gap-3 rounded-md border px-3 py-3">
-            <div className="grid min-w-0 gap-1">
-              <span className="text-sm font-medium">
-                {t('billingPage.settings.publicModelPricing')}
-              </span>
-              <span className="text-muted-foreground text-xs leading-5">
-                {t('billingPage.settings.publicModelPricingDescription')}
-              </span>
+                  </label>
+                ))}
+              </RadioGroup>
             </div>
-            <Switch
-              checked={publicModelPricingDraft}
-              disabled={workbench.mutating || workbench.billingSettingsLoading}
-              aria-label={t('billingPage.settings.publicModelPricing')}
-              onCheckedChange={setPublicModelPricingDraft}
-            />
-          </div>
 
-          <div className="grid gap-2">
-            <span className="text-xs font-semibold">
-              {t('billingPage.settings.serviceTierSource')}
-            </span>
-            <RadioGroup
-              value={tierSourceDraft}
-              disabled={workbench.mutating || workbench.billingSettingsLoading}
-              aria-label={t('billingPage.settings.serviceTierSource')}
-              onValueChange={(value) => {
-                if (value === 'request' || value === 'response') setTierSourceDraft(value)
-              }}
-            >
-              {(['request', 'response'] as const).map((source) => (
-                <label
-                  key={source}
-                  className={cn(
-                    'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
-                    tierSourceDraft === source
-                      ? 'border-primary/40 bg-primary/5'
-                      : 'border-border hover:bg-muted/40',
-                    workbench.mutating && 'cursor-not-allowed opacity-60',
-                  )}
-                >
-                  <RadioGroupItem value={source} className="mt-0.5" />
-                  <span className="grid min-w-0 gap-1">
-                    <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                      {t(`billingPage.settings.${source}`)}
-                      {source === 'request' ? (
-                        <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
-                          {t('billingPage.settings.defaultBadge')}
-                        </span>
-                      ) : null}
-                    </span>
-                    <span className="text-muted-foreground text-xs leading-5">
-                      {source === 'request'
-                        ? t('billingPage.settings.requestOptionDescription')
-                        : t('billingPage.settings.responseOptionDescription')}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </RadioGroup>
-          </div>
-
-          {settingsDirty ? (
-            <p className="bg-muted/40 rounded-md px-3 py-2 text-xs leading-5">
-              <span className="text-muted-foreground">
-                {t('billingPage.settings.proposedValue')}{' '}
-              </span>
-              <span className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</span>
-            </p>
-          ) : null}
-
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          workbench.billingTierDiagnosticsFetching ? (
-            <p className="text-muted-foreground text-xs leading-5" role="status">
-              {t('billingPage.settings.diagnosticsLoading')}
-            </p>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          !workbench.billingTierDiagnosticsError &&
-          workbench.billingTierDiagnostics?.supported ? (
-            <div
-              role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
-              className={cn(
-                'rounded-md border px-3 py-2 text-xs leading-5',
-                workbench.billingTierDiagnostics.fallbackRequests > 0
-                  ? 'border-warning/30 bg-warning/10 text-warning'
-                  : 'border-border bg-muted/30 text-muted-foreground',
-              )}
-            >
-              {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
-              workbench.billingTierDiagnostics.eligibleRequests > 0
-                ? t('billingPage.settings.noResponseTierWarningProposed', {
-                    count: workbench.billingTierDiagnostics.eligibleRequests,
-                  })
-                : t('billingPage.settings.fallbackSummaryProposed', {
-                    fallback: workbench.billingTierDiagnostics.fallbackRequests,
-                    total: workbench.billingTierDiagnostics.eligibleRequests,
-                  })}
+            <div className="border-border flex items-start justify-between gap-3 rounded-md border px-3 py-3">
+              <div className="grid min-w-0 gap-1">
+                <span className="text-sm font-medium">
+                  {t('billingPage.settings.publicModelPricing')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('billingPage.settings.publicModelPricingDescription')}
+                </span>
+              </div>
+              <Switch
+                checked={publicModelPricingDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.publicModelPricing')}
+                onCheckedChange={setPublicModelPricingDraft}
+              />
             </div>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          responseTierDiagnosticsUnavailable ? (
-            <p className="text-warning text-xs leading-5">
-              {t('billingPage.settings.diagnosticsUnavailable')}
-            </p>
-          ) : null}
-          {settingsError || workbench.billingSettingsError ? (
-            <p className="text-destructive text-xs" role="alert">
-              {settingsError || workbench.billingSettingsError}
-            </p>
-          ) : null}
 
-          <DialogFooter>
+            <div className="grid gap-2">
+              <span className="text-xs font-semibold">
+                {t('billingPage.settings.serviceTierSource')}
+              </span>
+              <RadioGroup
+                value={tierSourceDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.serviceTierSource')}
+                onValueChange={(value) => {
+                  if (value === 'request' || value === 'response') setTierSourceDraft(value)
+                }}
+              >
+                {(['request', 'response'] as const).map((source) => (
+                  <label
+                    key={source}
+                    className={cn(
+                      'control-bordered flex min-w-0 cursor-pointer items-start gap-3 rounded-md border px-3 py-3',
+                      tierSourceDraft === source
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-background',
+                      workbench.mutating && 'cursor-not-allowed opacity-60',
+                    )}
+                  >
+                    <RadioGroupItem value={source} className="mt-0.5" />
+                    <span className="grid min-w-0 gap-1">
+                      <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {t(`billingPage.settings.${source}`)}
+                        {source === 'request' ? (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                            {t('billingPage.settings.defaultBadge')}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-muted-foreground text-xs leading-5">
+                        {source === 'request'
+                          ? t('billingPage.settings.requestOptionDescription')
+                          : t('billingPage.settings.responseOptionDescription')}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {settingsDirty ? (
+              <div className="bg-muted/40 text-meta grid gap-2 rounded-md px-3 py-2" role="status">
+                <p className="text-muted-foreground">{t('billingPage.settings.proposedValue')}</p>
+                <dl className="grid gap-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <dt className="text-muted-foreground">
+                      {t('billingPage.settings.modelSource')}
+                    </dt>
+                    <dd className="font-medium">
+                      {t(`billingPage.settings.model_${modelSourceDraft}`)}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <dt className="text-muted-foreground">
+                      {t('billingPage.settings.serviceTierSource')}
+                    </dt>
+                    <dd className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            workbench.billingTierDiagnosticsFetching ? (
+              <p className="text-muted-foreground text-xs leading-5" role="status">
+                {t('billingPage.settings.diagnosticsLoading')}
+              </p>
+            ) : null}
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            !workbench.billingTierDiagnosticsFetching &&
+            !workbench.billingTierDiagnosticsError &&
+            workbench.billingTierDiagnostics?.supported ? (
+              <div
+                role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
+                className={cn(
+                  'rounded-md border px-3 py-2 text-xs leading-5',
+                  workbench.billingTierDiagnostics.fallbackRequests > 0
+                    ? 'border-warning/30 bg-warning/10 text-warning'
+                    : 'border-border bg-muted/30 text-muted-foreground',
+                )}
+              >
+                {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
+                workbench.billingTierDiagnostics.eligibleRequests > 0
+                  ? t('billingPage.settings.noResponseTierWarningProposed', {
+                      count: workbench.billingTierDiagnostics.eligibleRequests,
+                    })
+                  : t('billingPage.settings.fallbackSummaryProposed', {
+                      fallback: workbench.billingTierDiagnostics.fallbackRequests,
+                      total: workbench.billingTierDiagnostics.eligibleRequests,
+                    })}
+              </div>
+            ) : null}
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            !workbench.billingTierDiagnosticsFetching &&
+            responseTierDiagnosticsUnavailable ? (
+              <p className="text-warning text-xs leading-5">
+                {t('billingPage.settings.diagnosticsUnavailable')}
+              </p>
+            ) : null}
+            {settingsError || workbench.billingSettingsError ? (
+              <p className="text-destructive text-xs" role="alert">
+                {settingsError || workbench.billingSettingsError}
+              </p>
+            ) : null}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t p-4">
             <Button
               type="button"
               variant="outline"

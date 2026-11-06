@@ -39,6 +39,7 @@ import {
 } from '@/components/shared/drawer-scaffold'
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
@@ -177,6 +178,8 @@ type BindingCandidateFilterOption = {
 
 const unassignedUserValue = '__unassigned__'
 const modelSourceFilters: ModelSourceFilter[] = ['all', 'available', 'static']
+const userTableTooltipClassName =
+  'max-h-[calc(100dvh-2rem)] max-w-[min(24rem,calc(100vw-2rem))] overflow-y-auto wrap-anywhere whitespace-normal'
 
 const userPeriodTimezoneSuggestions = [
   'Asia/Shanghai',
@@ -295,33 +298,31 @@ function mapPeriodResetFieldErrors(t: TFunction, fieldErrors: UserApiFieldError[
 function UserPeriodLimitsTableBadge({ summary }: { summary: UserPeriodLimitsSummary | null }) {
   const { t } = useTranslation()
 
-  if (!summary) {
+  if (!summary || (summary.enabledWindows.length === 0 && summary.zeroLimitWindows.length === 0)) {
     return <span className="text-muted-foreground">—</span>
   }
 
-  if (summary.zeroLimitWindows.length > 0) {
-    const windows = summary.zeroLimitWindows.join(', ')
-    const label = t('usersPage.periodLimits.tableBlocked', { windows })
+  const blocked = summary.zeroLimitWindows.length > 0
+  const label = blocked
+    ? t('usersPage.periodLimits.tableBlocked', { windows: summary.zeroLimitWindows.join(', ') })
+    : t('usersPage.periodLimits.tableEnabled', { count: summary.enabledWindows.length })
 
-    return (
-      <span
-        className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning inline-flex max-w-full items-center truncate rounded-md border px-2 py-1 text-xs font-medium"
-        title={label}
-      >
-        {label}
-      </span>
-    )
-  }
-
-  if (summary.enabledWindows.length > 0) {
-    return (
-      <span className="bg-muted/50 text-muted-foreground inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium">
-        {t('usersPage.periodLimits.tableEnabled', { count: summary.enabledWindows.length })}
-      </span>
-    )
-  }
-
-  return <span className="text-muted-foreground">—</span>
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full min-w-0 items-center rounded-md border px-2 py-1 text-xs font-medium',
+        blocked
+          ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
+          : 'bg-muted/50 text-muted-foreground',
+      )}
+    >
+      <OverflowTooltipText
+        value={label}
+        overflowClassName="cursor-pointer"
+        tooltipClassName={userTableTooltipClassName}
+      />
+    </span>
+  )
 }
 
 function formatDateTime(value: string | null) {
@@ -2261,31 +2262,27 @@ function PeriodResetDialog({
 
 /*
  * Declared column widths, so a virtualised window cannot resize the table.
- * Each value is the widest the auto layout resolved to across zh-CN, zh-TW, en
- * and ru at 1440px, rounded up: sizing to one locale would have truncated the
- * others - Russian needs 200px for the credential scope where Chinese needs 97,
- * and Chinese needs 197px for the timestamp where the others need 161.
+ * Widths include the shared cell padding and scale with the root type size.
+ * Unbounded names, amounts and scope lists truncate inside these budgets, so
+ * they cannot consume the gutter or paint over the next column.
  *
  * The action column is deliberately absent. Its width already depends on the
  * locale through --table-action-column-3, so the sum below stops at the data
  * columns and defers the last term to CSS, the same way the request table does.
  */
 const userColumnWidths = {
-  select: 44,
-  user: 140,
-  status: 115,
-  credits: 90,
-  periodLimits: 125,
-  keys: 120,
-  credentialScope: 205,
-  modelScope: 150,
-  updatedAt: 200,
+  select: '2.75rem',
+  user: '14rem',
+  status: '8rem',
+  credits: '10rem',
+  periodLimits: '11rem',
+  keys: '7.5rem',
+  credentialScope: '13rem',
+  modelScope: '10rem',
+  updatedAt: '13rem',
 } as const
 
-const userTableWidth = `calc(${Object.values(userColumnWidths).reduce(
-  (total, width) => total + width,
-  0,
-)}px + var(--table-action-column-3))`
+const userTableWidth = `calc(${Object.values(userColumnWidths).join(' + ')} + var(--table-action-column-3))`
 
 function UsersTable({
   users,
@@ -2381,7 +2378,11 @@ function UsersTable({
           </TableHead>
           {/* Below 40rem the identity column takes the remainder instead. */}
           <TableHead style={showSecondary ? { width: userColumnWidths.user } : undefined}>
-            {t('usersPage.list.user')}
+            <OverflowTooltipText
+              value={t('usersPage.list.user')}
+              overflowClassName="cursor-pointer"
+              tooltipClassName={userTableTooltipClassName}
+            />
           </TableHead>
           <TableHead
             className={showSecondary ? undefined : 'w-28'}
@@ -2391,13 +2392,13 @@ function UsersTable({
           </TableHead>
           {showSecondary ? (
             <>
-              <TableHead style={{ width: userColumnWidths.credits }}>
+              <TableHead className="text-right" style={{ width: userColumnWidths.credits }}>
                 {t('usersPage.list.credits')}
               </TableHead>
               <TableHead style={{ width: userColumnWidths.periodLimits }}>
                 {t('usersPage.list.periodLimits')}
               </TableHead>
-              <TableHead style={{ width: userColumnWidths.keys }}>
+              <TableHead className="text-right" style={{ width: userColumnWidths.keys }}>
                 {t('usersPage.list.keys')}
               </TableHead>
               <TableHead style={{ width: userColumnWidths.credentialScope }}>
@@ -2412,7 +2413,9 @@ function UsersTable({
             </>
           ) : null}
           <TableHead className="table-sticky-action-head table-action-column-3 text-right">
-            {t('usersPage.list.actions')}
+            <span className={showSecondary ? undefined : 'sr-only'}>
+              {t('usersPage.list.actions')}
+            </span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -2447,32 +2450,59 @@ function UsersTable({
                 />
               </TableCell>
               <TableCell>
-                <div className="min-w-0">
-                  <p className="font-medium">{user.username}</p>
-                </div>
+                <OverflowTooltipText
+                  value={user.username}
+                  className="text-body font-medium"
+                  overflowClassName="cursor-pointer"
+                  tooltipClassName={userTableTooltipClassName}
+                />
               </TableCell>
               <TableCell>
                 <StatusBadge deletedAt={user.deletedAt} />
               </TableCell>
               {showSecondary ? (
                 <>
-                  <TableCell className="tabular-nums">{formatCreditAmount(user.credits)}</TableCell>
-                  <TableCell className="w-[120px]">
+                  <TableCell className="text-right tabular-nums">
+                    <OverflowTooltipText
+                      value={formatCreditAmount(user.credits)}
+                      overflowClassName="cursor-pointer"
+                      tooltipClassName={userTableTooltipClassName}
+                    />
+                  </TableCell>
+                  <TableCell>
                     <UserPeriodLimitsTableBadge summary={user.periodLimitsSummary} />
                   </TableCell>
-                  <TableCell>{formatNumber(keys.length)}</TableCell>
-                  <TableCell className="max-w-[220px] truncate">
-                    {groupListLabel(
-                      channelGroups,
-                      credentialScopeIds,
-                      t('usersPage.scopes.unrestricted'),
-                    )}
+                  <TableCell className="text-right tabular-nums">
+                    {formatNumber(keys.length)}
                   </TableCell>
-                  <TableCell className="max-w-[220px] truncate">
-                    {groupListLabel(modelGroups, modelScopeIds, t('usersPage.scopes.unrestricted'))}
+                  <TableCell>
+                    <OverflowTooltipText
+                      value={groupListLabel(
+                        channelGroups,
+                        credentialScopeIds,
+                        t('usersPage.scopes.unrestricted'),
+                      )}
+                      overflowClassName="cursor-pointer"
+                      tooltipClassName={userTableTooltipClassName}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <OverflowTooltipText
+                      value={groupListLabel(
+                        modelGroups,
+                        modelScopeIds,
+                        t('usersPage.scopes.unrestricted'),
+                      )}
+                      overflowClassName="cursor-pointer"
+                      tooltipClassName={userTableTooltipClassName}
+                    />
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
+                    <OverflowTooltipText
+                      value={formatOptionalTime(user.updatedAt, t('usersPage.status.notReturned'))}
+                      overflowClassName="cursor-pointer"
+                      tooltipClassName={userTableTooltipClassName}
+                    />
                   </TableCell>
                 </>
               ) : null}
@@ -3341,9 +3371,10 @@ export function UsersWorkbenchPage() {
     : ''
 
   return (
-    <section className="grid gap-5">
+    <section className="grid min-w-0 grid-cols-1 gap-5">
       <PageHeader
         title={t('usersPage.header.title')}
+        className="[&>div]:flex-wrap"
         actions={
           <>
             <Button
@@ -3380,8 +3411,9 @@ export function UsersWorkbenchPage() {
       <TableSurface className="min-w-0">
         <TableSurfaceHeader
           title={t('usersPage.workspace.title')}
+          className="md:flex-wrap"
           actions={
-            <div className="relative min-w-0 lg:w-80">
+            <div className="relative max-w-full min-w-0 lg:w-80">
               <Search
                 className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
                 aria-hidden="true"
@@ -3394,7 +3426,7 @@ export function UsersWorkbenchPage() {
               />
             </div>
           }
-          actionsClassName="w-full lg:w-auto"
+          actionsClassName="w-full min-w-0 max-w-full lg:w-auto"
         />
         <Tabs
           value={activeTab}

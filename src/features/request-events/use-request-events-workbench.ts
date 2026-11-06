@@ -33,7 +33,16 @@ import { applyFilterPatch } from '@/lib/filter-patch'
 import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const requestEventPageSizeOptions = [25, 50, 100, 200]
-const persistentRequestEventRanges = ['4h', '12h', '24h', '7d', '30d', 'today', 'all'] as const
+const persistentRequestEventRanges = [
+  '4h',
+  '12h',
+  '24h',
+  'today',
+  'yesterday',
+  '7d',
+  '30d',
+  '90d',
+] as const satisfies readonly RequestEventFilters['range'][]
 const persistentRequestEventSorts = [
   'timestamp_desc',
   'timestamp_asc',
@@ -84,9 +93,9 @@ export function useRequestEventsWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
-  const [storedRange, setStoredRange] = useLocalStoragePreference(
+  const [storedRange, setStoredRange] = useLocalStoragePreference<RequestEventFilters['range']>(
     uiPreferenceKeys.requestEventRange,
-    defaultRequestEventFilters.range as (typeof persistentRequestEventRanges)[number],
+    defaultRequestEventFilters.range,
     normalizeRequestEventRange,
   )
   const [storedSort, setStoredSort] = useLocalStoragePreference(
@@ -94,7 +103,7 @@ export function useRequestEventsWorkbench() {
     defaultRequestEventFilters.sort,
     normalizeRequestEventSort,
   )
-  const [filters, setFilters] = usePersistentPagination(
+  const [filters, setFilters] = usePersistentPagination<RequestEventFilters>(
     uiPreferenceKeys.requestEventPageSize,
     {
       ...defaultRequestEventFilters,

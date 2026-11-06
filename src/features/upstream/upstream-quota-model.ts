@@ -7,10 +7,11 @@ export type UpstreamQuotaCellState =
   | { kind: 'capability-absent' }
   | { kind: 'loading' }
   | { kind: 'not-collected' }
+  | { kind: 'read-error' }
   // A truncated snapshot list cannot tell whether an unloaded credential has
   // already been collected; its detail endpoint supplies the current state.
   | { kind: 'snapshot-miss' }
-  | { kind: 'entry'; entry: UpstreamQuotaEntry }
+  | { kind: 'entry'; entry: UpstreamQuotaEntry; readFailed?: boolean }
 
 export type AntigravityQuotaGroupId = 'gemini' | 'third-party'
 
@@ -176,18 +177,22 @@ export function resolveUpstreamQuotaCellState({
   truncated,
   map,
   resource,
+  readFailed = false,
 }: {
   available: boolean
   loading: boolean
   truncated: boolean
   map: Map<string, UpstreamQuotaEntry>
   resource: Pick<CredentialResource, 'authIndex' | 'id' | 'identifier' | 'name'>
+  readFailed?: boolean
 }): UpstreamQuotaCellState {
   if (!available) return { kind: 'capability-absent' }
 
   const entry = findUpstreamQuotaEntry(map, resource)
-  if (entry) return { kind: 'entry', entry }
+  if (entry)
+    return readFailed ? { kind: 'entry', entry, readFailed: true } : { kind: 'entry', entry }
   if (loading) return { kind: 'loading' }
+  if (readFailed) return { kind: 'read-error' }
   return { kind: truncated ? 'snapshot-miss' : 'not-collected' }
 }
 
@@ -337,4 +342,55 @@ export function resolveAntigravityQuotaPresentation(
     return { kind: 'not-collected', groups: [] }
   }
   return { kind: 'legacy', groups: [] }
+}
+
+export function resolveQuotaSnapshotDisplay(entry: UpstreamQuotaEntry) {
+  const expiresAt = entry.expiresAt ? Date.parse(entry.expiresAt) : NaN
+  const antigravity =
+    entry.provider.trim().toLowerCase() === 'antigravity'
+      ? resolveAntigravityQuotaPresentation(entry, [...entry.primaryWindows, ...entry.windows])
+      : null
+  const hasWindows = antigravity
+    ? antigravity.kind === 'windows'
+    : entry.primaryWindows.length > 0 || entry.windows.length > 0
+  const status =
+    antigravity?.kind === 'failed'
+      ? 'error'
+      : antigravity?.kind === 'legacy' ||
+          antigravity?.kind === 'collecting' ||
+          (!hasWindows &&
+            (entry.status === 'healthy' || entry.status === 'low' || entry.status === 'exhausted'))
+        ? 'unknown'
+        : entry.status
+  return {
+    status,
+    hasWindows,
+    historical:
+      hasWindows &&
+      (entry.freshness !== 'fresh' || (Number.isFinite(expiresAt) && expiresAt <= Date.now())),
+    notCollected:
+      entry.freshness === 'never' &&
+      entry.collectionStatus === 'idle' &&
+      entry.windowCount === 0 &&
+      entry.lastAttemptAt === null,
+  } as const
+}
+
+export function resolveQuotaLabelState(
+  entry: UpstreamQuotaEntry,
+  { collecting = false, readFailed = false } = {},
+) {
+  const display = resolveQuotaSnapshotDisplay(entry)
+  if (display.status === 'unsupported' || entry.collectionStatus === 'unsupported')
+    return 'unsupported'
+  if (collecting || entry.collectionStatus === 'collecting') return 'collecting'
+  if (readFailed) return 'read-error'
+  if (entry.collectionStatus === 'partial') return 'partial'
+  if (entry.collectionStatus === 'failed' || entry.lastError || display.status === 'error')
+    return 'failed'
+  if (display.historical || (!display.hasWindows && entry.windowCount > 0)) return 'outdated'
+  if (display.notCollected) return 'not-collected'
+  if (!display.hasWindows) return 'no-data'
+  if (display.status === 'unknown') return 'unknown'
+  return null
 }

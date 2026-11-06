@@ -3,7 +3,6 @@ import { type ReactNode, useRef, useState } from 'react'
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  Brain,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -48,6 +47,7 @@ import {
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import { TableSpacerRow, useVirtualTableRows } from '@/components/shared/virtual-table-rows'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -550,13 +550,6 @@ function getToolUsageEntries(toolUsage: RequestEventToolUsage | null | undefined
     .filter((entry) => entry.count > 0)
 }
 
-const REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH = 48
-
-function truncateUserAgent(value: string, maxLength = REQUEST_EVENT_USER_AGENT_DISPLAY_LENGTH) {
-  const chars = Array.from(value)
-  return chars.length <= maxLength ? value : `${chars.slice(0, maxLength).join('')}...`
-}
-
 function UserAgentCopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
 
@@ -571,24 +564,35 @@ function UserAgentCopyButton({ value, label }: { value: string; label: string })
   }
 
   return (
-    <button
-      type="button"
-      className={cn(
-        'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex size-5 shrink-0 items-center justify-center rounded transition-colors',
-        copied && 'text-success',
-      )}
-      aria-label={label}
-      onClick={(event) => {
-        event.stopPropagation()
-        void handleCopy()
-      }}
-    >
-      {copied ? (
-        <Check className="size-3" aria-hidden="true" />
-      ) : (
-        <Copy className="size-3" aria-hidden="true" />
-      )}
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          className="w-full min-w-0 justify-start"
+          aria-label={label}
+          onClick={(event) => {
+            event.stopPropagation()
+            void handleCopy()
+          }}
+        >
+          <span className="min-w-0 flex-1 truncate font-mono">{value}</span>
+          {copied ? (
+            <Check className="text-success" aria-hidden="true" />
+          ) : (
+            <Copy aria-hidden="true" />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="top"
+        align="start"
+        className="max-w-[min(28rem,calc(100vw-2rem))] font-mono break-all"
+      >
+        {value}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
@@ -1050,23 +1054,16 @@ function RequestEventStatusBadge({
   const success = event.status === 'success'
   const failed = event.status === 'failed'
   const hasLog = event.related?.requestLog?.available === true
-  const badgeClassName = cn(
-    'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition-colors',
-    success
-      ? 'border-success/30 bg-success/10 text-success'
-      : failed
-        ? 'border-destructive/30 bg-destructive/10 text-destructive'
-        : 'border-muted-foreground/25 bg-muted text-muted-foreground',
-    onInspect && 'hover:bg-accent/60 cursor-pointer',
-  )
+  const variant = success ? 'success' : failed ? 'destructive' : 'unknown'
+  const statusClassName = success ? 'text-success' : failed ? 'text-destructive' : undefined
   const content = (
     <>
       {success ? (
-        <CheckCircle2 className="size-3.5 shrink-0" aria-hidden="true" />
+        <CheckCircle2 className={statusClassName} aria-hidden="true" />
       ) : failed ? (
-        <XCircle className="size-3.5 shrink-0" aria-hidden="true" />
+        <XCircle className={statusClassName} aria-hidden="true" />
       ) : (
-        <CircleHelp className="size-3.5 shrink-0" aria-hidden="true" />
+        <CircleHelp aria-hidden="true" />
       )}
       <span>
         {success
@@ -1075,19 +1072,19 @@ function RequestEventStatusBadge({
             ? t('requestEventsPage.status.failed')
             : t('requestEventsPage.status.unknown')}
       </span>
-      {hasLog ? <FileText className="size-3 shrink-0 opacity-75" aria-hidden="true" /> : null}
+      {hasLog ? <FileText className="opacity-75" aria-hidden="true" /> : null}
     </>
   )
 
   if (onInspect) {
     return (
-      <button type="button" className={badgeClassName} onClick={onInspect}>
+      <Button type="button" variant="text" size="sm" onClick={onInspect}>
         {content}
-      </button>
+      </Button>
     )
   }
 
-  return <span className={badgeClassName}>{content}</span>
+  return <Badge variant={variant}>{content}</Badge>
 }
 
 function NumberRangeInputGroup({
@@ -1774,10 +1771,6 @@ function RequestEventsTable({
                       })),
                     ]
                     const toolUsageEntries = getToolUsageEntries(event.toolUsage)
-                    const totalToolCalls = toolUsageEntries.reduce(
-                      (sum, item) => sum + item.count,
-                      0,
-                    )
 
                     return (
                       <TableRow
@@ -1900,30 +1893,29 @@ function RequestEventsTable({
                               <TooltipTrigger asChild>
                                 <div
                                   tabIndex={0}
-                                  className="inline-flex max-w-full cursor-default flex-col items-end outline-hidden"
+                                  className="focus-visible:ring-ring/50 grid min-w-0 gap-0.5 rounded-sm outline-none focus-visible:ring-3"
                                 >
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    <span className="font-semibold">
+                                  <div className="flex min-w-0 items-center justify-end gap-1.5">
+                                    <span className="min-w-0 truncate font-semibold">
                                       {formatCompactNumber(tokenCounts.totalTokens)}
                                     </span>
                                     {cacheHitRate ? (
-                                      <span
-                                        className={cn(
-                                          'py-0.2 inline-flex items-center gap-0.5 rounded border px-1.5 text-[10px] font-medium',
-                                          tokenCounts.cacheReadTokens > 0
-                                            ? 'border-info/30 bg-info/10 text-info'
-                                            : 'border-border bg-muted/60 text-muted-foreground',
-                                        )}
+                                      <Badge
+                                        variant={tokenCounts.cacheReadTokens > 0 ? 'info' : 'muted'}
                                       >
-                                        <Database
-                                          className="size-2.5 shrink-0"
-                                          aria-hidden="true"
-                                        />
+                                        <Database aria-hidden="true" />
                                         {cacheHitRate}
-                                      </span>
+                                      </Badge>
+                                    ) : null}
+                                    {toolUsageEntries.length > 0 ? (
+                                      <Wrench
+                                        className="text-primary size-3 shrink-0"
+                                        role="img"
+                                        aria-label={t('requestEventsPage.detail.toolUsage')}
+                                      />
                                     ) : null}
                                   </div>
-                                  <div className="text-muted-foreground mt-0.5 flex items-center justify-end gap-2 text-xs">
+                                  <div className="text-muted-foreground flex min-w-0 items-center justify-end gap-2 overflow-hidden text-xs">
                                     <span className="inline-flex items-center gap-0.5">
                                       <ArrowUpFromLine
                                         className="text-info size-3 shrink-0"
@@ -1932,45 +1924,20 @@ function RequestEventsTable({
                                       <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
                                     </span>
                                     <span className="inline-flex items-center gap-0.5">
-                                      <Database
-                                        className="text-info/80 size-3 shrink-0"
-                                        aria-hidden="true"
-                                      />
-                                      <span>
-                                        {formatCompactNumber(tokenCounts.cacheReadTokens)}
-                                      </span>
-                                    </span>
-                                    <span className="inline-flex items-center gap-0.5">
                                       <ArrowDownToLine
                                         className="text-success size-3 shrink-0"
                                         aria-hidden="true"
                                       />
                                       <span>{formatCompactNumber(tokenCounts.outputTokens)}</span>
                                     </span>
-                                    {tokenCounts.reasoningTokens > 0 ? (
-                                      <span className="inline-flex items-center gap-0.5">
-                                        <Brain
-                                          className="text-warning size-3 shrink-0"
-                                          aria-hidden="true"
-                                        />
-                                        <span>
-                                          {formatCompactNumber(tokenCounts.reasoningTokens)}
-                                        </span>
-                                      </span>
-                                    ) : null}
-                                    {totalToolCalls > 0 ? (
-                                      <span className="inline-flex items-center gap-0.5">
-                                        <Wrench
-                                          className="text-primary size-3 shrink-0"
-                                          aria-hidden="true"
-                                        />
-                                        <span>{formatCompactNumber(totalToolCalls)}</span>
-                                      </span>
-                                    ) : null}
                                   </div>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent side="top" align="end" className="min-w-48 px-3 py-2">
+                              <TooltipContent
+                                side="top"
+                                align="end"
+                                className="max-w-[calc(100vw-2rem)] min-w-48 px-3 py-2 whitespace-normal"
+                              >
                                 <div className="grid gap-1 tabular-nums">
                                   <div className="border-background/20 mb-0.5 flex items-center justify-between gap-4 border-b pb-1 font-semibold">
                                     <span>{tokenTooltipRows[0]?.label}</span>
@@ -1979,10 +1946,10 @@ function RequestEventsTable({
                                   {tokenTooltipRows.slice(1).map((row) => (
                                     <div
                                       key={row.label}
-                                      className="flex items-center justify-between gap-4 text-[11px]"
+                                      className="text-meta flex items-start justify-between gap-4"
                                     >
-                                      <span className="opacity-80">{row.label}</span>
-                                      <span className="font-medium">{row.value}</span>
+                                      <span className="min-w-0 opacity-80">{row.label}</span>
+                                      <span className="shrink-0 font-medium">{row.value}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -2074,29 +2041,10 @@ function RequestEventsTable({
                         {isColumnRendered('userAgent') ? (
                           <TableCell className="min-w-0">
                             {event.client?.userAgent ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    tabIndex={0}
-                                    className="inline-flex max-w-full items-center gap-1 outline-hidden"
-                                  >
-                                    <span className="truncate font-mono text-xs">
-                                      {truncateUserAgent(event.client.userAgent)}
-                                    </span>
-                                    <UserAgentCopyButton
-                                      value={event.client.userAgent}
-                                      label={t('requestEventsPage.detail.actions.copy')}
-                                    />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent
-                                  side="top"
-                                  align="start"
-                                  className="max-w-md font-mono text-[11px] break-all"
-                                >
-                                  {event.client.userAgent}
-                                </TooltipContent>
-                              </Tooltip>
+                              <UserAgentCopyButton
+                                value={event.client.userAgent}
+                                label={`${t('requestEventsPage.detail.actions.copy')}: ${t('requestEventsPage.detail.fields.userAgent')}`}
+                              />
                             ) : (
                               <EmptyValue />
                             )}

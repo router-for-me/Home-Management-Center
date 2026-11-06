@@ -46,9 +46,3 @@ export function getCredentialDisplayName(resource: CredentialResource) {
     resource.label ?? resource.email ?? resource.account ?? resource.name ?? resource.identifier
   )
 }
-
-export function getCredentialStatusTone(resource: CredentialResource) {
-  if (resource.disabled || resource.unavailable) return 'warning'
-  if (resource.status === 'active') return 'positive'
-  return 'neutral'
-}

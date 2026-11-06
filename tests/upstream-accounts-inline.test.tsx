@@ -3,6 +3,7 @@ import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider, initReactI18next } from 'react-i18next'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
 import {
   buildCredentialMetadataPatch,
   isValidCredentialPriorityDraft,
@@ -177,50 +178,63 @@ describe('buildCredentialMetadataPatch', () => {
 
 describe('WebsocketsCell', () => {
   const noopSave = async () => {}
+  const copy = en.common.credentialsPage.inline
 
-  test('renders a switch for codex and xai credentials', () => {
-    for (const provider of ['codex', 'xai']) {
-      const markup = renderToStaticMarkup(
-        <I18nextProvider i18n={testI18n}>
+  function renderCell(
+    provider: string,
+    overrides: Partial<CredentialResource> = {},
+    mutating = false,
+  ) {
+    return renderToStaticMarkup(
+      <I18nextProvider i18n={testI18n}>
+        <TooltipProvider>
           <WebsocketsCell
-            resource={createCredentialResource(provider)}
-            mutating={false}
+            resource={createCredentialResource(provider, overrides)}
+            mutating={mutating}
             onSave={noopSave}
           />
-        </I18nextProvider>,
-      )
+        </TooltipProvider>
+      </I18nextProvider>,
+    )
+  }
+
+  test('keeps enabled Codex and xAI WebSocket settings editable', () => {
+    for (const provider of ['codex', 'xai']) {
+      const markup = renderCell(provider, { websockets: true })
       expect(markup).toContain('role="switch"')
+      expect(markup).toContain('aria-checked="true"')
+      expect(markup).toContain(`aria-label="Toggle WebSocket for ${provider}-01"`)
+      expect(markup).toContain(copy.websocketsEnabled)
+      expect(markup).not.toContain('disabled=""')
     }
   })
 
-  test('renders n/a for providers without websocket support', () => {
-    const markup = renderToStaticMarkup(
-      <I18nextProvider i18n={testI18n}>
-        <WebsocketsCell
-          resource={createCredentialResource('gemini')}
-          mutating={false}
-          onSave={noopSave}
-        />
-      </I18nextProvider>,
-    )
+  test('keeps a disabled xAI WebSocket setting editable', () => {
+    const markup = renderCell('xai', { websockets: false })
+    expect(markup).toContain('role="switch"')
+    expect(markup).toContain('aria-checked="false"')
+    expect(markup).toContain(copy.websocketsDisabled)
+    expect(markup).not.toContain('disabled=""')
+  })
+
+  test('shows not applicable for an unsupported provider even if a flag is present', () => {
+    const markup = renderCell('gemini', { websockets: true })
     expect(markup).not.toContain('role="switch"')
-    expect(markup).toContain('n/a')
+    expect(markup).toContain(copy.notApplicable)
+    expect(markup).not.toContain(copy.websocketsUnknown)
   })
 
   test('does not render a false switch state when the backend omitted websocket metadata', () => {
-    const markup = renderToStaticMarkup(
-      <I18nextProvider i18n={testI18n}>
-        <WebsocketsCell
-          resource={createCredentialResource('codex', {
-            metadataAvailability: { prefix: false, proxyUrl: false, websockets: false },
-          })}
-          mutating={false}
-          onSave={noopSave}
-        />
-      </I18nextProvider>,
-    )
+    const markup = renderCell('codex', {
+      metadataAvailability: { prefix: false, proxyUrl: false, websockets: false },
+    })
     expect(markup).not.toContain('role="switch"')
-    expect(markup).toContain('N/A')
+    expect(markup).toContain(copy.websocketsUnknown)
+    expect(markup).not.toContain(copy.notApplicable)
+  })
+
+  test('prevents repeated edits while a metadata change is pending', () => {
+    expect(renderCell('xai', {}, true)).toContain('disabled=""')
   })
 })
 

@@ -1,7 +1,11 @@
+import { AlertTriangle, CircleHelp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { getCredentialDisplayName } from '@/features/credentials/credential-display'
 import {
   type CredentialMetadataPatch,
   type CredentialResource,
@@ -17,6 +21,75 @@ function readErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error)
 }
 
+export function CredentialEnabledCell({
+  resource,
+  mutating,
+  onToggleStatus,
+  onInspect,
+}: {
+  resource: CredentialResource
+  mutating: boolean
+  onToggleStatus: (resource: CredentialResource, disabled: boolean) => void
+  onInspect: () => void
+}) {
+  const { t } = useTranslation()
+  const hasException = !resource.disabled && (resource.unavailable || resource.status !== 'active')
+  const statusLabel = resource.unavailable
+    ? t('credentialsPage.status.unavailable')
+    : t(`credentialsPage.status.${resource.status}`, { defaultValue: resource.status })
+  const StatusIcon =
+    resource.unavailable || resource.status === 'error' ? AlertTriangle : CircleHelp
+
+  return (
+    <div className="flex min-w-0 items-center gap-1">
+      <Switch
+        checked={!resource.disabled}
+        disabled={mutating}
+        aria-label={t('credentialsPage.list.toggleStatus', {
+          name: getCredentialDisplayName(resource),
+        })}
+        onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+        onClick={(event) => event.stopPropagation()}
+      />
+      {hasException ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="text"
+              size="icon-xs"
+              className="cursor-pointer"
+              aria-label={statusLabel}
+              aria-haspopup="dialog"
+              onClick={(event) => {
+                event.stopPropagation()
+                onInspect()
+              }}
+            >
+              <StatusIcon
+                className={
+                  resource.unavailable
+                    ? 'text-warning-foreground dark:text-warning'
+                    : resource.status === 'error'
+                      ? 'text-destructive'
+                      : undefined
+                }
+                aria-hidden="true"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent
+            side="top"
+            className="max-w-[min(24rem,calc(100vw-2rem))] wrap-anywhere whitespace-normal"
+          >
+            {statusLabel}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+    </div>
+  )
+}
+
 export function WebsocketsCell({
   resource,
   mutating,
@@ -28,22 +101,24 @@ export function WebsocketsCell({
 }) {
   const { t } = useTranslation()
 
-  if (!supportsCredentialWebsockets(resource)) {
-    return (
-      <span
-        className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-1 text-xs"
-        title={t('credentialsPage.inline.websocketsUnsupported')}
-      >
-        {t('credentialsPage.inline.notApplicable')}
-      </span>
-    )
-  }
+  const supported = supportsCredentialWebsockets(resource)
 
-  if (!resource.metadataAvailability.websockets) {
+  if (!supported || !resource.metadataAvailability.websockets) {
     return (
-      <span className="text-muted-foreground text-xs">
-        {t('credentialsPage.status.notAvailable')}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="text-muted-foreground text-body cursor-pointer" tabIndex={0}>
+            {supported
+              ? t('credentialsPage.inline.websocketsUnknown')
+              : t('credentialsPage.inline.notApplicable')}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal">
+          {supported
+            ? t('credentialsPage.inline.websocketsMissing')
+            : t('credentialsPage.inline.websocketsUnsupported')}
+        </TooltipContent>
+      </Tooltip>
     )
   }
 
@@ -57,18 +132,27 @@ export function WebsocketsCell({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col items-start gap-1">
       <Switch
         checked={resource.websockets}
         disabled={mutating}
-        aria-label={t('credentialsPage.inline.websocketsLabel')}
+        aria-label={t('credentialsPage.inline.websocketsLabel', {
+          name: getCredentialDisplayName(resource),
+        })}
         onCheckedChange={(checked) => void handleToggle(checked)}
         onClick={(event) => event.stopPropagation()}
       />
-      <span className="text-muted-foreground text-xs">
+      <span
+        className="text-muted-foreground text-meta max-w-full truncate"
+        title={
+          resource.websockets
+            ? t('credentialsPage.inline.websocketsEnabled')
+            : t('credentialsPage.inline.websocketsDisabled')
+        }
+      >
         {resource.websockets
-          ? t('credentialsPage.status.enabled')
-          : t('credentialsPage.status.disabled')}
+          ? t('credentialsPage.inline.websocketsEnabled')
+          : t('credentialsPage.inline.websocketsDisabled')}
       </span>
     </div>
   )

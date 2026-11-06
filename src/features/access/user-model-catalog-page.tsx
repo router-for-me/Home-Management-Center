@@ -98,6 +98,7 @@ export function UserModelCatalogPage() {
   const navigate = useNavigate({ from: CATALOG_PATH })
   const routeSearch = useSearch({ from: CATALOG_PATH })
   const [selected, setSelected] = useState<UserCatalogModel | null>(null)
+  const [detailSection, setDetailSection] = useState<'specs' | 'pricing'>('specs')
   const triggerRef = useRef<HTMLElement | null>(null)
 
   const query = routeSearch.q ?? ''
@@ -125,12 +126,13 @@ export function UserModelCatalogPage() {
     })
   }
 
-  const openDetails = (model: UserCatalogModel) => {
+  const openDetails = (model: UserCatalogModel, section: 'specs' | 'pricing' = 'specs') => {
     // Remember the control the buyer opened the sheet from so closing it puts
     // the keyboard back on that card instead of at the top of the document.
     triggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null
     setSelected(model)
+    setDetailSection(section)
   }
 
   const { models, authenticated } = catalog
@@ -242,11 +244,11 @@ export function UserModelCatalogPage() {
         {!authenticated && !catalog.unsupported ? (
           <div className="border-info/25 bg-info/10 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="min-w-0 text-sm font-medium">{t('userModels.signedOut.title')}</p>
-            <div className="flex shrink-0 flex-wrap gap-2">
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
               <Button asChild size="md">
                 <Link to="/user/login">{t('userModels.signedOut.signIn')}</Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" size="md">
                 <Link to="/user/register">{t('userModels.signedOut.register')}</Link>
               </Button>
             </div>
@@ -511,6 +513,7 @@ export function UserModelCatalogPage() {
       <UserModelDetailSheet
         model={selected}
         authenticated={authenticated}
+        initialSection={detailSection}
         onOpenChange={(open) => {
           if (!open) setSelected(null)
         }}

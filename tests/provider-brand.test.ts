@@ -1,6 +1,16 @@
-import { describe, expect, test } from 'bun:test'
+import { createElement } from 'react'
 
-import { resolveModelVendorId, resolveProviderLogoId } from '@/components/shared/provider-logo'
+import { describe, expect, test } from 'bun:test'
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { renderToStaticMarkup } from 'react-dom/server'
+
+import {
+  ProviderLogo,
+  resolveModelVendorId,
+  resolveProviderLogoId,
+} from '@/components/shared/provider-logo'
 
 describe('model vendor resolution', () => {
   test('recognizes Meta model families without claiming unrelated aliases', () => {
@@ -83,6 +93,23 @@ describe('model vendor resolution', () => {
 })
 
 describe('provider logo resolution', () => {
+  test.each(['devin', 'groq'])(
+    'uses the installed community collection for %s instead of a monogram',
+    (providerId) => {
+      const directory = join(
+        dirname(fileURLToPath(import.meta.resolve('@lobehub/icons-static-svg/package.json'))),
+        'icons',
+      )
+      expect(
+        existsSync(join(directory, `${providerId}-color.svg`)) ||
+          existsSync(join(directory, `${providerId}.svg`)),
+      ).toBe(true)
+      const markup = renderToStaticMarkup(createElement(ProviderLogo, { providerId }))
+      expect(markup).toContain(`data-provider-icon="${providerId}"`)
+      expect(markup).toContain(`@lobehub/icons-static-svg/icons/${providerId}`)
+    },
+  )
+
   test('resolves exact Meta aliases and preserves unrelated provider names', () => {
     for (const value of ['meta', 'muse', ' Meta ', 'MUSE']) {
       expect(resolveProviderLogoId(value)).toBe('meta')

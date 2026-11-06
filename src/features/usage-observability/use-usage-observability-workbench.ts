@@ -33,7 +33,16 @@ import { applyFilterPatch } from '@/lib/filter-patch'
 import { createChoicePreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 
 const recordPageSizeOptions = [25, 50, 100, 200]
-const persistentUsageRanges = ['24h', '7d', '30d', 'all'] as const
+const persistentUsageRanges = [
+  '4h',
+  '12h',
+  '24h',
+  'today',
+  'yesterday',
+  '7d',
+  '30d',
+  '90d',
+] as const satisfies readonly UsageFilters['range'][]
 const normalizeUsageRange = createChoicePreferenceNormalizer(persistentUsageRanges)
 const credentialUsagePageSizeOptions = [10, 20, 50, 100]
 const usageRecordsRefreshMs = 30_000
@@ -83,12 +92,12 @@ export function useUsageObservabilityWorkbench() {
     usageRealtime: false,
     requestLogIndex: false,
   }
-  const [storedRange, setStoredRange] = useLocalStoragePreference(
+  const [storedRange, setStoredRange] = useLocalStoragePreference<UsageFilters['range']>(
     uiPreferenceKeys.usageRange,
-    defaultUsageFilters.range as (typeof persistentUsageRanges)[number],
+    defaultUsageFilters.range,
     normalizeUsageRange,
   )
-  const [filters, setFilters] = usePersistentPagination(
+  const [filters, setFilters] = usePersistentPagination<UsageFilters>(
     uiPreferenceKeys.usageRecordPageSize,
     {
       ...defaultUsageFilters,

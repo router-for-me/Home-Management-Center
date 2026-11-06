@@ -9,7 +9,6 @@ import {
 } from 'react'
 
 import {
-  AlertTriangle,
   ChevronDown,
   CircleGauge,
   Download,
@@ -68,12 +67,13 @@ import {
 } from '@/features/credentials/use-credential-workbench'
 import {
   InlineWindowBar,
-  UpstreamQuotaMetaBadge,
-  UpstreamQuotaPlanBadge,
-  UpstreamQuotaStatusBadge,
+  QuotaSnapshotBadges,
   formatXaiProductUsedPercent,
 } from '@/features/upstream/quota-cells'
-import { getUpstreamQuotaErrorMessage } from '@/features/upstream/quota-format'
+import {
+  QuotaCollectionFacts,
+  QuotaCollectionNotice,
+} from '@/features/upstream/quota-collection-notice'
 import {
   type AntigravityQuotaGroup,
   type UpstreamQuotaEntry,
@@ -84,6 +84,7 @@ import {
   isXaiProductUsageWindow,
   resolveAntigravityQuotaPresentation,
   resolveCredentialQuotaAction,
+  resolveQuotaSnapshotDisplay,
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
@@ -461,9 +462,9 @@ function OverviewTab({
             websocketsSupported
               ? resource.metadataAvailability.websockets
                 ? resource.websockets
-                  ? t('credentialsPage.status.enabled')
-                  : t('credentialsPage.status.disabled')
-                : t('credentialsPage.status.notAvailable')
+                  ? t('credentialsPage.inline.websocketsEnabled')
+                  : t('credentialsPage.inline.websocketsDisabled')
+                : t('credentialsPage.inline.websocketsUnknown')
               : t('credentialsPage.inline.notApplicable'),
           ],
           [
@@ -916,7 +917,6 @@ function MetadataTab({
   const websocketsSupported = supportsCredentialWebsockets(resource)
   const websocketsAvailable = resource.metadataAvailability.websockets
   const usingApiSupported = supportsCredentialUsingApi(resource)
-  const isXaiCredential = resource.provider.trim().toLowerCase() === 'xai'
   const concurrencyEditable = canEditConcurrency && concurrencyPolicy !== null
 
   const validateDraft = (): CredentialFieldErrors => {
@@ -1225,17 +1225,13 @@ function MetadataTab({
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium">{t('credentialsPage.form.websockets')}</p>
-            {websocketsSupported && websocketsAvailable ? (
-              <p className="text-muted-foreground mt-1 text-xs leading-5">
-                {isXaiCredential
-                  ? t('upstreamPage.drawer.metadata.websocketsXaiHint')
+            <p className="text-muted-foreground mt-1 text-xs leading-5">
+              {!websocketsSupported
+                ? t('credentialsPage.inline.websocketsUnsupported')
+                : !websocketsAvailable
+                  ? t('credentialsPage.inline.websocketsMissing')
                   : t('credentialsPage.form.websocketsHint')}
-              </p>
-            ) : !websocketsSupported ? (
-              <p className="text-muted-foreground mt-1 text-xs leading-5">
-                {t('upstreamPage.drawer.metadata.websocketsUnsupported')}
-              </p>
-            ) : null}
+            </p>
           </div>
           {websocketsSupported && websocketsAvailable ? (
             <Switch
@@ -1249,7 +1245,7 @@ function MetadataTab({
           ) : (
             <span className="border-border bg-muted text-muted-foreground inline-flex shrink-0 items-center rounded-md border px-2 py-0.5 text-[11px] font-medium">
               {websocketsSupported
-                ? t('credentialsPage.status.notAvailable')
+                ? t('credentialsPage.inline.websocketsUnknown')
                 : t('credentialsPage.inline.notApplicable')}
             </span>
           )}
@@ -1546,16 +1542,28 @@ function QuotaWindowTiming({ window }: { window: QuotaWindow }) {
   )
 }
 
-function QuotaWindowDetailCard({ window }: { window: QuotaWindow }) {
+function QuotaWindowDetailCard({
+  window,
+  historical = false,
+}: {
+  window: QuotaWindow
+  historical?: boolean
+}) {
   return (
     <div className="grid gap-3 rounded-md border p-4">
-      <InlineWindowBar window={window} />
+      <InlineWindowBar window={window} historical={historical} />
       <QuotaWindowTiming window={window} />
     </div>
   )
 }
 
-function AntigravityQuotaGroups({ groups }: { groups: AntigravityQuotaGroup[] }) {
+function AntigravityQuotaGroups({
+  groups,
+  historical = false,
+}: {
+  groups: AntigravityQuotaGroup[]
+  historical?: boolean
+}) {
   const { t } = useTranslation()
 
   return (
@@ -1568,7 +1576,7 @@ function AntigravityQuotaGroups({ groups }: { groups: AntigravityQuotaGroup[] })
           <div className="mt-3 divide-y">
             {group.windows.map((window) => (
               <div key={window.id} className="grid gap-2.5 py-3 first:pt-0 last:pb-0">
-                <InlineWindowBar window={window} />
+                <InlineWindowBar window={window} historical={historical} />
                 <QuotaWindowTiming window={window} />
               </div>
             ))}
@@ -1675,6 +1683,7 @@ export function GrokQuotaDetail({
   headerAction?: ReactNode
 }) {
   const { t } = useTranslation()
+  const historical = resolveQuotaSnapshotDisplay(entry).historical
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
   const weeklyWindow = findXaiWeeklyWindow(entry)
@@ -1689,17 +1698,11 @@ export function GrokQuotaDetail({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <ProviderLogo providerId={entry.provider} size="lg" />
-          {entry.plan ? <UpstreamQuotaPlanBadge plan={entry.plan} /> : null}
-          <UpstreamQuotaStatusBadge status={entry.status} />
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.freshness.${entry.freshness}`)}
-          </UpstreamQuotaMetaBadge>
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.source.${entry.source}`)}
-          </UpstreamQuotaMetaBadge>
+          <QuotaSnapshotBadges entry={entry} />
         </div>
         {headerAction}
       </div>
+      <QuotaCollectionNotice entry={entry} />
       {productUsageWindows.length > 0 ? (
         <div className="grid gap-1.5 rounded-md border p-4">
           <p className="text-sm font-medium">{t('upstreamPage.quota.xai.usageBreakdown')}</p>
@@ -1727,7 +1730,11 @@ export function GrokQuotaDetail({
                 t('upstreamPage.quota.common.notAvailable')}
             </span>
           </div>
-          <InlineWindowBar window={monthlyWindow} label={t('upstreamPage.quota.remaining')} />
+          <InlineWindowBar
+            window={monthlyWindow}
+            historical={historical}
+            label={t('upstreamPage.quota.remaining')}
+          />
         </div>
       ) : null}
       <div className="grid gap-2 rounded-md border p-4">
@@ -1742,16 +1749,21 @@ export function GrokQuotaDetail({
           </span>
         </div>
         {onDemandWindow ? (
-          <InlineWindowBar window={onDemandWindow} label={t('upstreamPage.quota.remaining')} />
+          <InlineWindowBar
+            window={onDemandWindow}
+            historical={historical}
+            label={t('upstreamPage.quota.remaining')}
+          />
         ) : null}
       </div>
       {detailWindows.length > 0 ? (
         <div className="grid gap-3">
           {detailWindows.map((window) => (
-            <QuotaWindowDetailCard key={window.id} window={window} />
+            <QuotaWindowDetailCard key={window.id} window={window} historical={historical} />
           ))}
         </div>
       ) : null}
+      <QuotaCollectionFacts entry={entry} />
     </div>
   )
 }
@@ -1764,40 +1776,27 @@ export function UpstreamQuotaDetail({
   headerAction?: ReactNode
 }) {
   const { t } = useTranslation()
+  const historical = resolveQuotaSnapshotDisplay(item).historical
   const windows = item.windows.length > 0 ? item.windows : item.primaryWindows
   const isAntigravity = item.provider.trim().toLowerCase() === 'antigravity'
   const antigravityPresentation = isAntigravity
     ? resolveAntigravityQuotaPresentation(item, windows)
     : null
-  const antigravityNeedsRefresh =
-    antigravityPresentation?.kind === 'collecting' || antigravityPresentation?.kind === 'legacy'
-  const displayStatus = antigravityNeedsRefresh ? 'unknown' : item.status
-  const displayFreshness = antigravityNeedsRefresh ? 'stale' : item.freshness
 
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <ProviderLogo providerId={item.provider} size="lg" />
-          {item.plan ? <UpstreamQuotaPlanBadge plan={item.plan} /> : null}
-          <UpstreamQuotaStatusBadge status={displayStatus} />
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.freshness.${displayFreshness}`)}
-          </UpstreamQuotaMetaBadge>
-          <UpstreamQuotaMetaBadge>
-            {t(`upstreamPage.quota.source.${item.source}`)}
-          </UpstreamQuotaMetaBadge>
-          {isAntigravity && item.collectionStatus !== 'success' ? (
-            <UpstreamQuotaMetaBadge>
-              {t(`upstreamPage.quota.collection.${item.collectionStatus}`)}
-            </UpstreamQuotaMetaBadge>
-          ) : null}
+          <QuotaSnapshotBadges entry={item} />
         </div>
         {headerAction}
       </div>
 
+      <QuotaCollectionNotice entry={item} />
+
       {antigravityPresentation?.kind === 'windows' ? (
-        <AntigravityQuotaGroups groups={antigravityPresentation.groups} />
+        <AntigravityQuotaGroups groups={antigravityPresentation.groups} historical={historical} />
       ) : antigravityPresentation ? (
         <p
           className={cn(
@@ -1808,7 +1807,7 @@ export function UpstreamQuotaDetail({
           )}
         >
           {antigravityPresentation.kind === 'failed'
-            ? getUpstreamQuotaErrorMessage(item, t)
+            ? t('upstreamPage.quota.detail.noWindowsTitle')
             : antigravityPresentation.kind === 'collecting'
               ? t('upstreamPage.quota.antigravity.upgrading')
               : antigravityPresentation.kind === 'legacy'
@@ -1818,14 +1817,12 @@ export function UpstreamQuotaDetail({
       ) : windows.length > 0 ? (
         <div className="grid gap-3">
           {windows.map((window) => (
-            <QuotaWindowDetailCard key={window.id} window={window} />
+            <QuotaWindowDetailCard key={window.id} window={window} historical={historical} />
           ))}
         </div>
       ) : (
         <p className="text-muted-foreground rounded-md border px-3 py-2.5 text-sm">
-          {item.lastError
-            ? getUpstreamQuotaErrorMessage(item, t)
-            : t('upstreamPage.quota.detail.noWindowsTitle')}
+          {t('upstreamPage.quota.detail.noWindowsTitle')}
         </p>
       )}
 
@@ -1840,60 +1837,7 @@ export function UpstreamQuotaDetail({
         </p>
       ) : null}
 
-      <section>
-        <h3 className="text-sm font-semibold">{t('upstreamPage.quota.detail.collection')}</h3>
-        <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-          {[
-            [
-              t('upstreamPage.quota.detail.collectionStatus'),
-              t(`upstreamPage.quota.collection.${item.collectionStatus}`),
-            ],
-            [t('upstreamPage.quota.detail.source'), t(`upstreamPage.quota.source.${item.source}`)],
-            [
-              t('upstreamPage.quota.detail.observedAt'),
-              formatCredentialDateTime(item.observedAt) ??
-                t('upstreamPage.quota.common.notAvailable'),
-            ],
-            [
-              t('upstreamPage.quota.detail.lastAttemptAt'),
-              formatCredentialDateTime(item.lastAttemptAt) ??
-                t('upstreamPage.quota.common.notAvailable'),
-            ],
-            [
-              t('upstreamPage.quota.detail.nextProbeAt'),
-              formatCredentialDateTime(item.nextProbeAt) ??
-                t('upstreamPage.quota.common.notAvailable'),
-            ],
-            [t('upstreamPage.quota.detail.consecutiveFailures'), String(item.consecutiveFailures)],
-          ].map(([label, value]) => (
-            <div key={label} className="min-w-0 rounded-md border px-3 py-2.5">
-              <dt className="text-muted-foreground text-xs">{label}</dt>
-              <dd className="mt-1 min-w-0 truncate text-sm">{value}</dd>
-            </div>
-          ))}
-        </dl>
-        {item.lastError ? (
-          <div className="border-warning/30 bg-warning/10 mt-3 rounded-md border p-3">
-            <div className="flex items-start gap-2">
-              <AlertTriangle
-                className="text-warning-foreground dark:text-warning mt-0.5 size-4 shrink-0"
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">{t('upstreamPage.quota.detail.lastError')}</p>
-                <p className="text-muted-foreground mt-1 text-sm leading-6 break-words">
-                  {getUpstreamQuotaErrorMessage(item, t)}
-                </p>
-                {item.lastError.code ? (
-                  <p className="text-muted-foreground mt-1 font-mono text-xs">
-                    {item.lastError.code}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </section>
+      <QuotaCollectionFacts entry={item} />
     </div>
   )
 }
