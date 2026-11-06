@@ -18,6 +18,8 @@ describe('quota plan presentation', () => {
     ['xai', 'SuperGrok Heavy', 'flagship'],
     ['kimi', 'Allegretto', 'gold'],
     ['kimi', 'Allegro', 'flagship'],
+    ['devin', 'Pro', 'silver'],
+    ['devin', 'Free', 'standard'],
   ])('recognizes the confirmed %s %s tier', (provider, name, expected) => {
     expect(resolveQuotaPlanTier(provider, { name, premium: false })).toBe(expected)
   })

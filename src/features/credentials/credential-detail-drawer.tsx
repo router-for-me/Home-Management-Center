@@ -68,7 +68,7 @@ import {
 import {
   InlineWindowBar,
   QuotaSnapshotBadges,
-  formatXaiProductUsedPercent,
+  XaiProductUsageList,
 } from '@/features/upstream/quota-cells'
 import {
   QuotaCollectionFacts,
@@ -80,11 +80,11 @@ import {
   findCurrencyWindow,
   findXaiOnDemandWindow,
   findXaiProductUsageWindows,
-  findXaiWeeklyWindow,
   isXaiProductUsageWindow,
   resolveAntigravityQuotaPresentation,
   resolveCredentialQuotaAction,
   resolveQuotaSnapshotDisplay,
+  resolveXaiOnDemandState,
 } from '@/features/upstream/upstream-quota-model'
 import { useUpstreamQuotaCredentialDetail } from '@/features/upstream/use-upstream-quota'
 import {
@@ -1521,20 +1521,22 @@ function MetadataTab({
 }
 
 function QuotaWindowTiming({ window }: { window: QuotaWindow }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage ?? i18n.language
 
   return (
     <dl className="grid gap-x-4 gap-y-2 text-xs sm:grid-cols-2">
       <div>
         <dt className="text-muted-foreground">{t('upstreamPage.quota.window.resetAt')}</dt>
         <dd className="mt-0.5">
-          {formatCredentialDateTime(window.resetAt) ?? t('upstreamPage.quota.common.notAvailable')}
+          {formatCredentialDateTime(window.resetAt, locale) ??
+            t('upstreamPage.quota.common.notAvailable')}
         </dd>
       </div>
       <div>
         <dt className="text-muted-foreground">{t('upstreamPage.quota.window.observedAt')}</dt>
         <dd className="mt-0.5">
-          {formatCredentialDateTime(window.observedAt) ??
+          {formatCredentialDateTime(window.observedAt, locale) ??
             t('upstreamPage.quota.common.notAvailable')}
         </dd>
       </div>
@@ -1594,7 +1596,8 @@ function ResetCreditsDetail({
   resetCredits: QuotaResetCredits
   countOnly: boolean
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage ?? i18n.language
   const unavailableDetailCount = Math.max(
     0,
     resetCredits.availableCount - resetCredits.credits.length,
@@ -1635,7 +1638,7 @@ function ResetCreditsDetail({
               <p className="text-muted-foreground text-xs tabular-nums">
                 {t('upstreamPage.quota.codex.expiresAt', {
                   time:
-                    formatCredentialDateTime(credit.expiresAt) ??
+                    formatCredentialDateTime(credit.expiresAt, locale) ??
                     t('upstreamPage.quota.common.notAvailable'),
                 })}
               </p>
@@ -1666,7 +1669,7 @@ function ResetCreditsDetail({
         <p className="text-muted-foreground border-t px-4 py-2 text-xs">
           {t('upstreamPage.quota.codex.observedAt', {
             time:
-              formatCredentialDateTime(resetCredits.observedAt) ??
+              formatCredentialDateTime(resetCredits.observedAt, locale) ??
               t('upstreamPage.quota.common.notAvailable'),
           })}
         </p>
@@ -1682,16 +1685,14 @@ export function GrokQuotaDetail({
   entry: UpstreamQuotaEntry
   headerAction?: ReactNode
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage ?? i18n.language
   const historical = resolveQuotaSnapshotDisplay(entry).historical
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
-  const weeklyWindow = findXaiWeeklyWindow(entry)
+  const onDemandState = resolveXaiOnDemandState(entry)
   const productUsageWindows = findXaiProductUsageWindows(entry)
   const detailWindows = entry.windows.filter((window) => !isXaiProductUsageWindow(window))
-  const hasKnownWindows = Boolean(
-    monthlyWindow || onDemandWindow || weeklyWindow || productUsageWindows.length > 0,
-  )
 
   return (
     <div className="grid gap-3">
@@ -1706,18 +1707,8 @@ export function GrokQuotaDetail({
       {productUsageWindows.length > 0 ? (
         <div className="grid gap-1.5 rounded-md border p-4">
           <p className="text-sm font-medium">{t('upstreamPage.quota.xai.usageBreakdown')}</p>
-          <div className="text-muted-foreground grid gap-1 text-xs tabular-nums">
-            {productUsageWindows.map((window) => {
-              const product = window.label?.trim() || window.id.replace(/^xai-product-/, '')
-              const usedPercent = formatXaiProductUsedPercent(window)
-              return (
-                <p key={window.id}>
-                  {t('upstreamPage.quota.xai.productUsage', { product })}
-                  {': '}
-                  {usedPercent ?? t('upstreamPage.quota.xai.usageUnavailable')}
-                </p>
-              )
-            })}
+          <div className="text-muted-foreground text-meta min-w-0">
+            <XaiProductUsageList entry={entry} />
           </div>
         </div>
       ) : null}
@@ -1726,7 +1717,7 @@ export function GrokQuotaDetail({
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium">{t('upstreamPage.quota.monthlyCredits')}</p>
             <span className="text-muted-foreground text-xs">
-              {formatCredentialDateTime(monthlyWindow.resetAt) ??
+              {formatCredentialDateTime(monthlyWindow.resetAt, locale) ??
                 t('upstreamPage.quota.common.notAvailable')}
             </span>
           </div>
@@ -1741,11 +1732,13 @@ export function GrokQuotaDetail({
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm font-medium">{t('upstreamPage.quota.onDemand')}</p>
           <span className="text-muted-foreground text-xs">
-            {onDemandWindow
-              ? t('upstreamPage.quota.onDemandEnabled')
-              : hasKnownWindows
-                ? t('upstreamPage.quota.onDemandDisabled')
-                : t('upstreamPage.quota.onDemandUnknown')}
+            {t(
+              onDemandState === 'enabled'
+                ? 'upstreamPage.quota.onDemandEnabled'
+                : onDemandState === 'disabled'
+                  ? 'upstreamPage.quota.onDemandDisabled'
+                  : 'upstreamPage.quota.onDemandUnknown',
+            )}
           </span>
         </div>
         {onDemandWindow ? (

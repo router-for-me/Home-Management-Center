@@ -1964,6 +1964,7 @@ export const zhCN = {
         unsupported: '不支持查询',
         unsupportedHint: '该凭证类型暂不支持额度采集(常见于 Provider API Key)。',
         collectFailed: '采集失败',
+        daily: '日限额',
         weekly: '周限额',
         monthly: '月度',
         monthlyCredits: '月度积分',
@@ -1981,6 +1982,8 @@ export const zhCN = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         summary: {
           plan: '{{name}} 套餐',
+          subscriptionExpiry: '订阅到期',
+          subscriptionExpiresAt: '订阅到期：{{time}}',
           historical: '需重新采集',
           statusHint: '仅表示已上报的额度状态，涵盖未展示的周期；不代表凭证当前连通性。',
           viewAll: '额度详情（共{{count}}项）',
@@ -2062,6 +2065,10 @@ export const zhCN = {
             title: '额度查询受限',
             description: '上游限制了额度查询频率，请稍后重新采集。',
           },
+          clientOutdated: {
+            title: '额度查询需要升级',
+            description: '上游要求更新客户端版本，请升级 Home 后端后重新采集。',
+          },
           invalidResponse: {
             title: '额度查询不完整',
             description: '额度接口未返回完整、可用的数据，请稍后重新采集。',
@@ -2069,6 +2076,10 @@ export const zhCN = {
           missingAuthorization: {
             title: '缺少额度查询授权',
             description: '该凭证缺少访问 Meta 额度接口所需的授权，请检查查询权限。',
+          },
+          missingToken: {
+            title: '缺少额度查询凭证',
+            description: '当前凭证缺少查询所需的授权信息，请更新凭证后重试。',
           },
           unavailable: {
             title: '额度查询失败',

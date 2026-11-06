@@ -8,6 +8,7 @@ export type QuotaStatus = 'healthy' | 'low' | 'exhausted' | 'unknown' | 'error' 
 export type QuotaPlan = {
   name: string
   premium: boolean
+  expiresAt?: string
 }
 
 export type QuotaResetCredit = {
@@ -401,7 +402,12 @@ function normalizeQuotaPlan(value: unknown): QuotaPlan | null {
   if (!isRecord(value)) return null
   const name = readString(value, ['name'])
   if (!name) return null
-  return { name, premium: readBoolean(value, ['premium']) ?? false }
+  const expiresAt = readString(value, ['expires_at', 'expiresAt'])
+  return {
+    name,
+    premium: readBoolean(value, ['premium']) ?? false,
+    ...(expiresAt && Number.isFinite(Date.parse(expiresAt)) ? { expiresAt } : {}),
+  }
 }
 
 function normalizeQuotaResetCredit(value: unknown): QuotaResetCredit | null {
