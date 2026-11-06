@@ -647,8 +647,7 @@ function estimateAutoColumnWidths(rows: RequestEvent[]): Record<RequestEventColu
     const modelLine1 =
       (event.model ?? '').length + (event.reasoningEffort ? event.reasoningEffort.length + 3 : 0)
     const modelLine2 =
-      (event.provider ?? '').length +
-      (event.modelAlias && event.modelAlias !== event.model ? event.modelAlias.length + 5 : 0) +
+      (event.modelAlias && event.modelAlias !== event.model ? event.modelAlias.length + 2 : 0) +
       (event.serviceTier ? event.serviceTier.length + 3 : 0)
     bump('model', Math.max(modelLine1, modelLine2))
 
@@ -2078,11 +2077,14 @@ function RequestEventsTable({
                               ) : null}
                             </div>
                             <p className="text-muted-foreground truncate text-xs">
-                              {event.provider ?? <EmptyValue />}
-                              {event.modelAlias && event.modelAlias !== event.model
-                                ? ` · ↳ ${event.modelAlias}`
-                                : ''}
-                              {event.serviceTier ? ` · ${event.serviceTier}` : ''}
+                              {[
+                                event.modelAlias && event.modelAlias !== event.model
+                                  ? `↳ ${event.modelAlias}`
+                                  : null,
+                                event.serviceTier ?? null,
+                              ]
+                                .filter(Boolean)
+                                .join(' · ') || <EmptyValue />}
                             </p>
                           </TableCell>
                         ) : null}
