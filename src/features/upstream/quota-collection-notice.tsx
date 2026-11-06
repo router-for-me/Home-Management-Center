@@ -118,6 +118,9 @@ export function QuotaCollectionFacts({ entry }: { entry: UpstreamQuotaEntry }) {
       : t('upstreamPage.quota.common.notAvailable')
   const fields = [
     [t('upstreamPage.quota.summary.quotaStatus'), t(`upstreamPage.quota.status.${entry.status}`)],
+    ...(entry.plan?.expiresAt
+      ? [[t('upstreamPage.quota.summary.subscriptionExpiry'), formatTime(entry.plan.expiresAt)]]
+      : []),
     [
       t('upstreamPage.quota.summary.freshness'),
       t(`upstreamPage.quota.freshness.${entry.freshness}`),

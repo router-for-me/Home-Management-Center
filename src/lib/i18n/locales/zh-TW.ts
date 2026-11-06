@@ -1965,6 +1965,7 @@ export const zhTW = {
         unsupported: '不支援查詢',
         unsupportedHint: '該憑證類型暫不支援額度採集(常見於 Provider API Key)。',
         collectFailed: '採集失敗',
+        daily: '日限額',
         weekly: '周限額',
         monthly: '月度',
         monthlyCredits: '月度積分',
@@ -1982,6 +1983,8 @@ export const zhTW = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         summary: {
           plan: '{{name}} 套餐',
+          subscriptionExpiry: '訂閱到期',
+          subscriptionExpiresAt: '訂閱到期：{{time}}',
           historical: '需重新擷取',
           statusHint: '僅表示已回報的額度狀態，涵蓋未顯示的週期；不代表憑證目前的連線狀況。',
           viewAll: '額度詳情（共{{count}}項）',
@@ -2063,6 +2066,10 @@ export const zhTW = {
             title: '額度查詢受限',
             description: '上游限制了額度查詢頻率，請稍後重新擷取。',
           },
+          clientOutdated: {
+            title: '額度查詢需要升級',
+            description: '上游要求更新用戶端版本，請升級 Home 後端後重新採集。',
+          },
           invalidResponse: {
             title: '額度查詢不完整',
             description: '額度介面未回傳完整、可用的資料，請稍後重新擷取。',
@@ -2070,6 +2077,10 @@ export const zhTW = {
           missingAuthorization: {
             title: '缺少額度查詢授權',
             description: '該憑證缺少存取 Meta 額度介面所需的授權，請檢查查詢權限。',
+          },
+          missingToken: {
+            title: '缺少額度查詢憑證',
+            description: '目前憑證缺少查詢所需的授權資訊，請更新憑證後重試。',
           },
           unavailable: {
             title: '額度查詢失敗',

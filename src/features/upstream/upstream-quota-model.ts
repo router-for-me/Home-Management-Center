@@ -200,6 +200,7 @@ const quotaCollectableProviders = new Set([
   'claude',
   'antigravity',
   'codex',
+  'devin',
   'kimi',
   'xai',
   'grok',
@@ -265,6 +266,31 @@ export function findCurrencyWindow(entry: UpstreamQuotaEntry): QuotaWindow | nul
 export function findXaiOnDemandWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {
   const windows = [...entry.primaryWindows, ...entry.windows]
   return windows.find((window) => window.id === xaiOnDemandWindowId) ?? null
+}
+
+export function resolveXaiOnDemandState(entry: UpstreamQuotaEntry) {
+  const expiresAt = Date.parse(entry.expiresAt ?? '')
+  if (entry.freshness !== 'fresh' || (Number.isFinite(expiresAt) && expiresAt <= Date.now()))
+    return 'unknown'
+  const window = findXaiOnDemandWindow(entry)
+  if (window) return isRetainedQuotaWindow(entry, window) ? 'unknown' : 'enabled'
+  const hasWindows = entry.primaryWindows.length > 0 || entry.windows.length > 0
+  const observedEmpty =
+    entry.source === 'active_probe' &&
+    entry.windowCount === 0 &&
+    Number.isFinite(Date.parse(entry.observedAt ?? ''))
+  return entry.collectionStatus === 'success' && (hasWindows || observedEmpty)
+    ? 'disabled'
+    : 'unknown'
+}
+
+export function isRetainedQuotaWindow(
+  entry: Pick<UpstreamQuotaEntry, 'observedAt'>,
+  window: Pick<QuotaWindow, 'observedAt'>,
+) {
+  const snapshotTime = Date.parse(entry.observedAt ?? '')
+  const windowTime = Date.parse(window.observedAt ?? '')
+  return Number.isFinite(snapshotTime) && Number.isFinite(windowTime) && windowTime < snapshotTime
 }
 
 export function findXaiWeeklyWindow(entry: UpstreamQuotaEntry): QuotaWindow | null {

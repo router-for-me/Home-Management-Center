@@ -2049,6 +2049,7 @@ export const en = {
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
+        daily: 'Daily limit',
         weekly: 'Weekly limit',
         monthly: 'Monthly',
         monthlyCredits: 'Monthly credits',
@@ -2066,6 +2067,8 @@ export const en = {
         moneyRemaining: '{{remaining}} / {{limit}}',
         summary: {
           plan: '{{name}} plan',
+          subscriptionExpiry: 'Subscription ends',
+          subscriptionExpiresAt: 'Subscription ends: {{time}}',
           historical: 'Recollect needed',
           statusHint:
             'Reported quota status includes periods hidden from this preview. It does not confirm that the credential is currently reachable.',
@@ -2159,6 +2162,11 @@ export const en = {
             title: 'Quota query rate limited',
             description: 'The upstream limited quota queries. Wait before collecting again.',
           },
+          clientOutdated: {
+            title: 'Quota query requires an update',
+            description:
+              'The upstream requires a newer client version. Update the Home backend, then collect quota again.',
+          },
           invalidResponse: {
             title: 'Quota query incomplete',
             description:
@@ -2168,6 +2176,11 @@ export const en = {
             title: 'Quota query authorization missing',
             description:
               'This credential lacks authorization for the Meta quota endpoint. Check its query permissions.',
+          },
+          missingToken: {
+            title: 'Quota query credentials missing',
+            description:
+              'Required authorization data is missing from this credential. Update the credential, then collect quota again.',
           },
           unavailable: {
             title: 'Quota query failed',

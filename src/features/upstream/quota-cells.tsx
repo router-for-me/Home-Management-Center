@@ -5,7 +5,9 @@ import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatCredentialDateTime } from '@/features/credentials/credential-display'
 import {
+  formatUpstreamQuotaRelativeTime,
   getUpstreamQuotaWindowDisplayLabel,
   getUpstreamQuotaWindowIdentityLabel,
 } from '@/features/upstream/quota-format'
@@ -25,9 +27,11 @@ import {
   findXaiOnDemandWindow,
   findXaiProductUsageWindows,
   findXaiWeeklyWindow,
+  isRetainedQuotaWindow,
   resolveAntigravityQuotaPresentation,
   resolveQuotaLabelState,
   resolveQuotaSnapshotDisplay,
+  resolveXaiOnDemandState,
 } from './upstream-quota-model'
 
 const upstreamQuotaProgressClassNames: Record<QuotaStatus, string> = {
@@ -43,21 +47,36 @@ const quotaWindowRowClassName =
   'grid min-w-0 grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_2.25rem] items-center gap-2'
 
 function UpstreamQuotaPlanBadge({ provider, plan }: { provider: string; plan: QuotaPlan }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const label = t('upstreamPage.quota.summary.plan', { name: plan.name })
+  const expiresAt = Date.parse(plan.expiresAt ?? '')
+  const expiry = Number.isFinite(expiresAt)
+    ? t('upstreamPage.quota.summary.subscriptionExpiresAt', {
+        time: new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+          dateStyle: 'short',
+          timeStyle: 'short',
+        }).format(expiresAt),
+      })
+    : null
   return (
-    <Badge
-      variant="outline"
-      className="quota-plan-badge max-w-full min-w-0 shrink"
-      data-plan-tier={resolveQuotaPlanTier(provider, plan)}
-      aria-label={label}
+    <QuotaTooltip
+      content={
+        <div className="grid gap-1">
+          <p>{label}</p>
+          {expiry ? <p>{expiry}</p> : null}
+        </div>
+      }
     >
-      <OverflowTooltipText
-        value={label}
-        overflowClassName="cursor-pointer"
-        tooltipClassName="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal wrap-anywhere"
-      />
-    </Badge>
+      <Badge
+        variant="outline"
+        className="quota-plan-badge max-w-full min-w-0 shrink"
+        data-plan-tier={resolveQuotaPlanTier(provider, plan)}
+        aria-label={expiry ? `${label}, ${expiry}` : label}
+        tabIndex={0}
+      >
+        <span className="min-w-0 truncate">{label}</span>
+      </Badge>
+    </QuotaTooltip>
   )
 }
 
@@ -268,9 +287,11 @@ function InlineWindowMoneyLine({ window }: { window: QuotaWindow }) {
 }
 
 function GenericWindowsCell({ entry }: { entry: UpstreamQuotaEntry }) {
+  const { t } = useTranslation()
   const windows = entry.primaryWindows.length > 0 ? entry.primaryWindows : entry.windows
   const historical = resolveQuotaSnapshotDisplay(entry).historical
-  const grid = buildQuotaPreviewGrid(entry)
+  const isDevin = entry.provider.trim().toLowerCase() === 'devin'
+  const grid = isDevin ? null : buildQuotaPreviewGrid(entry)
   if (grid)
     return (
       <QuotaPreviewGrid
@@ -282,7 +303,20 @@ function GenericWindowsCell({ entry }: { entry: UpstreamQuotaEntry }) {
   return (
     <div className="grid min-w-0 grid-cols-1 gap-1.5">
       {windows.slice(0, 2).map((window) => (
-        <InlineWindowBar key={window.id} window={window} historical={historical} />
+        <InlineWindowBar
+          key={window.id}
+          window={window}
+          historical={historical}
+          label={
+            isDevin && (window.periodUnit === 'day' || window.periodUnit === 'week')
+              ? t(
+                  window.periodUnit === 'day'
+                    ? 'upstreamPage.quota.daily'
+                    : 'upstreamPage.quota.weekly',
+                )
+              : undefined
+          }
+        />
       ))}
     </div>
   )
@@ -315,7 +349,7 @@ function AntigravityQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   )
 }
 
-export function formatXaiProductUsedPercent(window: QuotaWindow): string | null {
+function formatXaiProductUsedPercent(window: QuotaWindow): string | null {
   if (window.used !== null && Number.isFinite(window.used)) {
     return `${Math.round(Math.max(0, Math.min(100, window.used)))}%`
   }
@@ -325,25 +359,49 @@ export function formatXaiProductUsedPercent(window: QuotaWindow): string | null 
   return null
 }
 
+export function XaiProductUsageList({ entry }: { entry: UpstreamQuotaEntry }) {
+  const { t, i18n } = useTranslation()
+  const locale = i18n.resolvedLanguage ?? i18n.language
+  return (
+    <div className="grid min-w-0 gap-2 wrap-anywhere tabular-nums">
+      {findXaiProductUsageWindows(entry).map((window) => (
+        <div key={window.id} className="grid min-w-0 gap-0.5">
+          <p>
+            {t('upstreamPage.quota.xai.productUsage', {
+              product: window.label?.trim() || window.id.replace(/^xai-product-/, ''),
+            })}
+            {': '}
+            {formatXaiProductUsedPercent(window) ?? t('upstreamPage.quota.xai.usageUnavailable')}
+          </p>
+          {isRetainedQuotaWindow(entry, window) ? (
+            <time
+              dateTime={window.observedAt ?? undefined}
+              aria-label={formatCredentialDateTime(window.observedAt, locale) ?? undefined}
+              className="text-meta"
+            >
+              {t('upstreamPage.quota.summary.observedAgo', {
+                time: formatUpstreamQuotaRelativeTime(Date.parse(window.observedAt ?? ''), locale),
+              })}
+            </time>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
   const { t } = useTranslation()
   const monthlyWindow = findCurrencyWindow(entry)
   const onDemandWindow = findXaiOnDemandWindow(entry)
   const weeklyWindow = findXaiWeeklyWindow(entry)
   const products = findXaiProductUsageWindows(entry)
+  const onDemandState = resolveXaiOnDemandState(entry)
   const historical = resolveQuotaSnapshotDisplay(entry).historical
   const windows = [weeklyWindow, monthlyWindow, onDemandWindow]
     .filter((window): window is QuotaWindow => window !== null)
     .slice(0, 2)
-  if (windows.length === 0) {
-    return products.length > 0 ? (
-      <p className="text-muted-foreground text-meta">
-        {t('upstreamPage.quota.summary.sharedProducts', { count: products.length })}
-      </p>
-    ) : (
-      <GenericWindowsCell entry={entry} />
-    )
-  }
+  if (windows.length === 0 && products.length === 0) return <GenericWindowsCell entry={entry} />
   return (
     <div className="grid min-w-0 grid-cols-1 gap-1.5">
       {windows.map((window) => (
@@ -365,15 +423,26 @@ function GrokQuotaCell({ entry }: { entry: UpstreamQuotaEntry }) {
       <p className="text-muted-foreground text-meta">
         {t('upstreamPage.quota.onDemand')}:{' '}
         {t(
-          onDemandWindow
+          onDemandState === 'enabled'
             ? 'upstreamPage.quota.onDemandEnabled'
-            : 'upstreamPage.quota.onDemandDisabled',
+            : onDemandState === 'disabled'
+              ? 'upstreamPage.quota.onDemandDisabled'
+              : 'upstreamPage.quota.onDemandUnknown',
         )}
       </p>
       {products.length > 0 ? (
-        <p className="text-muted-foreground text-meta">
-          {t('upstreamPage.quota.summary.sharedProducts', { count: products.length })}
-        </p>
+        <QuotaTooltip
+          content={
+            <div className="grid gap-1">
+              <p className="font-medium">{t('upstreamPage.quota.xai.usageBreakdown')}</p>
+              <XaiProductUsageList entry={entry} />
+            </div>
+          }
+        >
+          <p tabIndex={0} className="text-muted-foreground text-meta w-fit max-w-full truncate">
+            {t('upstreamPage.quota.summary.sharedProducts', { count: products.length })}
+          </p>
+        </QuotaTooltip>
       ) : null}
     </div>
   )
