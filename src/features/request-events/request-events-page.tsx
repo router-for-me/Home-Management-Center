@@ -598,6 +598,13 @@ function formatDuration(value: number | null) {
   return `${(value / 1000).toFixed(2)} s`
 }
 
+function formatExecutorName(executorType: string | null | undefined): string | null {
+  if (!executorType) return null
+  const trimmed = executorType.trim()
+  if (!trimmed) return null
+  return trimmed.replace(/Executor$/i, '') || trimmed
+}
+
 function formatAmount(value: number | null, currency?: string | null) {
   if (value === null || !Number.isFinite(value)) return null
   const unit = currency?.trim() || 'credits'
@@ -1838,7 +1845,9 @@ function RequestEventsTable({
                               </span>
                             </div>
                             <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                              {event.executorType ?? event.eventType ?? <EmptyValue />}
+                              {formatExecutorName(event.executorType) ?? event.eventType ?? (
+                                <EmptyValue />
+                              )}
                             </p>
                           </TableCell>
                         ) : null}
