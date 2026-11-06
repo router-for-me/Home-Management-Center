@@ -4,21 +4,17 @@ import {
   ArrowDownToLine,
   ArrowUpFromLine,
   Check,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Columns3,
   Copy,
   Database,
   Download,
   Eye,
-  FileText,
   Loader2,
   RefreshCw,
   Waves,
   Wrench,
-  XCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -150,7 +146,7 @@ type RequestEventColumn = {
 
 const requestEventColumns: RequestEventColumn[] = [
   { key: 'time', width: 148, required: true, compact: true },
-  { key: 'status', width: 132, compact: true },
+  { key: 'status', width: 96, compact: true },
   { key: 'event', width: 210 },
   { key: 'model', width: 250 },
   { key: 'credential', width: 220 },
@@ -1060,40 +1056,38 @@ function RequestEventStatusBadge({
   onInspect?: () => void
 }) {
   const { t } = useTranslation()
-  const success = event.status === 'success'
-  const failed = event.status === 'failed'
-  const hasLog = event.related?.requestLog?.available === true
+  const statusCode = event.statusCode ?? event.error?.statusCode ?? event.upstreamStatusCode
+  const success =
+    event.status === 'success' ||
+    (!event.failed && statusCode !== null && statusCode >= 200 && statusCode < 400)
+  const failed = event.status === 'failed' || (statusCode !== null && statusCode >= 400)
   const variant = success ? 'success' : failed ? 'destructive' : 'unknown'
-  const statusClassName = success ? 'text-success' : failed ? 'text-destructive' : undefined
-  const content = (
-    <>
-      {success ? (
-        <CheckCircle2 className={statusClassName} aria-hidden="true" />
-      ) : failed ? (
-        <XCircle className={statusClassName} aria-hidden="true" />
-      ) : (
-        <CircleHelp aria-hidden="true" />
-      )}
-      <span>
-        {success
-          ? t('requestEventsPage.status.success')
-          : failed
-            ? t('requestEventsPage.status.failed')
-            : t('requestEventsPage.status.unknown')}
-      </span>
-      {hasLog ? <FileText className="opacity-75" aria-hidden="true" /> : null}
-    </>
-  )
+  const fallbackLabel = success
+    ? t('requestEventsPage.status.success')
+    : failed
+      ? t('requestEventsPage.status.failed')
+      : t('requestEventsPage.status.unknown')
+  const label = statusCode !== null ? String(statusCode) : fallbackLabel
 
   if (onInspect) {
     return (
-      <Button type="button" variant="text" size="sm" onClick={onInspect}>
-        {content}
-      </Button>
+      <Badge
+        asChild
+        variant={variant}
+        className="cursor-pointer font-mono tabular-nums hover:opacity-85"
+      >
+        <button type="button" onClick={onInspect} title={fallbackLabel}>
+          {label}
+        </button>
+      </Badge>
     )
   }
 
-  return <Badge variant={variant}>{content}</Badge>
+  return (
+    <Badge variant={variant} className="font-mono tabular-nums" title={fallbackLabel}>
+      {label}
+    </Badge>
+  )
 }
 
 function NumberRangeInputGroup({
@@ -1741,10 +1735,6 @@ function RequestEventsTable({
                       tokenCounts.inputTokens,
                     )
                     const speedLabel = formatSpeedTps(event.performance.tps)
-                    const showErrorStatusCode =
-                      event.statusCode !== null &&
-                      (!event.failed || event.statusCode >= 400) &&
-                      event.statusCode !== 200
                     const tokenTooltipRows = [
                       {
                         label: t('requestEventsPage.detail.tokenFields.totalTokens'),
@@ -1813,11 +1803,7 @@ function RequestEventsTable({
                               event={event}
                               onInspect={() => onInspect(event)}
                             />
-                            {showErrorStatusCode ? (
-                              <p className="text-muted-foreground mt-1 font-mono text-xs">
-                                HTTP {event.statusCode}
-                              </p>
-                            ) : event.failed && (event.error?.message ?? event.error?.reason) ? (
+                            {event.failed && (event.error?.message ?? event.error?.reason) ? (
                               <p
                                 className="text-destructive/80 mt-1 truncate text-xs"
                                 title={event.error?.message ?? event.error?.reason ?? undefined}
