@@ -2,6 +2,7 @@ export const uiPreferenceKeys = {
   sidebarOpen: 'hmc:ui:sidebar-open',
   technicalTextWrap: 'hmc:ui:technical-text-wrap',
   requestEventColumns: 'hmc:request-events:columns',
+  requestEventColumnWidths: 'hmc:request-events:column-widths',
   requestEventPageSize: 'hmc:request-events:page-size',
   requestEventRange: 'hmc:request-events:range',
   requestEventSort: 'hmc:request-events:sort',

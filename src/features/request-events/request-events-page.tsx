@@ -1,4 +1,4 @@
-import { type ReactNode, useRef, useState } from 'react'
+import { type ReactNode, useMemo, useRef, useState } from 'react'
 
 import {
   ArrowDownToLine,
@@ -91,6 +91,7 @@ import {
 import { useRequestEventsWorkbench } from '@/features/request-events/use-request-events-workbench'
 import type { UsageWorkspaceView } from '@/features/usage-observability/usage-route'
 import { UsageWorkspaceShell } from '@/features/usage-observability/usage-workspace-shell'
+import { useLocalStoragePreference } from '@/hooks/use-local-storage-preference'
 import { usePersistentColumnVisibility } from '@/hooks/use-persistent-column-visibility'
 import type {
   RequestEvent,
@@ -108,7 +109,7 @@ import {
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
 import { formatUsageAmount } from '@/lib/billing/amount-format'
 import { formatCompactNumber, formatNumber } from '@/lib/number-format'
-import { uiPreferenceKeys } from '@/lib/ui-preferences'
+import { type PreferenceNormalizer, uiPreferenceKeys } from '@/lib/ui-preferences'
 import { cn } from '@/lib/utils'
 
 type RequestEventsVerdict = 'ready' | 'empty' | 'partial' | 'unsupported'
@@ -135,6 +136,8 @@ type RequestEventColumnKey =
 type RequestEventColumn = {
   key: RequestEventColumnKey
   width: number
+  minWidth: number
+  maxWidth: number
   align?: 'right'
   required?: boolean
   /*
@@ -145,20 +148,37 @@ type RequestEventColumn = {
 }
 
 const requestEventColumns: RequestEventColumn[] = [
-  { key: 'time', width: 148, required: true, compact: true },
-  { key: 'status', width: 96, compact: true },
-  { key: 'event', width: 210 },
-  { key: 'model', width: 250 },
-  { key: 'credential', width: 220 },
-  { key: 'tokens', width: 235, align: 'right' },
-  { key: 'latency', width: 165, align: 'right' },
-  { key: 'cost', width: 130, align: 'right' },
-  { key: 'client', width: 200 },
-  { key: 'userAgent', width: 220 },
-  { key: 'runtime', width: 195 },
-  { key: 'request', width: 240 },
-  { key: 'error', width: 250 },
+  { key: 'time', width: 112, minWidth: 96, maxWidth: 220, required: true, compact: true },
+  { key: 'status', width: 76, minWidth: 68, maxWidth: 180, compact: true },
+  { key: 'event', width: 195, minWidth: 140, maxWidth: 420 },
+  { key: 'model', width: 220, minWidth: 140, maxWidth: 420 },
+  { key: 'credential', width: 200, minWidth: 130, maxWidth: 420 },
+  { key: 'tokens', width: 210, minWidth: 165, maxWidth: 340, align: 'right' },
+  { key: 'latency', width: 145, minWidth: 115, maxWidth: 260, align: 'right' },
+  { key: 'cost', width: 120, minWidth: 96, maxWidth: 220, align: 'right' },
+  { key: 'client', width: 136, minWidth: 105, maxWidth: 320 },
+  { key: 'userAgent', width: 180, minWidth: 120, maxWidth: 380 },
+  { key: 'runtime', width: 170, minWidth: 125, maxWidth: 320 },
+  { key: 'request', width: 210, minWidth: 140, maxWidth: 420 },
+  { key: 'error', width: 220, minWidth: 140, maxWidth: 480 },
 ]
+
+type RequestEventColumnWidthOverrides = Partial<Record<RequestEventColumnKey, number>>
+
+const normalizeColumnWidthOverrides: PreferenceNormalizer<RequestEventColumnWidthOverrides> = (
+  value,
+) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const raw = value as Record<string, unknown>
+  const out: RequestEventColumnWidthOverrides = {}
+  for (const col of requestEventColumns) {
+    const w = raw[col.key]
+    if (typeof w === 'number' && Number.isFinite(w)) {
+      out[col.key] = Math.round(Math.min(col.maxWidth, Math.max(col.minWidth, w)))
+    }
+  }
+  return out
+}
 
 const defaultVisibleColumns: RequestEventColumnKey[] = [
   'time',
@@ -603,6 +623,65 @@ function formatExecutorName(executorType: string | null | undefined): string | n
   const trimmed = executorType.trim()
   if (!trimmed) return null
   return trimmed.replace(/Executor$/i, '') || trimmed
+}
+
+function estimateAutoColumnWidths(rows: RequestEvent[]): Record<RequestEventColumnKey, number> {
+  const defaults = Object.fromEntries(
+    requestEventColumns.map((col) => [col.key, col.width]),
+  ) as Record<RequestEventColumnKey, number>
+  if (rows.length === 0) return defaults
+
+  const maxChars: Partial<Record<RequestEventColumnKey, number>> = {}
+  const bump = (key: RequestEventColumnKey, len: number) => {
+    if (len > (maxChars[key] ?? 0)) maxChars[key] = len
+  }
+
+  for (const event of rows) {
+    const parsedEndpoint = parseRequestEndpoint(event.endpoint)
+    const endpointLen = (parsedEndpoint.endpoint ?? event.eventType ?? '').length + 6
+    const execLen =
+      (formatExecutorName(event.executorType) ?? event.eventType ?? '').length +
+      (event.stream !== null && event.stream !== undefined ? 6 : 0)
+    bump('event', Math.max(endpointLen, execLen))
+
+    const modelLine1 =
+      (event.model ?? '').length + (event.reasoningEffort ? event.reasoningEffort.length + 3 : 0)
+    const modelLine2 =
+      (event.provider ?? '').length +
+      (event.modelAlias && event.modelAlias !== event.model ? event.modelAlias.length + 5 : 0) +
+      (event.serviceTier ? event.serviceTier.length + 3 : 0)
+    bump('model', Math.max(modelLine1, modelLine2))
+
+    const credLabel = event.credential?.label ?? event.source ?? ''
+    bump('credential', credLabel.length)
+
+    const userLen = (event.client?.username ?? '').length
+    const keyLen = (event.client?.clientKeyLabel ?? event.client?.clientKeyMasked ?? '').length
+    bump('client', Math.max(userLen, keyLen))
+
+    const uaLen = Math.min(28, (event.client?.userAgent ?? '').length)
+    bump('userAgent', uaLen)
+
+    const homeLen = (getHomeNodeLabel(event) ?? '').length
+    const cpaLen = (getRuntimeNodeLabel(event) ?? '').length
+    bump('runtime', Math.max(homeLen, cpaLen))
+
+    const reqLen = Math.max((event.requestId ?? '').length, (event.upstreamRequestId ?? '').length)
+    bump('request', Math.min(32, reqLen))
+  }
+
+  const clamp = (col: RequestEventColumn, estimatedPx: number) =>
+    Math.round(Math.min(col.maxWidth, Math.max(col.minWidth, estimatedPx)))
+
+  for (const col of requestEventColumns) {
+    const chars = maxChars[col.key]
+    if (chars !== undefined && chars > 0) {
+      // ~7.4px per character + 26px cell horizontal padding
+      defaults[col.key] = clamp(col, chars * 7.4 + 26)
+    }
+  }
+
+  return defaults
 }
 
 function formatAmount(value: number | null, currency?: string | null) {
@@ -1529,7 +1608,62 @@ function RequestEventsTable({
     columns: requestEventColumns,
     defaultVisibleColumns,
   })
+  const [columnWidthOverrides, setColumnWidthOverrides] = useLocalStoragePreference(
+    uiPreferenceKeys.requestEventColumnWidths,
+    {},
+    normalizeColumnWidthOverrides,
+  )
   const rows = events?.items ?? []
+  const autoColumnWidths = useMemo(() => estimateAutoColumnWidths(rows), [rows])
+  const getColumnWidth = (column: RequestEventColumn) =>
+    columnWidthOverrides[column.key] ?? autoColumnWidths[column.key] ?? column.width
+
+  const handleResizeStart = (
+    event: React.MouseEvent<HTMLDivElement>,
+    column: RequestEventColumn,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const startX = event.clientX
+    const startWidth = getColumnWidth(column)
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX
+      const nextWidth = Math.round(
+        Math.min(column.maxWidth, Math.max(column.minWidth, startWidth + delta)),
+      )
+      setColumnWidthOverrides((prev) => ({
+        ...prev,
+        [column.key]: nextWidth,
+      }))
+    }
+
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.removeProperty('cursor')
+      document.body.style.removeProperty('user-select')
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+  }
+
+  const handleResizeReset = (
+    event: React.MouseEvent<HTMLDivElement>,
+    column: RequestEventColumn,
+  ) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setColumnWidthOverrides((prev) => {
+      if (!(column.key in prev)) return prev
+      const next = { ...prev }
+      delete next[column.key]
+      return next
+    })
+  }
   const total = events?.total ?? 0
   const start = total > 0 ? filters.offset + 1 : 0
   const end = Math.min(filters.offset + rows.length, total)
@@ -1556,7 +1690,7 @@ function RequestEventsTable({
    * sum stops at the data columns and defers the last term to CSS.
    */
   const tableWidth = `calc(${
-    visibleColumnConfigs.reduce((width, column) => width + column.width, 0) + 16
+    visibleColumnConfigs.reduce((width, column) => width + getColumnWidth(column), 0) + 16
   }px + var(--table-action-column-1))`
   const tableContainerRef = useRef<HTMLDivElement>(null)
   // Two stacked lines per cell, both truncated, so every row measures the same.
@@ -1712,16 +1846,36 @@ function RequestEventsTable({
                     {visibleColumnConfigs.map((column, index) => (
                       <TableHead
                         key={column.key}
-                        className={cn(column.align === 'right' && 'text-right')}
+                        className={cn(
+                          'group/head relative select-none',
+                          column.align === 'right' && 'text-right',
+                        )}
                         /*
                         Fixed layout takes the sum of the declared widths, so a
                         column set that adds up past the viewport still scrolls.
                         The identity column gives up its width below 40rem and
                         takes the remainder instead.
                       */
-                        style={!showSecondary && index === 0 ? undefined : { width: column.width }}
+                        style={
+                          !showSecondary && index === 0
+                            ? undefined
+                            : { width: getColumnWidth(column) }
+                        }
                       >
-                        {t(`requestEventsPage.table.columns.${column.key}`)}
+                        <span className="block truncate">
+                          {t(`requestEventsPage.table.columns.${column.key}`)}
+                        </span>
+                        {showSecondary ? (
+                          <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            onMouseDown={(e) => handleResizeStart(e, column)}
+                            onDoubleClick={(e) => handleResizeReset(e, column)}
+                            className="group/resizer absolute top-0 -right-1 z-10 flex h-full w-2.5 cursor-col-resize items-center justify-center"
+                          >
+                            <span className="bg-border/80 group-hover/resizer:bg-primary group-active/resizer:bg-primary h-3.5 w-px transition-all group-hover/resizer:h-full group-hover/resizer:w-0.5 group-active/resizer:h-full group-active/resizer:w-0.5" />
+                          </div>
+                        ) : null}
                       </TableHead>
                     ))}
                     <TableHead className="table-sticky-action-head table-action-column-1 text-right">
