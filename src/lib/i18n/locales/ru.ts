@@ -4610,6 +4610,8 @@ export const ru = {
         unknown: 'Неизвестно',
         unknownRequest: 'Неизвестный запрос',
         localHome: 'Локальный Home',
+        streaming: 'Поток',
+        nonStreaming: 'Без потока',
         yes: 'Да',
         no: 'Нет',
       },

@@ -4343,6 +4343,8 @@ export const zhTW = {
         unknown: '未知',
         unknownRequest: '未知請求',
         localHome: '本地 Home',
+        streaming: '串流',
+        nonStreaming: '非串流',
         yes: '是',
         no: '否',
       },

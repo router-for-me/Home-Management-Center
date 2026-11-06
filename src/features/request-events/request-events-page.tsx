@@ -1821,34 +1821,81 @@ function RequestEventsTable({
                           </TableCell>
                         ) : null}
                         {isColumnRendered('event') ? (
-                          <TableCell
-                            className="min-w-0"
-                            title={
-                              [
-                                event.endpoint ? `Endpoint: ${event.endpoint}` : null,
-                                event.eventType ? `Event: ${event.eventType}` : null,
-                                event.executorType ? `Executor: ${event.executorType}` : null,
-                              ]
-                                .filter(Boolean)
-                                .join('\n') || undefined
-                            }
-                          >
-                            <div className="flex items-center gap-1.5 truncate font-medium">
-                              {parsedEndpoint.requestType ? (
-                                <span className="bg-muted text-foreground inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold">
-                                  {parsedEndpoint.requestType}
-                                  <Waves className="size-3 opacity-70" aria-hidden="true" />
-                                </span>
-                              ) : null}
-                              <span className="truncate font-mono text-xs">
-                                {parsedEndpoint.endpoint ?? event.eventType ?? <EmptyValue />}
-                              </span>
-                            </div>
-                            <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                              {formatExecutorName(event.executorType) ?? event.eventType ?? (
-                                <EmptyValue />
-                              )}
-                            </p>
+                          <TableCell className="min-w-0">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  tabIndex={0}
+                                  className="focus-visible:ring-ring/50 min-w-0 rounded-sm outline-none focus-visible:ring-3"
+                                >
+                                  <div className="flex items-center gap-1.5 truncate font-medium">
+                                    {parsedEndpoint.requestType ? (
+                                      <span className="bg-muted text-foreground inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold">
+                                        {parsedEndpoint.requestType}
+                                        <Waves className="size-3 opacity-70" aria-hidden="true" />
+                                      </span>
+                                    ) : null}
+                                    <span className="truncate font-mono text-xs">
+                                      {parsedEndpoint.endpoint ?? event.eventType ?? <EmptyValue />}
+                                    </span>
+                                  </div>
+                                  <p className="text-muted-foreground mt-0.5 truncate text-xs">
+                                    {formatExecutorName(event.executorType) ?? event.eventType ?? (
+                                      <EmptyValue />
+                                    )}
+                                    {event.stream !== null && event.stream !== undefined
+                                      ? ` · ${event.stream ? t('requestEventsPage.status.streaming') : t('requestEventsPage.status.nonStreaming')}`
+                                      : ''}
+                                  </p>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent
+                                side="top"
+                                align="start"
+                                className="max-w-[calc(100vw-2rem)] min-w-48 px-3 py-2 whitespace-normal"
+                              >
+                                <div className="grid gap-1 text-xs">
+                                  {event.endpoint ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">Endpoint</span>
+                                      <span className="font-mono font-medium">
+                                        {event.endpoint}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.stream !== null && event.stream !== undefined ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">
+                                        {t('requestEventsPage.detail.payloadFields.stream')}
+                                      </span>
+                                      <span className="font-medium">
+                                        {event.stream
+                                          ? t('requestEventsPage.status.yes')
+                                          : t('requestEventsPage.status.no')}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.eventType ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">
+                                        {t('requestEventsPage.detail.fields.eventType')}
+                                      </span>
+                                      <span className="font-mono font-medium">
+                                        {event.eventType}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                  {event.executorType ? (
+                                    <div className="flex items-start justify-between gap-4">
+                                      <span className="opacity-80">Executor</span>
+                                      <span className="font-mono font-medium">
+                                        {event.executorType}
+                                      </span>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
                         ) : null}
                         {isColumnRendered('model') ? (

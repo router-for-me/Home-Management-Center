@@ -4341,6 +4341,8 @@ export const zhCN = {
         unknown: '未知',
         unknownRequest: '未知请求',
         localHome: '本地 Home',
+        streaming: '流式',
+        nonStreaming: '非流式',
         yes: '是',
         no: '否',
       },

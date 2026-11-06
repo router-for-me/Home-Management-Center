@@ -4583,6 +4583,8 @@ export const en = {
         unknown: 'Unknown',
         unknownRequest: 'Unknown request',
         localHome: 'Local Home',
+        streaming: 'Stream',
+        nonStreaming: 'Non-stream',
         yes: 'Yes',
         no: 'No',
       },
