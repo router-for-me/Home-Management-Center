@@ -194,6 +194,8 @@ export function normalizeBillingOverview(value: unknown): BillingOverview {
 
 export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
   const record = toRecord(value)
+  const modelSource = readString(record, ['model_source', 'modelSource'])
+  const priceModelSource = readString(record, ['price_model_source', 'priceModelSource'])
   const source = readString(record, ['service_tier_source', 'serviceTierSource'])
   const tokenBucketsRecord = toRecord(record.token_buckets ?? record.tokenBuckets)
   return {
@@ -211,6 +213,8 @@ export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
     cacheWritePricePerMillion:
       readNumber(record, ['cache_write_price_per_million', 'cacheWritePricePerMillion']) ?? 0,
     requestPrice: readNumber(record, ['request_price', 'requestPrice']) ?? 0,
+    modelSource: modelSource === 'request' || modelSource === 'response' ? modelSource : null,
+    priceModelSource,
     requestedServiceTier: readString(record, ['requested_service_tier', 'requestedServiceTier']),
     responseServiceTier: readString(record, ['response_service_tier', 'responseServiceTier']),
     serviceTierSource: source === 'request' || source === 'response' ? source : null,
@@ -494,12 +498,20 @@ export function normalizeBillingSettingsResponse(
   record: UnknownRecord,
   raw: unknown = record,
 ): BillingSettings {
+  const modelSource = readString(record, ['model_source', 'modelSource'])
   const source = readString(record, ['service_tier_source', 'serviceTierSource'])
   const reportTimezone = readString(record, ['report_timezone', 'reportTimezone'])
+  const publicModelPricing = readBoolean(
+    record,
+    ['public_model_pricing', 'publicModelPricing'],
+    false,
+  )
   if (!reportTimezone) throw new Error('billing_settings_contract_invalid')
   return {
+    modelSource: modelSource === 'response' ? 'response' : 'request',
     serviceTierSource: source === 'response' ? 'response' : 'request',
     reportTimezone,
+    publicModelPricing,
     supported: true,
     raw,
   }
@@ -511,8 +523,12 @@ export async function updateBillingSettings(
 ): Promise<BillingSettings> {
   const client = createManagementClient(session)
   const response = await client.patch<unknown>('/billing/settings', {
+    ...(input.modelSource ? { model_source: input.modelSource } : {}),
     ...(input.serviceTierSource ? { service_tier_source: input.serviceTierSource } : {}),
     ...(input.reportTimezone ? { report_timezone: input.reportTimezone.trim() } : {}),
+    ...(input.publicModelPricing !== undefined
+      ? { public_model_pricing: input.publicModelPricing }
+      : {}),
   })
   const record = toRecord(response.data)
   return normalizeBillingSettingsResponse(record, response.data)

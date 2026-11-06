@@ -7,10 +7,12 @@ export function OverflowTooltipText({
   value,
   className,
   tooltipClassName,
+  overflowClassName,
 }: {
   value: string
   className?: string
   tooltipClassName?: string
+  overflowClassName?: string
 }) {
   const textRef = useRef<HTMLSpanElement | null>(null)
   const [isOverflowing, setIsOverflowing] = useState(false)
@@ -23,22 +25,31 @@ export function OverflowTooltipText({
 
   useEffect(() => {
     measureOverflow()
-
     const element = textRef.current
-    if (!element || typeof ResizeObserver === 'undefined') return
-
-    const resizeObserver = new ResizeObserver(measureOverflow)
-    resizeObserver.observe(element)
-    return () => resizeObserver.disconnect()
+    let active = true
+    if (typeof document !== 'undefined')
+      void document.fonts?.ready.then(() => {
+        if (active) measureOverflow()
+      })
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measureOverflow)
+    if (element) resizeObserver?.observe(element)
+    return () => {
+      active = false
+      resizeObserver?.disconnect()
+    }
   }, [measureOverflow, value])
 
   const textNode = (
     <span
       ref={textRef}
+      onPointerEnter={measureOverflow}
+      onFocus={measureOverflow}
       tabIndex={isOverflowing ? 0 : undefined}
       className={cn(
         'block min-w-0 truncate rounded-sm outline-none',
         isOverflowing && 'focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+        isOverflowing && overflowClassName,
         className,
       )}
     >
@@ -46,14 +57,20 @@ export function OverflowTooltipText({
     </span>
   )
 
-  if (!isOverflowing) return textNode
-
   return (
-    <Tooltip>
+    // Keeping the trigger mounted preserves resize observation when clipping changes.
+    <Tooltip disableHoverableContent={!isOverflowing}>
       <TooltipTrigger asChild>{textNode}</TooltipTrigger>
-      <TooltipContent side="top" className={cn('max-w-96 text-left break-all', tooltipClassName)}>
-        {value}
-      </TooltipContent>
+      {isOverflowing ? (
+        <TooltipContent
+          side="top"
+          sideOffset={4}
+          collisionPadding={12}
+          className={cn('max-w-96 text-left break-all', tooltipClassName)}
+        >
+          {value}
+        </TooltipContent>
+      ) : null}
     </Tooltip>
   )
 }

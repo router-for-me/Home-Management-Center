@@ -371,14 +371,14 @@ export const ru = {
         retry: 'Повторить',
       },
       signedOut: {
-        title: 'Цены и доступность видны после входа.',
+        title: 'Войдите, чтобы увидеть модели, доступные вашим ключам.',
         signIn: 'Войти',
         register: 'Создать аккаунт',
       },
       accessibleError: {
         title: 'Не удалось загрузить данные аккаунта',
         description:
-          'Сейчас показан только публичный каталог: без цен, доступности и покрытия ключами. Причина: {{message}}',
+          'Показан публичный каталог. Доступ к моделям для ключей аккаунта пока неизвестен. Причина: {{message}}',
       },
       access: {
         noApiKeys: {
@@ -491,8 +491,7 @@ export const ru = {
         outSuffix: 'выход / за 1 млн токенов',
         tiered: 'Ступеней: {{rungs}}',
         signedOut: 'Цены видны после входа',
-        signedOutDetail:
-          'Этот кластер публикует цены только для вошедших аккаунтов. Войдите, чтобы увидеть полную ценовую лестницу этой модели.',
+        signedOutDetail: 'Войдите, чтобы увидеть полные ценовые ступени для вашего аккаунта.',
         notCovered: 'Ключи не покрывают эту модель',
         notCoveredDetail:
           'Модель не входит в группы, доступные вашим ключам, поэтому для текущего аккаунта применимой цены нет.',
@@ -509,9 +508,26 @@ export const ru = {
         rungFrom: 'От {{tokens}} входных токенов',
         input: 'Вход',
         output: 'Выход',
+        reasoning: 'Рассуждение',
         cacheRead: 'Чтение кеша',
         cacheWrite: 'Запись кеша',
         request: 'За запрос',
+        perCall: '/вызов',
+        toolsDetails: 'Цены инструментов ({{count}})',
+        pricingExpr: 'Формула тарификации:',
+        tools: {
+          webSearch: 'Веб-поиск',
+          webSearchQuery: 'Поисковый запрос',
+          webFetch: 'Загрузка страницы',
+          xSearch: 'Поиск X',
+          codeExecution: 'Выполнение кода',
+          fileSearch: 'Поиск файлов',
+          documentSearch: 'Поиск документов',
+          mcp: 'Инструмент MCP',
+          googleMaps: 'Google Карты',
+          sourcesUsed: 'Источники',
+          serverTools: 'Серверные инструменты',
+        },
       },
       availability: {
         signedOut: 'Наблюдаемая доступность видна после входа',
@@ -796,6 +812,13 @@ export const ru = {
         legacy: 'legacy',
       },
       settings: {
+        modelSource: 'Источник ID модели для биллинга',
+        model_request: 'ID модели запроса',
+        model_response: 'ID модели ответа',
+        modelRequestOptionDescription:
+          'По умолчанию сопоставлять правила цены по ID модели запроса с откатом к response_model.',
+        modelResponseOptionDescription:
+          'Сопоставлять правила цены по response_model ответа с откатом к модели запроса.',
         serviceTierSource: 'Источник tier для биллинга',
         runtimeContextTitle: 'Контекст биллинга во время выполнения',
         globalBadge: 'Глобально',
@@ -804,19 +827,22 @@ export const ru = {
         schemaVersionTechnical: 'Возможность backend для правил цены: Rule schema v{{version}}.',
         currentRuntimeSource: 'Правила цены сейчас используют {{source}}',
         runtimeContextDescription:
-          'Определяет, использовать Tier запроса или ответа для сопоставления правил цены при последующих списаниях.',
+          'Источники ID модели и Tier определяют сопоставление правил цены для новых запросов.',
         configure: 'Настроить сопоставление',
-        dialogTitle: 'Настроить глобальное сопоставление Tier',
+        publicModelPricing: 'Показывать цены в каталоге моделей без входа',
+        publicModelPricingDescription:
+          'Если включено, неавторизованные посетители могут просматривать тарифные сетки, стоимость инструментов и метрики доступности в публичном каталоге моделей.',
+        dialogTitle: 'Настроить сопоставление цен',
         dialogDescription:
-          'Выберите, получать Tier для биллинга из запроса или итогового ответа. Настройка применяется ко всем будущим списаниям.',
+          'Выберите источники ID модели и Tier отдельно. Настройки влияют только на новые списания после сохранения.',
         defaultBadge: 'По умолчанию',
         requestOptionDescription:
           'Использовать Tier клиентского запроса. Стабильно работает с провайдерами, которые не возвращают Tier ответа.',
         responseOptionDescription:
           'Использовать Tier итогового ответа. При его отсутствии применяется Tier запроса, а fallback записывается в снимок цены.',
-        policyTitle: 'Глобальная политика сопоставления Tier',
+        policyTitle: 'Глобальное сопоставление цен',
         policyDescription:
-          'Определяет, использовать Tier запроса или ответа для сопоставления правил цены при последующих списаниях.',
+          'Источники ID модели и Tier определяют сопоставление правил цены для новых запросов.',
         currentValue: 'Текущая политика',
         proposedValue: 'После сохранения:',
         change: 'Изменить',
@@ -830,8 +856,8 @@ export const ru = {
         schemaVersion: 'Схема правил v{{version}}',
         legacyModeHint:
           'Backend поддерживает только плоские цены. Настройки tier, диапазона контекста и источника tier скрыты.',
-        unsupported: 'Backend не предоставляет настройку источника tier для биллинга.',
-        saved: 'Источник tier для биллинга сохранен.',
+        unsupported: 'Этот сервер не предоставляет настройки источников для сопоставления цен.',
+        saved: 'Настройки сопоставления цен сохранены.',
         noResponseTierWarning:
           'В последних {{count}} подходящих запросах нет данных tier ответа. Режим ответа будет всегда откатываться к tier запроса.',
         fallbackSummary:
@@ -982,7 +1008,7 @@ export const ru = {
         empty: 'Цены моделей пока не настроены.',
         actions: {
           create: 'Новая цена',
-          import: 'Импорт из models.dev',
+          import: 'Импорт цен из каталога',
           refreshSynced: 'Проверить синхронизированные цены',
           createSelected: 'Создать {{count}}',
           selectModels: 'Выберите модели',
@@ -1029,10 +1055,10 @@ export const ru = {
           createDescription: 'Создайте правило цены для будущих списаний.',
           importTitle: 'Импорт цен моделей',
           importDescription:
-            'Проверьте совпадения models.dev, поля записи и вручную подтвердите выбранные правила.',
+            'Сопоставьте модели с каталогом цен, проверьте предпросмотр и подтвердите нужные правила.',
           refreshSyncedTitle: 'Обновить синхронизированные цены',
           refreshSyncedDescription:
-            'Загрузите актуальные цены models.dev и проверьте изменения существующих правил source=sync.',
+            'Загрузите цены из выбранного каталога и проверьте изменения существующих правил source=sync.',
           editTitle: 'Изменить цену модели',
           editDescription: 'Обновите правило цены для будущих списаний.',
         },
@@ -1113,8 +1139,8 @@ export const ru = {
           reloadCandidates: 'Перезагрузить кандидатов',
           candidateFailedEmpty:
             'Модели-кандидаты не загружены. Перезагрузите кандидатов или проверьте ответ Management API.',
-          catalogReady: 'Загружено моделей: {{count}} ({{time}}).',
-          catalogFailed: 'Не удалось загрузить каталог models.dev.',
+          catalogReady: '{{source}}: загружено моделей — {{count}} ({{time}}).',
+          catalogFailed: 'Не удалось загрузить каталог цен.',
           serverPreviewBadge: 'Предпросмотр сервера',
           legacyPreviewBadge: 'Режим совместимости',
           serverPreviewFailed: 'Не удалось создать серверный предпросмотр.',
@@ -1161,6 +1187,13 @@ export const ru = {
           targetsTitle: 'Цели импорта',
           targetsHint:
             'Ограничьте модели Home, которые попадут в предпросмотр до сопоставления и расчета цен.',
+          catalogSource: 'Источник цен',
+          catalogSources: {
+            auto: 'Авто (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: 'Провайдер',
           allProviders: 'Все провайдеры',
           targetFilter: 'Набор целей',
@@ -1187,7 +1220,7 @@ export const ru = {
           aliasRulesTitle: 'Псевдонимы моделей',
           addAlias: 'Добавить псевдоним',
           aliasTarget: 'ID модели Home',
-          aliasSources: 'Предпочтительные ID models.dev через запятую',
+          aliasSources: 'Предпочтительные ID моделей каталога, через запятую',
           removeAlias: 'Удалить псевдоним',
           includeCache: 'Включать цены кэша',
           includeZeroCost: 'Разрешить нулевые официальные цены',
@@ -1203,8 +1236,8 @@ export const ru = {
           selectAll: 'Выбрать все применимые',
           clearSelection: 'Очистить выбор',
           exportPreview: 'Экспорт предпросмотра',
-          searchPlaceholder: 'Провайдер, модель или models.dev',
-          resolveMatchPlaceholder: 'Выберите совпадение models.dev',
+          searchPlaceholder: 'Поиск поставщика, модели или совпадения в каталоге',
+          resolveMatchPlaceholder: 'Выберите модель из каталога',
           applyMatchOverride: 'Пересоздать предпросмотр',
           loadingPreview: 'Загрузка предпросмотра…',
           emptyPreview: 'Нет моделей для предпросмотра.',
@@ -1214,7 +1247,7 @@ export const ru = {
           columns: {
             status: 'Статус',
             action: 'План операции',
-            sourceModel: 'Совпадение models.dev',
+            sourceModel: 'Совпадение в каталоге',
             official: 'Официальные цены входа/выхода',
             multiplier: 'Множитель',
             writeFields: 'Поля записи',
@@ -1740,14 +1773,14 @@ export const ru = {
           'Отключите модельный ключ, чтобы убрать его из upstream request scheduling.',
         fields: {
           identifier: 'Идентификатор',
-          authIndex: 'Auth index',
+          authIndex: 'Индекс учетных данных',
           baseUrl: 'Base URL',
           proxyUrl: 'Proxy URL',
           prefix: 'Prefix',
           models: 'Модели',
           headers: 'Headers',
           excludedModels: 'Исключенные модели',
-          apiKeyEntries: 'API key entries',
+          apiKeyEntries: 'Записи API-ключей',
           priority: 'Приоритет',
           requestRetry: 'Раунды повторов запроса',
           disableCooling: 'Отключить cooling',
@@ -1990,16 +2023,16 @@ export const ru = {
         accountsMeta: '{{active}} активных · {{disabled}} отключено · {{unavailable}} недоступно',
         providerKeys: 'Ключи поставщиков',
         attention: 'Требуют внимания',
-        attentionHint: 'Нажмите для фильтра low / exhausted / error',
-        websockets: 'WebSocket вкл.',
-        websocketsHint: 'Codex / Grok',
+        attentionHint: 'Показать учётные данные с квотой, требующей внимания',
+        websockets: 'WebSocket включён',
+        websocketsHint: 'Codex / xAI (Grok)',
         pending: 'Загрузка',
         unsupported: 'Не поддерживается',
       },
       quota: {
         actions: {
           collect: 'Собрать квоту',
-          refresh: 'Обновить квоту',
+          refresh: 'Собрать снова',
           retry: 'Повторить сбор',
           collecting: 'Сбор квоты',
           disabled: 'Включите учётные данные для сбора квоты',
@@ -2013,7 +2046,7 @@ export const ru = {
         snapshotMiss: 'Не загружено',
         snapshotMissHint:
           'Эти учётные данные не входят в загруженный список снапшотов. Откройте сведения о квоте для чтения текущего состояния.',
-        unsupported: 'Не поддерживается',
+        unsupported: 'Запрос не поддерживается',
         unsupportedHint:
           'Сбор квоты недоступен для этого типа учётных данных (обычно для API-ключей поставщика).',
         collectFailed: 'Ошибка сбора',
@@ -2024,9 +2057,129 @@ export const ru = {
         onDemandEnabled: 'Включено',
         onDemandUnknown: 'Не предоставлено',
         onDemandDisabled: 'Отключено',
+        xai: {
+          usageBreakdown: 'Распределение использования (общая квота)',
+          productUsage: 'Использование {{product}}',
+          usageUnavailable: 'Данные об использовании недоступны от xAI',
+          usageSummary: 'По продуктам ({{count}})',
+        },
         remaining: 'Остаток',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: 'Ещё {{count}}',
+        summary: {
+          plan: '{{name}} тариф',
+          historical: 'Нужен новый сбор',
+          statusHint:
+            'Состояние учитывает все периоды квоты, включая скрытые в сводке. Оно не подтверждает текущую доступность учётных данных.',
+          viewAll: 'Детали квоты ({{count}} периодов)',
+          viewDetails: 'Подробности',
+          viewAllShort: 'Все {{count}}',
+          viewDetailsShort: 'Детали',
+          windowCount: 'Окон квоты: {{count}}',
+          sharedProducts: 'Общая квота для {{count}} продуктов',
+          updating: 'Сбор данных',
+          partial: 'Неполный сбор',
+          historicalDescription:
+            'Срок актуальности собранных значений истёк. Повторите сбор. Цвет индикаторов по-прежнему отражает остаток квоты на момент наблюдения.',
+          retainedDescription:
+            'Этот запрос не обновил данные. Сохранены последние достоверные значения.',
+          partialDescription:
+            'Часть информации не удалось обновить. Полученные данные квоты доступны; остальные могут относиться к предыдущему наблюдению.',
+          technicalDetails: 'Технические сведения',
+          originalError: 'Исходная ошибка провайдера',
+          errorCode: 'Код ошибки',
+          httpStatus: 'Статус HTTP',
+          requestId: 'ID запроса',
+          errorTime: 'Время ошибки',
+          quotaStatus: 'Последнее состояние квоты',
+          freshness: 'Актуальность данных',
+
+          noData: 'Данных пока нет',
+          unknownHint:
+            'Состояние квоты не подтверждено. Проверьте собранные данные в подробностях.',
+          historicalHint:
+            'Срок актуальности этих значений истёк. Повторите сбор квоты для обновления.',
+          noDataHint:
+            'Достоверных значений квоты пока нет. Состояние сбора доступно в подробностях.',
+          observedAgo: 'Собрано {{time}}',
+          observedAtHint: 'Время сбора: {{time}}',
+          queryScope: 'Это результат запроса квоты, а не результат обращения к модели.',
+          queryIssueHint: 'О запросе квоты',
+          queryIssueLabel: '{{reason}}. Показать пояснение',
+
+          model: 'Модель',
+          scope: 'Группа квот',
+          account: 'Аккаунт',
+          unlimited: 'Без ограничений',
+          periodUnavailable:
+            'Значение квоты {{group}} за {{period}} пока недоступно. Откройте подробности.',
+          nextReset: 'Сброс {{time}}',
+          resetUnconfirmed: 'Время сброса: нет',
+          resetHint: 'Время сброса: {{time}}',
+          pastResetHint: 'Записанное время сброса прошло: {{time}}',
+          validUntil: 'Эти данные были актуальны до {{time}}.',
+
+          detailReadLabel: 'Периоды квоты',
+          detailReadFailed: 'Часть сведений не загружена',
+
+          validUntilLabel: 'Актуальны до',
+
+          labels: 'Метки квоты',
+          queryFailed: 'Ошибка запроса квоты',
+          collectingHint:
+            'Идёт сбор актуальной квоты. Прежние значения сохраняются до получения достоверного результата.',
+          unsupportedHint: 'Этот тип учётных данных не поддерживает запрос квоты.',
+          capabilityAbsentHint: 'Подключённый сервер не предоставляет чтение снимков квоты.',
+          readFailed: 'Ошибка чтения квоты',
+          readFailedHint:
+            'Не удалось прочитать актуальные записи квоты. Синхронизируйте данные или откройте подробности для повтора.',
+          recordMissing: 'Нет записи квоты',
+          recordMissingHint:
+            'В списке нет записи квоты этих учётных данных. Откройте подробности для чтения.',
+          notCollectedHint: 'Данные квоты ещё не собраны. Нажмите «{{action}}» для получения.',
+          resetUnknownHint: 'Время сброса недоступно',
+          observedUnknown: 'Время сбора неизвестно',
+          noCollectionResult: 'Нет результата сбора',
+          notYetCollected: 'Ещё не собрано',
+          noCollectionResultHint: 'Последняя попытка: {{time}}',
+          hiddenRisk: {
+            low: 'Есть другой период с низкой квотой',
+            exhausted: 'Есть другой период с исчерпанной квотой',
+          },
+
+          historicalReadOnlyHint:
+            'Срок актуальности данных истёк. Показаны значения прежнего сбора.',
+          notCollectedReadOnlyHint: 'Достоверных результатов сбора квоты пока нет.',
+        },
+        errors: {
+          authorization: {
+            title: 'Нет доступа к квоте',
+            description:
+              'Авторизация этого запроса квоты не прошла. Проверьте доступ учётных данных к интерфейсу квоты.',
+          },
+          rateLimited: {
+            title: 'Запросы квоты ограничены',
+            description: 'Провайдер ограничил частоту запросов квоты. Повторите сбор позже.',
+          },
+          invalidResponse: {
+            title: 'Неполный ответ квоты',
+            description: 'Интерфейс квоты не вернул полные пригодные данные. Повторите сбор позже.',
+          },
+          missingAuthorization: {
+            title: 'Нет разрешения на квоту',
+            description:
+              'Этим учётным данным не хватает разрешения на запрос квоты Meta. Проверьте права доступа.',
+          },
+          unavailable: {
+            title: 'Квота не прочитана',
+            description:
+              'Не удалось прочитать интерфейс квоты. Проверьте права запроса или состояние провайдера.',
+          },
+          unknown: {
+            title: 'Запрос квоты не удался',
+            description:
+              'Не удалось получить актуальную квоту. Технические сведения доступны в подробностях квоты.',
+          },
+        },
         truncated:
           'Список квот загружает первые {{count}} учётных данных по риску. Для остальных откройте сведения о квоте.',
         antigravity: {
@@ -2054,11 +2207,11 @@ export const ru = {
           observedAt: 'Данные на {{time}}',
         },
         status: {
-          healthy: 'Норма',
+          healthy: 'Квота в норме',
           low: 'Низкая квота',
           exhausted: 'Квота исчерпана',
-          unknown: 'Неизвестно',
-          error: 'Ошибка запроса',
+          unknown: 'Квота не подтверждена',
+          error: 'Запрос квоты не удался',
           unsupported: 'Не поддерживается',
         },
         freshness: {
@@ -2112,8 +2265,8 @@ export const ru = {
         noWindows: 'Нет окон квоты',
       },
       quotaChips: {
-        attention: 'Внимание',
-        ws: 'Только WS',
+        attention: 'Только проблемы с квотой',
+        ws: 'Только с включённым WebSocket',
       },
       drawer: {
         tabs: {
@@ -2128,8 +2281,6 @@ export const ru = {
         metadata: {
           priorityPlaceholder: 'например, 10 или -1',
           priorityHint: 'Только целые числа; большее значение повышает приоритет планирования.',
-          websocketsXaiHint: 'Для xAI/Grok. Разрешает этой записи WebSocket-транспорт.',
-          websocketsUnsupported: 'Текущий поставщик не показывает переключатель WS.',
           enableTitle: 'Включить учётные данные',
         },
         danger: {
@@ -2180,7 +2331,7 @@ export const ru = {
         status: 'Статус',
         provider: 'Поставщик моделей',
         allProviders: 'Все поставщики моделей',
-        quickFilters: 'Быстрые фильтры',
+        quickFilters: 'Фильтры учётных данных',
         resultCount: 'Показано: {{visible}} из {{total}}',
         clear: 'Сбросить фильтры',
       },
@@ -2318,16 +2469,23 @@ export const ru = {
         provider: 'Поставщик моделей',
         toggleStatus: 'Переключить статус credential {{name}}',
         enabled: 'Включено',
-        ws: 'WS',
+        inFlight: 'В работе',
+        ws: 'WebSocket',
         cooling: 'Расписание охлаждения',
         priority: 'Приоритет',
+        weight: 'Вес',
         actions: 'Действия',
       },
       inline: {
         saved: 'Сохранено.',
-        websocketsLabel: 'Переключить WebSocket',
-        websocketsUnsupported: 'WebSocket не поддерживается для этого поставщика',
-        notApplicable: 'n/a',
+        websocketsLabel: 'Переключить WebSocket для {{name}}',
+        websocketsUnsupported:
+          'Настройка транспорта WebSocket доступна только для учётных данных Codex и xAI (Grok).',
+        websocketsEnabled: 'Включён',
+        websocketsDisabled: 'Выключен',
+        websocketsUnknown: 'Неизвестно',
+        websocketsMissing: 'Сервер не вернул настройку WebSocket для этих учётных данных.',
+        notApplicable: 'Неприменимо',
       },
       bulk: {
         selectAll: 'Выбрать все credentials в текущем списке',
@@ -2352,6 +2510,8 @@ export const ru = {
         enabled: 'Включено',
         disabled: 'Отключено',
         unavailable: 'Недоступно',
+        error: 'Ошибка учётных данных',
+        unknown: 'Статус неизвестен',
         notSet: 'Не задано',
         inherited: 'Наследовать глобальный',
         notAvailable: 'Н/Д',
@@ -2368,12 +2528,12 @@ export const ru = {
           type: 'Тип',
           source: 'Источник',
           account: 'Аккаунт',
-          authIndex: 'Auth index',
+          authIndex: 'Индекс учетных данных',
           path: 'Путь',
           size: 'Размер',
           priority: 'Приоритет',
           requestRetry: 'Раунды повторов запроса',
-          websockets: 'WebSocket',
+          websockets: 'Транспорт WebSocket',
           cooling: 'Расписание охлаждения',
           success: 'Успешно',
           failed: 'Ошибки',
@@ -2410,9 +2570,12 @@ export const ru = {
           'Количество дополнительных раундов повторных попыток после сбоя всех учетных данных в начальном раунде. 0 отключает дополнительные раунды; пустое или отрицательное значение наследует глобальную настройку.',
         requestRetryInvalid:
           'Количество раундов повторов должно быть неотрицательным целым числом.',
-        websockets: 'Поддержка WebSocket',
+        websockets: 'Транспорт WebSocket',
         websocketsHint:
-          'Только для Codex credentials. Включите, если этот credential должен обрабатывать Codex requests с WebSocket.',
+          'Включает или отключает транспорт WebSocket к поставщику. Доступно для Codex и xAI (Grok).',
+        usingApi: 'Использовать официальный API (using_api)',
+        usingApiHint:
+          'Если включено, используется официальный API xAI; если выключено — Grok CLI chat-proxy.',
         coolingSchedule: 'Расписание охлаждения',
         coolingScheduleHint:
           'Настройте, участвует ли эта учетная запись в расписании охлаждения квот или наследует глобальную политику.',
@@ -2519,6 +2682,13 @@ export const ru = {
           modelLimit: 'Лимит для {{model}} должен быть неотрицательным целым числом.',
           duplicateModel: 'Модель {{model}} настроена несколько раз.',
         },
+
+        cellUnsupported: 'Не поддерживается',
+        cellLoading: 'Загрузка данных о запросах в работе',
+        cellUnknown: 'Снимок запросов в работе пока отсутствует.',
+        cellUnavailable: 'Не удалось загрузить данные. Откройте подробности и повторите попытку.',
+        cellStale:
+          'Снимок устарел, неполон или не обновлён. Показаны последние известные значения.',
       },
       delete: {
         title: 'Удалить credential?',
@@ -2579,7 +2749,7 @@ export const ru = {
         delete: 'Удалить',
         copy: 'Копировать',
         copyKey: 'Копировать ключ {{key}}',
-        copyIdentifier: 'Копировать идентификатор',
+        copyIdentifier: 'Копировать идентификатор {{identifier}}',
         reveal: 'Показать',
         hide: 'Скрыть',
         generate: 'Сгенерировать ключ',
@@ -2587,15 +2757,13 @@ export const ru = {
       },
       list: {
         title: 'Access keys',
-        description:
-          'Эти ключи дают клиентам доступ к серверу Home Center; это не ключи провайдеров моделей.',
         filterPlaceholder: 'Фильтр keys',
         empty: 'Нет access keys для текущего фильтра.',
-        index: 'N',
         identity: 'Имя / ключ',
-        identifierTooltip:
-          'Отображаемое имя — редактируемая метка, не влияющая на аутентификацию. Стабильный идентификатор (api-key-N) не меняется при переименовании и ротации и связывает один и тот же ключ в использовании, биллинге и записях запросов.',
-        identifierUnavailable: 'Нет стабильного идентификатора',
+        identifier: 'ID ключа',
+        identifierHint:
+          'Идентификатор в записях об использовании и оплате. Не меняется при переименовании или ротации ключа.',
+        key: 'Ключ',
         owner: 'Владелец',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2624,6 +2792,8 @@ export const ru = {
         noName: 'Без отображаемого имени',
         fields: {
           name: 'Отображаемое имя',
+          identifier: 'Идентификатор ключа',
+          status: 'Статус',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Длина',
@@ -4406,7 +4576,6 @@ export const ru = {
           'Диапазон задержки должен содержать неотрицательные целые числа, а минимум не должен превышать максимум.',
         sort: 'Сортировка',
         advanced: 'Расширенные фильтры',
-        hideAdvanced: 'Скрыть расширенные фильтры',
         ranges: {
           '4h': 'Последние 4 часа',
           '12h': 'Последние 12 часов',
@@ -4467,6 +4636,7 @@ export const ru = {
           model: 'Модель',
           runtime: 'Узел Home',
           client: 'Пользователь',
+          userAgent: 'User-Agent',
           credential: 'Учетные данные',
           tokens: 'Токены',
           latency: 'Задержка',
@@ -4482,6 +4652,7 @@ export const ru = {
         errorTitle: 'Не удалось загрузить детали запроса',
         requestLogUnavailable: 'У этого запроса нет скачиваемого журнала.',
         tokens: 'Токены',
+        toolUsage: 'Использование инструментов',
         error: 'Сводка ошибки',
         payload: 'Сводка payload',
         logExcerpt: 'Фрагмент журнала',
@@ -4502,6 +4673,7 @@ export const ru = {
           cpa: 'CPA-узел',
           user: 'Пользователь',
           clientKey: 'Клиентский ключ доступа',
+          userAgent: 'User-Agent',
           credential: 'Учетные данные',
           latency: 'Задержка',
           cost: 'Стоимость',
@@ -4514,6 +4686,56 @@ export const ru = {
           cacheReadTokens: 'Чтение кэша',
           cacheCreationTokens: 'Запись кэша',
           totalTokens: 'Всего',
+        },
+        costBreakdown: {
+          total: 'Итого списано',
+          input: 'Входные токены',
+          imageInput: 'Вход изображений',
+          audioInput: 'Аудиовход',
+          videoInput: 'Видеовход',
+          fileInput: 'Вход файлов',
+          cacheRead: 'Чтение кэша',
+          cachedText: 'Кэш текста',
+          imageCacheRead: 'Кэш изображений',
+          audioCacheRead: 'Аудиокэш',
+          cacheWrite: 'Запись кэша',
+          cacheWrite30m: 'Запись кэша (30m)',
+          cacheWrite1h: 'Запись кэша (1h)',
+          cacheWrite12h: 'Запись кэша (12h)',
+          output: 'Выходные токены',
+          reasoning: 'Токены рассуждений',
+          imageOutput: 'Выход изображений',
+          audioOutput: 'Аудиовыход',
+          videoOutput: 'Видеовыход',
+          webSearch: 'Веб-поиск',
+          webSearchQuery: 'Поисковые запросы',
+          webFetch: 'Загрузка страниц',
+          xSearch: 'Поиск X',
+          codeExecution: 'Выполнение кода',
+          fileSearch: 'Поиск файлов',
+          documentSearch: 'Поиск документов',
+          mcp: 'Инструмент MCP',
+          googleMaps: 'Google Карты',
+          sourcesUsed: 'Источники',
+          serverTools: 'Серверные инструменты',
+          images: 'Изображения',
+          requestFee: 'Плата за запрос',
+          effortMultiplier: 'Множитель рассуждений',
+          billingMultiplier: 'Множитель пользователя',
+          matchedRule: 'Правило цены',
+        },
+        toolFields: {
+          webSearchCalls: 'Веб-поиск',
+          webSearchQueries: 'Поисковые запросы',
+          webFetchCalls: 'Загрузка страниц',
+          xSearchCalls: 'Поиск X',
+          codeExecutionCalls: 'Выполнение кода',
+          fileSearchCalls: 'Поиск файлов',
+          documentSearchCalls: 'Поиск документов',
+          mcpCalls: 'Инструмент MCP',
+          googleMapsChunks: 'Google Карты',
+          numSourcesUsed: 'Источники',
+          imageGenerationCalls: 'Генерация изображений',
         },
         payloadFields: {
           method: 'Метод',
@@ -4713,7 +4935,6 @@ export const ru = {
         minAmount: 'Мин. расход',
         maxAmount: 'Макс. расход',
         advanced: 'Расширенные фильтры',
-        hideAdvanced: 'Скрыть расширенные фильтры',
         searchPlaceholder: 'Запрос / пользователь / модель',
         minLatencyPlaceholder: 'Мин. задержка ms',
         maxLatencyPlaceholder: 'Макс. задержка ms',
@@ -4984,7 +5205,7 @@ export const ru = {
           clientKey: 'Клиентский ключ',
           clientIp: 'IP клиента',
           credential: 'Исполнительные учетные данные',
-          authIndex: 'Auth Index',
+          authIndex: 'Индекс учетных данных',
           model: 'Модель',
           endpoint: 'Endpoint',
           latency: 'Задержка',

@@ -209,6 +209,25 @@ describe('updateCredentialMetadata websockets payload', () => {
     })
   })
 
+  test('includes using_api for xai credentials and defaults to false', async () => {
+    const { requests, session } = createManagementAdapter(() => ({}))
+    const resource = createCredentialResource('xai')
+    expect(resource.usingApi ?? false).toBe(false)
+
+    await updateCredentialMetadata(session, resource, {
+      ...metadata,
+      usingApi: true,
+    })
+
+    const patch = requests.find(
+      (request) => request.method === 'PATCH' && request.pathname.endsWith('/credentials/fields'),
+    )
+    expect(patch?.body).toMatchObject({
+      name: 'xai-01',
+      using_api: true,
+    })
+  })
+
   test('keeps codex websockets behavior (regression)', async () => {
     const { requests, session } = createManagementAdapter(() => ({}))
 

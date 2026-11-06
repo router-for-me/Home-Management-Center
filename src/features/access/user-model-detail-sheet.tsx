@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from 'react'
+import { type ReactNode, type RefObject, useRef } from 'react'
 
 import { Boxes, Braces, Copy, Lightbulb, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +26,7 @@ import { formatModelPrice } from '@/lib/billing/amount-format'
 import type { UserCatalogModel } from './use-user-model-catalog'
 import {
   capabilityBadgeVariant,
+  extractRungToolPrices,
   formatExactNumber,
   formatMilliseconds,
   formatPercent,
@@ -37,6 +38,7 @@ import {
 type UserModelDetailSheetProps = {
   model: UserCatalogModel | null
   authenticated: boolean
+  initialSection?: 'specs' | 'pricing'
   onOpenChange: (open: boolean) => void
   /**
    * The card control that opened the sheet.
@@ -52,14 +54,22 @@ function Section({
   title,
   description,
   children,
+  headingRef,
 }: {
   title: string
   description?: string
   children: ReactNode
+  headingRef?: RefObject<HTMLHeadingElement | null>
 }) {
   return (
-    <section className="border-border/70 border-t pt-5 first:border-t-0 first:pt-0">
-      <h3 className="text-sm font-semibold">{title}</h3>
+    <section className="border-border/70 min-w-0 border-t pt-5 first:border-t-0 first:pt-0">
+      <h3
+        ref={headingRef}
+        tabIndex={headingRef ? -1 : undefined}
+        className="text-sm font-semibold outline-none"
+      >
+        {title}
+      </h3>
       {description ? (
         <p className="text-muted-foreground mt-1 text-xs leading-5">{description}</p>
       ) : null}
@@ -120,7 +130,8 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
 
-  const components: { key: string; label: string; value: number | null }[] = [
+  const toolPrices = extractRungToolPrices(rung)
+  const components: { key: string; label: string; value: number | null; suffix?: string }[] = [
     { key: 'input', label: t('userModels.price.input'), value: rung.inputPricePerMillion },
     { key: 'output', label: t('userModels.price.output'), value: rung.outputPricePerMillion },
     {
@@ -134,10 +145,16 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
       value: rung.cacheWritePricePerMillion,
     },
     { key: 'request', label: t('userModels.price.request'), value: rung.requestPrice },
+    ...toolPrices.map((item) => ({
+      key: `tool:${item.key}`,
+      label: t(`userModels.price.tools.${item.key}`),
+      value: item.pricePerCall,
+      suffix: t('userModels.price.perCall'),
+    })),
   ]
 
   return (
-    <div className="border-border/60 rounded-md border">
+    <div className="border-border/60 min-w-0 rounded-md border">
       <p className="border-border/60 text-muted-foreground border-b px-3 py-1.5 text-xs">
         {rung.minInputTokens > 0
           ? t('userModels.price.rungFrom', {
@@ -155,12 +172,30 @@ function PriceRungCard({ rung }: { rung: UserModelPriceRung }) {
               {component.value === null ? (
                 <UnreportedValue />
               ) : (
-                formatModelPrice(component.value, locale)
+                <>
+                  {formatModelPrice(component.value, locale)}
+                  {component.suffix ? (
+                    <span className="text-muted-foreground text-xs">{component.suffix}</span>
+                  ) : null}
+                </>
               )}
             </dd>
           </div>
         ))}
       </dl>
+      {rung.pricingExpr ? (
+        <div className="border-border/60 bg-muted/30 border-t px-3 py-1.5 text-xs">
+          <p className="text-muted-foreground">{t('userModels.price.pricingExpr')}</p>
+          <div
+            role="region"
+            aria-label={t('userModels.price.pricingExpr')}
+            tabIndex={0}
+            className="focus-visible:ring-ring/50 mt-1 max-w-full overflow-x-auto rounded-sm outline-none focus-visible:ring-3"
+          >
+            <code className="block w-max font-mono whitespace-pre">{rung.pricingExpr}</code>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -176,16 +211,22 @@ function PricingSection({
 }) {
   const { t } = useTranslation()
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.signedOutDetail')}</p>
-  }
+  if (!pricing) {
+    if (!authenticated) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.price.signedOutDetail')}</p>
+      )
+    }
 
-  if (accessible === false) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.notCoveredDetail')}</p>
-  }
+    if (accessible === false) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.price.notCoveredDetail')}</p>
+      )
+    }
 
-  if (accessible === null) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.price.unavailable')}</p>
+    if (accessible === null) {
+      return <p className="text-muted-foreground text-sm">{t('userModels.price.unavailable')}</p>
+    }
   }
 
   if (!pricing || pricing.status !== 'published' || pricing.providers.length === 0) {
@@ -239,14 +280,18 @@ function AvailabilitySection({
   const { t, i18n } = useTranslation()
   const locale = i18n.language
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-sm">{t('userModels.availability.signedOut')}</p>
-  }
+  if (!availability) {
+    if (!authenticated) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.availability.signedOut')}</p>
+      )
+    }
 
-  if (accessible === false) {
-    return (
-      <p className="text-muted-foreground text-sm">{t('userModels.availability.notCovered')}</p>
-    )
+    if (accessible === false) {
+      return (
+        <p className="text-muted-foreground text-sm">{t('userModels.availability.notCovered')}</p>
+      )
+    }
   }
 
   if (!availability) {
@@ -349,9 +394,11 @@ export function UserModelDetailSheet({
   authenticated,
   onOpenChange,
   restoreFocusRef,
+  initialSection = 'specs',
 }: UserModelDetailSheetProps) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language
+  const pricingHeadingRef = useRef<HTMLHeadingElement>(null)
   // Same reasoning as the catalog card: the header names the model's maker, and
   // no field on the payload reports it, so it comes from the identifier or from
   // nothing at all.
@@ -372,6 +419,13 @@ export function UserModelDetailSheet({
         side="right"
         className="w-full gap-0 sm:max-w-xl"
         closeLabel={t('userModels.detail.close')}
+        onOpenAutoFocus={(event) => {
+          if (initialSection === 'pricing') {
+            event.preventDefault()
+            pricingHeadingRef.current?.focus({ preventScroll: true })
+            pricingHeadingRef.current?.scrollIntoView({ block: 'start' })
+          }
+        }}
         onCloseAutoFocus={(event) => {
           const trigger = restoreFocusRef?.current
           if (!trigger?.isConnected) return
@@ -409,7 +463,7 @@ export function UserModelDetailSheet({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="grid flex-1 gap-5 overflow-y-auto p-4">
+            <div className="grid min-h-0 min-w-0 flex-1 content-start gap-5 overflow-y-auto p-4">
               {model.description ? (
                 <p className="text-sm leading-6 text-pretty">{model.description}</p>
               ) : (
@@ -591,6 +645,7 @@ export function UserModelDetailSheet({
               <Section
                 title={t('userModels.detail.pricing')}
                 description={t('userModels.price.ladderNote')}
+                headingRef={pricingHeadingRef}
               >
                 <PricingSection
                   pricing={model.pricing}

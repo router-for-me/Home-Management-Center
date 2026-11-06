@@ -110,6 +110,26 @@ describe('credential resource filters', () => {
     ).toEqual(['ws'])
   })
 
+  test('only includes known, enabled WebSocket settings on supported credentials', () => {
+    const resources = [
+      createCredential('codex-on', { websockets: true }),
+      createCredential('xai-on', { provider: 'xai', websockets: true }),
+      createCredential('xai-off', { provider: 'xai', websockets: false }),
+      createCredential('unsupported-flag', { provider: 'antigravity', websockets: true }),
+      createCredential('unknown-flag', {
+        websockets: true,
+        metadataAvailability: { prefix: false, proxyUrl: false, websockets: false },
+      }),
+    ]
+
+    expect(
+      filterCredentialResources(resources, new Map(), {
+        ...defaultFilters,
+        websocketOnly: true,
+      }).map((resource) => resource.id),
+    ).toEqual(['codex-on', 'xai-on'])
+  })
+
   test('composes search, status, and provider filters', () => {
     const resources = [
       createCredential('disabled-codex', {

@@ -6,7 +6,6 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Info,
   KeyRound,
   Loader2,
   Pencil,
@@ -22,6 +21,7 @@ import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
@@ -88,16 +88,108 @@ function generateAccessKey() {
   return `sk-${token}`
 }
 
-function formatAccessKeySequence(resource: AccessKeyResource) {
-  return `#${resource.index + 1}`
-}
-
 function formatAccessKeyIdentity(resource: AccessKeyResource) {
   const identity = resource.identifier
     ? `${resource.identifier} · ${resource.maskedValue}`
     : resource.maskedValue
 
   return resource.displayName ? `${resource.displayName} · ${identity}` : identity
+}
+
+const accessKeyTooltipClassName =
+  'max-h-[calc(100dvh-2rem)] max-w-[min(24rem,calc(100vw-2rem))] overflow-y-auto wrap-anywhere whitespace-normal'
+
+function AccessKeyIdentity({
+  resource,
+  onCopy,
+  onCopyIdentifier,
+  compact,
+}: {
+  resource: AccessKeyResource
+  onCopy: (resource: AccessKeyResource) => void
+  onCopyIdentifier: (resource: AccessKeyResource) => void
+  compact: boolean
+}) {
+  const { t } = useTranslation()
+  const title = resource.displayName
+
+  return (
+    <div className="min-w-0">
+      {title ? (
+        <OverflowTooltipText
+          value={title}
+          className="text-body font-medium"
+          overflowClassName="cursor-pointer"
+          tooltipClassName={accessKeyTooltipClassName}
+        />
+      ) : null}
+      {/* Keep copies of the usable key separate from identifier copies. */}
+      <div className={cn('flex min-w-0 items-center gap-1.5', title && 'mt-1')}>
+        <OverflowTooltipText
+          value={resource.maskedValue}
+          className="text-muted-foreground text-code"
+          overflowClassName="cursor-pointer"
+          tooltipClassName={accessKeyTooltipClassName}
+        />
+        {!compact ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-md"
+            className="-my-1"
+            aria-label={t('accessKeysPage.actions.copyKey', { key: resource.maskedValue })}
+            onClick={(event) => {
+              event.stopPropagation()
+              onCopy(resource)
+            }}
+          >
+            <Copy className="size-3.5" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+      {compact ? (
+        <div className="mt-1">
+          <AccessKeyIdentifier resource={resource} onCopy={onCopyIdentifier} />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function AccessKeyIdentifier({
+  resource,
+  onCopy,
+}: {
+  resource: AccessKeyResource
+  onCopy: (resource: AccessKeyResource) => void
+}) {
+  const { t } = useTranslation()
+
+  if (!resource.identifier) return <span className="text-muted-foreground">—</span>
+
+  return (
+    <div className="flex min-w-0 items-center gap-1.5">
+      <OverflowTooltipText
+        value={resource.identifier}
+        className="text-code font-medium tabular-nums"
+        overflowClassName="cursor-pointer"
+        tooltipClassName={accessKeyTooltipClassName}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-md"
+        className="-my-1"
+        aria-label={t('accessKeysPage.actions.copyIdentifier', { identifier: resource.identifier })}
+        onClick={(event) => {
+          event.stopPropagation()
+          onCopy(resource)
+        }}
+      >
+        <Copy className="size-3.5" aria-hidden="true" />
+      </Button>
+    </div>
+  )
 }
 
 function groupLabel(groups: AccessGroupResource[], id: number) {
@@ -162,7 +254,6 @@ function AccessKeysLoadingState() {
       <TableSurface>
         <TableSurfaceHeader
           title={t('accessKeysPage.list.title')}
-          description={t('accessKeysPage.list.description')}
           actions={
             <>
               <Skeleton className="h-9 w-28 rounded-md" />
@@ -219,7 +310,7 @@ function AccessKeysErrorState({
   )
 }
 
-function AccessKeyList({
+export function AccessKeyList({
   resources,
   users,
   channelGroups,
@@ -251,8 +342,8 @@ function AccessKeyList({
   const { t } = useTranslation()
   /*
    * Nine columns is four screens of sideways dragging on a phone. Identity and
-   * status stay because they are what a list is for; owner, both scopes, the
-   * sequence number and the length are all in the detail sheet the eye opens.
+   * stable identifier share one column on compact screens. Owner, scopes,
+   * status and key length belong in the detail sheet.
    */
   const showSecondary = useSecondaryColumns()
   const allSelected =
@@ -270,7 +361,7 @@ function AccessKeyList({
     // column to its content, which kept this one 298px wider than the viewport.
     <Table
       containerClassName="rounded-md border"
-      className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[952px]')}
+      className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1032px]')}
     >
       <TableHeader className={tableHeaderClassName}>
         <TableRow variant="static">
@@ -281,43 +372,34 @@ function AccessKeyList({
               onCheckedChange={onToggleAll}
             />
           </TableHead>
-          {showSecondary ? (
-            <TableHead className="w-16">{t('accessKeysPage.list.index')}</TableHead>
-          ) : null}
           <TableHead className={showSecondary ? 'w-[220px]' : undefined}>
-            <div className="flex items-center gap-1.5">
-              <span>{t('accessKeysPage.list.identity')}</span>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="text"
-                    size="icon-md"
-                    className="text-muted-foreground hover:text-foreground -my-1"
-                    aria-label={t('accessKeysPage.list.identifierTooltip')}
-                  >
-                    <Info className="size-3.5" aria-hidden="true" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-72">
-                  {t('accessKeysPage.list.identifierTooltip')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
+            {t(showSecondary ? 'accessKeysPage.list.identity' : 'accessKeysPage.list.key')}
           </TableHead>
           {showSecondary ? (
             <>
+              <TableHead className="w-36">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className="cursor-pointer" tabIndex={0}>
+                      {t('accessKeysPage.list.identifier')}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className={accessKeyTooltipClassName}>
+                    {t('accessKeysPage.list.identifierHint')}
+                  </TooltipContent>
+                </Tooltip>
+              </TableHead>
               <TableHead>{t('accessKeysPage.list.owner')}</TableHead>
               <TableHead>{t('accessKeysPage.list.credentialScope')}</TableHead>
               <TableHead>{t('accessKeysPage.list.modelScope')}</TableHead>
               <TableHead>{t('accessKeysPage.list.length')}</TableHead>
+              <TableHead>{t('accessKeysPage.list.status')}</TableHead>
             </>
           ) : null}
-          <TableHead className={showSecondary ? undefined : 'w-28'}>
-            {t('accessKeysPage.list.status')}
-          </TableHead>
           <TableHead className="table-sticky-action-head table-action-column-3 text-right">
-            {t('accessKeysPage.list.actions')}
+            <span className={showSecondary ? undefined : 'sr-only'}>
+              {t('accessKeysPage.list.actions')}
+            </span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -338,49 +420,19 @@ function AccessKeyList({
                 onClick={(event) => event.stopPropagation()}
               />
             </TableCell>
-            {showSecondary ? (
-              <TableCell className="text-muted-foreground font-mono text-xs">
-                {formatAccessKeySequence(resource)}
-              </TableCell>
-            ) : null}
             <TableCell className={showSecondary ? 'w-[220px] max-w-[220px]' : 'max-w-0'}>
-              {resource.displayName ? (
-                <p className="truncate text-sm font-medium">{resource.displayName}</p>
-              ) : null}
-              {resource.identifier ? (
-                <p className="truncate font-mono text-xs font-medium">{resource.identifier}</p>
-              ) : (
-                <p className="text-muted-foreground truncate text-xs">
-                  {t('accessKeysPage.list.identifierUnavailable')}
-                </p>
-              )}
-              {/*
-                The copy button sits on the masked value and copies the full
-                key string: pasting the key into a client is the frequent
-                intent, and a button beside the identifier reads as copying
-                the key while yielding a string that fails authentication.
-              */}
-              <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                <p className="text-muted-foreground min-w-0 truncate font-mono text-xs">
-                  {resource.maskedValue}
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-md"
-                  className="-my-1"
-                  aria-label={t('accessKeysPage.actions.copyKey', { key: resource.maskedValue })}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onCopy(resource)
-                  }}
-                >
-                  <Copy className="size-3.5" aria-hidden="true" />
-                </Button>
-              </div>
+              <AccessKeyIdentity
+                resource={resource}
+                onCopy={onCopy}
+                onCopyIdentifier={onCopyIdentifier}
+                compact={!showSecondary}
+              />
             </TableCell>
             {showSecondary ? (
               <>
+                <TableCell>
+                  <AccessKeyIdentifier resource={resource} onCopy={onCopyIdentifier} />
+                </TableCell>
                 <TableCell>
                   {userLabel(users, resource.userId) ?? (
                     <span className="text-muted-foreground">
@@ -403,26 +455,33 @@ function AccessKeyList({
                   )}
                 </TableCell>
                 <TableCell>{resource.length}</TableCell>
+                <TableCell>
+                  <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
+                    <CheckCircle2 className="size-3" aria-hidden="true" />
+                    {t('accessKeysPage.status.accepted')}
+                  </span>
+                </TableCell>
               </>
             ) : null}
-            <TableCell>
-              <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium">
-                <CheckCircle2 className="size-3" aria-hidden="true" />
-                {t('accessKeysPage.status.accepted')}
-              </span>
-            </TableCell>
             <TableCell className="table-sticky-action-cell table-action-column-3 text-right transition-colors">
               {/*
-                Two inline slots, so the order below is a ranking and not a
-                list. View and edit lead because this row is their only entry
-                point. Copying the key value lives beside the masked value it
-                copies, so the menu only keeps the low-frequency identifier
-                copy for cross-referencing usage and billing records, with
-                delete last and one deliberate step away.
+                View and edit lead on wide tables, with key copying beside the
+                masked value. Compact tables move key copying into the menu
+                to preserve readable identity text.
               */}
               <RowActions
                 menuLabel={formatAccessKeyIdentity(resource)}
                 actions={[
+                  ...(!showSecondary
+                    ? [
+                        {
+                          id: 'copy-key',
+                          label: t('accessKeysPage.actions.copyKey', { key: resource.maskedValue }),
+                          icon: Copy,
+                          onSelect: () => onCopy(resource),
+                        },
+                      ]
+                    : []),
                   {
                     id: 'view',
                     label: t('accessKeysPage.actions.view'),
@@ -435,16 +494,6 @@ function AccessKeyList({
                     icon: Pencil,
                     onSelect: () => onEditKey(resource),
                   },
-                  ...(resource.identifier
-                    ? [
-                        {
-                          id: 'copy-identifier',
-                          label: t('accessKeysPage.actions.copyIdentifier'),
-                          icon: Copy,
-                          onSelect: () => onCopyIdentifier(resource),
-                        },
-                      ]
-                    : []),
                   {
                     id: 'delete',
                     label: t('accessKeysPage.actions.delete'),
@@ -733,6 +782,9 @@ function AccessKeyDetailContent({
           ...(supportsDisplayNames
             ? [['name', resource.displayName ?? t('accessKeysPage.detail.noName')]]
             : []),
+          ...(resource.identifier ? [['identifier', resource.identifier]] : []),
+          ['status', t('accessKeysPage.status.accepted')],
+          ['length', String(resource.length)],
           ['owner', userLabel(users, resource.userId) ?? t('accessKeysPage.list.unassigned')],
           [
             'credentialScope',
@@ -1168,7 +1220,6 @@ export function AccessKeysWorkbenchPage() {
       <TableSurface className="min-w-0">
         <TableSurfaceHeader
           title={t('accessKeysPage.list.title')}
-          description={t('accessKeysPage.list.description')}
           actions={
             <>
               <Button

@@ -4,7 +4,11 @@ import {
   findUpstreamQuotaEntry,
   isQuotaAttentionEntry,
 } from '@/features/upstream/upstream-quota-model'
-import type { CredentialResource, CredentialStatusFilter } from '@/lib/api/management/credentials'
+import {
+  type CredentialResource,
+  type CredentialStatusFilter,
+  supportsCredentialWebsockets,
+} from '@/lib/api/management/credentials'
 
 export type CredentialFilterState = {
   search: string
@@ -13,6 +17,14 @@ export type CredentialFilterState = {
   quotaAvailable: boolean
   attentionOnly: boolean
   websocketOnly: boolean
+}
+
+export function isCredentialWebsocketEnabled(resource: CredentialResource) {
+  return (
+    supportsCredentialWebsockets(resource) &&
+    resource.metadataAvailability.websockets &&
+    resource.websockets
+  )
 }
 
 export function hasCredentialFilters({
@@ -55,7 +67,7 @@ export function filterCredentialResources(
       const entry = findUpstreamQuotaEntry(quotaMap, resource)
       if (!entry || !isQuotaAttentionEntry(entry)) return false
     }
-    if (websocketOnly && !resource.websockets) return false
+    if (websocketOnly && !isCredentialWebsocketEnabled(resource)) return false
     if (!normalizedSearch) return true
 
     return [

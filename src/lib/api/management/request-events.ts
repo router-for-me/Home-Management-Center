@@ -62,6 +62,21 @@ export type RequestEventTokens = {
   totalTokens: number
 }
 
+export type RequestEventToolUsage = {
+  webSearchCalls: number
+  webSearchQueries: number
+  webFetchCalls: number
+  xSearchCalls: number
+  codeExecutionCalls: number
+  fileSearchCalls: number
+  documentSearchCalls: number
+  mcpCalls: number
+  googleMapsChunks: number
+  numSourcesUsed: number
+  numServerSideToolsUsed: number
+  imageGenerationCalls: number
+}
+
 export type RequestEventPerformance = {
   latencyMs: number | null
   ttftMs: number | null
@@ -95,6 +110,7 @@ export type RequestEventClient = {
   clientKeyLabel: string | null
   clientKeyMasked: string | null
   clientIp: string | null
+  userAgent: string | null
 }
 
 export type RequestEventError = {
@@ -105,11 +121,32 @@ export type RequestEventError = {
   bodyPreview: string | null
 }
 
+export type RequestEventCostBreakdownItem = {
+  tokens: number
+  pricePerMillion: number
+  cost: number
+}
+
+export type RequestEventCostBreakdown = {
+  request: number
+  surcharges: number
+  baseTotal: number
+  billingMultiplier: number
+  total: number
+  reasoningEffort: string | null
+  reasoningEffortMultiplier: number | null
+  pricingExpr: string | null
+  items: Record<string, RequestEventCostBreakdownItem>
+}
+
 export type RequestEventBilling = {
   amount: number | null
+  baseAmount?: number | null
+  billingMultiplier?: number | null
   currency: string | null
   chargeId: string | null
   matchedPriceRule: string | null
+  costBreakdown?: RequestEventCostBreakdown | null
 }
 
 export type RequestEventRelated = {
@@ -148,6 +185,7 @@ export type RequestEvent = {
   error: RequestEventError | null
   tokens: RequestEventTokens
   tokenBreakdown: UsageTokenBreakdown | null
+  toolUsage?: RequestEventToolUsage | null
   performance: RequestEventPerformance
   billing: RequestEventBilling | null
   related: RequestEventRelated | null
@@ -530,30 +568,33 @@ function normalizeCredential(value: unknown, root: UnknownRecord): RequestEventC
   }
 }
 
-function normalizeClient(value: unknown): RequestEventClient | null {
-  if (!isRecord(value)) return null
+function normalizeClient(value: unknown, root?: UnknownRecord): RequestEventClient | null {
+  const record = isRecord(value) ? value : {}
+  const rootUserAgent = root ? readStringFromKeys(root, ['user_agent', 'userAgent']) : null
+  if (!isRecord(value) && !rootUserAgent) return null
   return {
-    userId: readNumberFromKeys(value, ['user_id', 'userId']),
-    username: readString(value, 'username'),
-    clientKeyId: readNumberFromKeys(value, [
+    userId: readNumberFromKeys(record, ['user_id', 'userId']),
+    username: readString(record, 'username'),
+    clientKeyId: readNumberFromKeys(record, [
       'client_key_id',
       'clientKeyId',
       'api_key_id',
       'apiKeyId',
     ]),
-    clientKeyLabel: readStringFromKeys(value, [
+    clientKeyLabel: readStringFromKeys(record, [
       'client_key_label',
       'clientKeyLabel',
       'api_key_label',
       'apiKeyLabel',
     ]),
-    clientKeyMasked: readStringFromKeys(value, [
+    clientKeyMasked: readStringFromKeys(record, [
       'client_key_masked',
       'clientKeyMasked',
       'api_key_masked',
       'apiKeyMasked',
     ]),
-    clientIp: readStringFromKeys(value, ['client_ip', 'clientIp']),
+    clientIp: readStringFromKeys(record, ['client_ip', 'clientIp']),
+    userAgent: readStringFromKeys(record, ['user_agent', 'userAgent']) ?? rootUserAgent,
   }
 }
 
@@ -580,13 +621,44 @@ function normalizeError(value: unknown): RequestEventError | null {
   return error
 }
 
+function normalizeCostBreakdown(value: unknown): RequestEventCostBreakdown | null {
+  if (!isRecord(value)) return null
+  const rawItems = isRecord(value.items) ? value.items : {}
+  const items: Record<string, RequestEventCostBreakdownItem> = {}
+  for (const [key, itemVal] of Object.entries(rawItems)) {
+    if (!isRecord(itemVal)) continue
+    items[key] = {
+      tokens: readNumber(itemVal, 'tokens') ?? 0,
+      pricePerMillion: readNumberFromKeys(itemVal, ['price_per_million', 'pricePerMillion']) ?? 0,
+      cost: readNumber(itemVal, 'cost') ?? 0,
+    }
+  }
+  return {
+    request: readNumber(value, 'request') ?? 0,
+    surcharges: readNumber(value, 'surcharges') ?? 0,
+    baseTotal: readNumberFromKeys(value, ['base_total', 'baseTotal']) ?? 0,
+    billingMultiplier: readNumberFromKeys(value, ['billing_multiplier', 'billingMultiplier']) ?? 1,
+    total: readNumber(value, 'total') ?? 0,
+    reasoningEffort: readStringFromKeys(value, ['reasoning_effort', 'reasoningEffort']),
+    reasoningEffortMultiplier: readNumberFromKeys(value, [
+      'reasoning_effort_multiplier',
+      'reasoningEffortMultiplier',
+    ]),
+    pricingExpr: readStringFromKeys(value, ['pricing_expr', 'pricingExpr']),
+    items,
+  }
+}
+
 function normalizeBilling(value: unknown): RequestEventBilling | null {
   if (!isRecord(value)) return null
   return {
     amount: readNumber(value, 'amount'),
+    baseAmount: readNumberFromKeys(value, ['base_amount', 'baseAmount']),
+    billingMultiplier: readNumberFromKeys(value, ['billing_multiplier', 'billingMultiplier']),
     currency: readString(value, 'currency'),
     chargeId: readStringFromKeys(value, ['charge_id', 'chargeId']),
     matchedPriceRule: readStringFromKeys(value, ['matched_price_rule', 'matchedPriceRule']),
+    costBreakdown: normalizeCostBreakdown(value.cost_breakdown ?? value.costBreakdown),
   }
 }
 
@@ -662,12 +734,15 @@ function normalizeRequestEvent(
     reasoningEffort: readStringFromKeys(record, ['reasoning_effort', 'reasoningEffort']),
     runtime: normalizeRuntime(record.runtime, record),
     credential: normalizeCredential(record.credential, record),
-    client: normalizeClient(record.client),
+    client: normalizeClient(record.client, record),
     error,
     tokens: normalizeTokens(record.tokens),
     tokenBreakdown: normalizeTokenBreakdown(
       record.token_breakdown ?? record.tokenBreakdown,
       tokenBreakdownV2,
+    ),
+    toolUsage: normalizeToolUsage(
+      record.tool_usage ?? record.toolUsage ?? record.tool_usage_details ?? record.toolUsageDetails,
     ),
     performance: normalizePerformance(record.performance, record),
     billing: normalizeBilling(record.billing),
@@ -680,6 +755,35 @@ function normalizeRequestEvent(
 // /request-events gained the field one release later — a capable backend can
 // still omit it here, so an unparseable payload degrades to the flat counters
 // instead of failing the whole query.
+function normalizeToolUsage(value: unknown): RequestEventToolUsage | null {
+  if (!isRecord(value)) return null
+  const out: RequestEventToolUsage = {
+    webSearchCalls:
+      readNumberFromKeys(value, ['web_search_calls', 'webSearchCalls', 'web_search_requests']) ?? 0,
+    webSearchQueries: readNumberFromKeys(value, ['web_search_queries', 'webSearchQueries']) ?? 0,
+    webFetchCalls: readNumberFromKeys(value, ['web_fetch_calls', 'webFetchCalls']) ?? 0,
+    xSearchCalls: readNumberFromKeys(value, ['x_search_calls', 'xSearchCalls']) ?? 0,
+    codeExecutionCalls:
+      readNumberFromKeys(value, [
+        'code_execution_calls',
+        'codeExecutionCalls',
+        'code_interpreter_calls',
+      ]) ?? 0,
+    fileSearchCalls: readNumberFromKeys(value, ['file_search_calls', 'fileSearchCalls']) ?? 0,
+    documentSearchCalls:
+      readNumberFromKeys(value, ['document_search_calls', 'documentSearchCalls']) ?? 0,
+    mcpCalls: readNumberFromKeys(value, ['mcp_calls', 'mcpCalls']) ?? 0,
+    googleMapsChunks: readNumberFromKeys(value, ['google_maps_chunks', 'googleMapsChunks']) ?? 0,
+    numSourcesUsed: readNumberFromKeys(value, ['num_sources_used', 'numSourcesUsed']) ?? 0,
+    numServerSideToolsUsed:
+      readNumberFromKeys(value, ['num_server_side_tools_used', 'numServerSideToolsUsed']) ?? 0,
+    imageGenerationCalls:
+      readNumberFromKeys(value, ['image_generation_calls', 'imageGenerationCalls']) ?? 0,
+  }
+  const hasAny = Object.values(out).some((count) => count > 0)
+  return hasAny ? out : null
+}
+
 function normalizeTokenBreakdown(value: unknown, enabled: boolean): UsageTokenBreakdown | null {
   if (!enabled) return null
   try {

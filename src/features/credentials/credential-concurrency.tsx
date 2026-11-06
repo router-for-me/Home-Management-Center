@@ -34,6 +34,7 @@ export type CredentialMetadataForm = {
   requestRetry: string
   note: string
   websockets: boolean
+  usingApi?: boolean
   disableCooling?: boolean | null
   headers?: Array<{ key: string; value: string }>
   excludedModelsText?: string

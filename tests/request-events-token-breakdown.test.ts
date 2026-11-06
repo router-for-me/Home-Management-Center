@@ -123,4 +123,29 @@ describe('request events token breakdown', () => {
     expect(detail.event.tokenBreakdown).toBeNull()
     expect(detail.event.tokens.cacheCreationTokens).toBe(926)
   })
+
+  test('normalizes server-side tool_usage counters when present', () => {
+    const rawEvent = {
+      ...createEvent(createBreakdown()),
+      tool_usage: {
+        web_search_calls: 1,
+        web_search_queries: 1,
+        x_search_calls: 1,
+        code_execution_calls: 0,
+        num_server_side_tools_used: 2,
+      },
+    }
+    const page = normalizeRequestEventsPage({ items: [rawEvent], total: 1 }, true)
+    const detail = normalizeRequestEventDetail({ event: rawEvent }, true)
+
+    expect(page.items[0]?.toolUsage).toMatchObject({
+      webSearchCalls: 1,
+      webSearchQueries: 1,
+      xSearchCalls: 1,
+      codeExecutionCalls: 0,
+      numServerSideToolsUsed: 2,
+    })
+    expect(detail.event.toolUsage?.webSearchCalls).toBe(1)
+    expect(detail.event.toolUsage?.xSearchCalls).toBe(1)
+  })
 })

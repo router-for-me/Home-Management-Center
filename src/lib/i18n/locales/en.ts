@@ -372,14 +372,14 @@ export const en = {
         retry: 'Try again',
       },
       signedOut: {
-        title: 'Pricing and availability are visible after you sign in.',
+        title: 'Sign in to see which models your keys can access.',
         signIn: 'Sign in',
         register: 'Create account',
       },
       accessibleError: {
         title: 'Your account view could not be loaded',
         description:
-          'The public catalog is shown without pricing, availability, or key coverage. Reported cause: {{message}}',
+          'Showing the public catalog. Model access for your account keys is unavailable. Reason: {{message}}',
       },
       access: {
         noApiKeys: {
@@ -492,8 +492,7 @@ export const en = {
         outSuffix: 'out / 1M tokens',
         tiered: '{{rungs}}-step ladder',
         signedOut: 'Sign in to see pricing',
-        signedOutDetail:
-          'This cluster publishes pricing to signed-in accounts only. Sign in to see the full ladder for this model.',
+        signedOutDetail: 'Sign in to view the complete price ladder available to your account.',
         notCovered: 'Not covered by your keys',
         notCoveredDetail:
           'This model is outside the model groups your keys can reach, so no price applies to your account yet.',
@@ -510,9 +509,26 @@ export const en = {
         rungFrom: 'From {{tokens}} input tokens',
         input: 'Input',
         output: 'Output',
+        reasoning: 'Reasoning',
         cacheRead: 'Cache read',
         cacheWrite: 'Cache write',
         request: 'Per request',
+        perCall: '/call',
+        toolsDetails: 'Tool prices ({{count}})',
+        pricingExpr: 'Pricing formula:',
+        tools: {
+          webSearch: 'Web search',
+          webSearchQuery: 'Search query',
+          webFetch: 'Web fetch',
+          xSearch: 'X search',
+          codeExecution: 'Code execution',
+          fileSearch: 'File search',
+          documentSearch: 'Document search',
+          mcp: 'MCP tool',
+          googleMaps: 'Google Maps',
+          sourcesUsed: 'Sources used',
+          serverTools: 'Server tools',
+        },
       },
       availability: {
         signedOut: 'Sign in to see observed availability',
@@ -796,6 +812,13 @@ export const en = {
         legacy: 'legacy',
       },
       settings: {
+        modelSource: 'Billing model ID source',
+        model_request: 'Request model ID',
+        model_response: 'Response model ID',
+        modelRequestOptionDescription:
+          'Match price rules using the requested/routed model ID first (default), falling back to upstream response_model.',
+        modelResponseOptionDescription:
+          'Match price rules using the upstream response_model first, falling back to the request model ID when absent.',
         serviceTierSource: 'Billing tier source',
         runtimeContextTitle: 'Runtime billing context',
         globalBadge: 'Global',
@@ -804,19 +827,22 @@ export const en = {
         schemaVersionTechnical: 'Backend price-rule capability: Rule schema v{{version}}.',
         currentRuntimeSource: 'Price rules currently use the {{source}}',
         runtimeContextDescription:
-          'Determines whether future charges match price rules using the request Tier or response Tier.',
+          'The model ID source and Tier source determine how future requests match price rules.',
         configure: 'Configure matching',
-        dialogTitle: 'Configure global Tier matching',
+        publicModelPricing: 'Show model catalog pricing when signed out',
+        publicModelPricingDescription:
+          'When enabled, anonymous visitors can view model price ladders, tool pricing, and availability metrics on the public model catalog without signing in.',
+        dialogTitle: 'Configure global billing matching',
         dialogDescription:
-          'Choose whether billing obtains the Tier from the request or the final response. This applies to every future charge.',
+          'Choose the sources for the billing model ID and Tier separately. Changes apply only to new charges after saving.',
         defaultBadge: 'Default',
         requestOptionDescription:
           'Use the Tier sent by the client. This is stable and works with providers that do not return a response Tier.',
         responseOptionDescription:
           'Use the final response Tier. Missing response Tiers fall back to the request Tier and are recorded in the price snapshot.',
-        policyTitle: 'Global Tier matching policy',
+        policyTitle: 'Global billing matching policy',
         policyDescription:
-          'Determines whether future charges match price rules using the request Tier or response Tier.',
+          'The model ID source and Tier source determine how future requests match price rules.',
         currentValue: 'Current policy',
         proposedValue: 'After saving:',
         change: 'Change',
@@ -830,8 +856,8 @@ export const en = {
         schemaVersion: 'Rule schema v{{version}}',
         legacyModeHint:
           'This backend exposes flat-price rules only. Tier, context-band, and tier-source controls are hidden.',
-        unsupported: 'This backend does not expose the Billing tier-source setting.',
-        saved: 'Billing tier source saved.',
+        unsupported: 'This backend does not expose billing matching source settings.',
+        saved: 'Billing matching settings saved.',
         noResponseTierWarning:
           'The latest {{count}} eligible requests contain no response-tier data. Response mode would fall back to the request tier for all of them.',
         fallbackSummary:
@@ -982,7 +1008,7 @@ export const en = {
         empty: 'No model prices yet.',
         actions: {
           create: 'New price',
-          import: 'Import from models.dev',
+          import: 'Import catalog prices',
           refreshSynced: 'Check synced price updates',
           createSelected: 'Create {{count}}',
           selectModels: 'Select models',
@@ -1029,10 +1055,10 @@ export const en = {
           createDescription: 'Create a price rule for future charge calculation.',
           importTitle: 'Import model prices',
           importDescription:
-            'Preview models.dev matches, review write fields, and manually confirm the rules to apply.',
+            'Match models from a price catalog, review the preview, and confirm which rules to apply.',
           refreshSyncedTitle: 'Update synced prices',
           refreshSyncedDescription:
-            'Fetch current models.dev prices and preview changes to existing source=sync rules.',
+            'Fetch prices from the selected catalog and preview changes to existing source=sync rules.',
           editTitle: 'Edit model price',
           editDescription: 'Update a model price rule used by future charges.',
         },
@@ -1112,8 +1138,8 @@ export const en = {
           reloadCandidates: 'Reload candidates',
           candidateFailedEmpty:
             'Candidate models could not be loaded. Reload candidates or check the Management API response.',
-          catalogReady: 'Loaded {{count}} models at {{time}}.',
-          catalogFailed: 'Failed to load models.dev catalog.',
+          catalogReady: '{{source}}: {{count}} models loaded ({{time}}).',
+          catalogFailed: 'Could not load the price catalog.',
           serverPreviewBadge: 'Server preview',
           legacyPreviewBadge: 'Compatibility preview',
           serverPreviewFailed: 'The server preview could not be generated.',
@@ -1161,6 +1187,13 @@ export const en = {
           targetsTitle: 'Import targets',
           targetsHint:
             'Limit which Home models enter the preview before matching and pricing rules are evaluated.',
+          catalogSource: 'Catalog source',
+          catalogSources: {
+            auto: 'Auto (models.dev + OpenRouter + LiteLLM)',
+            openrouter: 'OpenRouter',
+            litellm: 'LiteLLM',
+            modelsDev: 'models.dev',
+          },
           providerFilter: 'Provider',
           allProviders: 'All providers',
           targetFilter: 'Target set',
@@ -1187,7 +1220,7 @@ export const en = {
           aliasRulesTitle: 'Model aliases',
           addAlias: 'Add alias',
           aliasTarget: 'Home model ID',
-          aliasSources: 'Preferred models.dev IDs, comma separated',
+          aliasSources: 'Preferred catalog model IDs, comma-separated',
           removeAlias: 'Remove alias',
           includeCache: 'Include cache prices',
           includeZeroCost: 'Allow zero official prices',
@@ -1203,8 +1236,8 @@ export const en = {
           selectAll: 'Select all applicable',
           clearSelection: 'Clear selection',
           exportPreview: 'Export preview',
-          searchPlaceholder: 'Search Home provider, model, or models.dev match',
-          resolveMatchPlaceholder: 'Choose models.dev match',
+          searchPlaceholder: 'Search provider, model, or catalog match',
+          resolveMatchPlaceholder: 'Select a catalog model match',
           applyMatchOverride: 'Rebuild preview',
           loadingPreview: 'Loading preview…',
           emptyPreview: 'No candidate models to preview.',
@@ -1214,7 +1247,7 @@ export const en = {
           columns: {
             status: 'Status',
             action: 'Planned action',
-            sourceModel: 'models.dev match',
+            sourceModel: 'Catalog match',
             official: 'Official in/out',
             multiplier: 'Multiplier',
             writeFields: 'Fields to write',
@@ -1741,7 +1774,7 @@ export const en = {
         disableDescription: 'Disable this model key to remove it from upstream request scheduling.',
         fields: {
           identifier: 'Identifier',
-          authIndex: 'Auth index',
+          authIndex: 'Credential index',
           baseUrl: 'Base URL',
           proxyUrl: 'Proxy URL',
           prefix: 'Prefix',
@@ -1989,16 +2022,16 @@ export const en = {
         accountsMeta: '{{active}} active · {{disabled}} disabled · {{unavailable}} unavailable',
         providerKeys: 'Provider keys',
         attention: 'Quota attention',
-        attentionHint: 'Click to filter low / exhausted / error',
-        websockets: 'WebSocket on',
-        websocketsHint: 'Codex / Grok',
+        attentionHint: 'Show credentials whose quota needs attention',
+        websockets: 'WebSocket enabled',
+        websocketsHint: 'Codex / xAI (Grok)',
         pending: 'Loading',
         unsupported: 'Not supported',
       },
       quota: {
         actions: {
           collect: 'Collect quota',
-          refresh: 'Refresh quota',
+          refresh: 'Recollect quota',
           retry: 'Retry collection',
           collecting: 'Collecting',
           disabled: 'Enable this credential to collect quota',
@@ -2012,7 +2045,7 @@ export const en = {
         snapshotMiss: 'Not loaded',
         snapshotMissHint:
           'This credential is outside the loaded snapshot list. Open quota details to read its current status.',
-        unsupported: 'Unsupported',
+        unsupported: 'Query unsupported',
         unsupportedHint:
           'Quota collection is not available for this credential type (common for provider API keys).',
         collectFailed: 'Collection failed',
@@ -2023,9 +2056,130 @@ export const en = {
         onDemandEnabled: 'Enabled',
         onDemandUnknown: 'Not provided',
         onDemandDisabled: 'Disabled',
+        xai: {
+          usageBreakdown: 'Usage breakdown (shared quota)',
+          productUsage: '{{product}} usage',
+          usageUnavailable: 'Usage unavailable from xAI',
+          usageSummary: 'Product usage ({{count}})',
+        },
         remaining: 'Left',
         moneyRemaining: '{{remaining}} / {{limit}}',
-        more: '+{{count}} more',
+        summary: {
+          plan: '{{name}} plan',
+          historical: 'Recollect needed',
+          statusHint:
+            'Reported quota status includes periods hidden from this preview. It does not confirm that the credential is currently reachable.',
+          viewAll: 'Quota details ({{count}} windows)',
+          viewDetails: 'Quota details',
+          viewAllShort: 'All {{count}}',
+          viewDetailsShort: 'Details',
+          windowCount: '{{count}} quota windows',
+          sharedProducts: 'Products sharing quota: {{count}}',
+          updating: 'Collecting',
+          partial: 'Partial collection',
+          historicalDescription:
+            'These collected values are outside their validity period. Recollect for current quota. Bar colors still describe the remaining quota at that observation.',
+          retainedDescription:
+            'This query did not update the data. The last valid observations are retained.',
+          partialDescription:
+            'Some information could not be updated. Reported quota remains available; other information may come from an earlier observation.',
+          technicalDetails: 'Technical details',
+          originalError: 'Original upstream error',
+          errorCode: 'Error code',
+          httpStatus: 'HTTP status',
+          requestId: 'Request ID',
+          errorTime: 'Error time',
+          quotaStatus: 'Last observed quota status',
+          freshness: 'Data freshness',
+
+          noData: 'No data yet',
+          unknownHint: 'The quota status is not confirmed. Check the collected data in details.',
+          historicalHint:
+            'These are previous values outside their validity period. Recollect quota to update them.',
+          noDataHint:
+            'No usable quota values are available. Open details to review collection status.',
+          observedAgo: 'Collected {{time}}',
+          observedAtHint: 'Collected at: {{time}}',
+          queryScope: 'This describes the quota query only, not the outcome of model calls.',
+          queryIssueHint: 'About this quota query',
+          queryIssueLabel: '{{reason}}. Show explanation',
+
+          model: 'Model',
+          scope: 'Quota group',
+          account: 'Account',
+          unlimited: 'Unlimited',
+          periodUnavailable:
+            'The {{period}} quota for {{group}} is not available here. Check the full details.',
+          nextReset: 'Resets {{time}}',
+          resetUnconfirmed: 'Reset time unknown',
+          resetHint: 'Reset time: {{time}}',
+          pastResetHint: 'Recorded reset time has passed: {{time}}',
+          validUntil: 'This observation was valid until {{time}}.',
+
+          detailReadLabel: 'Quota periods',
+          detailReadFailed: 'Some details could not be loaded',
+
+          validUntilLabel: 'Data valid until',
+
+          labels: 'Quota labels',
+          queryFailed: 'Quota query failed',
+          collectingHint:
+            'Collecting the latest quota. Existing values remain visible until a valid result arrives.',
+          unsupportedHint: 'Quota queries are not supported for this credential type.',
+          capabilityAbsentHint:
+            'The connected backend does not provide the quota snapshot query capability.',
+          readFailed: 'Quota read failed',
+          readFailedHint:
+            'The latest quota records could not be read. Sync the data or open details to retry.',
+          recordMissing: 'No quota record',
+          recordMissingHint:
+            'This list has no quota record for the credential. Open details to read it.',
+          notCollectedHint: 'There is no collected quota yet. Use “{{action}}” to retrieve it.',
+          resetUnknownHint: 'Reset time unavailable',
+          observedUnknown: 'Collection time unknown',
+          noCollectionResult: 'No collection result',
+          notYetCollected: 'Not collected yet',
+          noCollectionResultHint: 'Last attempt: {{time}}',
+          hiddenRisk: {
+            low: 'Another quota window is low',
+            exhausted: 'Another quota window is exhausted',
+          },
+
+          historicalReadOnlyHint:
+            'These values are outside their validity period. The previous collection is shown.',
+          notCollectedReadOnlyHint: 'No valid quota collection is available yet.',
+        },
+        errors: {
+          authorization: {
+            title: 'Quota query unauthorized',
+            description:
+              'Authorization failed for this quota request. Check the credential’s access to the quota endpoint.',
+          },
+          rateLimited: {
+            title: 'Quota query rate limited',
+            description: 'The upstream limited quota queries. Wait before collecting again.',
+          },
+          invalidResponse: {
+            title: 'Quota query incomplete',
+            description:
+              'The quota endpoint did not return complete, usable data. Try collecting again later.',
+          },
+          missingAuthorization: {
+            title: 'Quota query authorization missing',
+            description:
+              'This credential lacks authorization for the Meta quota endpoint. Check its query permissions.',
+          },
+          unavailable: {
+            title: 'Quota query failed',
+            description:
+              'The quota endpoint could not be read. Check query permissions or upstream service status.',
+          },
+          unknown: {
+            title: 'Quota query failed',
+            description:
+              'The latest quota could not be retrieved. Open quota details for technical information.',
+          },
+        },
         truncated:
           'The quota list loads the first {{count}} credentials by risk. Open quota details for the remaining credentials.',
         antigravity: {
@@ -2052,11 +2206,11 @@ export const en = {
           observedAt: 'Observed {{time}}',
         },
         status: {
-          healthy: 'Healthy',
+          healthy: 'Quota healthy',
           low: 'Low quota',
           exhausted: 'Exhausted',
-          unknown: 'Unknown',
-          error: 'Query failed',
+          unknown: 'Quota unconfirmed',
+          error: 'Quota query failed',
           unsupported: 'Unsupported',
         },
         freshness: {
@@ -2110,8 +2264,8 @@ export const en = {
         noWindows: 'No quota windows',
       },
       quotaChips: {
-        attention: 'Attention',
-        ws: 'WS only',
+        attention: 'Quota alerts only',
+        ws: 'Only with WebSocket enabled',
       },
       drawer: {
         tabs: {
@@ -2126,8 +2280,6 @@ export const en = {
         metadata: {
           priorityPlaceholder: 'e.g. 10 or -1',
           priorityHint: 'Integers only; higher values have higher scheduling priority.',
-          websocketsXaiHint: 'For xAI/Grok. Enables this credential for WebSocket transport.',
-          websocketsUnsupported: 'The current provider does not expose a WS toggle.',
           enableTitle: 'Enable credential',
         },
         danger: {
@@ -2178,7 +2330,7 @@ export const en = {
         status: 'Status',
         provider: 'Model provider',
         allProviders: 'All model providers',
-        quickFilters: 'Quick filters',
+        quickFilters: 'Credential filters',
         resultCount: 'Showing {{visible}} of {{total}} credentials',
         clear: 'Clear filters',
       },
@@ -2315,16 +2467,23 @@ export const en = {
         provider: 'Model provider',
         toggleStatus: 'Toggle credential {{name}} status',
         enabled: 'Enabled',
-        ws: 'WS',
+        inFlight: 'In-flight',
+        ws: 'WebSocket',
         cooling: 'Cooling schedule',
         priority: 'Priority',
+        weight: 'Weight',
         actions: 'Actions',
       },
       inline: {
         saved: 'Saved.',
-        websocketsLabel: 'Toggle WebSocket',
-        websocketsUnsupported: 'WebSocket is not supported for this provider',
-        notApplicable: 'n/a',
+        websocketsLabel: 'Toggle WebSocket for {{name}}',
+        websocketsUnsupported:
+          'Only Codex and xAI (Grok) credentials support configuring WebSocket transport.',
+        websocketsEnabled: 'Enabled',
+        websocketsDisabled: 'Disabled',
+        websocketsUnknown: 'Unknown',
+        websocketsMissing: 'The backend did not return the WebSocket setting for this credential.',
+        notApplicable: 'Not applicable',
       },
       bulk: {
         selectAll: 'Select all credentials in the current list',
@@ -2349,6 +2508,8 @@ export const en = {
         enabled: 'Enabled',
         disabled: 'Disabled',
         unavailable: 'Unavailable',
+        error: 'Credential error',
+        unknown: 'Status unknown',
         notSet: 'Not set',
         inherited: 'Inherit global',
         notAvailable: 'N/A',
@@ -2365,12 +2526,12 @@ export const en = {
           type: 'Type',
           source: 'Source',
           account: 'Account',
-          authIndex: 'Auth index',
+          authIndex: 'Credential index',
           path: 'Path',
           size: 'Size',
           priority: 'Priority',
           requestRetry: 'Request retry rounds',
-          websockets: 'WebSocket',
+          websockets: 'WebSocket transport',
           cooling: 'Cooling schedule',
           success: 'Success',
           failed: 'Failed',
@@ -2405,9 +2566,12 @@ export const en = {
         requestRetryHint:
           'Additional retry rounds allowed after all credentials fail in the initial attempt round. 0 disables additional rounds; blank or negative values inherit the global setting.',
         requestRetryInvalid: 'Request retry rounds must be a non-negative integer.',
-        websockets: 'WebSocket support',
+        websockets: 'WebSocket transport',
         websocketsHint:
-          'Only applies to Codex credentials. Enable it when this credential should handle Codex requests that require WebSocket support.',
+          'Enable or disable upstream WebSocket transport for this credential. Applies to Codex and xAI (Grok).',
+        usingApi: 'Use official API (using_api)',
+        usingApiHint:
+          'Use the official xAI API when enabled; use Grok CLI chat-proxy when disabled.',
         coolingSchedule: 'Cooling schedule',
         coolingScheduleHint:
           'Configure whether this credential participates in quota cooldown scheduling or inherits the global policy.',
@@ -2515,6 +2679,13 @@ export const en = {
           modelLimit: 'The limit for {{model}} must be a non-negative integer.',
           duplicateModel: 'Model {{model}} is configured more than once.',
         },
+
+        cellUnsupported: 'Unsupported',
+        cellLoading: 'Loading in-flight data',
+        cellUnknown: 'No in-flight snapshot is available yet.',
+        cellUnavailable: 'In-flight data could not be loaded. Open details to retry.',
+        cellStale:
+          'The snapshot is stale, incomplete, or could not be refreshed. Showing the last known counts.',
       },
       delete: {
         title: 'Delete credential?',
@@ -2575,7 +2746,7 @@ export const en = {
         delete: 'Delete',
         copy: 'Copy',
         copyKey: 'Copy key {{key}}',
-        copyIdentifier: 'Copy identifier',
+        copyIdentifier: 'Copy identifier {{identifier}}',
         reveal: 'Reveal',
         hide: 'Hide',
         generate: 'Generate key',
@@ -2583,15 +2754,13 @@ export const en = {
       },
       list: {
         title: 'Access keys',
-        description:
-          'These keys grant clients access to the Home Center server; they are not model provider keys.',
         filterPlaceholder: 'Filter keys',
         empty: 'No access keys match the current filter.',
-        index: 'No.',
         identity: 'Name / key',
-        identifierTooltip:
-          'The display name is an editable label and does not affect authentication. The stable identifier (api-key-N) survives renames and key rotations, and links the same key across usage, billing, and request records.',
-        identifierUnavailable: 'No stable identifier',
+        identifier: 'Key ID',
+        identifierHint:
+          'Used in usage and billing records. Unchanged by renaming or rotating the key.',
+        key: 'Key',
         owner: 'Owner',
         credentialScope: 'Credential scope',
         modelScope: 'Model scope',
@@ -2620,6 +2789,8 @@ export const en = {
         noName: 'No display name',
         fields: {
           name: 'Display name',
+          identifier: 'Key identifier',
+          status: 'Status',
           prefix: 'Prefix',
           suffix: 'Suffix',
           length: 'Length',
@@ -4378,7 +4549,6 @@ export const en = {
           'Latency range must use non-negative integers, and minimum latency must not exceed maximum latency.',
         sort: 'Sort',
         advanced: 'Advanced filters',
-        hideAdvanced: 'Hide advanced filters',
         ranges: {
           '4h': 'Last 4 hours',
           '12h': 'Last 12 hours',
@@ -4439,6 +4609,7 @@ export const en = {
           model: 'Model',
           runtime: 'Home node',
           client: 'User',
+          userAgent: 'User-Agent',
           credential: 'Credential',
           tokens: 'Tokens',
           latency: 'Latency',
@@ -4454,6 +4625,7 @@ export const en = {
         errorTitle: 'Request details failed to load',
         requestLogUnavailable: 'This request has no downloadable request log.',
         tokens: 'Tokens',
+        toolUsage: 'Tool usage',
         error: 'Error summary',
         payload: 'Payload summary',
         logExcerpt: 'Log excerpt',
@@ -4474,6 +4646,7 @@ export const en = {
           cpa: 'CPA node',
           user: 'User',
           clientKey: 'Client access key',
+          userAgent: 'User-Agent',
           credential: 'Credential',
           latency: 'Latency',
           cost: 'Cost',
@@ -4486,6 +4659,56 @@ export const en = {
           cacheReadTokens: 'Cache read',
           cacheCreationTokens: 'Cache write',
           totalTokens: 'Total',
+        },
+        costBreakdown: {
+          total: 'Total charge',
+          input: 'Input tokens',
+          imageInput: 'Image input',
+          audioInput: 'Audio input',
+          videoInput: 'Video input',
+          fileInput: 'File input',
+          cacheRead: 'Cache read',
+          cachedText: 'Cached text',
+          imageCacheRead: 'Image cache read',
+          audioCacheRead: 'Audio cache read',
+          cacheWrite: 'Cache write',
+          cacheWrite30m: 'Cache write (30m)',
+          cacheWrite1h: 'Cache write (1h)',
+          cacheWrite12h: 'Cache write (12h)',
+          output: 'Output tokens',
+          reasoning: 'Reasoning tokens',
+          imageOutput: 'Image output',
+          audioOutput: 'Audio output',
+          videoOutput: 'Video output',
+          webSearch: 'Web search',
+          webSearchQuery: 'Search queries',
+          webFetch: 'Web fetch',
+          xSearch: 'X search',
+          codeExecution: 'Code execution',
+          fileSearch: 'File search',
+          documentSearch: 'Document search',
+          mcp: 'MCP tool',
+          googleMaps: 'Google Maps',
+          sourcesUsed: 'Sources used',
+          serverTools: 'Server tools',
+          images: 'Images',
+          requestFee: 'Per-request fee',
+          effortMultiplier: 'Effort multiplier',
+          billingMultiplier: 'User multiplier',
+          matchedRule: 'Matched rule',
+        },
+        toolFields: {
+          webSearchCalls: 'Web search',
+          webSearchQueries: 'Search queries',
+          webFetchCalls: 'Web fetch',
+          xSearchCalls: 'X search',
+          codeExecutionCalls: 'Code execution',
+          fileSearchCalls: 'File search',
+          documentSearchCalls: 'Document search',
+          mcpCalls: 'MCP tool',
+          googleMapsChunks: 'Google Maps',
+          numSourcesUsed: 'Sources used',
+          imageGenerationCalls: 'Image generation',
         },
         payloadFields: {
           method: 'Method',
@@ -4684,7 +4907,6 @@ export const en = {
         minAmount: 'Min spend',
         maxAmount: 'Max spend',
         advanced: 'Advanced filters',
-        hideAdvanced: 'Hide advanced filters',
         searchPlaceholder: 'Search request / user / model',
         minLatencyPlaceholder: 'Min latency ms',
         maxLatencyPlaceholder: 'Max latency ms',
@@ -4955,7 +5177,7 @@ export const en = {
           clientKey: 'Client key',
           clientIp: 'Client IP',
           credential: 'Execution credential',
-          authIndex: 'Auth index',
+          authIndex: 'Credential index',
           model: 'Model',
           endpoint: 'Endpoint',
           latency: 'Latency',

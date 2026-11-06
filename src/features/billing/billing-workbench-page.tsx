@@ -48,11 +48,11 @@ import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TablePaginationStatus,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -86,14 +86,7 @@ import {
 import { Sheet, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -842,9 +835,9 @@ function ChargeRecordsTab({
         <TableEmptyState kind="empty" title={t('billingPage.charges.empty')} />
       ) : (
         <TableSurfaceContent>
-          <Table
+          <ContainedTable
             className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1160px]')}
-            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            containerClassName="rounded-md border"
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
@@ -951,7 +944,7 @@ function ChargeRecordsTab({
                 )
               })}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </TableSurfaceContent>
       )}
     </TableSurface>
@@ -1004,9 +997,9 @@ function BalanceRecordsTab({
         <TableEmptyState kind="empty" title={t('billingPage.balance.empty')} />
       ) : (
         <TableSurfaceContent>
-          <Table
+          <ContainedTable
             className={cn(!showSecondary && 'table-fixed', 'sm:min-w-[1120px]')}
-            containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+            containerClassName="rounded-md border"
           >
             <TableHeader className={stickyTableHeaderClassName}>
               <TableRow variant="static">
@@ -1100,7 +1093,7 @@ function BalanceRecordsTab({
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </ContainedTable>
         </TableSurfaceContent>
       )}
     </TableSurface>
@@ -1132,7 +1125,9 @@ function ModelPricesTab({
    */
   const showSecondary = useSecondaryColumns()
   const supportsRuleScopes = (workbench.modelPriceSchemaVersion ?? 0) >= 2
+  const [modelSourceDraft, setModelSourceDraft] = useState<'request' | 'response'>('request')
   const [tierSourceDraft, setTierSourceDraft] = useState<'request' | 'response'>('request')
+  const [publicModelPricingDraft, setPublicModelPricingDraft] = useState(false)
   const [tierPolicyDialogOpen, setTierPolicyDialogOpen] = useState(false)
   const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
@@ -1142,8 +1137,13 @@ function ModelPricesTab({
   )
   const [sourceFilter, setSourceFilter] = useState<'all' | ModelPriceSource>('all')
   const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
+  const savedModelSource = workbench.billingSettings?.modelSource ?? 'request'
   const savedTierSource = workbench.billingSettings?.serviceTierSource ?? 'request'
+  const savedPublicModelPricing = workbench.billingSettings?.publicModelPricing ?? false
+  const modelSourceDirty = modelSourceDraft !== savedModelSource
   const tierSourceDirty = tierSourceDraft !== savedTierSource
+  const publicModelPricingDirty = publicModelPricingDraft !== savedPublicModelPricing
+  const settingsDirty = modelSourceDirty || tierSourceDirty || publicModelPricingDirty
   const responseTierDiagnosticsUnavailable =
     Boolean(workbench.billingTierDiagnosticsError) ||
     workbench.billingTierDiagnostics?.supported === false ||
@@ -1178,14 +1178,20 @@ function ModelPricesTab({
   )
 
   useEffect(() => {
+    setModelSourceDraft(savedModelSource)
     setTierSourceDraft(savedTierSource)
+    setPublicModelPricingDraft(savedPublicModelPricing)
     setSettingsError(null)
-  }, [savedTierSource])
+  }, [savedModelSource, savedTierSource, savedPublicModelPricing])
 
   const saveTierSource = async () => {
     setSettingsError(null)
     try {
-      await workbench.updateBillingSettings({ serviceTierSource: tierSourceDraft })
+      await workbench.updateBillingSettings({
+        modelSource: modelSourceDraft,
+        serviceTierSource: tierSourceDraft,
+        publicModelPricing: publicModelPricingDraft,
+      })
       toast.success(t('billingPage.settings.saved'))
       setTierPolicyDialogOpen(false)
       setConfirmTierSourceChange(false)
@@ -1198,6 +1204,7 @@ function ModelPricesTab({
 
   const requestTierSourceSave = () => {
     if (
+      tierSourceDirty &&
       tierSourceDraft === 'response' &&
       (responseTierDiagnosticsUnavailable ||
         (workbench.billingTierDiagnostics?.supported &&
@@ -1210,6 +1217,7 @@ function ModelPricesTab({
   }
 
   const cancelTierSourceEdit = () => {
+    setModelSourceDraft(savedModelSource)
     setTierSourceDraft(savedTierSource)
     setSettingsError(null)
     setTierPolicyDialogOpen(false)
@@ -1278,7 +1286,7 @@ function ModelPricesTab({
               </div>
               <p className="text-foreground mt-1 text-sm font-medium">
                 {t('billingPage.settings.currentRuntimeSource', {
-                  source: t(`billingPage.settings.${savedTierSource}`),
+                  source: `${t(`billingPage.settings.model_${savedModelSource}`)} / ${t(`billingPage.settings.${savedTierSource}`)}`,
                 })}
               </p>
               <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
@@ -1295,6 +1303,7 @@ function ModelPricesTab({
               className="shrink-0"
               disabled={workbench.billingSettingsLoading || Boolean(workbench.billingSettingsError)}
               onClick={() => {
+                setModelSourceDraft(savedModelSource)
                 setTierSourceDraft(savedTierSource)
                 setSettingsError(null)
                 setTierPolicyDialogOpen(true)
@@ -1441,10 +1450,7 @@ function ModelPricesTab({
               }
             />
           ) : (
-            <Table
-              className="min-w-[1260px]"
-              containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-            >
+            <ContainedTable className="min-w-[1260px]" containerClassName="rounded-md border">
               <TableHeader className={stickyTableHeaderClassName}>
                 <TableRow variant="static">
                   {showSecondary ? (
@@ -1583,7 +1589,7 @@ function ModelPricesTab({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ContainedTable>
           )}
         </TableSurfaceContent>
       </TableSurface>
@@ -1599,110 +1605,189 @@ function ModelPricesTab({
         }}
       >
         <DialogContent
-          className="max-w-xl"
+          className="flex max-h-[calc(100dvh-2rem)] max-w-xl flex-col gap-0 overflow-hidden p-0"
           closeLabel={t('close')}
           showCloseButton={!workbench.mutating}
         >
-          <DialogHeader>
+          <DialogHeader className="shrink-0 border-b p-5 pr-12">
             <DialogTitle>{t('billingPage.settings.dialogTitle')}</DialogTitle>
             <DialogDescription>{t('billingPage.settings.dialogDescription')}</DialogDescription>
           </DialogHeader>
 
-          <RadioGroup
-            value={tierSourceDraft}
-            disabled={workbench.mutating || workbench.billingSettingsLoading}
-            aria-label={t('billingPage.settings.serviceTierSource')}
-            onValueChange={(value) => {
-              if (value === 'request' || value === 'response') setTierSourceDraft(value)
-            }}
-          >
-            {(['request', 'response'] as const).map((source) => (
-              <label
-                key={source}
+          <div className="grid min-h-0 gap-5 overflow-y-auto p-5">
+            <div className="grid gap-2">
+              <span className="text-xs font-semibold">{t('billingPage.settings.modelSource')}</span>
+              <RadioGroup
+                value={modelSourceDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.modelSource')}
+                onValueChange={(value) => {
+                  if (value === 'request' || value === 'response') setModelSourceDraft(value)
+                }}
+              >
+                {(['request', 'response'] as const).map((source) => (
+                  <label
+                    key={`model-${source}`}
+                    className={cn(
+                      'control-bordered flex min-w-0 cursor-pointer items-start gap-3 rounded-md border px-3 py-3',
+                      modelSourceDraft === source
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-background',
+                      workbench.mutating && 'cursor-not-allowed opacity-60',
+                    )}
+                  >
+                    <RadioGroupItem value={source} className="mt-0.5" />
+                    <span className="grid min-w-0 gap-1">
+                      <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {t(`billingPage.settings.model_${source}`)}
+                        {source === 'request' ? (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                            {t('billingPage.settings.defaultBadge')}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-muted-foreground text-xs leading-5">
+                        {source === 'request'
+                          ? t('billingPage.settings.modelRequestOptionDescription')
+                          : t('billingPage.settings.modelResponseOptionDescription')}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div className="border-border flex items-start justify-between gap-3 rounded-md border px-3 py-3">
+              <div className="grid min-w-0 gap-1">
+                <span className="text-sm font-medium">
+                  {t('billingPage.settings.publicModelPricing')}
+                </span>
+                <span className="text-muted-foreground text-xs leading-5">
+                  {t('billingPage.settings.publicModelPricingDescription')}
+                </span>
+              </div>
+              <Switch
+                checked={publicModelPricingDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.publicModelPricing')}
+                onCheckedChange={setPublicModelPricingDraft}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <span className="text-xs font-semibold">
+                {t('billingPage.settings.serviceTierSource')}
+              </span>
+              <RadioGroup
+                value={tierSourceDraft}
+                disabled={workbench.mutating || workbench.billingSettingsLoading}
+                aria-label={t('billingPage.settings.serviceTierSource')}
+                onValueChange={(value) => {
+                  if (value === 'request' || value === 'response') setTierSourceDraft(value)
+                }}
+              >
+                {(['request', 'response'] as const).map((source) => (
+                  <label
+                    key={source}
+                    className={cn(
+                      'control-bordered flex min-w-0 cursor-pointer items-start gap-3 rounded-md border px-3 py-3',
+                      tierSourceDraft === source
+                        ? 'border-primary/40 bg-primary/5'
+                        : 'border-border bg-background',
+                      workbench.mutating && 'cursor-not-allowed opacity-60',
+                    )}
+                  >
+                    <RadioGroupItem value={source} className="mt-0.5" />
+                    <span className="grid min-w-0 gap-1">
+                      <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                        {t(`billingPage.settings.${source}`)}
+                        {source === 'request' ? (
+                          <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
+                            {t('billingPage.settings.defaultBadge')}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="text-muted-foreground text-xs leading-5">
+                        {source === 'request'
+                          ? t('billingPage.settings.requestOptionDescription')
+                          : t('billingPage.settings.responseOptionDescription')}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </div>
+
+            {settingsDirty ? (
+              <div className="bg-muted/40 text-meta grid gap-2 rounded-md px-3 py-2" role="status">
+                <p className="text-muted-foreground">{t('billingPage.settings.proposedValue')}</p>
+                <dl className="grid gap-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <dt className="text-muted-foreground">
+                      {t('billingPage.settings.modelSource')}
+                    </dt>
+                    <dd className="font-medium">
+                      {t(`billingPage.settings.model_${modelSourceDraft}`)}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <dt className="text-muted-foreground">
+                      {t('billingPage.settings.serviceTierSource')}
+                    </dt>
+                    <dd className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</dd>
+                  </div>
+                </dl>
+              </div>
+            ) : null}
+
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            workbench.billingTierDiagnosticsFetching ? (
+              <p className="text-muted-foreground text-xs leading-5" role="status">
+                {t('billingPage.settings.diagnosticsLoading')}
+              </p>
+            ) : null}
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            !workbench.billingTierDiagnosticsFetching &&
+            !workbench.billingTierDiagnosticsError &&
+            workbench.billingTierDiagnostics?.supported ? (
+              <div
+                role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
                 className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-md border px-3 py-3 transition-colors',
-                  tierSourceDraft === source
-                    ? 'border-primary/40 bg-primary/5'
-                    : 'border-border hover:bg-muted/40',
-                  workbench.mutating && 'cursor-not-allowed opacity-60',
+                  'rounded-md border px-3 py-2 text-xs leading-5',
+                  workbench.billingTierDiagnostics.fallbackRequests > 0
+                    ? 'border-warning/30 bg-warning/10 text-warning'
+                    : 'border-border bg-muted/30 text-muted-foreground',
                 )}
               >
-                <RadioGroupItem value={source} className="mt-0.5" />
-                <span className="grid min-w-0 gap-1">
-                  <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    {t(`billingPage.settings.${source}`)}
-                    {source === 'request' ? (
-                      <span className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[11px] font-medium">
-                        {t('billingPage.settings.defaultBadge')}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-muted-foreground text-xs leading-5">
-                    {source === 'request'
-                      ? t('billingPage.settings.requestOptionDescription')
-                      : t('billingPage.settings.responseOptionDescription')}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </RadioGroup>
+                {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
+                workbench.billingTierDiagnostics.eligibleRequests > 0
+                  ? t('billingPage.settings.noResponseTierWarningProposed', {
+                      count: workbench.billingTierDiagnostics.eligibleRequests,
+                    })
+                  : t('billingPage.settings.fallbackSummaryProposed', {
+                      fallback: workbench.billingTierDiagnostics.fallbackRequests,
+                      total: workbench.billingTierDiagnostics.eligibleRequests,
+                    })}
+              </div>
+            ) : null}
+            {tierSourceDirty &&
+            tierSourceDraft === 'response' &&
+            !workbench.billingTierDiagnosticsFetching &&
+            responseTierDiagnosticsUnavailable ? (
+              <p className="text-warning text-xs leading-5">
+                {t('billingPage.settings.diagnosticsUnavailable')}
+              </p>
+            ) : null}
+            {settingsError || workbench.billingSettingsError ? (
+              <p className="text-destructive text-xs" role="alert">
+                {settingsError || workbench.billingSettingsError}
+              </p>
+            ) : null}
+          </div>
 
-          {tierSourceDirty ? (
-            <p className="bg-muted/40 rounded-md px-3 py-2 text-xs leading-5">
-              <span className="text-muted-foreground">
-                {t('billingPage.settings.proposedValue')}{' '}
-              </span>
-              <span className="font-medium">{t(`billingPage.settings.${tierSourceDraft}`)}</span>
-            </p>
-          ) : null}
-
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          workbench.billingTierDiagnosticsFetching ? (
-            <p className="text-muted-foreground text-xs leading-5" role="status">
-              {t('billingPage.settings.diagnosticsLoading')}
-            </p>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          !workbench.billingTierDiagnosticsError &&
-          workbench.billingTierDiagnostics?.supported ? (
-            <div
-              role={workbench.billingTierDiagnostics.fallbackRequests > 0 ? 'alert' : 'status'}
-              className={cn(
-                'rounded-md border px-3 py-2 text-xs leading-5',
-                workbench.billingTierDiagnostics.fallbackRequests > 0
-                  ? 'border-warning/30 bg-warning/10 text-warning'
-                  : 'border-border bg-muted/30 text-muted-foreground',
-              )}
-            >
-              {workbench.billingTierDiagnostics.responseTierRequests === 0 &&
-              workbench.billingTierDiagnostics.eligibleRequests > 0
-                ? t('billingPage.settings.noResponseTierWarningProposed', {
-                    count: workbench.billingTierDiagnostics.eligibleRequests,
-                  })
-                : t('billingPage.settings.fallbackSummaryProposed', {
-                    fallback: workbench.billingTierDiagnostics.fallbackRequests,
-                    total: workbench.billingTierDiagnostics.eligibleRequests,
-                  })}
-            </div>
-          ) : null}
-          {tierSourceDirty &&
-          tierSourceDraft === 'response' &&
-          !workbench.billingTierDiagnosticsFetching &&
-          responseTierDiagnosticsUnavailable ? (
-            <p className="text-warning text-xs leading-5">
-              {t('billingPage.settings.diagnosticsUnavailable')}
-            </p>
-          ) : null}
-          {settingsError || workbench.billingSettingsError ? (
-            <p className="text-destructive text-xs" role="alert">
-              {settingsError || workbench.billingSettingsError}
-            </p>
-          ) : null}
-
-          <DialogFooter>
+          <DialogFooter className="shrink-0 border-t p-4">
             <Button
               type="button"
               variant="outline"
@@ -1715,8 +1800,10 @@ function ModelPricesTab({
               type="button"
               disabled={
                 workbench.mutating ||
-                !tierSourceDirty ||
-                (tierSourceDraft === 'response' && workbench.billingTierDiagnosticsFetching)
+                !settingsDirty ||
+                (tierSourceDirty &&
+                  tierSourceDraft === 'response' &&
+                  workbench.billingTierDiagnosticsFetching)
               }
               onClick={requestTierSourceSave}
             >

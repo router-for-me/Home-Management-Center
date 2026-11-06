@@ -1,5 +1,6 @@
 import type { ModelPrice, ModelPriceInput, ModelPriceSource } from '../api/management/billing-types'
 
+export type ModelPriceImportCatalogSource = 'models.dev' | 'openrouter' | 'litellm' | 'auto'
 export type ModelPriceImportOverwriteMode = 'missing' | 'sync' | 'all'
 export type ModelPriceImportTargetFilter = 'all' | 'missing' | 'synced' | 'selected'
 export type ModelPriceImportMatchMode = 'prefix' | 'regex'
@@ -50,6 +51,7 @@ export type ModelPriceImportMatchOverride = {
 }
 
 export type ModelPriceImportPreviewInput = {
+  source?: ModelPriceImportCatalogSource
   targets: ModelPriceImportTarget[]
   overwriteMode: ModelPriceImportOverwriteMode
   policy: ModelPriceImportPolicy
@@ -62,6 +64,17 @@ export type ModelPriceImportCost = {
   cacheRead: number
   cacheWrite: number
   request: number
+  cacheWrite30m?: number
+  cacheWrite1h?: number
+  cacheWrite12h?: number
+  reasoning?: number
+  imageInput?: number
+  imageOutput?: number
+  audioInput?: number
+  audioOutput?: number
+  webSearch?: number
+  image?: number
+  pricingExpr?: string
 }
 
 export type ModelPriceImportPreviewStatus =
@@ -151,7 +164,7 @@ export type ModelPriceImportPreview = {
   generatedAt: string
   expiresAt: string | null
   atomic: boolean
-  source: 'models.dev'
+  source: ModelPriceImportCatalogSource
   sourceUrl: string
   sourceFetchedAt: string
   sourceVersion: string | null

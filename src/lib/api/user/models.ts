@@ -59,9 +59,13 @@ export type UserModelPriceRung = {
   minInputTokens: number
   inputPricePerMillion: number | null
   outputPricePerMillion: number | null
+  reasoningPricePerMillion?: number | null
   cacheReadPricePerMillion: number | null
   cacheWritePricePerMillion: number | null
   requestPrice: number | null
+  webSearchPricePerCall?: number | null
+  imagePricePerImage?: number | null
+  pricingExpr?: string | null
 }
 
 export type UserModelPriceTier = {
@@ -284,6 +288,10 @@ function normalizePriceRung(value: unknown): UserModelPriceRung {
       'output_price_per_million',
       'outputPricePerMillion',
     ]),
+    reasoningPricePerMillion: readNumber(record, [
+      'reasoning_price_per_million',
+      'reasoningPricePerMillion',
+    ]),
     cacheReadPricePerMillion: readNumber(record, [
       'cache_read_price_per_million',
       'cacheReadPricePerMillion',
@@ -293,6 +301,12 @@ function normalizePriceRung(value: unknown): UserModelPriceRung {
       'cacheWritePricePerMillion',
     ]),
     requestPrice: readNumber(record, ['request_price', 'requestPrice']),
+    webSearchPricePerCall: readNumber(record, [
+      'web_search_price_per_call',
+      'webSearchPricePerCall',
+    ]),
+    imagePricePerImage: readNumber(record, ['image_price_per_image', 'imagePricePerImage']),
+    pricingExpr: readString(record, ['pricing_expr', 'pricingExpr']),
   }
 }
 

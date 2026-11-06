@@ -185,7 +185,7 @@ describe('Google Interactions provider Management API integration', () => {
     expect(resource).toMatchObject({
       identifier: 'team-interactions',
       name: 'team-interactions',
-      authIndex: null,
+      authIndex: 'interactions-auth-id',
       disableCooling: true,
       requestRetry: 2,
       apiKeyEntryCount: 1,
@@ -419,7 +419,7 @@ describe('Google Interactions provider Management API integration', () => {
     expect(models).toEqual([
       {
         name: 'gemini-2.5-pro',
-        alias: 'Gemini 2.5 Pro',
+        displayName: 'Gemini 2.5 Pro',
         description: 'Next generation multimodal model',
       },
     ])

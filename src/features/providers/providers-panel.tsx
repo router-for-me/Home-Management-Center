@@ -25,10 +25,10 @@ import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -60,14 +60,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
@@ -826,8 +819,8 @@ function ProviderResourceTable({
   }
 
   return (
-    <Table
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
+    <ContainedTable
+      containerClassName="rounded-md border"
       className="table-fixed sm:min-w-[1080px]"
     >
       <colgroup>
@@ -943,7 +936,7 @@ function ProviderResourceTable({
           </TableRow>
         ))}
       </TableBody>
-    </Table>
+    </ContainedTable>
   )
 }
 
@@ -1434,7 +1427,9 @@ export function ProviderFormPanel({
     if (!query) return modelDiscoveryModels
 
     return modelDiscoveryModels.filter((model) =>
-      `${model.name} ${model.alias ?? ''} ${model.description ?? ''}`.toLowerCase().includes(query),
+      `${model.name} ${model.displayName ?? ''} ${model.description ?? ''}`
+        .toLowerCase()
+        .includes(query),
     )
   }, [modelDiscoveryModels, modelDiscoverySearch])
   const selectableDiscoveredModels = useMemo(
@@ -1622,7 +1617,8 @@ export function ProviderFormPanel({
       ...selectedModels.map((model) => ({
         ...emptyModelEntry(),
         name: model.name,
-        alias: model.alias ?? '',
+        // The upstream ID stays the routable one; see normalizeDiscoveredModels.
+        displayName: model.displayName ?? '',
       })),
     ])
     setModelDiscoverySelected(new Set())
@@ -2653,9 +2649,9 @@ export function ProviderFormPanel({
                                   />
                                   <span className="min-w-0 flex-1">
                                     <span className="block font-mono break-all">{model.name}</span>
-                                    {model.alias || model.description ? (
-                                      <span className="text-muted-foreground mt-1 block leading-5">
-                                        {model.alias ?? model.description}
+                                    {model.displayName || model.description ? (
+                                      <span className="text-muted-foreground mt-1 block leading-5 [overflow-wrap:anywhere]">
+                                        {model.displayName ?? model.description}
                                       </span>
                                     ) : null}
                                   </span>

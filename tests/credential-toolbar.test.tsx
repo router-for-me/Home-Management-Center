@@ -1,3 +1,5 @@
+import type { ComponentProps } from 'react'
+
 import { beforeAll, describe, expect, test } from 'bun:test'
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -22,7 +24,7 @@ beforeAll(async () => {
   })
 })
 
-function renderToolbar() {
+function renderToolbar(overrides: Partial<ComponentProps<typeof AccountsToolbar>> = {}) {
   return renderToStaticMarkup(
     <I18nextProvider i18n={testI18n}>
       <AccountsToolbar
@@ -40,6 +42,7 @@ function renderToolbar() {
         onAttentionOnlyChange={() => undefined}
         onWebsocketOnlyChange={() => undefined}
         onClearFilters={() => undefined}
+        {...overrides}
       />
     </I18nextProvider>,
   )
@@ -53,22 +56,39 @@ describe('credential toolbar', () => {
     expect(markup.match(/role="combobox"/g)).toHaveLength(2)
     expect(markup).toContain('aria-label="Status"')
     expect(markup).toContain('aria-label="Model provider"')
-    expect(markup).toContain('aria-label="Quick filters"')
-    expect(markup.match(/aria-pressed="true"/g)).toHaveLength(2)
+    expect(markup).toContain('aria-label="Credential filters"')
+    expect(markup.match(/role="checkbox"/g)).toHaveLength(2)
+    expect(markup.match(/aria-checked="true"/g)).toHaveLength(2)
+    expect(markup).toContain(en.common.upstreamPage.quotaChips.ws)
+    expect(markup).not.toContain('aria-pressed=')
     expect(markup).toContain('Showing 0 of 0 credentials')
   })
 
-  test('uses full-width mobile controls before the content-driven two-column breakpoint', () => {
-    const markup = renderToolbar()
+  test('keeps either binary condition selected independently', () => {
+    for (const attentionOnly of [false, true]) {
+      const markup = renderToolbar({ attentionOnly, websocketOnly: !attentionOnly })
+      const buttons = markup.match(/<button\b[^>]*>/g) ?? []
+      for (const [label, checked] of [
+        [en.common.upstreamPage.quotaChips.attention, attentionOnly],
+        [en.common.upstreamPage.quotaChips.ws, !attentionOnly],
+      ] as const) {
+        const button = buttons.find((tag) => tag.includes(`aria-label="${label}"`))
+        expect(button).toContain(`aria-checked="${checked}"`)
+      }
+    }
+  })
 
-    expect(markup).toContain('grid-cols-1')
-    expect(markup).toContain('min-[480px]:grid-cols-2')
-    expect(markup.match(/data-size="xl"/g)).toHaveLength(7)
-    // Six of those seven carry the step class: the toggle group root reports the
-    // size but renders no box of its own, its items do. The previous count of
-    // seven matched `min-h-10` on the alignment row by substring, not a control.
-    expect(markup.match(/control-xl/g)).toHaveLength(6)
-    expect(markup).not.toContain('h-11')
+  test('keeps the WebSocket filter when quota queries are unsupported', () => {
+    const markup = renderToolbar({ quotaAvailable: false })
+    expect(markup.match(/role="checkbox"/g)).toHaveLength(1)
+    expect(markup).toContain(en.common.upstreamPage.quotaChips.ws)
+    expect(markup).not.toContain(en.common.upstreamPage.quotaChips.attention)
+  })
+
+  test('keeps reset visible but disabled when there are no active filters', () => {
+    const markup = renderToolbar({ attentionOnly: false, websocketOnly: false })
+    const reset = markup.match(/<button[^>]*>Clear filters<\/button>/)?.[0]
+    expect(reset).toContain('disabled=""')
   })
 
   test('keeps credential table copy aligned across all supported locales', () => {
@@ -77,13 +97,17 @@ describe('credential toolbar', () => {
     const expectedFilterKeys = Object.keys(en.common.credentialsPage.filters).sort()
     const expectedListKeys = Object.keys(en.common.credentialsPage.list).sort()
     const expectedQuickFilterKeys = Object.keys(en.common.upstreamPage.quotaChips).sort()
+    const expectedInlineKeys = Object.keys(en.common.credentialsPage.inline).sort()
 
-    expect(expectedListKeys).not.toContain('inFlight')
+    expect(expectedListKeys).toContain('inFlight')
+    expect(expectedListKeys).toContain('weight')
 
     for (const locale of locales) {
       expect(Object.keys(locale.common.credentialsPage.actions).sort()).toEqual(expectedActionKeys)
       expect(Object.keys(locale.common.credentialsPage.filters).sort()).toEqual(expectedFilterKeys)
       expect(Object.keys(locale.common.credentialsPage.list).sort()).toEqual(expectedListKeys)
+      expect(Object.keys(locale.common.credentialsPage.inline).sort()).toEqual(expectedInlineKeys)
+      expect(locale.common.credentialsPage.list.ws).toBe('WebSocket')
       expect(Object.keys(locale.common.upstreamPage.quotaChips).sort()).toEqual(
         expectedQuickFilterKeys,
       )

@@ -18,13 +18,16 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
+import { filterRowClassName } from '@/components/shared/form-layout'
+import { OverflowTooltipText } from '@/components/shared/overflow-tooltip-text'
+import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
+  ContainedTable,
   TableSurface,
   TableSurfaceContent,
   TableSurfaceHeader,
-  containedTableContainerClassName,
   stickyTableHeaderClassName,
 } from '@/components/shared/table-surface'
 import {
@@ -39,6 +42,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { controlSizeClassNames } from '@/components/ui/control-size'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -55,16 +59,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { getCredentialInFlightId } from '@/features/credentials/credential-concurrency'
 import {
   type CreateCredentialMode,
@@ -79,14 +75,19 @@ import {
 import {
   getCredentialDisplayName,
   getCredentialProviderLabel,
-  getCredentialStatusTone,
 } from '@/features/credentials/credential-display'
 import {
   filterCredentialResources,
   hasCredentialFilters,
+  isCredentialWebsocketEnabled,
 } from '@/features/credentials/credential-filters'
 import {
+  type CredentialInFlightAvailability,
+  CredentialInFlightCell,
+} from '@/features/credentials/credential-in-flight-cell'
+import {
   CoolingCell,
+  CredentialEnabledCell,
   type InlineMetadataSave,
   WebsocketsCell,
 } from '@/features/credentials/credential-inline-cells'
@@ -95,7 +96,7 @@ import {
   useCredentialModels,
   useCredentialWorkbench,
 } from '@/features/credentials/use-credential-workbench'
-import { UpstreamQuotaCell } from '@/features/upstream/quota-cells'
+import { CredentialQuotaSummary } from '@/features/upstream/credential-quota-summary'
 import { type UpstreamAccountsStats } from '@/features/upstream/summary-cards'
 import {
   type UpstreamQuotaEntry,
@@ -222,6 +223,36 @@ function CredentialErrorState({
   )
 }
 
+function CredentialQuickFilter({
+  checked,
+  label,
+  onCheckedChange,
+}: {
+  checked: boolean
+  label: string
+  onCheckedChange: (checked: boolean) => void
+}) {
+  return (
+    <label
+      className={cn(
+        'control-bordered border-input bg-background dark:bg-input/30 flex w-full min-w-0 cursor-pointer items-center border shadow-xs sm:w-auto sm:max-w-[min(18rem,100%)] sm:shrink-0',
+        controlSizeClassNames.xl,
+      )}
+    >
+      <Checkbox
+        checked={checked}
+        aria-label={label}
+        onCheckedChange={(value) => onCheckedChange(value === true)}
+      />
+      <OverflowTooltipText
+        value={label}
+        overflowClassName="cursor-pointer"
+        tooltipClassName={credentialCellTooltipClassName}
+      />
+    </label>
+  )
+}
+
 export function AccountsToolbar({
   resources,
   search,
@@ -265,10 +296,6 @@ export function AccountsToolbar({
     }))
     .sort((left, right) => providerCollator.compare(left.label, right.label))
   const statusFilters: CredentialStatusFilter[] = ['all', 'active', 'disabled', 'unavailable']
-  const activeQuickFilters = [
-    ...(quotaAvailable && attentionOnly ? ['attention'] : []),
-    ...(websocketOnly ? ['ws'] : []),
-  ]
   const hasActiveFilters = hasCredentialFilters({
     search,
     statusFilter,
@@ -279,37 +306,41 @@ export function AccountsToolbar({
   })
 
   return (
-    <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center">
-      <div className="relative w-full min-w-0 lg:max-w-80 lg:flex-1">
-        <Search
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          size="xl"
-          className="pl-9"
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder={t('credentialsPage.list.filterPlaceholder')}
-          aria-label={t('credentialsPage.list.filterPlaceholder')}
-        />
-      </div>
-      <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-2 sm:flex sm:flex-wrap sm:items-center lg:min-w-0 lg:flex-1">
+    <TooltipProvider delayDuration={120}>
+      <div
+        className={cn(filterRowClassName, 'border-b px-4 py-3 sm:flex-wrap')}
+        role="group"
+        aria-label={t('credentialsPage.filters.quickFilters')}
+      >
+        <div className="relative w-full min-w-0 sm:max-w-80 sm:min-w-[min(13rem,100%)] sm:flex-1">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            type="search"
+            size="xl"
+            className="pl-9"
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder={t('credentialsPage.list.filterPlaceholder')}
+            aria-label={t('credentialsPage.list.filterPlaceholder')}
+          />
+        </div>
         <Select
           value={statusFilter}
           onValueChange={(value) => onStatusFilterChange(value as CredentialStatusFilter)}
         >
           <SelectTrigger
             size="xl"
-            className="w-full sm:w-40"
+            className="w-full max-w-full sm:w-40"
             aria-label={t('credentialsPage.filters.status')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {statusFilters.map((filter) => (
-              <SelectItem key={filter} value={filter} className="min-h-11 sm:min-h-10">
+              <SelectItem key={filter} value={filter}>
                 {t(`credentialsPage.statusFilters.${filter}`)}
               </SelectItem>
             ))}
@@ -319,49 +350,37 @@ export function AccountsToolbar({
         <Select value={providerFilter} onValueChange={onProviderFilterChange}>
           <SelectTrigger
             size="xl"
-            className="w-full sm:w-52"
+            className="w-full max-w-full sm:w-52"
             aria-label={t('credentialsPage.filters.provider')}
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all" className="min-h-11 sm:min-h-10">
-              {t('credentialsPage.filters.allProviders')}
-            </SelectItem>
+            <SelectItem value="all">{t('credentialsPage.filters.allProviders')}</SelectItem>
             {providers.map((provider) => (
-              <SelectItem key={provider.id} value={provider.id} className="min-h-11 sm:min-h-10">
+              <SelectItem key={provider.id} value={provider.id}>
                 {provider.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        <ToggleGroup
-          type="multiple"
-          value={activeQuickFilters}
-          variant="outline"
-          size="xl"
-          className="col-span-full w-full justify-start border-0 bg-transparent p-0 shadow-none sm:w-auto"
-          aria-label={t('credentialsPage.filters.quickFilters')}
-          onValueChange={(values) => {
-            onAttentionOnlyChange(quotaAvailable && values.includes('attention'))
-            onWebsocketOnlyChange(values.includes('ws'))
-          }}
-        >
-          {quotaAvailable ? (
-            <ToggleGroupItem
-              value="attention"
-              className="data-[state=on]:border-warning/45 data-[state=on]:bg-warning/12 data-[state=on]:text-warning-foreground dark:data-[state=on]:text-warning"
-            >
-              {t('upstreamPage.quotaChips.attention')}
-            </ToggleGroupItem>
-          ) : null}
-          <ToggleGroupItem value="ws">{t('upstreamPage.quotaChips.ws')}</ToggleGroupItem>
-        </ToggleGroup>
+        {quotaAvailable ? (
+          <CredentialQuickFilter
+            checked={attentionOnly}
+            label={t('upstreamPage.quotaChips.attention')}
+            onCheckedChange={onAttentionOnlyChange}
+          />
+        ) : null}
+        <CredentialQuickFilter
+          checked={websocketOnly}
+          label={t('upstreamPage.quotaChips.ws')}
+          onCheckedChange={onWebsocketOnlyChange}
+        />
 
-        <div className="col-span-full flex min-h-10 min-w-0 items-center justify-between gap-2 sm:ml-auto">
+        <div className="flex w-full max-w-full min-w-0 items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:shrink-0">
           <p
-            className="text-muted-foreground min-w-0 text-sm tabular-nums sm:text-xs"
+            className="text-muted-foreground text-meta min-w-0 tabular-nums"
             role="status"
             aria-live="polite"
           >
@@ -370,30 +389,24 @@ export function AccountsToolbar({
               total: resources.length,
             })}
           </p>
-          {hasActiveFilters ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="xl"
-              className="px-2.5"
-              onClick={onClearFilters}
-            >
-              {t('credentialsPage.filters.clear')}
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="text"
+            size="xl"
+            disabled={!hasActiveFilters}
+            onClick={onClearFilters}
+          >
+            {t('credentialsPage.filters.clear')}
+          </Button>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
-/*
- * The action column used to be measured per locale — 224px for Chinese, 260 for
- * English, 284 for Russian — because three labelled buttons only fit if you know
- * how long the labels are. A shared reserved width replaces the table: the labels
- * still differ, but the column no longer has to be tailored to them, and below
- * 40rem there are no labels in it at all.
- */
+const credentialCellTooltipClassName =
+  'max-h-[calc(100dvh-2rem)] max-w-[min(24rem,calc(100vw-2rem))] overflow-y-auto wrap-anywhere whitespace-normal'
+
 function CredentialList({
   resources,
   selectedResourceId,
@@ -402,11 +415,14 @@ function CredentialList({
   cooldownResetSupported,
   quotaAvailable,
   quotaLoading,
+  quotaReadFailed,
   quotaRecollectAvailable,
   quotaSyncing,
   quotaTruncated,
   quotaMap,
   quotaCollectingIds,
+  inFlightByCredentialId,
+  inFlightAvailability,
   emptyState,
   onClearFilters,
   onClearCooldown,
@@ -426,11 +442,14 @@ function CredentialList({
   cooldownResetSupported: boolean
   quotaAvailable: boolean
   quotaLoading: boolean
+  quotaReadFailed: boolean
   quotaRecollectAvailable: boolean
   quotaSyncing: boolean
   quotaTruncated: boolean
   quotaMap: Map<string, UpstreamQuotaEntry>
   quotaCollectingIds: Set<string>
+  inFlightByCredentialId: Map<string, CredentialInFlightSummary>
+  inFlightAvailability: CredentialInFlightAvailability
   emptyState: 'empty' | 'filtered-empty'
   onClearFilters: () => void
   onClearCooldown: (resource: CredentialResource) => void
@@ -481,263 +500,283 @@ function CredentialList({
   }
 
   return (
-    <Table
-      containerClassName={cn(containedTableContainerClassName, 'rounded-md border')}
-      className="table-fixed sm:min-w-[1350px]"
-    >
-      {/*
+    <TooltipProvider delayDuration={120}>
+      <ContainedTable
+        containerClassName="credential-quota-table rounded-md border"
+        className="table-fixed sm:min-w-[1480px]"
+      >
+        {/*
         The identity column is the one given `auto`: in a fixed layout the
         remaining width lands on it, so the table fits any viewport without a
         min-width floor and the cell still truncates. Status keeps a fixed width
         so the two do not split the remainder between them.
       */}
-      <colgroup>
-        <col className="w-[44px]" />
-        <col className={showSecondary ? 'w-[250px]' : undefined} />
-        {showSecondary ? (
-          <>
-            <col className="w-[118px]" />
-            <col className="w-[150px]" />
-          </>
-        ) : (
-          /* Status carries a switch as well as a badge, so it cannot go as narrow
-             as a label. Below 40rem the two stack instead of sitting side by side,
-             which trades a little height for the width the identity column needs. */
-          <col className="w-24" />
-        )}
-        {showSecondary ? (
-          <>
-            <col className="w-[232px]" />
-            <col className="w-[96px]" />
-            <col className="w-[120px]" />
-            <col className="w-[112px]" />
-          </>
-        ) : null}
-        <col className="table-action-column-3" />
-      </colgroup>
-      <TableHeader className={stickyTableHeaderClassName}>
-        <TableRow variant="static">
-          <TableHead>
-            <Checkbox
-              checked={partiallySelected ? 'indeterminate' : allSelected}
-              aria-label={t('credentialsPage.bulk.selectAll')}
-              disabled={mutating}
-              onCheckedChange={onToggleAll}
-            />
-          </TableHead>
-          <TableHead>{t('credentialsPage.list.credential')}</TableHead>
-          {showSecondary ? <TableHead>{t('credentialsPage.list.provider')}</TableHead> : null}
-          <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
+        <colgroup>
+          <col className="w-[44px]" />
+          <col className={showSecondary ? 'w-[240px]' : undefined} />
           {showSecondary ? (
             <>
-              <TableHead>{t('credentialsPage.list.quota')}</TableHead>
-              <TableHead>{t('credentialsPage.list.ws')}</TableHead>
-              <TableHead>{t('credentialsPage.list.cooling')}</TableHead>
-              <TableHead>{t('credentialsPage.list.priority')}</TableHead>
+              <col className="w-[144px]" />
+              <col className="w-24" />
+            </>
+          ) : (
+            <col className="w-24" />
+          )}
+          {showSecondary ? (
+            <>
+              <col className="w-[22rem]" />
+              <col className="w-[112px]" />
+              <col className="w-[9rem]" />
+              <col className="w-[116px]" />
+              <col className="w-[6.5rem]" />
+              <col className="w-[5.5rem]" />
             </>
           ) : null}
-          <TableHead className="table-sticky-action-head table-action-column-3 text-right">
-            {t('credentialsPage.list.actions')}
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {resources.map((resource) => {
-          const statusTone = getCredentialStatusTone(resource)
-          const displayName = getCredentialDisplayName(resource)
-          const providerLabel = getCredentialProviderLabel(t, resource.provider)
-          const quotaAction = resolveCredentialQuotaAction({
-            resource,
-            entry: findUpstreamQuotaEntry(quotaMap, resource),
-            available: quotaAvailable && quotaRecollectAvailable,
-            collecting: quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(resource)),
-          })
-          const quotaBlocked = ['disabled', 'unsupported', 'unavailable'].includes(quotaAction)
-
-          return (
-            <TableRow
-              key={resource.id}
-              className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
-              variant="resource"
-            >
-              <TableCell>
-                <Checkbox
-                  checked={selectedResourceIds.has(resource.id)}
-                  aria-label={t('credentialsPage.bulk.selectOne', {
-                    name: displayName,
-                  })}
-                  disabled={mutating}
-                  onCheckedChange={() => onToggleSelection(resource)}
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
-                    <FileJson className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{displayName}</p>
-                    <p className="text-muted-foreground mt-1 truncate font-mono text-xs">
-                      {resource.name ?? resource.authIndex ?? resource.identifier}
-                    </p>
-                    {resource.note ? (
-                      <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                        {resource.note}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              </TableCell>
-              {showSecondary ? (
-                <TableCell>
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="border-primary/30 bg-primary/10 text-primary inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium">
-                      {providerLabel}
-                    </span>
-                    {resource.type ? (
-                      <span className="border-border bg-muted text-muted-foreground inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-xs">
-                        {resource.type}
+          <col className="table-action-column-3" />
+        </colgroup>
+        <TableHeader className={stickyTableHeaderClassName}>
+          <TableRow variant="static">
+            <TableHead>
+              <Checkbox
+                checked={partiallySelected ? 'indeterminate' : allSelected}
+                aria-label={t('credentialsPage.bulk.selectAll')}
+                disabled={mutating}
+                onCheckedChange={onToggleAll}
+              />
+            </TableHead>
+            <TableHead className="whitespace-normal">
+              {t('credentialsPage.list.credential')}
+            </TableHead>
+            {showSecondary ? (
+              <TableHead className="whitespace-normal">
+                {t('credentialsPage.list.provider')}
+              </TableHead>
+            ) : null}
+            <TableHead>{t('credentialsPage.list.enabled')}</TableHead>
+            {showSecondary ? (
+              <>
+                <TableHead>{t('credentialsPage.list.quota')}</TableHead>
+                <TableHead>{t('credentialsPage.list.inFlight')}</TableHead>
+                <TableHead>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-pointer" tabIndex={0}>
+                        {t('credentialsPage.list.ws')}
                       </span>
-                    ) : null}
-                  </div>
-                </TableCell>
-              ) : null}
-              <TableCell>
-                <div
-                  className={cn(
-                    'flex min-w-0 gap-2',
-                    showSecondary ? 'items-center' : 'flex-col items-start',
-                  )}
-                >
-                  <Switch
-                    checked={!resource.disabled}
-                    disabled={mutating}
-                    aria-label={t('credentialsPage.list.toggleStatus', {
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[min(24rem,calc(100vw-2rem))] whitespace-normal">
+                      {t('credentialsPage.form.websocketsHint')}
+                    </TooltipContent>
+                  </Tooltip>
+                </TableHead>
+                <TableHead className="whitespace-normal">
+                  {t('credentialsPage.list.cooling')}
+                </TableHead>
+                <TableHead>{t('credentialsPage.list.priority')}</TableHead>
+                <TableHead>{t('credentialsPage.list.weight')}</TableHead>
+              </>
+            ) : null}
+            <TableHead className="table-sticky-action-head table-action-column-3 text-right">
+              <span className={showSecondary ? undefined : 'sr-only'}>
+                {t('credentialsPage.list.actions')}
+              </span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {resources.map((resource) => {
+            const displayName = getCredentialDisplayName(resource)
+            const providerLabel = getCredentialProviderLabel(t, resource.provider)
+            const quotaAction = resolveCredentialQuotaAction({
+              resource,
+              entry: findUpstreamQuotaEntry(quotaMap, resource),
+              available: quotaAvailable && quotaRecollectAvailable,
+              collecting: quotaSyncing || quotaCollectingIds.has(getCredentialQuotaId(resource)),
+            })
+            const quotaBlocked = ['disabled', 'unsupported', 'unavailable'].includes(quotaAction)
+
+            return (
+              <TableRow
+                key={resource.id}
+                className={cn('group', resource.id === selectedResourceId ? 'bg-primary/8' : null)}
+                variant="resource"
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={selectedResourceIds.has(resource.id)}
+                    aria-label={t('credentialsPage.bulk.selectOne', {
                       name: displayName,
                     })}
-                    onCheckedChange={(checked) => onToggleStatus(resource, !checked)}
+                    disabled={mutating}
+                    onCheckedChange={() => onToggleSelection(resource)}
                     onClick={(event) => event.stopPropagation()}
                   />
-                  <span
-                    className={cn(
-                      'inline-flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium',
-                      statusTone === 'positive'
-                        ? 'border-primary/30 bg-primary/10 text-primary'
-                        : statusTone === 'warning'
-                          ? 'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning'
-                          : 'border-border bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {statusTone === 'warning' ? (
-                      <AlertTriangle className="size-3 shrink-0" aria-hidden="true" />
-                    ) : (
-                      <CheckCircle2 className="size-3 shrink-0" aria-hidden="true" />
-                    )}
-                    <span className="truncate">
-                      {resource.disabled
-                        ? t('credentialsPage.status.disabled')
-                        : resource.unavailable
-                          ? t('credentialsPage.status.unavailable')
-                          : t(`credentialsPage.status.${resource.status}`, {
-                              defaultValue: resource.status,
-                            })}
+                </TableCell>
+                <TableCell>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-md">
+                      <FileJson className="size-4" aria-hidden="true" />
                     </span>
-                  </span>
-                </div>
-              </TableCell>
-              {showSecondary ? (
-                <>
+                    <div className="min-w-0 flex-1">
+                      <OverflowTooltipText
+                        value={displayName}
+                        className="font-medium"
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
+                      <OverflowTooltipText
+                        value={resource.name ?? resource.authIndex ?? resource.identifier}
+                        className="text-muted-foreground mt-1 font-mono text-xs"
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
+                      {resource.note ? (
+                        <OverflowTooltipText
+                          value={resource.note}
+                          className="text-muted-foreground mt-0.5 text-xs"
+                          overflowClassName="cursor-pointer"
+                          tooltipClassName={credentialCellTooltipClassName}
+                        />
+                      ) : null}
+                    </div>
+                  </div>
+                </TableCell>
+                {showSecondary ? (
                   <TableCell>
-                    <UpstreamQuotaCell
-                      collecting={quotaAction === 'collecting'}
-                      unavailableReason={
-                        quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
-                      }
-                      state={resolveUpstreamQuotaCellState({
-                        available: quotaAvailable,
-                        loading: quotaLoading,
-                        truncated: quotaTruncated,
-                        map: quotaMap,
-                        resource,
-                      })}
-                    />
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ProviderLogo providerId={resource.provider} size="xs" />
+                      <OverflowTooltipText
+                        value={providerLabel}
+                        overflowClassName="cursor-pointer"
+                        tooltipClassName={credentialCellTooltipClassName}
+                      />
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    <WebsocketsCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-                  </TableCell>
-                  <TableCell>
-                    <CoolingCell resource={resource} mutating={mutating} onSave={onSaveInline} />
-                  </TableCell>
-                  <TableCell>
-                    {resource.priority === null ? (
-                      <span className="text-muted-foreground text-xs">
-                        {t('credentialsPage.status.notSet')}
-                      </span>
-                    ) : (
-                      <span className="font-mono text-xs font-medium tabular-nums">
-                        {resource.priority}
-                      </span>
-                    )}
-                  </TableCell>
-                </>
-              ) : null}
-              <TableCell className="table-sticky-action-cell table-action-column-3 pl-4 text-right transition-colors">
-                <RowActions
-                  menuLabel={displayName}
-                  actions={[
-                    {
-                      id: 'detail',
-                      label: t('credentialsPage.actions.detail'),
-                      icon: Eye,
-                      onSelect: () => onOpenDrawer(resource, 'overview'),
-                    },
-                    {
-                      id: 'download',
-                      label: t('credentialsPage.actions.download'),
-                      icon: Download,
-                      disabled: mutating,
-                      onSelect: () => onDownloadResource(resource),
-                    },
-                    !quotaBlocked
-                      ? {
-                          id: 'collect-quota',
-                          label: t(`upstreamPage.quota.actions.${quotaAction}`),
-                          ariaLabel: `${t(`upstreamPage.quota.actions.${quotaAction}`)}: ${displayName}`,
-                          icon: RefreshCw,
-                          busy: quotaAction === 'collecting',
-                          disabled: mutating,
-                          onSelect: () => onCollectQuota(resource),
+                ) : null}
+                <TableCell>
+                  <CredentialEnabledCell
+                    resource={resource}
+                    mutating={mutating}
+                    onToggleStatus={onToggleStatus}
+                    onInspect={() => onOpenDrawer(resource, 'overview')}
+                  />
+                </TableCell>
+                {showSecondary ? (
+                  <>
+                    <TableCell>
+                      <CredentialQuotaSummary
+                        onInspect={() => onOpenDrawer(resource, 'quota')}
+                        collecting={quotaAction === 'collecting'}
+                        unavailableReason={
+                          quotaBlocked ? t(`upstreamPage.quota.actions.${quotaAction}`) : undefined
                         }
-                      : null,
-                    cooldownResetSupported && getCredentialCooldownId(resource) !== null
-                      ? {
-                          id: 'clear-cooldown',
-                          label: t('credentialsPage.actions.clearCooldown'),
-                          ariaLabel: t('credentialsPage.actions.clearCooldownFor', {
-                            name: displayName,
-                          }),
-                          icon: TimerReset,
-                          disabled: mutating,
-                          onSelect: () => onClearCooldown(resource),
+                        state={resolveUpstreamQuotaCellState({
+                          available: quotaAvailable,
+                          loading: quotaLoading,
+                          readFailed: quotaReadFailed,
+                          truncated: quotaTruncated,
+                          map: quotaMap,
+                          resource,
+                        })}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CredentialInFlightCell
+                        resource={resource}
+                        summary={
+                          inFlightByCredentialId.get(getCredentialInFlightId(resource)) ?? null
                         }
-                      : null,
-                    {
-                      id: 'delete',
-                      label: t('credentialsPage.actions.delete'),
-                      icon: Trash2,
-                      tone: 'destructive',
-                      disabled: mutating,
-                      onSelect: () => onDeleteResource(resource),
-                    },
-                  ]}
-                />
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
+                        availability={inFlightAvailability}
+                        onInspect={() => onOpenDrawer(resource, 'concurrency')}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <WebsocketsCell
+                        resource={resource}
+                        mutating={mutating}
+                        onSave={onSaveInline}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <CoolingCell resource={resource} mutating={mutating} onSave={onSaveInline} />
+                    </TableCell>
+                    <TableCell>
+                      {resource.priority === null ? (
+                        <span className="text-muted-foreground text-body tabular-nums">0</span>
+                      ) : (
+                        <span className="text-body font-medium tabular-nums">
+                          {resource.priority}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {resource.weight === null || resource.weight === undefined ? (
+                        <span className="text-muted-foreground text-body tabular-nums">1</span>
+                      ) : (
+                        <span className="text-body font-medium tabular-nums">
+                          {resource.weight}
+                        </span>
+                      )}
+                    </TableCell>
+                  </>
+                ) : null}
+                <TableCell className="table-sticky-action-cell table-action-column-3 pl-4 text-right transition-colors">
+                  <RowActions
+                    menuLabel={displayName}
+                    actions={[
+                      {
+                        id: 'detail',
+                        label: t('credentialsPage.actions.detail'),
+                        icon: Eye,
+                        onSelect: () => onOpenDrawer(resource, 'overview'),
+                      },
+                      !quotaBlocked
+                        ? {
+                            id: 'collect-quota',
+                            label: t(`upstreamPage.quota.actions.${quotaAction}`),
+                            ariaLabel: `${t(`upstreamPage.quota.actions.${quotaAction}`)}: ${displayName}`,
+                            icon: RefreshCw,
+                            busy: quotaAction === 'collecting',
+                            disabled: mutating,
+                            onSelect: () => onCollectQuota(resource),
+                          }
+                        : null,
+                      {
+                        id: 'download',
+                        label: t('credentialsPage.actions.download'),
+                        icon: Download,
+                        disabled: mutating,
+                        onSelect: () => onDownloadResource(resource),
+                      },
+                      cooldownResetSupported && getCredentialCooldownId(resource) !== null
+                        ? {
+                            id: 'clear-cooldown',
+                            label: t('credentialsPage.actions.clearCooldown'),
+                            ariaLabel: t('credentialsPage.actions.clearCooldownFor', {
+                              name: displayName,
+                            }),
+                            icon: TimerReset,
+                            disabled: mutating,
+                            onSelect: () => onClearCooldown(resource),
+                          }
+                        : null,
+                      {
+                        id: 'delete',
+                        label: t('credentialsPage.actions.delete'),
+                        icon: Trash2,
+                        tone: 'destructive',
+                        disabled: mutating,
+                        onSelect: () => onDeleteResource(resource),
+                      },
+                    ]}
+                  />
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </ContainedTable>
+    </TooltipProvider>
   )
 }
 
@@ -751,6 +790,7 @@ export function AccountsPanel({
   onWebsocketOnlyChange,
   quotaAvailable = false,
   quotaLoading = false,
+  quotaReadFailed = false,
   quotaTruncated = false,
   quotaMap,
   quotaRecollectAvailable = false,
@@ -768,6 +808,7 @@ export function AccountsPanel({
   onWebsocketOnlyChange?: (websocketOnly: boolean) => void
   quotaAvailable?: boolean
   quotaLoading?: boolean
+  quotaReadFailed?: boolean
   quotaTruncated?: boolean
   quotaMap?: Map<string, UpstreamQuotaEntry>
   quotaRecollectAvailable?: boolean
@@ -778,6 +819,7 @@ export function AccountsPanel({
 }) {
   const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const detailTriggerRef = useRef<HTMLElement | null>(null)
   const workbench = useCredentialWorkbench()
   const [statusFilter, setStatusFilter] = useState<CredentialStatusFilter>('all')
   const [providerFilter, setProviderFilter] = useState('all')
@@ -944,7 +986,7 @@ export function AccountsPanel({
       active: resources.filter((resource) => !resource.disabled && !resource.unavailable).length,
       disabled: resources.filter((resource) => resource.disabled).length,
       unavailable: resources.filter((resource) => resource.unavailable).length,
-      websockets: resources.filter((resource) => resource.websockets).length,
+      websockets: resources.filter(isCredentialWebsocketEnabled).length,
       attention: countUpstreamQuotaAttentionResources(resources, resolvedQuotaMap),
     })
   }, [onStatsChange, resolvedQuotaMap, resources, workbench.snapshot])
@@ -1476,11 +1518,29 @@ export function AccountsPanel({
             cooldownResetSupported={workbench.credentialCooldownReset}
             quotaAvailable={quotaAvailable}
             quotaLoading={quotaLoading}
+            quotaReadFailed={quotaReadFailed}
             quotaRecollectAvailable={quotaRecollectAvailable && Boolean(onCollectQuota)}
             quotaSyncing={quotaSyncing}
             quotaTruncated={quotaTruncated}
             quotaMap={resolvedQuotaMap}
             quotaCollectingIds={quotaCollectingIds}
+            inFlightByCredentialId={inFlightByCredentialId}
+            inFlightAvailability={{
+              available: workbench.credentialInFlight || workbench.credentialConcurrencyLimits,
+              pending:
+                (workbench.credentialInFlight && workbench.inFlightPending) ||
+                (workbench.credentialConcurrencyLimits && workbench.concurrencyPending),
+              stale:
+                workbench.inFlightStale ||
+                workbench.concurrencyStale ||
+                Boolean(workbench.inFlightSnapshot?.stale) ||
+                Boolean(
+                  workbench.inFlightSnapshot &&
+                  (!workbench.inFlightSnapshot.coverageComplete ||
+                    !workbench.inFlightSnapshot.aggregatesComplete),
+                ),
+              errorMessage: concurrencyErrorMessage || null,
+            }}
             emptyState={resources.length > 0 && hasActiveFilters ? 'filtered-empty' : 'empty'}
             onClearFilters={handleClearFilters}
             onCollectQuota={(resource) => void onCollectQuota?.(resource)}
@@ -1490,6 +1550,8 @@ export function AccountsPanel({
             }}
             onDownloadResource={(resource) => void handleDownload(resource)}
             onOpenDrawer={(resource, tab) => {
+              detailTriggerRef.current =
+                document.activeElement instanceof HTMLElement ? document.activeElement : null
               setSelectedResourceId(resource.id)
               setDrawerTab(tab)
               setDetailSheetOpen(true)
@@ -1510,7 +1572,15 @@ export function AccountsPanel({
       </TableSurface>
 
       <Sheet open={detailSheetOpen} onOpenChange={setDetailSheetOpen}>
-        <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
+        <SheetContent
+          className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
+          onCloseAutoFocus={(event) => {
+            const trigger = detailTriggerRef.current
+            if (!trigger?.isConnected) return
+            event.preventDefault()
+            trigger.focus({ preventScroll: true })
+          }}
+        >
           {selectedResource ? (
             <CredentialDetailDrawer
               resource={selectedResource}

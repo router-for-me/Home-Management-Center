@@ -21,7 +21,7 @@ import {
 type UserModelCardProps = {
   model: UserCatalogModel
   authenticated: boolean
-  onOpenDetails: (model: UserCatalogModel) => void
+  onOpenDetails: (model: UserCatalogModel, section?: 'pricing') => void
 }
 
 function CapabilityBadge({
@@ -213,9 +213,11 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
         <CardPriceSummary
           authenticated={authenticated}
           accessible={model.accessible}
+          hasPricing={model.pricing !== null}
           published={model.pricing?.status === 'published'}
           entryPoint={entryPoint}
           locale={locale}
+          onOpenPricing={() => onOpenDetails(model, 'pricing')}
         />
       </div>
     </article>
@@ -225,28 +227,34 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
 function CardPriceSummary({
   authenticated,
   accessible,
+  hasPricing,
   published,
   entryPoint,
   locale,
+  onOpenPricing,
 }: {
   authenticated: boolean
   accessible: boolean | null
+  hasPricing: boolean
   published: boolean
   entryPoint: ReturnType<typeof pricingEntryPoint>
   locale: string
+  onOpenPricing: () => void
 }) {
   const { t } = useTranslation()
 
-  if (!authenticated) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.signedOut')}</p>
-  }
+  if (!hasPricing) {
+    if (!authenticated) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.signedOut')}</p>
+    }
 
-  if (accessible === false) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.notCovered')}</p>
-  }
+    if (accessible === false) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.notCovered')}</p>
+    }
 
-  if (accessible === null) {
-    return <p className="text-muted-foreground text-xs">{t('userModels.price.unavailable')}</p>
+    if (accessible === null) {
+      return <p className="text-muted-foreground text-xs">{t('userModels.price.unavailable')}</p>
+    }
   }
 
   // A published ladder with no readable entry rung, or no ladder at all, is the
@@ -257,27 +265,50 @@ function CardPriceSummary({
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <p className="min-w-0 text-xs">
-        <span className="text-muted-foreground">{t('userModels.price.from')}</span>{' '}
-        <span className="text-foreground font-semibold tabular-nums">
-          {entryPoint.input === null
-            ? t('userModels.value.unreported')
-            : formatModelPrice(entryPoint.input, locale)}
-        </span>{' '}
-        <span className="text-muted-foreground">{t('userModels.price.inSuffix')}</span>{' '}
-        <span className="text-muted-foreground">/</span>{' '}
-        <span className="text-foreground font-semibold tabular-nums">
-          {entryPoint.output === null
-            ? t('userModels.value.unreported')
-            : formatModelPrice(entryPoint.output, locale)}
-        </span>{' '}
-        <span className="text-muted-foreground">{t('userModels.price.outSuffix')}</span>
-      </p>
-      {entryPoint.tiered ? (
-        <Badge variant="info">
-          {t('userModels.price.tiered', { rungs: entryPoint.maxRungCount })}
-        </Badge>
+    <div className="grid gap-1">
+      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <p className="min-w-0 text-xs">
+          <span className="text-muted-foreground">{t('userModels.price.from')}</span>{' '}
+          <span className="text-foreground font-semibold tabular-nums">
+            {entryPoint.input === null
+              ? t('userModels.value.unreported')
+              : formatModelPrice(entryPoint.input, locale)}
+          </span>{' '}
+          <span className="text-muted-foreground">{t('userModels.price.inSuffix')}</span>{' '}
+          <span className="text-muted-foreground">/</span>{' '}
+          <span className="text-foreground font-semibold tabular-nums">
+            {entryPoint.output === null
+              ? t('userModels.value.unreported')
+              : formatModelPrice(entryPoint.output, locale)}
+          </span>{' '}
+          <span className="text-muted-foreground">{t('userModels.price.outSuffix')}</span>
+        </p>
+        {entryPoint.tiered ? (
+          <Badge variant="info">
+            {t('userModels.price.tiered', { rungs: entryPoint.maxRungCount })}
+          </Badge>
+        ) : null}
+      </div>
+      {entryPoint.toolPrices.length > 0 ? (
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          className="max-w-full min-w-0 justify-start"
+          onClick={onOpenPricing}
+          title={entryPoint.toolPrices
+            .map(
+              (item) =>
+                `${t(`userModels.price.tools.${item.key}`)} ${formatModelPrice(item.pricePerCall, locale)}${t('userModels.price.perCall')}`,
+            )
+            .join(' · ')}
+        >
+          <Wrench aria-hidden="true" />
+          <span className="min-w-0 truncate">
+            {t('userModels.price.toolsDetails', { count: entryPoint.toolPrices.length })}
+          </span>
+          <ChevronRight aria-hidden="true" />
+        </Button>
       ) : null}
     </div>
   )
