@@ -1617,6 +1617,8 @@ function RequestEventsTable({
   const getColumnWidth = (column: RequestEventColumn) =>
     columnWidthOverrides[column.key] ?? autoColumnWidths[column.key] ?? column.width
 
+  const headerRefs = useRef<Partial<Record<RequestEventColumnKey, HTMLTableCellElement | null>>>({})
+
   const handleResizeStart = (
     event: React.MouseEvent<HTMLDivElement>,
     column: RequestEventColumn,
@@ -1624,17 +1626,21 @@ function RequestEventsTable({
     event.preventDefault()
     event.stopPropagation()
     const startX = event.clientX
-    const startWidth = getColumnWidth(column)
+    const snapshotWidths: RequestEventColumnWidthOverrides = {}
+    for (const col of visibleColumnConfigs) {
+      snapshotWidths[col.key] = getColumnWidth(col)
+    }
+    const startWidth = snapshotWidths[column.key] ?? getColumnWidth(column)
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX
       const nextWidth = Math.round(
         Math.min(column.maxWidth, Math.max(column.minWidth, startWidth + delta)),
       )
-      setColumnWidthOverrides((prev) => ({
-        ...prev,
+      setColumnWidthOverrides({
+        ...snapshotWidths,
         [column.key]: nextWidth,
-      }))
+      })
     }
 
     const handleMouseUp = () => {
@@ -1832,19 +1838,35 @@ function RequestEventsTable({
               <ContainedTable
                 containerRef={tableContainerRef}
                 containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
-                className="table-fixed"
-                style={showSecondary ? { minWidth: tableWidth } : undefined}
+                className="w-auto table-fixed"
+                style={showSecondary ? { width: tableWidth } : undefined}
                 /*
                 The rows outside the window are not in the DOM, so the table has
                 to state how many there really are; the head counts as row one.
               */
                 aria-rowcount={rows.length + 1}
               >
+                <colgroup>
+                  {visibleColumnConfigs.map((column, index) => (
+                    <col
+                      key={column.key}
+                      style={
+                        !showSecondary && index === 0
+                          ? undefined
+                          : { width: getColumnWidth(column) }
+                      }
+                    />
+                  ))}
+                  <col />
+                </colgroup>
                 <TableHeader className={stickyTableHeaderClassName}>
                   <TableRow variant="static" aria-rowindex={1}>
                     {visibleColumnConfigs.map((column, index) => (
                       <TableHead
                         key={column.key}
+                        ref={(el) => {
+                          headerRefs.current[column.key] = el
+                        }}
                         className={cn(
                           'group/head relative select-none',
                           column.align === 'right' && 'text-right',
@@ -2110,22 +2132,41 @@ function RequestEventsTable({
                                     <span className="min-w-0 truncate font-semibold">
                                       {formatCompactNumber(tokenCounts.totalTokens)}
                                     </span>
-                                    {cacheHitRate ? (
-                                      <Badge
-                                        variant={tokenCounts.cacheReadTokens > 0 ? 'info' : 'muted'}
+                                    {totalToolCalls > 0 ? (
+                                      <span
+                                        className="border-primary/30 bg-primary/10 text-primary inline-flex shrink-0 items-center gap-0.5 rounded border px-1 py-0 text-[10px] font-medium"
+                                        title={t('requestEventsPage.detail.toolUsage')}
                                       >
-                                        <Database aria-hidden="true" />
-                                        {cacheHitRate}
-                                      </Badge>
+                                        <Wrench className="size-2.5 shrink-0" aria-hidden="true" />
+                                        <span>{formatCompactNumber(totalToolCalls)}</span>
+                                      </span>
                                     ) : null}
                                   </div>
                                   <div className="text-muted-foreground flex min-w-0 items-center justify-end gap-2 overflow-hidden text-xs">
-                                    <span className="inline-flex items-center gap-0.5">
-                                      <ArrowUpFromLine
-                                        className="text-info size-3 shrink-0"
-                                        aria-hidden="true"
-                                      />
-                                      <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <span className="inline-flex items-center gap-0.5">
+                                        <ArrowUpFromLine
+                                          className="text-info size-3 shrink-0"
+                                          aria-hidden="true"
+                                        />
+                                        <span>{formatCompactNumber(tokenCounts.inputTokens)}</span>
+                                      </span>
+                                      {cacheHitRate ? (
+                                        <span
+                                          className={cn(
+                                            'inline-flex items-center gap-0.5 rounded border px-1 py-0 text-[10px] font-medium',
+                                            tokenCounts.cacheReadTokens > 0
+                                              ? 'border-info/30 bg-info/10 text-info'
+                                              : 'border-border bg-muted/60 text-muted-foreground',
+                                          )}
+                                        >
+                                          <Database
+                                            className="size-2.5 shrink-0"
+                                            aria-hidden="true"
+                                          />
+                                          {cacheHitRate}
+                                        </span>
+                                      ) : null}
                                     </span>
                                     <span className="inline-flex items-center gap-0.5">
                                       <ArrowDownToLine
@@ -2134,18 +2175,6 @@ function RequestEventsTable({
                                       />
                                       <span>{formatCompactNumber(tokenCounts.outputTokens)}</span>
                                     </span>
-                                    {totalToolCalls > 0 ? (
-                                      <span
-                                        className="inline-flex items-center gap-0.5"
-                                        title={t('requestEventsPage.detail.toolUsage')}
-                                      >
-                                        <Wrench
-                                          className="text-primary size-3 shrink-0"
-                                          aria-hidden="true"
-                                        />
-                                        <span>{formatCompactNumber(totalToolCalls)}</span>
-                                      </span>
-                                    ) : null}
                                   </div>
                                 </div>
                               </TooltipTrigger>
