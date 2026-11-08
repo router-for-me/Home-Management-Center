@@ -455,6 +455,12 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
     ? rawWindows.map((window, windowIndex) => normalizeQuotaWindow(window, windowIndex))
     : []
 
+  const source = normalizeQuotaSource(readString(record, ['source']))
+  const collectionStatus = normalizeCollectionStatus(
+    readString(record, ['collection_status', 'collectionStatus']),
+  )
+  const lastError = normalizeCollectionError(record.error ?? record.last_error ?? record.lastError)
+
   return {
     id,
     name: readString(record, ['name', 'label']) ?? id,
@@ -468,10 +474,15 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
     credentialStatus: normalizeCredentialStatus(record),
     status: normalizeQuotaStatus(readString(record, ['quota_status', 'quotaStatus', 'status'])),
     freshness: normalizeQuotaFreshness(readString(record, ['freshness'])),
-    source: normalizeQuotaSource(readString(record, ['source'])),
-    collectionStatus: normalizeCollectionStatus(
-      readString(record, ['collection_status', 'collectionStatus']),
-    ),
+    source,
+    collectionStatus:
+      // Home stamps every response-header snapshot `partial`, since it is a
+      // passive read rather than a probe. Nothing is missing from it: it trails the
+      // probe by one request, so the percentages match. Read as incomplete, it put
+      // a standing warning on healthy cards that no action could clear.
+      collectionStatus === 'partial' && source === 'response_header' && !lastError
+        ? 'success'
+        : collectionStatus,
     observedAt: readString(record, ['observed_at', 'observedAt']),
     expiresAt: readString(record, ['expires_at', 'expiresAt']),
     earliestResetAt: readString(record, ['earliest_reset_at', 'earliestResetAt']),
@@ -479,7 +490,7 @@ function normalizeQuotaCredential(value: unknown, index: number): QuotaCredentia
     nextProbeAt: readString(record, ['next_probe_at', 'nextProbeAt']),
     lastSuccessAt: readString(record, ['last_success_at', 'lastSuccessAt']),
     consecutiveFailures: readCount(record, ['consecutive_failures', 'consecutiveFailures'], 0),
-    lastError: normalizeCollectionError(record.error ?? record.last_error ?? record.lastError),
+    lastError,
     runtime: normalizeQuotaRuntime(record.runtime),
     plan: normalizeQuotaPlan(record.plan),
     resetCredits: normalizeQuotaResetCredits(record.reset_credits ?? record.resetCredits),
