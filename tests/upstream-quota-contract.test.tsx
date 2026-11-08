@@ -246,6 +246,27 @@ describe('quota snapshot normalization contracts', () => {
     })
   })
 
+  test('reads a clean response-header snapshot as complete, but not one with an error', () => {
+    const headerCredential = {
+      credential_id: 'credential-codex-header',
+      provider: 'codex',
+      quota_status: 'healthy',
+      freshness: 'fresh',
+      collection_status: 'partial',
+      source: 'response_header',
+    }
+    const clean = normalizeQuotaSnapshot({ items: [headerCredential] }).items[0]
+    expect(clean).toMatchObject({ collectionStatus: 'success', source: 'response_header' })
+
+    const failed = normalizeQuotaCredentialDetail({
+      credential: {
+        ...headerCredential,
+        error: { code: 'partial_data', message: 'Profile request failed.' },
+      },
+    })
+    expect(failed.collectionStatus).toBe('partial')
+  })
+
   test('preserves backend-separated passive Codex quota families without inference', () => {
     const snapshot = normalizeQuotaSnapshot({
       items: [

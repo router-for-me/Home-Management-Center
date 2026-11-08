@@ -237,6 +237,7 @@ describe('xAI quota recovery states', () => {
   test('keeps absent on-demand state unknown after incomplete collection', () => {
     const entry = { ...devinEntry(), provider: 'xai' }
     expect(resolveXaiOnDemandState(entry)).toBe('disabled')
+    expect(resolveXaiOnDemandState({ ...entry, source: 'response_header' })).toBe('unknown')
     expect(resolveXaiOnDemandState({ ...entry, collectionStatus: 'partial' })).toBe('unknown')
     expect(resolveXaiOnDemandState({ ...entry, collectionStatus: 'failed' })).toBe('unknown')
     expect(

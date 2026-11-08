@@ -163,6 +163,15 @@ const requestEventColumns: RequestEventColumn[] = [
   { key: 'error', width: 220, minWidth: 140, maxWidth: 480 },
 ]
 
+// The column that absorbs a wide container's slack, first visible one wins. The
+// user agent is the value most often truncated, so it gains the most from room.
+const requestEventFlexColumnOrder: RequestEventColumnKey[] = [
+  'userAgent',
+  'credential',
+  'model',
+  'time',
+]
+
 type RequestEventColumnWidthOverrides = Partial<Record<RequestEventColumnKey, number>>
 
 const normalizeColumnWidthOverrides: PreferenceNormalizer<RequestEventColumnWidthOverrides> = (
@@ -1626,21 +1635,27 @@ function RequestEventsTable({
     event.preventDefault()
     event.stopPropagation()
     const startX = event.clientX
-    const snapshotWidths: RequestEventColumnWidthOverrides = {}
-    for (const col of visibleColumnConfigs) {
-      snapshotWidths[col.key] = getColumnWidth(col)
-    }
-    const startWidth = snapshotWidths[column.key] ?? getColumnWidth(column)
+    // The flex column shows wider than its stored width, so a drag starts from
+    // what is on screen; otherwise the first pixels of travel change nothing.
+    const flexHeader = column.key === flexColumnKey ? headerRefs.current[column.key] : null
+    const startWidth = flexHeader
+      ? Math.round(
+          Math.min(
+            column.maxWidth,
+            Math.max(column.minWidth, flexHeader.getBoundingClientRect().width),
+          ),
+        )
+      : getColumnWidth(column)
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX
       const nextWidth = Math.round(
         Math.min(column.maxWidth, Math.max(column.minWidth, startWidth + delta)),
       )
-      setColumnWidthOverrides({
-        ...snapshotWidths,
+      setColumnWidthOverrides((prev) => ({
+        ...prev,
         [column.key]: nextWidth,
-      })
+      }))
     }
 
     const handleMouseUp = () => {
@@ -1694,9 +1709,22 @@ function RequestEventsTable({
    * not add up: its width depends on the locale as well as the viewport, so the
    * sum stops at the data columns and defers the last term to CSS.
    */
-  const tableWidth = `calc(${
-    visibleColumnConfigs.reduce((width, column) => width + getColumnWidth(column), 0) + 16
-  }px + var(--table-action-column-1))`
+  const tableWidth = `calc(${visibleColumnConfigs.reduce(
+    (width, column) => width + getColumnWidth(column),
+    0,
+  )}px + var(--table-action-column-1))`
+  /*
+   * That sum is a floor, not the width: the table still fills its container. A
+   * fixed layout with every column declared would spread the slack over all of
+   * them, so a dragged column would land wider than the width it was given. One
+   * column declares no width and takes the slack alone, which keeps every other
+   * column at exactly its stored width. Below 40rem the identity column does this.
+   */
+  const flexColumnKey = showSecondary
+    ? requestEventFlexColumnOrder.find((key) => renderedColumnKeys.has(key))
+    : visibleColumnConfigs[0]?.key
+  const getDeclaredWidthStyle = (column: RequestEventColumn) =>
+    column.key === flexColumnKey ? undefined : { width: getColumnWidth(column) }
   const tableContainerRef = useRef<HTMLDivElement>(null)
   // Two stacked lines per cell, both truncated, so every row measures the same.
   const virtualRows = useVirtualTableRows({
@@ -1838,8 +1866,8 @@ function RequestEventsTable({
               <ContainedTable
                 containerRef={tableContainerRef}
                 containerClassName="max-h-[calc(100vh-250px)] rounded-md border"
-                className="w-auto table-fixed"
-                style={showSecondary ? { width: tableWidth } : undefined}
+                className="table-fixed"
+                style={showSecondary ? { minWidth: tableWidth } : undefined}
                 /*
                 The rows outside the window are not in the DOM, so the table has
                 to state how many there really are; the head counts as row one.
@@ -1847,21 +1875,14 @@ function RequestEventsTable({
                 aria-rowcount={rows.length + 1}
               >
                 <colgroup>
-                  {visibleColumnConfigs.map((column, index) => (
-                    <col
-                      key={column.key}
-                      style={
-                        !showSecondary && index === 0
-                          ? undefined
-                          : { width: getColumnWidth(column) }
-                      }
-                    />
+                  {visibleColumnConfigs.map((column) => (
+                    <col key={column.key} style={getDeclaredWidthStyle(column)} />
                   ))}
                   <col />
                 </colgroup>
                 <TableHeader className={stickyTableHeaderClassName}>
                   <TableRow variant="static" aria-rowindex={1}>
-                    {visibleColumnConfigs.map((column, index) => (
+                    {visibleColumnConfigs.map((column) => (
                       <TableHead
                         key={column.key}
                         ref={(el) => {
@@ -1877,11 +1898,7 @@ function RequestEventsTable({
                         The identity column gives up its width below 40rem and
                         takes the remainder instead.
                       */
-                        style={
-                          !showSecondary && index === 0
-                            ? undefined
-                            : { width: getColumnWidth(column) }
-                        }
+                        style={getDeclaredWidthStyle(column)}
                       >
                         <span className="block truncate">
                           {t(`requestEventsPage.table.columns.${column.key}`)}
