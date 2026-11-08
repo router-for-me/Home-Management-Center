@@ -606,7 +606,7 @@ function normalizeCompatibilityResource(
     baseUrl: readString(record, 'base-url'),
     proxyUrl: readString(record, 'proxy-url') ?? readString(firstKey, 'proxy-url'),
     prefix: readString(record, 'prefix'),
-    disabled: readBoolean(record, 'disabled') || hasDisableAllModelsRule(record),
+    disabled: readBoolean(record, 'disabled'),
     disableCooling: readBoolean(record, 'disable-cooling'),
     disableCoolingOverride:
       typeof record['disable-cooling'] === 'boolean' ? record['disable-cooling'] : null,
@@ -618,7 +618,7 @@ function normalizeCompatibilityResource(
       readNonNegativeInteger(record, 'request_retry'),
     modelCount: countArray(record, 'models'),
     headerCount: countRecordKeys(record, 'headers'),
-    excludedModelCount: countArray(record, 'excluded-models'),
+    excludedModelCount: 0,
     apiKeyEntryCount: Array.isArray(record.keys)
       ? record.keys.length
       : countArray(record, 'api-key-entries'),
@@ -1142,8 +1142,10 @@ function appendProviderOptions(
   const models = createModelPayload(input.models, descriptor, existingModels)
   payload.models = models
 
-  const excludedModels = parseTextList(input.excludedModelsText)
-  payload['excluded-models'] = excludedModels
+  if (descriptor.id !== 'openaiCompatibility') {
+    const excludedModels = parseTextList(input.excludedModelsText)
+    payload['excluded-models'] = excludedModels
+  }
 
   if (typeof input.disableCooling === 'boolean') {
     payload['disable-cooling'] = input.disableCooling

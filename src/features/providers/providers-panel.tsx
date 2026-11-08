@@ -380,7 +380,8 @@ export function createFormState(
     requestRetry: resource.requestRetry ?? undefined,
     models: readProviderModels(raw),
     headers: readProviderHeaders(raw),
-    excludedModelsText: readExcludedModelsText(raw),
+    excludedModelsText:
+      providerId === 'openaiCompatibility' ? '' : readExcludedModelsText(raw),
     testModel: supportsTestModel ? readStringField(raw, 'test-model') : undefined,
     cloak: supportsCloak ? readProviderCloak(raw) : undefined,
     requestScopedErrors: readRequestScopedErrors(raw),
@@ -1637,7 +1638,9 @@ export function ProviderFormPanel({
   const metadataFields = resource
     ? [
         ['authIndex', resource.authIndex ?? t('providersPage.status.notAvailable')],
-        ['excludedModels', String(resource.excludedModelCount)],
+        ...(descriptor.id !== 'openaiCompatibility'
+          ? ([['excludedModels', String(resource.excludedModelCount)]] as const)
+          : []),
         ['apiKeyEntries', String(resource.apiKeyEntryCount)],
         [
           'priority',
@@ -3015,29 +3018,31 @@ export function ProviderFormPanel({
           </CollapsibleContent>
         </Collapsible>
 
-        <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
-          <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">
-            <span className="min-w-0">
-              <span className="block">{t('providersPage.form.excludedModels')}</span>
-              <span className="text-muted-foreground mt-1 block text-xs leading-5 font-normal">
-                {t('providersPage.form.excludedModelsHint')}
+        {descriptor.id !== 'openaiCompatibility' ? (
+          <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
+            <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">
+              <span className="min-w-0">
+                <span className="block">{t('providersPage.form.excludedModels')}</span>
+                <span className="text-muted-foreground mt-1 block text-xs leading-5 font-normal">
+                  {t('providersPage.form.excludedModelsHint')}
+                </span>
               </span>
-            </span>
-            <ChevronDown
-              className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
-              aria-hidden="true"
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <Textarea
-              value={form.excludedModelsText}
-              onChange={(event) => updateField('excludedModelsText', event.target.value)}
-              rows={4}
-              placeholder={'model-a\nmodel-b'}
-              disabled={mutating}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+              <ChevronDown
+                className="text-muted-foreground size-4 shrink-0 transition-transform group-data-[state=open]:rotate-180"
+                aria-hidden="true"
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <Textarea
+                value={form.excludedModelsText}
+                onChange={(event) => updateField('excludedModelsText', event.target.value)}
+                rows={4}
+                placeholder={'model-a\nmodel-b'}
+                disabled={mutating}
+              />
+            </CollapsibleContent>
+          </Collapsible>
+        ) : null}
 
         <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
           <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">

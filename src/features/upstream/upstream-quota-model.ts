@@ -279,7 +279,9 @@ export function resolveXaiOnDemandState(entry: UpstreamQuotaEntry) {
     entry.source === 'active_probe' &&
     entry.windowCount === 0 &&
     Number.isFinite(Date.parse(entry.observedAt ?? ''))
-  return entry.collectionStatus === 'success' && (hasWindows || observedEmpty)
+  return entry.collectionStatus === 'success' &&
+    entry.source !== 'response_header' &&
+    (hasWindows || observedEmpty)
     ? 'disabled'
     : 'unknown'
 }
