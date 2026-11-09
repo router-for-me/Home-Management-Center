@@ -67,19 +67,6 @@ export function buildQuotaPreviewGrid(entry: QuotaCredential) {
         .map((w) => [periodKey(w)!, w]),
     ).values(),
   ]
-  if (
-    entry.provider.trim().toLowerCase() === 'antigravity' &&
-    entry.windowCount > windows.length &&
-    groups.length
-  ) {
-    // The contract's missing cycles remain empty until the detail read supplies their values.
-    for (const period of [
-      { id: 'preview-5h', label: null, periodUnit: 'hour' as const, periodValue: 5 },
-      { id: 'preview-week', label: null, periodUnit: 'week' as const, periodValue: 1 },
-    ]) {
-      if (!periods.some((value) => periodKey(value) === periodKey(period))) periods.push(period)
-    }
-  }
   const selectedPeriods = periods
     .sort((left, right) => periodOrder(left) - periodOrder(right))
     .slice(0, 2)
