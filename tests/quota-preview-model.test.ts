@@ -7,7 +7,7 @@ import {
   resolveQuotaPreviewEntry,
 } from '@/features/upstream/quota-preview-model'
 import { resolveQuotaSnapshotDisplay } from '@/features/upstream/upstream-quota-model'
-import { normalizeQuotaCredentialDetail } from '@/lib/api/management/quota'
+import { normalizeQuotaCredentialDetail, normalizeQuotaSnapshot } from '@/lib/api/management/quota'
 
 const observed = '2026-11-05T01:00:00Z'
 const later = '2026-11-05T02:00:00Z'
@@ -47,12 +47,12 @@ function entry(windows = [window('default-5h', null)], overrides: Record<string,
 }
 
 describe('quota table preview selection', () => {
-  test('shows both Antigravity periods in two stable model groups', () => {
+  test('loads missing Antigravity weekly windows from legacy list details', () => {
     const windows = [
-      window('gemini-5h', 'gemini'),
-      window('gemini-week', 'gemini', 0.07, true),
-      window('3p-5h', 'third-party', 1),
-      window('3p-week', 'third-party', 0.95, true),
+      window('antigravity-gemini-5h', 'gemini'),
+      window('antigravity-gemini-weekly', 'gemini', 0.07, true),
+      window('antigravity-3p-5h', 'third-party', 1),
+      window('antigravity-3p-weekly', 'third-party', 0.95, true),
     ]
     const full = entry(windows, {
       provider: 'antigravity',
@@ -66,11 +66,81 @@ describe('quota table preview selection', () => {
       [1, 0.95],
     ])
     expect(needsQuotaPreviewDetail(full)).toBe(false)
-    expect(needsQuotaPreviewDetail({ ...full, windows: [] })).toBe(true)
-    const pending = buildQuotaPreviewGrid({ ...full, windows: [] })!
-    expect(pending.periods.map((p) => p.periodUnit)).toEqual(['hour', 'week'])
-    expect(pending.groups.map((g) => g.values[1])).toEqual([null, null])
+    const list = { ...full, windows: [] }
+    expect(needsQuotaPreviewDetail(list)).toBe(true)
+    const pending = buildQuotaPreviewGrid(list)!
+    expect(pending.periods.map((p) => p.periodUnit)).toEqual(['hour'])
+    expect(pending.groups.map((g) => g.values.map((w) => w?.remainingRatio))).toEqual([[0.85], [1]])
+    const resolved = resolveQuotaPreviewEntry(list, full)
+    expect(needsQuotaPreviewDetail(resolved)).toBe(false)
+    expect(buildQuotaPreviewGrid(resolved)).toEqual(grid)
   })
+
+  const antigravityWindows = [
+    window('antigravity-gemini-5h', 'gemini'),
+    window('antigravity-3p-5h', 'third-party', 1),
+    window('antigravity-gemini-weekly', 'gemini', 0.07, true),
+    window('antigravity-3p-weekly', 'third-party', 0.95, true),
+  ]
+  for (const scenario of [
+    {
+      name: 'all four windows',
+      indexes: [0, 1, 2, 3],
+      periods: ['hour', 'week'],
+      values: [
+        [0.85, 0.07],
+        [1, 0.95],
+      ],
+    },
+    {
+      name: 'weekly-only windows',
+      indexes: [2, 3],
+      periods: ['week'],
+      values: [[0.07], [0.95]],
+    },
+    {
+      name: 'no third-party five-hour window',
+      indexes: [0, 2, 3],
+      periods: ['hour', 'week'],
+      values: [
+        [0.85, 0.07],
+        [null, 0.95],
+      ],
+    },
+    {
+      name: 'no Gemini five-hour window',
+      indexes: [1, 2, 3],
+      periods: ['hour', 'week'],
+      values: [
+        [null, 0.07],
+        [1, 0.95],
+      ],
+    },
+  ]) {
+    test(`renders Antigravity list with ${scenario.name} without requesting details`, () => {
+      const primaryWindows = scenario.indexes.map((index) => antigravityWindows[index])
+      const list = normalizeQuotaSnapshot({
+        items: [
+          {
+            credential_id: 'antigravity-preview',
+            provider: 'antigravity',
+            quota_status: 'low',
+            window_count: primaryWindows.length,
+            primary_windows: primaryWindows,
+          },
+        ],
+      }).items[0]!
+
+      expect(list.windows).toEqual([])
+      expect(needsQuotaPreviewDetail(list)).toBe(false)
+      const grid = buildQuotaPreviewGrid(list)!
+      expect(grid.groups.map((group) => group.id)).toEqual(['gemini', 'third-party'])
+      expect(grid.periods.map((period) => period.periodUnit)).toEqual(scenario.periods)
+      expect(
+        grid.groups.map((group) => group.values.map((value) => value?.remainingRatio ?? null)),
+      ).toEqual(scenario.values)
+    })
+  }
 
   test('keeps Codex account and Spark families separate, including their missing periods', () => {
     const windows = [
