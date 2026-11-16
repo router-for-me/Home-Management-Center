@@ -3403,10 +3403,10 @@ export const en = {
             'Configure default request headers sent to Claude and Codex upstreams for client identity spoofing and device-profile stabilization.',
         },
         payload: {
-          title: 'Request parameter rewriting',
-          shortTitle: 'Parameters',
+          title: 'Request rewriting',
+          shortTitle: 'Rewriting',
           description:
-            'Match requests by model and protocol, then fill, force, or remove request parameters.',
+            'Fill, override or remove request parameters, or replace user text by model and protocol.',
         },
         antigravity: {
           title: 'Antigravity',
@@ -3538,9 +3538,8 @@ export const en = {
             '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
         },
         payloadRulesJson: {
-          label: 'Request parameter rules',
-          description:
-            'Configure how request parameters are filled, forced, or removed. Saving writes the backend payload config.',
+          label: 'Request rewrite rules',
+          description: 'Configure request parameter and user text rewriting.',
           placeholder: '{"override":[]}',
         },
         antigravitySensitiveWordsJson: {
@@ -4154,9 +4153,9 @@ export const en = {
         count: '{{count}} sensitive words configured',
       },
       payload: {
-        summaryTitle: 'Request payload rewriting',
+        summaryTitle: 'Request rewriting',
         impactSummary:
-          'Fill {{fill}} (raw {{rawFill}}), override {{force}} (raw {{rawForce}}), remove {{remove}}. Targets: {{targets}}.',
+          'Fill {{fill}} (Raw {{rawFill}}), override {{force}} (Raw {{rawForce}}), text replacement {{replace}}, remove {{remove}}. Affected targets: {{targets}}.',
         emptyImpactSummary: 'No payload rules are configured. Choose an intent below to add one.',
         emptyRootWarning:
           'Saving 0 rules deletes the payload root, so runtime payload rewriting will not apply.',
@@ -4211,9 +4210,9 @@ export const en = {
         jsonValuePlaceholder: '{"key":"value"}',
         booleanTrue: 'true',
         booleanFalse: 'false',
-        addRuleTitle: 'Choose parameter rewrite intent',
+        addRuleTitle: 'Choose a request rewrite intent',
         addRuleDescription:
-          'Choose fill, override, or remove first. Existing rules open their section instead of adding duplicates.',
+          'Choose fill, override, user text replacement or removal. Open the corresponding section to review existing rules.',
         valueModeHint:
           'Typed value can be string, number, boolean, or JSON. Raw JSON is written as a raw JSON fragment.',
         addRule: 'Add another rule',
@@ -4267,12 +4266,68 @@ export const en = {
           conditionPath: 'Condition JSON path cannot be empty.',
           pathRequired: 'Path cannot be empty.',
         },
+        replace: {
+          target: 'Target messages',
+          selectedPositions: 'Selected user positions',
+          allUsers: 'All user messages',
+          positions: 'User positions',
+          positionsPlaceholder: 'For example 1, 2',
+          positionsHint:
+            'Count only user messages in the final upstream request, starting at 1. User messages without editable text also count.',
+          replacements: 'Replacements',
+          orderHint: 'Applied from top to bottom',
+          entryTitle: 'Replacement {{index}}',
+          deletesText: 'Deletes matched text',
+          moveUp: 'Move up',
+          moveDown: 'Move down',
+          moveEntryUp: 'Move replacement {{index}} up',
+          moveEntryDown: 'Move replacement {{index}} down',
+          removeEntry: 'Delete replacement {{index}}',
+          from: 'Find text',
+          to: 'Replace with',
+          entryFrom: 'Replacement {{index}} find text',
+          entryTo: 'Replacement {{index}} destination',
+          fromPlaceholder: 'Exact text to find',
+          toPlaceholder: 'Leave empty to delete matched text',
+          addEntry: 'Add replacement',
+          literalHint:
+            'Literal, case-sensitive matching. Spaces and line breaks are preserved; regular expressions are not supported. An empty destination deletes matched text and keeps the message.',
+          deleteDescription:
+            'Deletion changes the draft first. It affects future requests only after you save the configuration.',
+          confirmDelete: 'Confirm deletion',
+          previewTitle: 'Try text replacement locally',
+          previewHint:
+            'Tests only the selected rule’s text replacements. Protocol conversion, message selection and matching conditions are not simulated. Text is not sent to the backend.',
+          previewRule: 'Rule to test',
+          previewInput: 'Text from a selected user message',
+          previewOutput: 'Replacement result',
+          previewPlaceholder: 'Enter text to try the replacements',
+          previewIncomplete: 'Complete every find-text field before trying the replacements.',
+          previewEmpty: 'Enter user text to see the result.',
+          emptyResult: '(Empty text)',
+          ruleSummary: 'Models: {{models}} · replacements: {{count}}',
+          moveRuleUp: 'Move rule {{index}} up',
+          moveRuleDown: 'Move rule {{index}} down',
+          draftHint: 'Enter a matching model and find text before saving this rule.',
+          removeRuleTitle: 'Delete rule {{index}}',
+          executionOrder:
+            'Execution order: fill → override → user text replacement → parameter removal.',
+          groupingHint:
+            'Rules and replacements run from top to bottom. Each step processes the previous step’s result. Add another rule for a different matching scope.',
+        },
         ruleIssues: {
+          replacePositionsRequired: 'Enter at least one user position or select all user messages.',
+          replacePositionsInvalid:
+            'User positions must be positive integers starting at 1, for example 1, 2.',
+          replaceReplacementRequired: 'Add at least one replacement.',
+          replaceSourceRequired:
+            'Find text cannot be empty. Spaces and line breaks are matched literally.',
           modelRequired: 'Add at least one matched model before this rule can be saved.',
           paramRequired: 'Add at least one parameter before this rule has an effect.',
           paramPathRequired: 'Parameter JSON path cannot be empty.',
         },
         addRuleActions: {
+          replace: 'Replace user text',
           default: 'Typed value',
           'default-raw': 'Raw JSON',
           override: 'Typed value',
@@ -4280,6 +4335,10 @@ export const en = {
           filter: 'Remove parameter',
         },
         intentOptions: {
+          replace: {
+            title: 'Replace user text',
+            description: 'Find and replace literal text in existing user messages.',
+          },
           fill: {
             title: 'Fill missing value',
             description: 'Set missing defaults.',
@@ -4294,6 +4353,11 @@ export const en = {
           },
         },
         sections: {
+          replace: {
+            title: 'User text replacement',
+            description:
+              'Edit existing user text in the final upstream request, after overrides and before parameter removal.',
+          },
           default: {
             title: 'Default fill',
             description: 'Set parameters only when the request payload is missing them.',
