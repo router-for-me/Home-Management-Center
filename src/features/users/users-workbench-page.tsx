@@ -394,13 +394,45 @@ function getUnion(values: number[][]) {
   return [...new Set(values.flat())]
 }
 
-function createGroupSearchText(group: AccessGroupResource, details: AccessGroupDetailResource[]) {
+const emptyCredentialMap = new Map<string, CredentialBindingCandidate>()
+
+function resolveChannelDetailIdentity(
+  detail: AccessGroupDetailResource,
+  credentialByAuthId: ReadonlyMap<string, CredentialBindingCandidate>,
+) {
+  const candidate = credentialByAuthId.get(detail.targetId)
+  const candidateLabel =
+    candidate?.label && candidate.label.trim() !== detail.targetId ? candidate.label.trim() : ''
+  const detailLabel =
+    detail.targetLabel && detail.targetLabel.trim() !== detail.targetId
+      ? detail.targetLabel.trim()
+      : ''
+  const label = candidateLabel || detailLabel || null
+
+  return {
+    label,
+    provider: candidate?.provider ?? detail.targetProvider ?? null,
+    deleted: detail.targetDeleted ?? false,
+    disabled: candidate?.disabled ?? detail.targetDisabled ?? false,
+    unavailable: candidate?.unavailable ?? detail.targetUnavailable ?? false,
+  }
+}
+
+function createGroupSearchText(
+  group: AccessGroupResource,
+  details: AccessGroupDetailResource[],
+  credentialByAuthId: ReadonlyMap<string, CredentialBindingCandidate> = emptyCredentialMap,
+) {
   return [
     group.name,
     String(group.numericId),
     ...details
       .filter((detail) => detail.groupId === group.numericId)
-      .map((detail) => detail.targetId),
+      .flatMap((detail) => {
+        if (detail.kind !== 'channel') return [detail.targetId]
+        const identity = resolveChannelDetailIdentity(detail, credentialByAuthId)
+        return [detail.targetId, identity.label ?? '', identity.provider ?? '']
+      }),
   ]
     .join(' ')
     .toLowerCase()
@@ -2668,6 +2700,7 @@ function GroupsTable({
   groups,
   details,
   channelGroups,
+  credentialByAuthId,
   channelBindingsSupported,
   onEditGroup,
   onDeleteGroup,
@@ -2678,6 +2711,7 @@ function GroupsTable({
   groups: AccessGroupResource[]
   details: AccessGroupDetailResource[]
   channelGroups: AccessGroupResource[]
+  credentialByAuthId?: ReadonlyMap<string, CredentialBindingCandidate>
   channelBindingsSupported: boolean
   onEditGroup: (group: AccessGroupResource) => void
   onDeleteGroup: (group: AccessGroupResource) => void
@@ -2813,11 +2847,58 @@ function GroupsTable({
                               t('usersPage.status.notReturned'),
                             )
                           : t('usersPage.groups.detailChannelsInherit')
+                      const channelIdentity =
+                        kind === 'channel'
+                          ? resolveChannelDetailIdentity(
+                              detail,
+                              credentialByAuthId ?? emptyCredentialMap,
+                            )
+                          : null
 
                       return (
                         <TableRow key={detail.id} variant="resource">
-                          <TableCell className="truncate font-mono text-xs" title={detail.targetId}>
-                            {detail.targetId}
+                          <TableCell
+                            className={channelIdentity ? undefined : 'truncate font-mono text-xs'}
+                            title={
+                              channelIdentity?.label
+                                ? `${channelIdentity.label} (${detail.targetId})`
+                                : detail.targetId
+                            }
+                          >
+                            {channelIdentity ? (
+                              <div className="grid min-w-0 gap-0.5">
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  <span className="truncate text-sm font-medium">
+                                    {channelIdentity.label ?? detail.targetId}
+                                  </span>
+                                  {channelIdentity.provider ? (
+                                    <span className="bg-muted text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 text-[11px] leading-none">
+                                      {channelIdentity.provider}
+                                    </span>
+                                  ) : null}
+                                  {channelIdentity.deleted ? (
+                                    <span className="border-destructive/30 bg-destructive/10 text-destructive shrink-0 rounded border px-1.5 py-0.5 text-[11px] leading-none">
+                                      {t('usersPage.status.deleted')}
+                                    </span>
+                                  ) : channelIdentity.disabled ? (
+                                    <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning shrink-0 rounded border px-1.5 py-0.5 text-[11px] leading-none">
+                                      {t('usersPage.groups.disabled')}
+                                    </span>
+                                  ) : channelIdentity.unavailable ? (
+                                    <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning shrink-0 rounded border px-1.5 py-0.5 text-[11px] leading-none">
+                                      {t('usersPage.groups.credentialUnavailable')}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                {channelIdentity.label ? (
+                                  <span className="text-muted-foreground truncate font-mono text-xs">
+                                    {detail.targetId}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : (
+                              detail.targetId
+                            )}
                           </TableCell>
                           {showChannels ? (
                             <TableCell
@@ -3128,7 +3209,8 @@ export function UsersWorkbenchPage() {
     useState<PendingBalanceOperation | null>(null)
   const [pendingPeriodReset, setPendingPeriodReset] = useState<UserResource | null>(null)
   const loadCredentialCandidates =
-    sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel'
+    activeTab === 'channelGroups' ||
+    (sheetMode?.type === 'detail-create' && sheetMode.kind === 'channel')
   const loadModelCandidates = sheetMode?.type === 'detail-create' && sheetMode.kind === 'model'
   const loadPeriodLimits = sheetMode?.type === 'user-detail'
   const selectedUserId =
@@ -3179,14 +3261,20 @@ export function UsersWorkbenchPage() {
       ),
     [accessKeys, channelGroups, modelGroups, normalizedSearch, users],
   )
+  const credentialByAuthId = useMemo(
+    () => new Map(workbench.credentialCandidates.map((candidate) => [candidate.authId, candidate])),
+    [workbench.credentialCandidates],
+  )
   const filteredChannelGroups = useMemo(
     () =>
       channelGroups.filter((group) =>
         normalizedSearch
-          ? createGroupSearchText(group, channelGroupDetails).includes(normalizedSearch)
+          ? createGroupSearchText(group, channelGroupDetails, credentialByAuthId).includes(
+              normalizedSearch,
+            )
           : true,
       ),
-    [channelGroupDetails, channelGroups, normalizedSearch],
+    [channelGroupDetails, channelGroups, credentialByAuthId, normalizedSearch],
   )
   const filteredModelGroups = useMemo(
     () =>
@@ -3536,6 +3624,7 @@ export function UsersWorkbenchPage() {
                   groups={filteredChannelGroups}
                   details={channelGroupDetails}
                   channelGroups={channelGroups}
+                  credentialByAuthId={credentialByAuthId}
                   channelBindingsSupported={workbench.capabilities.modelChannelBindings}
                   onEditGroup={(group) => setSheetMode({ type: 'group-edit', group })}
                   onDeleteGroup={(group) => setPendingDelete({ type: 'group', group })}
@@ -3781,7 +3870,17 @@ export function UsersWorkbenchPage() {
                           ? pendingDelete.key.maskedValue
                           : pendingDelete.type === 'group'
                             ? pendingDelete.group.name
-                            : pendingDelete.detail.targetId,
+                            : pendingDelete.detail.kind === 'channel'
+                              ? (() => {
+                                  const identity = resolveChannelDetailIdentity(
+                                    pendingDelete.detail,
+                                    credentialByAuthId,
+                                  )
+                                  return identity.label
+                                    ? `${identity.label} (${pendingDelete.detail.targetId})`
+                                    : pendingDelete.detail.targetId
+                                })()
+                              : pendingDelete.detail.targetId,
                   })
                 : null}
             </AlertDialogDescription>
