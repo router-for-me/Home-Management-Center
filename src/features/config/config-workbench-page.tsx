@@ -2,6 +2,8 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   CheckCircle2,
   CloudUpload,
   Code2,
@@ -37,8 +39,9 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
-import { fieldClassName } from '@/components/shared/form-layout'
+import { fieldClassName, formGridClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
+import { RowActions } from '@/components/shared/row-actions'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,7 +52,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import {
@@ -70,6 +73,10 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  PayloadReplaceFields,
+  PayloadReplacePreview,
+} from '@/features/config/payload-replace-fields'
 import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import type {
@@ -79,6 +86,14 @@ import type {
   ConfigStructuredValues,
   WritableConfigFieldKey,
 } from '@/lib/api/management/config'
+import {
+  type PayloadReplaceContent,
+  type PayloadReplaceIssueKey,
+  canEditPayloadReplaceContent,
+  getPayloadReplaceIssues,
+  normalizePayloadReplaceContent,
+  serializePayloadReplaceContent,
+} from '@/lib/api/management/payload-replace'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
 import { scrollElementIntoShell } from '@/lib/shell-scroll'
 import { cn } from '@/lib/utils'
@@ -187,21 +202,32 @@ type PayloadFilterRule = {
   params: string[]
 }
 
+type PayloadReplaceRule = PayloadReplaceContent & {
+  models: PayloadModelEntry[]
+}
+
+type AnyPayloadRule = PayloadRule | PayloadFilterRule | PayloadReplaceRule
+
 type PayloadRulesConfig = {
   default: PayloadRule[]
   'default-raw': PayloadRule[]
   override: PayloadRule[]
   'override-raw': PayloadRule[]
+  replace: PayloadReplaceRule[]
   filter: PayloadFilterRule[]
 }
 
 type PayloadRuleSection = 'default' | 'default-raw' | 'override' | 'override-raw'
 
-type PayloadSectionKey = PayloadRuleSection | 'filter'
+type PayloadSectionKey = PayloadRuleSection | 'replace' | 'filter'
 
-type PayloadRuleIntentId = 'fill' | 'override' | 'filter'
+type PayloadRuleIntentId = 'fill' | 'override' | 'replace' | 'filter'
 
-type PayloadRuleIssueKey = 'modelRequired' | 'paramRequired' | 'paramPathRequired'
+type PayloadRuleIssueKey =
+  | 'modelRequired'
+  | 'paramRequired'
+  | 'paramPathRequired'
+  | PayloadReplaceIssueKey
 
 type RemovedPayloadRule =
   | {
@@ -213,6 +239,11 @@ type RemovedPayloadRule =
       sectionKey: 'filter'
       index: number
       rule: PayloadFilterRule
+    }
+  | {
+      sectionKey: 'replace'
+      index: number
+      rule: PayloadReplaceRule
     }
 
 type NetworkProxyPanel = 'current' | 'pool'
@@ -670,7 +701,7 @@ const payloadRuleSections: PayloadRuleSection[] = [
   'override-raw',
 ]
 
-const payloadSectionKeys: PayloadSectionKey[] = [...payloadRuleSections, 'filter']
+const payloadSectionKeys: PayloadSectionKey[] = [...payloadRuleSections, 'replace', 'filter']
 const payloadDraftValueTypeKey = '__hmc_payload_value_type'
 const payloadDraftValueKey = '__hmc_payload_value'
 
@@ -680,6 +711,7 @@ const payloadRuleIntentGroups: Array<{
 }> = [
   { id: 'fill', sectionKeys: ['default', 'default-raw'] },
   { id: 'override', sectionKeys: ['override', 'override-raw'] },
+  { id: 'replace', sectionKeys: ['replace'] },
   { id: 'filter', sectionKeys: ['filter'] },
 ]
 
@@ -1051,6 +1083,12 @@ function normalizePayloadConfig(value: unknown): PayloadRulesConfig {
     'default-raw': normalizePayloadRules(record['default-raw'], true),
     override: normalizePayloadRules(record.override),
     'override-raw': normalizePayloadRules(record['override-raw'], true),
+    replace: Array.isArray(record.replace)
+      ? record.replace.map((rule) => ({
+          models: normalizePayloadModels(isRecord(rule) ? rule.models : undefined),
+          ...normalizePayloadReplaceContent(rule),
+        }))
+      : [],
     filter: normalizePayloadFilterRules(record.filter),
   }
 }
@@ -1192,6 +1230,10 @@ function serializePayloadConfig(config: PayloadRulesConfig) {
     'default-raw': serializePayloadRules(config['default-raw'], true),
     override: serializePayloadRules(config.override),
     'override-raw': serializePayloadRules(config['override-raw'], true),
+    replace: config.replace.map((rule) => ({
+      models: serializePayloadModels(rule.models),
+      ...serializePayloadReplaceContent(rule),
+    })),
     filter: serializePayloadFilterRules(config.filter),
   }
 }
@@ -1269,6 +1311,10 @@ function serializePayloadDraftConfig(config: PayloadRulesConfig) {
     'default-raw': serializePayloadDraftRules(config['default-raw'], true),
     override: serializePayloadDraftRules(config.override),
     'override-raw': serializePayloadDraftRules(config['override-raw'], true),
+    replace: config.replace.map((rule) => ({
+      models: serializePayloadDraftModels(rule.models),
+      ...serializePayloadReplaceContent(rule, true),
+    })),
     filter: serializePayloadDraftFilterRules(config.filter),
   }
 }
@@ -1284,6 +1330,14 @@ function clonePayloadFilterRule(rule: PayloadFilterRule): PayloadFilterRule {
   return {
     models: rule.models.map(clonePayloadModel),
     params: [...rule.params],
+  }
+}
+
+function clonePayloadReplaceRule(rule: PayloadReplaceRule): PayloadReplaceRule {
+  return {
+    models: rule.models.map(clonePayloadModel),
+    target: { ...rule.target },
+    replacements: rule.replacements.map((entry) => ({ ...entry })),
   }
 }
 
@@ -1310,14 +1364,12 @@ function countPayloadRules(config: PayloadRulesConfig) {
     config['default-raw'].length +
     config.override.length +
     config['override-raw'].length +
+    config.replace.length +
     config.filter.length
   )
 }
 
-function isPayloadRuleComplete(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function isPayloadRuleComplete(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
   return countPayloadRuleIssues(rule, sectionKey) === 0
 }
 
@@ -1328,8 +1380,10 @@ function countPayloadSectionDrafts(config: PayloadRulesConfig, sectionKey: Paylo
 }
 
 function countPayloadDrafts(value: unknown) {
-  const config = normalizePayloadConfig(value)
+  return countPayloadConfigDrafts(normalizePayloadConfig(value))
+}
 
+function countPayloadConfigDrafts(config: PayloadRulesConfig) {
   return payloadSectionKeys.reduce(
     (total, sectionKey) => total + countPayloadSectionDrafts(config, sectionKey),
     0,
@@ -1417,16 +1471,13 @@ function countPayloadModelIssues(model: PayloadModelEntry) {
   )
 }
 
-function countPayloadModelIssuesForRule(rule: PayloadRule | PayloadFilterRule) {
+function countPayloadModelIssuesForRule(rule: AnyPayloadRule) {
   return rule.models.reduce((total, model) => total + countPayloadModelIssues(model), 0)
 }
 
-function countPayloadValueIssues(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function countPayloadValueIssues(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
   const modelIssueCount = countPayloadModelIssuesForRule(rule)
-  if (sectionKey === 'filter') return modelIssueCount
+  if (sectionKey === 'filter' || sectionKey === 'replace') return modelIssueCount
 
   const paramValidationCount = (rule as PayloadRule).params.filter((param) =>
     Boolean(
@@ -1439,14 +1490,16 @@ function countPayloadValueIssues(
   return modelIssueCount + paramValidationCount
 }
 
-function hasPayloadRuleSavableModel(rule: PayloadRule | PayloadFilterRule) {
+function hasPayloadRuleSavableModel(rule: AnyPayloadRule) {
   return serializePayloadModels(rule.models).length > 0
 }
 
-function hasPayloadRuleTargetParam(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function hasPayloadRuleTargetParam(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
+  if (sectionKey === 'replace') {
+    return (rule as PayloadReplaceRule).replacements.some(
+      (entry) => entry.from.length > 0 || entry.to.length > 0,
+    )
+  }
   if (sectionKey === 'filter') {
     return (rule as PayloadFilterRule).params.some((param) => param.trim())
   }
@@ -1454,10 +1507,7 @@ function hasPayloadRuleTargetParam(
   return (rule as PayloadRule).params.some((param) => param.path.trim())
 }
 
-function shouldShowPayloadRuleIssues(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function shouldShowPayloadRuleIssues(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
   if (countPayloadValueIssues(rule, sectionKey) > 0) return true
 
   const ruleIssues = getPayloadRuleIssueKeys(rule, sectionKey)
@@ -1471,13 +1521,19 @@ function hasBlankPayloadFilterParam(params: string[]) {
 }
 
 function getPayloadRuleIssueKeys(
-  rule: PayloadRule | PayloadFilterRule,
+  rule: AnyPayloadRule,
   sectionKey: PayloadSectionKey,
 ): PayloadRuleIssueKey[] {
   const issues: PayloadRuleIssueKey[] = []
 
   if (serializePayloadModels(rule.models).length === 0) {
     issues.push('modelRequired')
+  }
+
+  if (sectionKey === 'replace') {
+    if (!issues.includes('modelRequired') && hasBlankPayloadModel(rule.models))
+      issues.push('modelRequired')
+    return [...issues, ...getPayloadReplaceIssues(rule as PayloadReplaceRule)]
   }
 
   if (sectionKey === 'filter') {
@@ -1501,10 +1557,7 @@ function getPayloadRuleIssueKeys(
   return issues
 }
 
-function countPayloadRuleIssues(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function countPayloadRuleIssues(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
   return (
     getPayloadRuleIssueKeys(rule, sectionKey).length + countPayloadValueIssues(rule, sectionKey)
   )
@@ -1540,14 +1593,13 @@ function countPayloadSectionVisibleIssues(
   )
 }
 
-function getPayloadRuleAnchor(
-  rule: PayloadRule | PayloadFilterRule,
-  sectionKey: PayloadSectionKey,
-) {
+function getPayloadRuleAnchor(rule: AnyPayloadRule, sectionKey: PayloadSectionKey) {
   const model = rule.models.find((item) => item.name.trim())
   const modelTarget = model
     ? [model.protocol.trim(), model.name.trim()].filter(Boolean).join('/')
     : ''
+
+  if (sectionKey === 'replace') return modelTarget
 
   if (sectionKey === 'filter') {
     const param = (rule as PayloadFilterRule).params.find((item) => item.trim())?.trim() ?? ''
@@ -1623,10 +1675,17 @@ function canEditPayloadConfig(value: unknown) {
 
     return rules.every((rule) => {
       if (!isRecord(rule)) return false
-      if (!hasOnlyKeys(rule, ['models', 'params'])) return false
+      if (
+        !hasOnlyKeys(
+          rule,
+          key === 'replace' ? ['models', 'target', 'replacements'] : ['models', 'params'],
+        )
+      )
+        return false
       if (!Array.isArray(rule.models)) return false
       const modelsValid = rule.models.every(canEditPayloadModel)
       if (!modelsValid) return false
+      if (key === 'replace') return canEditPayloadReplaceContent(rule)
       if (key === 'filter') return Array.isArray(rule.params)
 
       return isRecord(rule.params)
@@ -1726,12 +1785,25 @@ function getStructuredChanges(
 ): ConfigChange[] {
   return fieldDefinitions
     .filter(isWritableConfigField)
-    .filter((field) => !areConfigValuesEqual(baseline[field.key], draft[field.key]))
     .map((field) => ({
       key: field.key,
-      previousValue: baseline[field.key],
-      nextValue: draft[field.key],
+      previousValue: getConfigChangeValue(field.key, baseline[field.key]),
+      nextValue: getConfigChangeValue(field.key, draft[field.key]),
     }))
+    .filter((change) => !areConfigValuesEqual(change.previousValue, change.nextValue))
+}
+
+function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): ConfigFieldValue {
+  if (key !== 'payloadRulesJson') return value
+  try {
+    const parsed: unknown = JSON.parse(String(value))
+    if (canEditPayloadConfig(parsed) && !hasPayloadValidationErrors(parsed)) {
+      return stringifyJson(serializePayloadConfig(normalizePayloadConfig(parsed)))
+    }
+  } catch {
+    return value
+  }
+  return value
 }
 
 function getValidationErrors(draft: ConfigStructuredValues) {
@@ -2145,7 +2217,7 @@ function JsonEditorFrame({
   return (
     <div
       className={cn(
-        'grid gap-4 rounded-lg border px-3 py-3',
+        'grid min-w-0 gap-4 rounded-lg border px-3 py-3',
         invalid ? 'border-amber-500/40 bg-amber-500/5' : 'bg-background/35',
       )}
     >
@@ -2854,6 +2926,14 @@ function createPayloadFilterRule(): PayloadFilterRule {
   }
 }
 
+function createPayloadReplaceRule(): PayloadReplaceRule {
+  return {
+    models: [createPayloadModel()],
+    target: { all: false, positions: '1' },
+    replacements: [{ from: '', to: '' }],
+  }
+}
+
 function PayloadIntentAction({
   sectionKey,
   count,
@@ -2927,7 +3007,7 @@ function PayloadAddRulePanel({
           {t('configPage.payload.draftBlockingHint')}
         </div>
       ) : null}
-      <div className="grid gap-2 lg:grid-cols-3">
+      <div className={formGridClassName}>
         {payloadRuleIntentGroups.map((intent) => (
           <div
             key={intent.id}
@@ -2985,7 +3065,7 @@ function PayloadHeaderRows({
 
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium">
           {t('configPage.payload.headers')}
         </p>
@@ -3137,7 +3217,7 @@ function PayloadConditionRows({
 
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium">{title}</p>
         <Button
           type="button"
@@ -3325,7 +3405,7 @@ function PayloadPathListRows({
 
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium">{title}</p>
         <Button
           type="button"
@@ -3497,10 +3577,10 @@ function PayloadModelRow({
   }, [hasAdvancedSettings])
 
   return (
-    <div className="grid gap-2 rounded-md border p-2 sm:border-0 sm:p-0">
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
+    <div className="grid min-w-0 grid-cols-1 gap-2 rounded-md border p-2 md:border-0 md:p-0">
+      <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
         <label className={fieldClassName}>
-          <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+          <span className="text-muted-foreground text-xs font-medium md:sr-only">
             {t('configPage.payload.modelName')}
           </span>
           <Input
@@ -3513,7 +3593,7 @@ function PayloadModelRow({
           />
         </label>
         <label className={fieldClassName}>
-          <span className="text-muted-foreground text-xs font-medium sm:sr-only">
+          <span className="text-muted-foreground text-xs font-medium md:sr-only">
             {t('configPage.payload.protocol')}
           </span>
           <Select
@@ -3539,13 +3619,20 @@ function PayloadModelRow({
           variant={advancedExpanded ? 'secondary' : 'outline'}
           size="lg"
           className="w-full justify-start"
+          title={
+            advancedExpanded
+              ? t('configPage.payload.hideAdvancedMatchers')
+              : t('configPage.payload.advancedMatchers')
+          }
           disabled={disabled}
           onClick={() => setAdvancedExpanded((expanded) => !expanded)}
         >
           <SlidersHorizontal className="size-4" aria-hidden="true" />
-          {advancedExpanded
-            ? t('configPage.payload.hideAdvancedMatchers')
-            : t('configPage.payload.advancedMatchers')}
+          <span className="min-w-0 truncate">
+            {advancedExpanded
+              ? t('configPage.payload.hideAdvancedMatchers')
+              : t('configPage.payload.advancedMatchers')}
+          </span>
           {advancedCount > 0 ? (
             <span className="bg-background text-muted-foreground rounded-md border px-1.5 py-0.5 text-[11px] leading-none">
               {advancedCount}
@@ -3606,7 +3693,7 @@ function PayloadModelRows({
 
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs font-medium">
           {t('configPage.payload.models')}
         </p>
@@ -3627,7 +3714,7 @@ function PayloadModelRows({
         </p>
       ) : null}
       <div className="grid gap-2">
-        <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
+        <div className="hidden gap-2 md:grid md:grid-cols-[minmax(0,1fr)_12rem_minmax(10.5rem,12rem)_minmax(4.5rem,auto)]">
           <TableHeaderCell
             label={t('configPage.payload.modelName')}
             description={t('configPage.payload.modelNameHelp')}
@@ -4220,6 +4307,162 @@ function PayloadFilterEditor({
   )
 }
 
+function PayloadReplaceEditor({
+  rules,
+  disabled,
+  onChange,
+  onRemoveRule,
+}: {
+  rules: PayloadReplaceRule[]
+  disabled: boolean
+  onChange: (rules: PayloadReplaceRule[]) => void
+  onRemoveRule: (index: number) => void
+}) {
+  const { t } = useTranslation()
+  const [removingIndex, setRemovingIndex] = useState<number | null>(null)
+  const updateRule = (index: number, patch: Partial<PayloadReplaceRule>) => {
+    onChange(rules.map((rule, ruleIndex) => (ruleIndex === index ? { ...rule, ...patch } : rule)))
+  }
+  const moveRule = (index: number, direction: number) => {
+    const nextIndex = index + direction
+    if (nextIndex < 0 || nextIndex >= rules.length) return
+    const nextRules = [...rules]
+    ;[nextRules[index], nextRules[nextIndex]] = [nextRules[nextIndex], nextRules[index]]
+    onChange(nextRules)
+  }
+
+  return (
+    <div className="grid min-w-0 gap-4">
+      {rules.map((rule, index) => {
+        const issues = getPayloadRuleIssueKeys(rule, 'replace')
+        const issueCount = countPayloadRuleIssues(rule, 'replace')
+        const showIssues = shouldShowPayloadRuleIssues(rule, 'replace')
+        const ruleTitle = t('configPage.payload.ruleTitle', { index: index + 1 })
+        const anchor = getPayloadRuleAnchor(rule, 'replace')
+
+        return (
+          <div
+            key={index}
+            role="group"
+            aria-label={ruleTitle}
+            className="grid min-w-0 gap-4 border-t pt-4 first:border-t-0 first:pt-0"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-label">{ruleTitle}</p>
+                  {anchor ? (
+                    <code className="bg-muted text-muted-foreground text-code max-w-full truncate rounded px-1.5 py-0.5">
+                      {anchor}
+                    </code>
+                  ) : null}
+                </div>
+                <p className="text-muted-foreground text-meta mt-1">
+                  {t('configPage.payload.replace.ruleSummary', {
+                    models: rule.models.filter((model) => model.name.trim()).length,
+                    count: rule.replacements.length,
+                  })}
+                </p>
+              </div>
+              <RowActions
+                menuLabel={ruleTitle}
+                className="shrink-0"
+                actions={[
+                  {
+                    id: 'up',
+                    label: t('configPage.payload.replace.moveUp'),
+                    ariaLabel: t('configPage.payload.replace.moveRuleUp', { index: index + 1 }),
+                    icon: ArrowUp,
+                    disabled: disabled || index === 0,
+                    onSelect: () => moveRule(index, -1),
+                  },
+                  {
+                    id: 'down',
+                    label: t('configPage.payload.replace.moveDown'),
+                    ariaLabel: t('configPage.payload.replace.moveRuleDown', { index: index + 1 }),
+                    icon: ArrowDown,
+                    disabled: disabled || index === rules.length - 1,
+                    onSelect: () => moveRule(index, 1),
+                  },
+                  {
+                    id: 'duplicate',
+                    label: t('configPage.payload.duplicateRule'),
+                    icon: Copy,
+                    disabled: disabled || issueCount > 0,
+                    onSelect: () =>
+                      onChange(insertAt(rules, index + 1, clonePayloadReplaceRule(rule))),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('configPage.payload.removeRule'),
+                    icon: Trash2,
+                    tone: 'destructive',
+                    disabled,
+                    onSelect: () => setRemovingIndex(index),
+                  },
+                ]}
+              />
+            </div>
+            {issueCount > 0 && !showIssues ? (
+              <p className="text-muted-foreground text-meta">
+                {t('configPage.payload.replace.draftHint')}
+              </p>
+            ) : null}
+            {showIssues && issues.length > 0 ? (
+              <div className="text-destructive text-meta grid gap-1" role="alert">
+                {issues.map((issue) => (
+                  <p key={issue}>{t(`configPage.payload.ruleIssues.${issue}`)}</p>
+                ))}
+              </div>
+            ) : null}
+            <PayloadModelRows
+              models={rule.models}
+              disabled={disabled}
+              onChange={(models) => updateRule(index, { models })}
+            />
+            <PayloadReplaceFields
+              value={rule}
+              disabled={disabled}
+              onChange={(content) => updateRule(index, content)}
+            />
+          </div>
+        )
+      })}
+      <PayloadReplacePreview rules={rules} disabled={disabled} />
+      <AlertDialog
+        open={removingIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemovingIndex(null)
+        }}
+      >
+        <AlertDialogContent className="max-h-[90dvh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('configPage.payload.replace.removeRuleTitle', { index: (removingIndex ?? 0) + 1 })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('configPage.payload.replace.deleteDescription')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: 'destructive' })}
+              disabled={disabled}
+              onClick={() => {
+                if (removingIndex !== null) onRemoveRule(removingIndex)
+                setRemovingIndex(null)
+              }}
+            >
+              {t('configPage.payload.replace.confirmDelete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
 function PayloadRulesEditor({
   value,
   disabled,
@@ -4233,7 +4476,7 @@ function PayloadRulesEditor({
   const [removedRule, setRemovedRule] = useState<RemovedPayloadRule | null>(null)
   const serialized = serializePayloadConfig(value)
   const totalRules = countPayloadRules(value)
-  const totalDrafts = countPayloadDrafts(value)
+  const totalDrafts = countPayloadConfigDrafts(value)
   const activeSections = payloadSectionKeys.filter((sectionKey) => value[sectionKey].length > 0)
   const affectedTargets = getPayloadAffectedTargets(value)
   const visibleTargets =
@@ -4261,6 +4504,11 @@ function PayloadRulesEditor({
       return
     }
 
+    if (sectionKey === 'replace') {
+      updateSection('replace', [...value.replace, createPayloadReplaceRule()])
+      return
+    }
+
     updateSection(sectionKey, [
       ...value[sectionKey],
       createPayloadRule(sectionKey.endsWith('-raw')),
@@ -4284,6 +4532,15 @@ function PayloadRulesEditor({
       value.filter.filter((_, ruleIndex) => ruleIndex !== index),
     )
   }
+  const removeReplaceRule = (index: number) => {
+    const rule = value.replace[index]
+    if (!rule) return
+    setRemovedRule({ sectionKey: 'replace', index, rule: clonePayloadReplaceRule(rule) })
+    updateSection(
+      'replace',
+      value.replace.filter((_, ruleIndex) => ruleIndex !== index),
+    )
+  }
   const restoreRemovedRule = () => {
     if (!removedRule) return
 
@@ -4291,6 +4548,11 @@ function PayloadRulesEditor({
       updateSection(
         'filter',
         insertAt(value.filter, removedRule.index, clonePayloadFilterRule(removedRule.rule)),
+      )
+    } else if (removedRule.sectionKey === 'replace') {
+      updateSection(
+        'replace',
+        insertAt(value.replace, removedRule.index, clonePayloadReplaceRule(removedRule.rule)),
       )
     } else {
       updateSection(
@@ -4307,7 +4569,7 @@ function PayloadRulesEditor({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid min-w-0 grid-cols-1 gap-4">
       <div className="bg-muted/30 grid gap-3 rounded-md border px-3 py-3 text-sm">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -4323,10 +4585,14 @@ function PayloadRulesEditor({
                   rawFill: value['default-raw'].length,
                   force: value.override.length,
                   rawForce: value['override-raw'].length,
+                  replace: value.replace.length,
                   remove: value.filter.length,
                   targets: visibleTargets,
                 })
               : t('configPage.payload.emptyImpactSummary')}
+          </p>
+          <p className="text-muted-foreground text-meta mt-1">
+            {t('configPage.payload.replace.executionOrder')}
           </p>
         </div>
         {totalRules === 0 && removedRule ? (
@@ -4375,7 +4641,7 @@ function PayloadRulesEditor({
               <div
                 key={sectionKey}
                 id={`payload-section-${sectionKey}`}
-                className="grid scroll-mt-28 gap-3 rounded-lg border px-3 py-3"
+                className="grid min-w-0 scroll-mt-28 gap-3 rounded-lg border px-3 py-3"
               >
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
@@ -4401,7 +4667,11 @@ function PayloadRulesEditor({
                       {t(`configPage.payload.sections.${sectionKey}.description`)}
                     </p>
                     <p className="text-muted-foreground mt-1 text-xs leading-5">
-                      {t('configPage.payload.groupingHint')}
+                      {t(
+                        sectionKey === 'replace'
+                          ? 'configPage.payload.replace.groupingHint'
+                          : 'configPage.payload.groupingHint',
+                      )}
                     </p>
                   </div>
                   <Button
@@ -4416,7 +4686,14 @@ function PayloadRulesEditor({
                     {t('configPage.payload.addRule')}
                   </Button>
                 </div>
-                {sectionKey === 'filter' ? (
+                {sectionKey === 'replace' ? (
+                  <PayloadReplaceEditor
+                    rules={value.replace}
+                    disabled={disabled}
+                    onChange={(rules) => updateSection('replace', rules)}
+                    onRemoveRule={removeReplaceRule}
+                  />
+                ) : sectionKey === 'filter' ? (
                   <PayloadFilterEditor
                     rules={value.filter}
                     disabled={disabled}
@@ -4633,7 +4910,7 @@ function StructuredWorkspace({
           <section
             key={section.id}
             id={`config-section-${section.id}`}
-            className="bg-card scroll-mt-24 rounded-lg border p-4 shadow-sm"
+            className="bg-card min-w-0 scroll-mt-24 rounded-lg border p-4 shadow-sm"
           >
             {(() => {
               const SectionIcon = sectionIcons[section.id]

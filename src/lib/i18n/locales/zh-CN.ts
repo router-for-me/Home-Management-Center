@@ -3237,9 +3237,9 @@ export const zhCN = {
             '配置发往 Claude 与 Codex 上游的默认请求头,用于客户端身份伪装与设备画像稳定。',
         },
         payload: {
-          title: '请求参数改写',
-          shortTitle: '参数改写',
-          description: '按模型和协议匹配请求，自动补齐、强制覆盖或移除请求参数。',
+          title: '请求改写',
+          shortTitle: '请求改写',
+          description: '按模型和协议填充、覆写、替换 user 文本或移除请求参数。',
         },
         antigravity: {
           title: 'Antigravity',
@@ -3364,8 +3364,8 @@ export const zhCN = {
             '{"claude":[{"name":"claude-sonnet-4","alias":"sonnet","fork":true,"force-mapping":true}]}',
         },
         payloadRulesJson: {
-          label: '请求参数规则',
-          description: '配置请求参数的补齐、覆盖和移除行为；保存后写入后端 payload 配置。',
+          label: '请求改写规则',
+          description: '配置请求参数与 user 文本的改写规则。',
           placeholder: '{"override":[]}',
         },
         antigravitySensitiveWordsJson: {
@@ -3931,9 +3931,9 @@ export const zhCN = {
         count: '已配置 {{count}} 个敏感词',
       },
       payload: {
-        summaryTitle: '请求 payload 改写',
+        summaryTitle: '请求改写',
         impactSummary:
-          '填充 {{fill}} 条（Raw {{rawFill}}），覆写 {{force}} 条（Raw {{rawForce}}），移除 {{remove}} 条。影响范围：{{targets}}。',
+          '填充 {{fill}} 条（Raw {{rawFill}}），覆写 {{force}} 条（Raw {{rawForce}}），文本替换 {{replace}} 条，移除 {{remove}} 条。影响范围：{{targets}}。',
         emptyImpactSummary: '当前没有 payload 规则。可以从下方选择一种意图来添加规则。',
         emptyRootWarning: '保存 0 条规则时会删除 payload root，运行时将不再应用 payload 改写。',
         totalRules: '{{count}} 条规则',
@@ -3985,8 +3985,8 @@ export const zhCN = {
         jsonValuePlaceholder: '{"key":"value"}',
         booleanTrue: 'true',
         booleanFalse: 'false',
-        addRuleTitle: '选择参数改写意图',
-        addRuleDescription: '先选择填充、覆写或移除；已有规则时会跳转到对应分区。',
+        addRuleTitle: '选择请求改写意图',
+        addRuleDescription: '选择填充、覆写、用户文本替换或移除；已有规则时可进入对应分区。',
         valueModeHint:
           '按类型填写可选择字符串、数字、布尔值或 JSON；Raw JSON 会按原始 JSON 片段写入。',
         addRule: '添加另一条规则',
@@ -4037,12 +4037,64 @@ export const zhCN = {
           conditionPath: '条件 JSON path 不能为空。',
           pathRequired: '路径不能为空。',
         },
+        replace: {
+          target: '目标消息',
+          selectedPositions: '指定 user 序号',
+          allUsers: '全部 user 消息',
+          positions: 'user 序号',
+          positionsPlaceholder: '例如 1, 2',
+          positionsHint:
+            '按最终上游请求中的 user 消息从 1 开始计数；没有可替换文本的 user 也计数。',
+          replacements: '替换内容',
+          orderHint: '从上到下依次执行',
+          entryTitle: '替换项 {{index}}',
+          deletesText: '删除匹配文本',
+          moveUp: '上移',
+          moveDown: '下移',
+          moveEntryUp: '上移替换项 {{index}}',
+          moveEntryDown: '下移替换项 {{index}}',
+          removeEntry: '删除替换项 {{index}}',
+          from: '查找文本',
+          to: '替换为',
+          entryFrom: '替换项 {{index}} 查找文本',
+          entryTo: '替换项 {{index}} 替换为',
+          fromPlaceholder: '要精确匹配的文字',
+          toPlaceholder: '留空将删除匹配文本',
+          addEntry: '添加替换项',
+          literalHint:
+            '逐字匹配，区分大小写；保留空格与换行，不支持正则表达式。替换为空只删除匹配文字，保留消息。',
+          deleteDescription: '删除先进入草稿，保存配置后才影响后续请求。',
+          confirmDelete: '确认删除',
+          previewTitle: '试替换文本（本地）',
+          previewHint:
+            '仅测试所选规则中的文本替换，不模拟协议转换、消息选择或匹配条件；文本不会发送到后端。',
+          previewRule: '测试规则',
+          previewInput: '一段已选中 user 的文本',
+          previewOutput: '替换结果',
+          previewPlaceholder: '输入用于试替换的文本',
+          previewIncomplete: '先填写所有查找文本，再试替换。',
+          previewEmpty: '输入一段 user 文本查看结果。',
+          emptyResult: '（空文本）',
+          ruleSummary: '{{models}} 个模型 · {{count}} 个替换项',
+          moveRuleUp: '上移规则 {{index}}',
+          moveRuleDown: '下移规则 {{index}}',
+          draftHint: '先填写匹配模型和查找文本，再保存规则。',
+          removeRuleTitle: '删除规则 {{index}}',
+          executionOrder: '执行顺序：填充 → 覆写 → 用户文本替换 → 移除参数。',
+          groupingHint:
+            '规则与替换项均从上到下执行，后一步会继续处理前一步的结果。不同匹配范围请添加另一条规则。',
+        },
         ruleIssues: {
+          replacePositionsRequired: '请指定至少一个 user 序号，或选择全部 user 消息。',
+          replacePositionsInvalid: 'user 序号必须是从 1 开始的正整数，例如 1, 2。',
+          replaceReplacementRequired: '至少添加一个替换项。',
+          replaceSourceRequired: '查找文本不能为空；空格和换行会原样参与匹配。',
           modelRequired: '至少填写一个匹配模型，否则该规则无法保存。',
           paramRequired: '至少填写一个参数，否则该规则不会产生效果。',
           paramPathRequired: '参数的 JSON path 不能为空。',
         },
         addRuleActions: {
+          replace: '替换用户文本',
           default: '按类型填写',
           'default-raw': 'Raw JSON',
           override: '按类型填写',
@@ -4050,6 +4102,10 @@ export const zhCN = {
           filter: '移除参数',
         },
         intentOptions: {
+          replace: {
+            title: '替换用户文本',
+            description: '在已有 user 文本中查找并替换字面文字。',
+          },
           fill: {
             title: '填充缺失值',
             description: '缺少参数时写入默认值。',
@@ -4064,6 +4120,10 @@ export const zhCN = {
           },
         },
         sections: {
+          replace: {
+            title: '用户文本替换',
+            description: '修改最终上游请求中 user 的已有文本，在覆写后、移除参数前执行。',
+          },
           default: {
             title: '默认填充',
             description: '仅在请求 payload 缺少指定参数时写入。',

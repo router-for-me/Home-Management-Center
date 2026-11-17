@@ -1,4 +1,10 @@
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  canEditPayloadReplaceContent,
+  getPayloadReplaceIssues,
+  normalizePayloadReplaceContent,
+  serializePayloadReplaceContent,
+} from '@/lib/api/management/payload-replace'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
@@ -202,6 +208,7 @@ function stringifyPayload(value: unknown) {
       'default-raw': Array.isArray(payload['default-raw']) ? payload['default-raw'] : [],
       override: Array.isArray(payload.override) ? payload.override : [],
       'override-raw': Array.isArray(payload['override-raw']) ? payload['override-raw'] : [],
+      replace: Array.isArray(payload.replace) ? payload.replace : [],
       filter: Array.isArray(payload.filter) ? payload.filter : [],
     },
     null,
@@ -347,13 +354,38 @@ function sanitizePayloadFilterSection(value: unknown) {
 }
 
 function sanitizePayloadForWrite(value: UnknownRecord) {
+  const replace = sanitizePayloadReplaceSection(value.replace)
   return {
     default: sanitizePayloadRuleSection(value.default),
     'default-raw': sanitizePayloadRuleSection(value['default-raw']),
     override: sanitizePayloadRuleSection(value.override),
     'override-raw': sanitizePayloadRuleSection(value['override-raw']),
+    // Older Home SDKs reject this field even when the list is empty.
+    ...(replace.length > 0 ? { replace } : {}),
     filter: sanitizePayloadFilterSection(value.filter),
   }
+}
+
+function sanitizePayloadReplaceSection(value: unknown) {
+  if (value === undefined) return []
+  if (!Array.isArray(value)) throw new Error('Invalid requests.payload.replace')
+
+  return value.map((item) => {
+    const rule = toRecord(item)
+    const models = sanitizePayloadModels(rule.models)
+    const content = normalizePayloadReplaceContent(rule)
+    if (
+      !canEditPayloadReplaceContent(rule) ||
+      Object.keys(rule).some((key) => !['models', 'target', 'replacements'].includes(key)) ||
+      getPayloadReplaceIssues(content).length > 0 ||
+      models.length === 0 ||
+      !Array.isArray(rule.models) ||
+      models.length !== rule.models.length
+    ) {
+      throw new Error('Invalid requests.payload.replace rule')
+    }
+    return { models, ...serializePayloadReplaceContent(content) }
+  })
 }
 
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
