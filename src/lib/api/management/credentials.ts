@@ -67,7 +67,7 @@ export type CredentialMetadataAvailability = {
   websockets: boolean
 }
 
-export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai'
+export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai' | 'devin'
 export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
 
 export type CredentialOAuthStartInput = {
@@ -306,6 +306,7 @@ const credentialOAuthProviders: CredentialOAuthProvider[] = [
   'antigravity',
   'kimi',
   'xai',
+  'devin',
 ]
 
 export function getCredentialOAuthProviders(runtimeMode: RuntimeMode) {

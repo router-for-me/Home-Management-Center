@@ -2286,6 +2286,7 @@ export const zhCN = {
           antigravity: '通过 Antigravity OAuth 获取 Google 账号凭证。',
           kimi: '通过 Kimi device flow 获取账号凭证。',
           xai: '通过 xAI/Grok OAuth 获取账号凭证。',
+          devin: '通过 Devin OAuth 获取账号凭证。',
         },
         statuses: {
           ok: '已完成',
@@ -2304,6 +2305,7 @@ export const zhCN = {
           antigravity: 'Antigravity',
           kimi: 'Kimi',
           xai: 'xAI / Grok',
+          devin: 'Devin',
         },
       },
       vertex: {

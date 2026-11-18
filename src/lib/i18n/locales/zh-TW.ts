@@ -2287,6 +2287,7 @@ export const zhTW = {
           antigravity: '透過 Antigravity OAuth 取得 Google 帳號憑證。',
           kimi: '透過 Kimi device flow 取得帳號憑證。',
           xai: '透過 xAI/Grok OAuth 取得帳號憑證。',
+          devin: '透過 Devin OAuth 取得帳號憑證。',
         },
         statuses: {
           ok: '已完成',
@@ -2305,6 +2306,7 @@ export const zhTW = {
           antigravity: 'Antigravity',
           kimi: 'Kimi',
           xai: 'xAI / Grok',
+          devin: 'Devin',
         },
       },
       vertex: {
