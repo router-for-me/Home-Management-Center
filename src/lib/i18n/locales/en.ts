@@ -2396,6 +2396,7 @@ export const en = {
           antigravity: 'Create a Google account credential through Antigravity OAuth.',
           kimi: 'Create an account credential through Kimi device flow.',
           xai: 'Create an account credential through xAI/Grok OAuth.',
+          devin: 'Create an account credential through Devin OAuth.',
         },
         statuses: {
           ok: 'Completed',
@@ -2414,6 +2415,7 @@ export const en = {
           antigravity: 'Antigravity',
           kimi: 'Kimi',
           xai: 'xAI / Grok',
+          devin: 'Devin',
         },
       },
       vertex: {
