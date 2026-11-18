@@ -3428,8 +3428,7 @@ export const ru = {
         payload: {
           title: 'Преобразование запросов',
           shortTitle: 'Преобразование',
-          description:
-            'Заполняйте, переопределяйте и удаляйте параметры или заменяйте текст user по модели и протоколу.',
+          description: 'Правила учитывают модель и протокол и выполняются в порядке категорий.',
         },
         antigravity: {
           title: 'Antigravity',
@@ -3564,7 +3563,7 @@ export const ru = {
         },
         payloadRulesJson: {
           label: 'Правила преобразования запросов',
-          description: 'Настройте преобразование параметров запросов и текста user.',
+          description: 'Изменение параметров и текста сообщений по модели и протоколу.',
           placeholder: '{"override":[]}',
         },
         antigravitySensitiveWordsJson: {
@@ -4187,12 +4186,8 @@ export const ru = {
       },
       payload: {
         summaryTitle: 'Преобразование запросов',
-        impactSummary:
-          'Заполнение: {{fill}} (Raw {{rawFill}}), переопределение: {{force}} (Raw {{rawForce}}), замена текста: {{replace}}, удаление: {{remove}}. Область действия: {{targets}}.',
-        emptyImpactSummary:
-          'Правила payload не настроены. Выберите намерение ниже, чтобы добавить правило.',
-        emptyRootWarning:
-          'Сохранение 0 правил удаляет payload root, поэтому перезапись payload во время выполнения применяться не будет.',
+        impactSummary: 'Модели · <models>{{targets}}</models>',
+        emptyRootWarning: 'После сохранения все правила преобразования запросов будут удалены.',
         totalRules: 'Правил: {{count}}',
         moreTargets: 'и еще {{count}}',
         noTargets: 'Модель не выбрана',
@@ -4203,12 +4198,12 @@ export const ru = {
         modelNameHelp: 'Укажите имя модели или wildcard-шаблон, например gpt-*.',
         modelNamePlaceholder: 'gpt-*',
         protocol: 'Protocol',
-        protocolHelp: 'Это translator protocol, а не provider или auth channel.',
+        protocolHelp: 'Протокол после преобразования запроса, например responses.',
         anyProtocol: 'Любой protocol',
         advancedMatchers: 'Расширенные условия',
         hideAdvancedMatchers: 'Скрыть расширенные',
         advancedMatchersSummary:
-          'Уточняют model matching по source protocol, Header или условиям payload.',
+          'Уточните условия по исходному протоколу, заголовкам или полям тела запроса.',
         fromProtocol: 'Source protocol',
         fromProtocolHelp:
           'Protocol до преобразования запроса. Оставьте пустым, чтобы не ограничивать source.',
@@ -4223,26 +4218,24 @@ export const ru = {
         matchConditions: 'Должно совпадать',
         notMatchConditions: 'Не должно совпадать',
         addCondition: 'Добавить условие',
-        conditionPath: 'JSON path условия',
-        conditionPathHelp:
-          'Используйте поддерживаемый backend gjson/sjson path для match по payload запроса.',
+        conditionPath: 'Путь JSON для условия',
+        conditionPathHelp: 'Укажите путь gjson/sjson к полю для проверки.',
         conditionPathPlaceholder: 'metadata.client',
         conditionValue: 'Значение условия',
         conditionValueHelp: 'Значение по этому path должно удовлетворять условию match.',
         existPaths: 'Должно существовать',
         notExistPaths: 'Не должно существовать',
         addPath: 'Добавить path',
-        paramPath: 'JSON path',
-        paramPathHelp: 'Используйте поддерживаемый backend gjson/sjson path для записи параметра.',
-        filterParamPathHelp: 'Используйте JSON path параметра, который нужно удалить из payload.',
+        paramPath: 'Путь JSON',
+        paramPathHelp: 'Укажите поле для записи с помощью пути gjson/sjson.',
+        filterParamPathHelp: 'Укажите путь к полю, которое нужно удалить из тела запроса.',
         paramPathPlaceholder: 'reasoning.effort',
         paramValue: 'Значение параметра',
-        paramValueHelp: 'Сохраняется как строка, число, boolean или JSON в зависимости от типа.',
+        paramValueHelp: 'Значение сохраняется с выбранным типом.',
         valueType: 'Тип значения',
-        valueTypeHelp:
-          'Raw-правила всегда используют JSON-фрагменты; обычные правила выбирают тип.',
+        valueTypeHelp: 'Выберите строку, число, логическое значение или JSON.',
         rawValueHelp:
-          'Raw-значения должны быть валидным JSON и сохраняются как raw JSON-фрагменты.',
+          'Введите каждое значение в формате JSON. Строки заключайте в двойные кавычки.',
         rawValuePlaceholder: '{"type":"object"}',
         jsonValuePlaceholder: '{"key":"value"}',
         booleanTrue: 'true',
@@ -4250,31 +4243,25 @@ export const ru = {
         addRuleTitle: 'Выберите действие для запроса',
         addRuleDescription:
           'Выберите заполнение, переопределение, замену текста user или удаление. Существующие правила доступны в соответствующем разделе.',
-        valueModeHint:
-          'Типизированное значение может быть string, number, boolean или JSON. Raw JSON записывается как raw JSON-фрагмент.',
         addRule: 'Добавить еще одно правило',
         draftBlockingHint: 'Завершите текущее правило, затем можно добавить новое.',
         viewExistingRules: 'Открыть существующие: {{count}}',
         removeRule: 'Удалить правило',
         duplicateRule: 'Дублировать правило',
         restoreRule: 'Восстановить',
-        removedRuleNotice:
-          'Одно правило удалено из {{section}}. Его можно восстановить до сохранения.',
+        removedRuleNotice: 'Из категории «{{section}}» удалено одно правило.',
         addModel: 'Добавить модель',
         addParam: 'Добавить параметр',
         completeCurrentModelFirst:
           'Сначала заполните имя текущей модели, затем добавьте следующую.',
-        completeCurrentParamFirst:
-          'Сначала заполните JSON path текущего параметра, затем добавьте следующий.',
         completeCurrentHeaderFirst:
           'Сначала заполните имя текущего Header, затем добавьте следующий.',
         completeCurrentConditionFirst:
-          'Сначала заполните JSON path текущего условия, затем добавьте следующее.',
+          'Перед добавлением следующего условия введите путь JSON для текущего.',
         completeCurrentPathFirst: 'Сначала заполните текущий path, затем добавьте следующий.',
         remove: 'Удалить',
         needsAttention: 'Проблем: {{count}}',
         draftCount: 'Правил для завершения: {{count}}',
-        draftHint: 'Правило не завершено. Заполните модель и параметр перед сохранением.',
         groupingHint:
           'Добавляйте несколько параметров в одно совпадение model/protocol. Новое правило нужно только для другого совпадения.',
         emptyRules: 'Правила не настроены.',
@@ -4286,7 +4273,53 @@ export const ru = {
         emptyNotExistPaths: 'У этой модели нет обязательных отсутствующих path.',
         ruleTitle: 'Правило {{index}}',
         ruleSummary: 'Моделей: {{models}} · параметров: {{params}}',
-        preview: 'Посмотреть payload JSON для сохранения',
+        preview: 'Просмотр JSON конфигурации',
+        workspace: {
+          readOnly: 'Только чтение',
+          readOnlyHint:
+            'Это правило использует настройки вне возможностей формы. При сохранении других изменений оно сохраняется в исходном виде.',
+          categoryLabels: {
+            fill: 'Заполнение',
+            override: 'Перезапись',
+            replace: 'Замена',
+            filter: 'Удаление',
+          },
+          categories: 'Категории изменения запросов',
+          draftNotice:
+            'Незавершённых правил: {{count}}. Завершите или отмените их перед сохранением.',
+          goToDraft: 'Проверить черновики',
+          addRule: 'Добавить правило',
+          incomplete: 'Не завершено',
+          unsavedRule: 'Ещё не сохранено',
+          discardNew: 'Отменить добавление',
+          discardTitle: 'Отменить добавление правила?',
+          discardDescription:
+            'Это правило ещё не сохранено. После отмены его можно добавить заново.',
+          executionPosition: 'Порядок: {{position}}',
+          selectedUsers: 'Номера сообщений пользователя · {{positions}}',
+          valueMode: 'Способ ввода параметров',
+          typedMode: 'Значения по типам',
+          rawMode: 'Ввод в JSON',
+          valueModeHelp:
+            'Способ ввода общий для всех параметров. При смене сохраняются пути и значения.',
+          modeOrder: 'Сначала выполняются правила по типам, затем правила JSON.',
+          modeMovesLast: 'Правило выполнится последним в новой группе.',
+          ruleMoved: 'Новая позиция правила — {{position}}.',
+          orderHints: {
+            fill: 'Для одного пути используется первое значение.',
+            override: 'Для одного пути используется последнее значение.',
+            replace: 'Подходящие правила выполняются сверху вниз.',
+            filter:
+              'Выполняется после замены текста. Удаляет подходящие поля; раннее удаление может повлиять на условия последующих правил.',
+          },
+          emptyHints: {
+            fill: 'Например, задать temperature, если параметр отсутствует.',
+            override:
+              'Например, задайте фиксированное значение temperature для каждого подходящего запроса.',
+            replace: 'Например, заменить foo на bar в сообщениях пользователя.',
+            filter: 'Например, удалите metadata.debug из подходящих запросов.',
+          },
+        },
         valueTypes: {
           string: 'String',
           number: 'Number',
@@ -4298,73 +4331,80 @@ export const ru = {
           number: '32768',
         },
         validation: {
+          headerDuplicate: 'В этом правиле модели уже используется такой заголовок.',
+          precision: 'При вводе по типу это число потеряет точность.',
           number: 'Введите корректное число.',
           boolean: 'Выберите true или false.',
           json: 'Введите корректный JSON.',
           headerName: 'Имя Header не может быть пустым.',
-          conditionPath: 'JSON path условия не может быть пустым.',
+          conditionPath: 'Введите путь JSON для условия.',
           pathRequired: 'Path не может быть пустым.',
         },
         replace: {
-          target: 'Целевые сообщения',
-          selectedPositions: 'Указанные номера user',
-          allUsers: 'Все сообщения user',
-          positions: 'Номера user',
+          actionSummary: '{{from}} → {{to}}',
+          deleteSummary: 'Удалить {{from}}',
+          moveStepUp: 'На шаг раньше',
+          moveStepDown: 'На шаг позже',
+          stepOrderHelp: 'Следующий шаг обрабатывает результат предыдущего.',
+          stepMoved: 'Новая позиция шага — {{position}}.',
+          localOnly: 'Пример текста не отправляется на сервер',
+          showSteps: 'Показать результаты шагов',
+          unchanged: 'Текст на этом шаге не изменился',
+
+          target: 'Сообщения пользователя',
+          selectedPositions: 'Выбрать по номеру',
+          allUsers: 'Все сообщения пользователя',
+          positions: 'Номера сообщений',
           positionsPlaceholder: 'Например 1, 2',
           positionsHint:
-            'Считаются только сообщения user в конечном запросе к upstream, начиная с 1. Сообщения без изменяемого текста тоже учитываются.',
+            'Нумерация сообщений пользователя в итоговом запросе начинается с 1. Учитываются и сообщения без текста для замены.',
           replacements: 'Замены',
-          orderHint: 'Выполняются сверху вниз',
-          entryTitle: 'Замена {{index}}',
+          entryTitle: 'Шаг {{index}}',
           deletesText: 'Удаляет найденный текст',
-          moveUp: 'Выше',
-          moveDown: 'Ниже',
-          moveEntryUp: 'Переместить замену {{index}} выше',
-          moveEntryDown: 'Переместить замену {{index}} ниже',
-          removeEntry: 'Удалить замену {{index}}',
+          moveUp: 'Выполнить раньше',
+          moveDown: 'Выполнить позже',
+          moveEntryUp: 'Выполнить шаг {{index}} раньше',
+          moveEntryDown: 'Выполнить шаг {{index}} позже',
+          removeEntry: 'Удалить шаг {{index}}',
           from: 'Найти текст',
           to: 'Заменить на',
-          entryFrom: 'Текст поиска для замены {{index}}',
-          entryTo: 'Текст результата для замены {{index}}',
+          entryFrom: 'Шаг {{index}}: найти текст',
+          entryTo: 'Шаг {{index}}: заменить на',
           fromPlaceholder: 'Точный текст для поиска',
-          toPlaceholder: 'Оставьте пустым для удаления найденного текста',
+          toPlaceholder: 'Оставьте пустым, чтобы удалить текст и сохранить сообщение',
           addEntry: 'Добавить замену',
-          literalHint:
-            'Буквальное сопоставление с учётом регистра. Пробелы и переносы строк сохраняются; регулярные выражения не поддерживаются. Пустой результат удаляет найденный текст, сохраняя сообщение.',
-          deleteDescription:
-            'Сначала удаление меняет черновик. Оно повлияет на будущие запросы только после сохранения конфигурации.',
+          literalHint: 'Точное совпадение с учётом регистра, пробелов и переносов строк.',
+          deleteDescription: 'Изменение вступит в силу после сохранения настроек.',
           confirmDelete: 'Подтвердить удаление',
-          previewTitle: 'Проверить замену локально',
+          previewTitle: 'Посмотреть результат замены',
           previewHint:
-            'Проверяются только замены текста выбранного правила. Преобразование протокола, выбор сообщений и условия сопоставления не моделируются. Текст не отправляется на сервер.',
+            'Проверяется только замена текста. Модель, протокол и номер сообщения не учитываются.',
           previewRule: 'Правило для проверки',
-          previewInput: 'Текст выбранного сообщения user',
-          previewOutput: 'Результат замены',
-          previewPlaceholder: 'Введите текст для проверки замен',
-          previewIncomplete: 'Заполните все поля поиска перед проверкой замен.',
-          previewEmpty: 'Введите текст user для просмотра результата.',
+          previewInput: 'Пример текста',
+          previewOutput: 'Текст после замены',
+          previewPlaceholder: 'Введите пример текста',
+          previewTooLarge:
+            'Предпросмотр слишком велик. Сократите пример текста или уменьшите число замен.',
+          previewIncomplete: 'Заполните все поля поиска для предпросмотра.',
+          previewEmpty: 'Введите пример текста, чтобы увидеть результат.',
           emptyResult: '(Пустой текст)',
-          ruleSummary: 'Моделей: {{models}} · замен: {{count}}',
-          moveRuleUp: 'Переместить правило {{index}} выше',
-          moveRuleDown: 'Переместить правило {{index}} ниже',
+          ruleSummary: 'Моделей: {{models}} · шагов замены: {{count}}',
+          moveRuleUp: 'Выполнить правило {{index}} раньше',
+          moveRuleDown: 'Выполнить правило {{index}} позже',
           draftHint: 'Укажите модель и текст поиска перед сохранением правила.',
           removeRuleTitle: 'Удалить правило {{index}}',
-          executionOrder:
-            'Порядок: заполнение → переопределение → замена текста user → удаление параметров.',
           groupingHint:
             'Правила и замены выполняются сверху вниз. Каждый шаг обрабатывает результат предыдущего. Для другой области сопоставления добавьте отдельное правило.',
         },
         ruleIssues: {
-          replacePositionsRequired:
-            'Укажите хотя бы один номер user или выберите все сообщения user.',
-          replacePositionsInvalid:
-            'Номера user должны быть целыми положительными числами начиная с 1, например 1, 2.',
-          replaceReplacementRequired: 'Добавьте хотя бы одну замену.',
-          replaceSourceRequired:
-            'Текст поиска не может быть пустым. Пробелы и переносы строк учитываются буквально.',
-          modelRequired: 'Добавьте хотя бы одну модель, иначе правило нельзя сохранить.',
+          replacePositionsRequired: 'Укажите номер или выберите все сообщения пользователя.',
+          replacePositionsInvalid: 'Укажите целые номера сообщений от 1, например 1, 2.',
+          replaceReplacementRequired: 'Добавьте хотя бы один шаг замены.',
+          replaceSourceRequired: 'Введите текст для поиска.',
+          modelRequired: 'Укажите модель для сопоставления.',
           paramRequired: 'Добавьте хотя бы один параметр, иначе правило не будет иметь эффекта.',
-          paramPathRequired: 'JSON path параметра не может быть пустым.',
+          paramPathDuplicate: 'В этом правиле уже есть такой путь.',
+          paramPathRequired: 'Введите путь JSON для параметра.',
         },
         addRuleActions: {
           replace: 'Заменить текст user',
@@ -4376,20 +4416,16 @@ export const ru = {
         },
         intentOptions: {
           replace: {
-            title: 'Заменить текст user',
-            description: 'Найти и заменить буквальный текст в существующих сообщениях user.',
+            title: 'Замена текста',
           },
           fill: {
             title: 'Заполнить отсутствующее',
-            description: 'Заполняет отсутствующие значения.',
           },
           override: {
             title: 'Принудительно перезаписать',
-            description: 'Всегда перезаписывает значения.',
           },
           filter: {
             title: 'Удалить параметр',
-            description: 'Удаляет по JSON path.',
           },
         },
         sections: {
@@ -4424,6 +4460,8 @@ export const ru = {
       },
       validation: {
         invalidField: 'Введите корректное значение.',
+        runtimeChanged:
+          'Изменяемая настройка обновлена на сервере. Загрузите конфигурацию заново перед редактированием.',
         jsonParseError: 'JSON не удалось разобрать: {{message}}',
         summary: 'Полей требуют внимания: {{count}}',
       },
