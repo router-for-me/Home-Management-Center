@@ -36,6 +36,10 @@ for (const [key, anchor] of cases) {
     Object.defineProperty(globalThis, 'document', {
       configurable: true,
       value: {
+        querySelectorAll: () => [
+          { getBoundingClientRect: () => ({ height: 56 }) },
+          { getBoundingClientRect: () => ({ height: 40 }) },
+        ],
         getElementById: (id: string) => {
           requestedIds.push(id)
           return id === `config-section-${anchor}` ? target : null
@@ -46,6 +50,6 @@ for (const [key, anchor] of cases) {
     scrollToField(key)
 
     expect(requestedIds).toEqual([`config-section-${anchor}`])
-    expect(scrolls).toEqual([{ top: 320, behavior: 'smooth' }])
+    expect(scrolls).toEqual([{ top: 224, behavior: 'smooth' }])
   })
 }

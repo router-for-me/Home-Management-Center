@@ -18,6 +18,7 @@ import {
   fetchCredentialInFlightDetail,
   fetchCredentialInFlightSummary,
   fetchCredentialModels,
+  fetchCredentialOAuthPluginProviders,
   fetchCredentialOAuthStatus,
   fetchCredentialRawMetadata,
   fetchCredentialSnapshot,
@@ -98,7 +99,6 @@ export function flattenCredentialInFlightRequests(pages: CredentialInFlightDetai
 export function useCredentialWorkbench() {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt } = useManagementSession()
-  const runtimeMode = useCapabilityStore((state) => state.runtimeMode)
   const credentialInFlight = useCapabilityStore((state) => state.capabilities.credentialInFlight)
   const credentialConcurrencyLimits = useCapabilityStore(
     (state) => state.capabilities.credentialConcurrencyLimits,
@@ -119,6 +119,23 @@ export function useCredentialWorkbench() {
       }
     },
   })
+
+  const oauthPluginQuery = useQuery({
+    queryKey: ['management-credential-oauth-plugins', session.baseUrl, connectedAt],
+    enabled: connected && Boolean(session.managementKey),
+    queryFn: async () => {
+      try {
+        return await fetchCredentialOAuthPluginProviders(session)
+      } catch (error) {
+        throw toCredentialApiError(error)
+      }
+    },
+  })
+  const oauthPluginProviders = oauthPluginQuery.data
+  const oauthProviders = useMemo(
+    () => [...getCredentialOAuthProviders(), ...(oauthPluginProviders ?? [])],
+    [oauthPluginProviders],
+  )
 
   const inFlightQueryKey = ['management-credential-in-flight', session.baseUrl, connectedAt]
   const inFlightQuery = useQuery({
@@ -323,7 +340,10 @@ export function useCredentialWorkbench() {
     credentialInFlight,
     credentialConcurrencyLimits,
     credentialCooldownReset,
-    oauthProviders: getCredentialOAuthProviders(runtimeMode),
+    oauthProviders,
+    oauthPluginProvidersError: oauthPluginQuery.isError
+      ? (oauthPluginQuery.error?.message ?? null)
+      : null,
     snapshot: query.data,
     isPending: query.isPending,
     isFetching: query.isFetching,
