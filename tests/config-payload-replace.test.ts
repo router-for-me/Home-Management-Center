@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test'
+import { createInstance } from 'i18next'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { normalizeConfigValues } from '../src/lib/api/management/config'
+import { canEditPayloadConfig, normalizeConfigValues } from '../src/lib/api/management/config'
 import {
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
@@ -30,13 +31,13 @@ const rule = {
   replacements: [{ ' project\n': ' 项目\n' }, { project: '' }, { project: 'duplicate source' }],
 }
 
-function writePayloads(payloads: unknown[]) {
+function writePayloads(payloads: unknown[], previous: unknown = {}) {
   const fixture = fileURLToPath(new URL('./fixtures/config-xhr-transport.ts', import.meta.url))
   const child = spawnSync(process.execPath, [fixture], {
     input: JSON.stringify(
       payloads.map((payload) => ({
         key: 'payloadRulesJson',
-        previousValue: '{}',
+        previousValue: JSON.stringify(previous),
         nextValue: JSON.stringify(payload),
       })),
     ),
@@ -91,30 +92,95 @@ describe('payload user text replacement', () => {
     expect(JSON.parse(result!.requests[0]!.body).replace).toEqual([rule])
   })
 
-  test('draft position text survives editing and switching target mode without reaching the wire', () => {
+  test('editing a literal rule preserves saved role, regex and path rules in order', () => {
+    const system = { ...rule, target: { role: 'system', all: true } }
+    const regex = { ...rule, replacements: [{ pattern: '(item)-([0-9]+)', replacement: '$1_$2' }] }
+    const paths = { ...rule, target: { paths: ['metadata.description'] } }
+    const previous = { replace: [system, rule, regex, paths, system] }
+    const edited = { ...rule, replacements: [{ before: 'after' }] }
+    const next = { replace: [system, edited, regex, paths, system] }
+    const [result] = writePayloads([next], previous)
+    expect(result!.error).toBeNull()
+    expect(JSON.parse(result!.requests[0]!.body).replace).toEqual(next.replace)
+
+    const [modified] = writePayloads(
+      [{ replace: [{ ...paths, replacements: [{ a: 'b' }] }] }],
+      previous,
+    )
+    expect(modified!.error).not.toBeNull()
+    expect(modified!.requests).toEqual([])
+    for (const result of writePayloads(
+      [{ replace: [edited] }, { replace: [...next.replace, system] }],
+      previous,
+    )) {
+      expect(result.error).not.toBeNull()
+      expect(result.requests).toEqual([])
+    }
+  })
+
+  test('the wire representation uses only the selected target and leaves the editor draft intact', () => {
     const content = normalizePayloadReplaceContent(rule)
     content.target.positions = '1, 2,'
-    const draft = { models: rule.models, ...serializePayloadReplaceContent(content, true) }
-    expect(normalizePayloadReplaceContent(draft).target.positions).toBe('1, 2,')
-    const allDraft = {
+    const selected = { models: rule.models, ...serializePayloadReplaceContent(content) }
+    const all = {
       models: rule.models,
-      ...serializePayloadReplaceContent(
-        { ...content, target: { ...content.target, all: true } },
-        true,
-      ),
+      ...serializePayloadReplaceContent({ ...content, target: { ...content.target, all: true } }),
     }
-    expect(normalizePayloadReplaceContent(allDraft).target.positions).toBe('1, 2,')
-    const results = writePayloads([{ replace: [draft] }, { replace: [allDraft] }])
-    expect(results.map((result) => result.error)).toEqual([null, null])
-    expect(JSON.parse(results[0]!.requests[0]!.body).replace[0].target).toEqual({
-      role: 'user',
-      positions: [1, 2],
-    })
-    expect(JSON.parse(results[1]!.requests[0]!.body).replace[0].target).toEqual({
-      role: 'user',
-      all: true,
-    })
-    expect(results.every((result) => !result.requests[0]!.body.includes('__hmc_'))).toBe(true)
+    expect(content.target.positions).toBe('1, 2,')
+    const [result] = writePayloads([{ replace: [selected, all] }])
+    expect(result!.error).toBeNull()
+    expect(
+      JSON.parse(result!.requests[0]!.body).replace.map((item: typeof rule) => item.target),
+    ).toEqual([
+      { role: 'user', positions: [1, 2] },
+      { role: 'user', all: true },
+    ])
+  })
+
+  test('unrepresented sections stay visible on read and block the entire subtree write', () => {
+    const editableRule = { models: ['*'], params: { temperature: 1 } }
+    const shapes = [
+      { future: [] },
+      { override: 'unknown' },
+      { replace: {} },
+      { filter: [{ models: ['*'], params: [10] }] },
+      { default: [{ ...editableRule, future: true }] },
+      { override: [{ models: [{ name: '*', future: true }], params: {} }] },
+    ]
+    for (const source of shapes) {
+      const normalized = JSON.parse(
+        String(normalizeConfigValues({ requests: { payload: source } }).payloadRulesJson),
+      )
+      expect(normalized).toMatchObject(source)
+      expect(canEditPayloadConfig(normalized)).toBe(false)
+      for (const result of writePayloads([{}, { override: [editableRule] }], source)) {
+        expect(result.error).not.toBeNull()
+        expect(result.requests).toEqual([])
+      }
+    }
+    for (const result of writePayloads(shapes)) expect(result.requests).toEqual([])
+    const malformed = normalizeConfigValues({ requests: { payload: 'future-format' } })
+    expect(JSON.parse(String(malformed.payloadRulesJson))).toBe('future-format')
+    expect(
+      canEditPayloadConfig(
+        JSON.parse(
+          String(
+            normalizeConfigValues({ requests: { payload: { default: null } } }).payloadRulesJson,
+          ),
+        ),
+      ),
+    ).toBe(true)
+  })
+
+  test('partial model and parameter rows cannot turn into a smaller write or a DELETE', () => {
+    for (const result of writePayloads([
+      { default: [{ models: ['*', { protocol: 'claude' }], params: { limit: 2 } }] },
+      { override: [{ models: ['*'], params: { ' a': 1, a: 2 } }] },
+      { filter: [{ models: ['*'], params: [''] }] },
+    ])) {
+      expect(result.error).not.toBeNull()
+      expect(result.requests).toEqual([])
+    }
   })
 
   test('invalid target and replacement shapes fail before making any request', () => {
@@ -155,10 +221,7 @@ describe('payload user text replacement', () => {
     ).toContain('replaceSourceRequired')
     const invalidDraft = {
       models: rule.models,
-      ...serializePayloadReplaceContent(
-        { ...content, target: { all: false, positions: '1.5' } },
-        true,
-      ),
+      ...serializePayloadReplaceContent({ ...content, target: { all: false, positions: '1.5' } }),
     }
     expect(writePayloads([{ replace: [invalidDraft] }])[0]!.requests).toEqual([])
   })
@@ -169,11 +232,44 @@ describe('payload user text replacement', () => {
       expect(keys(locale.common.configPage.payload.replace)).toEqual(
         keys(en.common.configPage.payload.replace),
       )
+      expect(keys(locale.common.configPage.payload.validation)).toEqual(
+        keys(en.common.configPage.payload.validation),
+      )
       expect(keys(locale.common.configPage.payload.ruleIssues)).toEqual(
         keys(en.common.configPage.payload.ruleIssues),
       )
+      expect(keys(locale.common.configPage.payload.workspace)).toEqual(
+        keys(en.common.configPage.payload.workspace),
+      )
+      expect(keys(locale.common.configPage.payload.workspace.orderHints)).toEqual(
+        keys(en.common.configPage.payload.workspace.orderHints),
+      )
+      expect(keys(locale.common.configPage.payload.workspace.emptyHints)).toEqual(
+        keys(en.common.configPage.payload.workspace.emptyHints),
+      )
+      expect(keys(locale.common.configPage.payload.workspace.categoryLabels)).toEqual(
+        keys(en.common.configPage.payload.workspace.categoryLabels),
+      )
       expect(locale.common.configPage.payload.intentOptions.replace.title).toBeTruthy()
       expect(locale.common.configPage.payload.sections.replace.description).toBeTruthy()
+    }
+  })
+
+  test('the overview names matched models in every locale without repeating category counts', async () => {
+    for (const locale of [en, zhCN, zhTW, ru]) {
+      const i18n = createInstance()
+      await i18n.init({ lng: 'test', resources: { test: locale }, defaultNS: 'common' })
+      for (const key of [
+        'configPage.validation.runtimeChanged',
+        'configPage.payload.validation.precision',
+        'configPage.payload.replace.previewTooLarge',
+      ])
+        expect(i18n.exists(key)).toBe(true)
+      const summary = i18n.t('configPage.payload.impactSummary', {
+        targets: 'example-model-*',
+      })
+      expect(summary).toContain('example-model-*')
+      expect(summary).not.toContain('{{')
     }
   })
 })

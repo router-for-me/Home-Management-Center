@@ -1,6 +1,7 @@
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import {
-  canEditPayloadReplaceContent,
+  canEditPayloadModel,
+  canEditPayloadReplaceRule,
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
   serializePayloadReplaceContent,
@@ -199,21 +200,38 @@ function stringifyJsonObject(value: unknown) {
   return JSON.stringify(isRecord(value) ? value : {}, null, 2)
 }
 
-function stringifyPayload(value: unknown) {
-  const payload = toRecord(value)
+const payloadSectionKeys = [
+  'default',
+  'default-raw',
+  'override',
+  'override-raw',
+  'replace',
+  'filter',
+]
 
-  return JSON.stringify(
-    {
-      default: Array.isArray(payload.default) ? payload.default : [],
-      'default-raw': Array.isArray(payload['default-raw']) ? payload['default-raw'] : [],
-      override: Array.isArray(payload.override) ? payload.override : [],
-      'override-raw': Array.isArray(payload['override-raw']) ? payload['override-raw'] : [],
-      replace: Array.isArray(payload.replace) ? payload.replace : [],
-      filter: Array.isArray(payload.filter) ? payload.filter : [],
-    },
-    null,
-    2,
-  )
+export function canEditPayloadConfig(value: unknown) {
+  if (!isRecord(value)) return false
+  return Object.entries(value).every(([key, rules]) => {
+    if (!payloadSectionKeys.includes(key) || !Array.isArray(rules)) return false
+    return rules.every((rule: unknown) => {
+      if (!isRecord(rule)) return false
+      if (key === 'replace') return true // Saved advanced rules can be carried through unchanged.
+      if (!Object.keys(rule).every((field) => field === 'models' || field === 'params'))
+        return false
+      if (!Array.isArray(rule.models) || !rule.models.every(canEditPayloadModel)) return false
+      return key === 'filter'
+        ? Array.isArray(rule.params) &&
+            rule.params.every((path: unknown) => typeof path === 'string')
+        : isRecord(rule.params)
+    })
+  })
+}
+
+function stringifyPayload(value: unknown) {
+  if (value != null && !isRecord(value)) return JSON.stringify(value, null, 2)
+  const payload = { ...toRecord(value) }
+  for (const key of payloadSectionKeys) payload[key] ??= []
+  return JSON.stringify(payload, null, 2)
 }
 
 function parseJsonArrayText(value: unknown) {
@@ -305,56 +323,46 @@ function sanitizePayloadModel(value: unknown) {
 }
 
 function sanitizePayloadModels(value: unknown) {
-  if (!Array.isArray(value)) return []
-
-  return value.flatMap((item) => {
+  if (!Array.isArray(value) || !value.length) throw new Error('Missing requests.payload models')
+  return value.map((item: unknown) => {
     const model = sanitizePayloadModel(item)
-    return model ? [model] : []
+    if (!model) throw new Error('Missing requests.payload model name')
+    return model
   })
 }
 
 function sanitizePayloadRuleSection(value: unknown) {
   if (!Array.isArray(value)) return []
-
-  return value.flatMap((item) => {
+  return value.map((item) => {
     const rule = toRecord(item)
     const models = sanitizePayloadModels(rule.models)
-    const params = toRecord(rule.params)
-    const nextParams = Object.entries(params).reduce<Record<string, unknown>>(
-      (nextValue, [path, paramValue]) => {
-        const normalizedPath = path.trim()
-        if (!normalizedPath) return nextValue
-
-        return {
-          ...nextValue,
-          [normalizedPath]: paramValue,
-        }
-      },
-      {},
-    )
-
-    if (models.length === 0 || Object.keys(nextParams).length === 0) return []
-
-    return [{ models, params: nextParams }]
+    const params = Object.entries(toRecord(rule.params))
+    const normalized = Object.fromEntries(params.map(([path, param]) => [path.trim(), param]))
+    if (!params.length || '' in normalized || Object.keys(normalized).length !== params.length) {
+      throw new Error('Invalid requests.payload parameter paths')
+    }
+    return { models, params: normalized }
   })
 }
 
 function sanitizePayloadFilterSection(value: unknown) {
   if (!Array.isArray(value)) return []
-
-  return value.flatMap((item) => {
+  return value.map((item) => {
     const rule = toRecord(item)
     const models = sanitizePayloadModels(rule.models)
     const params = sanitizePayloadStringList(rule.params)
-
-    if (models.length === 0 || params.length === 0) return []
-
-    return [{ models, params }]
+    if (!Array.isArray(rule.params) || !params.length || params.length !== rule.params.length) {
+      throw new Error('Invalid requests.payload filter paths')
+    }
+    return { models, params }
   })
 }
 
-function sanitizePayloadForWrite(value: UnknownRecord) {
-  const replace = sanitizePayloadReplaceSection(value.replace)
+function sanitizePayloadForWrite(value: UnknownRecord, previous: UnknownRecord) {
+  if (!canEditPayloadConfig(previous) || !canEditPayloadConfig(value)) {
+    throw new Error('Unsupported requests.payload structure')
+  }
+  const replace = sanitizePayloadReplaceSection(value.replace, previous.replace)
   return {
     default: sanitizePayloadRuleSection(value.default),
     'default-raw': sanitizePayloadRuleSection(value['default-raw']),
@@ -366,26 +374,34 @@ function sanitizePayloadForWrite(value: UnknownRecord) {
   }
 }
 
-function sanitizePayloadReplaceSection(value: unknown) {
-  if (value === undefined) return []
-  if (!Array.isArray(value)) throw new Error('Invalid requests.payload.replace')
+function sanitizePayloadReplaceSection(value: unknown, previous: unknown) {
+  const rules = value === undefined ? [] : value
+  if (!Array.isArray(rules)) throw new Error('Invalid requests.payload.replace')
 
-  return value.map((item) => {
-    const rule = toRecord(item)
+  // A subtree PUT must carry through saved rules that the visual form can't represent.
+  const savedReadOnly = (Array.isArray(previous) ? previous : []).filter(
+    (rule): rule is UnknownRecord => isRecord(rule) && !canEditPayloadReplaceRule(rule),
+  )
+  let preserved = 0
+  const result = rules.map((rule: unknown) => {
+    if (!isRecord(rule)) throw new Error('Invalid requests.payload.replace rule')
+    if (!canEditPayloadReplaceRule(rule)) {
+      const saved = savedReadOnly[preserved++]
+      if (!saved || JSON.stringify(saved) !== JSON.stringify(rule)) {
+        throw new Error('Invalid requests.payload.replace rule')
+      }
+      return saved
+    }
     const models = sanitizePayloadModels(rule.models)
     const content = normalizePayloadReplaceContent(rule)
-    if (
-      !canEditPayloadReplaceContent(rule) ||
-      Object.keys(rule).some((key) => !['models', 'target', 'replacements'].includes(key)) ||
-      getPayloadReplaceIssues(content).length > 0 ||
-      models.length === 0 ||
-      !Array.isArray(rule.models) ||
-      models.length !== rule.models.length
-    ) {
+    if (getPayloadReplaceIssues(content).length > 0) {
       throw new Error('Invalid requests.payload.replace rule')
     }
     return { models, ...serializePayloadReplaceContent(content) }
   })
+  if (preserved !== savedReadOnly.length)
+    throw new Error('Missing saved requests.payload.replace rule')
+  return result
 }
 
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
@@ -857,7 +873,10 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   const key = change.key
 
   if (key === 'payloadRulesJson') {
-    const payload = sanitizePayloadForWrite(parseJsonObjectText(change.nextValue))
+    const payload = sanitizePayloadForWrite(
+      parseJsonObjectText(change.nextValue),
+      parseJsonObjectText(change.previousValue),
+    )
     const hasRules = Object.values(payload).some(
       (section) => Array.isArray(section) && section.length > 0,
     )

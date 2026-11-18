@@ -17,8 +17,6 @@ type PayloadReplaceIssueKey =
   | 'replaceReplacementRequired'
   | 'replaceSourceRequired'
 
-const draftPositionsKey = '__hmc_payload_positions'
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
@@ -43,14 +41,11 @@ function normalizePayloadReplaceContent(value: unknown): PayloadReplaceContent {
   return {
     target: {
       all: target.all === true,
-      positions:
-        typeof target[draftPositionsKey] === 'string'
-          ? target[draftPositionsKey]
-          : Array.isArray(target.positions)
-            ? target.positions.join(', ')
-            : target.all === true
-              ? '1'
-              : '',
+      positions: Array.isArray(target.positions)
+        ? target.positions.join(', ')
+        : target.all === true
+          ? '1'
+          : '',
     },
     replacements: Array.isArray(rule.replacements)
       ? rule.replacements.map((entry) => {
@@ -74,17 +69,13 @@ function getPayloadReplaceIssues(content: PayloadReplaceContent): PayloadReplace
   return issues
 }
 
-function serializePayloadReplaceContent(content: PayloadReplaceContent, draft = false) {
+function serializePayloadReplaceContent(content: PayloadReplaceContent) {
   const positions = parsePayloadReplacePositions(content.target.positions)
-  const canonicalPositions = content.target.all ? '1' : positions?.join(', ')
-  // Keep partially typed positions in the draft without sending UI metadata to CPA.
-  const keepPositionsDraft = draft && content.target.positions !== canonicalPositions
 
   return {
     target: {
       role: 'user',
       ...(content.target.all ? { all: true } : { positions: positions ?? [] }),
-      ...(keepPositionsDraft ? { [draftPositionsKey]: content.target.positions } : {}),
     },
     // The array owns order and duplicates; neither operand is trimmed.
     replacements: content.replacements.map(({ from, to }) => ({ [from]: to })),
@@ -94,15 +85,8 @@ function serializePayloadReplaceContent(content: PayloadReplaceContent, draft = 
 function canEditPayloadReplaceContent(value: Record<string, unknown>) {
   const { target, replacements } = value
   if (!isRecord(target) || target.role !== 'user') return false
-  if (
-    Object.keys(target).some(
-      (key) => !['role', 'all', 'positions', draftPositionsKey].includes(key),
-    )
-  )
-    return false
+  if (Object.keys(target).some((key) => !['role', 'all', 'positions'].includes(key))) return false
   if (target.all !== undefined && typeof target.all !== 'boolean') return false
-  if (target[draftPositionsKey] !== undefined && typeof target[draftPositionsKey] !== 'string')
-    return false
   if (
     target.positions !== undefined &&
     (!Array.isArray(target.positions) ||
@@ -123,8 +107,65 @@ function canEditPayloadReplaceContent(value: Record<string, unknown>) {
   )
 }
 
+function canEditPayloadModel(model: unknown) {
+  if (typeof model === 'string') return true
+  if (!isRecord(model)) return false
+  return Object.entries(model).every(([key, value]) => {
+    switch (key) {
+      case 'name':
+      case 'protocol':
+      case 'from-protocol':
+        return typeof value === 'string'
+      case 'headers':
+        return isRecord(value) && Object.values(value).every((entry) => typeof entry === 'string')
+      case 'match':
+      case 'not-match':
+        return Array.isArray(value) && value.every(isRecord)
+      case 'exist':
+      case 'not-exist':
+        return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+      default:
+        return false
+    }
+  })
+}
+
+function canEditPayloadReplaceRule(rule: Record<string, unknown>) {
+  return (
+    Object.keys(rule).every((key) => ['models', 'target', 'replacements'].includes(key)) &&
+    Array.isArray(rule.models) &&
+    rule.models.every(canEditPayloadModel) &&
+    canEditPayloadReplaceContent(rule)
+  )
+}
+
+function describeReadOnlyPayloadReplace(rule: Record<string, unknown>) {
+  const target = isRecord(rule.target) ? rule.target : {}
+  const scope =
+    typeof target.role === 'string'
+      ? target.role
+      : Array.isArray(target.paths)
+        ? target.paths.filter((path) => typeof path === 'string').join(', ')
+        : ''
+  const entry: unknown = Array.isArray(rule.replacements) ? rule.replacements[0] : null
+  let first: PayloadReplacementEntry | undefined
+  let regex = false
+  if (isRecord(entry)) {
+    const pairs = Object.entries(entry)
+    if (typeof entry.pattern === 'string' && typeof entry.replacement === 'string') {
+      first = { from: entry.pattern, to: entry.replacement }
+      regex = true
+    } else if (pairs.length === 1 && typeof pairs[0][1] === 'string') {
+      first = { from: pairs[0][0], to: pairs[0][1] }
+    }
+  }
+  return { scope, first, regex }
+}
+
 export {
-  canEditPayloadReplaceContent,
+  canEditPayloadModel,
+  canEditPayloadReplaceRule,
+  describeReadOnlyPayloadReplace,
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
   serializePayloadReplaceContent,
