@@ -1,6 +1,9 @@
 import type { useTranslation } from 'react-i18next'
 
-import type { CredentialResource } from '@/lib/api/management/credentials'
+import type {
+  CredentialOAuthProviderOption,
+  CredentialResource,
+} from '@/lib/api/management/credentials'
 
 type TranslationFn = ReturnType<typeof useTranslation>['t']
 
@@ -23,6 +26,26 @@ export function getCredentialProviderLabel(t: TranslationFn, provider: string | 
 
   const translationKey = `credentialsPage.oauth.providers.${normalizedProvider}`
   return t(translationKey, { defaultValue: provider ?? normalizedProvider })
+}
+
+export function getCredentialOAuthProviderLabel(
+  t: TranslationFn,
+  option: CredentialOAuthProviderOption,
+) {
+  if (option.source === 'plugin') return option.displayName ?? option.id
+  return t(`credentialsPage.oauth.providers.${option.id}`)
+}
+
+export function getCredentialOAuthProviderHint(
+  t: TranslationFn,
+  option: CredentialOAuthProviderOption,
+) {
+  if (option.source === 'plugin') {
+    return t('credentialsPage.oauth.pluginProviderHint', {
+      name: getCredentialOAuthProviderLabel(t, option),
+    })
+  }
+  return t(`credentialsPage.oauth.providerHints.${option.id}`)
 }
 
 export function formatCredentialDateTime(value: string | null, locale?: string) {

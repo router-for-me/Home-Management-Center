@@ -1357,10 +1357,14 @@ export function AccountsPanel({
       setOAuthSessions((current) => ({ ...current, [provider]: result }))
       setOAuthStatuses((current) => {
         const next = { ...current }
-        delete next[provider]
+        if (result.state) next[provider] = { status: 'wait', error: null }
+        else delete next[provider]
         return next
       })
       toast.success(t('credentialsPage.toast.oauthStarted'))
+      // Device and plugin logins complete only while status is polled, and a CPA
+      // host can capture a browser redirect without a pasted callback.
+      if (result.state) void pollOAuthStatusUntilSettled(provider, result.state)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error))
     }
@@ -1636,6 +1640,7 @@ export function AccountsPanel({
         mode={createMode}
         fileInputRef={fileInputRef}
         oauthProviders={workbench.oauthProviders}
+        oauthPluginProvidersError={workbench.oauthPluginProvidersError}
         oauthSessions={oauthSessions}
         oauthStatuses={oauthStatuses}
         vertexImportResult={workbench.vertexImportResult}

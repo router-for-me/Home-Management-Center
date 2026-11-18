@@ -28,11 +28,16 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { formatCredentialBytes } from '@/features/credentials/credential-display'
+import {
+  formatCredentialBytes,
+  getCredentialOAuthProviderHint,
+  getCredentialOAuthProviderLabel,
+} from '@/features/credentials/credential-display'
 import {
   type CredentialOAuthCallbackInput,
-  type CredentialOAuthCallbackProvider,
+  type CredentialOAuthFlow,
   type CredentialOAuthProvider,
+  type CredentialOAuthProviderOption,
   type CredentialOAuthStatus,
   type VertexImportResult,
 } from '@/lib/api/management/credentials'
@@ -46,6 +51,8 @@ export type OAuthSessionSummary = {
   provider: CredentialOAuthProvider
   state: string | null
   url: string
+  userCode: string | null
+  flow: CredentialOAuthFlow
 }
 export type OAuthSessionMap = Partial<Record<CredentialOAuthProvider, OAuthSessionSummary>>
 export type OAuthStatusMap = Partial<Record<CredentialOAuthProvider, CredentialOAuthStatus>>
@@ -57,18 +64,12 @@ const oauthStatusToneClassNames: Record<string, string> = {
   unknown: 'border-border bg-muted text-muted-foreground',
 }
 
-function isOAuthCallbackProvider(
-  provider: CredentialOAuthProvider,
-): provider is CredentialOAuthCallbackProvider {
-  return provider !== 'kimi'
-}
-
-function isXaiOAuthProvider(provider: CredentialOAuthProvider): provider is 'xai' {
+function isXaiOAuthProvider(provider: CredentialOAuthProvider) {
   return provider === 'xai'
 }
 
 function createOAuthCallbackForm(
-  provider: CredentialOAuthCallbackProvider,
+  provider: CredentialOAuthProvider,
   state: string | null,
 ): CredentialOAuthCallbackInput {
   return {
@@ -99,6 +100,8 @@ async function copyTextToClipboard(value: string) {
 
 function OAuthClosurePanel({
   session,
+  providerLabel,
+  callbackSupported,
   status,
   mutating,
   compact = false,
@@ -106,6 +109,8 @@ function OAuthClosurePanel({
   onSubmitCallback,
 }: {
   session: OAuthSessionSummary
+  providerLabel: string
+  callbackSupported: boolean
   status: CredentialOAuthStatus | null
   mutating: boolean
   compact?: boolean
@@ -113,24 +118,19 @@ function OAuthClosurePanel({
   onSubmitCallback: (input: CredentialOAuthCallbackInput) => Promise<void>
 }) {
   const { t } = useTranslation()
-  const callbackSupported = isOAuthCallbackProvider(session.provider)
   const [statusState, setStatusState] = useState(session.state ?? '')
-  const [callbackForm, setCallbackForm] = useState<CredentialOAuthCallbackInput | null>(() => {
-    if (!isOAuthCallbackProvider(session.provider)) return null
-
-    return createOAuthCallbackForm(session.provider, session.state)
-  })
+  const [callbackForm, setCallbackForm] = useState<CredentialOAuthCallbackInput | null>(() =>
+    callbackSupported ? createOAuthCallbackForm(session.provider, session.state) : null,
+  )
   const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setStatusState(session.state ?? '')
     setCallbackForm(
-      isOAuthCallbackProvider(session.provider)
-        ? createOAuthCallbackForm(session.provider, session.state)
-        : null,
+      callbackSupported ? createOAuthCallbackForm(session.provider, session.state) : null,
     )
     setLocalError(null)
-  }, [session])
+  }, [session, callbackSupported])
 
   const handleCheckStatus = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -202,9 +202,7 @@ function OAuthClosurePanel({
       <div className="bg-muted/30 mt-4 grid gap-2 rounded-md border p-3 text-xs">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <span className="text-muted-foreground">{t('credentialsPage.oauth.lastProvider')}</span>
-          <span className="truncate font-medium">
-            {t(`credentialsPage.oauth.providers.${session.provider}`)}
-          </span>
+          <span className="truncate font-medium">{providerLabel}</span>
         </div>
         <div className="flex min-w-0 items-center justify-between gap-3">
           <span className="text-muted-foreground">{t('credentialsPage.oauth.lastState')}</span>
@@ -267,7 +265,7 @@ function OAuthClosurePanel({
             <label className={fieldClassName}>
               <span>{t('credentialsPage.oauth.callbackProvider')}</span>
               <div className="border-input bg-muted/30 flex h-9 items-center rounded-md border px-3 text-sm">
-                {t(`credentialsPage.oauth.providers.${callbackForm.provider}`)}
+                {providerLabel}
               </div>
             </label>
             <label className={fieldClassName}>
@@ -372,6 +370,16 @@ function OAuthAuthorizationLinkPanel({ session }: { session: OAuthSessionSummary
     window.open(session.url, '_blank', 'noopener,noreferrer')
   }
 
+  const handleCopyUserCode = async () => {
+    if (!session.userCode) return
+    try {
+      await copyTextToClipboard(session.userCode)
+      toast.success(t('credentialsPage.toast.oauthUserCodeCopied'))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error))
+    }
+  }
+
   return (
     <section className="bg-muted/20 mt-3 rounded-lg border p-4">
       <div className="flex items-start gap-3">
@@ -405,6 +413,26 @@ function OAuthAuthorizationLinkPanel({ session }: { session: OAuthSessionSummary
           {t('credentialsPage.oauth.openAuthorizationLink')}
         </Button>
       </div>
+      {session.userCode ? (
+        <div className="bg-card mt-3 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-muted-foreground text-meta">{t('credentialsPage.oauth.userCode')}</p>
+            <p className="text-section-title mt-1 font-mono break-all">{session.userCode}</p>
+            <p className="text-muted-foreground text-meta mt-1">
+              {t('credentialsPage.oauth.userCodeDescription')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => void handleCopyUserCode()}
+          >
+            <Copy className="size-4" aria-hidden="true" />
+            {t('credentialsPage.oauth.copyUserCode')}
+          </Button>
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -668,6 +696,7 @@ function VertexImportPanel({
 
 function OAuthStartPanel({
   providers,
+  pluginProvidersError,
   sessions,
   statuses,
   mutating,
@@ -675,7 +704,8 @@ function OAuthStartPanel({
   onCheckStatus,
   onSubmitCallback,
 }: {
-  providers: CredentialOAuthProvider[]
+  providers: CredentialOAuthProviderOption[]
+  pluginProvidersError: string | null
   sessions: OAuthSessionMap
   statuses: OAuthStatusMap
   mutating: boolean
@@ -688,7 +718,9 @@ function OAuthStartPanel({
   return (
     <div className="grid gap-4">
       <div className="grid gap-2">
-        {providers.map((provider) => {
+        {providers.map((option) => {
+          const provider = option.id
+          const label = getCredentialOAuthProviderLabel(t, option)
           const session = sessions[provider]
           const status = statuses[provider] ?? null
 
@@ -699,13 +731,11 @@ function OAuthStartPanel({
                   <p className="truncate text-sm font-medium">
                     <span className="inline-flex min-w-0 items-center gap-2">
                       <ProviderLogo providerId={provider} size="sm" />
-                      <span className="truncate">
-                        {t(`credentialsPage.oauth.providers.${provider}`)}
-                      </span>
+                      <span className="truncate">{label}</span>
                     </span>
                   </p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    {t(`credentialsPage.oauth.providerHints.${provider}`)}
+                    {getCredentialOAuthProviderHint(t, option)}
                   </p>
                 </div>
                 <Button
@@ -729,6 +759,8 @@ function OAuthStartPanel({
                   <OAuthClosurePanel
                     compact
                     session={session}
+                    providerLabel={label}
+                    callbackSupported={session.flow === 'browser'}
                     status={status}
                     mutating={mutating}
                     onCheckStatus={(state) => onCheckStatus(provider, state)}
@@ -740,6 +772,11 @@ function OAuthStartPanel({
           )
         })}
       </div>
+      {pluginProvidersError ? (
+        <p role="status" className="text-muted-foreground text-meta">
+          {t('credentialsPage.oauth.pluginProvidersUnavailable')}
+        </p>
+      ) : null}
     </div>
   )
 }
@@ -938,6 +975,7 @@ export function CreateCredentialSheet({
   mode,
   fileInputRef,
   oauthProviders,
+  oauthPluginProvidersError,
   oauthSessions,
   oauthStatuses,
   vertexImportResult,
@@ -959,7 +997,8 @@ export function CreateCredentialSheet({
   open: boolean
   mode: CreateCredentialMode
   fileInputRef: React.RefObject<HTMLInputElement | null>
-  oauthProviders: CredentialOAuthProvider[]
+  oauthProviders: CredentialOAuthProviderOption[]
+  oauthPluginProvidersError: string | null
   oauthSessions: OAuthSessionMap
   oauthStatuses: OAuthStatusMap
   vertexImportResult: VertexImportResult | null
@@ -1025,6 +1064,7 @@ export function CreateCredentialSheet({
           {mode === 'oauth' ? (
             <OAuthStartPanel
               providers={oauthProviders}
+              pluginProvidersError={oauthPluginProvidersError}
               sessions={oauthSessions}
               statuses={oauthStatuses}
               mutating={mutating}
