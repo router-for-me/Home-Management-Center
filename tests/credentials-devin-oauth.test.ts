@@ -39,10 +39,13 @@ function captureRequests(responseData: unknown) {
 }
 
 describe('Devin credential OAuth', () => {
-  test('offers Devin login in Home and direct CPA runtimes', () => {
-    for (const runtimeMode of ['cpa', 'home-standalone', 'home-cluster'] as const) {
-      expect(getCredentialOAuthProviders(runtimeMode)).toContain('devin')
-    }
+  test('offers Devin as a built-in browser login', () => {
+    expect(getCredentialOAuthProviders()).toContainEqual({
+      id: 'devin',
+      source: 'builtin',
+      flow: 'browser',
+      displayName: null,
+    })
   })
 
   test('starts through the shared auth-url route and submits the pasted callback URL as is', async () => {
@@ -53,6 +56,8 @@ describe('Devin credential OAuth', () => {
       provider: 'devin',
       url: authorizationUrl,
       state: 'dvn-state',
+      userCode: null,
+      flow: 'browser',
     })
 
     const redirectUrl = 'http://127.0.0.1:57121/callback?code=devin-code&state=dvn-state'

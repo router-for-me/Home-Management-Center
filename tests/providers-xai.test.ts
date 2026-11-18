@@ -1,7 +1,6 @@
 import axios, { type AxiosAdapter, type AxiosRequestConfig } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { getCredentialOAuthProviders } from '../src/lib/api/management/credentials'
 import { fetchManagementDashboardSnapshot } from '../src/lib/api/management/dashboard'
 import {
   type ProviderEntryFormInput,
@@ -122,9 +121,7 @@ function providerResponseKey(pathname: string) {
 }
 
 describe('xAI provider Management API integration', () => {
-  test('keeps xAI capabilities scoped to Home runtimes', () => {
-    expect(getCredentialOAuthProviders('cpa')).not.toContain('xai')
-    expect(getCredentialOAuthProviders('home-standalone')).toContain('xai')
+  test('keeps xAI model definitions scoped to Home runtimes', () => {
     expect(getProviderModelDefinitionChannels('cpa')).not.toContain('xai')
     expect(getProviderModelDefinitionChannels('home-cluster')).toContain('xai')
   })

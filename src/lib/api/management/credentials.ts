@@ -1,7 +1,7 @@
 import type { AxiosProgressEvent, AxiosResponse } from 'axios'
 
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
-import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
+import type { ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -67,8 +67,29 @@ export type CredentialMetadataAvailability = {
   websockets: boolean
 }
 
-export type CredentialOAuthProvider = 'claude' | 'codex' | 'antigravity' | 'kimi' | 'xai' | 'devin'
-export type CredentialOAuthCallbackProvider = Exclude<CredentialOAuthProvider, 'kimi'>
+type CredentialOAuthBuiltinProvider =
+  | 'claude'
+  | 'codex'
+  | 'antigravity'
+  | 'kimi'
+  | 'kimi-ai'
+  | 'meta'
+  | 'xai'
+  | 'devin'
+
+// Plugin logins send the plugin's `oauth_provider`, so the key cannot be a closed union.
+export type CredentialOAuthProvider = string
+
+// Device logins finish in the backend's device-flow worker and take no callback.
+export type CredentialOAuthFlow = 'browser' | 'device'
+
+export type CredentialOAuthProviderOption = {
+  id: CredentialOAuthProvider
+  source: 'builtin' | 'plugin'
+  flow: CredentialOAuthFlow
+  // Built-in providers are labelled through i18n; plugins carry their own name.
+  displayName: string | null
+}
 
 export type CredentialOAuthStartInput = {
   provider: CredentialOAuthProvider
@@ -80,7 +101,7 @@ export type CredentialOAuthStatus = {
 }
 
 export type CredentialOAuthCallbackInput = {
-  provider: CredentialOAuthCallbackProvider
+  provider: CredentialOAuthProvider
   redirectUrl: string
   code: string
   state: string
@@ -155,6 +176,8 @@ type OAuthUrlResponse = {
   status?: string
   url?: string
   state?: string
+  user_code?: string
+  flow?: string
 }
 
 type OAuthStatusResponse = {
@@ -296,23 +319,119 @@ type CredentialOAuthStartResult = {
   provider: CredentialOAuthProvider
   url: string
   state: string | null
+  userCode: string | null
+  flow: CredentialOAuthFlow
 }
 
 const credentialOAuthAuthUrlPath = '/oauth/auth-url'
 
-const credentialOAuthProviders: CredentialOAuthProvider[] = [
-  'claude',
-  'codex',
-  'antigravity',
-  'kimi',
-  'xai',
-  'devin',
+function builtinOAuthProvider(
+  id: CredentialOAuthBuiltinProvider,
+  flow: CredentialOAuthFlow,
+): CredentialOAuthProviderOption {
+  return { id, source: 'builtin', flow, displayName: null }
+}
+
+// `flow` is the Home behaviour. CPA runs xAI as a device flow and says so in its
+// auth-url response, which `resolveCredentialOAuthSessionFlow` gives precedence.
+const builtinCredentialOAuthProviders: CredentialOAuthProviderOption[] = [
+  builtinOAuthProvider('claude', 'browser'),
+  builtinOAuthProvider('codex', 'browser'),
+  builtinOAuthProvider('antigravity', 'browser'),
+  builtinOAuthProvider('kimi', 'device'),
+  builtinOAuthProvider('kimi-ai', 'device'),
+  builtinOAuthProvider('meta', 'device'),
+  builtinOAuthProvider('xai', 'browser'),
+  builtinOAuthProvider('devin', 'browser'),
 ]
 
-export function getCredentialOAuthProviders(runtimeMode: RuntimeMode) {
-  return runtimeMode === 'cpa'
-    ? credentialOAuthProviders.filter((provider) => provider !== 'xai')
-    : credentialOAuthProviders
+export function getCredentialOAuthProviders() {
+  return builtinCredentialOAuthProviders
+}
+
+function findBuiltinCredentialOAuthProvider(provider: CredentialOAuthProvider) {
+  return builtinCredentialOAuthProviders.find((option) => option.id === provider) ?? null
+}
+
+// CPA opens a loopback callback forwarder for WebUI browser logins, and copies every
+// other query key into a plugin's login metadata, so only built-in browser logins
+// carry `is_webui`.
+function shouldMarkCredentialOAuthStartAsWebUi(provider: CredentialOAuthProvider) {
+  return findBuiltinCredentialOAuthProvider(provider)?.flow === 'browser'
+}
+
+function resolveCredentialOAuthSessionFlow(
+  provider: CredentialOAuthProvider,
+  response: OAuthUrlResponse,
+): CredentialOAuthFlow {
+  if (response.flow === 'device' || response.user_code?.trim()) return 'device'
+  return findBuiltinCredentialOAuthProvider(provider)?.flow ?? 'browser'
+}
+
+// Runtimes trim and lowercase plugin keys, then accept only letters, digits, or hyphens.
+const pluginOAuthProviderPattern = /^[a-z0-9-]+$/
+
+function normalizePluginOAuthProviderKey(value: unknown) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
+
+// `oauth_providers` lists every identifier a plugin registers; older runtimes send
+// only the first one as `oauth_provider`.
+function readPluginOAuthProviderKeys(plugin: UnknownRecord) {
+  const keys = Array.isArray(plugin.oauth_providers)
+    ? plugin.oauth_providers.map(normalizePluginOAuthProviderKey).filter(Boolean)
+    : []
+  return keys.length > 0 ? keys : [normalizePluginOAuthProviderKey(plugin.oauth_provider)]
+}
+
+function readPluginOAuthEntryNames(plugin: UnknownRecord) {
+  const names = new Map<string, string>()
+  const entries = Array.isArray(plugin.oauth_provider_entries)
+    ? plugin.oauth_provider_entries.filter(isRecord)
+    : []
+  for (const entry of entries) {
+    const key = normalizePluginOAuthProviderKey(entry.identifier)
+    const name = readString(entry, 'name')?.trim()
+    if (key && name) names.set(key, name)
+  }
+  return names
+}
+
+export function normalizeCredentialOAuthPluginProviders(
+  value: unknown,
+): CredentialOAuthProviderOption[] {
+  const root = isRecord(value) ? value : {}
+  const plugins = Array.isArray(root.plugins) ? root.plugins.filter(isRecord) : []
+  const takenIds = new Set(builtinCredentialOAuthProviders.map((provider) => provider.id))
+
+  return plugins.flatMap((plugin) => {
+    if (!readBoolean(plugin, 'supports_oauth') || !readBoolean(plugin, 'effective_enabled')) {
+      return []
+    }
+    const metadata = isRecord(plugin.metadata) ? plugin.metadata : {}
+    const pluginName =
+      readString(metadata, 'name')?.trim() || readString(plugin, 'id')?.trim() || null
+    const entryNames = readPluginOAuthEntryNames(plugin)
+    const keys = readPluginOAuthProviderKeys(plugin)
+
+    return keys.flatMap((id): CredentialOAuthProviderOption[] => {
+      if (!pluginOAuthProviderPattern.test(id) || takenIds.has(id)) return []
+      takenIds.add(id)
+
+      const entryName = entryNames.get(id)
+      // Without per-login names, a plugin that registers several logins needs the key to tell them apart.
+      const fallbackName = pluginName && keys.length > 1 ? `${pluginName} (${id})` : pluginName
+      return [
+        { id, source: 'plugin', flow: 'browser', displayName: entryName ?? fallbackName ?? id },
+      ]
+    })
+  })
+}
+
+export async function fetchCredentialOAuthPluginProviders(session: ManagementSessionInput) {
+  const client = createManagementClient(session)
+  const response = await client.get<unknown>('/plugins')
+  return normalizeCredentialOAuthPluginProviders(response.data)
 }
 
 const xaiCallbackUrl = 'http://127.0.0.1:56121/callback'
@@ -1762,7 +1881,7 @@ export async function startCredentialOAuth(
   const response = await client.get<OAuthUrlResponse>(credentialOAuthAuthUrlPath, {
     params: {
       provider: input.provider,
-      is_webui: true,
+      ...(shouldMarkCredentialOAuthStartAsWebUi(input.provider) ? { is_webui: true } : {}),
     },
   })
 
@@ -1774,6 +1893,8 @@ export async function startCredentialOAuth(
     provider: input.provider,
     url: response.data.url,
     state: response.data.state ?? null,
+    userCode: response.data.user_code?.trim() || null,
+    flow: resolveCredentialOAuthSessionFlow(input.provider, response.data),
   }
 }
 
