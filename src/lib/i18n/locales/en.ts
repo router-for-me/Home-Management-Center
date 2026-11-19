@@ -4435,6 +4435,8 @@ export const en = {
       },
       validation: {
         invalidField: 'Enter a valid value.',
+        editConflict:
+          'The selected record changed, was removed, or could not be uniquely identified. Reload before saving.',
         runtimeChanged:
           'A setting you edited changed on the server. Reload before editing it again.',
         jsonParseError: 'JSON could not be parsed: {{message}}',
@@ -4445,6 +4447,11 @@ export const en = {
         unsupportedStructure:
           'This config contains a structure that is not supported by the visual editor.',
         emptyRows: 'No rules configured.',
+        aliasChannel: 'Alias channel',
+        customChannel: 'Custom channel',
+        moveAlias: 'Move alias',
+        vertexProtocol: 'Vertex protocol',
+        vertexModes: { auto: 'Automatic', native: 'Native', openapi: 'OpenAPI' },
         addAlias: 'Add alias',
         columns: {
           channel: 'Channel',

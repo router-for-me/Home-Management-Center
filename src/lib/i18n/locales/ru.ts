@@ -4460,6 +4460,8 @@ export const ru = {
       },
       validation: {
         invalidField: 'Введите корректное значение.',
+        editConflict:
+          'Запись изменилась, была удалена или не может быть однозначно определена. Обновите данные перед сохранением.',
         runtimeChanged:
           'Изменяемая настройка обновлена на сервере. Загрузите конфигурацию заново перед редактированием.',
         jsonParseError: 'JSON не удалось разобрать: {{message}}',
@@ -4470,6 +4472,11 @@ export const ru = {
         unsupportedStructure:
           'Эта config содержит структуру, которую visual editor пока не поддерживает.',
         emptyRows: 'Правила не настроены.',
+        aliasChannel: 'Канал псевдонимов',
+        customChannel: 'Другой канал',
+        moveAlias: 'Переместить псевдоним',
+        vertexProtocol: 'Протокол Vertex',
+        vertexModes: { auto: 'Автоматически', native: 'Нативный', openapi: 'OpenAPI' },
         addAlias: 'Добавить alias',
         columns: {
           channel: 'Channel',

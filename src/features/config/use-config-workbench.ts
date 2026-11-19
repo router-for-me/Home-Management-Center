@@ -6,6 +6,7 @@ import {
   fetchConfigSnapshot,
   toConfigApiError,
 } from '@/lib/api/management/config'
+import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import {
   type ProviderModelChannel,
   fetchProviderModelDefinitions,
@@ -14,6 +15,7 @@ import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
 function toThrowableError(error: unknown) {
+  if (error instanceof ConfigEditConflict) return error
   const apiError = toConfigApiError(error)
   return apiError instanceof Error ? apiError : new Error(apiError.message)
 }
@@ -91,6 +93,9 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
       } catch (error) {
         throw toThrowableError(error)
       }
+    },
+    onError: async (error) => {
+      if (error instanceof ConfigEditConflict) await invalidate()
     },
     onSuccess: invalidate,
   })

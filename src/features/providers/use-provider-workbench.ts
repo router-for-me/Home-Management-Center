@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { toManagementApiError } from '@/lib/api/management/client'
+import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import {
   type ProviderConnectivityTestInput,
   type ProviderDiscoveredModel,
@@ -40,6 +41,7 @@ function useManagementSession() {
 }
 
 function toError(error: unknown) {
+  if (error instanceof ConfigEditConflict) return error
   const apiError = toManagementApiError(error)
   return new Error(apiError.message, { cause: error })
 }
@@ -117,6 +119,9 @@ export function useProviderWorkbench(modelDefinitionChannel?: ProviderModelChann
       } catch (error) {
         throw toError(error)
       }
+    },
+    onError: async (error) => {
+      if (error instanceof ConfigEditConflict) await invalidate()
     },
     onSuccess: invalidate,
   })
