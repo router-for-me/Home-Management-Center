@@ -394,6 +394,60 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.ok(combined.textContent.includes(copy.fields.remoteManagementSecretKey.label))
   assert.ok(combined.textContent.includes('••••••••'))
   assert.ok(!combined.outerHTML.includes(managementKey))
+} else if (scenario === 'claude-execution-settings') {
+  await renderConfig({
+    upstream: {
+      claude: {
+        'header-defaults': {
+          'native-entrypoints': ['two\nlines'],
+          'anthropic-beta-strip': ['Flag-B', ' flag-A '],
+        },
+      },
+    },
+  })
+  const copy = en.common.configPage
+  const field = (key: string) => browser.document.getElementById('config-field-' + key)!
+  const save = button(copy.actions.save)
+  const mode = field('upstreamClaudeClientRequestId')
+  const modeCopy = copy.fields.upstreamClaudeClientRequestId
+  const trigger = mode.querySelector('[role="combobox"]')!
+  assert.equal(trigger.textContent.trim(), modeCopy.placeholder)
+  assert.equal(field('upstreamClaudeNativeEntrypointsJson').querySelector('textarea'), null)
+  assert.equal(
+    field('upstreamClaudeInjectDiagnostics')
+      .querySelector('[role="switch"]')
+      ?.getAttribute('aria-checked'),
+    'true',
+  )
+  assert.equal(save.disabled, true)
+  for (const option of Object.values(modeCopy.options)) {
+    await select(modeCopy.label, option)
+    assert.equal(trigger.textContent.trim(), option)
+    assert.equal(save.disabled, false)
+  }
+  await click(
+    [...mode.querySelectorAll('button')].find(
+      (node) => node.textContent.trim() === copy.actions.restoreDefault,
+    ),
+  )
+  assert.equal(browser.document.activeElement, trigger)
+  assert.equal(save.disabled, true)
+  const strip = field('upstreamClaudeAnthropicBetaStripJson').querySelector('textarea')!
+  assert.equal(strip.value, 'Flag-B\n flag-A ')
+  await edit(strip, '')
+  const appendField = field('upstreamClaudeAnthropicBetaAppendJson')
+  const append = appendField.querySelector('textarea')!
+  await edit(append, 'Flag-Z\nflag-a\nFlag-Z')
+  await click(button(copy.actions.viewChanges))
+  const diff = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(diff.textContent.includes('[]'))
+  assert.ok(diff.textContent.indexOf('Flag-Z') < diff.textContent.indexOf('flag-a'))
+  await click(button(en.common.close))
+  await click(appendField.querySelector('button')!)
+  assert.equal(browser.document.activeElement, append)
+  assert.equal(append.value, '')
+  await edit(strip, 'Flag-B\n flag-A ')
+  assert.equal(save.disabled, true)
 } else if (scenario === 'codex-execution-settings') {
   await renderConfig({ client: { codex: { 'web-search-result-cache': null } } })
   const copy = en.common.configPage

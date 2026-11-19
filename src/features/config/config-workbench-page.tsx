@@ -122,7 +122,9 @@ import {
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
+  claudeClientRequestIdModes,
   hasOAuthChannelConflict,
+  isEditableHeaderList,
   isReadOnlyConfigField,
   parseCodexCacheTtl,
   parseOptionalInteger,
@@ -175,6 +177,8 @@ type ConfigSubgroupId =
   | 'cpaServer'
   | 'codexSearchCache'
   | 'codexTransport'
+  | 'claudeExecution'
+  | 'claudeRequestHeaders'
   | 'devin'
   | 'liveMediaRelay'
   | 'antigravity'
@@ -193,6 +197,7 @@ type ConfigFieldKind =
   | 'duration'
   | 'nullableBoolean'
   | 'jsonArray'
+  | 'optionalStringList'
   | 'jsonObject'
 
 export {
@@ -200,7 +205,14 @@ export {
   serializeModelAliasRule,
 } from '@/lib/api/management/oauth-model-aliases'
 
+const claudeHeaderListKeys = [
+  'upstreamClaudeNativeEntrypointsJson',
+  'upstreamClaudeAnthropicBetaStripJson',
+  'upstreamClaudeAnthropicBetaAppendJson',
+] as const
+
 type JsonConfigFieldKey =
+  | (typeof claudeHeaderListKeys)[number]
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
   | 'oauthModelSettingsJson'
@@ -334,6 +346,7 @@ type ConfigFieldDefinition = {
   sectionId: ConfigSectionId
   groupId?: ConfigSubgroupId
   defaultChecked?: boolean
+  defaultOption?: string
   min?: number
   max?: number
   options?: string[]
@@ -583,6 +596,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'client' },
       { key: 'clientCodexEnableApplyPatch', kind: 'optionalSwitch', sectionId: 'client' },
+      { key: 'clientClaudeShowCodexCommentary', kind: 'optionalSwitch', sectionId: 'client' },
       {
         key: 'clientCodexWebSearchCacheEnabled',
         kind: 'optionalSwitch',
@@ -634,6 +648,18 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       { key: 'upstreamClaudeModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeToolSearch', kind: 'boolean', sectionId: 'upstream' },
+      {
+        key: 'upstreamClaudeServerSideFallback',
+        kind: 'optionalSwitch',
+        sectionId: 'upstream',
+        groupId: 'claudeExecution',
+      },
+      {
+        key: 'upstreamClaudeSessionDatePinDays',
+        kind: 'optionalInteger',
+        sectionId: 'upstream',
+        groupId: 'claudeExecution',
+      },
       { key: 'upstreamClaudeDisableCloakMode', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeDisableCloakingModelList', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamXaiInjectXSearch', kind: 'boolean', sectionId: 'upstream' },
@@ -656,6 +682,30 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       { key: 'oauthCodexHeaderUserAgent', kind: 'text', sectionId: 'headers' },
       { key: 'oauthCodexHeaderBetaFeatures', kind: 'text', sectionId: 'headers' },
+      ...claudeHeaderListKeys.map(
+        (key) =>
+          ({
+            key,
+            kind: 'optionalStringList',
+            sectionId: 'headers',
+            groupId: 'claudeRequestHeaders',
+          }) as const,
+      ),
+      {
+        key: 'upstreamClaudeInjectDiagnostics',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'headers',
+        groupId: 'claudeRequestHeaders',
+      },
+      {
+        key: 'upstreamClaudeClientRequestId',
+        kind: 'select',
+        options: claudeClientRequestIdModes,
+        defaultOption: 'on',
+        sectionId: 'headers',
+        groupId: 'claudeRequestHeaders',
+      },
     ],
   },
   {
@@ -860,6 +910,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
 }
 
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
+  ...claudeHeaderListKeys,
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
   'oauthModelSettingsJson',
@@ -877,6 +928,7 @@ const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
 ])
 
 const stringListConfigFieldKeys = new Set<JsonConfigFieldKey>([
+  ...claudeHeaderListKeys,
   'serverAllowHostJson',
   'serverTrustedProxiesJson',
   'discoverySubtypesJson',
@@ -931,10 +983,13 @@ function isJsonConfigFieldKey(key: ConfigFieldKey): key is JsonConfigFieldKey {
 }
 
 function parseJsonDraft(field: ConfigFieldDefinition, value: string): JsonParseResult {
-  const text = value.trim() || (field.kind === 'jsonArray' ? '[]' : '{}')
+  const text =
+    value.trim() ||
+    (field.kind === 'jsonArray' || field.kind === 'optionalStringList' ? '[]' : '{}')
 
   try {
     const parsed = JSON.parse(text) as unknown
+    if (field.kind === 'optionalStringList' && parsed === null) return { ok: true, value: [] }
 
     if (field.kind === 'jsonArray' && !Array.isArray(parsed)) {
       return { ok: false, message: 'Expected a JSON array' }
@@ -993,12 +1048,12 @@ function canEditAntigravitySensitiveWords(value: unknown): value is string[] {
   return value.every((item) => typeof item === 'string')
 }
 
-function normalizeStringList(value: unknown) {
+function normalizeStringList(value: unknown, preservePadding = false) {
   if (!Array.isArray(value)) return []
 
   return value
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter((item) => item.length > 0)
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => (preservePadding ? item : item.trim()))
 }
 
 function canEditStringList(value: unknown): value is string[] {
@@ -1595,6 +1650,8 @@ function getModelDisplayName(model: ProviderModelDefinition) {
 }
 
 function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
+  if (fieldDefinitionByKey[fieldKey].kind === 'optionalStringList')
+    return isEditableHeaderList(value)
   if (stringListConfigFieldKeys.has(fieldKey)) return canEditStringList(value)
   if (defaultJsonEditorFieldKeys.has(fieldKey)) return true
 
@@ -1735,6 +1792,7 @@ function getValidationErrors(
         return false
       }
       if (field.kind === 'select') {
+        if (field.defaultOption && value === null) return false
         return !field.options?.includes(String(value))
       }
       if (field.kind === 'duration') {
@@ -1749,10 +1807,12 @@ function getValidationErrors(
         const rows = parseReplacementDraft(value)
         return !rows || replacementIssues(field.kind, rows).some(Boolean)
       }
-      if (field.kind === 'jsonArray') {
+      if (field.kind === 'jsonArray' || field.kind === 'optionalStringList') {
         try {
           const parsed: unknown = JSON.parse(String(value || '[]'))
-          return !Array.isArray(parsed)
+          return field.kind === 'optionalStringList'
+            ? !isEditableHeaderList(parsed)
+            : !Array.isArray(parsed)
         } catch {
           return true
         }
@@ -2030,6 +2090,7 @@ function ConfigField({
 }) {
   const { t, i18n } = useTranslation()
   const optionalInput = useRef<HTMLInputElement>(null)
+  const selectTrigger = useRef<HTMLButtonElement>(null)
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
@@ -2041,6 +2102,16 @@ function ConfigField({
     field.key === 'routingStrategy'
       ? 'configPage.routingStrategies'
       : `configPage.fields.${field.key}.options`
+  const selectedOption = selectOptionFromValue(value ?? field.defaultOption ?? null)
+  const unknownOption =
+    field.defaultOption && value !== null && !field.options?.includes(selectedOption)
+  const optionTranslation = unknownOption
+    ? `configPage.fields.${field.key}.unknown`
+    : `${optionLabelKey}.${selectedOption}`
+  const selectedLabel =
+    field.kind === 'select'
+      ? t(optionTranslation, { defaultValue: selectedOption, value: String(value) })
+      : ''
 
   return (
     <div
@@ -2053,7 +2124,8 @@ function ConfigField({
         <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
         <p id={descriptionId} className="text-muted-foreground mt-1 text-xs leading-5">
           {t(`configPage.fields.${field.key}.description`, {
-            context: field.kind === 'select' ? String(value) : undefined,
+            context:
+              field.kind === 'select' ? (unknownOption ? 'unknown' : selectedOption) : undefined,
           })}
         </p>
         {invalid ? (
@@ -2208,28 +2280,46 @@ function ConfigField({
           </div>
         ) : null}
         {field.kind === 'select' ? (
-          <Select
-            value={selectOptionFromValue(value)}
-            disabled={controlDisabled}
-            onValueChange={(nextValue) => onChange(field.key, selectValueFromOption(nextValue))}
-          >
-            <SelectTrigger
-              className="md:w-56"
-              aria-label={t(`configPage.fields.${field.key}.label`)}
-              aria-describedby={descriptionId}
+          <>
+            <Select
+              value={field.defaultOption && value === null ? '' : selectedOption}
+              disabled={controlDisabled}
+              onValueChange={(nextValue) => onChange(field.key, selectValueFromOption(nextValue))}
             >
-              <SelectValue>
-                {t(`${optionLabelKey}.${value}`, { defaultValue: String(value) })}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {t(`${optionLabelKey}.${option}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                ref={selectTrigger}
+                className="min-w-0 md:w-56"
+                aria-label={t(`configPage.fields.${field.key}.label`)}
+                aria-describedby={descriptionId}
+              >
+                <SelectValue placeholder={value === null ? placeholder : selectedLabel}>
+                  {selectedLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {field.options?.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {t(`${optionLabelKey}.${option}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {field.defaultOption && value !== null ? (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                className="ms-2 shrink-0"
+                disabled={controlDisabled}
+                onClick={() => {
+                  selectTrigger.current?.focus({ preventScroll: true })
+                  onChange(field.key, null)
+                }}
+              >
+                {t('configPage.actions.restoreDefault')}
+              </Button>
+            ) : null}
+          </>
         ) : null}
         {field.kind === 'optionalSwitch' ? (
           <OptionalConfigSwitch
@@ -2697,41 +2787,35 @@ function AntigravitySensitiveWordsEditor({
 function StringListEditor({
   value,
   disabled,
+  label,
+  preservePadding,
   placeholder,
   hint,
   countLabel,
+  onReset,
   onChange,
 }: {
   value: string[]
   disabled: boolean
+  label: string
+  preservePadding: boolean
   placeholder: string
   hint: string
   countLabel: string
+  onReset?: () => void
   onChange: (value: string[]) => void
 }) {
-  const normalizedValue = normalizeStringList(value).join('\n')
+  const { t } = useTranslation()
+  const hintId = useId()
+  const textarea = useRef<HTMLTextAreaElement>(null)
+  const normalizedValue = value.join('\n')
   const [draft, setDraft] = useState(normalizedValue)
-
+  const normalizedDraft = normalizeStringList(draft.split('\n'), preservePadding).join('\n')
   useEffect(() => {
-    const normalizedDraft = draft
-      .split('\n')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-      .join('\n')
-
     if (normalizedDraft !== normalizedValue) {
       setDraft(normalizedValue)
     }
-  }, [draft, normalizedValue])
-
-  const commitDraft = (nextDraft: string) => {
-    onChange(
-      nextDraft
-        .split('\n')
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-    )
-  }
+  }, [normalizedDraft, normalizedValue])
 
   return (
     <div className="grid gap-3">
@@ -2740,14 +2824,35 @@ function StringListEditor({
         disabled={disabled}
         className="min-h-28 font-mono text-sm"
         placeholder={placeholder}
+        ref={textarea}
+        aria-label={label}
+        aria-describedby={hintId}
         onChange={(event) => {
-          setDraft(event.target.value)
-          commitDraft(event.target.value)
+          const text = event.target.value
+          setDraft(text)
+          onChange(normalizeStringList(text.split('\n'), preservePadding))
         }}
       />
       <div className="text-muted-foreground flex flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
-        <span>{hint}</span>
-        <span>{countLabel}</span>
+        <span id={hintId}>{hint}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span>{countLabel}</span>
+          {onReset && (
+            <Button
+              type="button"
+              variant="text"
+              size="sm"
+              disabled={disabled}
+              onClick={() => {
+                setDraft('')
+                textarea.current?.focus({ preventScroll: true })
+                onReset()
+              }}
+            >
+              {t('configPage.actions.restoreDefault')}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -4661,24 +4766,30 @@ function StructuredJsonEditor({
   value,
   disabled,
   oauthModelCatalog,
+  onReset,
   onChange,
 }: {
   fieldKey: JsonConfigFieldKey
   value: unknown
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
+  onReset?: () => void
   onChange: (value: unknown) => void
 }) {
   const { t } = useTranslation()
   const payload = useContext(PayloadSnapshotContext)
 
   if (stringListConfigFieldKeys.has(fieldKey)) {
-    const items = normalizeStringList(value)
+    const preservePadding = fieldDefinitionByKey[fieldKey].kind === 'optionalStringList'
+    const items = normalizeStringList(value, preservePadding)
 
     return (
       <StringListEditor
         value={items}
+        preservePadding={preservePadding}
         disabled={disabled}
+        label={t(`configPage.fields.${fieldKey}.label`)}
+        onReset={onReset}
         placeholder={t(`configPage.stringList.${fieldKey}.placeholder`)}
         hint={t(`configPage.stringList.${fieldKey}.hint`)}
         countLabel={t(`configPage.stringList.${fieldKey}.count`, { count: items.length })}
@@ -4791,6 +4902,11 @@ function JsonConfigField({
           value={parsed.value}
           disabled={disabled}
           oauthModelCatalog={oauthModelCatalog}
+          onReset={
+            field.kind === 'optionalStringList' && value !== ''
+              ? () => onChange(field.key, null)
+              : undefined
+          }
           onChange={(nextValue) => onChange(field.key, stringifyJson(nextValue))}
         />
       ) : (
@@ -4854,7 +4970,7 @@ function StructuredWorkspace({
         ) : isJsonConfigFieldKey(field.key) ? (
           <JsonConfigField
             field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-            value={String(draft[field.key])}
+            value={String(draft[field.key] ?? '')}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
             oauthModelCatalog={oauthModelCatalog}
@@ -5212,6 +5328,15 @@ function ConfigChangePreview({
     if (change.key === 'antigravityTosPauseWindow' && value === '')
       return t('configPage.fields.antigravityTosPauseWindow.placeholder')
     const kind = fieldDefinitionByKey[change.key].kind
+    if (kind === 'optionalStringList' && value === null)
+      return t('configPage.nullableBoolean.unset')
+    if (change.key === 'upstreamClaudeClientRequestId') {
+      const label = 'configPage.fields.upstreamClaudeClientRequestId'
+      if (value === null) return t(`${label}.placeholder`)
+      return typeof value === 'string' && claudeClientRequestIdModes.includes(value)
+        ? t(`${label}.options.${value}`)
+        : t(`${label}.unknown`, { value: String(value) })
+    }
     if (kind === 'sensitiveText' && value) return '••••••••'
     if ((kind === 'optionalInteger' || kind === 'optionalText') && value === null)
       return t(`configPage.fields.${change.key}.placeholder`)

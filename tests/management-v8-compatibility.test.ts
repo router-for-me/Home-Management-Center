@@ -145,6 +145,91 @@ const steering: ConfigChange = {
 const retry: ConfigChange = { key: 'requestRetry', previousValue: 0, nextValue: 1 }
 
 describe('optional V8 fields and writes', () => {
+  test('reads Claude execution settings from their owning scopes, including empty and explicit values', () => {
+    const raw = {
+      client: { claude: { 'show-codex-commentary': false } },
+      upstream: {
+        claude: {
+          'session-date-pin-days': 0,
+          'server-side-fallback': false,
+          'header-defaults': {
+            'native-entrypoints': [],
+            'anthropic-beta-append': null,
+            'anthropic-beta-strip': ['Beta', 'beta', 'Beta'],
+            'inject-diagnostics': false,
+            'client-request-id': ' OFF ',
+          },
+        },
+      },
+    }
+    const fields = {
+      clientClaudeShowCodexCommentary: false,
+      upstreamClaudeServerSideFallback: false,
+      upstreamClaudeSessionDatePinDays: 0,
+      upstreamClaudeNativeEntrypointsJson: '[]',
+      upstreamClaudeAnthropicBetaAppendJson: 'null',
+      upstreamClaudeAnthropicBetaStripJson: JSON.stringify(['Beta', 'beta', 'Beta'], null, 2),
+      upstreamClaudeInjectDiagnostics: false,
+      upstreamClaudeClientRequestId: 'off',
+    }
+    expect(normalizeConfigValues(raw)).toMatchObject(fields)
+    const missing = normalizeConfigValues({ client: raw.upstream, upstream: raw.client })
+    for (const key of Object.keys(fields) as (keyof typeof fields)[])
+      expect(missing[key]).toBeNull()
+    for (const saved of ['future-mode', false]) {
+      expect(
+        normalizeConfigValues({
+          upstream: { claude: { 'header-defaults': { 'client-request-id': saved } } },
+        }).upstreamClaudeClientRequestId,
+      ).toBe(saved)
+    }
+  })
+
+  test.each([
+    ['upstreamClaudeNativeEntrypointsJson', 'native-entrypoints'],
+    ['upstreamClaudeAnthropicBetaStripJson', 'anthropic-beta-strip'],
+    ['upstreamClaudeAnthropicBetaAppendJson', 'anthropic-beta-append'],
+  ] as const)(
+    '%s preserves order, detects intervening edits and deletes only its own leaf',
+    async (key, leaf) => {
+      const path = v8 + 'config/upstream/claude/header-defaults/' + leaf
+      let stored: unknown = null
+      const requests = serve((url, method, body) => {
+        expect(url).toBe(path)
+        if (method === 'GET') return stored === undefined ? missingValue : ok(stored)
+        if (method === 'PUT') stored = JSON.parse(String(body))
+        else if (method === 'DELETE') stored = undefined
+        else throw new Error('Unexpected method')
+        return ok({ status: 'ok' })
+      })
+      const save = (previousValue: string | null, nextValue: string | null) =>
+        applyConfigChanges(session, [{ key, previousValue, nextValue }])
+      const names = ['Flag-B', ' flag-A ', 'Flag-B']
+      await expect(save(null, '[]')).rejects.toMatchObject({ reason: 'conflict' })
+      await save('null', '[]')
+      expect(stored).toEqual([])
+      await save('[]', JSON.stringify(names))
+      await save('[]', JSON.stringify(names))
+      expect(stored).toEqual(names)
+      const concurrent = [' flag-A ', 'Flag-B', 'Flag-B']
+      stored = concurrent
+      await expect(save(JSON.stringify(names), null)).rejects.toMatchObject({
+        key,
+        reason: 'conflict',
+      })
+      await save(JSON.stringify(concurrent), null)
+      await save(JSON.stringify(concurrent), null)
+      expect(stored).toBeUndefined()
+      expect(requests.filter((request) => !request.startsWith('GET '))).toEqual([
+        'PUT ' + path,
+        'PUT ' + path,
+        'DELETE ' + path,
+      ])
+      serve(() => missingRoute)
+      await expect(save(null, '[]')).rejects.toMatchObject({ reason: 'unavailable' })
+    },
+  )
+
   test('Codex settings use their own V8 trees and distinguish missing, zero and false', () => {
     const empty = normalizeConfigValues({ client: { codex: { 'web-search-result-cache': null } } })
     expect(empty).toMatchObject({

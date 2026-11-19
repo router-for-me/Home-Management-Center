@@ -3346,6 +3346,16 @@ export const zhCN = {
           description:
             'Codex Responses 会话经 Claude 上游执行搜索时，CPA 可补回对话历史中缺失的搜索结果。',
         },
+        claudeExecution: {
+          title: 'Claude 执行设置',
+          shortTitle: 'Claude 执行',
+          description: '设置 CPA 如何处理 Claude 拒答和会话中的日期。',
+        },
+        claudeRequestHeaders: {
+          title: 'Claude 请求头策略',
+          shortTitle: 'Claude 请求头',
+          description: '调整 CPA 如何识别原生 Claude Code 客户端，以及发往 Claude 的默认请求。',
+        },
         codexTransport: {
           title: 'Codex 传输压缩',
           shortTitle: 'Codex 压缩',
@@ -3823,6 +3833,54 @@ export const zhCN = {
           label: 'Codex 响应引导',
           description: '开启后允许对 Codex 响应施加 steering 指令。',
         },
+        clientClaudeShowCodexCommentary: {
+          label: '向 Claude 客户端显示 Codex 进度',
+          description:
+            '开启后，Claude 客户端可看到 Codex 的公开进度消息，并在后续对话中回放。推理摘要仍显示为思考内容。',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: '服务端拒答回退',
+          description:
+            'Claude 模型拒答时，允许 Anthropic 为支持此功能的伪装请求尝试回退。请求或载荷规则已提供 fallbacks 时，沿用已有设置。',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: '会话日期固定天数',
+          description:
+            'Home KV 会持久保存会话日期，忽略此值。CPA 使用内存时，留空为 7 天，0 或负数为 1 小时。',
+          placeholder: '内存模式默认 7 天',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: '附加原生入口',
+          description:
+            '在内置入口之外添加名称。CPA 还会检查其他客户端特征，确认是原生 Claude Code 后才会透传。',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: '移除的 Anthropic-Beta 标记',
+          description: 'CPA 先从请求头移除指定标记，再处理追加列表。',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: '追加的 Anthropic-Beta 标记',
+          description:
+            'CPA 按列表顺序将缺少的标记追加到请求头末尾。自定义网关上的凭据级 Anthropic-Beta 请求头优先。',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: '注入诊断字段',
+          description:
+            '默认向兼容的 Anthropic 官方伪装请求体写入 diagnostics，并附加对应的 cache-diagnosis 标记。',
+        },
+        upstreamClaudeClientRequestId: {
+          label: '客户端请求 ID',
+          description: '控制发往 Claude 的 x-client-request-id。凭据中单独设置的请求头优先。',
+          placeholder: '默认（生成请求 ID）',
+          description_on:
+            '默认在官方 CLI 请求中生成新 ID，已识别的原生客户端保留传入的 ID。凭据级请求头优先。',
+          description_passthrough: '只转发现有的请求 ID。请求没有 ID 时留空。凭据级请求头优先。',
+          description_off: '省略默认请求 ID。凭据中单独设置的请求头仍然生效。',
+          description_unknown:
+            '当前界面无法识别 Home 保存的值。编辑其他设置时会保留原值，也可在这里选择新模式或恢复默认。',
+          unknown: '已保存「{{value}}」',
+          options: { on: '生成请求 ID', passthrough: '仅透传', off: '关闭' },
+        },
         clientCodexEnableApplyPatch: {
           label: '扩展 apply_patch 工具支持',
           description:
@@ -4060,6 +4118,21 @@ export const zhCN = {
         disabled: '禁用',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: '每行一个入口名称，匹配时忽略大小写。',
+          count: '{{count}} 个入口',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: '每行一个标记，按名称精确匹配，区分大小写。',
+          count: '{{count}} 个标记',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: '每行一个标记，保留大小写和顺序。',
+          count: '{{count}} 个标记',
+        },
         serverAllowHostJson: {
           placeholder: '192.0.2.10\n2001:db8::10',
           hint: '每行填写一个 IPv4 或 IPv6 地址。',

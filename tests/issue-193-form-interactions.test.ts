@@ -22,6 +22,7 @@ for (const scenario of [
   'oauth-refresh-concurrency',
   'cpa-server-token',
   'codex-execution-settings',
+  'claude-execution-settings',
 ]) {
   test(`issue #193 real form: ${scenario}`, () => {
     const result = spawnSync(process.execPath, [fixture, scenario], {

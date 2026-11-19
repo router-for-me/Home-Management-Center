@@ -3539,6 +3539,18 @@ export const ru = {
           description:
             'Когда сеанс Codex Responses использует Claude, CPA может восстанавливать отсутствующие результаты поиска при повторной передаче истории.',
         },
+        claudeExecution: {
+          title: 'Выполнение запросов Claude',
+          shortTitle: 'Выполнение Claude',
+          description:
+            'Настройте обработку отказов модели и фиксацию даты в сеансах Claude на узлах CPA.',
+        },
+        claudeRequestHeaders: {
+          title: 'Заголовки запросов Claude',
+          shortTitle: 'Заголовки Claude',
+          description:
+            'Настройте распознавание штатных клиентов Claude Code и подготовку запросов к Claude.',
+        },
         codexTransport: {
           title: 'Сжатие при передаче Codex',
           shortTitle: 'Сжатие Codex',
@@ -4059,6 +4071,57 @@ export const ru = {
           label: 'Response steering Codex',
           description: 'Разрешить steering-директивы для ответов Codex.',
         },
+        clientClaudeShowCodexCommentary: {
+          label: 'Показывать ход работы Codex в клиентах Claude',
+          description:
+            'Клиент увидит открытые сообщения Codex о ходе работы в тексте ответа и при воспроизведении диалога. Сводки рассуждений останутся в блоках размышлений.',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: 'Резервный ответ при отказе модели',
+          description:
+            'Разрешить Anthropic попробовать запасной вариант, если поддерживаемая модель отказалась отвечать на замаскированный запрос. Параметр fallbacks из запроса или правил тела имеет приоритет.',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: 'Фиксация даты сеанса в днях',
+          description:
+            'Home KV хранит дату сеанса постоянно и игнорирует это значение. При хранении в памяти пустое поле означает 7 дней, а ноль или отрицательное число — 1 час.',
+          placeholder: 'По умолчанию в памяти (7 дней)',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: 'Дополнительные точки входа',
+          description:
+            'Дополняет встроенный список точек входа. CPA проверяет и другие признаки клиента, прежде чем считать запрос штатным для Claude Code.',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: 'Удаляемые флаги Anthropic-Beta',
+          description: 'CPA удаляет перечисленные флаги из заголовка перед добавлением новых.',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: 'Добавляемые флаги Anthropic-Beta',
+          description:
+            'CPA добавляет недостающие флаги в конец заголовка в указанном порядке. На сторонних шлюзах заголовок Anthropic-Beta из учётных данных имеет приоритет.',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: 'Добавлять поле диагностики',
+          description:
+            'По умолчанию CPA добавляет поле diagnostics в тело совместимых замаскированных запросов к Anthropic и соответствующий флаг cache-diagnosis.',
+        },
+        upstreamClaudeClientRequestId: {
+          label: 'Идентификатор запроса клиента',
+          description:
+            'Управляет заголовком x-client-request-id в запросах к Claude. Заголовок из учётных данных имеет приоритет.',
+          placeholder: 'По умолчанию (создавать ID)',
+          description_on:
+            'По умолчанию CPA создаёт новый ID для каждого запроса CLI к Anthropic. Для распознанных штатных клиентов сохраняется входящий ID. Заголовок из учётных данных имеет приоритет.',
+          description_passthrough:
+            'Передаёт входящий ID, только если он задан. Заголовок из учётных данных имеет приоритет.',
+          description_off:
+            'По умолчанию ID не отправляется. Заголовок из учётных данных продолжает действовать.',
+          description_unknown:
+            'Консоль не распознаёт значение, сохранённое в Home. Оно сохраняется при других правках. Здесь можно выбрать режим или восстановить значение по умолчанию.',
+          unknown: 'Сохранено «{{value}}»',
+          options: { on: 'Создавать ID', passthrough: 'Передавать входящий ID', off: 'Выкл.' },
+        },
         clientCodexEnableApplyPatch: {
           label: 'Расширить поддержку apply_patch',
           description:
@@ -4319,6 +4382,21 @@ export const ru = {
         disabled: 'Отключено',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: 'По одной точке входа на строку. Регистр при сопоставлении игнорируется.',
+          count: 'Точек входа — {{count}}',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: 'По одному флагу на строку. Имена сопоставляются точно с учётом регистра.',
+          count: 'Флагов — {{count}}',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: 'По одному флагу на строку. Регистр и порядок сохраняются.',
+          count: 'Флагов — {{count}}',
+        },
         serverAllowHostJson: {
           placeholder: '192.0.2.10\n2001:db8::10',
           hint: 'Введите по одному адресу IPv4 или IPv6 в строке.',
