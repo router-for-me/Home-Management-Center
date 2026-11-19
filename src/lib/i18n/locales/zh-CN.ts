@@ -1758,7 +1758,7 @@ export const zhCN = {
         disabled: '禁用',
         disabledHint: '停用后，该条目不会被网关用于上游请求。',
         disableCooling: '禁用冷却调度',
-        disableCoolingHint: '开启后，该模型密钥不会参与配额冷却调度。',
+        disableCoolingHint: '启用后，此凭据跳过常规冷却。匹配 force_cooldown 的错误仍会触发冷却。',
         disableCoolingModeInherit: '继承全局',
         disableCoolingModeEnabled: '开启（禁用冷却）',
         disableCoolingModeDisabled: '关闭（参与冷却）',
@@ -2483,7 +2483,8 @@ export const zhCN = {
         usingApi: '使用官方 API（using_api）',
         usingApiHint: '开启后使用 xAI 官方 API；关闭时使用 Grok CLI chat-proxy。',
         coolingSchedule: '冷却调度',
-        coolingScheduleHint: '配置该凭证在配额受限时是否参与冷却调度，或继承全局策略。',
+        coolingScheduleHint:
+          '选择此凭据的常规冷却策略，或继承全局设置。匹配 force_cooldown 的错误仍会触发冷却。',
         coolingModeInherit: '继承全局策略',
         coolingModeEnabled: '参与冷却调度 (disable_cooling = false)',
         coolingModeDisabled: '禁用冷却调度 (disable_cooling = true)',
@@ -3186,12 +3187,13 @@ export const zhCN = {
         server: {
           title: '服务运行',
           shortTitle: '服务',
-          description: '配置监听端口、绑定地址、主机名校验、可信代理和商业版模式等基础服务行为。',
+          description: '配置监听端口、绑定地址、RESP 客户端 IP 白名单、可信代理和商业版模式。',
         },
         discovery: {
           title: '服务发现',
           shortTitle: '发现',
-          description: '配置 mDNS 服务发现广播：服务名、服务类型、子类型、网卡范围与接入控制。',
+          description:
+            'Home 将这些设置下发给 CPA 节点。节点只广播模型 API，管理端点始终不参与广播。',
         },
         tls: {
           title: 'TLS',
@@ -3382,8 +3384,9 @@ export const zhCN = {
             '冷却凭证恢复的最大等待时间（秒）。当所有凭证都在冷却时，最多等待该时间以让最早恢复的凭证重新可用并进入下一轮重试。',
         },
         disableCooling: {
-          label: '禁用冷却调度',
-          description: '开启后全局禁用认证与模型失败后的冷却窗口；所有凭证跳过失败退避调度。',
+          label: '禁用常规冷却',
+          description:
+            '开启后，Home 跳过由请求错误和额度限制触发的常规冷却。供应商或凭据可覆盖此设置。匹配 force_cooldown 的错误仍会触发冷却。',
         },
         forceModelPrefix: {
           label: '强制模型前缀匹配',
@@ -3420,8 +3423,9 @@ export const zhCN = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: '允许的 Host 请求头',
-          description: '逐行填写允许访问的 HTTP Host；空数组表示不限制。',
+          label: 'RESP 客户端 IP 白名单',
+          description:
+            '限制哪些客户端 IP 可以连接 Home 的 RESP 服务。留空允许任意 IP，所有连接都必须通过双向 TLS（mTLS）认证。',
         },
         serverTrustedProxiesJson: {
           label: '受信代理',
@@ -3434,21 +3438,21 @@ export const zhCN = {
         },
         discoveryEnabled: {
           label: '启用服务发现',
-          description: '开启后通过 mDNS 广播本实例，便于局域网内的 CPA 自动发现。',
+          description: '允许局域网客户端通过 mDNS 发现 CPA 节点的 API。',
         },
         discoveryServiceName: {
           label: '服务名',
-          description: 'mDNS 广播使用的服务实例名。',
-          placeholder: 'CLIProxyAPIHome',
+          description: '节点会在名称后附加短 ID。留空时使用 CPA 前缀，例如 CPA-8F3B。',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: '服务类型',
           description: 'mDNS 服务类型（service type），通常保持默认值。',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: '服务子类型',
-          description: '逐行填写附加的 mDNS subtype，用于更细粒度的发现过滤。',
+          description: '选择要广播的 API 协议子类型。留空使用 CPA 的默认列表。',
         },
         discoveryInterfacesIncludeJson: {
           label: '网卡包含列表',
@@ -3459,12 +3463,9 @@ export const zhCN = {
           description: '逐行填写不参与广播的网卡名。',
         },
         discoveryAuthRequired: {
-          label: '发现需要认证',
-          description: '开启后在发现响应中标记需要认证才能接入。',
-        },
-        discoveryAdvertiseManagement: {
-          label: '广播管理端',
-          description: '开启后在发现广播中附带管理端接入信息。',
+          label: '在广播中声明 API 需要认证',
+          description:
+            '默认开启。CPA 在发现记录中用 auth=1 提示客户端需要凭据，关闭后广播 auth=0。此设置只改变广播内容。',
         },
         managementBaseUrl: {
           label: '管理端 Base URL',
@@ -3626,7 +3627,6 @@ export const zhCN = {
         },
         sessionAffinitySubagents: {
           label: '子代理粘性会话',
-          defaultOn: '默认开启',
           description:
             '默认开启，仅在主粘性会话开启时生效。未绑定的子会话可继承父会话在同一供应商、同一模型上的凭证。Guardian 可跨模型继承父会话最近选用且仍可用的凭证。关闭后，未绑定的子会话按常规方式选择凭证，Home 停止为 Guardian 记录新的父会话选择。已有子会话绑定和 fork 行为继续生效。',
         },
@@ -3849,15 +3849,16 @@ export const zhCN = {
         unknown: '未知',
       },
       nullableBoolean: {
+        defaultOn: '默认开启',
         unset: '未设置（默认）',
         enabled: '启用',
         disabled: '禁用',
       },
       stringList: {
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: '每行一个允许的 Host，保存时会过滤空行。',
-          count: '已配置 {{count}} 个 Host',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: '每行填写一个 IPv4 或 IPv6 地址。',
+          count: '已配置 {{count}} 个 IP 地址',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -3865,7 +3866,7 @@ export const zhCN = {
           count: '已配置 {{count}} 个受信代理',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: '每行一个 mDNS subtype，保存时会过滤空行。',
           count: '已配置 {{count}} 个子类型',
         },

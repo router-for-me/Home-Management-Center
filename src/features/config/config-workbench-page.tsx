@@ -154,6 +154,7 @@ type ConfigSubgroupId = 'devin' | 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
   | 'boolean'
+  | 'defaultOnBoolean'
   | 'number'
   | 'text'
   | 'sensitiveText'
@@ -326,8 +327,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'discoverySubtypesJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesIncludeJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesExcludeJson', kind: 'jsonArray', sectionId: 'discovery' },
-      { key: 'discoveryAuthRequired', kind: 'boolean', sectionId: 'discovery' },
-      { key: 'discoveryAdvertiseManagement', kind: 'boolean', sectionId: 'discovery' },
+      { key: 'discoveryAuthRequired', kind: 'defaultOnBoolean', sectionId: 'discovery' },
     ],
   },
   {
@@ -422,7 +422,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
-      { key: 'sessionAffinitySubagents', kind: 'nullableBoolean', sectionId: 'streaming' },
+      { key: 'sessionAffinitySubagents', kind: 'defaultOnBoolean', sectionId: 'streaming' },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -1531,7 +1531,7 @@ function getValidationErrors(
         const text = typeof value === 'string' ? value.trim() : ''
         return text.length > 0 && !durationPattern.test(text)
       }
-      if (field.kind === 'nullableBoolean') {
+      if (field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean') {
         return value !== null && typeof value !== 'boolean'
       }
       if (field.kind === 'jsonArray') {
@@ -1744,12 +1744,14 @@ function BooleanControl({
   )
 }
 
-function SubagentAffinityControl({
+function DefaultOnSwitch({
+  label,
   value,
   disabled,
   descriptionId,
   onChange,
 }: {
+  label: string
   value: boolean | null
   disabled: boolean
   descriptionId?: string
@@ -1762,7 +1764,7 @@ function SubagentAffinityControl({
     <div className="flex min-w-0 items-center gap-2 md:flex-row-reverse">
       <Switch
         ref={switchRef}
-        aria-label={t('configPage.fields.sessionAffinitySubagents.label')}
+        aria-label={label}
         aria-describedby={descriptionId}
         checked={value ?? true}
         disabled={disabled}
@@ -1804,7 +1806,9 @@ function ConfigField({
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
   const descriptionId =
-    field.kind === 'nullableBoolean' ? `config-field-${field.key}-description` : undefined
+    field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean'
+      ? `config-field-${field.key}-description`
+      : undefined
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
 
@@ -1916,8 +1920,9 @@ function ConfigField({
             </SelectContent>
           </Select>
         ) : null}
-        {field.key === 'sessionAffinitySubagents' ? (
-          <SubagentAffinityControl
+        {field.kind === 'defaultOnBoolean' ? (
+          <DefaultOnSwitch
+            label={t(`configPage.fields.${field.key}.label`)}
             value={typeof value === 'boolean' ? value : null}
             disabled={controlDisabled}
             descriptionId={descriptionId}
@@ -4662,8 +4667,8 @@ function ConfigChangePreview({
     }
   }
   function formatValue(value: ConfigFieldValue) {
-    if (change.key === 'sessionAffinitySubagents') {
-      if (value === null) return t('configPage.fields.sessionAffinitySubagents.defaultOn')
+    if (fieldDefinitionByKey[change.key].kind === 'defaultOnBoolean') {
+      if (value === null) return t('configPage.nullableBoolean.defaultOn')
       return t(`configPage.nullableBoolean.${nullableBooleanOptionFromValue(value)}`)
     }
     return value === '' || value === null ? t('configPage.status.emptyValue') : String(value)

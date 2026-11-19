@@ -1832,7 +1832,8 @@ export const en = {
         disabled: 'Disabled',
         disabledHint: 'When disabled, this entry will not be used for upstream requests.',
         disableCooling: 'Disable cooling',
-        disableCoolingHint: 'Exclude this model key from quota cooldown scheduling.',
+        disableCoolingHint:
+          'Skip ordinary cooldowns for this credential. Errors matching force_cooldown still trigger a cooldown.',
         disableCoolingModeInherit: 'Inherit global',
         disableCoolingModeEnabled: 'Enabled (disable cooling)',
         disableCoolingModeDisabled: 'Disabled (allow cooling)',
@@ -2604,7 +2605,7 @@ export const en = {
           'Use the official xAI API when enabled; use Grok CLI chat-proxy when disabled.',
         coolingSchedule: 'Cooling schedule',
         coolingScheduleHint:
-          'Configure whether this credential participates in quota cooldown scheduling or inherits the global policy.',
+          'Set the ordinary cooldown policy for this credential or inherit the global setting. Errors matching force_cooldown still trigger a cooldown.',
         coolingModeInherit: 'Inherit global policy',
         coolingModeEnabled: 'Participate in cooling (disable_cooling = false)',
         coolingModeDisabled: 'Disable cooling (disable_cooling = true)',
@@ -3352,13 +3353,13 @@ export const en = {
           title: 'Server runtime',
           shortTitle: 'Server',
           description:
-            'Configure the listen port, bind address, host allowlist, trusted proxies, and commercial mode.',
+            'Configure the listen port, bind address, RESP client IP allowlist, trusted proxies, and commercial mode.',
         },
         discovery: {
           title: 'Service discovery',
           shortTitle: 'Discovery',
           description:
-            'Configure mDNS service discovery broadcast: service name, service type, subtypes, interface scope, and access control.',
+            'Home sends these settings to CPA nodes. Nodes advertise only model APIs. Management endpoints are never advertised.',
         },
         tls: {
           title: 'TLS',
@@ -3562,9 +3563,9 @@ export const en = {
             'Maximum wait time (in seconds) for cooling credentials to recover. When all credentials are in cooldown, the server waits up to this duration for the earliest recovering credential before proceeding to the next round.',
         },
         disableCooling: {
-          label: 'Disable cooldown scheduling',
+          label: 'Disable ordinary cooldowns',
           description:
-            'Disable auth and model failure cooldown windows globally; all credentials skip failure backoff scheduling.',
+            'When enabled, Home skips ordinary cooldowns for request errors and quota limits. A provider or credential can override this setting. Errors matching force_cooldown still trigger a cooldown.',
         },
         forceModelPrefix: {
           label: 'Require model prefix match',
@@ -3605,8 +3606,9 @@ export const en = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: 'Allowed Host headers',
-          description: 'One allowed HTTP Host per line. An empty array means no restriction.',
+          label: 'RESP client IP allowlist',
+          description:
+            'Restrict which client IPs can connect to Home over RESP. An empty list allows any IP. Every connection requires mutual TLS (mTLS).',
         },
         serverTrustedProxiesJson: {
           label: 'Trusted proxies',
@@ -3619,21 +3621,23 @@ export const en = {
         },
         discoveryEnabled: {
           label: 'Enable service discovery',
-          description: 'Broadcast this instance over mDNS so LAN CPA nodes can discover it.',
+          description: 'Let clients on the local network discover CPA node APIs over mDNS.',
         },
         discoveryServiceName: {
           label: 'Service name',
-          description: 'Service instance name used in the mDNS broadcast.',
-          placeholder: 'CLIProxyAPIHome',
+          description:
+            'The node adds its short ID to the name. An empty name uses the CPA prefix, for example CPA-8F3B.',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: 'Service type',
           description: 'mDNS service type. Usually keep the default.',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: 'Service subtypes',
-          description: 'One additional mDNS subtype per line for finer discovery filtering.',
+          description:
+            'Choose which API protocol subtypes to advertise. An empty list uses the CPA defaults.',
         },
         discoveryInterfacesIncludeJson: {
           label: 'Included interfaces',
@@ -3645,12 +3649,9 @@ export const en = {
           description: 'One interface name per line; these interfaces do not broadcast.',
         },
         discoveryAuthRequired: {
-          label: 'Discovery requires auth',
-          description: 'Mark discovery responses as requiring authentication to join.',
-        },
-        discoveryAdvertiseManagement: {
-          label: 'Advertise management',
-          description: 'Include management access information in the discovery broadcast.',
+          label: 'Advertise that the API requires credentials',
+          description:
+            'On by default. CPA advertises auth=1 to tell clients they need credentials. Turning this off advertises auth=0. This setting only changes the discovery record.',
         },
         managementBaseUrl: {
           label: 'Management base URL',
@@ -3828,7 +3829,6 @@ export const en = {
         },
         sessionAffinitySubagents: {
           label: 'Subagent session affinity',
-          defaultOn: 'Default (on)',
           description:
             'On by default. Requires session affinity. An unbound child can inherit its parent’s credential for the same provider and model. Guardian can reuse the parent’s latest eligible credential across models. Turning this off restores normal selection for unbound children and stops adding parent credential choices to Guardian history. Existing child bindings and forks still work.',
         },
@@ -4075,15 +4075,16 @@ export const en = {
         unknown: 'Unknown',
       },
       nullableBoolean: {
+        defaultOn: 'Default (on)',
         unset: 'Unset (default)',
         enabled: 'Enabled',
         disabled: 'Disabled',
       },
       stringList: {
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: 'One allowed Host per line. Empty lines are dropped when saving.',
-          count: '{{count}} Hosts configured',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: 'Enter one IPv4 or IPv6 address per line.',
+          count: 'IP addresses configured: {{count}}',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -4091,7 +4092,7 @@ export const en = {
           count: '{{count}} trusted proxies configured',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: 'One mDNS subtype per line. Empty lines are dropped when saving.',
           count: '{{count}} subtypes configured',
         },
