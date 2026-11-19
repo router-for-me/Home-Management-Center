@@ -122,4 +122,74 @@ describe('access group model channel bindings', () => {
     const undeclared = await probeManagementRuntime(session)
     expect(undeclared.capabilities.modelChannelBindings).toBe(false)
   })
+
+  test('parses credential metadata fields on channel group details', async () => {
+    const adapter: AxiosAdapter = async (config) => {
+      if (config.url === '/channel-groups') {
+        return response(config, {
+          channel_groups: [{ id: 2, channel_name: 'default', disabled: false }],
+        })
+      }
+      if (config.url === '/channel-group-details') {
+        return response(config, {
+          channel_group_details: [
+            {
+              id: 31,
+              channel_group_id: 2,
+              auth_id: '01501b64-0d64-48ff-ac64-904386eeb98d',
+              auth_label: 'olga.kozoriz@gmail.com',
+              auth_provider: 'antigravity',
+              auth_status: 'active',
+              auth_disabled: false,
+              auth_unavailable: false,
+              auth_deleted: false,
+            },
+            {
+              id: 32,
+              channel_group_id: 2,
+              auth_id: '3985f3af-f53c-4f67-8dee-3a65b8334da0',
+              auth_label: 'nosov@nodeart.io',
+              auth_provider: 'xai',
+              auth_status: 'disabled',
+              auth_disabled: true,
+              auth_unavailable: true,
+              auth_deleted: true,
+            },
+          ],
+        })
+      }
+      if (config.url === '/model-groups') return response(config, { model_groups: [] })
+      if (config.url === '/model-group-details')
+        return response(config, { model_group_details: [] })
+      return response(config, {}, 404)
+    }
+    axios.defaults.adapter = adapter
+
+    const snapshot = await fetchAccessGroupsSnapshot(session)
+
+    expect(snapshot.channelGroupDetails).toMatchObject([
+      {
+        id: '31',
+        groupId: 2,
+        targetId: '01501b64-0d64-48ff-ac64-904386eeb98d',
+        targetLabel: 'olga.kozoriz@gmail.com',
+        targetProvider: 'antigravity',
+        targetStatus: 'active',
+        targetDisabled: false,
+        targetUnavailable: false,
+        targetDeleted: false,
+      },
+      {
+        id: '32',
+        groupId: 2,
+        targetId: '3985f3af-f53c-4f67-8dee-3a65b8334da0',
+        targetLabel: 'nosov@nodeart.io',
+        targetProvider: 'xai',
+        targetStatus: 'disabled',
+        targetDisabled: true,
+        targetUnavailable: true,
+        targetDeleted: true,
+      },
+    ])
+  })
 })

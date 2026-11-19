@@ -24,6 +24,12 @@ export type AccessGroupDetailResource = {
   kind: AccessGroupKind
   groupId: number
   targetId: string
+  targetLabel?: string | null
+  targetProvider?: string | null
+  targetStatus?: string | null
+  targetDisabled?: boolean
+  targetUnavailable?: boolean
+  targetDeleted?: boolean
   /** Model kind only: bound channel group IDs; empty means the binding inherits the API key scope. */
   channels: number[]
   deletedAt: string | null
@@ -152,6 +158,16 @@ function normalizeDetail(
     kind,
     groupId,
     targetId,
+    ...(kind === 'channel'
+      ? {
+          targetLabel: readString(record, ['auth_label', 'credential_label', 'label']),
+          targetProvider: readString(record, ['auth_provider', 'credential_provider', 'provider']),
+          targetStatus: readString(record, ['auth_status', 'credential_status', 'status']),
+          targetDisabled: readBoolean(record, ['auth_disabled', 'disabled']) ?? false,
+          targetUnavailable: readBoolean(record, ['auth_unavailable', 'unavailable']) ?? false,
+          targetDeleted: readBoolean(record, ['auth_deleted']) ?? false,
+        }
+      : {}),
     channels: kind === 'model' ? readNumberArray(record, ['channels']) : [],
     deletedAt: readString(record, ['deleted_at', 'deletedAt']),
     createdAt: readString(record, ['created_at', 'createdAt']),
