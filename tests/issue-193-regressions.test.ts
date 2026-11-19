@@ -7,7 +7,15 @@ import {
   normalizeCredentialResource,
   updateCredentialMetadata,
 } from '../src/lib/api/management/credentials'
-import { fetchProviderSnapshot, updateProviderResource } from '../src/lib/api/management/providers'
+import {
+  connectionPoolIssues,
+  readConnectionPool,
+} from '../src/lib/api/management/provider-connection-pool'
+import {
+  createProviderResource,
+  fetchProviderSnapshot,
+  updateProviderResource,
+} from '../src/lib/api/management/providers'
 import { en } from '../src/lib/i18n/locales/en'
 import { ru } from '../src/lib/i18n/locales/ru'
 import { zhCN } from '../src/lib/i18n/locales/zh-CN'
@@ -39,6 +47,7 @@ async function setup(family: RecordValue[], provider = 'openaiCompatibility') {
   const group = snapshot.groups.find((group) => group.id === provider)!
   const resource = group.resources[0]!
   return {
+    group,
     form: createFormState(resource, group),
     writes,
     setCurrent: (value: RecordValue[]) => {
@@ -56,6 +65,216 @@ const groupWith = (keys: RecordValue[], models: RecordValue[] = []) => [
     models,
   },
 ]
+
+describe('provider connection pool scopes', () => {
+  for (const provider of [
+    'gemini',
+    'interactions',
+    'vertex',
+    'codex',
+    'xai',
+    'meta',
+    'claude',
+    'openaiCompatibility',
+  ]) {
+    test(`${provider} writes the group and one key independently`, async () => {
+      const sibling = { id: 'B', 'api-key': 'fake-B', 'connection-pool': { enabled: false } }
+      const first = {
+        id: 'A',
+        'api-key': 'fake-A',
+        'connection-pool': { enabled: null, extra: { retain: true } },
+      }
+      const [initial] = groupWith([first, sibling])
+      const other = { name: 'other', keys: [{ id: 'C' }] }
+      const { form, save, writes } = await setup(
+        [{ ...initial, 'connection-pool': null }, other],
+        provider,
+      )
+      expect(form.groupConnectionPool?.mode).toBe('absent')
+      const key = form.keyConnectionPool ?? form.apiKeyEntries![0].connectionPool!
+      expect(key).toEqual({ mode: 'configured', idleTimeout: '', maxIdle: '' })
+      form.groupConnectionPool!.mode = 'configured'
+      key.maxIdle = '0'
+      await save(form)
+      expect(writes[0]).toEqual([
+        {
+          ...initial,
+          'connection-pool': {},
+          keys: [
+            {
+              ...first,
+              'connection-pool': { ...first['connection-pool'], 'max-idle-conns-per-host': 0 },
+            },
+            sibling,
+          ],
+        },
+        other,
+      ])
+    })
+  }
+
+  test('removing a group and clearing one inherited field keep sibling overrides and nulls intact', async () => {
+    const sibling = { id: 'B', 'api-key': 'fake-B', 'connection-pool': null }
+    const key = {
+      id: 'A',
+      'api-key': 'fake-A',
+      'connection-pool': { enabled: true, 'idle-conn-timeout': null, 'max-idle-conns-per-host': 0 },
+    }
+    const [group] = groupWith([key, sibling])
+    const { form, save, writes } = await setup(
+      [{ ...group, 'connection-pool': { enabled: false, 'idle-conn-timeout': '2m' } }],
+      'codex',
+    )
+    expect(form.keyConnectionPool?.idleTimeout).toBe('')
+    form.groupConnectionPool!.mode = 'absent'
+    form.keyConnectionPool!.maxIdle = ''
+    await save(form)
+    expect(writes[0]).toEqual([
+      {
+        ...group,
+        keys: [
+          { ...key, 'connection-pool': { enabled: true, 'idle-conn-timeout': null } },
+          sibling,
+        ],
+      },
+    ])
+  })
+
+  test('group edits apply to both sides of a native base URL split', async () => {
+    const keys = [
+      { id: 'A', 'api-key': 'fake-A' },
+      { id: 'B', 'api-key': 'fake-B' },
+    ]
+    const [group] = groupWith(keys)
+    const { form, save, writes } = await setup([group], 'vertex')
+    form.baseUrl = 'https://new.test'
+    form.groupConnectionPool = readConnectionPool({ enabled: true, 'idle-conn-timeout': '1m30s' })
+    form.keyConnectionPool = readConnectionPool({ enabled: false })
+    await save(form)
+    const pooled = { ...group, 'connection-pool': { enabled: true, 'idle-conn-timeout': '1m30s' } }
+    expect(writes[0]).toEqual([
+      { ...pooled, keys: [keys[1]] },
+      {
+        ...pooled,
+        'base-url': form.baseUrl,
+        keys: [{ ...keys[0], 'connection-pool': { enabled: false } }],
+      },
+    ])
+  })
+
+  test('a native group edit rejects changed membership, while a key edit preserves a newly added sibling', async () => {
+    const [group] = groupWith([{ id: 'A', 'api-key': 'fake-A' }])
+    const { form, save, writes, setCurrent } = await setup([group], 'codex')
+    const sibling = { id: 'B', 'api-key': 'fake-B' }
+    setCurrent([{ ...group, keys: [...group.keys, sibling] }])
+    form.groupConnectionPool = readConnectionPool({})
+    await expect(save(form)).rejects.toThrow()
+    expect(writes).toEqual([])
+    form.groupConnectionPool = readConnectionPool()
+    form.keyConnectionPool = readConnectionPool({ enabled: false })
+    await save(form)
+    expect(writes[0][0].keys).toEqual([
+      { ...group.keys[0], 'connection-pool': { enabled: false } },
+      sibling,
+    ])
+  })
+
+  test('a regrouped compatibility record is selected by stable member IDs, including after a secret rotation', async () => {
+    const [group] = groupWith([
+      { id: 'A', 'api-key': 'fake-A' },
+      { id: 'B', 'api-key': 'fake-B' },
+    ])
+    const [other] = groupWith([
+      { id: 'C', 'api-key': 'fake-C' },
+      { id: 'D', 'api-key': 'fake-D' },
+    ])
+    const { form, save, writes, setCurrent, group: descriptor } = await setup([group, other])
+    expect(new Set(descriptor.resources.map((resource) => resource.id)).size).toBe(2)
+    const latest = { ...group, keys: [{ ...group.keys[0], 'api-key': 'rotated' }, group.keys[1]] }
+    setCurrent([other, latest])
+    form.apiKeyEntries!.reverse()
+    form.apiKeyEntries![0].connectionPool = readConnectionPool({ enabled: true })
+    await save(form)
+    expect(writes[0]).toEqual([
+      other,
+      {
+        ...latest,
+        keys: [{ ...group.keys[1], 'connection-pool': { enabled: true } }, latest.keys[0]],
+      },
+    ])
+    setCurrent([latest, latest])
+    await expect(save(form)).rejects.toThrow()
+    expect(writes.length).toBe(1)
+  })
+
+  for (const provider of ['codex', 'openaiCompatibility'] as const) {
+    test(`${provider} creates an empty group pool and a disabled key, then removes just the key override`, async () => {
+      const { group, writes } = await setup(groupWith([{ id: 'A', 'api-key': 'old' }]), provider)
+      const draft = createFormState(null, group)
+      draft.name = 'new'
+      draft.baseUrl = 'https://new.test'
+      draft.groupConnectionPool = readConnectionPool({})
+      const optOut = readConnectionPool({ enabled: false })
+      draft.apiKey = 'fake-new'
+      if (draft.apiKeyEntries)
+        Object.assign(draft.apiKeyEntries[0], { apiKey: draft.apiKey, connectionPool: optOut })
+      else draft.keyConnectionPool = optOut
+      await createProviderResource(session, provider, draft)
+      const created = writes[0][1]
+      expect(created['connection-pool']).toEqual({})
+      expect(created.keys[0]['connection-pool']).toEqual({ enabled: false })
+      const reopened = await setup([created], provider)
+      const override =
+        reopened.form.keyConnectionPool ?? reopened.form.apiKeyEntries![0].connectionPool!
+      override.mode = 'absent'
+      await reopened.save(reopened.form)
+      expect(reopened.writes[0][0]['connection-pool']).toEqual({})
+      expect(reopened.writes[0][0].keys[0]).not.toHaveProperty('connection-pool')
+    })
+  }
+
+  test('unrecognized blocks survive unrelated edits, and invalid drafts never write', async () => {
+    const [initial] = groupWith([{ id: 'A', 'api-key': 'fake', 'connection-pool': [] }])
+    const { form, writes, save } = await setup(
+      [{ ...initial, 'connection-pool': { enabled: 'future' } }],
+      'codex',
+    )
+    expect(form.groupConnectionPool?.mode).toBe('unsupported')
+    expect(form.keyConnectionPool?.mode).toBe('unsupported')
+    form.prefix = 'new'
+    await save(form)
+    expect(writes[0]).toEqual([
+      { ...initial, prefix: 'new', 'connection-pool': { enabled: 'future' } },
+    ])
+    const other = await setup([initial], 'codex')
+    other.form.groupConnectionPool = { mode: 'enabled', idleTimeout: '12d', maxIdle: '' }
+    await expect(other.save(other.form)).rejects.toThrow()
+    expect(other.writes).toEqual([])
+  })
+
+  test('validates the signed Go duration boundary and preserves nonpositive limits', () => {
+    const draft = readConnectionPool({})
+    for (const idleTimeout of ['0', '-0', '+0', '0s', '-1m30s', '.25s', '-9223372036854775808ns']) {
+      expect(connectionPoolIssues({ ...draft, idleTimeout, maxIdle: '-2' })).toEqual({
+        idleTimeout: false,
+        maxIdle: false,
+      })
+    }
+    for (const idleTimeout of [
+      '+',
+      '-',
+      '4',
+      '0d',
+      '-9223372036854775809ns',
+      '9223372036854775808ns',
+    ]) {
+      expect(connectionPoolIssues({ ...draft, idleTimeout, maxIdle: '2.5' })).toEqual({
+        idleTimeout: true,
+        maxIdle: true,
+      })
+    }
+  })
+})
 
 describe('compatibility key identities', () => {
   test('removing an earlier key does not copy its weight to a surviving key', async () => {
@@ -254,6 +473,7 @@ test('all static labels used by the changed forms resolve in every supported lan
   const sources = await Promise.all(
     [
       '../src/features/providers/providers-panel.tsx',
+      '../src/features/providers/provider-connection-pool-editor.tsx',
       '../src/features/credentials/credential-detail-drawer.tsx',
       '../src/features/plugins/plugins-workbench-page.tsx',
     ].map((path) => Bun.file(new URL(path, import.meta.url)).text()),
