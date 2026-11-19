@@ -8,6 +8,7 @@ import {
   applyConfigChanges,
   fetchConfigSnapshot,
   normalizeConfigValues,
+  parseCodexCacheTtl,
 } from '../src/lib/api/management/config'
 import { fetchPluginConfig } from '../src/lib/api/management/plugin-store'
 import { probeManagementRuntime } from '../src/lib/api/management/probe'
@@ -144,6 +145,67 @@ const steering: ConfigChange = {
 const retry: ConfigChange = { key: 'requestRetry', previousValue: 0, nextValue: 1 }
 
 describe('optional V8 fields and writes', () => {
+  test('Codex settings use their own V8 trees and distinguish missing, zero and false', () => {
+    const empty = normalizeConfigValues({ client: { codex: { 'web-search-result-cache': null } } })
+    expect(empty).toMatchObject({
+      clientCodexEnableApplyPatch: null,
+      clientCodexWebSearchCacheEnabled: null,
+      clientCodexWebSearchCacheTtl: null,
+      clientCodexWebSearchCacheLimit: null,
+      upstreamCodexRequestCompression: null,
+      upstreamCodexRequestCompressionMinBytes: null,
+      upstreamCodexWebsocketCompression: null,
+      oauthCodexSigninIdentifier: null,
+    })
+    for (const ttl of [0, '0', 1800, '1800', '1h30m']) {
+      expect(
+        normalizeConfigValues({
+          client: {
+            codex: {
+              'enable-apply-patch': false,
+              'web-search-result-cache': { enabled: false, ttl, limit: 0 },
+            },
+          },
+          upstream: {
+            codex: {
+              'upstream-request-compression': false,
+              'upstream-request-compression-min-bytes': 0,
+              'websocket-compression': false,
+            },
+          },
+          oauth: {
+            providers: {
+              codex: {
+                'signin-with-chatgpt-identifier': 'node-client',
+                'enable-apply-patch': true,
+                'websocket-compression': true,
+              },
+            },
+          },
+        }),
+      ).toMatchObject({
+        clientCodexEnableApplyPatch: false,
+        clientCodexWebSearchCacheEnabled: false,
+        clientCodexWebSearchCacheTtl: ttl,
+        clientCodexWebSearchCacheLimit: 0,
+        upstreamCodexRequestCompression: false,
+        upstreamCodexRequestCompressionMinBytes: 0,
+        upstreamCodexWebsocketCompression: false,
+        oauthCodexSigninIdentifier: 'node-client',
+      })
+    }
+  })
+
+  test('Codex cache TTL follows Home duration and integer-seconds bounds', () => {
+    expect(parseCodexCacheTtl('')).toBeNull()
+    expect(parseCodexCacheTtl('+1800')).toBe(1800)
+    expect(parseCodexCacheTtl('9223372036')).toBe(9223372036)
+    for (const value of ['0s', '1h30m', '.5s', '1μs', '9223372036854775807ns'])
+      expect(parseCodexCacheTtl(value)).toBe(value)
+    for (const invalid of ['1d', '-1', '-1ms', '1.5', '9223372037', '9223372036854775808ns'])
+      expect(parseCodexCacheTtl(invalid)).toBeUndefined()
+  })
+
   test('CPA server values distinguish absence from explicit zero and false', () => {
     const fields = {
       serverMaxRequestBodyBytes: null,

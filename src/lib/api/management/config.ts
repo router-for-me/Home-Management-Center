@@ -11,6 +11,7 @@ import {
 } from '@/lib/api/management/payload-replace'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
+import { parseGoDurationNanos } from '@/lib/go-duration'
 
 import { ConfigEditConflict, sameConfigValue } from './config-edit'
 import { hasIncompleteAliasChanges } from './oauth-model-aliases'
@@ -135,6 +136,14 @@ export type ConfigFieldKey =
   | 'upstreamClaudeHeaderStabilizeDeviceProfile'
   | 'upstreamXaiInjectXSearch'
   | 'clientCodexOptimizeMultiAgentV2'
+  | 'clientCodexEnableApplyPatch'
+  | 'clientCodexWebSearchCacheEnabled'
+  | 'clientCodexWebSearchCacheTtl'
+  | 'clientCodexWebSearchCacheLimit'
+  | 'upstreamCodexRequestCompression'
+  | 'upstreamCodexRequestCompressionMinBytes'
+  | 'upstreamCodexWebsocketCompression'
+  | 'oauthCodexSigninIdentifier'
   | 'oauthAuthDir'
   | 'oauthAutoRefreshWorkers'
   | 'oauthCodexHeaderUserAgent'
@@ -214,7 +223,10 @@ function readNumber(record: UnknownRecord, key: string, fallback: number | null 
 }
 
 // Blank input removes the override. Invalid text must stay in the draft.
-export function parseOptionalInteger(value: ConfigFieldValue): number | null | undefined {
+export function parseOptionalInteger(
+  value: ConfigFieldValue,
+  min?: number,
+): number | null | undefined {
   if (value === null) return null
   if (typeof value === 'string') {
     const text = value.trim()
@@ -222,7 +234,30 @@ export function parseOptionalInteger(value: ConfigFieldValue): number | null | u
     if (!/^[+-]?\d+$/.test(text)) return undefined
     value = Number(text)
   }
-  return typeof value === 'number' && Number.isSafeInteger(value) ? value : undefined
+  return typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    (min === undefined || value >= min)
+    ? value
+    : undefined
+}
+
+const integerSeconds = /^[+-]?\d+$/
+
+export function parseCodexCacheTtl(
+  value: ConfigFieldValue,
+  previous?: ConfigFieldValue,
+): string | number | null | undefined {
+  if (value === null) return null
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined
+  const text = String(value).trim()
+  if (!text) return null
+  const seconds = integerSeconds.test(text)
+  const nanos = parseGoDurationNanos(seconds ? text + 's' : text)
+  if (nanos === null || nanos < 0n) return undefined
+  // Home accepts both integer seconds and quoted seconds. Preserve an existing quoted representation.
+  if (seconds && !(typeof previous === 'string' && integerSeconds.test(previous.trim())))
+    return Number(text)
+  return text
 }
 
 function readString(record: UnknownRecord, key: string, fallback = '') {
@@ -497,6 +532,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const upstreamXai = toRecord(upstream.xai)
   const client = toRecord(rawConfig.client)
   const clientCodex = toRecord(client.codex)
+  const searchCache = toRecord(clientCodex['web-search-result-cache'])
   const oauth = toRecord(rawConfig.oauth)
   const oauthProviders = toRecord(oauth.providers)
   const oauthCodex = toRecord(oauthProviders.codex)
@@ -631,6 +667,25 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     ),
     upstreamXaiInjectXSearch: readBoolean(upstreamXai, 'inject-x-search'),
     clientCodexOptimizeMultiAgentV2: readBoolean(clientCodex, 'optimize-multi-agent-v2'),
+    clientCodexEnableApplyPatch: readNullableBoolean(clientCodex, 'enable-apply-patch'),
+    clientCodexWebSearchCacheEnabled: readNullableBoolean(searchCache, 'enabled'),
+    clientCodexWebSearchCacheTtl:
+      typeof searchCache.ttl === 'number' || typeof searchCache.ttl === 'string'
+        ? searchCache.ttl
+        : null,
+    clientCodexWebSearchCacheLimit: readNumber(searchCache, 'limit', null),
+    upstreamCodexRequestCompression: readNullableBoolean(
+      upstreamCodex,
+      'upstream-request-compression',
+    ),
+    upstreamCodexRequestCompressionMinBytes: readNumber(
+      upstreamCodex,
+      'upstream-request-compression-min-bytes',
+      null,
+    ),
+    upstreamCodexWebsocketCompression: readNullableBoolean(upstreamCodex, 'websocket-compression'),
+    oauthCodexSigninIdentifier:
+      readString(oauthCodex, 'signin-with-chatgpt-identifier').trim() || null,
     oauthAuthDir: readString(oauth, 'auth-dir'),
     oauthAutoRefreshWorkers: readNumber(oauth, 'auth-auto-refresh-workers', null),
     oauthCodexHeaderUserAgent: readString(oauthCodexHeaders, 'user-agent'),
@@ -721,6 +776,7 @@ type ConfigWriteKind =
   | 'boolean'
   | 'number'
   | 'optionalInteger'
+  | 'codexCacheTtl'
   | 'secret'
   | 'string'
   | 'optionalBoolean'
@@ -732,7 +788,11 @@ type ConfigWriteKind =
 type ConfigWriteTarget = {
   path: string
   kind: ConfigWriteKind
+  member?: string
+  min?: number
 }
+
+const codexCachePath = 'client/codex/web-search-result-cache'
 
 const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'alias' },
@@ -911,6 +971,35 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
     kind: 'nullableBoolean',
   },
   upstreamXaiInjectXSearch: { path: 'upstream/xai/inject-x-search', kind: 'boolean' },
+  clientCodexEnableApplyPatch: { path: 'client/codex/enable-apply-patch', kind: 'optionalBoolean' },
+  clientCodexWebSearchCacheEnabled: {
+    path: codexCachePath,
+    member: 'enabled',
+    kind: 'optionalBoolean',
+  },
+  clientCodexWebSearchCacheTtl: { path: codexCachePath, member: 'ttl', kind: 'codexCacheTtl' },
+  clientCodexWebSearchCacheLimit: {
+    path: codexCachePath,
+    member: 'limit',
+    kind: 'optionalInteger',
+    min: 0,
+  },
+  upstreamCodexRequestCompression: {
+    path: 'upstream/codex/upstream-request-compression',
+    kind: 'optionalBoolean',
+  },
+  upstreamCodexRequestCompressionMinBytes: {
+    path: 'upstream/codex/upstream-request-compression-min-bytes',
+    kind: 'optionalInteger',
+  },
+  upstreamCodexWebsocketCompression: {
+    path: 'upstream/codex/websocket-compression',
+    kind: 'optionalBoolean',
+  },
+  oauthCodexSigninIdentifier: {
+    path: 'oauth/providers/codex/signin-with-chatgpt-identifier',
+    kind: 'string',
+  },
   clientCodexOptimizeMultiAgentV2: {
     path: 'client/codex/optimize-multi-agent-v2',
     kind: 'boolean',
@@ -1029,6 +1118,12 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   }
   const target = configWriteTargets[change.key]
   const url = `/config/${target.path}`
+  const writeOptional = (value: string | number | boolean | null) => {
+    if (value === null) return deleteOptional(target.member ? url + '/' + target.member : url)
+    // A single-member PATCH also initializes an explicitly null cache mapping.
+    if (target.member) return client.patch(url, { [target.member]: value })
+    return putJson(url, value)
+  }
 
   if (target.kind === 'alias' || target.kind === 'modelSettings') {
     const before = parseJsonObjectText(change.previousValue)
@@ -1134,16 +1229,20 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       await putJson(url, Number(change.nextValue))
       return
     case 'optionalInteger': {
-      const value = parseOptionalInteger(change.nextValue)
-      if (value === undefined)
-        throw new Error('Expected a whole number within the safe integer range')
-      if (value === null) await deleteOptional(url)
-      else await putJson(url, value)
+      const value = parseOptionalInteger(change.nextValue, target.min)
+      if (value === undefined) throw new Error('Expected a whole number within the supported range')
+      await writeOptional(value)
+      return
+    }
+    case 'codexCacheTtl': {
+      const ttl = parseCodexCacheTtl(change.nextValue, change.previousValue)
+      if (ttl === undefined)
+        throw new Error('Expected nonnegative integer seconds or a Go duration')
+      await writeOptional(ttl)
       return
     }
     case 'optionalBoolean':
-      if (change.nextValue === null) await deleteOptional(url)
-      else await putJson(url, change.nextValue)
+      await writeOptional(change.nextValue)
       return
     case 'nullableBoolean':
       await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))

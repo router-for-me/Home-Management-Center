@@ -3527,11 +3527,29 @@ export const ru = {
           description:
             'Частота наблюдения in-flight запросов и лимиты памяти. stale-after должен быть не меньше 3× snapshot-interval.',
         },
+        client: {
+          title: 'Совместимость с клиентами',
+          shortTitle: 'Клиенты',
+          description:
+            'Настройте инструменты моделей и воспроизведение истории диалога на узлах CPA.',
+        },
+        codexSearchCache: {
+          title: 'Кеш веб-поиска Codex',
+          shortTitle: 'Кеш поиска',
+          description:
+            'Когда сеанс Codex Responses использует Claude, CPA может восстанавливать отсутствующие результаты поиска при повторной передаче истории.',
+        },
+        codexTransport: {
+          title: 'Сжатие при передаче Codex',
+          shortTitle: 'Сжатие Codex',
+          description:
+            'Настройте сжатие исходящих HTTP-запросов и согласование сжатия WebSocket на узлах CPA.',
+        },
         upstream: {
           title: 'Поведение upstream',
           shortTitle: 'Upstream',
           description:
-            'Управление маскировкой запросов, охлаждением и поведением стриминга для upstream Codex, Claude и xAI.',
+            'Управление маскировкой запросов, сжатием, охлаждением и поведением стриминга для upstream Codex, Claude и xAI.',
         },
         headers: {
           title: 'Подмена заголовков',
@@ -4041,6 +4059,53 @@ export const ru = {
           label: 'Response steering Codex',
           description: 'Разрешить steering-директивы для ответов Codex.',
         },
+        clientCodexEnableApplyPatch: {
+          label: 'Расширить поддержку apply_patch',
+          description:
+            'По умолчанию Codex видит возможность freeform у моделей, которые объявляют её сами. Включите параметр, чтобы объявлять её и для моделей, поддерживаемых всеми подходящими исполнителями.',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: 'Кешировать результаты поиска',
+          description:
+            'По умолчанию выключено. CPA сохраняет результаты поиска для повторного использования в том же сеансе.',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: 'Срок хранения',
+          description:
+            'Попадание в кеш продлевает срок хранения. Введите целые секунды или длительность, например 1800, 30m или 1h30m. Пустое поле или ноль задают 24 часа.',
+          placeholder: 'По умолчанию (24 часа)',
+          invalid:
+            'Введите неотрицательное целое число секунд или длительность, например 1800 или 30m.',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: 'Лимит записей в памяти',
+          description:
+            'Пустое поле или ноль задают лимит в 1024 записи в памяти CPA. В Home KV записи удаляются по истечении срока хранения.',
+          placeholder: 'По умолчанию (1024 записи)',
+          invalid: 'Введите неотрицательное целое число или оставьте поле пустым.',
+        },
+        upstreamCodexRequestCompression: {
+          label: 'Сжимать тела запросов к Codex',
+          description:
+            'По умолчанию выключено. Обычные OAuth-запросы к официальному серверу ChatGPT Codex могут использовать zstd. Для API-ключей, других серверов и входа через ChatGPT отправляется исходное тело. После HTTP 400 или 415 CPA повторяет запрос один раз с исходным телом.',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: 'Порог сжатия запроса (байты)',
+          description:
+            'Сжатие применяется начиная с этого размера. Пустое поле, ноль или отрицательное число задают порог в 1024 байта.',
+          placeholder: 'По умолчанию (1024 байта)',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'Сжатие WebSocket',
+          description:
+            'По умолчанию включено. CPA согласует permessage-deflate на входящих и исходящих соединениях Codex WebSocket.',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Идентификатор входа Codex',
+          description:
+            'CPA использует это значение для agent_name_hint при входе через ChatGPT и как префикс User-Agent в запросах к API. Пустое поле задаёт CLIProxyAPI.',
+          placeholder: 'По умолчанию (CLIProxyAPI)',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: 'Оптимизация multi-agent V2',
           description: 'Применять оптимизации V2 к multi-agent запросам Codex со стороны клиента.',
@@ -4247,6 +4312,7 @@ export const ru = {
         removing: 'Удалить сохранённый токен',
       },
       nullableBoolean: {
+        defaultOff: 'По умолчанию (выкл.)',
         defaultOn: 'По умолчанию включено',
         unset: 'Не задано (по умолчанию)',
         enabled: 'Включено',

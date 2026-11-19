@@ -9,7 +9,8 @@ type Case = {
   key: WritableConfigFieldKey
   value: ConfigFieldValue
   path: string
-  method: 'PUT' | 'DELETE'
+  method: 'PUT' | 'PATCH' | 'DELETE'
+  previousValue?: ConfigFieldValue
   expected?: unknown
 }
 
@@ -23,7 +24,94 @@ function put(
   return { name, key, value, path, method: 'PUT', expected }
 }
 
+const cache = 'client/codex/web-search-result-cache'
 const cases: Case[] = [
+  ...(
+    [
+      ['clientCodexEnableApplyPatch', 'client/codex/enable-apply-patch'],
+      ['upstreamCodexRequestCompression', 'upstream/codex/upstream-request-compression'],
+      ['upstreamCodexWebsocketCompression', 'upstream/codex/websocket-compression'],
+    ] as const
+  ).flatMap(([key, path]) => [
+    put(`preserves the explicit false override at ${path}`, key, false, path),
+    { name: `removes only ${path}`, key, path, value: null, method: 'DELETE' as const },
+  ]),
+  put(
+    'saves zero as the Codex request compression threshold',
+    'upstreamCodexRequestCompressionMinBytes',
+    '0',
+    'upstream/codex/upstream-request-compression-min-bytes',
+    0,
+  ),
+  put(
+    'saves a JSON-looking Codex sign-in identifier as a string',
+    'oauthCodexSigninIdentifier',
+    ' false ',
+    'oauth/providers/codex/signin-with-chatgpt-identifier',
+    'false',
+  ),
+  {
+    name: 'clears the sign-in identifier without writing OAuth siblings',
+    key: 'oauthCodexSigninIdentifier',
+    value: null,
+    path: 'oauth/providers/codex/signin-with-chatgpt-identifier',
+    method: 'DELETE',
+  },
+  {
+    name: 'merges an explicit false into a nullable web search cache',
+    key: 'clientCodexWebSearchCacheEnabled',
+    value: false,
+    path: cache,
+    method: 'PATCH',
+    expected: { enabled: false },
+  },
+  {
+    name: 'merges a zero entry limit independently of cache enablement',
+    key: 'clientCodexWebSearchCacheLimit',
+    value: '0',
+    path: cache,
+    method: 'PATCH',
+    expected: { limit: 0 },
+  },
+  {
+    name: 'stores new cache seconds as a bare integer including zero',
+    key: 'clientCodexWebSearchCacheTtl',
+    value: '0',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: 0 },
+  },
+  {
+    name: 'keeps a previously quoted seconds value quoted when edited',
+    key: 'clientCodexWebSearchCacheTtl',
+    previousValue: '1800',
+    value: '7200',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: '7200' },
+  },
+  {
+    name: 'stores a unit-bearing cache duration as text',
+    key: 'clientCodexWebSearchCacheTtl',
+    previousValue: 60,
+    value: '1h30m',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: '1h30m' },
+  },
+  ...(
+    [
+      ['clientCodexWebSearchCacheEnabled', 'enabled'],
+      ['clientCodexWebSearchCacheTtl', 'ttl'],
+      ['clientCodexWebSearchCacheLimit', 'limit'],
+    ] as const
+  ).map(([key, member]) => ({
+    name: `restores just the cache ${member} default`,
+    key,
+    value: null,
+    path: cache + '/' + member,
+    method: 'DELETE' as const,
+  })),
   ...(
     [
       ['serverMaxRequestBodyBytes', 'server/max-request-body-bytes'],
@@ -274,7 +362,11 @@ beforeAll(() => {
   const fixture = fileURLToPath(new URL('./fixtures/config-xhr-transport.ts', import.meta.url))
   const child = spawnSync(process.execPath, [fixture], {
     input: JSON.stringify(
-      cases.map(({ key, value }) => ({ key, nextValue: value, previousValue: null })),
+      cases.map(({ key, value, previousValue = null }) => ({
+        key,
+        nextValue: value,
+        previousValue,
+      })),
     ),
     encoding: 'utf8',
     timeout: 10_000,

@@ -3339,10 +3339,26 @@ export const zhTW = {
           description:
             '控制在途請求觀測快照的採集頻率與記憶體上限；stale-after 必須不小於 snapshot-interval 的 3 倍。',
         },
+        client: {
+          title: '用戶端相容性',
+          shortTitle: '用戶端',
+          description: '設定 CPA 節點提供給用戶端的模型工具與對話重播行為。',
+        },
+        codexSearchCache: {
+          title: 'Codex 網頁搜尋快取',
+          shortTitle: '搜尋快取',
+          description:
+            'Codex Responses 工作階段透過 Claude 上游執行搜尋時，CPA 可補回對話記錄中缺少的搜尋結果。',
+        },
+        codexTransport: {
+          title: 'Codex 傳輸壓縮',
+          shortTitle: 'Codex 壓縮',
+          description: '分別控制 CPA 傳送至上游的 HTTP 請求主體壓縮與 WebSocket 連線的壓縮協商。',
+        },
         upstream: {
           title: '上游行為',
           shortTitle: '上游',
-          description: '控制發往 Codex、Claude、xAI 上游的請求偽裝、冷卻與流式行為。',
+          description: '設定傳送至 Codex、Claude、xAI 上游的請求偽裝、壓縮、冷卻與串流行為。',
         },
         headers: {
           title: '請求標頭偽裝',
@@ -3811,6 +3827,50 @@ export const zhTW = {
           label: 'Codex 回應引導',
           description: '開啟後允許對 Codex 回應施加 steering 指令。',
         },
+        clientCodexEnableApplyPatch: {
+          label: '擴充 apply_patch 工具支援',
+          description:
+            '預設僅原生宣告此工具的模型會向 Codex 公告 freeform 能力。啟用後，所有候選執行器均支援的模型也可公告此能力。',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: '快取搜尋結果',
+          description: '預設關閉。啟用後，CPA 會儲存目前工作階段的搜尋結果供後續重播。',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: '快取有效期限',
+          description:
+            '命中後重新計時。可填整數秒或時長，例如 1800、30m 或 1h30m。留白或填 0 使用 24 小時。',
+          placeholder: '預設（24 小時）',
+          invalid: '請輸入非負整數秒或有效時長，例如 1800 或 30m。',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: '記憶體快取筆數上限',
+          description:
+            '留白或填 0 使用 1024 筆。此上限適用於 CPA 記憶體快取，Home KV 依有效期限清除。',
+          placeholder: '預設（1024 筆）',
+          invalid: '請輸入非負整數，或留白還原預設值。',
+        },
+        upstreamCodexRequestCompression: {
+          label: '壓縮 Codex 上游請求主體',
+          description:
+            '預設關閉。傳送至官方 ChatGPT Codex 端點的一般 OAuth 請求可使用 zstd。API Key、自訂上游及「使用 ChatGPT 登入」請求使用原始主體。遇到 HTTP 400 或 415 時會以原始主體重試一次。',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: '請求主體壓縮門檻（位元組）',
+          description: '達到門檻才壓縮。留白、0 或負數使用 1024 位元組。',
+          placeholder: '預設（1024 位元組）',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'WebSocket 壓縮',
+          description:
+            '預設開啟。CPA 會在 Codex 的上下游 WebSocket 連線上協商 permessage-deflate。',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Codex 登入識別名稱',
+          description:
+            'CPA 將此值用於「使用 ChatGPT 登入」的 agent_name_hint 與 API 請求的 User-Agent 前綴。留白使用 CLIProxyAPI。',
+          placeholder: '預設（CLIProxyAPI）',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: '多代理最佳化 V2',
           description: '開啟後用戶端對 Codex 多代理請求套用 V2 最佳化。',
@@ -3998,6 +4058,7 @@ export const zhTW = {
         removing: '清除已儲存的權杖',
       },
       nullableBoolean: {
+        defaultOff: '預設關閉',
         defaultOn: '預設開啟',
         unset: '未設定（預設）',
         enabled: '啟用',

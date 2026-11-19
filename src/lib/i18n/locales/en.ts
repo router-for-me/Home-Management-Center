@@ -3512,11 +3512,29 @@ export const en = {
           description:
             'Control in-flight request observation cadence and memory limits. stale-after must be at least 3× snapshot-interval.',
         },
+        client: {
+          title: 'Client compatibility',
+          shortTitle: 'Clients',
+          description:
+            'Configure the model tools and conversation replay behavior CPA nodes offer to clients.',
+        },
+        codexSearchCache: {
+          title: 'Codex web search cache',
+          shortTitle: 'Search cache',
+          description:
+            'For Codex Responses sessions using a Claude upstream, CPA can restore missing search results when the client replays its history.',
+        },
+        codexTransport: {
+          title: 'Codex transport compression',
+          shortTitle: 'Codex compression',
+          description:
+            'Configure outgoing HTTP request compression and WebSocket compression negotiation on CPA nodes.',
+        },
         upstream: {
           title: 'Upstream behavior',
           shortTitle: 'Upstream',
           description:
-            'Control request cloaking, cooling, and streaming behavior for Codex, Claude, and xAI upstreams.',
+            'Control request cloaking, compression, cooling, and streaming behavior for Codex, Claude, and xAI upstreams.',
         },
         headers: {
           title: 'Header spoofing',
@@ -4020,6 +4038,51 @@ export const en = {
           label: 'Codex response steering',
           description: 'Allow steering directives on Codex responses.',
         },
+        clientCodexEnableApplyPatch: {
+          label: 'Extend apply_patch support',
+          description:
+            'By default, Codex sees freeform support on models that declare it natively. Enable this to advertise it for models supported by every candidate executor.',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: 'Cache search results',
+          description: 'Off by default. CPA stores search results for replay in the same session.',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: 'Cache lifetime',
+          description:
+            'A cache hit renews the lifetime. Enter whole seconds or a duration such as 1800, 30m or 1h30m. Blank or zero uses 24 hours.',
+          placeholder: 'Default (24 hours)',
+          invalid: 'Enter nonnegative whole seconds or a valid duration such as 1800 or 30m.',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: 'In-memory entry limit',
+          description:
+            'Blank or zero uses 1024 entries in CPA memory. Home KV expires entries by their lifetime.',
+          placeholder: 'Default (1024 entries)',
+          invalid: 'Enter a nonnegative whole number or leave blank for the default.',
+        },
+        upstreamCodexRequestCompression: {
+          label: 'Compress upstream Codex request bodies',
+          description:
+            'Off by default. Standard OAuth requests to the official ChatGPT Codex backend can use zstd. API keys, custom upstreams and Sign in with ChatGPT requests use the original body. CPA retries once with the original body after HTTP 400 or 415.',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: 'Request compression threshold (bytes)',
+          description:
+            'Compress request bodies at or above this size. Blank, zero or a negative value uses 1024 bytes.',
+          placeholder: 'Default (1024 bytes)',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'WebSocket compression',
+          description:
+            'On by default. CPA negotiates permessage-deflate on upstream and downstream Codex WebSocket connections.',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Codex sign-in identifier',
+          description:
+            'CPA uses this value for the Sign in with ChatGPT agent_name_hint and the User-Agent prefix on its API requests. Blank uses CLIProxyAPI.',
+          placeholder: 'Default (CLIProxyAPI)',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: 'Multi-agent optimization V2',
           description: 'Apply V2 optimizations to Codex multi-agent requests from the client.',
@@ -4224,6 +4287,7 @@ export const en = {
         removing: 'Clear stored token',
       },
       nullableBoolean: {
+        defaultOff: 'Default (off)',
         defaultOn: 'Default (on)',
         unset: 'Unset (default)',
         enabled: 'Enabled',
