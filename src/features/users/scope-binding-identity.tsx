@@ -1,8 +1,8 @@
-import { Boxes, KeyRound } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { CopyValueButton } from '@/components/shared/diagnostic-detail'
-import { ProviderLogo, resolveModelVendorId } from '@/components/shared/provider-logo'
+import { ModelLogo, ProviderLogo } from '@/components/shared/provider-logo'
 import { getCredentialProviderLabel } from '@/features/credentials/credential-display'
 import type { ChannelGroupCredential } from '@/lib/api/management/access-groups'
 
@@ -79,16 +79,11 @@ export function ScopeModelIdentity({
   modelId: string
   displayName?: string
 }) {
-  const vendor = resolveModelVendorId(modelId, displayName)
   const name = displayName && displayName !== modelId ? displayName : null
 
   return (
     <span className="flex min-w-0 items-center gap-2">
-      {vendor ? (
-        <ProviderLogo providerId={vendor} size="sm" />
-      ) : (
-        <Boxes className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
-      )}
+      <ModelLogo modelId={modelId} displayName={displayName} size="sm" />
       <span className="grid min-w-0 gap-0.5">
         {name && (
           <span className="text-label truncate" title={name}>

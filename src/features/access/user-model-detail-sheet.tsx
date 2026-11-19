@@ -1,11 +1,11 @@
 import { type ReactNode, type RefObject, useRef } from 'react'
 
-import { Boxes, Braces, Copy, Lightbulb, Wrench } from 'lucide-react'
+import { Braces, Copy, Lightbulb, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { formGridClassName } from '@/components/shared/form-layout'
-import { ProviderLogo, resolveModelVendorId } from '@/components/shared/provider-logo'
+import { ModelLogo, ProviderLogo } from '@/components/shared/provider-logo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -399,10 +399,6 @@ export function UserModelDetailSheet({
   const { t, i18n } = useTranslation()
   const locale = i18n.language
   const pricingHeadingRef = useRef<HTMLHeadingElement>(null)
-  // Same reasoning as the catalog card: the header names the model's maker, and
-  // no field on the payload reports it, so it comes from the identifier or from
-  // nothing at all.
-  const vendorId = model ? resolveModelVendorId(model.id, model.displayName) : null
 
   const handleCopy = async (value: string) => {
     try {
@@ -437,11 +433,7 @@ export function UserModelDetailSheet({
           <>
             <SheetHeader className="border-border/70 border-b">
               <SheetTitle className="flex min-w-0 items-center gap-2">
-                {vendorId ? (
-                  <ProviderLogo providerId={vendorId} size="md" />
-                ) : (
-                  <Boxes className="text-muted-foreground size-5 shrink-0" aria-hidden="true" />
-                )}
+                <ModelLogo modelId={model.id} displayName={model.displayName} />
                 <span className="min-w-0 [overflow-wrap:anywhere]">{modelDisplayName(model)}</span>
               </SheetTitle>
               <SheetDescription asChild>

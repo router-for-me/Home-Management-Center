@@ -96,3 +96,17 @@ test('model labels retain the exact model ID and unknown aliases have a neutral 
   expect(alias).toContain('<svg')
   expect(alias).toContain('>private-alias<')
 })
+
+test.each([
+  ['muse-wonder-full-1.0-contributor', 'Muse Wonder Full 1.0 Contributor', 'muse'],
+  ['muse-spark-1.3-contributor', 'Muse Spark 1.3 Contributor', 'muse'],
+  ['imagen-3.0-fast-generate-001', 'Imagen 3.0 Fast Generate', 'gemini'],
+])('the picker and saved binding use the same artwork for %s', (modelId, name, brand) => {
+  for (const displayName of [name, undefined]) {
+    const markup = renderToStaticMarkup(
+      <ScopeModelIdentity modelId={modelId} displayName={displayName} />,
+    )
+    expect(markup).toContain(`data-provider-icon="${brand}"`)
+    expect(markup).toContain(`>${modelId}<`)
+  }
+})
