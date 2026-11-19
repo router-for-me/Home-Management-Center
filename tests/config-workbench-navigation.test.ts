@@ -17,6 +17,7 @@ const cases: Array<[ConfigFieldKey, string]> = [
   ['antigravityConnPoolMaxIdleConnsPerHost', 'antigravity'],
   ['oauthAuthDir', 'oauthProviders'],
   ['port', 'server'],
+  ['serverGithubToken', 'cpaServer'],
   ['proxyUrl', 'network'],
 ]
 

@@ -24,6 +24,30 @@ function put(
 }
 
 const cases: Case[] = [
+  ...(
+    [
+      ['serverMaxRequestBodyBytes', 'server/max-request-body-bytes'],
+      ['serverResponseCompressionMinBytes', 'server/response-compression/min-bytes'],
+      ['serverShutdownTimeout', 'server/shutdown-timeout'],
+    ] as const
+  ).flatMap(([key, path]) => [
+    put(`preserves explicit zero at ${path}`, key, '0', path, 0),
+    put(`writes a positive integer at ${path}`, key, '2048', path, 2048),
+    { name: `restores the default at ${path}`, key, value: null, path, method: 'DELETE' as const },
+  ]),
+  put(
+    'disables only the CPA compression switch',
+    'serverResponseCompressionEnabled',
+    false,
+    'server/response-compression/enabled',
+  ),
+  {
+    name: 'restores the default without removing the CPA compression threshold',
+    key: 'serverResponseCompressionEnabled',
+    value: null,
+    path: 'server/response-compression/enabled',
+    method: 'DELETE',
+  },
   ...['3', '0', '-2', '+016'].map((text) =>
     put(
       `writes OAuth refresh concurrency ${text} as a JSON integer`,

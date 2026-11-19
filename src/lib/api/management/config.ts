@@ -62,6 +62,11 @@ export type ConfigFieldKey =
   | 'serverAllowHostJson'
   | 'serverTrustedProxiesJson'
   | 'serverCommercialMode'
+  | 'serverMaxRequestBodyBytes'
+  | 'serverResponseCompressionEnabled'
+  | 'serverResponseCompressionMinBytes'
+  | 'serverShutdownTimeout'
+  | 'serverGithubToken'
   | 'discoveryEnabled'
   | 'discoveryServiceName'
   | 'discoveryServiceType'
@@ -465,6 +470,7 @@ export function readObservabilityFlags(config: UnknownRecord) {
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
   const server = toRecord(rawConfig.server)
   const serverTls = toRecord(server.tls)
+  const compression = toRecord(server['response-compression'])
   const discovery = toRecord(server.discovery)
   const discoveryInterfaces = toRecord(discovery.interfaces)
   const management = toRecord(rawConfig.management)
@@ -542,6 +548,11 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     serverAllowHostJson: stringifyJsonArray(server['allow-host']),
     serverTrustedProxiesJson: stringifyJsonArray(server['trusted-proxies']),
     serverCommercialMode: readBoolean(server, 'commercial-mode'),
+    serverMaxRequestBodyBytes: readNumber(server, 'max-request-body-bytes', null),
+    serverResponseCompressionEnabled: readNullableBoolean(compression, 'enabled'),
+    serverResponseCompressionMinBytes: readNumber(compression, 'min-bytes', null),
+    serverShutdownTimeout: readNumber(server, 'shutdown-timeout', null),
+    serverGithubToken: readString(server, 'github-token').trim() || null,
     discoveryEnabled: readBoolean(discovery, 'enabled'),
     discoveryServiceName: readString(discovery, 'service-name'),
     discoveryServiceType: readString(discovery, 'service-type'),
@@ -710,6 +721,7 @@ type ConfigWriteKind =
   | 'boolean'
   | 'number'
   | 'optionalInteger'
+  | 'secret'
   | 'string'
   | 'optionalBoolean'
   | 'nullableBoolean'
@@ -772,6 +784,17 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   serverAllowHostJson: { path: 'server/allow-host', kind: 'stringList' },
   serverTrustedProxiesJson: { path: 'server/trusted-proxies', kind: 'stringList' },
   serverCommercialMode: { path: 'server/commercial-mode', kind: 'boolean' },
+  serverMaxRequestBodyBytes: { path: 'server/max-request-body-bytes', kind: 'optionalInteger' },
+  serverResponseCompressionEnabled: {
+    path: 'server/response-compression/enabled',
+    kind: 'optionalBoolean',
+  },
+  serverResponseCompressionMinBytes: {
+    path: 'server/response-compression/min-bytes',
+    kind: 'optionalInteger',
+  },
+  serverShutdownTimeout: { path: 'server/shutdown-timeout', kind: 'optionalInteger' },
+  serverGithubToken: { path: 'server/github-token', kind: 'secret' },
   discoveryEnabled: { path: 'server/discovery/enabled', kind: 'boolean' },
   discoveryServiceName: { path: 'server/discovery/service-name', kind: 'string' },
   discoveryServiceType: { path: 'server/discovery/service-type', kind: 'string' },
@@ -1125,6 +1148,23 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     case 'nullableBoolean':
       await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))
       return
+    case 'secret': {
+      const next = change.nextValue
+      if (next !== null && (typeof next !== 'string' || !next.trim())) return
+      const desired = typeof next === 'string' ? next.trim() : null
+      let current: unknown = null
+      try {
+        const { data } = await client.get<unknown>(url)
+        current = typeof data === 'string' ? data.trim() || null : data
+      } catch (error) {
+        if (!isMissingConfigPath(error)) throw error
+      }
+      if (current === desired) return
+      if (current !== change.previousValue) throw new ConfigEditConflict()
+      if (desired === null) await deleteOptional(url)
+      else await putJson(url, desired)
+      return
+    }
     case 'string': {
       const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
       if (!value) {

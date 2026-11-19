@@ -20,6 +20,7 @@ for (const scenario of [
   'oauth-alias-channel-edit',
   'oauth-model-setting-validation',
   'oauth-refresh-concurrency',
+  'cpa-server-token',
 ]) {
   test(`issue #193 real form: ${scenario}`, () => {
     const result = spawnSync(process.execPath, [fixture, scenario], {

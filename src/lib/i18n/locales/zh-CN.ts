@@ -3254,6 +3254,11 @@ export const zhCN = {
           shortTitle: '服务',
           description: '配置监听端口、绑定地址、RESP 客户端 IP 白名单、可信代理和商业版模式。',
         },
+        cpaServer: {
+          title: 'CPA 节点服务设置',
+          shortTitle: 'CPA 节点',
+          description: 'Home 将这些设置下发给连接的 CPA 节点。',
+        },
         discovery: {
           title: '服务发现',
           shortTitle: '发现',
@@ -3508,6 +3513,33 @@ export const zhCN = {
         serverCommercialMode: {
           label: '商业化模式',
           description: '开启后启用面向商业部署的服务端行为约束。',
+        },
+        serverMaxRequestBodyBytes: {
+          label: '请求体上限（字节）',
+          description: '超过上限的请求会收到 HTTP 413。留空或设为 0 及以下表示不限大小。',
+          placeholder: '默认（不限大小）',
+        },
+        serverResponseCompressionEnabled: {
+          label: '响应压缩',
+          description:
+            '默认开启。客户端支持时，CPA 使用 zstd 或 gzip 压缩 HTTP 响应，包括 SSE 流。WebSocket 升级请求跳过这项 HTTP 压缩。',
+        },
+        serverResponseCompressionMinBytes: {
+          label: '压缩门槛（字节）',
+          description:
+            '此门槛仅用于非流式响应，小于门槛时直接发送。留空或设为 0 及以下使用 1024 字节。',
+          placeholder: '默认（1024 字节）',
+        },
+        serverShutdownTimeout: {
+          label: '关闭等待时间（秒）',
+          description:
+            'CPA 收到退出信号后，最多等待这么久让进行中的 HTTP 请求完成。留空或设为 0 及以下会立即关闭。',
+          placeholder: '默认（立即关闭）',
+        },
+        serverGithubToken: {
+          label: 'GitHub 令牌',
+          description:
+            '受信任的 CPA 节点使用此令牌访问 GitHub。清除后，节点可使用环境变量 GITHUB_TOKEN。',
         },
         discoveryEnabled: {
           label: '启用服务发现',
@@ -3836,7 +3868,6 @@ export const zhCN = {
           description:
             'Home 同时自动刷新的 OAuth 凭证数。留空、0 或负整数使用默认值 16。保存后立即生效，正在进行的刷新会继续完成。',
           placeholder: '默认（16）',
-          invalid: '请输入有效范围内的整数，或留空使用默认值。',
         },
         oauthAuthDir: {
           label: 'OAuth 凭证目录',
@@ -3951,6 +3982,16 @@ export const zhCN = {
         'weighted-round-robin': '加权轮询',
         'fill-first': '优先填满',
         unknown: '未知',
+      },
+      token: {
+        keep: '已设置，留空保留',
+        enter: '输入令牌',
+        pendingClear: '保存后清除',
+        clear: '清除令牌',
+        undoClear: '撤销清除',
+        setting: '设置令牌',
+        replacing: '替换令牌',
+        removing: '清除已保存的令牌',
       },
       nullableBoolean: {
         defaultOn: '默认开启',
@@ -4364,6 +4405,7 @@ export const zhCN = {
         },
       },
       validation: {
+        optionalInteger: '请输入有效范围内的整数，或留空使用默认值。',
         invalidField: '请填写有效值。',
         editConflict: '记录已变更、已删除或无法唯一匹配。请重新加载后再编辑。',
         runtimeChanged: '正在编辑的配置已在服务端更新。请重新加载后再编辑。',

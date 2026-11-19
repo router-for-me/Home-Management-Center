@@ -3425,6 +3425,11 @@ export const en = {
           description:
             'Configure the listen port, bind address, RESP client IP allowlist, trusted proxies, and commercial mode.',
         },
+        cpaServer: {
+          title: 'CPA node server settings',
+          shortTitle: 'CPA nodes',
+          description: 'Home distributes these settings to connected CPA nodes.',
+        },
         discovery: {
           title: 'Service discovery',
           shortTitle: 'Discovery',
@@ -3694,6 +3699,34 @@ export const en = {
         serverCommercialMode: {
           label: 'Commercial mode',
           description: 'Enable server behavior constraints intended for commercial deployments.',
+        },
+        serverMaxRequestBodyBytes: {
+          label: 'Request body limit (bytes)',
+          description:
+            'CPA rejects larger requests with HTTP 413. Leave blank or enter zero or less for unlimited size.',
+          placeholder: 'Default (unlimited)',
+        },
+        serverResponseCompressionEnabled: {
+          label: 'Response compression',
+          description:
+            'Enabled by default. CPA uses zstd or gzip when the client supports it, including for SSE streams. HTTP compression skips WebSocket upgrades.',
+        },
+        serverResponseCompressionMinBytes: {
+          label: 'Compression threshold (bytes)',
+          description:
+            'This threshold applies to non-streaming responses. CPA sends smaller responses uncompressed. A blank, zero or negative value uses 1024 bytes.',
+          placeholder: 'Default (1024 bytes)',
+        },
+        serverShutdownTimeout: {
+          label: 'Shutdown timeout (seconds)',
+          description:
+            'How long CPA waits for in-flight HTTP requests after a shutdown signal. A blank, zero or negative value closes connections immediately.',
+          placeholder: 'Default (immediate)',
+        },
+        serverGithubToken: {
+          label: 'GitHub token',
+          description:
+            'Trusted CPA nodes use this token to access GitHub. Clearing it lets each node use its GITHUB_TOKEN environment variable.',
         },
         discoveryEnabled: {
           label: 'Enable service discovery',
@@ -4056,8 +4089,6 @@ export const en = {
           description:
             'How many OAuth credentials Home can refresh at once. Blank, zero or a negative integer uses the default of 16. Changes apply on save and active refreshes run to completion.',
           placeholder: 'Default (16)',
-          invalid:
-            'Enter a whole number within the supported range or leave it blank for the default.',
         },
         oauthAuthDir: {
           label: 'OAuth auth directory',
@@ -4181,6 +4212,16 @@ export const en = {
         'weighted-round-robin': 'Weighted round robin',
         'fill-first': 'Fill first',
         unknown: 'Unknown',
+      },
+      token: {
+        keep: 'Configured, leave blank to keep',
+        enter: 'Enter a token',
+        pendingClear: 'Will clear on save',
+        clear: 'Clear token',
+        undoClear: 'Undo clear',
+        setting: 'Set token',
+        replacing: 'Replace token',
+        removing: 'Clear stored token',
       },
       nullableBoolean: {
         defaultOn: 'Default (on)',
@@ -4611,6 +4652,8 @@ export const en = {
         },
       },
       validation: {
+        optionalInteger:
+          'Enter a whole number within the supported range or leave it blank for the default.',
         invalidField: 'Enter a valid value.',
         editConflict:
           'The selected record changed, was removed, or could not be uniquely identified. Reload before saving.',

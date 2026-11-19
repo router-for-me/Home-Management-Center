@@ -71,6 +71,10 @@ test.each([
     (value: boolean | null) => ({ routing: { 'session-affinity-subagents': value } }),
   ],
   [
+    'serverResponseCompressionEnabled',
+    (value: boolean | null) => ({ server: { 'response-compression': { enabled: value } } }),
+  ],
+  [
     'discoveryAuthRequired',
     (value: boolean | null) => ({ server: { discovery: { 'auth-required': value } } }),
   ],
