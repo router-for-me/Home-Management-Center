@@ -96,6 +96,21 @@ const cases: Case[] = [
     path: 'routing/session-affinity-subagents',
     method: 'DELETE',
   },
+  ...[false, true].map((value) =>
+    put(
+      `writes only the discovery auth flag when explicitly set to ${value}`,
+      'discoveryAuthRequired',
+      value,
+      'server/discovery/auth-required',
+    ),
+  ),
+  {
+    name: 'restores the default discovery auth flag without replacing the discovery subtree',
+    key: 'discoveryAuthRequired',
+    value: null,
+    path: 'server/discovery/auth-required',
+    method: 'DELETE',
+  },
   put(
     'preserves nullable false',
     'antigravitySignatureBypassStrict',

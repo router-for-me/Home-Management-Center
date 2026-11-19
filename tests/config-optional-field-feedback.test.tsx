@@ -65,22 +65,41 @@ test('an omitted optional switch has the same initial UI as its reported default
     expect(explicit.outerHTML).toBe(initial.outerHTML)
   }))
 
-test('subagent affinity uses one switch and only explicit values offer a reset', () =>
+test.each([
+  [
+    'sessionAffinitySubagents',
+    (value: boolean | null) => ({ routing: { 'session-affinity-subagents': value } }),
+  ],
+  [
+    'discoveryAuthRequired',
+    (value: boolean | null) => ({ server: { discovery: { 'auth-required': value } } }),
+  ],
+] as const)('%s uses one default-on switch and only explicit values offer a reset', (key, config) =>
   withConfigWorkbench((renderField) => {
     for (const value of [undefined, null, false, true]) {
-      const routing = value === undefined ? {} : { 'session-affinity-subagents': value }
-      const field = renderField('sessionAffinitySubagents', { routing })
+      const field = renderField(key, value === undefined ? {} : config(value))
       const switches = field.querySelectorAll('[role="switch"]')
       expect(switches).toHaveLength(1)
       const toggle = switches[0]
       expect(toggle.getAttribute('aria-checked')).toBe(String(value ?? true))
-      expect(toggle.getAttribute('aria-label')).toBe(
-        en.common.configPage.fields.sessionAffinitySubagents.label,
-      )
+      expect(toggle.getAttribute('aria-label')).toBe(en.common.configPage.fields[key].label)
+      expect(toggle.getAttribute('aria-describedby')).toBe(`config-field-${key}-description`)
       expect(field.querySelector('[role="combobox"]')).toBeNull()
       const reset = [...field.querySelectorAll('button')].filter((button) => button !== toggle)
       expect(reset.map((button) => button.textContent)).toEqual(
         value == null ? [] : ['Restore default'],
       )
     }
+  }),
+)
+
+test('a stored management advertisement flag does not expose a switch for management endpoints', () =>
+  withConfigWorkbench((renderField) => {
+    const field = renderField('discoveryAuthRequired', {
+      server: { discovery: { 'advertise-management': true } },
+    })
+    const section = field.closest('section')
+    expect(section?.textContent).toContain(en.common.configPage.sections.discovery.description)
+    expect(section?.querySelector('#config-field-discoveryAdvertiseManagement')).toBeNull()
+    expect(field.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true')
   }))

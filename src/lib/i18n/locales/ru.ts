@@ -1832,7 +1832,8 @@ export const ru = {
         disabled: 'Отключено',
         disabledHint: 'Отключенная запись не используется для upstream requests.',
         disableCooling: 'Отключить cooling',
-        disableCoolingHint: 'Исключает модельный ключ из quota cooldown scheduling.',
+        disableCoolingHint:
+          'Пропускать обычные паузы для этих учётных данных. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         disableCoolingModeInherit: 'Наследовать глобальный',
         disableCoolingModeEnabled: 'Включено (отключить cooling)',
         disableCoolingModeDisabled: 'Выключено (разрешить cooling)',
@@ -2608,7 +2609,7 @@ export const ru = {
           'Если включено, используется официальный API xAI; если выключено — Grok CLI chat-proxy.',
         coolingSchedule: 'Расписание охлаждения',
         coolingScheduleHint:
-          'Настройте, участвует ли эта учетная запись в расписании охлаждения квот или наследует глобальную политику.',
+          'Задайте политику обычных пауз для этих учётных данных или используйте глобальную настройку. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         coolingModeInherit: 'Наследовать глобальную политику',
         coolingModeEnabled: 'Участвовать в охлаждении (disable_cooling = false)',
         coolingModeDisabled: 'Отключить охлаждение (disable_cooling = true)',
@@ -3363,13 +3364,13 @@ export const ru = {
           title: 'Runtime сервера',
           shortTitle: 'Сервер',
           description:
-            'Настройка порта прослушивания, адреса привязки, списка разрешённых хостов, доверенных proxy и коммерческого режима.',
+            'Настройте порт, адрес привязки, список разрешённых IP-адресов клиентов RESP, доверенные прокси и коммерческий режим.',
         },
         discovery: {
           title: 'Обнаружение сервиса',
           shortTitle: 'Discovery',
           description:
-            'Настройка mDNS broadcast: имя сервиса, тип сервиса, подтипы, диапазон интерфейсов и контроль доступа.',
+            'Home передаёт эти настройки узлам CPA. Узлы публикуют только API моделей. Адреса интерфейса управления в объявления не включаются.',
         },
         tls: {
           title: 'TLS',
@@ -3575,9 +3576,9 @@ export const ru = {
             'Максимальное время ожидания (в секундах) для восстановления охлаждающихся учетных данных. Когда все учетные данные находятся на охлаждении, сервер ожидает до этого времени восстановления ближайших данных перед переходом к следующему раунду.',
         },
         disableCooling: {
-          label: 'Отключить планирование cooldown',
+          label: 'Отключить обычные паузы',
           description:
-            'Глобально отключает окна охлаждения при ошибках аутентификации и моделей; все учетные данные пропускают задержку повторов.',
+            'При включении Home пропускает обычные паузы при ошибках запросов и исчерпании квоты. Настройки провайдера или учётных данных могут переопределить этот выбор. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         },
         forceModelPrefix: {
           label: 'Требовать совпадение prefix модели',
@@ -3619,9 +3620,9 @@ export const ru = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: 'Разрешенные заголовки Host',
+          label: 'Разрешённые IP-адреса клиентов RESP',
           description:
-            'По одному разрешенному HTTP Host на строку. Пустой массив означает без ограничений.',
+            'Ограничивает IP-адреса клиентов, которые могут подключаться к Home по RESP. Пустой список разрешает любой IP-адрес. Для каждого подключения требуется взаимная аутентификация TLS (mTLS).',
         },
         serverTrustedProxiesJson: {
           label: 'Доверенные proxy',
@@ -3634,23 +3635,23 @@ export const ru = {
         },
         discoveryEnabled: {
           label: 'Включить обнаружение сервиса',
-          description:
-            'Транслировать этот экземпляр по mDNS, чтобы узлы CPA в LAN могли его найти.',
+          description: 'Разрешить клиентам в локальной сети находить API узлов CPA через mDNS.',
         },
         discoveryServiceName: {
           label: 'Имя сервиса',
-          description: 'Имя экземпляра сервиса в mDNS broadcast.',
-          placeholder: 'CLIProxyAPIHome',
+          description:
+            'Узел добавляет к имени свой короткий ID. Если имя пустое, используется префикс CPA, например CPA-8F3B.',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: 'Тип сервиса',
           description: 'Тип сервиса mDNS (service type). Обычно оставьте значение по умолчанию.',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: 'Подтипы сервиса',
           description:
-            'По одному дополнительному mDNS subtype на строку для более точной фильтрации обнаружения.',
+            'Выберите подтипы протоколов API для публикации. Если список пуст, CPA использует подтипы по умолчанию.',
         },
         discoveryInterfacesIncludeJson: {
           label: 'Включаемые интерфейсы',
@@ -3663,12 +3664,9 @@ export const ru = {
             'По одному имени интерфейса на строку; эти интерфейсы не участвуют в broadcast.',
         },
         discoveryAuthRequired: {
-          label: 'Обнаружение требует аутентификации',
-          description: 'Помечать ответы обнаружения как требующие аутентификации для подключения.',
-        },
-        discoveryAdvertiseManagement: {
-          label: 'Анонсировать management',
-          description: 'Включать информацию о доступе к management в broadcast обнаружения.',
+          label: 'Сообщать, что API требует аутентификации',
+          description:
+            'По умолчанию включено. Значение auth=1 сообщает клиентам, что нужны учётные данные. При отключении CPA публикует auth=0. Меняется только запись обнаружения.',
         },
         managementBaseUrl: {
           label: 'Base URL панели управления',
@@ -3849,7 +3847,6 @@ export const ru = {
         },
         sessionAffinitySubagents: {
           label: 'Session affinity для subagent',
-          defaultOn: 'По умолчанию включено',
           description:
             'По умолчанию включено. Действует при включённом Session affinity. Дочерняя сессия без привязки может унаследовать учётные данные родительской сессии для того же провайдера и модели. Guardian может использовать последние подходящие учётные данные родителя и для другой модели. При отключении для сессий без привязки действует обычный выбор, а Home перестаёт записывать выбор родителя в историю Guardian. Существующие привязки дочерних сессий и поведение fork сохраняются.',
         },
@@ -4096,15 +4093,16 @@ export const ru = {
         unknown: 'Неизвестно',
       },
       nullableBoolean: {
+        defaultOn: 'По умолчанию включено',
         unset: 'Не задано (по умолчанию)',
         enabled: 'Включено',
         disabled: 'Отключено',
       },
       stringList: {
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: 'По одному разрешенному Host на строку. Пустые строки удаляются при сохранении.',
-          count: 'Настроено Host: {{count}}',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: 'Введите по одному адресу IPv4 или IPv6 в строке.',
+          count: 'Всего IP-адресов в списке: {{count}}',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -4112,7 +4110,7 @@ export const ru = {
           count: 'Настроено доверенных proxy: {{count}}',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: 'По одному mDNS subtype на строку. Пустые строки удаляются при сохранении.',
           count: 'Настроено подтипов: {{count}}',
         },

@@ -61,7 +61,6 @@ export type ConfigFieldKey =
   | 'discoveryServiceName'
   | 'discoveryServiceType'
   | 'discoveryAuthRequired'
-  | 'discoveryAdvertiseManagement'
   | 'discoverySubtypesJson'
   | 'discoveryInterfacesIncludeJson'
   | 'discoveryInterfacesExcludeJson'
@@ -508,8 +507,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     discoveryEnabled: readBoolean(discovery, 'enabled'),
     discoveryServiceName: readString(discovery, 'service-name'),
     discoveryServiceType: readString(discovery, 'service-type'),
-    discoveryAuthRequired: readBoolean(discovery, 'auth-required'),
-    discoveryAdvertiseManagement: readBoolean(discovery, 'advertise-management'),
+    discoveryAuthRequired: readNullableBoolean(discovery, 'auth-required'),
     discoverySubtypesJson: stringifyJsonArray(discovery.subtypes),
     discoveryInterfacesIncludeJson: stringifyJsonArray(discoveryInterfaces.include),
     discoveryInterfacesExcludeJson: stringifyJsonArray(discoveryInterfaces.exclude),
@@ -710,8 +708,7 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   discoveryEnabled: { path: 'server/discovery/enabled', kind: 'boolean' },
   discoveryServiceName: { path: 'server/discovery/service-name', kind: 'string' },
   discoveryServiceType: { path: 'server/discovery/service-type', kind: 'string' },
-  discoveryAuthRequired: { path: 'server/discovery/auth-required', kind: 'boolean' },
-  discoveryAdvertiseManagement: { path: 'server/discovery/advertise-management', kind: 'boolean' },
+  discoveryAuthRequired: { path: 'server/discovery/auth-required', kind: 'optionalBoolean' },
   discoverySubtypesJson: { path: 'server/discovery/subtypes', kind: 'stringList' },
   discoveryInterfacesIncludeJson: {
     path: 'server/discovery/interfaces/include',

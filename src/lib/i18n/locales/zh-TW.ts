@@ -1760,7 +1760,8 @@ export const zhTW = {
         disabled: '停用',
         disabledHint: '停用後，該條目不會被閘道用於上游請求。',
         disableCooling: '停用冷卻排程',
-        disableCoolingHint: '開啟後，該模型金鑰不會參與配額冷卻排程。',
+        disableCoolingHint:
+          '開啟後，此憑證會略過一般冷卻。符合 force_cooldown 的錯誤仍會觸發冷卻。',
         disableCoolingModeInherit: '繼承全域',
         disableCoolingModeEnabled: '開啟（停用冷卻）',
         disableCoolingModeDisabled: '關閉（參與冷卻）',
@@ -2485,7 +2486,8 @@ export const zhTW = {
         usingApi: '使用官方 API（using_api）',
         usingApiHint: '開啟後使用 xAI 官方 API；關閉時使用 Grok CLI chat-proxy。',
         coolingSchedule: '冷卻排程',
-        coolingScheduleHint: '配置該憑證在配額受限時是否參與冷卻排程，或繼承全域策略。',
+        coolingScheduleHint:
+          '選擇此憑證的一般冷卻策略，或繼承全域設定。符合 force_cooldown 的錯誤仍會觸發冷卻。',
         coolingModeInherit: '繼承全域策略',
         coolingModeEnabled: '參與冷卻排程 (disable_cooling = false)',
         coolingModeDisabled: '停用冷卻排程 (disable_cooling = true)',
@@ -3188,12 +3190,14 @@ export const zhTW = {
         server: {
           title: '服務執行',
           shortTitle: '服務',
-          description: '設定監聽埠、綁定位址、主機名稱校驗、可信代理和商業版模式等基礎服務行為。',
+          description:
+            '設定監聽連接埠、繫結位址、RESP 用戶端 IP 允許清單、受信任的代理與商業版模式。',
         },
         discovery: {
           title: '服務發現',
           shortTitle: '發現',
-          description: '設定 mDNS 服務發現廣播：服務名、服務類型、子類型、網卡範圍與存取控制。',
+          description:
+            'Home 將這些設定下發給 CPA 節點。節點只廣播模型 API，管理端點一律不會出現在廣播中。',
         },
         tls: {
           title: 'TLS',
@@ -3384,8 +3388,9 @@ export const zhTW = {
             '冷卻憑證恢復的最大等待時間（秒）。當所有憑證都在冷卻時，最多等待該時間以讓最早恢復的憑證重新可用並進入下一輪重試。',
         },
         disableCooling: {
-          label: '停用冷卻調度',
-          description: '開啟後全域停用認證與模型失敗後的冷卻視窗；所有憑證跳過失敗退避調度。',
+          label: '停用一般冷卻',
+          description:
+            '開啟後，Home 會略過請求錯誤及配額限制引發的一般冷卻。供應商或憑證可以覆寫此設定。符合 force_cooldown 的錯誤仍會觸發冷卻。',
         },
         forceModelPrefix: {
           label: '強制模型前綴匹配',
@@ -3422,8 +3427,9 @@ export const zhTW = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: '允許的 Host 請求頭',
-          description: '逐行填寫允許存取的 HTTP Host；空陣列表示不限制。',
+          label: 'RESP 用戶端 IP 允許清單',
+          description:
+            '限制哪些用戶端 IP 可以連線到 Home 的 RESP 服務。留空時允許任何 IP，所有連線都必須通過雙向 TLS（mTLS）驗證。',
         },
         serverTrustedProxiesJson: {
           label: '受信代理',
@@ -3436,21 +3442,21 @@ export const zhTW = {
         },
         discoveryEnabled: {
           label: '啟用服務發現',
-          description: '開啟後透過 mDNS 廣播本執行個體，便於區域網路內的 CPA 自動發現。',
+          description: '允許區域網路上的用戶端透過 mDNS 找到 CPA 節點的 API。',
         },
         discoveryServiceName: {
           label: '服務名',
-          description: 'mDNS 廣播使用的服務執行個體名。',
-          placeholder: 'CLIProxyAPIHome',
+          description: '節點會在名稱後加上短 ID。留空時使用 CPA 前綴，例如 CPA-8F3B。',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: '服務類型',
           description: 'mDNS 服務類型（service type），通常保持預設值。',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: '服務子類型',
-          description: '逐行填寫附加的 mDNS subtype，用於更細粒度的發現過濾。',
+          description: '選擇要廣播的 API 協定子類型。留空時使用 CPA 的預設清單。',
         },
         discoveryInterfacesIncludeJson: {
           label: '網卡包含清單',
@@ -3461,12 +3467,9 @@ export const zhTW = {
           description: '逐行填寫不參與廣播的網卡名。',
         },
         discoveryAuthRequired: {
-          label: '發現需要認證',
-          description: '開啟後在發現回應中標記需要認證才能接入。',
-        },
-        discoveryAdvertiseManagement: {
-          label: '廣播管理端',
-          description: '開啟後在發現廣播中附帶管理端接入資訊。',
+          label: '在廣播中宣告 API 需要驗證',
+          description:
+            '預設開啟。CPA 在服務探索記錄中以 auth=1 提示用戶端需要憑證，關閉後廣播 auth=0。此設定只會改變廣播內容。',
         },
         managementBaseUrl: {
           label: '管理端 Base URL',
@@ -3628,7 +3631,6 @@ export const zhTW = {
         },
         sessionAffinitySubagents: {
           label: '子代理粘性會話',
-          defaultOn: '預設開啟',
           description:
             '預設開啟，僅在主粘性會話開啟時生效。尚未綁定的子會話可繼承父會話在同一供應商、同一模型上的憑證。Guardian 可跨模型繼承父會話最近選用且仍可用的憑證。停用後，尚未綁定的子會話依一般規則選擇憑證，Home 會停止為 Guardian 記錄新的父會話選擇。既有子會話綁定及 fork 行為仍然有效。',
         },
@@ -3851,15 +3853,16 @@ export const zhTW = {
         unknown: '未知',
       },
       nullableBoolean: {
+        defaultOn: '預設開啟',
         unset: '未設定（預設）',
         enabled: '啟用',
         disabled: '停用',
       },
       stringList: {
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: '每行一個允許的 Host，儲存時會過濾空行。',
-          count: '已設定 {{count}} 個 Host',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: '每行輸入一個 IPv4 或 IPv6 位址。',
+          count: '已設定 {{count}} 個 IP 位址',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -3867,7 +3870,7 @@ export const zhTW = {
           count: '已設定 {{count}} 個受信代理',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: '每行一個 mDNS subtype，儲存時會過濾空行。',
           count: '已設定 {{count}} 個子類型',
         },
