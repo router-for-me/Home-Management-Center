@@ -104,6 +104,35 @@ test('a stored management advertisement flag does not expose a switch for manage
     expect(field.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true')
   }))
 
+test('the TOS pause duration shows the Home default or the stored override as configuration', () =>
+  withConfigWorkbench((renderField) => {
+    const copy = en.common.configPage.fields.antigravityTosPauseWindow
+    for (const [stored, displayed] of [
+      [undefined, ''],
+      [null, ''],
+      ['  ', ''],
+      [0, '0'],
+      [false, 'false'],
+      ['0', '0'],
+      [' OFF ', 'OFF'],
+      ['1h30m', '1h30m'],
+    ] as const) {
+      const field = renderField('antigravityTosPauseWindow', {
+        oauth: {
+          providers: { antigravity: stored === undefined ? {} : { 'tos-pause-window': stored } },
+        },
+      })
+      const input = field.querySelector('input')
+      expect(input?.value).toBe(displayed)
+      expect(input?.placeholder).toBe(copy.placeholder)
+      expect(input?.getAttribute('aria-label')).toBe(copy.label)
+      expect(field.querySelector('#' + input?.getAttribute('aria-describedby'))?.textContent).toBe(
+        copy.description,
+      )
+      expect(field.querySelector('[role="status"], [role="timer"]')).toBeNull()
+    }
+  }))
+
 test('session rebinding shows the effective policy and explains the selected behavior', () =>
   withConfigWorkbench((renderField) => {
     const copy = en.common.configPage.fields.sessionAffinityRebindOn

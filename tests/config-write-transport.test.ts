@@ -24,6 +24,21 @@ function put(
 }
 
 const cases: Case[] = [
+  ...['0', 'false', 'off', 'none', 'disabled', '1h30m'].map((value) =>
+    put(
+      `writes the Antigravity TOS pause window ${value} as a JSON string`,
+      'antigravityTosPauseWindow',
+      value,
+      'oauth/providers/antigravity/tos-pause-window',
+    ),
+  ),
+  {
+    name: 'restores the default TOS pause window by deleting only that field',
+    key: 'antigravityTosPauseWindow',
+    value: '  ',
+    path: 'oauth/providers/antigravity/tos-pause-window',
+    method: 'DELETE',
+  },
   put(
     'writes a quoted public IP',
     'liveMediaRelayPublicIp',

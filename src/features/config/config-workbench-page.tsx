@@ -106,6 +106,7 @@ import {
 } from '@/features/config/payload-replace-fields'
 import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
+import { isValidAntigravityPauseWindow } from '@/lib/api/management/antigravity-pause-window'
 import {
   type ConfigChange,
   type ConfigFieldKey,
@@ -627,6 +628,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         kind: 'jsonArray',
         sectionId: 'oauthProviders',
         groupId: 'liveMediaRelay',
+      },
+      {
+        key: 'antigravityTosPauseWindow',
+        kind: 'duration',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
       },
       {
         key: 'antigravitySensitiveWordsJson',
@@ -1547,6 +1554,7 @@ function getStructuredChanges(
 }
 
 function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): ConfigFieldValue {
+  if (key === 'antigravityTosPauseWindow') return String(value ?? '').trim()
   if (key !== 'payloadRulesJson') return value
   try {
     const parsed: unknown = JSON.parse(String(value))
@@ -1591,6 +1599,7 @@ function getValidationErrors(
       }
       if (field.kind === 'duration') {
         const text = typeof value === 'string' ? value.trim() : ''
+        if (field.key === 'antigravityTosPauseWindow') return !isValidAntigravityPauseWindow(text)
         return text.length > 0 && !durationPattern.test(text)
       }
       if (field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean') {
@@ -1871,10 +1880,8 @@ function ConfigField({
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
-  const descriptionId =
-    field.kind === 'select' || field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean'
-      ? `config-field-${field.key}-description`
-      : undefined
+  const descriptionId = `config-field-${field.key}-description`
+  const errorId = `config-field-${field.key}-error`
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
   const optionLabelKey =
@@ -1897,8 +1904,8 @@ function ConfigField({
           })}
         </p>
         {invalid ? (
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {t('configPage.validation.invalidField')}
+          <p id={errorId} className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            {t([`configPage.fields.${field.key}.invalid`, 'configPage.validation.invalidField'])}
           </p>
         ) : null}
       </div>
@@ -1931,6 +1938,9 @@ function ConfigField({
         ) : null}
         {field.kind === 'text' || field.kind === 'duration' ? (
           <Input
+            aria-label={t(`configPage.fields.${field.key}.label`)}
+            aria-describedby={invalid ? `${descriptionId} ${errorId}` : descriptionId}
+            aria-invalid={invalid || undefined}
             value={String(value)}
             disabled={controlDisabled}
             className="md:max-w-80"
@@ -4943,6 +4953,8 @@ function ConfigChangePreview({
     }
   }
   function formatValue(value: ConfigFieldValue) {
+    if (change.key === 'antigravityTosPauseWindow' && value === '')
+      return t('configPage.fields.antigravityTosPauseWindow.placeholder')
     const kind = fieldDefinitionByKey[change.key].kind
     if (kind === 'literalReplacements' || kind === 'patternReplacements') {
       const rows = parseReplacementDraft(value)

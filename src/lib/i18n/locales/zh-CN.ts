@@ -3307,7 +3307,7 @@ export const zhCN = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '配置 Antigravity 系统指令的文本处理规则、额度与连接池。',
+          description: '设置 TOS 违规后的暂停时长、系统指令的文本处理规则、额度与连接池。',
         },
         multimedia: {
           title: '多媒体',
@@ -3838,6 +3838,13 @@ export const zhCN = {
           description:
             '按 provider 键控的错误处理规则，每条规则形状为 {status, match[], match-regexr[], action}。',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'TOS 违规后的暂停时长',
+          description:
+            '仅当 Google RPC 返回 403 PERMISSION_DENIED 且 ErrorInfo.reason 为 TOS_VIOLATION 时，Home 才按此时长暂停调度整个 Antigravity 凭证池。可填 30m 或 1h30m，填 0 关闭，留空恢复默认。',
+          placeholder: '0（默认关闭）',
+          invalid: '请输入有效的正时长，如 30m 或 1h30m，或填 0 关闭。',
         },
         antigravityCredits: {
           label: 'Antigravity 额度',
