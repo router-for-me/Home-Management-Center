@@ -2935,6 +2935,7 @@ export const zhCN = {
         },
         channelSearchPlaceholder: '搜索范围、凭证名称、提供商或 ID',
         channelSearchEmpty: '没有匹配的凭证范围。',
+        modelGroupSearchEmpty: '没有匹配的模型范围。',
         credentialCandidatesDenied: '当前连接无权读取可绑定的凭证。',
         credentialCandidatesFailed: '暂时无法读取可绑定的凭证。',
         loadingCredentialMetadata: '正在读取凭证名称和状态…',
@@ -2972,7 +2973,6 @@ export const zhCN = {
         channelEmpty: '当前没有凭证范围。',
         modelEmpty: '当前没有模型范围。',
         detailCount: '{{count}} 个绑定',
-        groupId: '范围 ID：{{id}}',
         noDetails: '尚未添加绑定。',
         detailChannels: '凭证范围',
         detailChannelsHint:

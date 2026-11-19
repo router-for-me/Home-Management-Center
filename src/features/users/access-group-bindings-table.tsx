@@ -1,7 +1,6 @@
 import { Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-import { CopyValueButton } from '@/components/shared/diagnostic-detail'
 import { RowActions } from '@/components/shared/row-actions'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import { tableHeaderClassName } from '@/components/shared/table-surface'
@@ -13,57 +12,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatOptionalTime, groupListLabel } from '@/features/users/users-format'
+import {
+  ScopeCredentialIdentity,
+  ScopeModelIdentity,
+} from '@/features/users/scope-binding-identity'
+import { formatOptionalTime, groupListLabel, repeatedNames } from '@/features/users/users-format'
 import type {
   AccessGroupDetailResource,
   AccessGroupKind,
   AccessGroupResource,
 } from '@/lib/api/management/access-groups'
 import { cn } from '@/lib/utils'
-
-function BoundCredentialIdentity({ detail }: { detail: AccessGroupDetailResource }) {
-  const { t } = useTranslation()
-  const credential = detail.credential
-  const name = credential?.displayName !== detail.targetId ? credential?.displayName : null
-  const state = credential === null ? 'unresolved' : credential?.state
-
-  return (
-    <div className="grid min-w-0 gap-0.5">
-      {name && (
-        <span className="truncate font-medium" title={name}>
-          {name}
-        </span>
-      )}
-      <div className="flex min-w-0 items-center gap-1">
-        <code
-          className="text-muted-foreground min-w-0 truncate text-xs select-all"
-          title={detail.targetId}
-        >
-          {detail.targetId}
-        </code>
-        <CopyValueButton
-          value={detail.targetId}
-          copyLabel={t('usersPage.groups.copyCredentialId', { id: detail.targetId })}
-          copiedLabel={t('usersPage.groups.credentialIdCopied')}
-        />
-      </div>
-      {(credential?.provider || state) && (
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-xs">
-          {credential?.provider && (
-            <span className="truncate" title={credential.provider}>
-              {credential.provider}
-            </span>
-          )}
-          {state && (
-            <span className="text-warning-foreground dark:text-warning">
-              {t(`usersPage.groups.credentialState.${state}`)}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export function AccessGroupBindingsTable({
   kind,
@@ -81,6 +40,9 @@ export function AccessGroupBindingsTable({
   const { t } = useTranslation()
   const showSecondaryTime = useSecondaryColumns() || kind === 'model'
   const showChannels = kind === 'model' && channelBindingsSupported
+  const ambiguousCredentials = repeatedNames(
+    groupDetails.map((detail) => detail.credential?.displayName),
+  )
   // Fixed proportions keep stacked group cards' tables column-aligned regardless of content.
   const targetColumnWidth = kind === 'channel' ? undefined : showChannels ? 'w-[40%]' : 'w-[56%]'
   const timeColumnWidth = kind === 'channel' ? 'w-[28%]' : showChannels ? 'w-[20%]' : 'w-[26%]'
@@ -136,11 +98,16 @@ export function AccessGroupBindingsTable({
                 <TableRow key={detail.id} variant="resource">
                   <TableCell>
                     {kind === 'channel' ? (
-                      <BoundCredentialIdentity detail={detail} />
+                      <ScopeCredentialIdentity
+                        authId={detail.targetId}
+                        displayName={detail.credential?.displayName}
+                        provider={detail.credential?.provider}
+                        state={detail.credential === null ? 'unresolved' : detail.credential?.state}
+                        showId={ambiguousCredentials.has(detail.credential?.displayName ?? '')}
+                        copyable
+                      />
                     ) : (
-                      <span className="block truncate font-mono text-xs" title={detail.targetId}>
-                        {detail.targetId}
-                      </span>
+                      <ScopeModelIdentity modelId={detail.targetId} />
                     )}
                   </TableCell>
                   {showChannels ? (

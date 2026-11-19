@@ -3083,6 +3083,7 @@ export const ru = {
         },
         channelSearchPlaceholder: 'Поиск по области, учётным данным, провайдеру или ID',
         channelSearchEmpty: 'Подходящих областей учётных данных нет.',
+        modelGroupSearchEmpty: 'Подходящих областей моделей нет.',
         credentialCandidatesDenied:
           'У этого подключения нет прав на просмотр учётных данных для привязки.',
         credentialCandidatesFailed: 'Не удалось загрузить учётные данные для привязки.',
@@ -3123,7 +3124,6 @@ export const ru = {
         channelEmpty: 'Областей учетных данных пока нет.',
         modelEmpty: 'Областей моделей пока нет.',
         detailCount: 'Связей: {{count}}',
-        groupId: 'ID области: {{id}}',
         noDetails: 'Связей пока нет.',
         detailChannels: 'Область учетных данных',
         detailChannelsHint:

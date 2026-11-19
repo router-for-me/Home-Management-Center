@@ -2936,6 +2936,7 @@ export const zhTW = {
         },
         channelSearchPlaceholder: '搜尋範圍、憑證名稱、提供者或 ID',
         channelSearchEmpty: '沒有符合條件的憑證範圍。',
+        modelGroupSearchEmpty: '沒有符合條件的模型範圍。',
         credentialCandidatesDenied: '目前的連線沒有權限讀取可綁定的憑證。',
         credentialCandidatesFailed: '目前無法讀取可綁定的憑證。',
         loadingCredentialMetadata: '正在讀取憑證名稱與狀態…',
@@ -2973,7 +2974,6 @@ export const zhTW = {
         channelEmpty: '目前沒有憑證範圍。',
         modelEmpty: '目前沒有模型範圍。',
         detailCount: '{{count}} 個綁定',
-        groupId: '範圍 ID：{{id}}',
         noDetails: '尚未新增綁定。',
         detailChannels: '憑證範圍',
         detailChannelsHint:

@@ -2,6 +2,7 @@ import {
   type Dispatch,
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
   type SetStateAction,
   useEffect,
   useId,
@@ -86,7 +87,12 @@ import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/compon
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { getCredentialProviderLabel } from '@/features/credentials/credential-display'
 import { AccessGroupBindingsTable } from '@/features/users/access-group-bindings-table'
+import {
+  ScopeCredentialIdentity,
+  ScopeModelIdentity,
+} from '@/features/users/scope-binding-identity'
 import {
   type CredentialBindingCandidate,
   type ModelBindingCandidate,
@@ -97,6 +103,8 @@ import {
   formatOptionalTime,
   groupLabel,
   groupListLabel,
+  repeatedNames,
+  scopeNames,
 } from '@/features/users/users-format'
 import type {
   AccessGroupDetailResource,
@@ -162,8 +170,7 @@ type BalanceOperationTarget = {
 type BindingCandidateOption = {
   id: string
   value: string
-  label: string
-  description: string
+  identity: ReactNode
   badges: Array<{
     label: string
     className?: string
@@ -371,16 +378,20 @@ function getUnion(values: number[][]) {
   return [...new Set(values.flat())]
 }
 
-function createGroupSearchText(group: AccessGroupResource, details: AccessGroupDetailResource[]) {
+function createGroupSearchText(
+  group: AccessGroupResource,
+  details: AccessGroupDetailResource[],
+  t: TFunction,
+) {
   return [
-    group.name,
-    String(group.numericId),
+    `${group.name} (#${group.numericId})`,
     ...details
       .filter((detail) => detail.groupId === group.numericId)
       .flatMap((detail) => [
         detail.targetId,
         detail.credential?.displayName,
         detail.credential?.provider,
+        detail.credential?.provider && getCredentialProviderLabel(t, detail.credential.provider),
       ]),
   ]
     .join(' ')
@@ -944,6 +955,7 @@ function GroupCheckboxList({
   hint?: string
   onToggle: (id: number) => void
 }) {
+  const names = scopeNames(groups)
   return (
     <div className="grid gap-2">
       <p className="text-sm font-medium">{label}</p>
@@ -962,7 +974,7 @@ function GroupCheckboxList({
                 checked={selected.includes(group.numericId)}
                 onCheckedChange={() => onToggle(group.numericId)}
               />
-              <span className="min-w-0 truncate">{group.name}</span>
+              <span className="min-w-0 truncate">{names.get(group.numericId)}</span>
             </label>
           ))}
         </div>
@@ -1473,24 +1485,19 @@ function BindingCandidateMultiSelect({
                     className="mt-0.5"
                     onCheckedChange={() => toggleSelection(option.value)}
                   />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-sm font-medium">{option.label}</span>
-                      {option.badges.map((badge, index) => (
-                        <span
-                          key={`${badge.label}-${index}`}
-                          className={cn(
-                            'rounded-md border px-1.5 py-0.5 text-[11px]',
-                            badge.className ?? 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {badge.label}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="text-muted-foreground mt-1 block truncate font-mono text-xs">
-                      {option.description}
-                    </span>
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                    {option.identity}
+                    {option.badges.map((badge, index) => (
+                      <span
+                        key={`${badge.label}-${index}`}
+                        className={cn(
+                          'rounded-md border px-1.5 py-0.5 text-[11px]',
+                          badge.className ?? 'bg-muted text-muted-foreground',
+                        )}
+                      >
+                        {badge.label}
+                      </span>
+                    ))}
                   </span>
                 </label>
               )
@@ -1572,6 +1579,7 @@ function GroupDetailForm({
         candidate.label,
         candidate.authId,
         candidate.provider,
+        candidate.provider && getCredentialProviderLabel(t, candidate.provider),
         candidate.type,
         candidate.status ?? '',
       ]
@@ -1579,44 +1587,50 @@ function GroupDetailForm({
         .toLowerCase()
         .includes(normalizedSearch),
     )
-  }, [credentialCandidates, credentialSearch])
-  const credentialOptions = useMemo<BindingCandidateOption[]>(
-    () =>
-      filteredCredentialCandidates.map((candidate) => {
-        const alreadyBound = boundTargetIds.has(candidate.authId)
-        const unavailable = candidate.disabled || candidate.unavailable
+  }, [credentialCandidates, credentialSearch, t])
+  const credentialOptions = useMemo<BindingCandidateOption[]>(() => {
+    const ambiguousCredentials = repeatedNames(
+      credentialCandidates.map((candidate) => candidate.label),
+    )
+    return filteredCredentialCandidates.map((candidate) => {
+      const alreadyBound = boundTargetIds.has(candidate.authId)
+      const unavailable = candidate.disabled || candidate.unavailable
 
-        return {
-          id: candidate.id,
-          value: candidate.authId,
-          label: candidate.label,
-          description: candidate.authId,
-          disabled: alreadyBound || unavailable,
-          badges: [
-            ...(candidate.provider ? [{ label: candidate.provider }] : []),
-            ...(alreadyBound
+      return {
+        id: candidate.id,
+        value: candidate.authId,
+        identity: (
+          <ScopeCredentialIdentity
+            authId={candidate.authId}
+            displayName={candidate.label}
+            provider={candidate.provider}
+            showId={ambiguousCredentials.has(candidate.label)}
+          />
+        ),
+        disabled: alreadyBound || unavailable,
+        badges: [
+          ...(alreadyBound
+            ? [
+                {
+                  label: t('usersPage.groups.credentialAlreadyBound'),
+                  className: 'border-success/30 bg-success/10 text-success',
+                },
+              ]
+            : unavailable
               ? [
                   {
-                    label: t('usersPage.groups.credentialAlreadyBound'),
-                    className: 'border-success/30 bg-success/10 text-success',
+                    label: candidate.disabled
+                      ? t('usersPage.groups.disabled')
+                      : t('usersPage.groups.credentialUnavailable'),
+                    className:
+                      'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
                   },
                 ]
-              : unavailable
-                ? [
-                    {
-                      label: candidate.disabled
-                        ? t('usersPage.groups.disabled')
-                        : t('usersPage.groups.credentialUnavailable'),
-                      className:
-                        'border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning',
-                    },
-                  ]
-                : []),
-          ],
-        }
-      }),
-    [boundTargetIds, filteredCredentialCandidates, t],
-  )
+              : []),
+        ],
+      }
+    })
+  }, [boundTargetIds, credentialCandidates, filteredCredentialCandidates, t])
   const filteredModelCandidates = useMemo(() => {
     const normalizedSearch = modelSearch.trim().toLowerCase()
     const sourceFilteredCandidates =
@@ -1656,8 +1670,9 @@ function GroupDetailForm({
         return {
           id: candidate.id,
           value: candidate.modelId,
-          label: candidate.label,
-          description: candidate.modelId,
+          identity: (
+            <ScopeModelIdentity modelId={candidate.modelId} displayName={candidate.label} />
+          ),
           disabled: alreadyBound,
           badges: [
             ...candidate.scopes.map((scope) => ({
@@ -1744,8 +1759,7 @@ function GroupDetailForm({
   }
 
   const selectedGroupName =
-    groups.find((group) => group.numericId === groupId)?.name ??
-    (groupId ? `#${groupId}` : t('usersPage.groups.groupPlaceholder'))
+    groupId === null ? t('usersPage.groups.groupPlaceholder') : groupLabel(groups, groupId)
 
   return (
     <DrawerScaffoldForm onSubmit={(event) => void handleSubmit(event)}>
@@ -2652,7 +2666,7 @@ function GroupsTable({
   details,
   channelGroups,
   channelBindingsSupported,
-  noMatches = false,
+  search,
   onEditGroup,
   onDeleteGroup,
   onAddDetail,
@@ -2663,21 +2677,33 @@ function GroupsTable({
   details: AccessGroupDetailResource[]
   channelGroups: AccessGroupResource[]
   channelBindingsSupported: boolean
-  noMatches?: boolean
+  search: string
   onEditGroup: (group: AccessGroupResource) => void
   onDeleteGroup: (group: AccessGroupResource) => void
   onAddDetail: (group: AccessGroupResource) => void
   onDeleteDetail: (detail: AccessGroupDetailResource) => void
 }) {
   const { t } = useTranslation()
-  if (groups.length === 0) {
+  const names = useMemo(() => scopeNames(groups), [groups])
+  const visibleGroups = useMemo(
+    () =>
+      search
+        ? groups.filter((group) => createGroupSearchText(group, details, t).includes(search))
+        : groups,
+    [groups, details, search, t],
+  )
+  if (visibleGroups.length === 0) {
     return (
       <TableEmptyState
         kind="empty"
         className="m-0"
         title={
-          noMatches
-            ? t('usersPage.groups.channelSearchEmpty')
+          groups.length > 0
+            ? t(
+                kind === 'channel'
+                  ? 'usersPage.groups.channelSearchEmpty'
+                  : 'usersPage.groups.modelGroupSearchEmpty',
+              )
             : kind === 'channel'
               ? t('usersPage.groups.channelEmpty')
               : t('usersPage.groups.modelEmpty')
@@ -2688,27 +2714,22 @@ function GroupsTable({
 
   return (
     <div className="grid gap-3">
-      {groups.map((group) => {
+      {visibleGroups.map((group) => {
         const groupDetails = details.filter((detail) => detail.groupId === group.numericId)
 
         return (
           <div key={group.id} className="rounded-md border">
-            <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium">{group.name}</p>
-                  <span className="bg-muted text-muted-foreground rounded-md border px-2 py-1 text-xs">
-                    {t('usersPage.groups.detailCount', { count: groupDetails.length })}
+            <div className="flex flex-col gap-3 border-b p-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="font-medium wrap-anywhere">{names.get(group.numericId)}</p>
+                <span className="bg-muted text-muted-foreground rounded-md border px-2 py-1 text-xs">
+                  {t('usersPage.groups.detailCount', { count: groupDetails.length })}
+                </span>
+                {group.disabled ? (
+                  <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-2 py-1 text-xs">
+                    {t('usersPage.groups.disabled')}
                   </span>
-                  {group.disabled ? (
-                    <span className="border-warning/35 bg-warning/12 text-warning-foreground dark:text-warning rounded-md border px-2 py-1 text-xs">
-                      {t('usersPage.groups.disabled')}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {t('usersPage.groups.groupId', { id: group.numericId })}
-                </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
                 <Tooltip>
@@ -3093,24 +3114,6 @@ export function UsersWorkbenchPage() {
       ),
     [accessKeys, channelGroups, modelGroups, normalizedSearch, users],
   )
-  const filteredChannelGroups = useMemo(
-    () =>
-      channelGroups.filter((group) =>
-        normalizedSearch
-          ? createGroupSearchText(group, channelGroupDetails).includes(normalizedSearch)
-          : true,
-      ),
-    [channelGroupDetails, channelGroups, normalizedSearch],
-  )
-  const filteredModelGroups = useMemo(
-    () =>
-      modelGroups.filter((group) =>
-        normalizedSearch
-          ? createGroupSearchText(group, modelGroupDetails).includes(normalizedSearch)
-          : true,
-      ),
-    [modelGroupDetails, modelGroups, normalizedSearch],
-  )
   const assignedKeyCount = accessKeys.filter((key) => key.userId !== null).length
   const unassignedKeyCount = Math.max(accessKeys.length - assignedKeyCount, 0)
 
@@ -3471,8 +3474,8 @@ export function UsersWorkbenchPage() {
                 </div>
                 <GroupsTable
                   kind="channel"
-                  groups={filteredChannelGroups}
-                  noMatches={Boolean(normalizedSearch) && channelGroups.length > 0}
+                  groups={channelGroups}
+                  search={normalizedSearch}
                   details={channelGroupDetails}
                   channelGroups={channelGroups}
                   channelBindingsSupported={workbench.capabilities.modelChannelBindings}
@@ -3507,7 +3510,8 @@ export function UsersWorkbenchPage() {
                 </div>
                 <GroupsTable
                   kind="model"
-                  groups={filteredModelGroups}
+                  groups={modelGroups}
+                  search={normalizedSearch}
                   details={modelGroupDetails}
                   channelGroups={channelGroups}
                   channelBindingsSupported={workbench.capabilities.modelChannelBindings}
@@ -3742,7 +3746,10 @@ export function UsersWorkbenchPage() {
                       : pendingDelete.type === 'key'
                         ? pendingDelete.key.maskedValue
                         : pendingDelete.type === 'group'
-                          ? pendingDelete.group.name
+                          ? groupLabel(
+                              pendingDelete.group.kind === 'channel' ? channelGroups : modelGroups,
+                              pendingDelete.group.numericId,
+                            )
                           : pendingDelete.detail.targetId,
                 })
               ) : null}

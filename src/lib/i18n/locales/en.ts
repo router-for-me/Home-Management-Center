@@ -3078,6 +3078,7 @@ export const en = {
         },
         channelSearchPlaceholder: 'Search scopes, credentials, providers, or IDs',
         channelSearchEmpty: 'No credential scopes match your search.',
+        modelGroupSearchEmpty: 'No model scopes match your search.',
         credentialCandidatesDenied:
           'This connection does not have permission to list credentials for binding.',
         credentialCandidatesFailed: 'Could not load credentials for binding.',
@@ -3118,7 +3119,6 @@ export const en = {
         channelEmpty: 'No credential scopes yet.',
         modelEmpty: 'No model scopes yet.',
         detailCount: '{{count}} bindings',
-        groupId: 'Scope ID: {{id}}',
         noDetails: 'No bindings yet.',
         detailChannels: 'Credential scope',
         detailChannelsHint:
