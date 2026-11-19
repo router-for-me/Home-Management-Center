@@ -1672,6 +1672,31 @@ export const en = {
       },
     },
     providersPage: {
+      pool: {
+        groupSize: 'This group contains {{total}} keys.',
+        group: 'Group connection pool',
+        key: 'Connection pool for this key',
+        inherit: 'Use group settings',
+        unconfigured: 'Unconfigured',
+        on: 'Enable pooling',
+        off: 'Disable pooling',
+        parameters: 'Override individual fields',
+        forceOn: 'Enable for this key',
+        optOut: 'Disable for this key',
+        groupHint:
+          'Applies to every key in this group that inherits the setting. CPA reuses connections separately for each key.',
+        defaults:
+          'Leave fields blank to use CPA defaults of 300 seconds and 2 idle connections per host.',
+        keyHint: 'Blank fields inherit the group value or fall back to the CPA default.',
+        defaultOptIn: 'Overriding fields enables pooling when the group is unconfigured.',
+        nonpositive: 'A zero or negative value in either field disables connection reuse.',
+        timeout: 'Idle timeout',
+        maxIdle: 'Max idle connections per host',
+        unsupported: 'Home returned an unrecognized pool setting. Its stored value is preserved.',
+        invalidTimeout: 'Enter a duration such as 45s, 1m30s or 0.',
+        invalidCount: 'Enter a whole number within the supported integer range.',
+        invalidSettings: 'Check the highlighted connection pool fields.',
+      },
       disconnected: {
         title: 'Connect a management runtime',
         description:

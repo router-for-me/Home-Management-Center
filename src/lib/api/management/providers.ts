@@ -8,6 +8,7 @@ import {
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
 import { ConfigEditConflict, mergeConfigEdits, sameConfigValue } from './config-edit'
+import { type ProviderConnectionPool, withConnectionPool } from './provider-connection-pool'
 import { createFormState, readProviderModels, readRequestScopedErrors } from './provider-form'
 import type { ProviderErrorRuleAction } from './provider-form'
 import { type ReplacementRow, serializeReplacementRows } from './sensitive-replacements'
@@ -57,6 +58,7 @@ export type ProviderRequestScopedErrorRule = {
 }
 
 export type ProviderApiKeyEntryInput = {
+  connectionPool?: ProviderConnectionPool
   original?: UnknownRecord
   id?: string
   apiKey: string
@@ -83,6 +85,8 @@ export type ProviderDescriptor = {
 }
 
 export type ProviderEntryFormInput = {
+  groupConnectionPool?: ProviderConnectionPool
+  keyConnectionPool?: ProviderConnectionPool
   apiKey: string
   name: string
   baseUrl: string
@@ -529,6 +533,13 @@ function readAuthIndex(record: UnknownRecord) {
   return readString(record, 'auth_index') ?? readString(record, 'auth-index')
 }
 
+function compatibilityMemberIds(keys: UnknownRecord[]) {
+  const ids = keys.map(
+    (key) => readString(key, 'id') ?? readString(key, 'uuid') ?? readAuthIndex(key),
+  )
+  return ids.every((id): id is string => id !== null) ? ids.sort() : []
+}
+
 function normalizeNativeKeyResource(
   descriptor: ProviderDescriptor,
   group: UnknownRecord,
@@ -603,8 +614,8 @@ function normalizeCompatibilityResource(
     readString(record, 'id') ??
     readString(record, 'uuid') ??
     authIndex ??
-    name ??
-    `${descriptor.id}-${index + 1}`
+    compatibilityMemberIds(keys)[0] ??
+    `${name ?? descriptor.id}-${index + 1}`
 
   return {
     id: `${descriptor.id}:${id}`,
@@ -1412,7 +1423,7 @@ function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: Un
     if (matches.length > 1 || (existing && used.has(existing))) throw new ConfigEditConflict()
     if (existing) used.add(existing)
     if (!existing && !entry.apiKey.trim()) continue
-    const key = { ...existing }
+    const key = withConnectionPool(existing ?? {}, entry.connectionPool)
     if (entry.apiKey.trim()) key['api-key'] = entry.apiKey.trim()
     const proxy = entry.proxyUrl.trim()
     if (entry.proxyUrl !== (typeof key['proxy-url'] === 'string' ? key['proxy-url'] : '')) {
@@ -1429,15 +1440,18 @@ function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: Un
 function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
   if (descriptor.id === 'openaiCompatibility') {
     return {
-      ...createCompatibilityGroupPayload(descriptor, input),
+      ...withConnectionPool(
+        createCompatibilityGroupPayload(descriptor, input),
+        input.groupConnectionPool,
+      ),
       keys: createCompatibilityKeys(input, []),
     }
   }
 
-  const key = createNativeKeyPayload(descriptor, input)
+  const key = withConnectionPool(createNativeKeyPayload(descriptor, input), input.keyConnectionPool)
 
   return {
-    ...createNativeGroupPayload(descriptor, input),
+    ...withConnectionPool(createNativeGroupPayload(descriptor, input), input.groupConnectionPool),
     keys: readString(key, 'api-key') ? [key] : [],
   }
 }
@@ -1492,8 +1506,18 @@ function locateCompatibilityGroup(family: UnknownRecord[], resource: ProviderRes
     return index === selector.index
   }
   const matches = family.flatMap((group, index) => (matchesGroup(group, index) ? [index] : []))
-  if (matches.length > 1) throw new ConfigEditConflict()
-  return matches[0] ?? null
+  if (matches.length <= 1) return matches[0] ?? null
+  // Home can return several groups with the same name when their per-key options differ.
+  if (selector.name && source) {
+    const ids = compatibilityMemberIds(readGroupKeys(source.group))
+    const exact = ids.length
+      ? matches.filter((index) =>
+          sameConfigValue(ids, compatibilityMemberIds(readGroupKeys(family[index]))),
+        )
+      : []
+    if (exact.length === 1) return exact[0]
+  }
+  throw new ConfigEditConflict()
 }
 
 function withoutKeys(group: UnknownRecord) {
@@ -1536,8 +1560,16 @@ function replaceNativeCredential(
   const models = Array.isArray(resource.raw.models) ? resource.raw.models.filter(isRecord) : []
   const before = createNativeGroupPayload(descriptor, form, models)
   const after = createNativeGroupPayload(descriptor, draft, models)
+  const pooledGroup = withConnectionPool(group, input.groupConnectionPool)
+  if (source && !sameConfigValue(group['connection-pool'], pooledGroup['connection-pool'])) {
+    // A group edit affects its siblings. Verify the membership the operator opened.
+    const identity = (item: UnknownRecord) =>
+      item.id ?? item.uuid ?? readAuthIndex(item) ?? item['api-key'] ?? item
+    if (!sameConfigValue(readGroupKeys(source.group).map(identity), keys.map(identity)))
+      throw new ConfigEditConflict()
+  }
   const nextKey = mergeConfigEdits(
-    key,
+    withConnectionPool(key, input.keyConnectionPool),
     createNativeKeyPayload(descriptor, form, key),
     createNativeKeyPayload(descriptor, draft, key),
   )
@@ -1579,13 +1611,13 @@ function replaceNativeCredential(
     delete groupBefore[field]
     delete groupAfter[field]
   }
-  const nextGroup = mergeConfigEdits(group, groupBefore, groupAfter)
+  const nextGroup = mergeConfigEdits(pooledGroup, groupBefore, groupAfter)
   const result = family.slice()
   if (keys.length > 1 && !sameConfigValue(group['base-url'], nextGroup['base-url'])) {
     result.splice(
       location.groupIndex,
       1,
-      { ...group, keys: keys.filter((_, i) => i !== location.keyIndex) },
+      { ...pooledGroup, keys: keys.filter((_, i) => i !== location.keyIndex) },
       { ...nextGroup, keys: [nextKey] },
     )
   } else {
@@ -1635,7 +1667,7 @@ function replaceCompatibilityGroup(
   }
   const models = Array.isArray(group.models) ? group.models.filter(isRecord) : []
   const next = mergeConfigEdits(
-    group,
+    withConnectionPool(group, input.groupConnectionPool),
     createCompatibilityGroupPayload(descriptor, form, models),
     createCompatibilityGroupPayload(descriptor, { ...form, ...input }, models),
   )

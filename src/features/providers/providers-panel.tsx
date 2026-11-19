@@ -64,10 +64,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
+import { ProviderConnectionPoolEditor } from '@/features/providers/provider-connection-pool-editor'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
 import type { UpstreamProvidersStats } from '@/features/upstream/summary-cards'
 import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import { MAX_CREDENTIAL_WEIGHT } from '@/lib/api/management/credentials'
+import { connectionPoolIssues } from '@/lib/api/management/provider-connection-pool'
 import {
   createFormState,
   emptyApiKeyEntry,
@@ -382,6 +384,17 @@ export function validateProviderForm(
     replacementKinds.some((kind) => replacementIssues(kind, form.cloak?.[kind] ?? []).some(Boolean))
   )
     generalError = t('sensitiveReplacements.incomplete')
+
+  const pools = [
+    form.groupConnectionPool,
+    form.keyConnectionPool,
+    ...(form.apiKeyEntries ?? []).map((entry) => entry.connectionPool),
+  ]
+  if (
+    !generalError &&
+    pools.some((pool) => Object.values(connectionPoolIssues(pool)).some(Boolean))
+  )
+    generalError = t('providersPage.pool.invalidSettings')
 
   return { fieldErrors, generalError }
 }
@@ -1560,6 +1573,14 @@ export function ProviderFormPanel({
           </label>
         ) : null}
 
+        {descriptor.id === 'openaiCompatibility' && form.groupConnectionPool && (
+          <ProviderConnectionPoolEditor
+            value={form.groupConnectionPool}
+            disabled={mutating}
+            onChange={(pool) => updateField('groupConnectionPool', pool)}
+          />
+        )}
+
         {descriptor.id === 'openaiCompatibility' ? (
           <div className="grid gap-3 rounded-md border p-3">
             <div className="flex items-center justify-between gap-2">
@@ -1685,6 +1706,21 @@ export function ProviderFormPanel({
                     />
                   </label>
                 </div>
+                {entry.connectionPool && (
+                  <ProviderConnectionPoolEditor
+                    value={entry.connectionPool}
+                    group={form.groupConnectionPool}
+                    disabled={mutating}
+                    onChange={(pool) =>
+                      updateField(
+                        'apiKeyEntries',
+                        (form.apiKeyEntries ?? []).map((row, index) =>
+                          index === idx ? { ...row, connectionPool: pool } : row,
+                        ),
+                      )
+                    }
+                  />
+                )}
               </div>
             ))}
             {fieldErrors.apiKey ? (
@@ -2242,6 +2278,25 @@ export function ProviderFormPanel({
             </span>
           </label>
         ) : null}
+
+        {descriptor.id !== 'openaiCompatibility' &&
+          form.groupConnectionPool &&
+          form.keyConnectionPool && (
+            <div className="grid gap-4 rounded-md border p-3">
+              <ProviderConnectionPoolEditor
+                value={form.groupConnectionPool}
+                groupKeyCount={resource?.apiKeyEntryCount}
+                disabled={mutating}
+                onChange={(pool) => updateField('groupConnectionPool', pool)}
+              />
+              <ProviderConnectionPoolEditor
+                value={form.keyConnectionPool}
+                group={form.groupConnectionPool}
+                disabled={mutating}
+                onChange={(pool) => updateField('keyConnectionPool', pool)}
+              />
+            </div>
+          )}
 
         <Collapsible className="rounded-md border px-3 py-2.5 text-sm">
           <CollapsibleTrigger className="group focus-visible:ring-ring/50 flex w-full items-center justify-between gap-3 text-left text-sm font-medium outline-none focus-visible:ring-[3px]">

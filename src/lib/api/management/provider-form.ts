@@ -1,3 +1,4 @@
+import { readConnectionPool } from './provider-connection-pool'
 import {
   type ProviderApiKeyEntryInput,
   type ProviderCloakInput,
@@ -54,6 +55,7 @@ export function emptyApiKeyEntry(): ProviderApiKeyEntryInput {
     apiKey: '',
     proxyUrl: '',
     weight: undefined,
+    connectionPool: readConnectionPool(),
   }
 }
 
@@ -171,6 +173,7 @@ function readCompatibilityApiKeyEntries(raw: UnknownRecord): ProviderApiKeyEntry
     existingApiKey: readStringField(key, 'api-key') || undefined,
     proxyUrl: readStringField(key, 'proxy-url'),
     weight: typeof key.weight === 'number' && Number.isFinite(key.weight) ? key.weight : undefined,
+    connectionPool: readConnectionPool(key['connection-pool']),
   }))
   return entries.length > 0 ? entries : [emptyApiKeyEntry()]
 }
@@ -237,6 +240,8 @@ export function createFormState(
     return {
       ...emptyForm,
       baseUrl: descriptor?.defaultBaseUrl ?? '',
+      groupConnectionPool: readConnectionPool(),
+      keyConnectionPool: providerId === 'openaiCompatibility' ? undefined : readConnectionPool(),
       models: [],
       headers: [],
       testModel: supportsTestModel ? '' : undefined,
@@ -256,6 +261,11 @@ export function createFormState(
   return {
     apiKey: '',
     name: resource.name ?? '',
+    groupConnectionPool: readConnectionPool(resource.source?.group['connection-pool']),
+    keyConnectionPool:
+      providerId === 'openaiCompatibility'
+        ? undefined
+        : readConnectionPool(resource.source?.key?.['connection-pool']),
     baseUrl: resource.baseUrl ?? '',
     proxyUrl: resource.proxyUrl ?? '',
     prefix: resource.prefix ?? '',
