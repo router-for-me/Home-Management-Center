@@ -114,7 +114,6 @@ import {
   type WritableConfigFieldKey,
   canEditPayloadConfig,
   hasAliasChannelConflict,
-  isConfigFieldReported,
   isReadOnlyConfigField,
 } from '@/lib/api/management/config'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
@@ -1751,14 +1750,12 @@ function BooleanControl({
 
 function ConfigField({
   field,
-  statusLabel,
   value,
   disabled,
   invalid,
   onChange,
 }: {
   field: ConfigFieldDefinition
-  statusLabel: ReactNode
   value: ConfigStructuredValues[ConfigFieldKey]
   disabled: boolean
   invalid: boolean
@@ -1779,10 +1776,7 @@ function ConfigField({
       )}
     >
       <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
-          {statusLabel}
-        </div>
+        <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
         <p className="text-muted-foreground mt-1 text-xs leading-5">
           {t(`configPage.fields.${field.key}.description`)}
         </p>
@@ -1912,13 +1906,11 @@ function ConfigField({
 
 function JsonEditorFrame({
   field,
-  statusLabel,
   invalid,
   parseError,
   children,
 }: {
   field: ConfigFieldDefinition
-  statusLabel: ReactNode
   invalid: boolean
   parseError: string | null
   children: ReactNode
@@ -1926,12 +1918,7 @@ function JsonEditorFrame({
   const { t } = useTranslation()
 
   if (field.key === 'payloadRulesJson') {
-    return (
-      <div className="grid min-w-0 gap-4">
-        {statusLabel}
-        {children}
-      </div>
-    )
+    return <div className="grid min-w-0 gap-4">{children}</div>
   }
 
   return (
@@ -1943,10 +1930,7 @@ function JsonEditorFrame({
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
-            {statusLabel}
-          </div>
+          <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
           <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
             {t(`configPage.fields.${field.key}.description`)}
           </p>
@@ -4225,7 +4209,6 @@ function StructuredJsonEditor({
 
 function JsonConfigField({
   field,
-  statusLabel,
   value,
   disabled,
   invalid,
@@ -4233,7 +4216,6 @@ function JsonConfigField({
   onChange,
 }: {
   field: ConfigFieldDefinition & { key: JsonConfigFieldKey }
-  statusLabel: ReactNode
   value: string
   disabled: boolean
   invalid: boolean
@@ -4248,12 +4230,7 @@ function JsonConfigField({
     const placeholderKey = `configPage.fields.${field.key}.placeholder`
 
     return (
-      <JsonEditorFrame
-        field={field}
-        statusLabel={statusLabel}
-        invalid={invalid}
-        parseError={parseError}
-      >
+      <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
         <Textarea
           value={value}
           disabled={disabled}
@@ -4268,12 +4245,7 @@ function JsonConfigField({
   const canUseStructured = parsed.ok && canEditJsonField(field.key, parsed.value)
 
   return (
-    <JsonEditorFrame
-      field={field}
-      statusLabel={statusLabel}
-      invalid={invalid}
-      parseError={parseError}
-    >
+    <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
       {canUseStructured ? (
         <StructuredJsonEditor
           fieldKey={field.key}
@@ -4296,7 +4268,6 @@ function JsonConfigField({
 
 function StructuredWorkspace({
   draft,
-  rawConfig,
   saveError,
   onDiscardField,
   changes,
@@ -4306,7 +4277,6 @@ function StructuredWorkspace({
   onChange,
 }: {
   draft: ConfigStructuredValues
-  rawConfig: Record<string, unknown>
   saveError: ConfigFieldSaveError | null
   onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
@@ -4320,32 +4290,19 @@ function StructuredWorkspace({
 
   const renderField = (field: ConfigFieldDefinition) => {
     const fieldError = saveError?.key === field.key ? saveError : null
-    const unreported =
-      !isReadOnlyConfigField(field.key) && !isConfigFieldReported(rawConfig, field.key)
-    const changed = changes.some((change) => change.key === field.key)
-    const statusLabel =
-      unreported && !fieldError ? (
-        <span
-          className="text-meta text-muted-foreground"
-          title={t('configPage.compatibility.unreported')}
-        >
-          {t('configPage.compatibility.unreportedLabel')}
-        </span>
-      ) : null
     const fieldId = `config-field-${field.key}`
     return (
       <div
         key={field.key}
         id={fieldId}
-        className="group/setting min-w-0"
+        className="min-w-0"
         role="group"
         aria-label={t(`configPage.fields.${field.key}.label`)}
-        aria-describedby={fieldError || unreported ? fieldId + '-feedback' : undefined}
+        aria-describedby={fieldError ? fieldId + '-feedback' : undefined}
       >
         {isJsonConfigFieldKey(field.key) ? (
           <JsonConfigField
             field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-            statusLabel={statusLabel}
             value={String(draft[field.key])}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
@@ -4355,7 +4312,6 @@ function StructuredWorkspace({
         ) : (
           <ConfigField
             field={field}
-            statusLabel={statusLabel}
             value={draft[field.key]}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
@@ -4372,7 +4328,7 @@ function StructuredWorkspace({
             {fieldError.status ? (
               <span className="text-meta text-muted-foreground">HTTP {fieldError.status}</span>
             ) : null}
-            {changed ? (
+            {changes.some((change) => change.key === fieldError.key) ? (
               <Button
                 type="button"
                 size="sm"
@@ -4384,16 +4340,6 @@ function StructuredWorkspace({
               </Button>
             ) : null}
           </div>
-        ) : unreported ? (
-          <p
-            id={fieldId + '-feedback'}
-            className={cn(
-              'text-muted-foreground mt-1 text-xs leading-5',
-              !changed && 'hidden group-focus-within/setting:block',
-            )}
-          >
-            {t('configPage.compatibility.unreported')}
-          </p>
         ) : null}
       </div>
     )
@@ -5008,7 +4954,6 @@ function ConfigWorkbenchSession() {
       >
         <StructuredWorkspace
           draft={structuredDraft}
-          rawConfig={latest.rawConfig}
           saveError={saveError}
           onDiscardField={(key) => {
             if (key === 'payloadRulesJson') setPayloadDraft(null)

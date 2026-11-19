@@ -3132,9 +3132,7 @@ export const zhCN = {
     },
     configPage: {
       compatibility: {
-        unreportedLabel: '后端未返回',
         unavailable: '此设置的管理接口不可用。请核对后端版本和代理路径，草稿已保留。',
-        unreported: '后端未返回此项配置，保存时将确认是否支持。',
         unsupported: '当前后端不支持此项更改，草稿已保留。',
         rejected: '后端拒绝了此值。草稿已保留，请检查后重试。',
         failed: '未能确认保存结果，草稿已保留，可重试。',

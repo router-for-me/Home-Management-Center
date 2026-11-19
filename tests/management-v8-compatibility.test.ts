@@ -6,7 +6,7 @@ import { toManagementApiError } from '../src/lib/api/management/client'
 import {
   type ConfigChange,
   applyConfigChanges,
-  isConfigFieldReported,
+  fetchConfigSnapshot,
   normalizeConfigValues,
 } from '../src/lib/api/management/config'
 import { fetchPluginConfig } from '../src/lib/api/management/plugin-store'
@@ -25,14 +25,14 @@ type Reply = { status: number; data: unknown; headers?: Record<string, string> }
 const missingRoute: Reply = { status: 404, data: '404 page not found' }
 const missingValue: Reply = { status: 404, data: { error: 'not_found' } }
 const ok = (data: unknown): Reply => ({ status: 200, data })
-function serve(reply: (path: string, method: string) => Reply) {
+function serve(reply: (path: string, method: string, body: unknown) => Reply) {
   const requests: string[] = []
   axios.defaults.adapter = async (config) => {
     const url = new URL(axios.getUri(config))
     expect(url.origin).toBe('https://home.test')
     const method = config.method!.toUpperCase()
     requests.push(method + ' ' + url.pathname)
-    const result = reply(url.pathname, method)
+    const result = reply(url.pathname, method, config.data)
     const response = { headers: {}, statusText: String(result.status), config, ...result }
     if (config.validateStatus && !config.validateStatus(result.status)) {
       throw new AxiosError('HTTP ' + result.status, undefined, config, undefined, response)
@@ -172,19 +172,38 @@ describe('optional V8 fields and writes', () => {
     expect(before.values.proxyUrl).toBe(' https://example.test ')
   })
 
-  test('reads field presence independently of falsy values, arrays and omitted mappings', () => {
-    const config = {
-      observability: { logs: { debug: false } },
-      routing: { retry: { 'request-retry': 0 } },
-      oauth: { 'model-alias': {} },
-      multimedia: { 'disable-image-generation': null },
+  test('first-time configuration accepts an omitted setting and preserves an explicit false', async () => {
+    const leaf = v8 + 'config/upstream/codex/response-steering'
+    let value: boolean | undefined
+    const requests = serve((path, method, body) => {
+      if (path === v8 + 'config' && method === 'GET') {
+        return ok({
+          'config-version': 8,
+          ...(value === undefined ? {} : { upstream: { codex: { 'response-steering': value } } }),
+        })
+      }
+      if (path === leaf && method === 'PUT') {
+        value = JSON.parse(String(body))
+        return ok({ status: 'ok' })
+      }
+      return missingRoute
+    })
+
+    const initial = await fetchConfigSnapshot(session)
+    expect(initial.rawConfig).toEqual({ 'config-version': 8 })
+    expect(initial.structured.upstreamCodexResponseSteering).toBe(false)
+    for (const nextValue of [true, false]) {
+      await applyConfigChanges(session, [{ ...steering, previousValue: !nextValue, nextValue }])
+      const saved = await fetchConfigSnapshot(session)
+      expect(saved.rawConfig.upstream).toEqual({ codex: { 'response-steering': nextValue } })
     }
-    expect(isConfigFieldReported(config, 'debug')).toBe(true)
-    expect(isConfigFieldReported(config, 'requestRetry')).toBe(true)
-    expect(isConfigFieldReported(config, 'oauthModelAliasJson')).toBe(true)
-    expect(isConfigFieldReported(config, 'multimediaDisableImageGeneration')).toBe(true)
-    expect(isConfigFieldReported(config, 'upstreamCodexResponseSteering')).toBe(false)
-    expect(isConfigFieldReported({ oauth: [] }, 'oauthModelAliasJson')).toBe(false)
+    expect(requests).toEqual([
+      'GET ' + v8 + 'config',
+      'PUT ' + leaf,
+      'GET ' + v8 + 'config',
+      'PUT ' + leaf,
+      'GET ' + v8 + 'config',
+    ])
   })
 
   test.each([

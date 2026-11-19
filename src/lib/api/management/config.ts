@@ -899,15 +899,6 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   },
 }
 
-export function isConfigFieldReported(config: UnknownRecord, key: WritableConfigFieldKey) {
-  let node: unknown = config
-  for (const part of configWriteTargets[key].path.split('/')) {
-    if (!isRecord(node) || !Object.hasOwn(node, part)) return false
-    node = node[part]
-  }
-  return true
-}
-
 export function hasAliasChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
   const before = parseJsonObjectText(change.previousValue)
   const after = parseJsonObjectText(change.nextValue)

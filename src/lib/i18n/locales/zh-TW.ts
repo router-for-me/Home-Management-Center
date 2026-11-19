@@ -3134,9 +3134,7 @@ export const zhTW = {
     },
     configPage: {
       compatibility: {
-        unreportedLabel: '後端未傳回',
         unavailable: '此設定的管理介面無法使用。請核對後端版本和代理路徑，草稿已保留。',
-        unreported: '後端未傳回此項設定，儲存時將確認是否支援。',
         unsupported: '目前的後端不支援這項變更，草稿已保留。',
         rejected: '後端拒絕了此值。草稿已保留，請檢查後重試。',
         failed: '無法確認儲存結果，草稿已保留，可重試。',

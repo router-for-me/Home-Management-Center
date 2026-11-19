@@ -3293,10 +3293,8 @@ export const en = {
     },
     configPage: {
       compatibility: {
-        unreportedLabel: 'Not reported',
         unavailable:
           'The management route for this setting is unavailable. Check the backend version and proxy path. Your draft is preserved.',
-        unreported: 'The backend omitted this setting. Its support will be checked when you save.',
         unsupported: 'This backend does not support this change. Your draft is preserved.',
         rejected:
           'The backend rejected this value. Review the setting and retry. Your draft is preserved.',
