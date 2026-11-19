@@ -3288,7 +3288,8 @@ export const zhCN = {
         oauthProviders: {
           title: 'OAuth 提供商',
           shortTitle: '提供商',
-          description: '配置 OAuth 凭证目录及 Codex、Antigravity、Devin 等提供商专属参数。',
+          description:
+            '配置 OAuth 凭证目录、自动刷新并发数及 Codex、Antigravity、Devin 等提供商专属参数。',
         },
         devin: {
           title: 'Devin',
@@ -3829,6 +3830,13 @@ export const zhCN = {
         upstreamXaiInjectXSearch: {
           label: 'xAI 注入 X Search',
           description: '开启后向 xAI 上游请求注入 X Search 能力。',
+        },
+        oauthAutoRefreshWorkers: {
+          label: 'OAuth 自动刷新并发数',
+          description:
+            'Home 同时自动刷新的 OAuth 凭证数。留空、0 或负整数使用默认值 16。保存后立即生效，正在进行的刷新会继续完成。',
+          placeholder: '默认（16）',
+          invalid: '请输入有效范围内的整数，或留空使用默认值。',
         },
         oauthAuthDir: {
           label: 'OAuth 凭证目录',
