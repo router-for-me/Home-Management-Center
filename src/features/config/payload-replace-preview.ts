@@ -4,7 +4,7 @@ const maxPreviewCharacters = 64 * 1024
 const maxPreviewSteps = 128
 
 export function getPayloadReplacePreview(text: string, entries: PayloadReplacementEntry[]) {
-  if (!entries.length || entries.some(({ from }) => !from.length)) {
+  if (!entries.length || entries.some(({ kind, from }) => kind !== 'regex' && !from.length)) {
     return { status: 'incomplete' } as const
   }
   if (!text) return { status: 'empty' } as const
@@ -15,7 +15,9 @@ export function getPayloadReplacePreview(text: string, entries: PayloadReplaceme
   let result = text
   let remaining = maxPreviewCharacters
   const steps: Array<{ result: string; changed: boolean }> = []
-  for (const { from, to } of entries) {
+  for (const { kind, from, to } of entries) {
+    if (kind === 'regex')
+      return { status: 'requiresCPA', position: steps.length + 1, steps } as const
     let length = result.length
     const growth = to.length - from.length
     if (growth !== 0) {

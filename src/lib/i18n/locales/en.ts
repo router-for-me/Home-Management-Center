@@ -4262,8 +4262,7 @@ export const en = {
         booleanTrue: 'true',
         booleanFalse: 'false',
         addRuleTitle: 'Choose a request rewrite intent',
-        addRuleDescription:
-          'Choose fill, override, user text replacement or removal. Open the corresponding section to review existing rules.',
+        addRuleDescription: 'Choose a rule to fill, override, replace text, or remove a parameter.',
         addRule: 'Add another rule',
         draftBlockingHint: 'Complete the current rule before adding another rule.',
         viewExistingRules: 'View {{count}} existing',
@@ -4314,7 +4313,6 @@ export const en = {
           discardDescription:
             'This rule has not been saved. You can add it again after discarding it.',
           executionPosition: 'Runs {{position}}',
-          selectedUsers: 'User message positions · {{positions}}',
           valueMode: 'Parameter entry mode',
           typedMode: 'Typed values',
           rawMode: 'JSON values',
@@ -4358,6 +4356,35 @@ export const en = {
           pathRequired: 'Path cannot be empty.',
         },
         replace: {
+          targets: {
+            user: 'User messages',
+            system: 'System messages',
+            developer: 'Developer messages',
+            paths: 'GJSON paths',
+          },
+          addPath: 'Add GJSON path',
+          removePath: 'Remove GJSON path {{index}}',
+          pendingConfig: 'Configuration to save',
+          savedConfig: 'Saved configuration',
+          previewRegex:
+            'Step {{index}} uses Go RE2. Verify this step and the remaining output in CPA.',
+          regexHint:
+            'Use Go RE2 syntax. A replacement can reference captures with $1 or ${1}. CPA skips a step with an empty or invalid pattern.',
+          entryPattern: 'Step {{index}} regex pattern',
+          pattern: 'Pattern',
+          regex: 'Go RE2 regex',
+          literal: 'Literal text',
+          entryKind: 'Step {{index}} matching method',
+          rolePositions: '{{role}} · positions {{positions}}',
+          allRoleMessages: '{{role}} · all messages',
+          pathSummary: 'GJSON paths ({{count}})',
+          pathEntry: 'GJSON path {{index}}',
+          pathsHint:
+            'Paths start at the upstream request root. CPA edits existing string fields and processes each resolved path once per rule.',
+          systemHint:
+            'A top-level system instruction counts as one system message. Choose system for developer text merged into a system message.',
+          allMessages: 'All messages of this role',
+          messageScope: 'Messages to include',
           actionSummary: '{{from}} → {{to}}',
           deleteSummary: 'Delete {{from}}',
           moveStepUp: 'One step earlier',
@@ -4368,13 +4395,12 @@ export const en = {
           showSteps: 'View step results',
           unchanged: 'Text unchanged in this step',
 
-          target: 'Target user messages',
+          target: 'Replacement target',
           selectedPositions: 'Select by position',
-          allUsers: 'All user messages',
           positions: 'Message positions',
           positionsPlaceholder: 'For example 1, 2',
           positionsHint:
-            'Count user messages from 1 in the final upstream request, including messages with no replaceable text.',
+            'Count messages of this role from 1 in the final upstream request, including messages without editable text.',
           replacements: 'Replacements',
           entryTitle: 'Step {{index}}',
           deletesText: 'Deletes matched text',
@@ -4388,21 +4414,21 @@ export const en = {
           entryFrom: 'Step {{index}} find text',
           entryTo: 'Step {{index}} replacement text',
           fromPlaceholder: 'Exact text to find',
-          toPlaceholder: 'Leave empty to delete the match and keep the message',
+          toPlaceholder: 'Leave empty to delete matched text',
           addEntry: 'Add a replacement',
           literalHint: 'Matches exact text, including case, spaces and line breaks.',
           deleteDescription: 'Takes effect when you save the configuration.',
           confirmDelete: 'Confirm deletion',
-          previewTitle: 'Preview replacements',
+          previewTitle: 'Test with sample text',
           previewHint:
-            'Tests this rule’s text only. Model, protocol and message position are skipped.',
+            'This sample shows literal text replacements in order. CPA evaluates model conditions, roles, positions and GJSON paths on the actual request.',
           previewRule: 'Rule to test',
           previewInput: 'Sample text',
-          previewOutput: 'Text after replacement',
+          previewOutput: 'Sample result',
           previewPlaceholder: 'Enter sample text',
           previewTooLarge:
             'This preview is too large. Shorten the sample text or use fewer replacements.',
-          previewIncomplete: 'Complete every find-text field to preview replacements.',
+          previewIncomplete: 'Complete the literal search text to test the sample.',
           previewEmpty: 'Enter sample text to see the result.',
           emptyResult: '(Empty text)',
           ruleSummary: 'Models: {{models}} · Steps: {{count}}',
@@ -4414,7 +4440,8 @@ export const en = {
             'Rules and replacements run from top to bottom. Each step processes the previous step’s result. Add another rule for a different matching scope.',
         },
         ruleIssues: {
-          replacePositionsRequired: 'Enter a position or select all user messages.',
+          replacePathsRequired: 'Enter a non-empty GJSON path for each row.',
+          replacePositionsRequired: 'Enter a position or select all messages of this role.',
           replacePositionsInvalid: 'Use whole message positions starting at 1, for example 1, 2.',
           replaceReplacementRequired: 'Add at least one replacement step.',
           replaceSourceRequired: 'Enter the text to find.',
@@ -4424,7 +4451,7 @@ export const en = {
           paramPathRequired: 'Enter a JSON path for this parameter.',
         },
         addRuleActions: {
-          replace: 'Replace user text',
+          replace: 'Replace text',
           default: 'Typed value',
           'default-raw': 'Raw JSON',
           override: 'Typed value',
@@ -4447,9 +4474,9 @@ export const en = {
         },
         sections: {
           replace: {
-            title: 'User text replacement',
+            title: 'Text replacement',
             description:
-              'Edit existing user text in the final upstream request, after overrides and before parameter removal.',
+              'Replace text in selected messages or string fields in the final upstream request. Rules run after overrides and before parameter removal.',
           },
           default: {
             title: 'Default fill',

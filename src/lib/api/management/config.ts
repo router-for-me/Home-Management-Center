@@ -8,7 +8,6 @@ import {
   canEditPayloadReplaceRule,
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
-  serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
@@ -234,8 +233,8 @@ export function canEditPayloadConfig(value: unknown) {
   return Object.entries(value).every(([key, rules]) => {
     if (!payloadSectionKeys.includes(key) || !Array.isArray(rules)) return false
     return rules.every((rule: unknown) => {
+      if (key === 'replace') return true // Preserve opaque saved entries at their original positions.
       if (!isRecord(rule)) return false
-      if (key === 'replace') return true // Saved advanced rules can be carried through unchanged.
       if (!Object.keys(rule).every((field) => field === 'models' || field === 'params'))
         return false
       if (!Array.isArray(rule.models) || !rule.models.every(canEditPayloadModel)) return false
@@ -293,15 +292,13 @@ function sanitizePayloadStringMap(value: unknown) {
 function sanitizePayloadConditions(value: unknown) {
   if (!Array.isArray(value)) return []
 
-  return value.flatMap((item) => {
+  return value.flatMap((item: unknown) => {
     if (!isRecord(item)) return []
 
-    return Object.entries(item).flatMap(([path, conditionValue]) => {
-      const normalizedPath = path.trim()
-      if (!normalizedPath) return []
-
-      return [{ [normalizedPath]: conditionValue }]
-    })
+    const entries = Object.entries(item)
+      .map(([path, conditionValue]) => [path.trim(), conditionValue] as const)
+      .filter(([path]) => path.length > 0)
+    return entries.length ? [Object.fromEntries(entries)] : []
   })
 }
 
@@ -399,25 +396,31 @@ function sanitizePayloadReplaceSection(value: unknown, previous: unknown) {
   if (!Array.isArray(rules)) throw new Error('Invalid requests.payload.replace')
 
   // A subtree PUT must carry through saved rules that the visual form can't represent.
-  const savedReadOnly = (Array.isArray(previous) ? previous : []).filter(
-    (rule): rule is UnknownRecord => isRecord(rule) && !canEditPayloadReplaceRule(rule),
+  const savedReadOnly: unknown[] = (Array.isArray(previous) ? previous : []).filter(
+    (rule: unknown) => !isRecord(rule) || !canEditPayloadReplaceRule(rule),
   )
   let preserved = 0
   const result = rules.map((rule: unknown) => {
-    if (!isRecord(rule)) throw new Error('Invalid requests.payload.replace rule')
-    if (!canEditPayloadReplaceRule(rule)) {
-      const saved = savedReadOnly[preserved++]
-      if (!saved || JSON.stringify(saved) !== JSON.stringify(rule)) {
+    if (!isRecord(rule) || !canEditPayloadReplaceRule(rule)) {
+      if (
+        preserved >= savedReadOnly.length ||
+        JSON.stringify(savedReadOnly[preserved]) !== JSON.stringify(rule)
+      ) {
         throw new Error('Invalid requests.payload.replace rule')
       }
-      return saved
+      return savedReadOnly[preserved++]
     }
     const models = sanitizePayloadModels(rule.models)
     const content = normalizePayloadReplaceContent(rule)
     if (getPayloadReplaceIssues(content).length > 0) {
       throw new Error('Invalid requests.payload.replace rule')
     }
-    return { models, ...serializePayloadReplaceContent(content) }
+    return {
+      // Saved model objects can contain explicit defaults and grouped conditions.
+      models: rule.models.map((model, index) => (isRecord(model) ? model : models[index])),
+      target: rule.target,
+      replacements: rule.replacements,
+    }
   })
   if (preserved !== savedReadOnly.length)
     throw new Error('Missing saved requests.payload.replace rule')
