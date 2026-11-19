@@ -3165,6 +3165,7 @@ export const zhTW = {
         reload: '重新載入',
         save: '儲存',
         viewChanges: '查看變更',
+        restoreDefault: '恢復預設',
         showSensitive: '顯示敏感欄位',
         hideSensitive: '隱藏敏感欄位',
       },
@@ -3627,7 +3628,9 @@ export const zhTW = {
         },
         sessionAffinitySubagents: {
           label: '子代理粘性會話',
-          description: '開啟後子代理請求也參與粘性會話路由。',
+          defaultOn: '預設開啟',
+          description:
+            '預設開啟，僅在主粘性會話開啟時生效。尚未綁定的子會話可繼承父會話在同一供應商、同一模型上的憑證。Guardian 可跨模型繼承父會話最近選用且仍可用的憑證。停用後，尚未綁定的子會話依一般規則選擇憑證，Home 會停止為 Guardian 記錄新的父會話選擇。既有子會話綁定及 fork 行為仍然有效。',
         },
         streamingKeepaliveSeconds: {
           label: '流式保活間隔 (秒)',

@@ -422,7 +422,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
-      { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
+      { key: 'sessionAffinitySubagents', kind: 'nullableBoolean', sectionId: 'streaming' },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -1563,10 +1563,6 @@ function getValidationErrors(
     .map((field) => field.key)
 }
 
-function formatConfigValue(value: ConfigChange['nextValue'], emptyLabel: string) {
-  return value === '' || value === null ? emptyLabel : String(value)
-}
-
 function ConfigDisconnectedState() {
   const { t } = useTranslation()
   const openConnectionDialog = useConsoleUiStore((state) => state.openConnectionDialog)
@@ -1748,6 +1744,48 @@ function BooleanControl({
   )
 }
 
+function SubagentAffinityControl({
+  value,
+  disabled,
+  descriptionId,
+  onChange,
+}: {
+  value: boolean | null
+  disabled: boolean
+  descriptionId?: string
+  onChange: (value: boolean | null) => void
+}) {
+  const { t } = useTranslation()
+  const switchRef = useRef<HTMLButtonElement>(null)
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 md:flex-row-reverse">
+      <Switch
+        ref={switchRef}
+        aria-label={t('configPage.fields.sessionAffinitySubagents.label')}
+        aria-describedby={descriptionId}
+        checked={value ?? true}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
+      {value !== null ? (
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          disabled={disabled}
+          onClick={() => {
+            switchRef.current?.focus({ preventScroll: true })
+            onChange(null)
+          }}
+        >
+          {t('configPage.actions.restoreDefault')}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function ConfigField({
   field,
   value,
@@ -1765,6 +1803,8 @@ function ConfigField({
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
+  const descriptionId =
+    field.kind === 'nullableBoolean' ? `config-field-${field.key}-description` : undefined
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
 
@@ -1777,7 +1817,7 @@ function ConfigField({
     >
       <div className="min-w-0">
         <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
-        <p className="text-muted-foreground mt-1 text-xs leading-5">
+        <p id={descriptionId} className="text-muted-foreground mt-1 text-xs leading-5">
           {t(`configPage.fields.${field.key}.description`)}
         </p>
         {invalid ? (
@@ -1876,7 +1916,14 @@ function ConfigField({
             </SelectContent>
           </Select>
         ) : null}
-        {field.kind === 'nullableBoolean' ? (
+        {field.key === 'sessionAffinitySubagents' ? (
+          <SubagentAffinityControl
+            value={typeof value === 'boolean' ? value : null}
+            disabled={controlDisabled}
+            descriptionId={descriptionId}
+            onChange={(nextValue) => onChange(field.key, nextValue)}
+          />
+        ) : field.kind === 'nullableBoolean' ? (
           <Select
             value={nullableBooleanOptionFromValue(value)}
             disabled={controlDisabled}
@@ -1887,6 +1934,7 @@ function ConfigField({
             <SelectTrigger
               className="md:w-56"
               aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={descriptionId}
             >
               <SelectValue />
             </SelectTrigger>
@@ -4613,13 +4661,19 @@ function ConfigChangePreview({
       )
     }
   }
+  function formatValue(value: ConfigFieldValue) {
+    if (change.key === 'sessionAffinitySubagents') {
+      if (value === null) return t('configPage.fields.sessionAffinitySubagents.defaultOn')
+      return t(`configPage.nullableBoolean.${nullableBooleanOptionFromValue(value)}`)
+    }
+    return value === '' || value === null ? t('configPage.status.emptyValue') : String(value)
+  }
+
   return (
     <span className="text-muted-foreground text-code min-w-0 break-all whitespace-normal">
-      {formatConfigValue(change.previousValue, t('configPage.status.emptyValue'))}
+      {formatValue(change.previousValue)}
       {' → '}
-      <span className="text-foreground">
-        {formatConfigValue(change.nextValue, t('configPage.status.emptyValue'))}
-      </span>
+      <span className="text-foreground">{formatValue(change.nextValue)}</span>
     </span>
   )
 }

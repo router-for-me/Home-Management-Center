@@ -547,7 +547,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     inFlightMaxStringBytes: readNumber(inFlight, 'max-string-bytes', 256),
     sessionAffinity: readBoolean(routing, 'session-affinity'),
     sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
-    sessionAffinitySubagents: readBoolean(routing, 'session-affinity-subagents'),
+    sessionAffinitySubagents: readNullableBoolean(routing, 'session-affinity-subagents'),
     streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
     streamingSendKeepaliveBeforeFt: readBoolean(requestsStreaming, 'send-keepalive-before-ft'),
     streamingBootstrapRetries: readNumber(requestsStreaming, 'bootstrap-retries'),
@@ -655,6 +655,7 @@ type ConfigWriteKind =
   | 'boolean'
   | 'number'
   | 'string'
+  | 'optionalBoolean'
   | 'nullableBoolean'
   | 'stringList'
   | 'jsonObject'
@@ -764,7 +765,7 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   inFlightMaxStringBytes: { path: 'credentials/in-flight/max-string-bytes', kind: 'number' },
   sessionAffinity: { path: 'routing/session-affinity', kind: 'boolean' },
   sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
-  sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'boolean' },
+  sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'optionalBoolean' },
   streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },
   streamingSendKeepaliveBeforeFt: {
     path: 'requests/streaming/send-keepalive-before-ft',
@@ -999,6 +1000,10 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       return
     case 'number':
       await putJson(url, Number(change.nextValue))
+      return
+    case 'optionalBoolean':
+      if (change.nextValue === null) await deleteOptional(url)
+      else await putJson(url, change.nextValue)
       return
     case 'nullableBoolean':
       await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))

@@ -3163,6 +3163,7 @@ export const zhCN = {
         reload: '重新加载',
         save: '保存',
         viewChanges: '查看变更',
+        restoreDefault: '恢复默认',
         showSensitive: '显示敏感字段',
         hideSensitive: '隐藏敏感字段',
       },
@@ -3625,7 +3626,9 @@ export const zhCN = {
         },
         sessionAffinitySubagents: {
           label: '子代理粘性会话',
-          description: '开启后子代理请求也参与粘性会话路由。',
+          defaultOn: '默认开启',
+          description:
+            '默认开启，仅在主粘性会话开启时生效。未绑定的子会话可继承父会话在同一供应商、同一模型上的凭证。Guardian 可跨模型继承父会话最近选用且仍可用的凭证。关闭后，未绑定的子会话按常规方式选择凭证，Home 停止为 Guardian 记录新的父会话选择。已有子会话绑定和 fork 行为继续生效。',
         },
         streamingKeepaliveSeconds: {
           label: '流式保活间隔 (秒)',
