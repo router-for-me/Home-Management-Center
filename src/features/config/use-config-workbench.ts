@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   type ConfigChange,
+  ConfigFieldSaveError,
   applyConfigChanges,
   fetchConfigSnapshot,
   toConfigApiError,
 } from '@/lib/api/management/config'
-import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import {
   type ProviderModelChannel,
   fetchProviderModelDefinitions,
@@ -15,7 +15,6 @@ import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
 
 function toThrowableError(error: unknown) {
-  if (error instanceof ConfigEditConflict) return error
   const apiError = toConfigApiError(error)
   return apiError instanceof Error ? apiError : new Error(apiError.message)
 }
@@ -87,15 +86,14 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
   }
 
   const structuredMutation = useMutation({
-    mutationFn: async (changes: ConfigChange[]) => {
-      try {
-        await applyConfigChanges(session, changes)
-      } catch (error) {
-        throw toThrowableError(error)
-      }
-    },
+    mutationFn: (changes: ConfigChange[]) => applyConfigChanges(session, changes),
     onError: async (error) => {
-      if (error instanceof ConfigEditConflict) await invalidate()
+      if (
+        error instanceof ConfigFieldSaveError &&
+        (error.savedKeys.length || error.reason === 'conflict' || error.reason === 'failed')
+      ) {
+        await invalidate()
+      }
     },
     onSuccess: invalidate,
   })
@@ -105,6 +103,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
     checking,
     runtimeMode,
     snapshot: query.data,
+    getCachedSnapshot: () => queryClient.getQueryData<NonNullable<typeof query.data>>(queryKey),
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,

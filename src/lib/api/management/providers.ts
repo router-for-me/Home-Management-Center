@@ -1,6 +1,10 @@
 import type { AxiosInstance } from 'axios'
 
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  createManagementClient,
+  isMissingConfigPath,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
 import { ConfigEditConflict, mergeConfigEdits, sameConfigValue } from './config-edit'
@@ -469,7 +473,7 @@ function normalizeIssue(providerId: ProviderId, error: unknown): ProviderRequest
 
   return {
     providerId,
-    kind: apiError.status === 404 || apiError.code === 'not-found' ? 'unsupported' : 'error',
+    kind: apiError.status === 404 || apiError.status === 405 ? 'unsupported' : 'error',
     message: apiError.message,
     status: apiError.status,
     code: apiError.code,
@@ -1664,7 +1668,7 @@ async function fetchProviderFamily(
     // The persisted v8 config view prunes empty provider families, so the
     // subtree read answers 404 for "no keys configured" — an empty family,
     // not an unsupported endpoint.
-    if (toManagementApiError(error).status === 404) {
+    if (isMissingConfigPath(error)) {
       return []
     }
     throw error
