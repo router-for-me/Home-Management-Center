@@ -69,6 +69,7 @@ export function hasInvalidModelSettingChanges(before: ConfigObject, after: Confi
     if (rows === undefined) return false
     if (!Array.isArray(rows)) return true
     const original = oauthChannelValue(before, channel)
+    const unmatched = Array.isArray(original) ? Array.from<unknown>(original) : []
     return rows.some((row) => {
       if (
         canEditModelSetting(row, channel) &&
@@ -76,7 +77,11 @@ export function hasInvalidModelSettingChanges(before: ConfigObject, after: Confi
         validContextLength(row['max-context-length'])
       )
         return false
-      return !Array.isArray(original) || !original.some((old) => sameConfigValue(old, row))
+      // Each unchanged legacy row can account for only one row in the draft.
+      const match = unmatched.findIndex((old) => sameConfigValue(old, row))
+      if (match < 0) return true
+      unmatched.splice(match, 1)
+      return false
     })
   })
 }

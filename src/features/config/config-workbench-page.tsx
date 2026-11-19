@@ -88,7 +88,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
-import { OAuthModelSettingsEditor } from '@/features/config/oauth-model-settings-editor'
+import {
+  ModelSettingFeedbackContext,
+  type ModelSettingIssue,
+  OAuthModelSettingsEditor,
+} from '@/features/config/oauth-model-settings-editor'
 import { PayloadFormField, PayloadReviewFieldContext } from '@/features/config/payload-form-field'
 import {
   type PayloadParamEntry,
@@ -5135,6 +5139,8 @@ function ConfigWorkbenchSession() {
   const structuredDraft = edits?.values ?? baseline?.structured
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
+  const modelSettingFeedback = useState<ModelSettingIssue[]>([])
+  const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
   const [saveError, setSaveError] = useState<ConfigFieldSaveError | null>(null)
@@ -5178,7 +5184,9 @@ function ConfigWorkbenchSession() {
   )
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
-    (key) => key !== 'payloadRulesJson' || !payloadDraft,
+    (key) =>
+      (key !== 'payloadRulesJson' || !payloadDraft) &&
+      (key !== 'oauthModelSettingsJson' || modelSettingIssues.length > 0),
   )
   const isDirty = changes.length > 0
   const saveDisabled =
@@ -5225,6 +5233,7 @@ function ConfigWorkbenchSession() {
   const reloadFromRuntime = () => {
     setSaveError(null)
     setPayloadDraft(null)
+    setModelSettingIssues([])
     setEdits(null)
     workbench.refetch()
   }
@@ -5247,6 +5256,7 @@ function ConfigWorkbenchSession() {
       setSaveError(null)
       setEdits(null)
       setPayloadDraft(null)
+      setModelSettingIssues([])
       toast.success(t('configPage.toast.saved'))
     } catch (error) {
       if (!(error instanceof ConfigFieldSaveError)) {
@@ -5327,20 +5337,23 @@ function ConfigWorkbenchSession() {
           setDraft: setPayloadDraft,
         }}
       >
-        <StructuredWorkspace
-          draft={structuredDraft}
-          saveError={saveError}
-          onDiscardField={(key) => {
-            if (key === 'payloadRulesJson') setPayloadDraft(null)
-            setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
-            setSaveError(null)
-          }}
-          changes={changes}
-          validationErrors={visibleValidationErrors}
-          disabled={workbench.mutating}
-          oauthModelCatalog={oauthModelCatalog}
-          onChange={handleStructuredChange}
-        />
+        <ModelSettingFeedbackContext.Provider value={modelSettingFeedback}>
+          <StructuredWorkspace
+            draft={structuredDraft}
+            saveError={saveError}
+            onDiscardField={(key) => {
+              if (key === 'payloadRulesJson') setPayloadDraft(null)
+              if (key === 'oauthModelSettingsJson') setModelSettingIssues([])
+              setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
+              setSaveError(null)
+            }}
+            changes={changes}
+            validationErrors={visibleValidationErrors}
+            disabled={workbench.mutating}
+            oauthModelCatalog={oauthModelCatalog}
+            onChange={handleStructuredChange}
+          />
+        </ModelSettingFeedbackContext.Provider>
       </PayloadSnapshotContext.Provider>
     </section>
   )

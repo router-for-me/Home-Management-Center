@@ -1,4 +1,12 @@
-import { useId, useState } from 'react'
+import {
+  type Dispatch,
+  type SetStateAction,
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  useState,
+} from 'react'
 
 import { Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -26,6 +34,11 @@ import {
   validContextLength,
 } from '@/lib/api/management/oauth-model-settings'
 
+export type ModelSettingIssue = { provider: string; index: number; field: 'name' | 'limit' }
+export const ModelSettingFeedbackContext = createContext<
+  [ModelSettingIssue[], Dispatch<SetStateAction<ModelSettingIssue[]>>]
+>([[], () => {}])
+
 function ReadOnlySetting({ value }: { value: unknown }) {
   const { t } = useTranslation()
   return (
@@ -49,6 +62,8 @@ export function OAuthModelSettingsEditor({
 }) {
   const { t } = useTranslation()
   const id = useId()
+  const [issues, setIssues] = useContext(ModelSettingFeedbackContext)
+  const focusNewName = useRef<number | null>(null)
   const [provider, setProvider] = useState(
     () => Object.keys(value).find(isOAuthChannelKey) ?? 'codex',
   )
@@ -63,6 +78,30 @@ export function OAuthModelSettingsEditor({
     if (nextRows.length) next[provider] = nextRows
     else delete next[provider]
     onChange(next)
+  }
+
+  function reveal(index: number, field: ModelSettingIssue['field']) {
+    setIssues((current) =>
+      current.some(
+        (issue) => issue.provider === provider && issue.index === index && issue.field === field,
+      )
+        ? current
+        : [...current, { provider, index, field }],
+    )
+  }
+
+  function removeRow(index: number) {
+    if (!rows) return
+    setIssues((current) =>
+      current
+        .filter((issue) => issue.provider !== provider || issue.index !== index)
+        .map((issue) =>
+          issue.provider === provider && issue.index > index
+            ? { ...issue, index: issue.index - 1 }
+            : issue,
+        ),
+    )
+    updateRows(rows.filter((_, i) => i !== index))
   }
 
   return (
@@ -84,7 +123,11 @@ export function OAuthModelSettingsEditor({
           type="button"
           variant="outline"
           disabled={!writable}
-          onClick={() => rows && updateRows([...rows, { name: '' }])}
+          onClick={() => {
+            if (!rows) return
+            focusNewName.current = rows.length
+            updateRows([...rows, { name: '' }])
+          }}
         >
           <Plus />
           {t('configPage.modelSettings.add')}
@@ -105,25 +148,52 @@ export function OAuthModelSettingsEditor({
                   <ReadOnlySetting value={row} />
                 </div>
               )
-            const change = (patch: Parameters<typeof editModelSetting>[1]) =>
-              updateRows(
-                rows.map((entry, i) => (i === index ? editModelSetting(row, patch) : entry)),
-              )
+            const rowIssues = issues.filter(
+              (issue) => issue.provider === provider && issue.index === index,
+            )
+            const nameIssue = rowIssues.find((issue) => issue.field === 'name')
+            const limitIssue = rowIssues.find((issue) => issue.field === 'limit')
+            const change = (patch: Parameters<typeof editModelSetting>[1]) => {
+              const next = editModelSetting(row, patch)
+              if (nameIssue && next.name?.trim())
+                setIssues((current) => current.filter((issue) => issue !== nameIssue))
+              if (limitIssue && validContextLength(next['max-context-length']))
+                setIssues((current) => current.filter((issue) => issue !== limitIssue))
+              updateRows(rows.map((entry, i) => (i === index ? next : entry)))
+            }
             const limit = row['max-context-length']
+            const invalidName = !row.name?.trim()
             const invalidLimit = !validContextLength(limit)
-            const errorId = id + '-limit-' + index
+            const showNameError = invalidName && Boolean(nameIssue)
+            const showLimitError = invalidLimit && Boolean(limitIssue)
+            const nameErrorId = id + '-name-' + index
+            const limitErrorId = id + '-limit-' + index
             return (
               <div key={index} className="grid gap-2 p-3">
                 <div className={formGridClassName}>
                   <label className={fieldClassName}>
                     <span>{t('configPage.modelSettings.name')}</span>
                     <Input
+                      ref={(input) => {
+                        if (input && focusNewName.current === index) {
+                          focusNewName.current = null
+                          input.focus()
+                        }
+                      }}
                       value={row.name ?? ''}
                       required
-                      aria-invalid={!row.name?.trim()}
+                      aria-label={t('configPage.modelSettings.name')}
+                      aria-invalid={showNameError}
+                      aria-describedby={showNameError ? nameErrorId : undefined}
                       disabled={!writable}
+                      onBlur={() => invalidName && reveal(index, 'name')}
                       onChange={(event) => change({ name: event.target.value })}
                     />
+                    {showNameError && (
+                      <span id={nameErrorId} className="text-destructive text-xs" role="alert">
+                        {t('configPage.modelSettings.nameRequired')}
+                      </span>
+                    )}
                   </label>
                   <label className={fieldClassName}>
                     <span>{t('configPage.modelSettings.alias')}</span>
@@ -138,14 +208,16 @@ export function OAuthModelSettingsEditor({
                     <Input
                       value={limit ?? ''}
                       inputMode="numeric"
+                      aria-label={t('configPage.modelSettings.limit')}
                       placeholder={t('configPage.modelSettings.defaultLimit')}
                       disabled={!writable}
-                      aria-invalid={invalidLimit}
-                      aria-describedby={invalidLimit ? errorId : undefined}
+                      aria-invalid={showLimitError}
+                      aria-describedby={showLimitError ? limitErrorId : undefined}
+                      onBlur={() => invalidLimit && reveal(index, 'limit')}
                       onChange={(event) => change({ contextLength: event.target.value })}
                     />
-                    {invalidLimit && (
-                      <span id={errorId} className="text-destructive text-xs">
+                    {showLimitError && (
+                      <span id={limitErrorId} className="text-destructive text-xs" role="alert">
                         {t('configPage.modelSettings.invalidLimit')}
                       </span>
                     )}
@@ -170,7 +242,7 @@ export function OAuthModelSettingsEditor({
                   aria-label={t('configPage.modelSettings.removeRow', {
                     model: row.alias || row.name || index + 1,
                   })}
-                  onClick={() => updateRows(rows.filter((_, i) => i !== index))}
+                  onClick={() => removeRow(index)}
                 >
                   <Trash2 />
                   {t('configPage.json.remove')}

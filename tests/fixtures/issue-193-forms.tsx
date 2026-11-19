@@ -264,6 +264,79 @@ if (scenario === 'oauth-alias-channel-edit') {
   await select(labels.aliasChannel, 'plugin')
   assert.equal(button(labels.addAlias).disabled, true)
   assert.deepEqual(draft.plugin, initial.plugin)
+} else if (scenario === 'oauth-model-setting-validation') {
+  const { ConfigWorkbenchPage } = await import('../../src/features/config/config-workbench-page')
+  const { normalizeConfigValues } = await import('../../src/lib/api/management/config')
+  const { TooltipProvider } = await import('../../src/components/ui/tooltip')
+  const rawConfig = { 'config-version': 8 }
+  client.setQueryData(['management-config', 'http://forms.test', 'forms-session'], {
+    fetchedAt: '2026-01-01T00:00:00Z',
+    rawConfig,
+    structured: normalizeConfigValues(rawConfig),
+  })
+  await render(React.createElement(TooltipProvider, {}, React.createElement(ConfigWorkbenchPage)))
+  const field = browser.document.getElementById('config-field-oauthModelSettingsJson')!
+  const toolbar = browser.document.querySelector('[data-config-sticky]')!
+  const copy = en.common.configPage
+  const summary = i18n.t('configPage.validation.summary', { count: 1 })
+  const save = button(copy.actions.save)
+  const add = button(copy.modelSettings.add)
+  const names = () => [...field.querySelectorAll('input[required]')]
+  const hasFeedback = () => toolbar.textContent.includes(summary)
+  const focus = async (input: { focus: () => void }) => React.act(async () => input.focus())
+
+  await click(add)
+  const first = names()[0]
+  assert.equal(browser.document.activeElement, first)
+  assert.equal(field.querySelector('[aria-invalid="true"]'), null)
+  assert.ok(!field.textContent.includes(copy.validation.invalidField))
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, true)
+  const limit = input(copy.modelSettings.defaultLimit)
+  await focus(limit)
+  assert.equal(hasFeedback(), true)
+  assert.equal(
+    browser.document.getElementById(first.getAttribute('aria-describedby')!)?.textContent,
+    copy.modelSettings.nameRequired,
+  )
+  await focus(first)
+  await edit(first, 'model-a')
+  assert.equal(first.hasAttribute('aria-describedby'), false)
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+
+  await focus(limit)
+  await edit(limit, '2.5')
+  assert.equal(save.disabled, true)
+  assert.equal(hasFeedback(), false)
+  await focus(add)
+  assert.ok(field.textContent.includes(copy.modelSettings.invalidLimit))
+  assert.equal(hasFeedback(), true)
+  await click(add)
+  assert.equal(browser.document.activeElement, names()[1])
+  assert.notEqual(names()[1].getAttribute('aria-invalid'), 'true')
+  assert.equal(hasFeedback(), true)
+  await edit(names()[1], 'model-b')
+  await click(button(i18n.t('configPage.modelSettings.removeRow', { model: 'model-a' })))
+  assert.equal(names()[0].value, 'model-b')
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+
+  await click(add)
+  await focus(add)
+  await select(copy.modelSettings.provider, 'vertex')
+  await click(add)
+  assert.notEqual(names()[0].getAttribute('aria-invalid'), 'true')
+  await edit(names()[0], 'vertex-a')
+  assert.equal(hasFeedback(), true)
+  assert.equal(save.disabled, true)
+  await select(copy.modelSettings.provider, 'codex')
+  assert.equal(names()[1].getAttribute('aria-invalid'), 'true')
+  await click(button(i18n.t('configPage.modelSettings.removeRow', { model: 'model-b' })))
+  assert.equal(names()[0].getAttribute('aria-invalid'), 'true')
+  await edit(names()[0], 'model-c')
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
 } else if (scenario === 'plugin-loading') {
   await render(pluginForm())
   assert.ok(button(en.common.pluginPage.config.save).disabled)

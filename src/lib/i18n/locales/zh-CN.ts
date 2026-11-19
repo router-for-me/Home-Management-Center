@@ -4367,6 +4367,7 @@ export const zhCN = {
         add: '添加模型设置',
         empty: '{{provider}} 尚未配置模型设置。',
         name: '原模型名',
+        nameRequired: '请输入原模型名。',
         alias: '已有别名（可选）',
         limit: '上下文上限（token）',
         defaultLimit: '留空或填 0 使用模型默认值',

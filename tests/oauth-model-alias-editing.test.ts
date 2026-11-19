@@ -143,6 +143,17 @@ describe('provider-scoped OAuth model settings', () => {
     expect(requests).toEqual([])
   })
 
+  test('an existing blank row does not allow a newly added blank row to be saved', async () => {
+    const blank = { name: '' }
+    const before = { codex: [blank, named] }
+    const { requests } = fixture(before, path)
+    expect(hasInvalidModelSettingChanges(before, { codex: [aliased, blank] })).toBe(false)
+    const after = { codex: [...before.codex, { name: '' }] }
+    expect(hasInvalidModelSettingChanges(before, after)).toBe(true)
+    await expect(applyConfigChange(session, settingsChange(before, after))).rejects.toThrow()
+    expect(requests).toEqual([])
+  })
+
   test('adding a provider and removing its last row are isolated and idempotent', async () => {
     const before = { codex: [named] }
     const after = { ...before, devin: [{ name: 'shared', 'max-context-length': 16384 }] }

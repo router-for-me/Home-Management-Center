@@ -4371,6 +4371,7 @@ export const zhTW = {
         add: '新增模型設定',
         empty: '{{provider}} 尚未設定模型。',
         name: '原模型名稱',
+        nameRequired: '請輸入原模型名稱。',
         alias: '既有別名（選填）',
         limit: '上下文上限（token）',
         defaultLimit: '留白或填 0 使用模型預設值',

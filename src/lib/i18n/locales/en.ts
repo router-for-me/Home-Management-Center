@@ -4616,6 +4616,7 @@ export const en = {
         add: 'Add model setting',
         empty: 'No model settings for {{provider}}.',
         name: 'Upstream model name',
+        nameRequired: 'Enter the upstream model name.',
         alias: 'Existing alias (optional)',
         limit: 'Context window (tokens)',
         defaultLimit: 'Model default if blank or 0',
