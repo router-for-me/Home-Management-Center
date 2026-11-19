@@ -1670,6 +1670,23 @@ export const ru = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Параметры выполнения Vertex',
+        key: 'Текущий ключ',
+        group: 'Настройки группы',
+        groupHint:
+          'Ключей в группе — {{count}}. Каждый ключ наследует параметры, для которых у него нет своих значений.',
+        credentialProtocol: 'Протокол ключа',
+        modelProtocol: 'Протокол модели',
+        protocolHint:
+          'В режиме «Авто» модель использует протокол ключа. Если оба значения автоматические, маршрут выбирает CPA.',
+        location: 'Регион OpenAPI',
+        interactions: 'Запросы Interactions',
+        nativeInteractions: 'Нативный Interactions',
+        bridge: 'Преобразование протокола',
+        cpaDefault: 'По умолчанию в CPA (преобразование)',
+        inherit: 'Как в группе ({{value}})',
+      },
       pool: {
         groupSize: 'Ключей в группе — {{total}}.',
         group: 'Пул соединений группы',
@@ -1835,6 +1852,9 @@ export const ru = {
         modelImageSupportHint: 'Отмечать эту модель как модель изображений в каталоге.',
         modelUseMaxCompletionTokensHint:
           'Отправлять серверу max_completion_tokens вместо max_tokens.',
+        modelThinkingDisableType: 'Значение Claude thinking.type при отключении',
+        modelThinkingDisableHint:
+          'Пустое поле означает disabled. Для таких моделей, как claude-sonnet-5-5, используется between_tools.',
         modelThinkingEnabled: 'Переопределить возможности рассуждения',
         modelThinkingHint:
           'Если выключено, используются настройки сервера. Если включено — только возможности, заданные ниже.',

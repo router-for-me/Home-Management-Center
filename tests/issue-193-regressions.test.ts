@@ -66,6 +66,137 @@ const groupWith = (keys: RecordValue[], models: RecordValue[] = []) => [
   },
 ]
 
+describe('Vertex execution options and model overrides', () => {
+  const native = { name: 'shared', alias: 'native', openapi: false, thinking: {} }
+  const compatible = { name: 'shared', alias: 'chat', openapi: true, thinking: null }
+  const automatic = { name: 'auto', openapi: null, 'future-field': 0 }
+  const key = { id: 'A', 'api-key': 'fake-A', openapi: null }
+  const sibling = { id: 'B', 'api-key': 'fake-B', interactions: false, models: [automatic] }
+  const group = {
+    name: 'fixture',
+    interactions: true,
+    openapi: false,
+    'openapi-location': 'global',
+    models: [native, compatible, automatic],
+    keys: [key, sibling],
+  }
+
+  test('editing an inheriting key or its group preserves both model lists and the other key', async () => {
+    const { form, save, writes } = await setup([group], 'vertex')
+    expect(form.groupVertexOptions).toEqual({
+      interactions: true,
+      openapi: false,
+      location: 'global',
+    })
+    expect(form.keyVertexOptions).toEqual({ interactions: null, openapi: null, location: '' })
+    form.keyVertexOptions!.interactions = false
+    form.keyVertexOptions!.location = ' us-central1 '
+    await save(form)
+    expect(writes[0]).toEqual([
+      {
+        ...group,
+        keys: [{ ...key, interactions: false, 'openapi-location': 'us-central1' }, sibling],
+      },
+    ])
+    form.groupVertexOptions!.openapi = true
+    await save(form)
+    expect(writes[1]).toEqual([{ ...writes[0][0], openapi: true }])
+  })
+
+  test('restoring group inheritance removes only the explicit key overrides', async () => {
+    const original = {
+      ...group,
+      keys: [{ ...key, openapi: true, interactions: false, 'openapi-location': 'eu' }, sibling],
+    }
+    const { form, save, writes } = await setup([original], 'vertex')
+    form.keyVertexOptions = { openapi: null, interactions: null, location: '' }
+    await save(form)
+    expect(writes[0]).toEqual([{ ...group, keys: [{ id: 'A', 'api-key': 'fake-A' }, sibling] }])
+  })
+
+  test('per-row protocol edits follow row identity and leave credential and sibling settings intact', async () => {
+    const { form, save, writes } = await setup([group], 'vertex')
+    expect(form.models.map((model) => model.openapi)).toEqual([false, true, null])
+    const [first, second, third] = form.models
+    form.models = [
+      { ...second, openapi: null },
+      { ...first, name: 'renamed', openapi: true },
+      third,
+    ]
+    await save(form)
+    expect(writes[0]).toEqual([
+      {
+        ...group,
+        keys: [
+          {
+            ...key,
+            models: [
+              { name: 'shared', alias: 'chat', thinking: null },
+              { ...native, name: 'renamed', openapi: true },
+              automatic,
+            ],
+          },
+          sibling,
+        ],
+      },
+    ])
+  })
+
+  test('creating a Vertex credential keeps an automatic row absent and explicit native false', async () => {
+    const { group: descriptor, writes } = await setup([group], 'vertex')
+    const form = createFormState(null, descriptor)
+    form.apiKey = 'fake-new'
+    form.groupVertexOptions = { interactions: false, openapi: true, location: ' global ' }
+    const row = { raw: null, name: 'first', alias: '', displayName: '', forceMapping: false }
+    form.models = [row, { ...row, name: 'second', openapi: false }]
+    await createProviderResource(session, descriptor.id, form)
+    const created = writes[0].at(-1)!
+    expect(created).toMatchObject({
+      interactions: false,
+      openapi: true,
+      'openapi-location': 'global',
+      models: [{ name: 'first' }, { name: 'second', openapi: false }],
+    })
+    expect(created.models[0]).not.toHaveProperty('openapi')
+    expect(created.keys[0]).not.toHaveProperty('openapi')
+  })
+
+  test('changing group defaults checks membership and retains the draft on a conflict', async () => {
+    const { form, save, writes, setCurrent } = await setup([group], 'vertex')
+    setCurrent([{ ...group, keys: [...group.keys, { id: 'C', 'api-key': 'fake-C' }] }])
+    form.groupVertexOptions!.location = 'global-test'
+    await expect(save(form)).rejects.toThrow()
+    expect(writes).toHaveLength(0)
+    expect(form.groupVertexOptions!.location).toBe('global-test')
+  })
+
+  test('Claude thinking.type can be set or removed independently of the rest of a model', async () => {
+    const models = [
+      {
+        name: 'claude',
+        thinking: { 'disable-type': 'between_tools', 'zero-allowed': false, custom: 0 },
+      },
+      { name: 'other', thinking: {} },
+    ]
+    const { form, save, writes } = await setup(groupWith([key], models), 'claude')
+    expect(form.models[0].thinkingDisableType).toBe('between_tools')
+    form.models[0].thinkingDisableType = ''
+    form.models[1].thinkingDisableType = 'custom_type'
+    form.models[1].openapi = true
+    form.groupVertexOptions = { interactions: false, openapi: true, location: 'eu' }
+    await save(form)
+    expect(writes[0]).toEqual(
+      groupWith(
+        [key],
+        [
+          { name: 'claude', thinking: { 'zero-allowed': false, custom: 0 } },
+          { name: 'other', thinking: { 'disable-type': 'custom_type' } },
+        ],
+      ),
+    )
+  })
+})
+
 describe('provider connection pool scopes', () => {
   for (const provider of [
     'gemini',

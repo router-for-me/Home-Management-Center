@@ -1605,6 +1605,21 @@ export const zhTW = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Vertex 執行選項',
+        key: '目前金鑰',
+        group: '群組預設值',
+        groupHint: '群組內共有 {{count}} 把金鑰。每項設定會套用到繼承該項的金鑰。',
+        credentialProtocol: '憑證協定',
+        modelProtocol: '模型協定',
+        protocolHint: '模型協定為「自動」時沿用此設定。兩者皆為「自動」時，由 CPA 選擇路由。',
+        location: 'OpenAPI 區域',
+        interactions: 'Interactions 請求',
+        nativeInteractions: '原生 Interactions',
+        bridge: '協定轉換',
+        cpaDefault: 'CPA 預設（協定轉換）',
+        inherit: '繼承群組（{{value}}）',
+      },
       pool: {
         groupSize: '此群組共有 {{total}} 把金鑰。',
         group: '群組連線池',
@@ -1758,6 +1773,9 @@ export const zhTW = {
         modelSupportConfigUpdateHint: '允許此模型使用 Responses configuration_update。',
         modelImageSupportHint: '在模型目錄中將此模型標記為影像模型。',
         modelUseMaxCompletionTokensHint: '向上游傳送 max_completion_tokens，而非 max_tokens。',
+        modelThinkingDisableType: '關閉思考時的 Claude thinking.type',
+        modelThinkingDisableHint:
+          '留白時使用 disabled。claude-sonnet-5-5 等模型使用 between_tools。',
         modelThinkingEnabled: '自訂思考能力',
         modelThinkingHint: '關閉時使用後端預設能力；開啟後僅採用下方設定的能力。',
         requestScopedErrorAction: '處理動作',

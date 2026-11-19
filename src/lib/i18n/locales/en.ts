@@ -1672,6 +1672,22 @@ export const en = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Vertex execution options',
+        key: 'This key',
+        group: 'Group defaults',
+        groupHint: 'Keys in this group ({{count}}) inherit each setting unless they override it.',
+        credentialProtocol: 'Credential protocol',
+        modelProtocol: 'Model protocol',
+        protocolHint:
+          'Models set to Auto use this protocol. If both are Auto, CPA selects the route.',
+        location: 'OpenAPI location',
+        interactions: 'Interactions requests',
+        nativeInteractions: 'Native Interactions',
+        bridge: 'Protocol translation',
+        cpaDefault: 'CPA default (protocol translation)',
+        inherit: 'Use group setting ({{value}})',
+      },
       pool: {
         groupSize: 'This group contains {{total}} keys.',
         group: 'Group connection pool',
@@ -1831,6 +1847,9 @@ export const en = {
         modelImageSupportHint: 'Publish this model as an image model in the model catalog.',
         modelUseMaxCompletionTokensHint:
           'Send max_completion_tokens instead of max_tokens to the upstream.',
+        modelThinkingDisableType: 'Claude thinking.type when off',
+        modelThinkingDisableHint:
+          'Leave blank for disabled. Models such as claude-sonnet-5-5 use between_tools.',
         modelThinkingEnabled: 'Override thinking capabilities',
         modelThinkingHint:
           'When off, use backend defaults. When on, use only the capabilities configured below.',

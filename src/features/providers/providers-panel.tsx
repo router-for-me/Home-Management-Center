@@ -21,6 +21,7 @@ import { toast } from 'sonner'
 
 import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
+import { OptionalBooleanField } from '@/components/shared/optional-boolean-field'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { SensitiveReplacementEditor } from '@/components/shared/sensitive-replacement-editor'
@@ -66,6 +67,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { isValidProxyUrl } from '@/features/credentials/credential-detail-drawer'
 import { ProviderConnectionPoolEditor } from '@/features/providers/provider-connection-pool-editor'
 import { useProviderWorkbench } from '@/features/providers/use-provider-workbench'
+import { VertexExecutionFields } from '@/features/providers/vertex-execution-fields'
 import type { UpstreamProvidersStats } from '@/features/upstream/summary-cards'
 import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import { MAX_CREDENTIAL_WEIGHT } from '@/lib/api/management/credentials'
@@ -2245,6 +2247,17 @@ export function ProviderFormPanel({
           </label>
         ) : null}
 
+        {descriptor.id === 'vertex' && form.groupVertexOptions && (
+          <VertexExecutionFields
+            group={form.groupVertexOptions}
+            keyOptions={form.keyVertexOptions}
+            count={resource?.apiKeyEntryCount ?? 1}
+            disabled={mutating}
+            onGroupChange={(options) => updateField('groupVertexOptions', options)}
+            onKeyChange={(options) => updateField('keyVertexOptions', options)}
+          />
+        )}
+
         {descriptor.supportsWebsockets ? (
           <label className="flex items-start gap-3 text-sm">
             <Checkbox
@@ -2565,7 +2578,17 @@ export function ProviderFormPanel({
                       disabled={mutating}
                     />
                   </label>
-                  {descriptor.id !== 'vertex' ? (
+                  {descriptor.id === 'vertex' ? (
+                    <OptionalBooleanField
+                      label={t('providersPage.vertex.modelProtocol')}
+                      value={model.openapi}
+                      defaultLabel={t('configPage.json.vertexModes.auto')}
+                      onLabel={t('configPage.json.vertexModes.openapi')}
+                      offLabel={t('configPage.json.vertexModes.native')}
+                      disabled={mutating}
+                      onChange={(openapi) => updateModelField(index, 'openapi', openapi)}
+                    />
+                  ) : (
                     <label className="grid gap-1.5 text-xs font-medium">
                       <span>{t('providersPage.form.modelMaxContextLength')}</span>
                       <Input
@@ -2580,7 +2603,7 @@ export function ProviderFormPanel({
                         disabled={mutating}
                       />
                     </label>
-                  ) : null}
+                  )}
                 </div>
 
                 <div className="grid gap-2">
@@ -2725,6 +2748,23 @@ export function ProviderFormPanel({
                   </p>
                   {model.thinkingEnabled ? (
                     <div className="grid gap-2.5 pl-6">
+                      {(descriptor.id === 'claude' || model.thinkingDisableType !== undefined) && (
+                        <label className={fieldClassName}>
+                          <span>{t('providersPage.form.modelThinkingDisableType')}</span>
+                          <Input
+                            value={model.thinkingDisableType ?? ''}
+                            placeholder="disabled"
+                            className="font-mono"
+                            disabled={mutating}
+                            onChange={(event) =>
+                              updateModelField(index, 'thinkingDisableType', event.target.value)
+                            }
+                          />
+                          <span className="text-muted-foreground text-xs leading-5 font-normal">
+                            {t('providersPage.form.modelThinkingDisableHint')}
+                          </span>
+                        </label>
+                      )}
                       <div className="grid gap-1.5">
                         <span className="text-muted-foreground text-xs font-medium">
                           {t('providersPage.form.modelThinkingLevels')}

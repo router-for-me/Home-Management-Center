@@ -1603,6 +1603,21 @@ export const zhCN = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Vertex 执行选项',
+        key: '当前密钥',
+        group: '分组默认值',
+        groupHint: '组内共 {{count}} 把密钥。每项设置会应用到继承该项的密钥。',
+        credentialProtocol: '凭据协议',
+        modelProtocol: '模型协议',
+        protocolHint: '模型协议为“自动”时沿用此设置。两者均为“自动”时，由 CPA 选择路由。',
+        location: 'OpenAPI 区域',
+        interactions: 'Interactions 请求',
+        nativeInteractions: '原生 Interactions',
+        bridge: '协议转换',
+        cpaDefault: 'CPA 默认（协议转换）',
+        inherit: '继承分组（{{value}}）',
+      },
       pool: {
         groupSize: '此分组共有 {{total}} 把密钥。',
         group: '分组连接池',
@@ -1756,6 +1771,9 @@ export const zhCN = {
         modelSupportConfigUpdateHint: '允许此模型使用 Responses configuration_update。',
         modelImageSupportHint: '在模型目录中将此模型标记为图像模型。',
         modelUseMaxCompletionTokensHint: '向上游发送 max_completion_tokens，而不是 max_tokens。',
+        modelThinkingDisableType: '关闭思考时的 Claude thinking.type',
+        modelThinkingDisableHint:
+          '留空时使用 disabled。claude-sonnet-5-5 等模型使用 between_tools。',
         modelThinkingEnabled: '自定义思考能力',
         modelThinkingHint: '关闭时使用后端默认能力；开启后仅采用下方配置的能力。',
         requestScopedErrorAction: '处理动作',
