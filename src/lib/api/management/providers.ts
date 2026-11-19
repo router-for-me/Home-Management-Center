@@ -10,6 +10,7 @@ import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/t
 import { ConfigEditConflict, mergeConfigEdits, sameConfigValue } from './config-edit'
 import { createFormState, readProviderModels, readRequestScopedErrors } from './provider-form'
 import type { ProviderErrorRuleAction } from './provider-form'
+import { type ReplacementRow, serializeReplacementRows } from './sensitive-replacements'
 
 export { PROVIDER_ERROR_RULE_ACTIONS, type ProviderErrorRuleAction } from './provider-form'
 
@@ -114,6 +115,8 @@ export type ProviderCloakInput = {
   strictMode: boolean
   cacheUserId: boolean
   sensitiveWordsText: string
+  literalReplacements?: ReplacementRow[] | null
+  patternReplacements?: ReplacementRow[] | null
 }
 
 export type ProviderModelEntryInput = {
@@ -1148,18 +1151,24 @@ function createCloakPayload(input?: ProviderCloakInput, editing = false) {
 
   const mode = input.mode.trim()
   const sensitiveWords = parseTextList(input.sensitiveWordsText)
-  const hasCloak = mode || input.strictMode || input.cacheUserId || sensitiveWords.length > 0
-  if (!editing && !hasCloak) return undefined
-
-  const payload: UnknownRecord = {
-    'strict-mode': input.strictMode,
-    'cache-user-id': input.cacheUserId,
-  }
-
+  const payload: UnknownRecord = {}
+  if (editing || input.strictMode) payload['strict-mode'] = input.strictMode
+  if (editing || input.cacheUserId) payload['cache-user-id'] = input.cacheUserId
   if (mode) payload.mode = mode
   if (sensitiveWords.length) payload['sensitive-words'] = sensitiveWords
-
-  return payload
+  if (input.literalReplacements?.length) {
+    payload['sensitive-words-replace'] = serializeReplacementRows(
+      'literalReplacements',
+      input.literalReplacements,
+    )
+  }
+  if (input.patternReplacements?.length) {
+    payload['sensitive-patterns-replace'] = serializeReplacementRows(
+      'patternReplacements',
+      input.patternReplacements,
+    )
+  }
+  return Object.keys(payload).length ? payload : undefined
 }
 
 function serializeErrorRule(rule: ProviderRequestScopedErrorRule) {
@@ -1523,6 +1532,7 @@ function replaceNativeCredential(
 
   const form = createFormState(resource, descriptor)
   const draft = { ...form, ...input }
+  if (form.cloak && input.cloak) draft.cloak = { ...form.cloak, ...input.cloak }
   const models = Array.isArray(resource.raw.models) ? resource.raw.models.filter(isRecord) : []
   const before = createNativeGroupPayload(descriptor, form, models)
   const after = createNativeGroupPayload(descriptor, draft, models)

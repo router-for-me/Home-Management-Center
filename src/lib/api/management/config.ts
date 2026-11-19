@@ -19,6 +19,12 @@ import {
   hasIncompleteAliasChanges,
   isAliasChannel,
 } from './oauth-model-aliases'
+import {
+  type ReplacementKind,
+  parseReplacementDraft,
+  readReplacementRows,
+  serializeReplacementRows,
+} from './sensitive-replacements'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -52,6 +58,8 @@ export type ConfigFieldKey =
   | 'oauthModelAliasJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
+  | 'antigravityLiteralReplacements'
+  | 'antigravityPatternReplacements'
   | 'serverHost'
   | 'serverAllowHostJson'
   | 'serverTrustedProxiesJson'
@@ -134,6 +142,8 @@ export type ConfigFieldKey =
   | 'liveMediaRelayPublicIp'
   | 'liveMediaRelayIceServersJson'
   | 'devinSensitiveWordsJson'
+  | 'devinLiteralReplacements'
+  | 'devinPatternReplacements'
   | 'oauthRequestScopedErrorsJson'
   | 'antigravityCredits'
   | 'antigravitySignatureCacheEnabled'
@@ -503,6 +513,16 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     oauthModelAliasJson: stringifyJsonObject(oauth['model-alias']),
     payloadRulesJson: stringifyPayload(requests.payload),
     antigravitySensitiveWordsJson: stringifyJsonArray(antigravity['sensitive-words']),
+    antigravityLiteralReplacements: JSON.stringify(
+      readReplacementRows('literalReplacements', antigravity['sensitive-words-replace']),
+      null,
+      2,
+    ),
+    antigravityPatternReplacements: JSON.stringify(
+      readReplacementRows('patternReplacements', antigravity['sensitive-patterns-replace']),
+      null,
+      2,
+    ),
     serverHost: readString(server, 'host'),
     serverAllowHostJson: stringifyJsonArray(server['allow-host']),
     serverTrustedProxiesJson: stringifyJsonArray(server['trusted-proxies']),
@@ -597,6 +617,16 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     liveMediaRelayPublicIp: readString(liveMediaRelay, 'public-ip'),
     liveMediaRelayIceServersJson: stringifyJsonArray(liveMediaRelay['ice-servers']),
     devinSensitiveWordsJson: stringifyJsonArray(devin['sensitive-words']),
+    devinLiteralReplacements: JSON.stringify(
+      readReplacementRows('literalReplacements', devin['sensitive-words-replace']),
+      null,
+      2,
+    ),
+    devinPatternReplacements: JSON.stringify(
+      readReplacementRows('patternReplacements', devin['sensitive-patterns-replace']),
+      null,
+      2,
+    ),
     oauthRequestScopedErrorsJson: stringifyJsonObject(oauth['request-scoped-errors']),
     antigravityCredits: readBoolean(antigravity, 'antigravity-credits'),
     antigravitySignatureCacheEnabled: readNullableBoolean(antigravity, 'signature-cache-enabled'),
@@ -650,6 +680,7 @@ export async function fetchConfigSnapshot(
 }
 
 type ConfigWriteKind =
+  | ReplacementKind
   | 'alias'
   | 'payload'
   | 'imageGeneration'
@@ -700,6 +731,14 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   disableCooling: { path: 'routing/cooldown/disable-cooling', kind: 'boolean' },
   routingStrategy: { path: 'routing/strategy', kind: 'string' },
   oauthExcludedModelsJson: { path: 'oauth/excluded-models', kind: 'jsonObject' },
+  antigravityLiteralReplacements: {
+    path: 'oauth/providers/antigravity/sensitive-words-replace',
+    kind: 'literalReplacements',
+  },
+  antigravityPatternReplacements: {
+    path: 'oauth/providers/antigravity/sensitive-patterns-replace',
+    kind: 'patternReplacements',
+  },
   antigravitySensitiveWordsJson: {
     path: 'oauth/providers/antigravity/sensitive-words',
     kind: 'stringList',
@@ -864,6 +903,14 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
     path: 'oauth/providers/codex/live-media-relay/ice-servers',
     kind: 'jsonArray',
   },
+  devinLiteralReplacements: {
+    path: 'oauth/providers/devin/sensitive-words-replace',
+    kind: 'literalReplacements',
+  },
+  devinPatternReplacements: {
+    path: 'oauth/providers/devin/sensitive-patterns-replace',
+    kind: 'patternReplacements',
+  },
   devinSensitiveWordsJson: { path: 'oauth/providers/devin/sensitive-words', kind: 'stringList' },
   oauthRequestScopedErrorsJson: { path: 'oauth/request-scoped-errors', kind: 'jsonObject' },
   antigravityCredits: { path: 'oauth/providers/antigravity/antigravity-credits', kind: 'boolean' },
@@ -995,6 +1042,13 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   }
 
   switch (target.kind) {
+    case 'literalReplacements':
+    case 'patternReplacements':
+      await putJson(
+        url,
+        serializeReplacementRows(target.kind, parseReplacementDraft(change.nextValue)),
+      )
+      return
     case 'boolean':
       await putJson(url, change.nextValue)
       return

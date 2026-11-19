@@ -1,5 +1,6 @@
 import {
   type ProviderApiKeyEntryInput,
+  type ProviderCloakInput,
   type ProviderDescriptor,
   type ProviderEntryFormInput,
   type ProviderHeaderEntryInput,
@@ -7,6 +8,7 @@ import {
   type ProviderRequestScopedErrorRule,
   type ProviderResource,
 } from './providers'
+import { readReplacementRows } from './sensitive-replacements'
 
 export const PROVIDER_ERROR_RULE_ACTIONS = [
   'stop',
@@ -55,12 +57,14 @@ export function emptyApiKeyEntry(): ProviderApiKeyEntryInput {
   }
 }
 
-export function emptyCloakInput() {
+export function emptyCloakInput(): ProviderCloakInput {
   return {
     mode: '',
     strictMode: false,
     cacheUserId: false,
     sensitiveWordsText: '',
+    literalReplacements: [],
+    patternReplacements: [],
   }
 }
 
@@ -205,6 +209,14 @@ function readProviderCloak(raw: UnknownRecord) {
     mode: readStringField(cloak, 'mode'),
     strictMode: cloak['strict-mode'] === true,
     cacheUserId: cloak['cache-user-id'] === true,
+    literalReplacements: readReplacementRows(
+      'literalReplacements',
+      cloak['sensitive-words-replace'],
+    ),
+    patternReplacements: readReplacementRows(
+      'patternReplacements',
+      cloak['sensitive-patterns-replace'],
+    ),
     sensitiveWordsText: Array.isArray(sensitiveWords)
       ? sensitiveWords.filter((item): item is string => typeof item === 'string').join('\n')
       : '',
