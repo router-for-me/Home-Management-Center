@@ -89,6 +89,14 @@ const cases: Case[] = [
       'routing/session-affinity-subagents',
     ),
   ),
+  ...['any', 'quota', 'never'].map((value) =>
+    put(
+      `writes the ${value} session rebinding policy as a single routing field`,
+      'sessionAffinityRebindOn',
+      value,
+      'routing/session-affinity-rebind-on',
+    ),
+  ),
   {
     name: 'restores default subagent affinity by deleting only its override',
     key: 'sessionAffinitySubagents',

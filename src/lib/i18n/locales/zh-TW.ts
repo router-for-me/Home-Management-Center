@@ -3650,6 +3650,20 @@ export const zhTW = {
           label: '粘性會話',
           description: '開啟後同一工作階段優先路由到同一憑證。',
         },
+        sessionAffinityRebindOn: {
+          label: '工作階段重新綁定策略',
+          description: '此策略僅在粘性會話開啟時生效。',
+          description_any: '開啟粘性會話後，容錯移轉會將工作階段綁定到新憑證。後續請求沿用新憑證。',
+          description_quota:
+            '開啟粘性會話後，暫時性故障只讓目前的請求改用其他憑證，後續請求仍沿用原綁定。配額、驗證或模型支援問題可觸發重新綁定。',
+          description_never:
+            '開啟粘性會話後，綁定有效期間只使用原憑證。憑證無法使用時，Home 會重試該憑證或傳回錯誤。綁定到期後可重新選擇。',
+          options: {
+            any: '切換即重新綁定（預設）',
+            quota: '依錯誤類型重新綁定',
+            never: '保留原綁定',
+          },
+        },
         sessionAffinityTtl: {
           label: '粘性會話有效期',
           description: '粘性會話綁定的有效時長（Go duration）；留空恢復後端預設。',
