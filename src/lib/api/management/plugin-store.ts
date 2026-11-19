@@ -1,4 +1,8 @@
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  createManagementClient,
+  isMissingConfigPath,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 type UnknownRecord = Record<string, unknown>
@@ -381,7 +385,7 @@ export async function fetchPluginConfig(
     )
     return toRecord(response.data)
   } catch (error) {
-    if (toManagementApiError(error).status === 404) {
+    if (isMissingConfigPath(error)) {
       return {}
     }
     throw error

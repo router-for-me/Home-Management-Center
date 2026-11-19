@@ -65,6 +65,7 @@ export type ManagementApiFieldError = {
 
 export type ManagementApiError = {
   message: string
+  configVersion?: number
   status?: number
   code?: 'network' | 'auth' | 'not-found' | 'server' | 'unknown'
   backendCode?: string

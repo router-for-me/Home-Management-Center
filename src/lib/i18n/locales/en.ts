@@ -161,11 +161,16 @@ export const en = {
       connectedAs: 'Connected to {{mode}}.',
       errors: {
         managementKeyRequired: 'Management key is required.',
-        unsupportedApiVersion: {
-          title: 'Unsupported Management API version',
-          description:
-            'This backend only serves a legacy Management API. Upgrade CLIProxyAPIHome to a release that supports the V8 Management API, then try again.',
-        },
+        legacyApi:
+          'This address responds to the legacy Management API. Connect to a backend serving V8 or upgrade CLIProxyAPIHome.',
+        routeUnavailable:
+          'The V8 management route is unavailable. Check the address, reverse-proxy path, and whether Home has a management key configured.',
+        unexpectedResponse:
+          'This address returned an unexpected response to the V8 config request. Check the backend address and reverse-proxy path.',
+        incompatibleConfigVersion:
+          'The backend reports config version {{version}}. This console requires version 8.',
+        unreachable:
+          'Could not reach the management endpoint. Check the host, port, and network connection.',
       },
     },
     embeddedPortal: {
@@ -3287,6 +3292,18 @@ export const en = {
       },
     },
     configPage: {
+      compatibility: {
+        unreportedLabel: 'Not reported',
+        unavailable:
+          'The management route for this setting is unavailable. Check the backend version and proxy path. Your draft is preserved.',
+        unreported: 'The backend omitted this setting. Its support will be checked when you save.',
+        unsupported: 'This backend does not support this change. Your draft is preserved.',
+        rejected:
+          'The backend rejected this value. Review the setting and retry. Your draft is preserved.',
+        failed: 'Could not confirm the save. Your draft is available to retry.',
+        discardField: 'Discard this change',
+        saveFailed: 'Could not save {{field}}. Your draft is preserved.',
+      },
       disconnected: {
         title: 'Connect a management runtime',
         description:

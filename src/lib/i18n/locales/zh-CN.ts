@@ -159,11 +159,12 @@ export const zhCN = {
       connectedAs: '已连接到 {{mode}}。',
       errors: {
         managementKeyRequired: '必须填写 management key。',
-        unsupportedApiVersion: {
-          title: '后端 Management API 版本过旧',
-          description:
-            '该后端仅提供旧版 Management API。请将 CLIProxyAPIHome 升级到支持 V8 Management API 的版本后重试。',
-        },
+        legacyApi: '此地址响应旧版管理 API。请连接提供 V8 管理接口的后端，或升级 CLIProxyAPIHome。',
+        routeUnavailable:
+          'V8 管理路由不可用。请核对服务地址和反向代理路径，并确认 Home 已配置管理密钥。',
+        unexpectedResponse: '此地址返回的内容无法识别为 V8 配置。请核对后端地址和反向代理路径。',
+        incompatibleConfigVersion: '后端报告的配置版本为 {{version}}，此控制台需要版本 8。',
+        unreachable: '无法连接管理服务。请检查主机、端口和网络连接。',
       },
     },
     embeddedPortal: {
@@ -3130,6 +3131,16 @@ export const zhCN = {
       },
     },
     configPage: {
+      compatibility: {
+        unreportedLabel: '后端未返回',
+        unavailable: '此设置的管理接口不可用。请核对后端版本和代理路径，草稿已保留。',
+        unreported: '后端未返回此项配置，保存时将确认是否支持。',
+        unsupported: '当前后端不支持此项更改，草稿已保留。',
+        rejected: '后端拒绝了此值。草稿已保留，请检查后重试。',
+        failed: '未能确认保存结果，草稿已保留，可重试。',
+        discardField: '撤销此项更改',
+        saveFailed: '未能保存「{{field}}」，草稿已保留。',
+      },
       disconnected: {
         title: '连接管理端运行时',
         description: '系统配置来自 Management API。连接运行时后，才能读取、编辑和保存配置。',

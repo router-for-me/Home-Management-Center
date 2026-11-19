@@ -107,14 +107,16 @@ import { useConfigWorkbench } from '@/features/config/use-config-workbench'
 import {
   type ConfigChange,
   type ConfigFieldKey,
+  ConfigFieldSaveError,
   type ConfigFieldValue,
+  type ConfigSnapshot,
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
   hasAliasChannelConflict,
+  isConfigFieldReported,
   isReadOnlyConfigField,
 } from '@/lib/api/management/config'
-import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
 import {
   type PayloadReplaceIssueKey,
@@ -1506,6 +1508,12 @@ function getValidationErrors(
       if (isReadOnlyConfigField(field.key)) return false
 
       const value = draft[field.key]
+      if (
+        saved &&
+        value === saved[field.key] &&
+        !(field.key === 'payloadRulesJson' && hasPayloadDrafts)
+      )
+        return false
       if (field.key === 'payloadRulesJson') {
         if (hasPayloadDrafts !== null) return hasPayloadDrafts
         if (value === saved?.payloadRulesJson) return false
@@ -1743,12 +1751,14 @@ function BooleanControl({
 
 function ConfigField({
   field,
+  statusLabel,
   value,
   disabled,
   invalid,
   onChange,
 }: {
   field: ConfigFieldDefinition
+  statusLabel: ReactNode
   value: ConfigStructuredValues[ConfigFieldKey]
   disabled: boolean
   invalid: boolean
@@ -1769,7 +1779,10 @@ function ConfigField({
       )}
     >
       <div className="min-w-0">
-        <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
+          {statusLabel}
+        </div>
         <p className="text-muted-foreground mt-1 text-xs leading-5">
           {t(`configPage.fields.${field.key}.description`)}
         </p>
@@ -1899,11 +1912,13 @@ function ConfigField({
 
 function JsonEditorFrame({
   field,
+  statusLabel,
   invalid,
   parseError,
   children,
 }: {
   field: ConfigFieldDefinition
+  statusLabel: ReactNode
   invalid: boolean
   parseError: string | null
   children: ReactNode
@@ -1911,7 +1926,12 @@ function JsonEditorFrame({
   const { t } = useTranslation()
 
   if (field.key === 'payloadRulesJson') {
-    return <div className="grid min-w-0 gap-4">{children}</div>
+    return (
+      <div className="grid min-w-0 gap-4">
+        {statusLabel}
+        {children}
+      </div>
+    )
   }
 
   return (
@@ -1925,6 +1945,7 @@ function JsonEditorFrame({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
+            {statusLabel}
           </div>
           <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
             {t(`configPage.fields.${field.key}.description`)}
@@ -4204,6 +4225,7 @@ function StructuredJsonEditor({
 
 function JsonConfigField({
   field,
+  statusLabel,
   value,
   disabled,
   invalid,
@@ -4211,6 +4233,7 @@ function JsonConfigField({
   onChange,
 }: {
   field: ConfigFieldDefinition & { key: JsonConfigFieldKey }
+  statusLabel: ReactNode
   value: string
   disabled: boolean
   invalid: boolean
@@ -4225,7 +4248,12 @@ function JsonConfigField({
     const placeholderKey = `configPage.fields.${field.key}.placeholder`
 
     return (
-      <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
+      <JsonEditorFrame
+        field={field}
+        statusLabel={statusLabel}
+        invalid={invalid}
+        parseError={parseError}
+      >
         <Textarea
           value={value}
           disabled={disabled}
@@ -4240,7 +4268,12 @@ function JsonConfigField({
   const canUseStructured = parsed.ok && canEditJsonField(field.key, parsed.value)
 
   return (
-    <JsonEditorFrame field={field} invalid={invalid} parseError={parseError}>
+    <JsonEditorFrame
+      field={field}
+      statusLabel={statusLabel}
+      invalid={invalid}
+      parseError={parseError}
+    >
       {canUseStructured ? (
         <StructuredJsonEditor
           fieldKey={field.key}
@@ -4263,6 +4296,9 @@ function JsonConfigField({
 
 function StructuredWorkspace({
   draft,
+  rawConfig,
+  saveError,
+  onDiscardField,
   changes,
   validationErrors,
   disabled,
@@ -4270,6 +4306,9 @@ function StructuredWorkspace({
   onChange,
 }: {
   draft: ConfigStructuredValues
+  rawConfig: Record<string, unknown>
+  saveError: ConfigFieldSaveError | null
+  onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
   validationErrors: ConfigFieldKey[]
   disabled: boolean
@@ -4279,27 +4318,86 @@ function StructuredWorkspace({
   const { t } = useTranslation()
   const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
 
-  const renderField = (field: ConfigFieldDefinition) =>
-    isJsonConfigFieldKey(field.key) ? (
-      <JsonConfigField
+  const renderField = (field: ConfigFieldDefinition) => {
+    const fieldError = saveError?.key === field.key ? saveError : null
+    const unreported =
+      !isReadOnlyConfigField(field.key) && !isConfigFieldReported(rawConfig, field.key)
+    const changed = changes.some((change) => change.key === field.key)
+    const statusLabel =
+      unreported && !fieldError ? (
+        <span
+          className="text-meta text-muted-foreground"
+          title={t('configPage.compatibility.unreported')}
+        >
+          {t('configPage.compatibility.unreportedLabel')}
+        </span>
+      ) : null
+    const fieldId = `config-field-${field.key}`
+    return (
+      <div
         key={field.key}
-        field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-        value={String(draft[field.key])}
-        disabled={disabled}
-        invalid={validationErrors.includes(field.key)}
-        oauthModelCatalog={oauthModelCatalog}
-        onChange={onChange}
-      />
-    ) : (
-      <ConfigField
-        key={field.key}
-        field={field}
-        value={draft[field.key]}
-        disabled={disabled}
-        invalid={validationErrors.includes(field.key)}
-        onChange={onChange}
-      />
+        id={fieldId}
+        className="group/setting min-w-0"
+        role="group"
+        aria-label={t(`configPage.fields.${field.key}.label`)}
+        aria-describedby={fieldError || unreported ? fieldId + '-feedback' : undefined}
+      >
+        {isJsonConfigFieldKey(field.key) ? (
+          <JsonConfigField
+            field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+            statusLabel={statusLabel}
+            value={String(draft[field.key])}
+            disabled={disabled}
+            invalid={validationErrors.includes(field.key)}
+            oauthModelCatalog={oauthModelCatalog}
+            onChange={onChange}
+          />
+        ) : (
+          <ConfigField
+            field={field}
+            statusLabel={statusLabel}
+            value={draft[field.key]}
+            disabled={disabled}
+            invalid={validationErrors.includes(field.key)}
+            onChange={onChange}
+          />
+        )}
+        {fieldError ? (
+          <div id={fieldId + '-feedback'} className="mt-1 flex flex-wrap items-center gap-x-2">
+            <p role="alert" className="text-destructive text-sm">
+              {fieldError.reason === 'conflict'
+                ? t('configPage.validation.editConflict')
+                : t(`configPage.compatibility.${fieldError.reason}`)}
+            </p>
+            {fieldError.status ? (
+              <span className="text-meta text-muted-foreground">HTTP {fieldError.status}</span>
+            ) : null}
+            {changed ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="text"
+                disabled={disabled}
+                onClick={() => onDiscardField(fieldError.key)}
+              >
+                {t('configPage.compatibility.discardField')}
+              </Button>
+            ) : null}
+          </div>
+        ) : unreported ? (
+          <p
+            id={fieldId + '-feedback'}
+            className={cn(
+              'text-muted-foreground mt-1 text-xs leading-5',
+              !changed && 'hidden group-focus-within/setting:block',
+            )}
+          >
+            {t('configPage.compatibility.unreported')}
+          </p>
+        ) : null}
+      </div>
     )
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
@@ -4354,18 +4452,7 @@ function StructuredWorkspace({
                 </div>
 
                 {networkPanel === 'current' ? (
-                  <div className="grid gap-3">
-                    {section.fields.map((field) => (
-                      <ConfigField
-                        key={field.key}
-                        field={field}
-                        value={draft[field.key]}
-                        disabled={disabled}
-                        invalid={validationErrors.includes(field.key)}
-                        onChange={onChange}
-                      />
-                    ))}
-                  </div>
+                  <div className="grid gap-3">{section.fields.map(renderField)}</div>
                 ) : (
                   <ProxyPoolsPanel enabled={networkPanel === 'pool'} />
                 )}
@@ -4700,21 +4787,37 @@ export function ConfigWorkbenchPage() {
   return <ConfigWorkbenchSession key={JSON.stringify([baseUrl, connectedAt])} />
 }
 
+type ConfigDraft = { baseline: ConfigSnapshot; values: ConfigStructuredValues }
+
+export function reconcileSavedConfigFields(
+  current: ConfigDraft | null,
+  keys: readonly WritableConfigFieldKey[],
+  reported?: ConfigStructuredValues,
+): ConfigDraft | null {
+  if (!current) return null
+  const structured = { ...current.baseline.structured }
+  const values = { ...current.values }
+  for (const key of keys) {
+    const savedValue = reported ? reported[key] : current.values[key]
+    structured[key] = savedValue
+    values[key] = savedValue
+  }
+  return { values, baseline: { ...current.baseline, structured } }
+}
+
 function ConfigWorkbenchSession() {
   const { t } = useTranslation()
   const [oauthModelChannel, setOauthModelChannel] = useState<ProviderModelChannel>('claude')
   const [oauthModelFilter, setOauthModelFilter] = useState('')
   const workbench = useConfigWorkbench(oauthModelChannel)
-  const [edits, setEdits] = useState<{
-    baseline: NonNullable<typeof workbench.snapshot>
-    values: ConfigStructuredValues
-  } | null>(null)
+  const [edits, setEdits] = useState<ConfigDraft | null>(null)
   const baseline = edits?.baseline ?? workbench.snapshot
   const structuredDraft = edits?.values ?? baseline?.structured
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
+  const [saveError, setSaveError] = useState<ConfigFieldSaveError | null>(null)
 
   const draftCount = useMemo(() => {
     if (payloadDraft) return countPayloadConfigDrafts(payloadDraft)
@@ -4791,26 +4894,25 @@ function ConfigWorkbenchSession() {
   }
 
   const handleStructuredChange = (key: ConfigFieldKey, value: ConfigFieldValue) => {
+    setSaveError((current) => (current?.key === key ? null : current))
     setEdits((current) => ({
       baseline: current?.baseline ?? latest,
       values: { ...(current?.values ?? latest.structured), [key]: value },
     }))
   }
 
+  const reloadFromRuntime = () => {
+    setSaveError(null)
+    setPayloadDraft(null)
+    setEdits(null)
+    workbench.refetch()
+  }
   const handleReload = () => {
     if (isDirty) {
       setConfirmation({ type: 'reload' })
       return
     }
-    setPayloadDraft(null)
-    setEdits(null)
-    workbench.refetch()
-  }
-
-  const reloadFromRuntime = () => {
-    setPayloadDraft(null)
-    setEdits(null)
-    workbench.refetch()
+    reloadFromRuntime()
   }
 
   const handleSave = async () => {
@@ -4821,17 +4923,28 @@ function ConfigWorkbenchSession() {
         return
       }
       await workbench.saveStructured(changes)
+      setSaveError(null)
       setEdits(null)
       setPayloadDraft(null)
       toast.success(t('configPage.toast.saved'))
     } catch (error) {
+      if (!(error instanceof ConfigFieldSaveError)) {
+        toast.error(error instanceof Error ? error.message : String(error))
+        return
+      }
+      setSaveError(error)
+      // Keep failed and unattempted edits. A retry must not resend completed fields.
+      if (error.savedKeys.length) {
+        const refreshed = workbench.getCachedSnapshot()
+        const reported = refreshed && refreshed !== latest ? refreshed.structured : undefined
+        setEdits((current) => reconcileSavedConfigFields(current, error.savedKeys, reported))
+      }
       toast.error(
-        error instanceof ConfigEditConflict
-          ? t('configPage.validation.editConflict')
-          : error instanceof Error
-            ? error.message
-            : String(error),
+        t('configPage.compatibility.saveFailed', {
+          field: t(`configPage.fields.${error.key}.label`),
+        }),
       )
+      window.requestAnimationFrame(() => scrollToConfigTarget(`config-field-${error.key}`))
     }
   }
 
@@ -4895,6 +5008,13 @@ function ConfigWorkbenchSession() {
       >
         <StructuredWorkspace
           draft={structuredDraft}
+          rawConfig={latest.rawConfig}
+          saveError={saveError}
+          onDiscardField={(key) => {
+            if (key === 'payloadRulesJson') setPayloadDraft(null)
+            setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
+            setSaveError(null)
+          }}
           changes={changes}
           validationErrors={visibleValidationErrors}
           disabled={workbench.mutating}

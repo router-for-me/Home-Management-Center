@@ -34,7 +34,7 @@ function fixture(initial: AliasMap) {
       faults.get(method + ' ' + channel) ??
       (method === 'GET' && !Object.hasOwn(saved, channel) ? 404 : 200)
     const response = {
-      data: saved[channel],
+      data: status === 404 ? { error: 'not_found' } : saved[channel],
       config,
       status,
       statusText: String(status),

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { CheckCircle2, Loader2, PlugZap, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { ManagementConnectionError } from '@/components/session/management-connection-error'
 import { ManagementEndpointField } from '@/components/session/management-endpoint-field'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
@@ -170,22 +171,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps) 
           </div>
         ) : null}
 
-        {localError || error ? (
-          <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-            {localError ? (
-              localError
-            ) : error?.backendCode === 'unsupported-api-version' ? (
-              <span className="grid gap-1">
-                <span className="font-medium">
-                  {t('connectionDialog.errors.unsupportedApiVersion.title')}
-                </span>
-                <span>{t('connectionDialog.errors.unsupportedApiVersion.description')}</span>
-              </span>
-            ) : (
-              error?.message
-            )}
-          </div>
-        ) : null}
+        <ManagementConnectionError inputError={localError} error={error} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
           {connected ? (

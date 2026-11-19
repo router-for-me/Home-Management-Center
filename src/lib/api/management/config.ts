@@ -1,4 +1,8 @@
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  createManagementClient,
+  isMissingConfigPath,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import {
   canEditPayloadModel,
   canEditPayloadReplaceRule,
@@ -168,7 +172,7 @@ export type ConfigChange = {
   nextValue: ConfigFieldValue
 }
 
-type ConfigSnapshot = {
+export type ConfigSnapshot = {
   fetchedAt: string
   rawConfig: UnknownRecord
   structured: ConfigStructuredValues
@@ -645,6 +649,9 @@ export async function fetchConfigSnapshot(
 }
 
 type ConfigWriteKind =
+  | 'alias'
+  | 'payload'
+  | 'imageGeneration'
   | 'boolean'
   | 'number'
   | 'string'
@@ -658,12 +665,13 @@ type ConfigWriteTarget = {
   kind: ConfigWriteKind
 }
 
-type ConfigWriteTargetKey = Exclude<
-  WritableConfigFieldKey,
-  'payloadRulesJson' | 'multimediaDisableImageGeneration' | 'oauthModelAliasJson'
->
-
-const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
+const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
+  oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'alias' },
+  payloadRulesJson: { path: 'requests/payload', kind: 'payload' },
+  multimediaDisableImageGeneration: {
+    path: 'multimedia/disable-image-generation',
+    kind: 'imageGeneration',
+  },
   debug: { path: 'observability/logs/debug', kind: 'boolean' },
   port: { path: 'server/port', kind: 'number' },
   pluginsEnabled: { path: 'plugins/enabled', kind: 'boolean' },
@@ -891,6 +899,15 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   },
 }
 
+export function isConfigFieldReported(config: UnknownRecord, key: WritableConfigFieldKey) {
+  let node: unknown = config
+  for (const part of configWriteTargets[key].path.split('/')) {
+    if (!isRecord(node) || !Object.hasOwn(node, part)) return false
+    node = node[part]
+  }
+  return true
+}
+
 export function hasAliasChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
   const before = parseJsonObjectText(change.previousValue)
   const after = parseJsonObjectText(change.nextValue)
@@ -909,9 +926,17 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   // Keep false/0/null as request bodies and JSON-looking strings as strings.
   const putJson = (url: string, value: unknown) =>
     client.put(url, JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
-  const key = change.key
+  const deleteOptional = async (path: string) => {
+    try {
+      await client.delete(path)
+    } catch (error) {
+      if (!isMissingConfigPath(error)) throw error
+    }
+  }
+  const target = configWriteTargets[change.key]
+  const url = `/config/${target.path}`
 
-  if (key === 'oauthModelAliasJson') {
+  if (target.kind === 'alias') {
     const before = parseJsonObjectText(change.previousValue)
     const after = parseJsonObjectText(change.nextValue)
     const channels = changedAliasChannels(before, after)
@@ -923,12 +948,12 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     }
     const pending: { path: string; value: unknown; shrinks: boolean }[] = []
     for (const channel of channels) {
-      const path = '/config/oauth/model-alias/' + encodeURIComponent(channel)
+      const path = url + '/' + encodeURIComponent(channel)
       let current: unknown
       try {
         current = (await client.get<unknown>(path)).data
       } catch (error) {
-        if (toManagementApiError(error).status !== 404) throw error
+        if (!isMissingConfigPath(error)) throw error
       }
       const next = aliasChannelValue(after, channel)
       if (sameConfigValue(current, next)) continue
@@ -943,11 +968,11 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     // Store destinations before deleting sources when a rule moves to another channel.
     pending.sort((left, right) => Number(left.shrinks) - Number(right.shrinks))
     for (const { path, value } of pending) if (value !== undefined) await putJson(path, value)
-    for (const { path, value } of pending) if (value === undefined) await client.delete(path)
+    for (const { path, value } of pending) if (value === undefined) await deleteOptional(path)
     return
   }
 
-  if (key === 'payloadRulesJson') {
+  if (target.kind === 'payload') {
     const payload = sanitizePayloadForWrite(
       parseJsonObjectText(change.nextValue),
       parseJsonObjectText(change.previousValue),
@@ -957,28 +982,25 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     )
 
     if (hasRules) {
-      await putJson('/config/requests/payload', payload)
+      await putJson(url, payload)
       return
     }
 
-    await client.delete('/config/requests/payload')
+    await deleteOptional(url)
     return
   }
 
-  if (key === 'multimediaDisableImageGeneration') {
+  if (target.kind === 'imageGeneration') {
     const value = change.nextValue
 
     if (typeof value === 'string' && !value.trim()) {
-      await client.delete('/config/multimedia/disable-image-generation')
+      await deleteOptional(url)
       return
     }
 
-    await putJson('/config/multimedia/disable-image-generation', value)
+    await putJson(url, value)
     return
   }
-
-  const target = configWriteTargets[key]
-  const url = `/config/${target.path}`
 
   switch (target.kind) {
     case 'boolean':
@@ -993,7 +1015,7 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     case 'string': {
       const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
       if (!value) {
-        await client.delete(url)
+        await deleteOptional(url)
         return
       }
       await putJson(url, value)
@@ -1015,9 +1037,46 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   }
 }
 
+// Home's V8 validator and older yaml.v3 KnownFields decoders report unknown keys differently.
+const unknownConfigField =
+  /^(?:unknown (?:configuration field|field|v8 configuration section|API-key provider)\b|removed configuration field\b|legacy field\b|api-keys\.\S+: unsupported group field\b)|^\s*(?:line \d+: )?field [\w.-]+ not found in type \S+/im
+
+export class ConfigFieldSaveError extends Error {
+  readonly key: WritableConfigFieldKey
+  readonly savedKeys: WritableConfigFieldKey[]
+  readonly reason: 'unavailable' | 'unsupported' | 'rejected' | 'conflict' | 'failed'
+  readonly status?: number
+
+  constructor(key: WritableConfigFieldKey, savedKeys: WritableConfigFieldKey[], cause: unknown) {
+    const apiError = toManagementApiError(cause)
+    super(apiError.message, { cause })
+    this.key = key
+    this.savedKeys = savedKeys
+    const { status, backendCode, message } = apiError
+    this.status = status
+    if (cause instanceof ConfigEditConflict) this.reason = 'conflict'
+    else if (status === 405 || status === 501 || (status === 404 && !backendCode))
+      this.reason = 'unavailable'
+    else if (
+      (status === 400 || status === 422) &&
+      backendCode === 'invalid_config' &&
+      unknownConfigField.test(message)
+    )
+      this.reason = 'unsupported'
+    else if (status === 400 || status === 422) this.reason = 'rejected'
+    else this.reason = 'failed'
+  }
+}
+
 export async function applyConfigChanges(session: ManagementSessionInput, changes: ConfigChange[]) {
+  const savedKeys: WritableConfigFieldKey[] = []
   for (const change of changes) {
-    await applyConfigChange(session, change)
+    try {
+      await applyConfigChange(session, change)
+      savedKeys.push(change.key)
+    } catch (error) {
+      throw new ConfigFieldSaveError(change.key, savedKeys, error)
+    }
   }
 }
 

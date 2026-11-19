@@ -232,6 +232,12 @@ export function toManagementApiError(error: unknown): ManagementApiError {
   }
 }
 
+/** A V8 config subtree GET or DELETE identifies an absent value with this JSON error. */
+export function isMissingConfigPath(error: unknown) {
+  const { status, backendCode } = toManagementApiError(error)
+  return status === 404 && backendCode === 'not_found'
+}
+
 export { DEFAULT_MANAGEMENT_BASE_URL }
 export { CAN_CUSTOMIZE_MANAGEMENT_ENDPOINT }
 export { SAME_ORIGIN_MANAGEMENT_BASE_URL }
