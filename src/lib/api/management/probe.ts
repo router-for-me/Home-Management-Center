@@ -33,6 +33,7 @@ const capabilityRequests: Record<
     | 'credentialCooldownReset'
     | 'quotaRecollect'
     | 'modelChannelBindings'
+    | 'channelGroupCredentialCandidates'
   >,
   {
     path: string
@@ -109,6 +110,7 @@ const emptyCapabilities: CapabilityMap = {
   users: false,
   userPeriodLimits: false,
   accessGroups: false,
+  channelGroupCredentialCandidates: false,
   modelChannelBindings: false,
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
@@ -666,6 +668,10 @@ export async function probeManagementRuntime(
     logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
     accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
+    channelGroupCredentialCandidates:
+      capabilitiesPayload !== null &&
+      readDeclaredCapabilityValue(capabilitySource, ['channel_group_credential_candidates']) ===
+        true,
     // The model-group-details routes predate per-model channel bindings, so an HTTP
     // status probe cannot detect support; only the declared capability bit can.
     modelChannelBindings: declaredModelChannelBindings ?? false,

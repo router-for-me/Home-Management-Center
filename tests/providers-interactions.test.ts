@@ -53,6 +53,7 @@ const noCapabilities: CapabilityMap = {
   requestErrorLogs: false,
   users: false,
   accessGroups: false,
+  channelGroupCredentialCandidates: false,
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
