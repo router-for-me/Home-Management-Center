@@ -3479,7 +3479,7 @@ export const ru = {
           title: 'Провайдеры OAuth',
           shortTitle: 'Провайдеры',
           description:
-            'Настройка каталога учётных данных OAuth и параметров провайдеров Codex, Antigravity и Devin.',
+            'Настройка каталога учётных данных OAuth, числа одновременных обновлений и параметров провайдеров Codex, Antigravity и Devin.',
         },
         devin: {
           title: 'Devin',
@@ -4071,6 +4071,14 @@ export const ru = {
         upstreamXaiInjectXSearch: {
           label: 'Внедрение X Search в xAI',
           description: 'Внедрять возможность X Search в запросы upstream xAI.',
+        },
+        oauthAutoRefreshWorkers: {
+          label: 'Параллельное автообновление OAuth',
+          description:
+            'Сколько учётных данных OAuth Home может обновлять одновременно. При пустом поле, нуле или отрицательном целом числе используется 16. Изменения применяются при сохранении. Текущие обновления завершаются.',
+          placeholder: 'По умолчанию (16)',
+          invalid:
+            'Введите целое число в допустимом диапазоне или оставьте поле пустым для значения по умолчанию.',
         },
         oauthAuthDir: {
           label: 'Каталог OAuth auth',

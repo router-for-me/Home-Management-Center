@@ -3292,7 +3292,8 @@ export const zhTW = {
         oauthProviders: {
           title: 'OAuth 提供商',
           shortTitle: '提供商',
-          description: '設定 OAuth 憑證目錄及 Codex、Antigravity、Devin 等提供商專屬參數。',
+          description:
+            '設定 OAuth 憑證目錄、自動更新並行數及 Codex、Antigravity、Devin 等提供商專屬參數。',
         },
         devin: {
           title: 'Devin',
@@ -3833,6 +3834,13 @@ export const zhTW = {
         upstreamXaiInjectXSearch: {
           label: 'xAI 注入 X Search',
           description: '開啟後向 xAI 上游請求注入 X Search 能力。',
+        },
+        oauthAutoRefreshWorkers: {
+          label: 'OAuth 自動更新並行數',
+          description:
+            'Home 同時自動更新的 OAuth 憑證數量。留白、0 或負整數會使用預設值 16。儲存後立即生效，進行中的更新會繼續完成。',
+          placeholder: '預設（16）',
+          invalid: '請輸入有效範圍內的整數，或留白使用預設值。',
         },
         oauthAuthDir: {
           label: 'OAuth 憑證目錄',

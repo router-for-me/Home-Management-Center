@@ -93,6 +93,28 @@ test.each([
   }),
 )
 
+test('OAuth refresh concurrency shows the default only for an unset value', () =>
+  withConfigWorkbench((renderField) => {
+    const key = 'oauthAutoRefreshWorkers'
+    const copy = en.common.configPage.fields[key]
+    for (const value of [undefined, null, 0, -2, 3, 16]) {
+      const field = renderField(
+        key,
+        value === undefined ? {} : { oauth: { 'auth-auto-refresh-workers': value } },
+      )
+      const control = field.querySelector('input')!
+      expect(control.value).toBe(value == null ? '' : String(value))
+      expect(control.placeholder).toBe(copy.placeholder)
+      expect(control.getAttribute('aria-label')).toBe(copy.label)
+      expect(field.querySelector('#' + control.getAttribute('aria-describedby'))?.textContent).toBe(
+        copy.description,
+      )
+      expect(field.querySelector('button')?.textContent ?? null).toBe(
+        value == null ? null : en.common.configPage.actions.restoreDefault,
+      )
+    }
+  }))
+
 test('a stored management advertisement flag does not expose a switch for management endpoints', () =>
   withConfigWorkbench((renderField) => {
     const field = renderField('discoveryAuthRequired', {

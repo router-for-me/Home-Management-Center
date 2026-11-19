@@ -222,6 +222,18 @@ const credentialForm = () =>
     ),
   )
 
+async function renderConfig(rawConfig: Record<string, unknown>) {
+  const { ConfigWorkbenchPage } = await import('../../src/features/config/config-workbench-page')
+  const { normalizeConfigValues } = await import('../../src/lib/api/management/config')
+  const { TooltipProvider } = await import('../../src/components/ui/tooltip')
+  client.setQueryData(['management-config', 'http://forms.test', 'forms-session'], {
+    fetchedAt: '2026-01-01T00:00:00Z',
+    rawConfig,
+    structured: normalizeConfigValues(rawConfig),
+  })
+  await render(React.createElement(TooltipProvider, {}, React.createElement(ConfigWorkbenchPage)))
+}
+
 const scenario = process.argv[2]
 if (scenario === 'oauth-alias-channel-edit') {
   const { ModelAliasEditor } = await import('../../src/features/config/oauth-model-alias-editor')
@@ -265,16 +277,7 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.equal(button(labels.addAlias).disabled, true)
   assert.deepEqual(draft.plugin, initial.plugin)
 } else if (scenario === 'oauth-model-setting-validation') {
-  const { ConfigWorkbenchPage } = await import('../../src/features/config/config-workbench-page')
-  const { normalizeConfigValues } = await import('../../src/lib/api/management/config')
-  const { TooltipProvider } = await import('../../src/components/ui/tooltip')
-  const rawConfig = { 'config-version': 8 }
-  client.setQueryData(['management-config', 'http://forms.test', 'forms-session'], {
-    fetchedAt: '2026-01-01T00:00:00Z',
-    rawConfig,
-    structured: normalizeConfigValues(rawConfig),
-  })
-  await render(React.createElement(TooltipProvider, {}, React.createElement(ConfigWorkbenchPage)))
+  await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthModelSettingsJson')!
   const toolbar = browser.document.querySelector('[data-config-sticky]')!
   const copy = en.common.configPage
@@ -336,6 +339,39 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.equal(names()[0].getAttribute('aria-invalid'), 'true')
   await edit(names()[0], 'model-c')
   assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+} else if (scenario === 'oauth-refresh-concurrency') {
+  await renderConfig({ 'config-version': 8 })
+  const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!
+  const control = field.querySelector('input')!
+  const copy = en.common.configPage
+  const save = button(copy.actions.save)
+  assert.equal(control.value, '')
+  await React.act(async () => control.focus())
+  await edit(control, 'null')
+  assert.equal(button(copy.actions.viewChanges).disabled, false)
+  assert.equal(save.disabled, true)
+  await edit(control, '-')
+  assert.equal(save.disabled, true)
+  assert.ok(!field.textContent.includes(copy.fields.oauthAutoRefreshWorkers.invalid))
+  await React.act(async () => control.blur())
+  assert.equal(control.getAttribute('aria-invalid'), 'true')
+  assert.ok(field.textContent.includes(copy.fields.oauthAutoRefreshWorkers.invalid))
+  await React.act(async () => control.focus())
+  for (const invalid of ['2.5', '1e2', '9007199254740993']) {
+    await edit(control, invalid)
+    assert.equal(save.disabled, true)
+    assert.equal(control.value, invalid)
+  }
+  await edit(control, '-2')
+  assert.equal(control.getAttribute('aria-invalid'), null)
+  assert.equal(save.disabled, false)
+  await click(field.querySelector('button')!)
+  assert.equal(browser.document.activeElement, control)
+  assert.equal(control.value, '')
+  assert.equal(field.querySelector('button'), null)
+  assert.equal(save.disabled, true)
+  await edit(control, '0')
   assert.equal(save.disabled, false)
 } else if (scenario === 'plugin-loading') {
   await render(pluginForm())

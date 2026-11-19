@@ -3464,7 +3464,7 @@ export const en = {
           title: 'OAuth providers',
           shortTitle: 'Providers',
           description:
-            'Configure the OAuth credential directory and provider-specific settings for Codex, Antigravity, and Devin.',
+            'Configure the OAuth credential directory, refresh concurrency and provider-specific settings for Codex, Antigravity and Devin.',
         },
         devin: {
           title: 'Devin',
@@ -4050,6 +4050,14 @@ export const en = {
         upstreamXaiInjectXSearch: {
           label: 'xAI inject X Search',
           description: 'Inject X Search capability into xAI upstream requests.',
+        },
+        oauthAutoRefreshWorkers: {
+          label: 'OAuth auto-refresh concurrency',
+          description:
+            'How many OAuth credentials Home can refresh at once. Blank, zero or a negative integer uses the default of 16. Changes apply on save and active refreshes run to completion.',
+          placeholder: 'Default (16)',
+          invalid:
+            'Enter a whole number within the supported range or leave it blank for the default.',
         },
         oauthAuthDir: {
           label: 'OAuth auth directory',

@@ -131,6 +131,7 @@ export type ConfigFieldKey =
   | 'upstreamXaiInjectXSearch'
   | 'clientCodexOptimizeMultiAgentV2'
   | 'oauthAuthDir'
+  | 'oauthAutoRefreshWorkers'
   | 'oauthCodexHeaderUserAgent'
   | 'oauthCodexHeaderBetaFeatures'
   | 'liveMediaRelayEnabled'
@@ -203,8 +204,20 @@ function readNullableBoolean(record: UnknownRecord, key: string): boolean | null
   return typeof value === 'boolean' ? value : null
 }
 
-function readNumber(record: UnknownRecord, key: string, fallback = 0) {
+function readNumber(record: UnknownRecord, key: string, fallback: number | null = 0) {
   return typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] : fallback
+}
+
+// Blank input removes the override. Invalid text must stay in the draft.
+export function parseOptionalInteger(value: ConfigFieldValue): number | null | undefined {
+  if (value === null) return null
+  if (typeof value === 'string') {
+    const text = value.trim()
+    if (!text) return null
+    if (!/^[+-]?\d+$/.test(text)) return undefined
+    value = Number(text)
+  }
+  return typeof value === 'number' && Number.isSafeInteger(value) ? value : undefined
 }
 
 function readString(record: UnknownRecord, key: string, fallback = '') {
@@ -608,6 +621,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     upstreamXaiInjectXSearch: readBoolean(upstreamXai, 'inject-x-search'),
     clientCodexOptimizeMultiAgentV2: readBoolean(clientCodex, 'optimize-multi-agent-v2'),
     oauthAuthDir: readString(oauth, 'auth-dir'),
+    oauthAutoRefreshWorkers: readNumber(oauth, 'auth-auto-refresh-workers', null),
     oauthCodexHeaderUserAgent: readString(oauthCodexHeaders, 'user-agent'),
     oauthCodexHeaderBetaFeatures: readString(oauthCodexHeaders, 'beta-features'),
     liveMediaRelayEnabled: readBoolean(liveMediaRelay, 'enabled'),
@@ -695,6 +709,7 @@ type ConfigWriteKind =
   | 'imageGeneration'
   | 'boolean'
   | 'number'
+  | 'optionalInteger'
   | 'string'
   | 'optionalBoolean'
   | 'nullableBoolean'
@@ -878,6 +893,7 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
     kind: 'boolean',
   },
   oauthAuthDir: { path: 'oauth/auth-dir', kind: 'string' },
+  oauthAutoRefreshWorkers: { path: 'oauth/auth-auto-refresh-workers', kind: 'optionalInteger' },
   oauthCodexHeaderUserAgent: {
     path: 'oauth/providers/codex/header-defaults/user-agent',
     kind: 'string',
@@ -1094,6 +1110,14 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     case 'number':
       await putJson(url, Number(change.nextValue))
       return
+    case 'optionalInteger': {
+      const value = parseOptionalInteger(change.nextValue)
+      if (value === undefined)
+        throw new Error('Expected a whole number within the safe integer range')
+      if (value === null) await deleteOptional(url)
+      else await putJson(url, value)
+      return
+    }
     case 'optionalBoolean':
       if (change.nextValue === null) await deleteOptional(url)
       else await putJson(url, change.nextValue)

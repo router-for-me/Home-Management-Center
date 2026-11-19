@@ -24,6 +24,22 @@ function put(
 }
 
 const cases: Case[] = [
+  ...['3', '0', '-2', '+016'].map((text) =>
+    put(
+      `writes OAuth refresh concurrency ${text} as a JSON integer`,
+      'oauthAutoRefreshWorkers',
+      text,
+      'oauth/auth-auto-refresh-workers',
+      Number(text),
+    ),
+  ),
+  {
+    name: 'restores the default OAuth refresh concurrency by deleting its override',
+    key: 'oauthAutoRefreshWorkers',
+    value: null,
+    path: 'oauth/auth-auto-refresh-workers',
+    method: 'DELETE',
+  },
   ...['0', 'false', 'off', 'none', 'disabled', '1h30m'].map((value) =>
     put(
       `writes the Antigravity TOS pause window ${value} as a JSON string`,

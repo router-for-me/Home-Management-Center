@@ -123,6 +123,7 @@ import {
   canEditPayloadConfig,
   hasOAuthChannelConflict,
   isReadOnlyConfigField,
+  parseOptionalInteger,
 } from '@/lib/api/management/config'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
 import { hasInvalidModelSettingChanges } from '@/lib/api/management/oauth-model-settings'
@@ -173,6 +174,7 @@ type ConfigFieldKind =
   | ReplacementKind
   | 'boolean'
   | 'defaultOnBoolean'
+  | 'optionalInteger'
   | 'number'
   | 'text'
   | 'sensitiveText'
@@ -576,6 +578,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'oauthProviders',
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
+      { key: 'oauthAutoRefreshWorkers', kind: 'optionalInteger', sectionId: 'oauthProviders' },
       {
         key: 'devinSensitiveWordsJson',
         kind: 'jsonArray',
@@ -1541,6 +1544,7 @@ function areConfigValuesEqual(
   left: ConfigStructuredValues[ConfigFieldKey],
   right: ConfigStructuredValues[ConfigFieldKey],
 ) {
+  if (left === null || right === null) return left === right
   return String(left) === String(right)
 }
 
@@ -1564,6 +1568,10 @@ function getStructuredChanges(
 }
 
 function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): ConfigFieldValue {
+  if (fieldDefinitionByKey[key].kind === 'optionalInteger') {
+    const integer = parseOptionalInteger(value)
+    return integer === undefined ? value : integer
+  }
   if (key === 'antigravityTosPauseWindow') return String(value ?? '').trim()
   if (key !== 'payloadRulesJson') return value
   try {
@@ -1597,6 +1605,7 @@ function getValidationErrors(
         if (hasPayloadDrafts !== null) return hasPayloadDrafts
         if (value === saved?.payloadRulesJson) return false
       }
+      if (field.kind === 'optionalInteger') return parseOptionalInteger(value) === undefined
       if (field.kind === 'number') {
         const num = typeof value === 'number' ? value : Number(value)
         if (typeof value !== 'number' || Number.isNaN(value) || !Number.isInteger(num)) return true
@@ -1884,15 +1893,18 @@ function ConfigField({
   value,
   disabled,
   invalid,
+  onEditingIntegerChange,
   onChange,
 }: {
   field: ConfigFieldDefinition
   value: ConfigStructuredValues[ConfigFieldKey]
   disabled: boolean
   invalid: boolean
+  onEditingIntegerChange: (key: ConfigFieldKey | null) => void
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
   const { t, i18n } = useTranslation()
+  const integerInput = useRef<HTMLInputElement>(null)
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
@@ -1939,6 +1951,40 @@ function ConfigField({
             disabled={controlDisabled}
             onChange={(nextValue) => onChange(field.key, nextValue)}
           />
+        ) : null}
+        {field.kind === 'optionalInteger' ? (
+          <div className="flex w-full min-w-0 items-center gap-2 md:max-w-80">
+            <Input
+              ref={integerInput}
+              inputMode="numeric"
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={invalid ? `${descriptionId} ${errorId}` : descriptionId}
+              aria-invalid={invalid || undefined}
+              value={String(value ?? '')}
+              placeholder={placeholder}
+              disabled={controlDisabled}
+              className="min-w-0 flex-1"
+              onChange={(event) => {
+                if (!invalid) onEditingIntegerChange(field.key)
+                onChange(field.key, event.target.value)
+              }}
+              onBlur={() => onEditingIntegerChange(null)}
+            />
+            {parseOptionalInteger(value) !== null && (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={controlDisabled}
+                onClick={() => {
+                  integerInput.current?.focus({ preventScroll: true })
+                  onChange(field.key, null)
+                }}
+              >
+                {t('configPage.actions.restoreDefault')}
+              </Button>
+            )}
+          </div>
         ) : null}
         {field.kind === 'number' ? (
           <Input
@@ -4598,6 +4644,7 @@ function StructuredWorkspace({
   onDiscardField,
   changes,
   validationErrors,
+  onEditingIntegerChange,
   disabled,
   oauthModelCatalog,
   onChange,
@@ -4607,6 +4654,7 @@ function StructuredWorkspace({
   onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
   validationErrors: ConfigFieldKey[]
+  onEditingIntegerChange: (key: ConfigFieldKey | null) => void
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
@@ -4649,6 +4697,7 @@ function StructuredWorkspace({
             value={draft[field.key]}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
+            onEditingIntegerChange={onEditingIntegerChange}
             onChange={onChange}
           />
         )}
@@ -4980,6 +5029,8 @@ function ConfigChangePreview({
     if (change.key === 'antigravityTosPauseWindow' && value === '')
       return t('configPage.fields.antigravityTosPauseWindow.placeholder')
     const kind = fieldDefinitionByKey[change.key].kind
+    if (kind === 'optionalInteger' && value === null)
+      return t(`configPage.fields.${change.key}.placeholder`)
     if (kind === 'literalReplacements' || kind === 'patternReplacements') {
       const rows = parseReplacementDraft(value)
       if (!rows) return t('sensitiveReplacements.unsupported')
@@ -5139,6 +5190,7 @@ function ConfigWorkbenchSession() {
   const structuredDraft = edits?.values ?? baseline?.structured
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
+  const [editingInteger, setEditingInteger] = useState<ConfigFieldKey | null>(null)
   const modelSettingFeedback = useState<ModelSettingIssue[]>([])
   const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
@@ -5185,6 +5237,7 @@ function ConfigWorkbenchSession() {
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
     (key) =>
+      key !== editingInteger &&
       (key !== 'payloadRulesJson' || !payloadDraft) &&
       (key !== 'oauthModelSettingsJson' || modelSettingIssues.length > 0),
   )
@@ -5349,6 +5402,7 @@ function ConfigWorkbenchSession() {
             }}
             changes={changes}
             validationErrors={visibleValidationErrors}
+            onEditingIntegerChange={setEditingInteger}
             disabled={workbench.mutating}
             oauthModelCatalog={oauthModelCatalog}
             onChange={handleStructuredChange}
