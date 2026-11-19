@@ -81,6 +81,21 @@ const cases: Case[] = [
     null,
     'oauth/providers/antigravity/signature-cache-enabled',
   ),
+  ...[false, true].map((value) =>
+    put(
+      `writes an explicit subagent session affinity override of ${value}`,
+      'sessionAffinitySubagents',
+      value,
+      'routing/session-affinity-subagents',
+    ),
+  ),
+  {
+    name: 'restores default subagent affinity by deleting only its override',
+    key: 'sessionAffinitySubagents',
+    value: null,
+    path: 'routing/session-affinity-subagents',
+    method: 'DELETE',
+  },
   put(
     'preserves nullable false',
     'antigravitySignatureBypassStrict',

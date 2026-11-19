@@ -144,6 +144,22 @@ const steering: ConfigChange = {
 const retry: ConfigChange = { key: 'requestRetry', previousValue: 0, nextValue: 1 }
 
 describe('optional V8 fields and writes', () => {
+  test.each([false, true])(
+    'keeps the subagent override distinct when main affinity is %s',
+    (parent) => {
+      const routing = { 'session-affinity': parent }
+      expect(normalizeConfigValues({ routing }).sessionAffinitySubagents).toBeNull()
+      for (const value of [null, false, true]) {
+        expect(
+          normalizeConfigValues({ routing: { ...routing, 'session-affinity-subagents': value } }),
+        ).toMatchObject({
+          sessionAffinity: parent,
+          sessionAffinitySubagents: value,
+        })
+      }
+    },
+  )
+
   test('a partial save accepts normalized server values and preserves failed and unattempted drafts', () => {
     const structured = normalizeConfigValues({})
     const before = {

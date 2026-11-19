@@ -3328,6 +3328,7 @@ export const en = {
         reload: 'Reload',
         save: 'Save',
         viewChanges: 'View changes',
+        restoreDefault: 'Restore default',
         showSensitive: 'Show sensitive field',
         hideSensitive: 'Hide sensitive field',
       },
@@ -3827,7 +3828,9 @@ export const en = {
         },
         sessionAffinitySubagents: {
           label: 'Subagent session affinity',
-          description: 'Include subagent requests in session affinity routing.',
+          defaultOn: 'Default (on)',
+          description:
+            'On by default. Requires session affinity. An unbound child can inherit its parent’s credential for the same provider and model. Guardian can reuse the parent’s latest eligible credential across models. Turning this off restores normal selection for unbound children and stops adding parent credential choices to Guardian history. Existing child bindings and forks still work.',
         },
         streamingKeepaliveSeconds: {
           label: 'Stream keepalive interval (seconds)',

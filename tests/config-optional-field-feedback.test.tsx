@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import { expect, spyOn, test } from 'bun:test'
-import { Window } from 'happy-dom'
+import { type HTMLElement, Window } from 'happy-dom'
 import { createInstance } from 'i18next'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { I18nextProvider } from 'react-i18next'
@@ -9,10 +9,12 @@ import { I18nextProvider } from 'react-i18next'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ConfigWorkbenchPage } from '@/features/config/config-workbench-page'
 import * as workbench from '@/features/config/use-config-workbench'
-import { normalizeConfigValues } from '@/lib/api/management/config'
+import { type ConfigFieldKey, normalizeConfigValues } from '@/lib/api/management/config'
 import { en } from '@/lib/i18n/locales/en'
 
-test('an omitted optional switch has the same initial UI as its reported default', async () => {
+type RenderField = (key: ConfigFieldKey, config: Record<string, unknown>) => HTMLElement
+
+async function withConfigWorkbench(check: (renderField: RenderField) => void) {
   const i18n = createInstance()
   await i18n.init({ resources: { en }, lng: 'en', defaultNS: 'common' })
   const client = new QueryClient()
@@ -38,19 +40,47 @@ test('an omitted optional switch has the same initial UI as its reported default
       </QueryClientProvider>
     </I18nextProvider>
   )
-  function renderSwitch() {
+  const renderField: RenderField = (key, config) => {
+    rawConfig = { 'config-version': 8, ...config }
     browser.document.body.innerHTML = renderToStaticMarkup(page)
-    const field = browser.document.getElementById('config-field-upstreamCodexResponseSteering')
-    expect(field?.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false')
-    return field!.outerHTML
+    const field = browser.document.getElementById(`config-field-${key}`)
+    if (!field) throw new Error(`Missing configuration field ${key}`)
+    return field
   }
   try {
-    const initial = renderSwitch()
-    rawConfig = { ...rawConfig, upstream: { codex: { 'response-steering': false } } }
-    expect(renderSwitch()).toBe(initial)
+    check(renderField)
   } finally {
     hook.mockRestore()
     client.clear()
     await browser.happyDOM.close()
   }
-})
+}
+
+test('an omitted optional switch has the same initial UI as its reported default', () =>
+  withConfigWorkbench((renderField) => {
+    const key = 'upstreamCodexResponseSteering'
+    const initial = renderField(key, {})
+    expect(initial.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('false')
+    const explicit = renderField(key, { upstream: { codex: { 'response-steering': false } } })
+    expect(explicit.outerHTML).toBe(initial.outerHTML)
+  }))
+
+test('subagent affinity uses one switch and only explicit values offer a reset', () =>
+  withConfigWorkbench((renderField) => {
+    for (const value of [undefined, null, false, true]) {
+      const routing = value === undefined ? {} : { 'session-affinity-subagents': value }
+      const field = renderField('sessionAffinitySubagents', { routing })
+      const switches = field.querySelectorAll('[role="switch"]')
+      expect(switches).toHaveLength(1)
+      const toggle = switches[0]
+      expect(toggle.getAttribute('aria-checked')).toBe(String(value ?? true))
+      expect(toggle.getAttribute('aria-label')).toBe(
+        en.common.configPage.fields.sessionAffinitySubagents.label,
+      )
+      expect(field.querySelector('[role="combobox"]')).toBeNull()
+      const reset = [...field.querySelectorAll('button')].filter((button) => button !== toggle)
+      expect(reset.map((button) => button.textContent)).toEqual(
+        value == null ? [] : ['Restore default'],
+      )
+    }
+  }))
