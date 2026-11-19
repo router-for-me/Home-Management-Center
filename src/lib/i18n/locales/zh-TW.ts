@@ -3145,6 +3145,7 @@ export const zhTW = {
         hideSensitive: '隱藏敏感欄位',
       },
       status: {
+        unknown: '未知',
         clean: '無未儲存修改',
         visualChangeCount: '{{count}} 項視覺化變更',
         enabled: '已啟用',
@@ -3214,7 +3215,7 @@ export const zhTW = {
           title: '日誌與統計',
           shortTitle: '日誌',
           description:
-            '控制 Debug 診斷、請求日誌、檔案日誌、用量統計、日誌保留、pprof 和 Redis 用量佇列。',
+            '設定 Debug 診斷、請求日誌、檔案日誌、日誌保留、pprof 和 Redis 用量佇列，並查看用量統計狀態。',
         },
         network: {
           title: '網路代理',
@@ -3275,6 +3276,10 @@ export const zhTW = {
           description:
             '下發給下游 CPA 節點的監聽連接埠（1~65535）。修改後會持久化並下發，已執行的 CPA 需重啟行程後生效。',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: '用量統計',
+          description: 'Home 固定啟用用量統計。此處顯示目前後端回傳的狀態。',
         },
         loggingToFile: {
           label: '檔案日誌',

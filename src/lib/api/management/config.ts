@@ -28,6 +28,7 @@ export type ConfigFieldKey =
   | 'pluginsDir'
   | 'pluginStoreSourcesJson'
   | 'loggingToFile'
+  | 'usageStatisticsEnabled'
   | 'logsMaxTotalSizeMb'
   | 'errorLogsMaxFiles'
   | 'tlsEnable'
@@ -145,9 +146,17 @@ export type ConfigFieldKey =
   | 'pprofAddr'
   | 'redisUsageQueueRetentionSeconds'
 
-export type ReadOnlyConfigFieldKey =
-  | 'concurrencyLifecycleConfigRevision'
-  | 'concurrencyObservationBarrierRevision'
+const readOnlyFields = [
+  'concurrencyLifecycleConfigRevision',
+  'concurrencyObservationBarrierRevision',
+  'usageStatisticsEnabled',
+] as const satisfies readonly ConfigFieldKey[]
+
+export type ReadOnlyConfigFieldKey = (typeof readOnlyFields)[number]
+
+export function isReadOnlyConfigField(key: ConfigFieldKey): key is ReadOnlyConfigFieldKey {
+  return readOnlyFields.some((field) => field === key)
+}
 
 export type WritableConfigFieldKey = Exclude<ConfigFieldKey, ReadOnlyConfigFieldKey>
 
@@ -412,6 +421,18 @@ function sanitizePayloadReplaceSection(value: unknown, previous: unknown) {
   return result
 }
 
+export function readObservabilityFlags(config: UnknownRecord) {
+  const observability = toRecord(config.observability)
+  const logs = toRecord(observability.logs)
+  const usage = toRecord(observability.usage)
+  return {
+    debug: readBoolean(logs, 'debug'),
+    requestLog: readBoolean(logs, 'request-log'),
+    loggingToFile: readBoolean(logs, 'logging-to-file'),
+    usageStatisticsEnabled: readNullableBoolean(usage, 'usage-statistics-enabled'),
+  }
+}
+
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
   const server = toRecord(rawConfig.server)
   const serverTls = toRecord(server.tls)
@@ -452,12 +473,11 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const multimedia = toRecord(rawConfig.multimedia)
 
   return {
-    debug: readBoolean(observabilityLogs, 'debug'),
+    ...readObservabilityFlags(rawConfig),
     port: readNumber(server, 'port', 8317),
     pluginsEnabled: readBoolean(plugins, 'enabled'),
     pluginsDir: readString(plugins, 'dir', 'plugins'),
     pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
-    loggingToFile: readBoolean(observabilityLogs, 'logging-to-file'),
     logsMaxTotalSizeMb: readNumber(observabilityLogs, 'logs-max-total-size-mb'),
     errorLogsMaxFiles: readNumber(observabilityLogs, 'error-logs-max-files', 10),
     tlsEnable: readBoolean(serverTls, 'enable'),
@@ -467,7 +487,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     remoteManagementSecretKey: readString(management, 'secret-key'),
     remoteManagementDisableControlPanel: readBoolean(management, 'disable-control-panel'),
     proxyUrl: readString(requests, 'proxy-url'),
-    requestLog: readBoolean(observabilityLogs, 'request-log'),
     requestRetry: readNumber(routingRetry, 'request-retry'),
     maxRetryCredentials: readNumber(routingRetry, 'max-retry-credentials'),
     maxRetryInterval: readNumber(routingRetry, 'max-retry-interval'),

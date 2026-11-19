@@ -3144,6 +3144,7 @@ export const zhCN = {
         hideSensitive: '隐藏敏感字段',
       },
       status: {
+        unknown: '未知',
         clean: '无未保存修改',
         visualChangeCount: '{{count}} 项可视化变更',
         enabled: '已启用',
@@ -3213,7 +3214,7 @@ export const zhCN = {
           title: '日志与统计',
           shortTitle: '日志',
           description:
-            '控制 Debug 诊断、请求日志、文件日志、用量统计、日志保留、pprof 和 Redis 用量队列。',
+            '配置 Debug 诊断、请求日志、文件日志、日志保留、pprof 和 Redis 用量队列，并查看用量统计状态。',
         },
         network: {
           title: '网络代理',
@@ -3274,6 +3275,10 @@ export const zhCN = {
           description:
             '下发给下游 CPA 节点的监听端口（1~65535）。修改后会持久化并下发，已运行的 CPA 需重启进程后生效。',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: '用量统计',
+          description: 'Home 固定启用用量统计。这里显示当前后端回读的状态。',
         },
         loggingToFile: {
           label: '文件日志',

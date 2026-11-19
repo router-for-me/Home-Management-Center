@@ -5,6 +5,7 @@ import { sectionDefinitions } from '../src/features/config/config-workbench-page
 import {
   applyConfigChange,
   fetchConfigSnapshot,
+  isReadOnlyConfigField,
   normalizeConfigValues,
 } from '../src/lib/api/management/config'
 import { en } from '../src/lib/i18n/locales/en'
@@ -218,7 +219,6 @@ describe('Antigravity sensitive words configuration', () => {
       'aistudioWsAuth',
       'quotaSwitchProject',
       'quotaSwitchPreviewModel',
-      'usageStatisticsEnabled',
     ]
     const allDefinedKeys = sectionDefinitions.flatMap((section) =>
       section.fields.map((field) => field.key),
@@ -228,6 +228,15 @@ describe('Antigravity sensitive words configuration', () => {
     for (const key of removedFieldKeys) {
       expect(allDefinedKeys).not.toContain(key)
       expect(normalizedValues).not.toHaveProperty(key)
+    }
+  })
+
+  test('shows the reported usage flag as a read-only observability setting (#194)', () => {
+    const fields = sectionDefinitions.find((section) => section.id === 'system')?.fields ?? []
+    expect(fields.some((field) => field.key === 'usageStatisticsEnabled')).toBe(true)
+    expect(isReadOnlyConfigField('usageStatisticsEnabled')).toBe(true)
+    for (const key of ['debug', 'requestLog', 'loggingToFile'] as const) {
+      expect(isReadOnlyConfigField(key)).toBe(false)
     }
   })
 
