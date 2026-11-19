@@ -436,6 +436,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         options: ['round-robin', 'weighted-round-robin', 'fill-first'],
       },
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
+      {
+        key: 'sessionAffinityRebindOn',
+        kind: 'select',
+        sectionId: 'streaming',
+        options: ['any', 'quota', 'never'],
+      },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
       { key: 'sessionAffinitySubagents', kind: 'defaultOnBoolean', sectionId: 'streaming' },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -1866,11 +1872,15 @@ function ConfigField({
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
   const descriptionId =
-    field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean'
+    field.kind === 'select' || field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean'
       ? `config-field-${field.key}-description`
       : undefined
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
+  const optionLabelKey =
+    field.key === 'routingStrategy'
+      ? 'configPage.routingStrategies'
+      : `configPage.fields.${field.key}.options`
 
   return (
     <div
@@ -1882,7 +1892,9 @@ function ConfigField({
       <div className="min-w-0">
         <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
         <p id={descriptionId} className="text-muted-foreground mt-1 text-xs leading-5">
-          {t(`configPage.fields.${field.key}.description`)}
+          {t(`configPage.fields.${field.key}.description`, {
+            context: field.kind === 'select' ? String(value) : undefined,
+          })}
         </p>
         {invalid ? (
           <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
@@ -1966,15 +1978,16 @@ function ConfigField({
             <SelectTrigger
               className="md:w-56"
               aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={descriptionId}
             >
-              <SelectValue />
+              <SelectValue>
+                {t(`${optionLabelKey}.${value}`, { defaultValue: String(value) })}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {field.options?.map((option) => (
                 <SelectItem key={option} value={option}>
-                  {field.key === 'routingStrategy'
-                    ? t(`configPage.routingStrategies.${option}`)
-                    : t(`configPage.fields.${field.key}.options.${option}`)}
+                  {t(`${optionLabelKey}.${option}`)}
                 </SelectItem>
               ))}
             </SelectContent>

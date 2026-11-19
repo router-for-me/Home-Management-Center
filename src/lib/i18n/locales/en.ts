@@ -3848,6 +3848,21 @@ export const en = {
           label: 'Session affinity',
           description: 'Route the same session to the same credential when possible.',
         },
+        sessionAffinityRebindOn: {
+          label: 'Session rebinding policy',
+          description: 'This policy applies when session affinity is on.',
+          description_any:
+            'With session affinity on, each failover binds the session to the new credential for subsequent requests.',
+          description_quota:
+            'With session affinity on, a transient failure switches credentials for this request only. Quota, authentication, or model-support failures can move the binding to a new credential.',
+          description_never:
+            'With session affinity on, a live binding keeps its credential. If it is unavailable, Home retries it or returns an error. Home can select a new credential once the binding expires.',
+          options: {
+            any: 'Any failover (default)',
+            quota: 'Selected failures',
+            never: 'Keep original binding',
+          },
+        },
         sessionAffinityTtl: {
           label: 'Session affinity TTL',
           description:

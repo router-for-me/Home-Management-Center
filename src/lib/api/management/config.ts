@@ -104,6 +104,7 @@ export type ConfigFieldKey =
   | 'inFlightMaxDetails'
   | 'inFlightMaxStringBytes'
   | 'sessionAffinity'
+  | 'sessionAffinityRebindOn'
   | 'sessionAffinityTtl'
   | 'sessionAffinitySubagents'
   | 'streamingKeepaliveSeconds'
@@ -567,6 +568,8 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     inFlightMaxDetails: readNumber(inFlight, 'max-details', 10_000),
     inFlightMaxStringBytes: readNumber(inFlight, 'max-string-bytes', 256),
     sessionAffinity: readBoolean(routing, 'session-affinity'),
+    sessionAffinityRebindOn:
+      readString(routing, 'session-affinity-rebind-on').trim().toLowerCase() || 'any',
     sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
     sessionAffinitySubagents: readNullableBoolean(routing, 'session-affinity-subagents'),
     streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
@@ -803,6 +806,7 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   inFlightMaxDetails: { path: 'credentials/in-flight/max-details', kind: 'number' },
   inFlightMaxStringBytes: { path: 'credentials/in-flight/max-string-bytes', kind: 'number' },
   sessionAffinity: { path: 'routing/session-affinity', kind: 'boolean' },
+  sessionAffinityRebindOn: { path: 'routing/session-affinity-rebind-on', kind: 'string' },
   sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
   sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'optionalBoolean' },
   streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },

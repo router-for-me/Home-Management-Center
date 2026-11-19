@@ -3646,6 +3646,20 @@ export const zhCN = {
           label: '粘性会话',
           description: '开启后同一会话优先路由到同一凭证。',
         },
+        sessionAffinityRebindOn: {
+          label: '会话重绑定策略',
+          description: '此策略仅在粘性会话开启时生效。',
+          description_any: '开启粘性会话后，故障切换时会将会话绑定到新凭证。后续请求沿用新凭证。',
+          description_quota:
+            '开启粘性会话后，临时故障只让当前请求换用其他凭证，后续请求仍沿用原绑定。额度、鉴权或模型支持问题可触发重绑。',
+          description_never:
+            '开启粘性会话后，绑定有效期间只使用原凭证。凭证不可用时，Home 会重试该凭证或返回错误。绑定过期后可重新选择。',
+          options: {
+            any: '切换即重绑（默认）',
+            quota: '按错误类型重绑',
+            never: '保持原绑定',
+          },
+        },
         sessionAffinityTtl: {
           label: '粘性会话有效期',
           description: '粘性会话绑定的有效时长（Go duration）；留空恢复后端默认。',

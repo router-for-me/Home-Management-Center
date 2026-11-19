@@ -103,3 +103,31 @@ test('a stored management advertisement flag does not expose a switch for manage
     expect(section?.querySelector('#config-field-discoveryAdvertiseManagement')).toBeNull()
     expect(field.querySelector('[role="switch"]')?.getAttribute('aria-checked')).toBe('true')
   }))
+
+test('session rebinding shows the effective policy and explains the selected behavior', () =>
+  withConfigWorkbench((renderField) => {
+    const copy = en.common.configPage.fields.sessionAffinityRebindOn
+    for (const [raw, label, description] of [
+      [undefined, copy.options.any, copy.description_any],
+      [null, copy.options.any, copy.description_any],
+      ['  ', copy.options.any, copy.description_any],
+      ['any', copy.options.any, copy.description_any],
+      [' QuOtA ', copy.options.quota, copy.description_quota],
+      ['never', copy.options.never, copy.description_never],
+      ['future-mode', 'future-mode', copy.description],
+    ] as const) {
+      const field = renderField('sessionAffinityRebindOn', {
+        routing: {
+          'session-affinity': false,
+          ...(raw === undefined ? {} : { 'session-affinity-rebind-on': raw }),
+        },
+      })
+      const select = field.querySelector('[role="combobox"]')
+      expect(select?.textContent).toBe(label)
+      expect(select?.hasAttribute('disabled')).toBe(false)
+      expect(select?.getAttribute('aria-label')).toBe(copy.label)
+      expect(field.querySelector('#' + select?.getAttribute('aria-describedby'))?.textContent).toBe(
+        description,
+      )
+    }
+  }))
