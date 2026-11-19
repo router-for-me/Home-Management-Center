@@ -1149,7 +1149,7 @@ export function DashboardConsolePage() {
                         defaultValue:
                           check.value === 'unknown' ? t('dashboard.status.unknown') : check.value,
                       })
-                    : t(`dashboard.status.${check.enabled ? 'enabled' : 'disabled'}`)
+                    : t(`dashboard.status.${check.value}`)
 
                 return (
                   <div

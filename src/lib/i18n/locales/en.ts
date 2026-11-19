@@ -3300,6 +3300,7 @@ export const en = {
         hideSensitive: 'Hide sensitive field',
       },
       status: {
+        unknown: 'Unknown',
         clean: 'No unsaved changes',
         visualChangeCount: '{{count}} visual changes',
         enabled: 'Enabled',
@@ -3377,7 +3378,7 @@ export const en = {
           title: 'Logs and usage',
           shortTitle: 'Logs',
           description:
-            'Control debug diagnostics, request logs, file logs, usage statistics, log retention, pprof, and the Redis usage queue.',
+            'Configure debug diagnostics, request and file logs, retention, pprof, and the Redis usage queue. View the current usage statistics status.',
         },
         network: {
           title: 'Network proxy',
@@ -3442,6 +3443,11 @@ export const en = {
           description:
             'Listening port distributed to downstream CPA nodes (1–65535). Changes are persisted and broadcast immediately, but running CPA instances must be restarted to rebind.',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: 'Usage statistics',
+          description:
+            'Home keeps usage statistics enabled. This status comes from the connected backend.',
         },
         loggingToFile: {
           label: 'File logging',

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { formatClientKeyIdentityLabel } from '../src/features/access-keys/access-key-display'
 import { createDashboardOverviewViewModel } from '../src/features/dashboard/dashboard-model'
 import type { AccessKeyResource } from '../src/lib/api/management/access-keys'
+import { normalizeConfigValues } from '../src/lib/api/management/config'
 import {
   type DashboardSnapshot,
   fetchManagementDashboardSnapshot,
@@ -77,6 +78,81 @@ const providerKey: DashboardSnapshot['providers'][number] = {
   active: 1,
   disabled: 0,
 }
+
+describe('V8 observability on the dashboard and config page', () => {
+  const booleanPairs = [
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ] as const
+  for (const [debug, requestLog] of booleanPairs) {
+    for (const [loggingToFile, usageStatisticsEnabled] of booleanPairs) {
+      test(`debug=${debug} requestLog=${requestLog} loggingToFile=${loggingToFile} usage=${usageStatisticsEnabled}`, () => {
+        const config = {
+          'config-version': 8,
+          observability: {
+            logs: { debug, 'request-log': requestLog, 'logging-to-file': loggingToFile },
+            usage: { 'usage-statistics-enabled': usageStatisticsEnabled },
+          },
+          debug: !debug,
+          'request-log': !requestLog,
+          'logging-to-file': !loggingToFile,
+          'usage-statistics-enabled': !usageStatisticsEnabled,
+        }
+        const dashboard = createDashboardOverviewViewModel(
+          createSnapshot({ config }),
+          capabilities,
+          'home-standalone',
+        )
+        const badges = Object.fromEntries(dashboard.configChecks.map((check) => [check.id, check]))
+        for (const [id, enabled] of Object.entries({
+          debug,
+          requestLog,
+          fileLogging: loggingToFile,
+          usageStatistics: usageStatisticsEnabled,
+        })) {
+          expect(badges[id]).toMatchObject({ enabled, value: enabled ? 'enabled' : 'disabled' })
+        }
+        expect(badges.debug.tone).toBe(debug ? 'warning' : 'positive')
+        expect(dashboard.healthSummary.id).toBe(debug ? 'degraded' : 'ready')
+        expect(dashboard.recommendedActions.some((action) => action.id === 'reviewDebug')).toBe(
+          debug,
+        )
+        expect(normalizeConfigValues(config)).toMatchObject({
+          debug,
+          requestLog,
+          loggingToFile,
+          usageStatisticsEnabled,
+        })
+      })
+    }
+  }
+
+  test.each([{}, { logs: null, usage: [] }, { usage: { 'usage-statistics-enabled': 'false' } }])(
+    'defaults omitted logging flags and distinguishes unreported usage from an explicit false (%#)',
+    (observability) => {
+      const config = { observability, 'usage-statistics-enabled': true }
+      const dashboard = createDashboardOverviewViewModel(
+        createSnapshot({ config }),
+        capabilities,
+        'home-cluster',
+      )
+      expect(dashboard.configChecks.find((check) => check.id === 'usageStatistics')).toEqual({
+        id: 'usageStatistics',
+        enabled: null,
+        value: 'unknown',
+        tone: 'neutral',
+      })
+      expect(normalizeConfigValues(config)).toMatchObject({
+        debug: false,
+        requestLog: false,
+        loggingToFile: false,
+        usageStatisticsEnabled: null,
+      })
+    },
+  )
+})
 
 describe('dashboard runtime readiness', () => {
   test('treats OAuth-only model access as ready without recommending a provider key', () => {

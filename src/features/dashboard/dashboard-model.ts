@@ -1,5 +1,6 @@
 import { formatClientKeyIdentityLabel } from '@/features/access-keys/access-key-display'
 import type { AccessKeyResource } from '@/lib/api/management/access-keys'
+import { readObservabilityFlags } from '@/lib/api/management/config'
 import type { DashboardSnapshot } from '@/lib/api/management/dashboard'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { CapabilityMap, RuntimeMode } from '@/lib/api/management/types'
@@ -67,7 +68,7 @@ export type DashboardOperatingKpi = {
 
 export type DashboardConfigCheck = {
   id: DashboardConfigCheckId
-  enabled: boolean
+  enabled: boolean | null
   value: string
   tone: DashboardTone
 }
@@ -172,8 +173,19 @@ export type DashboardOverviewViewModel = {
   issueCount: number
 }
 
-function readBoolean(config: Record<string, unknown>, key: string): boolean {
-  return config[key] === true
+function booleanConfigCheck(
+  id: Exclude<DashboardConfigCheckId, 'routing'>,
+  enabled: boolean | null,
+  enabledTone: DashboardTone,
+  disabledTone: DashboardTone,
+): DashboardConfigCheck {
+  if (enabled === null) return { id, enabled, value: 'unknown', tone: 'neutral' }
+  return {
+    id,
+    enabled,
+    value: enabled ? 'enabled' : 'disabled',
+    tone: enabled ? enabledTone : disabledTone,
+  }
 }
 
 function getDashboardCapabilityTone(id: DashboardCapabilityId): DashboardTone {
@@ -475,7 +487,12 @@ export function createDashboardOverviewViewModel(
     return 'neutral'
   }
   const routingStrategy = readManagementRoutingStrategy(snapshot.config)
-  const debugEnabled = readBoolean(snapshot.config, 'debug')
+  const {
+    debug: debugEnabled,
+    requestLog,
+    loggingToFile,
+    usageStatisticsEnabled,
+  } = readObservabilityFlags(snapshot.config)
   const nodeTopologySupported = capabilities.topology || capabilities.nodes
   const nodeCount = snapshot.nodeTopology?.cpaCount ?? snapshot.nodes.length
   const homeNodeCount = snapshot.nodeTopology?.homeCount ?? 0
@@ -586,30 +603,10 @@ export function createDashboardOverviewViewModel(
     operatingKpis,
     metrics,
     configChecks: [
-      {
-        id: 'requestLog',
-        enabled: readBoolean(snapshot.config, 'request-log'),
-        value: readBoolean(snapshot.config, 'request-log') ? 'enabled' : 'disabled',
-        tone: readBoolean(snapshot.config, 'request-log') ? 'positive' : 'warning',
-      },
-      {
-        id: 'usageStatistics',
-        enabled: readBoolean(snapshot.config, 'usage-statistics-enabled'),
-        value: readBoolean(snapshot.config, 'usage-statistics-enabled') ? 'enabled' : 'disabled',
-        tone: readBoolean(snapshot.config, 'usage-statistics-enabled') ? 'positive' : 'warning',
-      },
-      {
-        id: 'fileLogging',
-        enabled: readBoolean(snapshot.config, 'logging-to-file'),
-        value: readBoolean(snapshot.config, 'logging-to-file') ? 'enabled' : 'disabled',
-        tone: readBoolean(snapshot.config, 'logging-to-file') ? 'positive' : 'neutral',
-      },
-      {
-        id: 'debug',
-        enabled: debugEnabled,
-        value: debugEnabled ? 'enabled' : 'disabled',
-        tone: debugEnabled ? 'warning' : 'positive',
-      },
+      booleanConfigCheck('requestLog', requestLog, 'positive', 'warning'),
+      booleanConfigCheck('usageStatistics', usageStatisticsEnabled, 'positive', 'warning'),
+      booleanConfigCheck('fileLogging', loggingToFile, 'positive', 'neutral'),
+      booleanConfigCheck('debug', debugEnabled, 'warning', 'positive'),
       {
         id: 'routing',
         enabled: routingStrategy !== 'unknown',

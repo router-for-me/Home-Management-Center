@@ -112,6 +112,7 @@ import {
   type WritableConfigFieldKey,
   canEditPayloadConfig,
   hasAliasChannelConflict,
+  isReadOnlyConfigField,
 } from '@/lib/api/management/config'
 import { ConfigEditConflict } from '@/lib/api/management/config-edit'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
@@ -383,6 +384,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'debug', kind: 'boolean', sectionId: 'system' },
       { key: 'requestLog', kind: 'boolean', sectionId: 'system' },
       { key: 'loggingToFile', kind: 'boolean', sectionId: 'system' },
+      { key: 'usageStatisticsEnabled', kind: 'boolean', sectionId: 'system' },
       { key: 'logsMaxTotalSizeMb', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'errorLogsMaxFiles', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'pprofEnable', kind: 'boolean', sectionId: 'system' },
@@ -724,11 +726,6 @@ const defaultJsonEditorFieldKeys = new Set<JsonConfigFieldKey>([
   'liveMediaRelayIceServersJson',
 ])
 
-const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
-  'concurrencyLifecycleConfigRevision',
-  'concurrencyObservationBarrierRevision',
-])
-
 const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
 
 const payloadRuleSections: PayloadRuleSection[] = [
@@ -849,7 +846,7 @@ function canEditStringList(value: unknown): value is string[] {
 function isWritableConfigField(
   field: ConfigFieldDefinition,
 ): field is ConfigFieldDefinition & { key: WritableConfigFieldKey } {
-  return !readOnlyConfigFieldKeys.has(field.key)
+  return !isReadOnlyConfigField(field.key)
 }
 
 function selectOptionFromValue(value: ConfigStructuredValues[ConfigFieldKey]) {
@@ -1506,7 +1503,7 @@ function getValidationErrors(
 ) {
   return fieldDefinitions
     .filter((field) => {
-      if (readOnlyConfigFieldKeys.has(field.key)) return false
+      if (isReadOnlyConfigField(field.key)) return false
 
       const value = draft[field.key]
       if (field.key === 'payloadRulesJson') {
@@ -1759,7 +1756,7 @@ function ConfigField({
 }) {
   const { t, i18n } = useTranslation()
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
-  const locked = readOnlyConfigFieldKeys.has(field.key)
+  const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
@@ -1783,7 +1780,14 @@ function ConfigField({
         ) : null}
       </div>
       <div className="flex min-w-0 justify-start md:justify-end">
-        {field.kind === 'boolean' ? (
+        {field.kind === 'boolean' && locked ? (
+          <span className="text-sm font-medium">
+            {typeof value === 'boolean'
+              ? t(value ? 'configPage.status.enabled' : 'configPage.status.disabled')
+              : t('configPage.status.unknown')}
+          </span>
+        ) : null}
+        {field.kind === 'boolean' && !locked ? (
           <BooleanControl
             checked={Boolean(value)}
             disabled={controlDisabled}

@@ -3310,6 +3310,7 @@ export const ru = {
         hideSensitive: 'Скрыть чувствительное поле',
       },
       status: {
+        unknown: 'Неизвестно',
         clean: 'Нет несохраненных изменений',
         visualChangeCount: 'Визуальных изменений: {{count}}',
         enabled: 'Включено',
@@ -3387,7 +3388,7 @@ export const ru = {
           title: 'Журналы и usage',
           shortTitle: 'Журналы',
           description:
-            'Управление диагностикой debug, request logs, file logs, usage statistics, хранением журналов, pprof и Redis usage queue.',
+            'Настройка отладки, журналов запросов, записи журналов в файлы, сроков хранения, pprof и очереди Redis. Здесь также показано состояние сбора статистики.',
         },
         network: {
           title: 'Сетевой proxy',
@@ -3453,6 +3454,11 @@ export const ru = {
           description:
             'Порт прослушивания, распространяемый на узлы CPA (1–65535). Изменения сохраняются и передаются сразу, но запущенные процессы CPA необходимо перезапустить для применения.',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: 'Статистика использования',
+          description:
+            'Home всегда включает сбор статистики. Здесь показано состояние, полученное от сервера.',
         },
         loggingToFile: {
           label: 'Файловые журналы',
