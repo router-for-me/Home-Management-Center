@@ -63,6 +63,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAccessKeyWorkbench } from '@/features/access-keys/use-access-key-workbench'
+import { groupListLabel } from '@/features/users/users-format'
 import type { AccessGroupResource } from '@/lib/api/management/access-groups'
 import {
   ACCESS_KEY_DISPLAY_NAME_MAX_LENGTH,
@@ -190,15 +191,6 @@ function AccessKeyIdentifier({
       </Button>
     </div>
   )
-}
-
-function groupLabel(groups: AccessGroupResource[], id: number) {
-  return groups.find((group) => group.numericId === id)?.name ?? `#${id}`
-}
-
-function groupListLabel(groups: AccessGroupResource[], ids: number[], emptyLabel: string) {
-  if (ids.length === 0) return emptyLabel
-  return ids.map((id) => groupLabel(groups, id)).join(', ')
 }
 
 function userLabel(users: UserResource[], userId: number | null) {

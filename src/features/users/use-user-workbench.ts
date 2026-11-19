@@ -11,6 +11,8 @@ import {
   deleteAccessGroup,
   deleteAccessGroupDetail,
   fetchAccessGroupsSnapshot,
+  fetchBoundChannelCredentials,
+  fetchChannelGroupCredentialCandidates,
   toAccessGroupsApiError,
   updateAccessGroup,
 } from '@/lib/api/management/access-groups'
@@ -25,6 +27,7 @@ import {
 } from '@/lib/api/management/access-keys'
 import { createDeduction, createRecharge, toBillingApiError } from '@/lib/api/management/billing'
 import type { BalanceOperationInput } from '@/lib/api/management/billing-types'
+import { toManagementApiError } from '@/lib/api/management/client'
 import {
   type CredentialResource,
   fetchCredentialSnapshot,
@@ -62,12 +65,11 @@ export type CredentialBindingCandidate = {
   id: string
   authId: string
   label: string
-  provider: string
-  type: string
+  provider: string | null
+  type: string | null
   status: string | null
   disabled: boolean
   unavailable: boolean
-  source: 'credential' | 'provider'
 }
 
 type CredentialBindingCandidateSnapshot = {
@@ -149,7 +151,6 @@ function normalizeCredentialCandidate(resource: CredentialResource): CredentialB
     status: resource.status,
     disabled: resource.disabled,
     unavailable: resource.unavailable,
-    source: 'credential',
   }
 }
 
@@ -166,7 +167,6 @@ function normalizeProviderCandidate(resource: ProviderResource): CredentialBindi
     status: null,
     disabled: resource.disabled,
     unavailable: false,
-    source: 'provider',
   }
 }
 
@@ -233,12 +233,19 @@ function readSettledError(result: PromiseSettledResult<unknown>) {
   return result.status === 'rejected' ? toError(result.reason).message : null
 }
 
-export function useUserWorkbench(
-  selectedUserId?: string | null,
-  loadCredentialCandidates = false,
-  loadModelCandidates = false,
-  loadPeriodLimits = false,
-) {
+export function useUserWorkbench({
+  selectedUserId,
+  loadCredentialCandidates,
+  loadModelCandidates,
+  loadPeriodLimits,
+  showBoundCredentials,
+}: {
+  selectedUserId: string | null
+  loadCredentialCandidates: boolean
+  loadModelCandidates: boolean
+  loadPeriodLimits: boolean
+  showBoundCredentials: boolean
+}) {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, capabilityReady, capabilities, runtimeMode } =
     useManagementSession()
@@ -259,6 +266,7 @@ export function useUserWorkbench(
     session.baseUrl,
     connectedAt,
     runtimeMode,
+    capabilities.channelGroupCredentialCandidates,
   ]
   const modelCandidatesQueryKey = [
     'management-model-binding-candidates',
@@ -309,10 +317,38 @@ export function useUserWorkbench(
     },
   })
 
+  const boundCredentialsEnabled =
+    accessGroupsEnabled &&
+    showBoundCredentials &&
+    Boolean(groupsQuery.data?.channelGroupDetails.length)
+  const boundCredentialsQuery = useQuery({
+    queryKey: [...groupsQueryKey, 'bound-credentials'],
+    enabled: boundCredentialsEnabled,
+    retry: false,
+    queryFn: () => fetchBoundChannelCredentials(session),
+  })
+
   const credentialCandidatesQuery = useQuery({
     queryKey: credentialCandidatesQueryKey,
     enabled: accessGroupsEnabled && loadCredentialCandidates,
+    ...(capabilities.channelGroupCredentialCandidates && { retry: false }),
     queryFn: async (): Promise<CredentialBindingCandidateSnapshot> => {
+      if (capabilities.channelGroupCredentialCandidates) {
+        const credentials = await fetchChannelGroupCredentialCandidates(session)
+        return {
+          candidates: credentials.map((item) => ({
+            id: item.authId,
+            authId: item.authId,
+            label: item.displayName,
+            provider: item.provider,
+            type: null,
+            status: item.state,
+            disabled: item.state === 'disabled' || item.state === 'deleted',
+            unavailable: item.state === 'unavailable',
+          })),
+          issue: null,
+        }
+      }
       const [credentialsResult, providersResult] = await Promise.allSettled([
         fetchCredentialSnapshot(session),
         fetchProviderSnapshot(session, runtimeMode),
@@ -617,6 +653,11 @@ export function useUserWorkbench(
     onSuccess: invalidateAccess,
   })
 
+  const invalidateBinding = (_result: unknown, binding: { kind: AccessGroupKind }) =>
+    binding.kind === 'channel'
+      ? queryClient.invalidateQueries({ queryKey: groupsQueryKey })
+      : invalidateAccess()
+
   const createGroupDetailMutation = useMutation({
     mutationFn: async ({
       kind,
@@ -631,7 +672,7 @@ export function useUserWorkbench(
         throw toAccessGroupsApiError(error)
       }
     },
-    onSuccess: invalidateAccess,
+    onSuccess: invalidateBinding,
   })
 
   const createGroupDetailsMutation = useMutation({
@@ -658,7 +699,7 @@ export function useUserWorkbench(
         failed,
       }
     },
-    onSuccess: invalidateAccess,
+    onSuccess: invalidateBinding,
   })
 
   const deleteGroupDetailMutation = useMutation({
@@ -669,7 +710,7 @@ export function useUserWorkbench(
         throw toAccessGroupsApiError(error)
       }
     },
-    onSuccess: invalidateAccess,
+    onSuccess: invalidateBinding,
   })
 
   const firstError =
@@ -702,11 +743,18 @@ export function useUserWorkbench(
     users: usersQuery.data?.resources ?? [],
     accessKeys: accessKeysQuery.data?.resources ?? [],
     groups: groupsQuery.data ?? null,
+    boundCredentials: boundCredentialsQuery.isError
+      ? undefined
+      : boundCredentialsQuery.data?.byAuthId,
+    boundCredentialsUnavailable:
+      boundCredentialsQuery.isError || boundCredentialsQuery.data?.unavailable === true,
+    boundCredentialsFetching: boundCredentialsQuery.isFetching,
+    refetchBoundCredentials: () => void boundCredentialsQuery.refetch(),
     credentialCandidates: credentialCandidatesQuery.data?.candidates ?? [],
     credentialCandidatesPending: credentialCandidatesQuery.isPending,
     credentialCandidatesIssueMessage: credentialCandidatesQuery.data?.issue ?? null,
-    credentialCandidatesErrorMessage: credentialCandidatesQuery.error
-      ? toError(credentialCandidatesQuery.error).message
+    credentialCandidatesError: credentialCandidatesQuery.error
+      ? toManagementApiError(credentialCandidatesQuery.error)
       : null,
     modelCandidates: modelCandidatesQuery.data?.candidates ?? [],
     modelCandidatesPending: modelCandidatesQuery.isPending,
@@ -741,6 +789,7 @@ export function useUserWorkbench(
       void usersQuery.refetch()
       void accessKeysQuery.refetch()
       if (accessGroupsEnabled) void groupsQuery.refetch()
+      if (boundCredentialsEnabled) void boundCredentialsQuery.refetch()
     },
     refetchCredentialCandidates: () => {
       void credentialCandidatesQuery.refetch()

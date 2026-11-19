@@ -40,6 +40,7 @@ const capabilities: CapabilityMap = {
   requestErrorLogs: true,
   users: true,
   accessGroups: true,
+  channelGroupCredentialCandidates: false,
   credentialInFlight: true,
   credentialInFlightSnapshotCursor: true,
   credentialConcurrencyLimits: true,

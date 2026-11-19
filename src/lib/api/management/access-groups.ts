@@ -18,12 +18,21 @@ export type AccessGroupResource = {
   raw: unknown
 }
 
+export type ChannelGroupCredential = {
+  authId: string
+  displayName: string
+  provider: string | null
+  state: 'disabled' | 'unavailable' | 'deleted' | null
+}
+
 export type AccessGroupDetailResource = {
   id: string
-  numericId: number
+  numericId: number | null
   kind: AccessGroupKind
   groupId: number
   targetId: string
+  /** Undefined for basic reads, null for a completed lookup with no canonical match. */
+  credential?: ChannelGroupCredential | null
   /** Model kind only: bound channel group IDs; empty means the binding inherits the API key scope. */
   channels: number[]
   deletedAt: string | null
@@ -139,7 +148,8 @@ function normalizeDetail(
   record: UnknownRecord,
   index: number,
 ): AccessGroupDetailResource {
-  const numericId = readNumber(record, ['id']) ?? index + 1
+  const rowId = readNumber(record, ['id'])
+  const numericId = rowId !== null && Number.isSafeInteger(rowId) && rowId > 0 ? rowId : null
   const groupId =
     readNumber(record, [kind === 'channel' ? 'channel_group_id' : 'model_group_id', 'group_id']) ??
     0
@@ -147,7 +157,7 @@ function normalizeDetail(
     readString(record, [kind === 'channel' ? 'auth_id' : 'model_id', 'target_id', 'value']) ?? ''
 
   return {
-    id: String(numericId),
+    id: numericId === null ? `unidentified-${index}` : String(numericId),
     numericId,
     kind,
     groupId,
@@ -189,6 +199,54 @@ function toDetailPayload(kind: AccessGroupKind, input: AccessGroupDetailInput) {
     // Empty means "inherit the API key scope"; the backend treats omitted and [] alike.
     ...(input.channels && input.channels.length > 0 ? { channels: input.channels } : {}),
   }
+}
+
+function normalizeChannelCredential(value: unknown): ChannelGroupCredential | undefined {
+  if (!isRecord(value)) return undefined
+  const authId = readString(value, ['auth_id'])
+  if (!authId) return undefined
+  const state = value.state
+  return {
+    authId,
+    displayName: readString(value, ['display_name']) ?? authId,
+    provider: readString(value, ['provider']),
+    state: state === 'disabled' || state === 'unavailable' || state === 'deleted' ? state : null,
+  }
+}
+
+export async function fetchBoundChannelCredentials(session: ManagementSessionInput) {
+  const { data } = await createManagementClient(session).get<unknown>('/channel-group-details', {
+    params: { include: 'credential' },
+  })
+  const byAuthId = new Map<string, ChannelGroupCredential | null>()
+  for (const row of readArrayRecords(data, ['channel_group_details', 'items'])) {
+    const targetId = readString(row, ['auth_id'])
+    if (!targetId) continue
+    if (row.credential === null) {
+      byAuthId.set(targetId, null)
+    } else {
+      const credential = normalizeChannelCredential(row.credential)
+      if (credential?.authId === targetId) byAuthId.set(targetId, credential)
+    }
+  }
+  const response = toRecord(data)
+  return {
+    byAuthId,
+    unavailable:
+      response.credential_metadata_unavailable === true ||
+      (!Array.isArray(response.channel_group_details) && !Array.isArray(response.items)),
+  }
+}
+
+export async function fetchChannelGroupCredentialCandidates(session: ManagementSessionInput) {
+  const { data } = await createManagementClient(session).get<unknown>(
+    '/channel-group-credential-candidates',
+  )
+  const candidates = toRecord(data).credential_candidates
+  if (!Array.isArray(candidates)) throw new Error('Missing credential_candidates in response')
+  return candidates
+    .map(normalizeChannelCredential)
+    .filter((credential): credential is ChannelGroupCredential => Boolean(credential))
 }
 
 export async function fetchAccessGroupsSnapshot(
@@ -282,8 +340,9 @@ export async function deleteAccessGroupDetail(
   session: ManagementSessionInput,
   detail: AccessGroupDetailResource,
 ) {
+  if (detail.numericId === null) throw new Error('Missing binding ID')
   const client = createManagementClient(session)
-  await client.delete(`${detailPath(detail.kind)}/${encodeURIComponent(detail.id)}`)
+  await client.delete(`${detailPath(detail.kind)}/${detail.numericId}`)
 }
 
 export function toAccessGroupsApiError(error: unknown) {

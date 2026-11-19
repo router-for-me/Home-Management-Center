@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { type ReactNode, useState } from 'react'
+
+import { Boxes } from 'lucide-react'
 
 import iflowLogo from '@/assets/icons/iflow.svg'
 import { cn } from '@/lib/utils'
@@ -27,27 +29,18 @@ const providerAliases: Array<[brandId: string, matches: RegExp]> = [
   ['openai', /openai|chatgpt|^gpt|^o\d/],
 ]
 
-/**
- * Model-ID vendor rules, tried in order.
- *
- * Nothing in the catalog payload names the company that built a model. A
- * third-party model reaches the registry as a string an operator typed into a
- * first-party provider's `models:` list, so `providers[]` reports `codex` for a
- * GLM model and `owned_by` reports `anthropic` for a DeepSeek one. The
- * identifier is the only evidence there is.
- *
- * Rules anchor to a token boundary rather than testing for a bare substring,
- * which would hand `example-model` to Amp and claim every ID containing `o3`.
- */
-const vendorRules: Array<[brandId: string, matches: RegExp]> = [
+// Model families can have their own artwork even when they share a provider.
+const modelLogoRules: Array<[brandId: string, matches: RegExp]> = [
   ['claude', /(^|[/-])(claude|anthropic)/],
   ['gemini', /(^|[/-])(gemini|gemma)/],
+  ['gemini', /(^|\/)imagen(?=$|[-/\d])/],
   ['deepseek', /(^|[/-])deepseek/],
   ['glm', /(^|[/-])(glm|chatglm|zhipu|bigmodel)/],
   ['qwen', /(^|[/-])(qwen|qwq|qvq)/],
   ['minimax', /(^|[/-])(minimax|abab)/],
   ['kimi', /(^|[/-])(kimi|moonshot)/],
-  ['meta', /(^|\/)(meta-llama|muse-spark|llama)(?=$|[-/\d])/],
+  ['muse', /(^|\/)muse-(spark|wonder)(?=$|[-/\d])/],
+  ['meta', /(^|\/)(meta-llama|llama)(?=$|[-/\d])/],
   ['xai', /(^|[/-])grok/],
   ['openai', /(^|[/-])(gpt|chatgpt|openai|codex|o[1-4]([/-]|$))/],
 ]
@@ -77,27 +70,21 @@ export function resolveProviderLogoId(value: string | null | undefined) {
     if (matches.test(normalized)) return brandId
   }
 
-  // Usage reporting groups by model as readily as by provider, so a model ID
-  // reaches this function too. Falling through to the vendor rules puts a
-  // DeepSeek mark on a DeepSeek row rather than the letters "DE".
-  return resolveModelVendorId(normalized) ?? normalized
+  return resolveModelLogoId(normalized) ?? normalized
 }
 
-/**
- * Resolves the company that built a model from the strings the catalog carries.
- *
- * Returns `null` when nothing matches, and callers must render something
- * neutral rather than falling back to the provider logo: a model reached
- * through the `codex` provider is not an OpenAI model, and refusing to guess is
- * the whole point of this function.
- */
-export function resolveModelVendorId(...sources: Array<string | null | undefined>) {
-  for (const source of sources) {
-    const normalized = normalizeBrandToken(source)
-    if (!normalized) continue
-
-    for (const [brandId, matches] of vendorRules) {
-      if (matches.test(normalized)) return brandId
+export function resolveModelLogoId(
+  modelId: string | null | undefined,
+  displayName?: string | null,
+) {
+  const id = normalizeBrandToken(modelId)
+  const label = normalizeBrandToken(displayName)
+  // A routing prefix such as "codex/" can serve another company's model.
+  const modelName = id?.slice(id.lastIndexOf('/') + 1)
+  for (const source of [modelName, label === id ? null : label]) {
+    if (!source) continue
+    for (const [brandId, matches] of modelLogoRules) {
+      if (matches.test(source)) return brandId
     }
   }
 
@@ -111,7 +98,7 @@ const sizeClassNames = {
   lg: 'size-7 text-[10px]',
 } as const
 
-type ProviderLogoSize = keyof typeof sizeClassNames
+type LogoStyleProps = { size?: keyof typeof sizeClassNames; className?: string }
 
 type IconSource = { src: string; monochrome: boolean }
 
@@ -152,24 +139,11 @@ function getLibraryIcon(brandId: string): IconSource | null {
   return icon
 }
 
-export function ProviderLogo({
-  providerId,
-  size = 'md',
-  className,
-}: {
-  providerId: string
-  size?: ProviderLogoSize
-  className?: string
-}) {
-  const brandId = resolveProviderLogoId(providerId) ?? providerId
+function BrandLogo({ brandId, size = 'md', className }: LogoStyleProps & { brandId: string }) {
   // Keep the existing iFlow mark until the community collection includes it.
   const icon =
     getLibraryIcon(brandId) ?? (brandId === 'iflow' ? { src: iflowLogo, monochrome: false } : null)
   const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    setFailed(false)
-  }, [providerId, icon?.src])
 
   if (icon && !failed) {
     return (
@@ -200,5 +174,36 @@ export function ProviderLogo({
     >
       {brandId.slice(0, 2).toUpperCase()}
     </span>
+  )
+}
+
+export function ProviderLogo({ providerId, ...style }: LogoStyleProps & { providerId: string }) {
+  return (
+    <BrandLogo
+      key={providerId}
+      brandId={resolveProviderLogoId(providerId) ?? providerId}
+      {...style}
+    />
+  )
+}
+
+export function ModelLogo({
+  modelId,
+  displayName,
+  size = 'md',
+  className,
+  fallback,
+}: LogoStyleProps & { modelId: string | null; displayName?: string | null; fallback?: ReactNode }) {
+  const brandId = resolveModelLogoId(modelId, displayName)
+  if (brandId) {
+    return <BrandLogo key={brandId} brandId={brandId} size={size} className={className} />
+  }
+  return (
+    fallback ?? (
+      <Boxes
+        aria-hidden="true"
+        className={cn('text-muted-foreground shrink-0', sizeClassNames[size], className)}
+      />
+    )
   )
 }

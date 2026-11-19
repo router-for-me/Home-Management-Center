@@ -54,7 +54,7 @@ import {
   narrowFilterGridWithActionsClassName,
 } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
-import { ProviderLogo, resolveProviderLogoId } from '@/components/shared/provider-logo'
+import { ModelLogo, ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
 import { SelectInputGroup } from '@/components/shared/select-input-group'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
@@ -1989,15 +1989,6 @@ function getMetadataString(item: UsageAggregateItem, keys: string[]) {
   return null
 }
 
-function getRankingProviderLogoId(item: UsageAggregateItem, groupBy: UsageAggregateGroupBy) {
-  const provider =
-    getMetadataString(item, ['provider', 'provider_id', 'providerId']) ??
-    (groupBy === 'provider' ? item.id || item.label : null)
-  const fallback = groupBy === 'model' || groupBy === 'provider' ? item.label : null
-
-  return resolveProviderLogoId(provider) ?? resolveProviderLogoId(fallback)
-}
-
 function RankingIdentityMarker({
   item,
   groupBy,
@@ -2007,29 +1998,21 @@ function RankingIdentityMarker({
   groupBy: UsageAggregateGroupBy
   index: number
 }) {
-  const providerLogoId = getRankingProviderLogoId(item, groupBy)
-  if (
-    providerLogoId &&
-    (groupBy === 'model' || groupBy === 'provider' || groupBy === 'credential')
-  ) {
-    return <ProviderLogo providerId={providerLogoId} size="sm" className="rounded" />
+  if (groupBy === 'model') {
+    return <ModelLogo modelId={item.id} displayName={item.label} size="sm" className="rounded" />
   }
-
-  if (groupBy === 'user') {
+  if (groupBy === 'user' || groupBy === 'client_key') {
     return <RankingBullet index={index} />
   }
 
-  if (groupBy === 'client_key') {
-    return <RankingBullet index={index} />
-  }
-
+  const provider =
+    groupBy === 'provider' || groupBy === 'credential'
+      ? getMetadataString(item, ['provider', 'provider_id', 'providerId'])
+      : null
   return (
-    <span
-      className="border-border bg-muted text-muted-foreground flex size-5 items-center justify-center rounded-md border"
-      aria-hidden="true"
-    >
-      <Hash className="size-3" />
-    </span>
+    <UsageProviderLogo
+      provider={provider ?? (groupBy === 'provider' ? item.id || item.label : null)}
+    />
   )
 }
 
@@ -2440,26 +2423,15 @@ function CredentialBadge({ credential }: { credential: UsageExecutionCredential 
   )
 }
 
-function getUsageProviderLogoId(...values: Array<string | null | undefined>) {
-  for (const value of values) {
-    const logoId = resolveProviderLogoId(value)
-    if (logoId) return logoId
-  }
-
-  return null
-}
-
 function UsageProviderLogo({
-  values,
+  provider,
   className,
 }: {
-  values: Array<string | null | undefined>
+  provider: string | null
   className?: string
 }) {
-  const logoId = getUsageProviderLogoId(...values)
-
-  if (logoId) {
-    return <ProviderLogo providerId={logoId} size="sm" className={cn('rounded', className)} />
+  if (provider) {
+    return <ProviderLogo providerId={provider} size="sm" className={cn('rounded', className)} />
   }
 
   return (
@@ -2478,7 +2450,11 @@ function UsageProviderLogo({
 function RequestModelCell({ record }: { record: UsageRecord }) {
   return (
     <div className="flex min-w-0 items-start gap-2">
-      <UsageProviderLogo values={[record.provider, record.model]} className="mt-0.5" />
+      {record.model ? (
+        <ModelLogo modelId={record.model} size="sm" className="mt-0.5 rounded" />
+      ) : (
+        <UsageProviderLogo provider={record.provider} className="mt-0.5" />
+      )}
       <div className="min-w-0">
         <p className="truncate font-medium">{record.model ?? <EmptyValue />}</p>
         <p className="text-muted-foreground truncate text-xs">
@@ -2518,7 +2494,7 @@ function ProviderValueCell({ provider, fallback }: { provider: string | null; fa
 
   return (
     <div className="flex min-w-0 items-center gap-2">
-      <UsageProviderLogo values={[provider]} />
+      <UsageProviderLogo provider={provider} />
       <span className="truncate">{label}</span>
     </div>
   )

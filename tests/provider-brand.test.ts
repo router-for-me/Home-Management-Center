@@ -7,24 +7,41 @@ import { fileURLToPath } from 'node:url'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
+  ModelLogo,
   ProviderLogo,
-  resolveModelVendorId,
+  resolveModelLogoId,
   resolveProviderLogoId,
 } from '@/components/shared/provider-logo'
 
-describe('model vendor resolution', () => {
-  test('recognizes Meta model families without claiming unrelated aliases', () => {
+describe('model logo resolution', () => {
+  test('recognizes the Muse and Imagen families across versions and routing prefixes', () => {
     for (const value of [
       'muse-spark-1.3',
       'muse-spark1.3',
-      'team/muse-spark-1.3',
+      'team/muse-spark-1.3-contributor',
+      'muse-wonder-1.0',
+      'muse-wonder-full-1.0-contributor',
+      'gemini/muse-wonder-1.0-contributor',
+    ]) {
+      expect(resolveModelLogoId(value)).toBe('muse')
+    }
+    expect(resolveModelLogoId('house-fast', 'Muse Wonder Full 1.0 Contributor')).toBe('muse')
+    expect(resolveModelLogoId('team/private', 'Muse Wonder / Preview')).toBe('muse')
+    expect(resolveModelLogoId('imagen-3.0-fast-generate-001')).toBe('gemini')
+    expect(resolveModelLogoId('openai/models/imagen-4.0-ultra-generate-001')).toBe('gemini')
+    expect(resolveModelLogoId('house-image', 'Imagen 3.0 Fast Generate')).toBe('gemini')
+    expect(resolveModelLogoId('muse-spark-1.3-contributor', 'Imagen 3.0')).toBe('muse')
+  })
+
+  test('recognizes Llama and keeps unrelated names neutral', () => {
+    for (const value of [
       'Llama3.1-8B',
       'llama-3.1-8b',
       'Meta-Llama-3.1-8B',
       'team/Meta-Llama-3.1-8B',
       'meta-llama/Llama-3.1-8B',
     ]) {
-      expect(resolveModelVendorId(value)).toBe('meta')
+      expect(resolveModelLogoId(value)).toBe('meta')
     }
     for (const value of [
       'metadata-search',
@@ -33,9 +50,14 @@ describe('model vendor resolution', () => {
       'llamaindex',
       'meta-llamaindex',
       'muse-sparkle',
+      'muse-wonderland',
+      'muse-private',
+      'amuse-wonder-1',
+      'imagenet-3',
+      'vertex/private/imagenerator',
       'team/metadata-search',
     ]) {
-      expect(resolveModelVendorId(value)).toBeNull()
+      expect(resolveModelLogoId(value)).toBeNull()
     }
   })
   test('reads the vendor off the model ID, not off the provider that serves it', () => {
@@ -43,53 +65,71 @@ describe('model vendor resolution', () => {
     // `codex-api-key` reports `providers: ["codex"]`, and a DeepSeek endpoint
     // wired through `claude-api-key` reports `providers: ["claude"]`. Neither
     // identifier is consulted here, so neither can mislabel the card.
-    expect(resolveModelVendorId('glm-4.6')).toBe('glm')
-    expect(resolveModelVendorId('deepseek-chat')).toBe('deepseek')
-    expect(resolveModelVendorId('deepseek-reasoner')).toBe('deepseek')
+    expect(resolveModelLogoId('glm-4.6')).toBe('glm')
+    expect(resolveModelLogoId('deepseek-chat')).toBe('deepseek')
+    expect(resolveModelLogoId('deepseek-reasoner')).toBe('deepseek')
   })
 
   test('names the first-party vendors from their own IDs', () => {
-    expect(resolveModelVendorId('claude-sonnet-4-6')).toBe('claude')
-    expect(resolveModelVendorId('gemini-2.5-pro')).toBe('gemini')
-    expect(resolveModelVendorId('gpt-5-codex')).toBe('openai')
-    expect(resolveModelVendorId('gpt-oss-120b')).toBe('openai')
-    expect(resolveModelVendorId('o3')).toBe('openai')
-    expect(resolveModelVendorId('o4-mini')).toBe('openai')
-    expect(resolveModelVendorId('grok-4')).toBe('xai')
-    expect(resolveModelVendorId('kimi-k2-0905-preview')).toBe('kimi')
-    expect(resolveModelVendorId('qwen3-max')).toBe('qwen')
-    expect(resolveModelVendorId('MiniMax-M2')).toBe('minimax')
+    expect(resolveModelLogoId('claude-sonnet-4-6')).toBe('claude')
+    expect(resolveModelLogoId('gemini-2.5-pro')).toBe('gemini')
+    expect(resolveModelLogoId('gpt-5-codex')).toBe('openai')
+    expect(resolveModelLogoId('gpt-oss-120b')).toBe('openai')
+    expect(resolveModelLogoId('o3')).toBe('openai')
+    expect(resolveModelLogoId('o4-mini')).toBe('openai')
+    expect(resolveModelLogoId('grok-4')).toBe('xai')
+    expect(resolveModelLogoId('kimi-k2-0905-preview')).toBe('kimi')
+    expect(resolveModelLogoId('qwen3-max')).toBe('qwen')
+    expect(resolveModelLogoId('MiniMax-M2')).toBe('minimax')
   })
 
   test('reads through a namespace prefix', () => {
-    expect(resolveModelVendorId('anthropic/claude-sonnet-4.6')).toBe('claude')
-    expect(resolveModelVendorId('deepseek/deepseek-v3.1')).toBe('deepseek')
-    expect(resolveModelVendorId('teamA/gpt-5-codex')).toBe('openai')
+    expect(resolveModelLogoId('anthropic/claude-sonnet-4.6')).toBe('claude')
+    expect(resolveModelLogoId('deepseek/deepseek-v3.1')).toBe('deepseek')
+    expect(resolveModelLogoId('teamA/gpt-5-codex')).toBe('openai')
   })
 
   test('answers null rather than guessing when the ID says nothing', () => {
     // An operator alias is the common case, and the honest answer is that this
     // catalog does not know who built the model. Callers render a neutral mark;
     // falling back to the provider logo is what this whole function replaces.
-    expect(resolveModelVendorId('my-alias')).toBeNull()
-    expect(resolveModelVendorId('internal-model-1')).toBeNull()
-    expect(resolveModelVendorId(null)).toBeNull()
-    expect(resolveModelVendorId('')).toBeNull()
+    expect(resolveModelLogoId('my-alias')).toBeNull()
+    expect(resolveModelLogoId('internal-model-1')).toBeNull()
+    expect(resolveModelLogoId(null)).toBeNull()
+    expect(resolveModelLogoId('')).toBeNull()
   })
 
   test('matches on token boundaries so a substring cannot claim a model', () => {
-    expect(resolveModelVendorId('example-model')).toBeNull()
-    expect(resolveModelVendorId('sonar-pro')).toBeNull()
-    expect(resolveModelVendorId('command-r-plus')).toBeNull()
+    expect(resolveModelLogoId('example-model')).toBeNull()
+    expect(resolveModelLogoId('sonar-pro')).toBeNull()
+    expect(resolveModelLogoId('command-r-plus')).toBeNull()
   })
 
   test('falls back to the display name when the ID is an opaque alias', () => {
     // `models: [{ name: glm-4.6, alias: house-fast }]` publishes the alias as
     // the ID and the upstream name as the display name, so the second string is
     // the only evidence left.
-    expect(resolveModelVendorId('house-fast', 'GLM-4.6')).toBe('glm')
-    expect(resolveModelVendorId('house-fast', null)).toBeNull()
+    expect(resolveModelLogoId('house-fast', 'GLM-4.6')).toBe('glm')
+    expect(resolveModelLogoId('house-fast', null)).toBeNull()
+    expect(resolveModelLogoId('codex/house-fast', 'Muse Spark 1.3 Contributor')).toBe('muse')
+    expect(resolveModelLogoId('gemini/house-fast')).toBeNull()
+    expect(resolveModelLogoId('gemini/house-fast', 'gemini/house-fast')).toBeNull()
   })
+
+  test.each([
+    ['muse-spark-1.3-contributor', 'muse', 'meta', 'meta'],
+    ['muse-wonder-full-1.0-contributor', 'muse', 'muse', 'meta'],
+    ['imagen-3.0-fast-generate-001', 'gemini', 'vertex', 'vertex'],
+  ])(
+    '%s uses its model artwork alongside its serving provider',
+    (modelId, modelMark, providerId, providerMark) => {
+      const model = renderToStaticMarkup(createElement(ModelLogo, { modelId }))
+      const provider = renderToStaticMarkup(createElement(ProviderLogo, { providerId }))
+      expect(model).toContain(`data-provider-icon="${modelMark}"`)
+      expect(model).toContain(`@lobehub/icons-static-svg/icons/${modelMark}-color.svg`)
+      expect(provider).toContain(`data-provider-icon="${providerMark}"`)
+    },
+  )
 })
 
 describe('provider logo resolution', () => {
@@ -152,7 +192,7 @@ describe('provider logo resolution', () => {
     expect(resolveProviderLogoId('iflow')).toBe('iflow')
   })
 
-  test('recognizes a model ID, because usage reporting groups by model too', () => {
+  test('recognizes provider identifiers named after a model family', () => {
     expect(resolveProviderLogoId('deepseek-chat')).toBe('deepseek')
     expect(resolveProviderLogoId('glm-4.6')).toBe('glm')
   })

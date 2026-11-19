@@ -3068,6 +3068,23 @@ export const en = {
         group: 'Scope',
         groupPlaceholder: 'Select a scope',
         credential: 'Account credential',
+        copyCredentialId: 'Copy credential ID {{id}}',
+        credentialIdCopied: 'Credential ID copied',
+        credentialState: {
+          disabled: 'Disabled',
+          unavailable: 'Temporarily unavailable',
+          deleted: 'Credential deleted',
+          unresolved: 'Unconfirmed credential',
+        },
+        channelSearchPlaceholder: 'Search scopes, credentials, providers, or IDs',
+        channelSearchEmpty: 'No credential scopes match your search.',
+        modelGroupSearchEmpty: 'No model scopes match your search.',
+        credentialCandidatesDenied:
+          'This connection does not have permission to list credentials for binding.',
+        credentialCandidatesFailed: 'Could not load credentials for binding.',
+        loadingCredentialMetadata: 'Loading credential names and states…',
+        credentialMetadataUnavailable:
+          'Credential names and states are unavailable. You can still manage bindings by ID.',
         credentialSearchPlaceholder: 'Search credential name, provider, or ID',
         credentialEmpty: 'No account credentials are available for selection.',
         credentialSearchEmpty: 'No account credentials match your search.',
@@ -3076,7 +3093,7 @@ export const en = {
         credentialSelectedCount: '{{count}} credentials selected',
         credentialFilteredCount: '{{count}} current results',
         credentialSelectHint:
-          'Select one or more credentials. Only credentials with an explicit Auth ID are listed. Bound or unavailable credentials cannot be selected again.',
+          'Select one or more credentials. Bound, disabled, and temporarily unavailable credentials cannot be selected.',
         authId: 'Credential ID',
         model: 'Model',
         modelId: 'Model ID',
@@ -3102,7 +3119,6 @@ export const en = {
         channelEmpty: 'No credential scopes yet.',
         modelEmpty: 'No model scopes yet.',
         detailCount: '{{count}} bindings',
-        groupId: 'Scope ID: {{id}}',
         noDetails: 'No bindings yet.',
         detailChannels: 'Credential scope',
         detailChannelsHint:
@@ -3266,6 +3282,7 @@ export const en = {
         user: 'Delete user "{{name}}"? This will not automatically delete global credentials.',
         key: 'Delete client key {{name}}? Linked clients will stop working immediately.',
         group: 'Delete scope "{{name}}"? Bound keys will lose this scope reference.',
+        credentialBinding: 'Remove the binding for “{{name}}” from “{{group}}”?',
         detail: 'Delete binding "{{name}}"?',
       },
     },
