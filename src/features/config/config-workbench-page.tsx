@@ -85,6 +85,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
 import { PayloadFormField, PayloadReviewFieldContext } from '@/features/config/payload-form-field'
 import {
   type PayloadParamEntry,
@@ -110,7 +111,10 @@ import {
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
+  hasAliasChannelConflict,
 } from '@/lib/api/management/config'
+import { ConfigEditConflict } from '@/lib/api/management/config-edit'
+import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
 import {
   type PayloadReplaceIssueKey,
   canEditPayloadReplaceRule,
@@ -157,6 +161,11 @@ type ConfigFieldKind =
   | 'jsonArray'
   | 'jsonObject'
 
+export {
+  normalizeModelAliasRule,
+  serializeModelAliasRule,
+} from '@/lib/api/management/oauth-model-aliases'
+
 type JsonConfigFieldKey =
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
@@ -182,16 +191,6 @@ type OAuthModelCatalogState = {
   onChannelChange: (channel: ProviderModelChannel) => void
   onFilterChange: (filter: string) => void
   onRetry: () => void
-}
-
-type AliasRule = {
-  name?: string
-  alias?: string
-  displayName?: string
-  'display-name'?: string
-  fork?: boolean
-  forceMapping?: boolean
-  'force-mapping'?: boolean
 }
 
 type PayloadHeaderEntry = {
@@ -797,98 +796,11 @@ function stringifyJson(value: unknown) {
   return JSON.stringify(value, null, 2)
 }
 
-function hasOnlyKeys(record: Record<string, unknown>, keys: string[]) {
-  const allowed = new Set(keys)
-  return Object.keys(record).every((key) => allowed.has(key))
-}
-
 function canEditExcludedModels(value: unknown): value is Record<string, string[]> {
   if (!isRecord(value)) return false
 
   return Object.values(value).every(
     (models) => Array.isArray(models) && models.every((model) => typeof model === 'string'),
-  )
-}
-
-function canEditModelAliases(value: unknown) {
-  if (!isRecord(value)) return false
-
-  return Object.values(value).every(
-    (items) =>
-      Array.isArray(items) &&
-      items.every(
-        (item) =>
-          isRecord(item) &&
-          hasOnlyKeys(item, [
-            'name',
-            'alias',
-            'display-name',
-            'displayName',
-            'fork',
-            'force-mapping',
-            'forceMapping',
-          ]) &&
-          (item.name === undefined || typeof item.name === 'string') &&
-          (item.alias === undefined || typeof item.alias === 'string') &&
-          (item['display-name'] === undefined || typeof item['display-name'] === 'string') &&
-          (item.displayName === undefined || typeof item.displayName === 'string') &&
-          (item.fork === undefined || typeof item.fork === 'boolean') &&
-          (item['force-mapping'] === undefined || typeof item['force-mapping'] === 'boolean') &&
-          (item.forceMapping === undefined || typeof item.forceMapping === 'boolean'),
-      ),
-  )
-}
-
-export function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
-  const displayName = rule['display-name'] ?? rule.displayName
-  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
-
-  return {
-    ...(typeof rule.name === 'string' ? { name: rule.name } : {}),
-    ...(typeof rule.alias === 'string' ? { alias: rule.alias } : {}),
-    ...(typeof displayName === 'string' ? { displayName } : {}),
-    ...(typeof rule.fork === 'boolean' ? { fork: rule.fork } : {}),
-    ...(typeof forceMapping === 'boolean' ? { forceMapping } : {}),
-  }
-}
-
-function normalizeModelAliases(value: unknown): Record<string, AliasRule[]> {
-  if (!isRecord(value)) return {}
-
-  return Object.entries(value).reduce<Record<string, AliasRule[]>>(
-    (nextValue, [channel, rules]) => {
-      if (!Array.isArray(rules)) return nextValue
-
-      return {
-        ...nextValue,
-        [channel]: rules.filter(isRecord).map((rule) => normalizeModelAliasRule(rule)),
-      }
-    },
-    {},
-  )
-}
-
-export function serializeModelAliasRule(rule: AliasRule) {
-  const nextRule: Record<string, string | boolean> = {}
-  const displayName = (rule['display-name'] ?? rule.displayName)?.trim()
-  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
-
-  if (rule.name !== undefined) nextRule.name = rule.name
-  if (rule.alias !== undefined) nextRule.alias = rule.alias
-  if (displayName) nextRule['display-name'] = displayName
-  if (typeof rule.fork === 'boolean') nextRule.fork = rule.fork
-  if (forceMapping === true) nextRule['force-mapping'] = true
-
-  return nextRule
-}
-
-function serializeModelAliases(value: Record<string, AliasRule[]>) {
-  return Object.entries(value).reduce<Record<string, ReturnType<typeof serializeModelAliasRule>[]>>(
-    (nextValue, [channel, rules]) => ({
-      ...nextValue,
-      [channel]: rules.map(serializeModelAliasRule),
-    }),
-    {},
   )
 }
 
@@ -1512,7 +1424,7 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
     case 'oauthExcludedModelsJson':
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
-      return canEditModelAliases(value)
+      return isRecord(value)
     case 'pluginStoreSourcesJson':
       return canEditPluginStoreSources(value)
     case 'payloadRulesJson':
@@ -1589,7 +1501,7 @@ function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): Con
 
 function getValidationErrors(
   draft: ConfigStructuredValues,
-  savedPayload: ConfigFieldValue | undefined,
+  saved: ConfigStructuredValues | undefined,
   hasPayloadDrafts: boolean | null,
 ) {
   return fieldDefinitions
@@ -1599,7 +1511,7 @@ function getValidationErrors(
       const value = draft[field.key]
       if (field.key === 'payloadRulesJson') {
         if (hasPayloadDrafts !== null) return hasPayloadDrafts
-        if (value === savedPayload) return false
+        if (value === saved?.payloadRulesJson) return false
       }
       if (field.kind === 'number') {
         const num = typeof value === 'number' ? value : Number(value)
@@ -1630,6 +1542,10 @@ function getValidationErrors(
         try {
           const parsed: unknown = JSON.parse(String(value || '{}'))
           if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return true
+          if (field.key === 'oauthModelAliasJson' && saved && isRecord(parsed)) {
+            const original: unknown = JSON.parse(String(saved.oauthModelAliasJson))
+            return !isRecord(original) || hasIncompleteAliasChanges(original, parsed)
+          }
           if (field.key === 'payloadRulesJson') {
             return !canEditPayloadConfig(parsed) || hasPayloadValidationErrors(parsed)
           }
@@ -2284,210 +2200,6 @@ function ExcludedModelsEditor({
           </div>
         </div>
       ) : null}
-    </div>
-  )
-}
-
-function ModelAliasEditor({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: Record<string, AliasRule[]>
-  disabled: boolean
-  onChange: (value: Record<string, AliasRule[]>) => void
-}) {
-  const { t } = useTranslation()
-  const channels = Object.entries(value)
-  const rows = channels.flatMap(([channel, aliases]) =>
-    aliases.map((item, index) => ({
-      channel,
-      index,
-      item,
-    })),
-  )
-  const columnsClass =
-    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
-
-  const updateRow = (rowIndex: number, patch: Partial<{ channel: string; item: AliasRule }>) => {
-    const nextRows = rows.map((row, index) => ({
-      channel: index === rowIndex ? (patch.channel ?? row.channel) : row.channel,
-      item: index === rowIndex ? { ...row.item, ...patch.item } : row.item,
-    }))
-
-    const nextValue = nextRows.reduce<Record<string, AliasRule[]>>((nextRecord, row) => {
-      return {
-        ...nextRecord,
-        [row.channel]: [...(nextRecord[row.channel] ?? []), row.item],
-      }
-    }, {})
-
-    onChange(nextValue)
-  }
-
-  const addAlias = () => {
-    const defaultChannel = channels.at(-1)?.[0] ?? 'claude'
-    onChange({
-      ...value,
-      [defaultChannel]: [...(value[defaultChannel] ?? []), { name: '', alias: '', fork: false }],
-    })
-  }
-
-  const removeAlias = (rowIndex: number) => {
-    const nextRows = rows.filter((_, index) => index !== rowIndex)
-    const nextValue = nextRows.reduce<Record<string, AliasRule[]>>((nextRecord, row) => {
-      return {
-        ...nextRecord,
-        [row.channel]: [...(nextRecord[row.channel] ?? []), row.item],
-      }
-    }, {})
-
-    onChange(nextValue)
-  }
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex justify-start lg:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          className="w-fit"
-          disabled={disabled}
-          onClick={addAlias}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t('configPage.json.addAlias')}
-        </Button>
-      </div>
-
-      {rows.length === 0 ? (
-        <EmptyJsonRows label={t('configPage.json.emptyRows')} />
-      ) : (
-        <div className="overflow-hidden rounded-md border">
-          <div className={cn('bg-muted/45 hidden border-b lg:grid', columnsClass)}>
-            <TableHeaderCell
-              label={t('configPage.json.columns.channel')}
-              description={t('configPage.json.columnDescriptions.channel')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.name')}
-              description={t('configPage.json.columnDescriptions.name')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.alias')}
-              description={t('configPage.json.columnDescriptions.alias')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.displayName')}
-              description={t('configPage.json.columnDescriptions.displayName')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.fork')}
-              description={t('configPage.json.columnDescriptions.fork')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.forceMapping')}
-              description={t('configPage.json.columnDescriptions.forceMapping')}
-            />
-            <TableHeaderCell label={t('configPage.json.columns.actions')} />
-          </div>
-
-          <div className="divide-y">
-            {rows.map(({ channel, item }, rowIndex) => (
-              <div
-                key={rowIndex}
-                className={cn('grid gap-2 px-3 py-3 lg:items-start', columnsClass)}
-              >
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.channel')}
-                  </span>
-                  <Input
-                    value={channel}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.channel')}
-                    placeholder={t('configPage.json.placeholders.channel')}
-                    onChange={(event) => updateRow(rowIndex, { channel: event.target.value })}
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.name')}
-                  </span>
-                  <Input
-                    value={item.name ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.name')}
-                    placeholder={t('configPage.json.placeholders.name')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { name: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.alias')}
-                  </span>
-                  <Input
-                    value={item.alias ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.alias')}
-                    placeholder={t('configPage.json.placeholders.alias')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { alias: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.displayName')}
-                  </span>
-                  <Input
-                    value={item.displayName ?? item['display-name'] ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.displayName')}
-                    placeholder={t('configPage.json.placeholders.displayName')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { displayName: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(item.fork)}
-                    disabled={disabled}
-                    onCheckedChange={(checked) =>
-                      updateRow(rowIndex, { item: { fork: checked === true } })
-                    }
-                  />
-                  <span>{t('configPage.json.columns.fork')}</span>
-                </label>
-                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(item.forceMapping ?? item['force-mapping'])}
-                    disabled={disabled}
-                    onCheckedChange={(checked) =>
-                      updateRow(rowIndex, { item: { forceMapping: checked === true } })
-                    }
-                  />
-                  <span>{t('configPage.json.columns.forceMapping')}</span>
-                </label>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="lg"
-                  className="justify-start lg:justify-center"
-                  disabled={disabled}
-                  onClick={() => removeAlias(rowIndex)}
-                >
-                  {t('configPage.json.remove')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -4448,9 +4160,10 @@ function StructuredJsonEditor({
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
-          value={normalizeModelAliases(value)}
+          availableChannels={modelDefinitionChannels}
+          value={value as Record<string, unknown>}
           disabled={disabled}
-          onChange={(nextValue) => onChange(serializeModelAliases(nextValue))}
+          onChange={onChange}
         />
       )
     case 'pluginStoreSourcesJson':
@@ -5023,17 +4736,17 @@ function ConfigWorkbenchSession() {
     latest !== baseline &&
     changes.some((change) => {
       const current = getConfigChangeValue(change.key, latest.structured[change.key])
+      if (change.key === 'oauthModelAliasJson') return hasAliasChannelConflict(change, current)
       return (
         !areConfigValuesEqual(current, change.previousValue) &&
         !areConfigValuesEqual(current, change.nextValue)
       )
     }),
   )
-  const savedPayload = baseline?.structured.payloadRulesJson
+  const saved = baseline?.structured
   const validationErrors = useMemo(
-    () =>
-      structuredDraft ? getValidationErrors(structuredDraft, savedPayload, hasPayloadDrafts) : [],
-    [structuredDraft, savedPayload, hasPayloadDrafts],
+    () => (structuredDraft ? getValidationErrors(structuredDraft, saved, hasPayloadDrafts) : []),
+    [structuredDraft, saved, hasPayloadDrafts],
   )
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
@@ -5108,7 +4821,13 @@ function ConfigWorkbenchSession() {
       setPayloadDraft(null)
       toast.success(t('configPage.toast.saved'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
+      toast.error(
+        error instanceof ConfigEditConflict
+          ? t('configPage.validation.editConflict')
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      )
     }
   }
 

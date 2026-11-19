@@ -268,3 +268,168 @@ test('all static labels used by the changed forms resolve in every supported lan
     }
   }
 })
+
+describe('provider family replacements preserve persisted configuration', () => {
+  for (const provider of [
+    'claude',
+    'vertex',
+    'gemini',
+    'interactions',
+    'codex',
+    'xai',
+    'meta',
+    'openaiCompatibility',
+  ]) {
+    test(`a prefix edit changes only that field for ${provider}`, async () => {
+      const key = {
+        id: 'A',
+        'api-key': 'fixture-A',
+        'connection-pool': { enabled: false },
+        weight: 0,
+        ...(provider === 'claude'
+          ? {
+              cloak: {
+                'sensitive-words-replace': { old: '' },
+                'sensitive-patterns-replace': [{ pattern: '^old', replacement: '' }],
+              },
+            }
+          : {}),
+        ...(provider === 'vertex'
+          ? { interactions: false, openapi: true, 'openapi-location': 'global' }
+          : {}),
+      }
+      const group = {
+        name: 'test',
+        'connection-pool': {},
+        keys: [key],
+        'disable-cooling': null,
+        headers: {},
+        models: [
+          {
+            name: 'upstream',
+            alias: 'upstream',
+            'force-mapping': false,
+            thinking: { 'disable-type': 'between_tools', levels: [] },
+            ...(provider === 'vertex' ? { openapi: false } : {}),
+          },
+        ],
+      }
+      const { form, save, writes } = await setup([group], provider)
+      form.prefix = 'edited'
+      await save(form)
+      expect(writes).toEqual([[{ ...group, prefix: 'edited' }]])
+    })
+  }
+
+  test('editing one known cloak field keeps replacement rules and inherited booleans', async () => {
+    const cloak = { 'sensitive-words-replace': { old: '' }, 'sensitive-patterns-replace': [] }
+    const group = { keys: [{ id: 'A', 'api-key': 'fixture-A', cloak }] }
+    const { form, save, writes } = await setup([group], 'claude')
+    form.cloak!.mode = 'always'
+    await save(form)
+    expect(writes[0][0].keys[0].cloak).toEqual({ ...cloak, mode: 'always' })
+  })
+
+  test('reordered and renamed duplicate model names keep their own protocol and thinking', async () => {
+    const native = {
+      name: 'shared',
+      alias: 'native',
+      openapi: false,
+      thinking: { 'disable-type': 'disabled' },
+    }
+    const openapi = {
+      name: 'shared',
+      alias: 'compat',
+      openapi: true,
+      'force-mapping': false,
+      thinking: null,
+    }
+    const { form, save, writes } = await setup(
+      groupWith([{ id: 'A', 'api-key': 'fixture' }], [native, openapi]),
+      'vertex',
+    )
+    form.models.reverse()
+    form.models[0].name = 'renamed'
+    form.models.push({
+      raw: null,
+      name: 'shared',
+      alias: 'new',
+      displayName: '',
+      forceMapping: false,
+    })
+    await save(form)
+    expect(writes[0][0].models).toEqual([
+      { ...openapi, name: 'renamed' },
+      native,
+      { name: 'shared', alias: 'new' },
+    ])
+  })
+
+  test('editing inherited headers does not change another credential or its concurrent changes', async () => {
+    const keys = [
+      { id: 'A', 'api-key': 'fixture-A', headers: null },
+      { id: 'B', 'api-key': 'fixture-B' },
+    ]
+    const group = { keys, headers: { 'X-One': 'one', 'X-Two': 'two' } }
+    const latestSibling = { ...keys[1], 'connection-pool': { enabled: false } }
+    const { form, save, writes, setCurrent } = await setup([group], 'claude')
+    form.headers[1].value = 'updated'
+    setCurrent([{ ...group, keys: [keys[0], latestSibling] }])
+    await save(form)
+    expect(writes[0]).toEqual([
+      {
+        ...group,
+        keys: [{ ...keys[0], headers: { 'X-One': 'one', 'X-Two': 'updated' } }, latestSibling],
+      },
+    ])
+  })
+
+  test('a group-only base URL change leaves siblings at their original address', async () => {
+    const keys = [
+      { id: 'A', 'api-key': 'fixture-A' },
+      { id: 'B', 'api-key': 'fixture-B' },
+    ]
+    const group = { keys, 'base-url': 'https://old.test', 'connection-pool': {} }
+    const { form, save, writes } = await setup([group], 'xai')
+    form.baseUrl = 'https://new.test'
+    await save(form)
+    expect(writes[0]).toEqual([
+      { ...group, keys: [keys[1]] },
+      { ...group, keys: [keys[0]], 'base-url': 'https://new.test' },
+    ])
+  })
+
+  test('clearing an inherited exclusion list retains the disabled marker', async () => {
+    const { form, save, writes } = await setup(
+      [{ 'excluded-models': ['*', 'old'], keys: [{ id: 'A', 'api-key': 'fixture' }, { id: 'B' }] }],
+      'claude',
+    )
+    form.excludedModelsText = ''
+    await save(form)
+    expect(writes[0][0]['excluded-models']).toEqual(['*', 'old'])
+    expect(writes[0][0].keys[0]['excluded-models']).toEqual(['*'])
+  })
+
+  test('a changed target, ambiguous identity or deleted native key never writes a family', async () => {
+    const group = { keys: [{ id: 'A', 'api-key': 'fixture' }] }
+    const { form, save, writes, setCurrent } = await setup([group], 'vertex')
+    form.prefix = 'draft'
+    for (const current of [[{ ...group, 'connection-pool': {} }], [group, group], []]) {
+      setCurrent(current)
+      await expect(save(form)).rejects.toThrow()
+    }
+    expect(writes).toEqual([])
+    expect(form.prefix).toBe('draft')
+  })
+
+  test('keeps models and errors unchanged within a modified list', async () => {
+    const rule = { status: 429, action: 'continue', match: [], 'future-option': false }
+    const { form, save, writes } = await setup(
+      [{ 'request-scoped-errors': [rule], keys: [{ id: 'A' }] }],
+      'gemini',
+    )
+    form.requestScopedErrors![0].action = 'stop'
+    await save(form)
+    expect(writes[0][0]['request-scoped-errors']).toEqual([{ ...rule, action: 'stop' }])
+  })
+})

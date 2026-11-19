@@ -223,7 +223,48 @@ const credentialForm = () =>
   )
 
 const scenario = process.argv[2]
-if (scenario === 'plugin-loading') {
+if (scenario === 'oauth-alias-channel-edit') {
+  const { ModelAliasEditor } = await import('../../src/features/config/oauth-model-alias-editor')
+  const initial = {
+    claude: [{ name: 'upstream', alias: 'client' }],
+    vertex: [
+      { name: 'same', alias: 'native', openapi: false, fork: false, extra: 0 },
+      { name: 'same', alias: 'compat', openapi: true },
+    ],
+    plugin: { future: [] },
+  }
+  let draft: Record<string, unknown> = initial
+  function Editor() {
+    const [value, setValue] = React.useState(draft)
+    return React.createElement(ModelAliasEditor, {
+      value,
+      availableChannels: ['claude', 'vertex'],
+      disabled: false,
+      onChange: (next) => {
+        draft = next
+        setValue(next)
+      },
+    })
+  }
+  const labels = en.common.configPage.json
+  await render(React.createElement(Editor))
+  await edit(input(labels.placeholders.alias), 'changed-claude')
+  assert.deepEqual(draft, { ...initial, claude: [{ name: 'upstream', alias: 'changed-claude' }] })
+  await select(labels.aliasChannel, 'vertex')
+  await edit(input(labels.placeholders.alias), 'changed-native')
+  assert.deepEqual(draft.vertex, [
+    { ...initial.vertex[0], alias: 'changed-native' },
+    initial.vertex[1],
+  ])
+  await select(labels.vertexProtocol, labels.vertexModes.auto)
+  assert.deepEqual(draft.vertex, [
+    { name: 'same', alias: 'changed-native', fork: false, extra: 0 },
+    initial.vertex[1],
+  ])
+  await select(labels.aliasChannel, 'plugin')
+  assert.equal(button(labels.addAlias).disabled, true)
+  assert.deepEqual(draft.plugin, initial.plugin)
+} else if (scenario === 'plugin-loading') {
   await render(pluginForm())
   assert.ok(button(en.common.pluginPage.config.save).disabled)
   assert.ok(browser.document.querySelector('[role="status"]'))

@@ -3,6 +3,12 @@ import type { AxiosInstance } from 'axios'
 import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
 import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 
+import { ConfigEditConflict, mergeConfigEdits, sameConfigValue } from './config-edit'
+import { createFormState, readProviderModels, readRequestScopedErrors } from './provider-form'
+import type { ProviderErrorRuleAction } from './provider-form'
+
+export { PROVIDER_ERROR_RULE_ACTIONS, type ProviderErrorRuleAction } from './provider-form'
+
 type UnknownRecord = Record<string, unknown>
 
 export type ProviderId =
@@ -37,23 +43,16 @@ export const PROVIDER_THINKING_LEVELS = [
   'auto',
 ] as const
 
-export const PROVIDER_ERROR_RULE_ACTIONS = [
-  'stop',
-  'stop-and-cooldown',
-  'continue',
-  'continue-and-cooldown',
-] as const
-
-export type ProviderErrorRuleAction = (typeof PROVIDER_ERROR_RULE_ACTIONS)[number]
-
 export type ProviderRequestScopedErrorRule = {
   status: number
   match?: string[]
   'match-regexr'?: string[]
+  raw?: UnknownRecord
   action: ProviderErrorRuleAction
 }
 
 export type ProviderApiKeyEntryInput = {
+  original?: UnknownRecord
   id?: string
   apiKey: string
   existingApiKey?: string
@@ -131,7 +130,7 @@ export type ProviderModelEntryInput = {
   thinkingMax?: string
   thinkingZeroAllowed?: boolean
   thinkingDynamicAllowed?: boolean
-  raw?: UnknownRecord
+  raw?: UnknownRecord | null
 }
 
 export type ProviderHeaderEntryInput = {
@@ -190,6 +189,7 @@ export type ProviderResource = {
   excludedModelCount: number
   apiKeyEntryCount: number
   selector: UnknownRecord
+  source?: { group: UnknownRecord; key?: UnknownRecord }
   raw: UnknownRecord
 }
 
@@ -530,6 +530,9 @@ function normalizeNativeKeyResource(
 ): ProviderResource {
   // Effective credential view: group fields with the key's own overrides winning.
   const record = { ...group, ...key }
+  for (const field of nativeSharedFields) {
+    if (key[field] === null) record[field] = group[field]
+  }
   delete record.keys
 
   // Older Home versions return only the credential ID, which /requests/api-call
@@ -566,6 +569,7 @@ function normalizeNativeKeyResource(
     excludedModelCount: countArray(record, 'excluded-models'),
     apiKeyEntryCount: readGroupKeys(group).length,
     selector: createNativeKeySelector(key, group, index),
+    source: { group, key },
     raw: record,
   }
 }
@@ -623,6 +627,7 @@ function normalizeCompatibilityResource(
       ? record.keys.length
       : countArray(record, 'api-key-entries'),
     selector: createSelector(descriptor, record, index),
+    source: { group: record },
     raw: record,
   }
 }
@@ -682,12 +687,9 @@ function parseTextList(value: string): string[] {
 }
 
 function createHeaderPayload(entries: ProviderHeaderEntryInput[]) {
-  return entries.reduce<UnknownRecord>((payload, entry) => {
-    const key = entry.key.trim()
-    if (!key) return payload
-    payload[key] = entry.value
-    return payload
-  }, {})
+  return Object.fromEntries(
+    entries.filter((entry) => entry.key.trim()).map((entry) => [entry.key.trim(), entry.value]),
+  )
 }
 
 function createStringHeaderPayload(entries: ProviderHeaderEntryInput[]) {
@@ -980,120 +982,149 @@ function createModelPayload(
   descriptor: ProviderDescriptor,
   existingModels: UnknownRecord[] = [],
 ) {
-  const existingByName = new Map<string, UnknownRecord>()
-  for (const model of existingModels) {
-    const name = readString(model, 'name')
-    if (name && !existingByName.has(name)) {
-      existingByName.set(name, model)
+  const used = new Set<UnknownRecord>()
+  return entries
+    .filter((entry) => entry.name.trim())
+    .map((entry) => {
+      let raw = entry.raw
+      // Older callers may only provide a name. Repeated upstream names need an alias to bind a row.
+      if (raw === undefined) {
+        const matching = existingModels.filter(
+          (model) => readString(model, 'name') === entry.name.trim(),
+        )
+        const candidates =
+          matching.length > 1
+            ? matching.filter((model) => (readString(model, 'alias') ?? '') === entry.alias.trim())
+            : matching
+        if (matching.length > 1 && candidates.length !== 1) throw new ConfigEditConflict()
+        raw = candidates[0]
+      }
+      if (!raw) return serializeModelEntry(entry, descriptor)
+      if (used.has(raw)) throw new ConfigEditConflict()
+      used.add(raw)
+      const [original] = readProviderModels({ models: [raw] })
+      const draft = { ...original, ...entry }
+      const next = mergeConfigEdits(
+        raw,
+        serializeModelEntry(original, descriptor, raw),
+        serializeModelEntry(draft, descriptor, raw),
+      )
+      if (isRecord(next.thinking)) {
+        const thinking = { ...next.thinking }
+        // Only migrate a legacy spelling when that toggle was edited.
+        if (original.thinkingZeroAllowed !== draft.thinkingZeroAllowed) delete thinking.zero_allowed
+        if (original.thinkingDynamicAllowed !== draft.thinkingDynamicAllowed)
+          delete thinking.dynamic_allowed
+        next.thinking = thinking
+      }
+      return next
+    })
+}
+
+function serializeModelEntry(
+  entry: ProviderModelEntryInput,
+  descriptor: ProviderDescriptor,
+  baseRaw?: UnknownRecord,
+) {
+  const name = entry.name.trim()
+  const payload: UnknownRecord = baseRaw ? { ...baseRaw } : {}
+  payload.name = name
+
+  const alias = entry.alias.trim()
+  if (alias && alias !== name) {
+    payload.alias = alias
+  } else {
+    delete payload.alias
+  }
+
+  if (descriptor.supportsRichModelAliases) {
+    const displayName = entry.displayName.trim()
+    if (displayName) {
+      payload['display-name'] = displayName
+    } else {
+      delete payload['display-name']
+    }
+
+    if (entry.forceMapping) {
+      payload['force-mapping'] = true
+    } else {
+      delete payload['force-mapping']
     }
   }
 
-  return entries
-    .map((entry) => {
-      const name = entry.name.trim()
-      if (!name) return null
-
-      const baseRaw = entry.raw ?? existingByName.get(name)
-      const payload: UnknownRecord = baseRaw ? { ...baseRaw } : {}
-      payload.name = name
-
-      const alias = entry.alias.trim()
-      if (alias && alias !== name) {
-        payload.alias = alias
+  if (descriptor.id !== 'vertex') {
+    if (entry.maxContextLength !== undefined) {
+      const trimmed = entry.maxContextLength.trim()
+      const parsed = trimmed ? Number(trimmed) : Number.NaN
+      if (trimmed && Number.isSafeInteger(parsed) && parsed > 0) {
+        payload['max-context-length'] = parsed
       } else {
-        delete payload.alias
+        delete payload['max-context-length']
       }
+    }
 
-      if (descriptor.supportsRichModelAliases) {
-        const displayName = entry.displayName.trim()
-        if (displayName) {
-          payload['display-name'] = displayName
-        } else {
-          delete payload['display-name']
-        }
-
-        if (entry.forceMapping) {
-          payload['force-mapping'] = true
-        } else {
-          delete payload['force-mapping']
-        }
-      }
-
-      if (descriptor.id !== 'vertex') {
-        if (entry.maxContextLength !== undefined) {
-          const trimmed = entry.maxContextLength.trim()
-          const parsed = trimmed ? Number(trimmed) : Number.NaN
-          if (trimmed && Number.isSafeInteger(parsed) && parsed > 0) {
-            payload['max-context-length'] = parsed
-          } else {
-            delete payload['max-context-length']
-          }
-        }
-
-        if (entry.isCompat !== undefined) {
-          if (entry.isCompat) {
-            payload['is-compat'] = true
-          } else {
-            delete payload['is-compat']
-          }
-        }
-      }
-
-      if (descriptor.id === 'codex' && entry.supportConfigurationUpdate !== undefined) {
-        if (entry.supportConfigurationUpdate) {
-          payload['support-configuration-update'] = true
-        } else {
-          delete payload['support-configuration-update']
-        }
-      }
-
-      if (descriptor.id === 'openaiCompatibility') {
-        if (entry.image !== undefined) {
-          if (entry.image) {
-            payload.image = true
-          } else {
-            delete payload.image
-          }
-        }
-
-        if (entry.inputModalitiesText !== undefined) {
-          const modalities = parseModalityList(entry.inputModalitiesText)
-          if (modalities.length > 0) {
-            payload['input-modalities'] = modalities
-          } else {
-            delete payload['input-modalities']
-          }
-        }
-
-        if (entry.outputModalitiesText !== undefined) {
-          const modalities = parseModalityList(entry.outputModalitiesText)
-          if (modalities.length > 0) {
-            payload['output-modalities'] = modalities
-          } else {
-            delete payload['output-modalities']
-          }
-        }
-
-        if (entry.useMaxCompletionTokens !== undefined) {
-          if (entry.useMaxCompletionTokens) {
-            payload['use-max-completion-tokens'] = true
-          } else {
-            delete payload['use-max-completion-tokens']
-          }
-        }
-      }
-
-      const existingThinking = isRecord(baseRaw?.thinking) ? baseRaw.thinking : undefined
-      const thinking = buildModelThinkingPayload(entry, existingThinking)
-      if (thinking !== undefined) {
-        payload.thinking = thinking
+    if (entry.isCompat !== undefined) {
+      if (entry.isCompat) {
+        payload['is-compat'] = true
       } else {
-        delete payload.thinking
+        delete payload['is-compat']
       }
+    }
+  }
 
-      return payload
-    })
-    .filter((entry): entry is UnknownRecord => Boolean(entry))
+  if (descriptor.id === 'codex' && entry.supportConfigurationUpdate !== undefined) {
+    if (entry.supportConfigurationUpdate) {
+      payload['support-configuration-update'] = true
+    } else {
+      delete payload['support-configuration-update']
+    }
+  }
+
+  if (descriptor.id === 'openaiCompatibility') {
+    if (entry.image !== undefined) {
+      if (entry.image) {
+        payload.image = true
+      } else {
+        delete payload.image
+      }
+    }
+
+    if (entry.inputModalitiesText !== undefined) {
+      const modalities = parseModalityList(entry.inputModalitiesText)
+      if (modalities.length > 0) {
+        payload['input-modalities'] = modalities
+      } else {
+        delete payload['input-modalities']
+      }
+    }
+
+    if (entry.outputModalitiesText !== undefined) {
+      const modalities = parseModalityList(entry.outputModalitiesText)
+      if (modalities.length > 0) {
+        payload['output-modalities'] = modalities
+      } else {
+        delete payload['output-modalities']
+      }
+    }
+
+    if (entry.useMaxCompletionTokens !== undefined) {
+      if (entry.useMaxCompletionTokens) {
+        payload['use-max-completion-tokens'] = true
+      } else {
+        delete payload['use-max-completion-tokens']
+      }
+    }
+  }
+
+  const existingThinking = isRecord(baseRaw?.thinking) ? baseRaw.thinking : undefined
+  const thinking = buildModelThinkingPayload(entry, existingThinking)
+  if (thinking !== undefined) {
+    payload.thinking = thinking
+  } else {
+    delete payload.thinking
+  }
+
+  return payload
 }
 
 function pickConnectivityModel(input: ProviderConnectivityTestInput) {
@@ -1108,13 +1139,13 @@ function pickConnectivityModel(input: ProviderConnectivityTestInput) {
   return ''
 }
 
-function createCloakPayload(input?: ProviderCloakInput) {
+function createCloakPayload(input?: ProviderCloakInput, editing = false) {
   if (!input) return undefined
 
   const mode = input.mode.trim()
   const sensitiveWords = parseTextList(input.sensitiveWordsText)
   const hasCloak = mode || input.strictMode || input.cacheUserId || sensitiveWords.length > 0
-  if (!hasCloak) return undefined
+  if (!editing && !hasCloak) return undefined
 
   const payload: UnknownRecord = {
     'strict-mode': input.strictMode,
@@ -1125,6 +1156,17 @@ function createCloakPayload(input?: ProviderCloakInput) {
   if (sensitiveWords.length) payload['sensitive-words'] = sensitiveWords
 
   return payload
+}
+
+function serializeErrorRule(rule: ProviderRequestScopedErrorRule) {
+  const match = rule.match?.map((item) => item.trim()).filter(Boolean) ?? []
+  const regexes = rule['match-regexr']?.map((item) => item.trim()).filter(Boolean) ?? []
+  return {
+    status: rule.status,
+    action: rule.action,
+    ...(match.length ? { match } : {}),
+    ...(regexes.length ? { 'match-regexr': regexes } : {}),
+  }
 }
 
 function appendProviderOptions(
@@ -1163,14 +1205,10 @@ function appendProviderOptions(
   if (descriptor.id !== 'vertex' && input.requestScopedErrors !== undefined) {
     if (input.requestScopedErrors.length > 0) {
       payload['request-scoped-errors'] = input.requestScopedErrors.map((rule) => {
-        const match = rule.match?.map((item) => item.trim()).filter(Boolean) ?? []
-        const regexes = rule['match-regexr']?.map((item) => item.trim()).filter(Boolean) ?? []
-        return {
-          status: rule.status,
-          action: rule.action,
-          ...(match.length ? { match } : {}),
-          ...(regexes.length ? { 'match-regexr': regexes } : {}),
-        }
+        const next = serializeErrorRule(rule)
+        if (!rule.raw) return next
+        const [original] = readRequestScopedErrors({ 'request-scoped-errors': [rule.raw] })
+        return mergeConfigEdits(rule.raw, serializeErrorRule(original), next)
       })
     } else {
       delete payload['request-scoped-errors']
@@ -1178,19 +1216,17 @@ function appendProviderOptions(
   }
 }
 
-// Group fields the entry form does not manage; carried over on update so an
-// edit does not silently drop them from the strict-schema PUT.
-const NATIVE_GROUP_CARRY_FIELDS = ['name', 'request-scoped-errors']
-const COMPATIBILITY_GROUP_CARRY_FIELDS = ['id', 'support-prompt-cache-key', 'request-scoped-errors']
-// Provider-specific key options the form does not manage; carried per key.
-const NATIVE_KEY_CARRY_FIELDS = [
+const nativeSharedFields = [
+  'priority',
+  'prefix',
+  'proxy-url',
+  'headers',
+  'models',
+  'excluded-models',
+  'disable-cooling',
+  'request-retry',
   'request-scoped-errors',
-  'disable-codex-cloaking',
-  'alpha-search',
-  'experimental-cch-signing',
-  'rebuild-mid-system-message',
-  'native-tool-search',
-  'fingerprint-profile',
+  'connection-pool',
 ]
 
 function createNativeKeyPayload(
@@ -1215,10 +1251,6 @@ function createNativeKeyPayload(
   } else {
     const weight = readNumber(existing, 'weight')
     if (weight !== null) payload.weight = weight
-  }
-
-  for (const field of NATIVE_KEY_CARRY_FIELDS) {
-    if (existing[field] !== undefined) payload[field] = existing[field]
   }
 
   if (descriptor.id === 'codex') {
@@ -1276,7 +1308,7 @@ function createNativeKeyPayload(
   }
 
   if (descriptor.supportsCloak) {
-    const cloak = createCloakPayload(input.cloak)
+    const cloak = createCloakPayload(input.cloak, Boolean(existingKey))
     if (cloak) payload.cloak = cloak
   }
 
@@ -1340,80 +1372,45 @@ function createCompatibilityGroupPayload(
 }
 
 function createCompatibilityKeys(input: ProviderEntryFormInput, existingKeys: UnknownRecord[]) {
-  if (input.apiKeyEntries !== undefined) {
-    return input.apiKeyEntries
-      .map((entry) => {
-        const entryId = entry.id?.trim()
-        const existingApiKey = entry.existingApiKey?.trim()
-        const existing = existingKeys.find((key) =>
-          entryId
-            ? (readString(key, 'id') ?? readString(key, 'uuid')) === entryId
-            : Boolean(existingApiKey) && readString(key, 'api-key') === existingApiKey,
-        )
-        if ((entryId || existingApiKey) && !existing) {
-          throw new Error('Provider credential not found')
-        }
-        const resolvedApiKey = entry.apiKey.trim() || readString(existing ?? {}, 'api-key') || ''
-        if (!resolvedApiKey) return null
-
-        const payload: UnknownRecord = {}
-        const id = readString(existing ?? {}, 'id') ?? readString(existing ?? {}, 'uuid')
-        if (id) payload.id = id
-
-        payload['api-key'] = resolvedApiKey
-        const proxyUrl = entry.proxyUrl.trim()
-        if (proxyUrl) payload['proxy-url'] = proxyUrl
-
-        if (entry.weight !== undefined) {
-          if (typeof entry.weight === 'number' && Number.isSafeInteger(entry.weight)) {
-            payload.weight = entry.weight
-          }
-        } else {
-          const weight = readNumber(existing ?? {}, 'weight')
-          if (weight !== null) payload.weight = weight
-        }
-
-        return payload
-      })
-      .filter((entry): entry is UnknownRecord => Boolean(entry))
-  }
-
-  const apiKey = input.apiKey.trim()
-  const proxyUrl = input.proxyUrl.trim()
-
-  // An empty keys list is the keyless fallback credential for the group.
-  if (!existingKeys.length) {
-    if (!apiKey) return []
-    const key: UnknownRecord = { 'api-key': apiKey }
-    if (proxyUrl) key['proxy-url'] = proxyUrl
-    if (typeof input.weight === 'number' && Number.isSafeInteger(input.weight)) {
-      key.weight = input.weight
+  const entries: ProviderApiKeyEntryInput[] = input.apiKeyEntries ?? [
+    {
+      apiKey: input.apiKey,
+      proxyUrl: input.proxyUrl,
+      weight: input.weight,
+      id:
+        readString(existingKeys[0] ?? {}, 'id') ??
+        readString(existingKeys[0] ?? {}, 'uuid') ??
+        undefined,
+      existingApiKey: readString(existingKeys[0] ?? {}, 'api-key') ?? undefined,
+    },
+  ]
+  const used = new Set<UnknownRecord>()
+  const result: UnknownRecord[] = []
+  for (const entry of entries) {
+    const matches = existingKeys.filter((key) => {
+      if (entry.id) return (readString(key, 'id') ?? readString(key, 'uuid')) === entry.id
+      if (entry.existingApiKey) return readString(key, 'api-key') === entry.existingApiKey
+      return entry.original && sameConfigValue(key, entry.original)
+    })
+    const existing = matches[0]
+    if ((entry.id || entry.existingApiKey || entry.original) && !existing) {
+      throw new ConfigEditConflict('Provider credential not found')
     }
-    return [key]
-  }
-
-  return existingKeys.map((existing, index) => {
-    if (index !== 0) return existing
-
-    const payload: UnknownRecord = {}
-    const id = readString(existing, 'id') ?? readString(existing, 'uuid')
-    if (id) payload.id = id
-
-    const resolvedApiKey = apiKey || readString(existing, 'api-key') || ''
-    if (resolvedApiKey) payload['api-key'] = resolvedApiKey
-    if (proxyUrl) payload['proxy-url'] = proxyUrl
-
-    if (input.weight !== undefined) {
-      if (typeof input.weight === 'number' && Number.isSafeInteger(input.weight)) {
-        payload.weight = input.weight
-      }
-    } else {
-      const weight = readNumber(existing, 'weight')
-      if (weight !== null) payload.weight = weight
+    if (matches.length > 1 || (existing && used.has(existing))) throw new ConfigEditConflict()
+    if (existing) used.add(existing)
+    if (!existing && !entry.apiKey.trim()) continue
+    const key = { ...existing }
+    if (entry.apiKey.trim()) key['api-key'] = entry.apiKey.trim()
+    const proxy = entry.proxyUrl.trim()
+    if (entry.proxyUrl !== (typeof key['proxy-url'] === 'string' ? key['proxy-url'] : '')) {
+      if (proxy) key['proxy-url'] = proxy
+      else delete key['proxy-url']
     }
-
-    return payload
-  })
+    if (entry.weight === null) delete key.weight
+    else if (Number.isSafeInteger(entry.weight)) key.weight = entry.weight
+    result.push(key)
+  }
+  return input.apiKeyEntries === undefined ? [...result, ...existingKeys.slice(1)] : result
 }
 
 function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntryFormInput) {
@@ -1441,80 +1438,64 @@ function locateNativeCredential(
   family: UnknownRecord[],
   resource: ProviderResource,
 ): NativeCredentialLocation | null {
-  const selector = resource.selector
-
-  const id =
-    (typeof selector.id === 'string' ? selector.id : null) ??
-    (typeof selector.uuid === 'string' ? selector.uuid : null)
-  if (id) {
-    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
-      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
-        (key) => readString(key, 'id') === id || readString(key, 'uuid') === id,
+  const { selector, source } = resource
+  const matches: NativeCredentialLocation[] = []
+  let flatIndex = 0
+  function matchesKey(group: UnknownRecord, key: UnknownRecord, index: number) {
+    const id = selector.id ?? selector.uuid
+    if (id) return key.id === id || key.uuid === id
+    if (selector.auth_index)
+      return (readAuthIndex(key) ?? readAuthIndex(group)) === selector.auth_index
+    if (selector['api-key'])
+      return (
+        key['api-key'] === selector['api-key'] &&
+        (!selector['base-url'] || group['base-url'] === selector['base-url'])
       )
-      if (keyIndex !== -1) return { groupIndex, keyIndex }
-    }
-  }
-
-  const authIndex = typeof selector.auth_index === 'string' ? selector.auth_index : null
-  if (authIndex) {
-    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
-      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
-        (key) => readAuthIndex(key) === authIndex,
+    if (source)
+      return (
+        sameConfigValue(source.key, key) &&
+        sameConfigValue(withoutKeys(source.group), withoutKeys(group))
       )
-      if (keyIndex !== -1) return { groupIndex, keyIndex }
-    }
+    return index === selector.index
   }
-
-  const apiKey = typeof selector['api-key'] === 'string' ? selector['api-key'] : null
-  if (apiKey) {
-    const baseUrl = typeof selector['base-url'] === 'string' ? selector['base-url'] : null
-    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
-      if (baseUrl && readString(family[groupIndex], 'base-url') !== baseUrl) continue
-      const keyIndex = readGroupKeys(family[groupIndex]).findIndex(
-        (key) => readString(key, 'api-key') === apiKey,
-      )
-      if (keyIndex !== -1) return { groupIndex, keyIndex }
-    }
-  }
-
-  if (typeof selector.index === 'number') {
-    let flatIndex = 0
-    for (let groupIndex = 0; groupIndex < family.length; groupIndex += 1) {
-      const keyCount = readGroupKeys(family[groupIndex]).length
-      if (selector.index < flatIndex + keyCount) {
-        return { groupIndex, keyIndex: selector.index - flatIndex }
-      }
-      flatIndex += keyCount
-    }
-  }
-
-  return null
+  family.forEach((group, groupIndex) => {
+    readGroupKeys(group).forEach((key, keyIndex) => {
+      if (matchesKey(group, key, flatIndex)) matches.push({ groupIndex, keyIndex })
+      flatIndex++
+    })
+  })
+  if (matches.length > 1) throw new ConfigEditConflict()
+  return matches[0] ?? null
 }
 
 function locateCompatibilityGroup(family: UnknownRecord[], resource: ProviderResource) {
-  const selector = resource.selector
-
-  const id =
-    (typeof selector.id === 'string' ? selector.id : null) ??
-    (typeof selector.uuid === 'string' ? selector.uuid : null)
-  if (id) {
-    const index = family.findIndex(
-      (group) => readString(group, 'id') === id || readString(group, 'uuid') === id,
-    )
-    if (index !== -1) return index
+  const { selector, source } = resource
+  const id = selector.id ?? selector.uuid
+  function matchesGroup(group: UnknownRecord, index: number) {
+    if (id) return group.id === id || group.uuid === id
+    if (selector.auth_index) return readAuthIndex(group) === selector.auth_index
+    if (selector.name) return group.name === selector.name
+    if (source) return sameConfigValue(source.group, group)
+    return index === selector.index
   }
+  const matches = family.flatMap((group, index) => (matchesGroup(group, index) ? [index] : []))
+  if (matches.length > 1) throw new ConfigEditConflict()
+  return matches[0] ?? null
+}
 
-  const name = typeof selector.name === 'string' ? selector.name : null
-  if (name) {
-    const index = family.findIndex((group) => readString(group, 'name') === name)
-    if (index !== -1) return index
+function withoutKeys(group: UnknownRecord) {
+  const copy = { ...group }
+  delete copy.keys
+  return copy
+}
+
+function sameCredential(opened: UnknownRecord, current: UnknownRecord, replacingSecret: boolean) {
+  // A blank secret input means keep the latest secret of this same credential.
+  const stableId = opened.id ?? opened.uuid
+  if (!replacingSecret && stableId && stableId === (current.id ?? current.uuid)) {
+    return sameConfigValue({ ...opened, 'api-key': null }, { ...current, 'api-key': null })
   }
-
-  if (typeof selector.index === 'number' && selector.index >= 0 && selector.index < family.length) {
-    return selector.index
-  }
-
-  return null
+  return sameConfigValue(opened, current)
 }
 
 function replaceNativeCredential(
@@ -1524,29 +1505,82 @@ function replaceNativeCredential(
   input: ProviderEntryFormInput,
 ) {
   const location = locateNativeCredential(family, resource)
-  if (!location) throw new Error('Provider credential not found')
-
+  if (!location) throw new ConfigEditConflict('Provider credential not found')
   const group = family[location.groupIndex]
-  const existingKeys = readGroupKeys(group)
-  const existingModels = Array.isArray(group.models) ? group.models.filter(isRecord) : []
-  const nextKey = createNativeKeyPayload(descriptor, input, existingKeys[location.keyIndex])
-  const nextKeys = existingKeys.length
-    ? existingKeys.map((key, index) => (index === location.keyIndex ? nextKey : key))
-    : [nextKey]
+  const keys = readGroupKeys(group)
+  const key = keys[location.keyIndex]
+  const source = resource.source
+  if (
+    source?.key &&
+    (!sameConfigValue(withoutKeys(source.group), withoutKeys(group)) ||
+      !sameCredential(source.key, key, Boolean(input.apiKey.trim())))
+  )
+    throw new ConfigEditConflict()
 
-  const nextGroup: UnknownRecord = {}
-  for (const field of NATIVE_GROUP_CARRY_FIELDS) {
-    if (group[field] !== undefined) nextGroup[field] = group[field]
+  const form = createFormState(resource, descriptor)
+  const draft = { ...form, ...input }
+  const models = Array.isArray(resource.raw.models) ? resource.raw.models.filter(isRecord) : []
+  const before = createNativeGroupPayload(descriptor, form, models)
+  const after = createNativeGroupPayload(descriptor, draft, models)
+  const nextKey = mergeConfigEdits(
+    key,
+    createNativeKeyPayload(descriptor, form, key),
+    createNativeKeyPayload(descriptor, draft, key),
+  )
+  if (
+    isRecord(key.cloak) &&
+    Object.keys(key.cloak).length > 0 &&
+    isRecord(nextKey.cloak) &&
+    !Object.keys(nextKey.cloak).length
+  ) {
+    delete nextKey.cloak
   }
-  Object.assign(nextGroup, createNativeGroupPayload(descriptor, input, existingModels))
-  if (input.requestScopedErrors !== undefined && input.requestScopedErrors.length === 0) {
-    delete nextGroup['request-scoped-errors']
+  const groupBefore = { ...before }
+  const groupAfter = { ...after }
+  for (const field of nativeSharedFields) {
+    if (sameConfigValue(before[field], after[field])) continue
+    if (
+      field === 'excluded-models' &&
+      Array.isArray(resource.raw[field]) &&
+      resource.raw[field].includes('*')
+    ) {
+      after[field] = [...new Set(['*', ...(after[field] as string[])])]
+      groupAfter[field] = after[field]
+    }
+    if (keys.length === 1 && key[field] == null) continue
+    // Each credential in the UI edits its effective value. A key-level override must
+    // include the full effective map or list, because Home replaces inherited values.
+    const effective = mergeConfigEdits(
+      resource.raw,
+      { [field]: before[field] },
+      Object.hasOwn(after, field) ? { [field]: after[field] } : {},
+    )
+    const cleared =
+      field === 'prefix' || field === 'proxy-url'
+        ? ''
+        : field === 'request-scoped-errors'
+          ? []
+          : null
+    nextKey[field] = effective[field] ?? cleared
+    delete groupBefore[field]
+    delete groupAfter[field]
   }
-  nextGroup.keys = nextKeys
-
-  const nextFamily = family.slice()
-  nextFamily[location.groupIndex] = nextGroup
-  return nextFamily
+  const nextGroup = mergeConfigEdits(group, groupBefore, groupAfter)
+  const result = family.slice()
+  if (keys.length > 1 && !sameConfigValue(group['base-url'], nextGroup['base-url'])) {
+    result.splice(
+      location.groupIndex,
+      1,
+      { ...group, keys: keys.filter((_, i) => i !== location.keyIndex) },
+      { ...nextGroup, keys: [nextKey] },
+    )
+  } else {
+    result[location.groupIndex] = {
+      ...nextGroup,
+      keys: keys.map((item, i) => (i === location.keyIndex ? nextKey : item)),
+    }
+  }
+  return result
 }
 
 function replaceCompatibilityGroup(
@@ -1555,27 +1589,44 @@ function replaceCompatibilityGroup(
   resource: ProviderResource,
   input: ProviderEntryFormInput,
 ) {
-  const groupIndex = locateCompatibilityGroup(family, resource)
-  if (groupIndex === null) throw new Error('Provider entry not found')
-
-  const group = family[groupIndex]
-  const existingModels = Array.isArray(group.models) ? group.models.filter(isRecord) : []
-  const nextGroup: UnknownRecord = {}
-  for (const field of COMPATIBILITY_GROUP_CARRY_FIELDS) {
-    if (group[field] !== undefined) nextGroup[field] = group[field]
+  const index = locateCompatibilityGroup(family, resource)
+  if (index === null) throw new ConfigEditConflict('Provider entry not found')
+  const group = family[index]
+  const keys = readGroupKeys(group)
+  const form = createFormState(resource, descriptor)
+  const keysEdited =
+    input.apiKeyEntries !== undefined
+      ? !sameConfigValue(form.apiKeyEntries, input.apiKeyEntries)
+      : Boolean(input.apiKey.trim()) ||
+        input.proxyUrl !== form.proxyUrl ||
+        (input.weight !== undefined && input.weight !== form.weight)
+  const opened = resource.source?.group
+  if (opened) {
+    const originalKeys = readGroupKeys(opened)
+    if (!sameConfigValue(withoutKeys(opened), withoutKeys(group))) throw new ConfigEditConflict()
+    if (originalKeys.length !== keys.length)
+      throw new ConfigEditConflict('Provider credential not found')
+    originalKeys.forEach((key, index) => {
+      const id = key.id ?? key.uuid
+      if (id && id !== (keys[index].id ?? keys[index].uuid))
+        throw new ConfigEditConflict('Provider credential not found')
+      const replacing =
+        input.apiKeyEntries?.some(
+          (entry) =>
+            (id ? entry.id === id : entry.existingApiKey === key['api-key']) && entry.apiKey.trim(),
+        ) ??
+        (index === 0 && Boolean(input.apiKey.trim()))
+      if (!sameCredential(key, keys[index], Boolean(replacing))) throw new ConfigEditConflict()
+    })
   }
-  Object.assign(nextGroup, createCompatibilityGroupPayload(descriptor, input, existingModels))
-  if (input.supportPromptCacheKey === false) {
-    delete nextGroup['support-prompt-cache-key']
-  }
-  if (input.requestScopedErrors !== undefined && input.requestScopedErrors.length === 0) {
-    delete nextGroup['request-scoped-errors']
-  }
-  nextGroup.keys = createCompatibilityKeys(input, readGroupKeys(group))
-
-  const nextFamily = family.slice()
-  nextFamily[groupIndex] = nextGroup
-  return nextFamily
+  const models = Array.isArray(group.models) ? group.models.filter(isRecord) : []
+  const next = mergeConfigEdits(
+    group,
+    createCompatibilityGroupPayload(descriptor, form, models),
+    createCompatibilityGroupPayload(descriptor, { ...form, ...input }, models),
+  )
+  if (keysEdited) next.keys = createCompatibilityKeys(input, keys)
+  return family.map((item, i) => (i === index ? next : item))
 }
 
 function removeNativeCredential(family: UnknownRecord[], resource: ProviderResource) {

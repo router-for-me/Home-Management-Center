@@ -9,6 +9,14 @@ import {
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
+import { ConfigEditConflict, sameConfigValue } from './config-edit'
+import {
+  aliasChannelValue,
+  changedAliasChannels,
+  hasIncompleteAliasChanges,
+  isAliasChannel,
+} from './oauth-model-aliases'
+
 type UnknownRecord = Record<string, unknown>
 
 export type ConfigFieldValue = string | number | boolean | null
@@ -633,7 +641,7 @@ type ConfigWriteTarget = {
 
 type ConfigWriteTargetKey = Exclude<
   WritableConfigFieldKey,
-  'payloadRulesJson' | 'multimediaDisableImageGeneration'
+  'payloadRulesJson' | 'multimediaDisableImageGeneration' | 'oauthModelAliasJson'
 >
 
 const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
@@ -663,7 +671,6 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   disableCooling: { path: 'routing/cooldown/disable-cooling', kind: 'boolean' },
   routingStrategy: { path: 'routing/strategy', kind: 'string' },
   oauthExcludedModelsJson: { path: 'oauth/excluded-models', kind: 'jsonObject' },
-  oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'jsonObject' },
   antigravitySensitiveWordsJson: {
     path: 'oauth/providers/antigravity/sensitive-words',
     kind: 'stringList',
@@ -865,12 +872,61 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   },
 }
 
+export function hasAliasChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
+  const before = parseJsonObjectText(change.previousValue)
+  const after = parseJsonObjectText(change.nextValue)
+  const latest = parseJsonObjectText(current)
+  return changedAliasChannels(before, after).some((channel) => {
+    const value = aliasChannelValue(latest, channel)
+    return (
+      !sameConfigValue(value, aliasChannelValue(before, channel)) &&
+      !sameConfigValue(value, aliasChannelValue(after, channel))
+    )
+  })
+}
+
 export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
   // Keep false/0/null as request bodies and JSON-looking strings as strings.
   const putJson = (url: string, value: unknown) =>
     client.put(url, JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
   const key = change.key
+
+  if (key === 'oauthModelAliasJson') {
+    const before = parseJsonObjectText(change.previousValue)
+    const after = parseJsonObjectText(change.nextValue)
+    const channels = changedAliasChannels(before, after)
+    if (
+      hasIncompleteAliasChanges(before, after) ||
+      channels.some((channel) => !isAliasChannel(channel))
+    ) {
+      throw new Error('Invalid OAuth model alias')
+    }
+    const pending: { path: string; value: unknown; shrinks: boolean }[] = []
+    for (const channel of channels) {
+      const path = '/config/oauth/model-alias/' + encodeURIComponent(channel)
+      let current: unknown
+      try {
+        current = (await client.get<unknown>(path)).data
+      } catch (error) {
+        if (toManagementApiError(error).status !== 404) throw error
+      }
+      const next = aliasChannelValue(after, channel)
+      if (sameConfigValue(current, next)) continue
+      if (!sameConfigValue(current, aliasChannelValue(before, channel)))
+        throw new ConfigEditConflict()
+      pending.push({
+        path,
+        value: next,
+        shrinks: Array.isArray(current) && Array.isArray(next) && next.length < current.length,
+      })
+    }
+    // Store destinations before deleting sources when a rule moves to another channel.
+    pending.sort((left, right) => Number(left.shrinks) - Number(right.shrinks))
+    for (const { path, value } of pending) if (value !== undefined) await putJson(path, value)
+    for (const { path, value } of pending) if (value === undefined) await client.delete(path)
+    return
+  }
 
   if (key === 'payloadRulesJson') {
     const payload = sanitizePayloadForWrite(

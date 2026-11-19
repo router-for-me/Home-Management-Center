@@ -4199,6 +4199,7 @@ export const zhCN = {
       },
       validation: {
         invalidField: '请填写有效值。',
+        editConflict: '记录已变更、已删除或无法唯一匹配。请重新加载后再编辑。',
         runtimeChanged: '正在编辑的配置已在服务端更新。请重新加载后再编辑。',
         jsonParseError: 'JSON 无法解析：{{message}}',
         summary: '{{count}} 个字段需要处理',
@@ -4207,6 +4208,11 @@ export const zhCN = {
         remove: '移除',
         unsupportedStructure: '当前配置包含暂不支持可视化编辑的结构。',
         emptyRows: '当前没有规则。',
+        aliasChannel: '别名通道',
+        customChannel: '自定义渠道',
+        moveAlias: '移动别名',
+        vertexProtocol: 'Vertex 协议',
+        vertexModes: { auto: '自动', native: '原生', openapi: 'OpenAPI' },
         addAlias: '添加别名',
         columns: {
           channel: 'Channel',

@@ -4200,6 +4200,7 @@ export const zhTW = {
       },
       validation: {
         invalidField: '請填寫有效值。',
+        editConflict: '記錄已變更、已刪除或無法唯一比對。請重新載入後再編輯。',
         runtimeChanged: '正在編輯的設定已在伺服器更新。請重新載入後再編輯。',
         jsonParseError: 'JSON 無法解析：{{message}}',
         summary: '{{count}} 個欄位需要處理',
@@ -4208,6 +4209,11 @@ export const zhTW = {
         remove: '移除',
         unsupportedStructure: '目前設定包含暫不支援視覺化編輯的結構。',
         emptyRows: '目前沒有規則。',
+        aliasChannel: '別名通道',
+        customChannel: '自訂渠道',
+        moveAlias: '移動別名',
+        vertexProtocol: 'Vertex 協定',
+        vertexModes: { auto: '自動', native: '原生', openapi: 'OpenAPI' },
         addAlias: '新增別名',
         columns: {
           channel: 'Channel',
