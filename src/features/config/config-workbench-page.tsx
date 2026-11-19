@@ -12,6 +12,7 @@ import {
 
 import {
   AlertTriangle,
+  AppWindow,
   ArrowDown,
   ArrowUp,
   CheckCircle2,
@@ -123,6 +124,7 @@ import {
   canEditPayloadConfig,
   hasOAuthChannelConflict,
   isReadOnlyConfigField,
+  parseCodexCacheTtl,
   parseOptionalInteger,
 } from '@/lib/api/management/config'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
@@ -163,18 +165,26 @@ type ConfigSectionId =
   | 'streaming'
   | 'credentialConcurrency'
   | 'credentialInFlight'
+  | 'client'
   | 'upstream'
   | 'headers'
   | 'payload'
   | 'multimedia'
 
-type ConfigSubgroupId = 'cpaServer' | 'devin' | 'liveMediaRelay' | 'antigravity'
+type ConfigSubgroupId =
+  | 'cpaServer'
+  | 'codexSearchCache'
+  | 'codexTransport'
+  | 'devin'
+  | 'liveMediaRelay'
+  | 'antigravity'
 
 type ConfigFieldKind =
   | ReplacementKind
   | 'boolean'
-  | 'defaultOnBoolean'
+  | 'optionalSwitch'
   | 'optionalInteger'
+  | 'optionalText'
   | 'number'
   | 'text'
   | 'sensitiveText'
@@ -323,6 +333,7 @@ type ConfigFieldDefinition = {
   kind: ConfigFieldKind
   sectionId: ConfigSectionId
   groupId?: ConfigSubgroupId
+  defaultChecked?: boolean
   min?: number
   max?: number
   options?: string[]
@@ -350,7 +361,8 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       {
         key: 'serverResponseCompressionEnabled',
-        kind: 'defaultOnBoolean',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
         sectionId: 'server',
         groupId: 'cpaServer',
       },
@@ -383,7 +395,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'discoverySubtypesJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesIncludeJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesExcludeJson', kind: 'jsonArray', sectionId: 'discovery' },
-      { key: 'discoveryAuthRequired', kind: 'defaultOnBoolean', sectionId: 'discovery' },
+      {
+        key: 'discoveryAuthRequired',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'discovery',
+      },
     ],
   },
   {
@@ -484,7 +501,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         options: ['any', 'quota', 'never'],
       },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
-      { key: 'sessionAffinitySubagents', kind: 'defaultOnBoolean', sectionId: 'streaming' },
+      {
+        key: 'sessionAffinitySubagents',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'streaming',
+      },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -557,6 +579,32 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
+    id: 'client',
+    fields: [
+      { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'client' },
+      { key: 'clientCodexEnableApplyPatch', kind: 'optionalSwitch', sectionId: 'client' },
+      {
+        key: 'clientCodexWebSearchCacheEnabled',
+        kind: 'optionalSwitch',
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+      {
+        key: 'clientCodexWebSearchCacheTtl',
+        kind: 'optionalText',
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+      {
+        key: 'clientCodexWebSearchCacheLimit',
+        kind: 'optionalInteger',
+        min: 0,
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+    ],
+  },
+  {
     id: 'upstream',
     fields: [
       { key: 'upstreamCodexDisableCloaking', kind: 'boolean', sectionId: 'upstream' },
@@ -565,7 +613,25 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'upstreamCodexOrphanDelegationCompatibility', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamCodexModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamCodexResponseSteering', kind: 'boolean', sectionId: 'upstream' },
-      { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'upstream' },
+      {
+        key: 'upstreamCodexRequestCompression',
+        kind: 'optionalSwitch',
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
+      {
+        key: 'upstreamCodexRequestCompressionMinBytes',
+        kind: 'optionalInteger',
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
+      {
+        key: 'upstreamCodexWebsocketCompression',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
       { key: 'upstreamClaudeModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeToolSearch', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeDisableCloakMode', kind: 'boolean', sectionId: 'upstream' },
@@ -610,6 +676,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
       { key: 'oauthAutoRefreshWorkers', kind: 'optionalInteger', sectionId: 'oauthProviders' },
+      { key: 'oauthCodexSigninIdentifier', kind: 'optionalText', sectionId: 'oauthProviders' },
       {
         key: 'devinSensitiveWordsJson',
         kind: 'jsonArray',
@@ -785,6 +852,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   streaming: Route,
   credentialConcurrency: Hourglass,
   credentialInFlight: Layers,
+  client: AppWindow,
   upstream: CloudUpload,
   headers: PanelTop,
   payload: Code2,
@@ -1597,7 +1665,7 @@ function getStructuredChanges(
       nextValue:
         field.kind === 'writeOnlySecret' && draft[field.key] === true
           ? baseline[field.key]
-          : getConfigChangeValue(field.key, draft[field.key]),
+          : getConfigChangeValue(field.key, draft[field.key], baseline[field.key]),
     }))
     .filter(
       (change) =>
@@ -1606,11 +1674,21 @@ function getStructuredChanges(
     )
 }
 
-function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): ConfigFieldValue {
+function getConfigChangeValue(
+  key: ConfigFieldKey,
+  value: ConfigFieldValue,
+  previous: ConfigFieldValue = value,
+): ConfigFieldValue {
+  if (key === 'clientCodexWebSearchCacheTtl') {
+    const ttl = parseCodexCacheTtl(value, previous)
+    return ttl === undefined ? value : ttl
+  }
   if (fieldDefinitionByKey[key].kind === 'optionalInteger') {
     const integer = parseOptionalInteger(value)
     return integer === undefined ? value : integer
   }
+  if (fieldDefinitionByKey[key].kind === 'optionalText' && typeof value === 'string')
+    return value.trim() || null
   if (key === 'serverGithubToken' && typeof value === 'string') return value.trim()
   if (key === 'antigravityTosPauseWindow') return String(value ?? '').trim()
   if (key !== 'payloadRulesJson') return value
@@ -1645,7 +1723,10 @@ function getValidationErrors(
         if (hasPayloadDrafts !== null) return hasPayloadDrafts
         if (value === saved?.payloadRulesJson) return false
       }
-      if (field.kind === 'optionalInteger') return parseOptionalInteger(value) === undefined
+      if (field.kind === 'optionalInteger')
+        return parseOptionalInteger(value, field.min) === undefined
+      if (field.key === 'clientCodexWebSearchCacheTtl')
+        return parseCodexCacheTtl(value) === undefined
       if (field.kind === 'number') {
         const num = typeof value === 'number' ? value : Number(value)
         if (typeof value !== 'number' || Number.isNaN(value) || !Number.isInteger(num)) return true
@@ -1661,7 +1742,7 @@ function getValidationErrors(
         if (field.key === 'antigravityTosPauseWindow') return !isValidAntigravityPauseWindow(text)
         return text.length > 0 && !durationPattern.test(text)
       }
-      if (field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean') {
+      if (field.kind === 'nullableBoolean' || field.kind === 'optionalSwitch') {
         return value !== null && typeof value !== 'boolean'
       }
       if (field.kind === 'literalReplacements' || field.kind === 'patternReplacements') {
@@ -1884,15 +1965,17 @@ function BooleanControl({
   )
 }
 
-function DefaultOnSwitch({
+function OptionalConfigSwitch({
   label,
   value,
+  defaultChecked,
   disabled,
   descriptionId,
   onChange,
 }: {
   label: string
   value: boolean | null
+  defaultChecked: boolean
   disabled: boolean
   descriptionId?: string
   onChange: (value: boolean | null) => void
@@ -1906,7 +1989,7 @@ function DefaultOnSwitch({
         ref={switchRef}
         aria-label={label}
         aria-describedby={descriptionId}
-        checked={value ?? true}
+        checked={value ?? defaultChecked}
         disabled={disabled}
         onCheckedChange={onChange}
       />
@@ -1934,7 +2017,7 @@ function ConfigField({
   hasStoredSecret,
   disabled,
   invalid,
-  onEditingIntegerChange,
+  onEditingFieldChange,
   onChange,
 }: {
   field: ConfigFieldDefinition
@@ -1942,11 +2025,11 @@ function ConfigField({
   hasStoredSecret: boolean
   disabled: boolean
   invalid: boolean
-  onEditingIntegerChange: (key: ConfigFieldKey | null) => void
+  onEditingFieldChange: (key: ConfigFieldKey | null) => void
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
   const { t, i18n } = useTranslation()
-  const integerInput = useRef<HTMLInputElement>(null)
+  const optionalInput = useRef<HTMLInputElement>(null)
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
   const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
@@ -1975,11 +2058,12 @@ function ConfigField({
         </p>
         {invalid ? (
           <p id={errorId} className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {t(
+            {t([
+              `configPage.fields.${field.key}.invalid`,
               field.kind === 'optionalInteger'
                 ? 'configPage.validation.optionalInteger'
-                : [`configPage.fields.${field.key}.invalid`, 'configPage.validation.invalidField'],
-            )}
+                : 'configPage.validation.invalidField',
+            ])}
           </p>
         ) : null}
       </div>
@@ -1998,11 +2082,11 @@ function ConfigField({
             onChange={(nextValue) => onChange(field.key, nextValue)}
           />
         ) : null}
-        {field.kind === 'optionalInteger' ? (
+        {field.kind === 'optionalInteger' || field.kind === 'optionalText' ? (
           <div className="flex w-full min-w-0 items-center gap-2 md:max-w-80">
             <Input
-              ref={integerInput}
-              inputMode="numeric"
+              ref={optionalInput}
+              inputMode={field.kind === 'optionalInteger' ? 'numeric' : undefined}
               aria-label={t(`configPage.fields.${field.key}.label`)}
               aria-describedby={invalid ? `${descriptionId} ${errorId}` : descriptionId}
               aria-invalid={invalid || undefined}
@@ -2011,19 +2095,19 @@ function ConfigField({
               disabled={controlDisabled}
               className="min-w-0 flex-1"
               onChange={(event) => {
-                if (!invalid) onEditingIntegerChange(field.key)
+                if (!invalid) onEditingFieldChange(field.key)
                 onChange(field.key, event.target.value)
               }}
-              onBlur={() => onEditingIntegerChange(null)}
+              onBlur={() => onEditingFieldChange(null)}
             />
-            {parseOptionalInteger(value) !== null && (
+            {String(value ?? '').trim() !== '' && (
               <Button
                 type="button"
                 variant="text"
                 size="sm"
                 disabled={controlDisabled}
                 onClick={() => {
-                  integerInput.current?.focus({ preventScroll: true })
+                  optionalInput.current?.focus({ preventScroll: true })
                   onChange(field.key, null)
                 }}
               >
@@ -2147,8 +2231,9 @@ function ConfigField({
             </SelectContent>
           </Select>
         ) : null}
-        {field.kind === 'defaultOnBoolean' ? (
-          <DefaultOnSwitch
+        {field.kind === 'optionalSwitch' ? (
+          <OptionalConfigSwitch
+            defaultChecked={field.defaultChecked ?? false}
             label={t(`configPage.fields.${field.key}.label`)}
             value={typeof value === 'boolean' ? value : null}
             disabled={controlDisabled}
@@ -4727,7 +4812,7 @@ function StructuredWorkspace({
   onDiscardField,
   changes,
   validationErrors,
-  onEditingIntegerChange,
+  onEditingFieldChange,
   disabled,
   oauthModelCatalog,
   onChange,
@@ -4738,7 +4823,7 @@ function StructuredWorkspace({
   onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
   validationErrors: ConfigFieldKey[]
-  onEditingIntegerChange: (key: ConfigFieldKey | null) => void
+  onEditingFieldChange: (key: ConfigFieldKey | null) => void
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
@@ -4782,7 +4867,7 @@ function StructuredWorkspace({
             value={draft[field.key]}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
-            onEditingIntegerChange={onEditingIntegerChange}
+            onEditingFieldChange={onEditingFieldChange}
             onChange={onChange}
           />
         )}
@@ -5128,7 +5213,7 @@ function ConfigChangePreview({
       return t('configPage.fields.antigravityTosPauseWindow.placeholder')
     const kind = fieldDefinitionByKey[change.key].kind
     if (kind === 'sensitiveText' && value) return '••••••••'
-    if (kind === 'optionalInteger' && value === null)
+    if ((kind === 'optionalInteger' || kind === 'optionalText') && value === null)
       return t(`configPage.fields.${change.key}.placeholder`)
     if (kind === 'literalReplacements' || kind === 'patternReplacements') {
       const rows = parseReplacementDraft(value)
@@ -5136,8 +5221,13 @@ function ConfigChangePreview({
       if (replacementIssues(kind, rows).some(Boolean)) return t('sensitiveReplacements.incomplete')
       return JSON.stringify(serializeReplacementRows(kind, rows))
     }
-    if (fieldDefinitionByKey[change.key].kind === 'defaultOnBoolean') {
-      if (value === null) return t('configPage.nullableBoolean.defaultOn')
+    if (kind === 'optionalSwitch') {
+      if (value === null)
+        return t(
+          fieldDefinitionByKey[change.key].defaultChecked
+            ? 'configPage.nullableBoolean.defaultOn'
+            : 'configPage.nullableBoolean.defaultOff',
+        )
       return t(`configPage.nullableBoolean.${nullableBooleanOptionFromValue(value)}`)
     }
     return value === '' || value === null ? t('configPage.status.emptyValue') : String(value)
@@ -5295,7 +5385,7 @@ function ConfigWorkbenchSession() {
   )
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
-  const [editingInteger, setEditingInteger] = useState<ConfigFieldKey | null>(null)
+  const [editingField, setEditingField] = useState<ConfigFieldKey | null>(null)
   const modelSettingFeedback = useState<ModelSettingIssue[]>([])
   const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
@@ -5342,7 +5432,7 @@ function ConfigWorkbenchSession() {
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
     (key) =>
-      key !== editingInteger &&
+      key !== editingField &&
       (key !== 'payloadRulesJson' || !payloadDraft) &&
       (key !== 'oauthModelSettingsJson' || modelSettingIssues.length > 0),
   )
@@ -5508,7 +5598,7 @@ function ConfigWorkbenchSession() {
             }}
             changes={changes}
             validationErrors={visibleValidationErrors}
-            onEditingIntegerChange={setEditingInteger}
+            onEditingFieldChange={setEditingField}
             disabled={workbench.mutating}
             oauthModelCatalog={oauthModelCatalog}
             onChange={handleStructuredChange}

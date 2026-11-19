@@ -3335,10 +3335,26 @@ export const zhCN = {
           description:
             '控制在途请求观测快照的采集频率与内存上限；stale-after 必须不小于 snapshot-interval 的 3 倍。',
         },
+        client: {
+          title: '客户端兼容性',
+          shortTitle: '客户端',
+          description: '配置 CPA 节点为客户端提供的模型工具和会话回放行为。',
+        },
+        codexSearchCache: {
+          title: 'Codex 网页搜索缓存',
+          shortTitle: '搜索缓存',
+          description:
+            'Codex Responses 会话经 Claude 上游执行搜索时，CPA 可补回对话历史中缺失的搜索结果。',
+        },
+        codexTransport: {
+          title: 'Codex 传输压缩',
+          shortTitle: 'Codex 压缩',
+          description: '分别控制 CPA 发给上游的 HTTP 请求体压缩和 WebSocket 连接的压缩协商。',
+        },
         upstream: {
           title: '上游行为',
           shortTitle: '上游',
-          description: '控制发往 Codex、Claude、xAI 上游的请求伪装、冷却与流式行为。',
+          description: '配置发往 Codex、Claude、xAI 上游的请求伪装、压缩、冷却和流式行为。',
         },
         headers: {
           title: '请求头伪装',
@@ -3807,6 +3823,49 @@ export const zhCN = {
           label: 'Codex 响应引导',
           description: '开启后允许对 Codex 响应施加 steering 指令。',
         },
+        clientCodexEnableApplyPatch: {
+          label: '扩展 apply_patch 工具支持',
+          description:
+            '默认向 Codex 客户端标注模型原生的 freeform 能力。开启后，还会标注所有候选执行器都支持 apply_patch 的模型。',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: '缓存搜索结果',
+          description: '默认关闭。开启后，CPA 会保存当前会话的搜索结果，供后续回放。',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: '缓存有效期',
+          description:
+            '命中后重新计时。可填整数秒或时长，例如 1800、30m 或 1h30m。留空或填 0 使用 24 小时。',
+          placeholder: '默认（24 小时）',
+          invalid: '请输入非负整数秒或有效时长，例如 1800 或 30m。',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: '内存缓存条数上限',
+          description:
+            '留空或填 0 使用 1024 条。此上限用于 CPA 内存缓存，Home KV 按有效期清理记录。',
+          placeholder: '默认（1024 条）',
+          invalid: '请输入非负整数，或留空恢复默认。',
+        },
+        upstreamCodexRequestCompression: {
+          label: '压缩 Codex 上游请求体',
+          description:
+            '默认关闭。发往官方 ChatGPT Codex 接口的常规 OAuth 请求可使用 zstd。API Key、自定义上游及「使用 ChatGPT 登录」请求使用原始请求体。遇到 HTTP 400 或 415 时会以原始请求体重试一次。',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: '请求体压缩门槛（字节）',
+          description: '达到门槛才压缩。留空、0 或负数使用 1024 字节。',
+          placeholder: '默认（1024 字节）',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'WebSocket 压缩',
+          description: '默认开启。CPA 在 Codex 的上下游 WebSocket 连接上协商 permessage-deflate。',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Codex 登录标识',
+          description:
+            'CPA 将此值用于「使用 ChatGPT 登录」的 agent_name_hint 和 API 请求的 User-Agent 前缀。留空使用 CLIProxyAPI。',
+          placeholder: '默认（CLIProxyAPI）',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: '多代理优化 V2',
           description: '开启后客户端对 Codex 多代理请求应用 V2 优化。',
@@ -3994,6 +4053,7 @@ export const zhCN = {
         removing: '清除已保存的令牌',
       },
       nullableBoolean: {
+        defaultOff: '默认关闭',
         defaultOn: '默认开启',
         unset: '未设置（默认）',
         enabled: '启用',

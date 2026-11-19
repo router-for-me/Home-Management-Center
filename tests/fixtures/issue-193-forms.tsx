@@ -394,6 +394,67 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.ok(combined.textContent.includes(copy.fields.remoteManagementSecretKey.label))
   assert.ok(combined.textContent.includes('••••••••'))
   assert.ok(!combined.outerHTML.includes(managementKey))
+} else if (scenario === 'codex-execution-settings') {
+  await renderConfig({ client: { codex: { 'web-search-result-cache': null } } })
+  const copy = en.common.configPage
+  const field = (key: string) => browser.document.getElementById('config-field-' + key)!
+  const save = button(copy.actions.save)
+  const cache = field('clientCodexWebSearchCacheEnabled')
+  const toggle = cache.querySelector('[role="switch"]')!
+  assert.equal(toggle.getAttribute('aria-checked'), 'false')
+  assert.equal(
+    field('upstreamCodexWebsocketCompression')
+      .querySelector('[role="switch"]')
+      ?.getAttribute('aria-checked'),
+    'true',
+  )
+  assert.equal(save.disabled, true)
+  await click(toggle)
+  await click(toggle)
+  assert.equal(toggle.getAttribute('aria-checked'), 'false')
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const diff = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(diff.textContent.includes(copy.nullableBoolean.defaultOff))
+  assert.ok(diff.textContent.includes(copy.nullableBoolean.disabled))
+  await click(button(en.common.close))
+  await click(button(copy.actions.restoreDefault))
+  assert.equal(save.disabled, true)
+
+  const ttl = field('clientCodexWebSearchCacheTtl').querySelector('input')!
+  const limit = field('clientCodexWebSearchCacheLimit').querySelector('input')!
+  await React.act(async () => ttl.focus())
+  await edit(ttl, '1h3')
+  assert.equal(ttl.getAttribute('aria-invalid'), null)
+  assert.equal(save.disabled, true)
+  await React.act(async () => ttl.blur())
+  assert.equal(ttl.getAttribute('aria-invalid'), 'true')
+  assert.ok(
+    field('clientCodexWebSearchCacheTtl').textContent.includes(
+      copy.fields.clientCodexWebSearchCacheTtl.invalid,
+    ),
+  )
+  await edit(ttl, '+01800')
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const seconds = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(seconds.textContent.includes('1800'))
+  assert.ok(!seconds.textContent.includes('+01800'))
+  await click(button(en.common.close))
+  await edit(ttl, '1h30m')
+  assert.equal(save.disabled, false)
+  await edit(limit, '-1')
+  await React.act(async () => {
+    limit.focus()
+    limit.blur()
+  })
+  assert.equal(limit.getAttribute('aria-invalid'), 'true')
+  await edit(limit, '0')
+  assert.equal(save.disabled, false)
+  await click(field('clientCodexWebSearchCacheLimit').querySelector('button')!)
+  await click(field('clientCodexWebSearchCacheTtl').querySelector('button')!)
+  assert.equal(browser.document.activeElement, ttl)
+  assert.equal(save.disabled, true)
 } else if (scenario === 'oauth-refresh-concurrency') {
   await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!
