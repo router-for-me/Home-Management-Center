@@ -168,7 +168,7 @@ type ConfigSectionId =
   | 'payload'
   | 'multimedia'
 
-type ConfigSubgroupId = 'devin' | 'liveMediaRelay' | 'antigravity'
+type ConfigSubgroupId = 'cpaServer' | 'devin' | 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
   | ReplacementKind
@@ -178,6 +178,7 @@ type ConfigFieldKind =
   | 'number'
   | 'text'
   | 'sensitiveText'
+  | 'writeOnlySecret'
   | 'select'
   | 'duration'
   | 'nullableBoolean'
@@ -341,6 +342,36 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'serverAllowHostJson', kind: 'jsonArray', sectionId: 'server' },
       { key: 'serverTrustedProxiesJson', kind: 'jsonArray', sectionId: 'server' },
       { key: 'serverCommercialMode', kind: 'boolean', sectionId: 'server' },
+      {
+        key: 'serverMaxRequestBodyBytes',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverResponseCompressionEnabled',
+        kind: 'defaultOnBoolean',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverResponseCompressionMinBytes',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverShutdownTimeout',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverGithubToken',
+        kind: 'writeOnlySecret',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
     ],
   },
   {
@@ -1548,6 +1579,11 @@ function areConfigValuesEqual(
   return String(left) === String(right)
 }
 
+// The form only receives a presence flag for the saved token. Text in the control is user input.
+function createConfigDraftValues(saved: ConfigStructuredValues): ConfigStructuredValues {
+  return { ...saved, serverGithubToken: saved.serverGithubToken ? true : null }
+}
+
 function getStructuredChanges(
   baseline: ConfigStructuredValues,
   draft: ConfigStructuredValues,
@@ -1558,7 +1594,10 @@ function getStructuredChanges(
     .map((field) => ({
       key: field.key,
       previousValue: getConfigChangeValue(field.key, baseline[field.key]),
-      nextValue: getConfigChangeValue(field.key, draft[field.key]),
+      nextValue:
+        field.kind === 'writeOnlySecret' && draft[field.key] === true
+          ? baseline[field.key]
+          : getConfigChangeValue(field.key, draft[field.key]),
     }))
     .filter(
       (change) =>
@@ -1572,6 +1611,7 @@ function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): Con
     const integer = parseOptionalInteger(value)
     return integer === undefined ? value : integer
   }
+  if (key === 'serverGithubToken' && typeof value === 'string') return value.trim()
   if (key === 'antigravityTosPauseWindow') return String(value ?? '').trim()
   if (key !== 'payloadRulesJson') return value
   try {
@@ -1891,6 +1931,7 @@ function DefaultOnSwitch({
 function ConfigField({
   field,
   value,
+  hasStoredSecret,
   disabled,
   invalid,
   onEditingIntegerChange,
@@ -1898,6 +1939,7 @@ function ConfigField({
 }: {
   field: ConfigFieldDefinition
   value: ConfigStructuredValues[ConfigFieldKey]
+  hasStoredSecret: boolean
   disabled: boolean
   invalid: boolean
   onEditingIntegerChange: (key: ConfigFieldKey | null) => void
@@ -1933,7 +1975,11 @@ function ConfigField({
         </p>
         {invalid ? (
           <p id={errorId} className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {t([`configPage.fields.${field.key}.invalid`, 'configPage.validation.invalidField'])}
+            {t(
+              field.kind === 'optionalInteger'
+                ? 'configPage.validation.optionalInteger'
+                : [`configPage.fields.${field.key}.invalid`, 'configPage.validation.invalidField'],
+            )}
           </p>
         ) : null}
       </div>
@@ -2009,6 +2055,42 @@ function ConfigField({
             placeholder={placeholder}
             onChange={(event) => onChange(field.key, event.target.value)}
           />
+        ) : null}
+        {field.kind === 'writeOnlySecret' ? (
+          <div className="flex w-full min-w-0 items-center gap-2 md:max-w-80">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              spellCheck={false}
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={descriptionId}
+              value={typeof value === 'string' ? value : ''}
+              placeholder={t(
+                hasStoredSecret
+                  ? value === null
+                    ? 'configPage.token.pendingClear'
+                    : 'configPage.token.keep'
+                  : 'configPage.token.enter',
+              )}
+              disabled={controlDisabled}
+              className="min-w-0 flex-1"
+              onChange={(event) => {
+                const text = event.target.value
+                onChange(field.key, text.trim() ? text : hasStoredSecret || null)
+              }}
+            />
+            {hasStoredSecret && (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={controlDisabled}
+                onClick={() => onChange(field.key, value === null ? true : null)}
+              >
+                {t(value === null ? 'configPage.token.undoClear' : 'configPage.token.clear')}
+              </Button>
+            )}
+          </div>
         ) : null}
         {field.kind === 'sensitiveText' ? (
           <div className="relative min-w-0 md:w-full md:max-w-80">
@@ -4640,6 +4722,7 @@ function JsonConfigField({
 
 function StructuredWorkspace({
   draft,
+  hasStoredGithubToken,
   saveError,
   onDiscardField,
   changes,
@@ -4650,6 +4733,7 @@ function StructuredWorkspace({
   onChange,
 }: {
   draft: ConfigStructuredValues
+  hasStoredGithubToken: boolean
   saveError: ConfigFieldSaveError | null
   onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
@@ -4694,6 +4778,7 @@ function StructuredWorkspace({
         ) : (
           <ConfigField
             field={field}
+            hasStoredSecret={field.key === 'serverGithubToken' && hasStoredGithubToken}
             value={draft[field.key]}
             disabled={disabled}
             invalid={validationErrors.includes(field.key)}
@@ -4974,6 +5059,19 @@ function ConfigChangePreview({
   payloadDraft: PayloadRulesConfig | null
 }) {
   const { t } = useTranslation()
+  if (fieldDefinitionByKey[change.key].kind === 'writeOnlySecret') {
+    const action =
+      change.nextValue === null
+        ? 'configPage.token.removing'
+        : change.previousValue
+          ? 'configPage.token.replacing'
+          : 'configPage.token.setting'
+    return (
+      <span className="text-muted-foreground text-meta">
+        {t(action)} <span aria-hidden="true">••••••••</span>
+      </span>
+    )
+  }
   if (change.key === 'payloadRulesJson') {
     const parsed = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.nextValue))
     if (!parsed.ok || !canEditPayloadConfig(parsed.value)) {
@@ -5029,6 +5127,7 @@ function ConfigChangePreview({
     if (change.key === 'antigravityTosPauseWindow' && value === '')
       return t('configPage.fields.antigravityTosPauseWindow.placeholder')
     const kind = fieldDefinitionByKey[change.key].kind
+    if (kind === 'sensitiveText' && value) return '••••••••'
     if (kind === 'optionalInteger' && value === null)
       return t(`configPage.fields.${change.key}.placeholder`)
     if (kind === 'literalReplacements' || kind === 'patternReplacements') {
@@ -5070,7 +5169,10 @@ function ChangeDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-full overflow-hidden sm:max-w-xl">
+      <SheetContent
+        className="w-full max-w-full overflow-hidden sm:max-w-xl"
+        closeLabel={t('close')}
+      >
         <SheetHeader className="border-b">
           <SheetTitle>{t('configPage.diff.title')}</SheetTitle>
           <SheetDescription>
@@ -5104,7 +5206,7 @@ function ChangeDetailSheet({
                         {t(`configPage.fields.${change.key}.label`)}
                       </span>
                       <span className="text-muted-foreground shrink-0 text-xs">
-                        {t(`configPage.sections.${field.sectionId}.shortTitle`)}
+                        {t(`configPage.sections.${field.groupId ?? field.sectionId}.shortTitle`)}
                       </span>
                     </span>
                     <ConfigChangePreview change={change} payloadDraft={payloadDraft} />
@@ -5175,7 +5277,7 @@ export function reconcileSavedConfigFields(
   for (const key of keys) {
     const savedValue = reported ? reported[key] : current.values[key]
     structured[key] = savedValue
-    values[key] = savedValue
+    values[key] = key === 'serverGithubToken' && savedValue ? true : savedValue
   }
   return { values, baseline: { ...current.baseline, structured } }
 }
@@ -5187,7 +5289,10 @@ function ConfigWorkbenchSession() {
   const workbench = useConfigWorkbench(oauthModelChannel)
   const [edits, setEdits] = useState<ConfigDraft | null>(null)
   const baseline = edits?.baseline ?? workbench.snapshot
-  const structuredDraft = edits?.values ?? baseline?.structured
+  const structuredDraft = useMemo(
+    () => edits?.values ?? (baseline && createConfigDraftValues(baseline.structured)),
+    [edits, baseline],
+  )
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
   const [editingInteger, setEditingInteger] = useState<ConfigFieldKey | null>(null)
@@ -5279,7 +5384,7 @@ function ConfigWorkbenchSession() {
     setSaveError((current) => (current?.key === key ? null : current))
     setEdits((current) => ({
       baseline: current?.baseline ?? latest,
-      values: { ...(current?.values ?? latest.structured), [key]: value },
+      values: { ...(current?.values ?? structuredDraft), [key]: value },
     }))
   }
 
@@ -5393,6 +5498,7 @@ function ConfigWorkbenchSession() {
         <ModelSettingFeedbackContext.Provider value={modelSettingFeedback}>
           <StructuredWorkspace
             draft={structuredDraft}
+            hasStoredGithubToken={Boolean(baseline.structured.serverGithubToken)}
             saveError={saveError}
             onDiscardField={(key) => {
               if (key === 'payloadRulesJson') setPayloadDraft(null)

@@ -144,6 +144,67 @@ const steering: ConfigChange = {
 const retry: ConfigChange = { key: 'requestRetry', previousValue: 0, nextValue: 1 }
 
 describe('optional V8 fields and writes', () => {
+  test('CPA server values distinguish absence from explicit zero and false', () => {
+    const fields = {
+      serverMaxRequestBodyBytes: null,
+      serverResponseCompressionEnabled: null,
+      serverResponseCompressionMinBytes: null,
+      serverShutdownTimeout: null,
+      serverGithubToken: null,
+    }
+    expect(normalizeConfigValues({})).toMatchObject(fields)
+    expect(
+      normalizeConfigValues({
+        server: {
+          'max-request-body-bytes': 0,
+          'response-compression': { enabled: false, 'min-bytes': 0 },
+          'shutdown-timeout': 0,
+          'github-token': '',
+        },
+      }),
+    ).toMatchObject({
+      serverMaxRequestBodyBytes: 0,
+      serverResponseCompressionEnabled: false,
+      serverResponseCompressionMinBytes: 0,
+      serverShutdownTimeout: 0,
+      serverGithubToken: null,
+    })
+  })
+
+  test('token writes preserve the old value on conflict and retries are idempotent', async () => {
+    const path = v8 + 'config/server/github-token'
+    let stored: string | null = null
+    const requests = serve((url, method, body) => {
+      expect(url).toBe(path)
+      if (method === 'GET') return stored === null ? missingValue : ok(JSON.stringify(stored))
+      if (method === 'PUT') stored = JSON.parse(String(body))
+      else if (method === 'DELETE') stored = null
+      else throw new Error('Unexpected secret operation')
+      return ok({ status: 'ok' })
+    })
+    const save = (previousValue: string | null, nextValue: string | null) =>
+      applyConfigChanges(session, [{ key: 'serverGithubToken', previousValue, nextValue }])
+    await save(null, 'true')
+    expect(stored).toBe('true')
+    await save('true', '  next-token  ')
+    await save('true', 'next-token')
+    await save('next-token', '')
+    expect(stored).toBe('next-token')
+    await expect(save('true', null)).rejects.toMatchObject({
+      key: 'serverGithubToken',
+      reason: 'conflict',
+    })
+    expect(stored).toBe('next-token')
+    await save('next-token', null)
+    await save('next-token', null)
+    expect(stored).toBeNull()
+    expect(requests.filter((request) => !request.startsWith('GET '))).toEqual([
+      'PUT ' + path,
+      'PUT ' + path,
+      'DELETE ' + path,
+    ])
+  })
+
   test.each([false, true])(
     'keeps the subagent override distinct when main affinity is %s',
     (parent) => {

@@ -3258,6 +3258,11 @@ export const zhTW = {
           description:
             '設定監聽連接埠、繫結位址、RESP 用戶端 IP 允許清單、受信任的代理與商業版模式。',
         },
+        cpaServer: {
+          title: 'CPA 節點服務設定',
+          shortTitle: 'CPA 節點',
+          description: 'Home 會將這些設定傳送給已連線的 CPA 節點。',
+        },
         discovery: {
           title: '服務發現',
           shortTitle: '發現',
@@ -3512,6 +3517,33 @@ export const zhTW = {
         serverCommercialMode: {
           label: '商業化模式',
           description: '開啟後啟用面向商業部署的服務端行為約束。',
+        },
+        serverMaxRequestBodyBytes: {
+          label: '請求主體上限（位元組）',
+          description: '超過上限的請求會收到 HTTP 413。留白或設為 0 以下（含 0）表示不限大小。',
+          placeholder: '預設（不限大小）',
+        },
+        serverResponseCompressionEnabled: {
+          label: '回應壓縮',
+          description:
+            '預設開啟。用戶端支援時，CPA 會使用 zstd 或 gzip 壓縮 HTTP 回應，包括 SSE 串流。WebSocket 升級請求會略過這項 HTTP 壓縮。',
+        },
+        serverResponseCompressionMinBytes: {
+          label: '壓縮門檻（位元組）',
+          description:
+            '此門檻僅用於非串流回應，小於門檻時會直接傳送。留白或設為 0 以下（含 0）會使用 1024 位元組。',
+          placeholder: '預設（1024 位元組）',
+        },
+        serverShutdownTimeout: {
+          label: '關閉等待時間（秒）',
+          description:
+            'CPA 收到結束訊號後，最多等待這段時間讓進行中的 HTTP 請求完成。留白或設為 0 以下（含 0）會立即關閉。',
+          placeholder: '預設（立即關閉）',
+        },
+        serverGithubToken: {
+          label: 'GitHub 權杖',
+          description:
+            '受信任的 CPA 節點會使用此權杖存取 GitHub。清除後，節點可使用環境變數 GITHUB_TOKEN。',
         },
         discoveryEnabled: {
           label: '啟用服務發現',
@@ -3840,7 +3872,6 @@ export const zhTW = {
           description:
             'Home 同時自動更新的 OAuth 憑證數量。留白、0 或負整數會使用預設值 16。儲存後立即生效，進行中的更新會繼續完成。',
           placeholder: '預設（16）',
-          invalid: '請輸入有效範圍內的整數，或留白使用預設值。',
         },
         oauthAuthDir: {
           label: 'OAuth 憑證目錄',
@@ -3955,6 +3986,16 @@ export const zhTW = {
         'weighted-round-robin': '加權輪詢',
         'fill-first': '優先填滿',
         unknown: '未知',
+      },
+      token: {
+        keep: '已設定，留白保留',
+        enter: '輸入權杖',
+        pendingClear: '儲存後清除',
+        clear: '清除權杖',
+        undoClear: '取消清除',
+        setting: '設定權杖',
+        replacing: '更換權杖',
+        removing: '清除已儲存的權杖',
       },
       nullableBoolean: {
         defaultOn: '預設開啟',
@@ -4368,6 +4409,7 @@ export const zhTW = {
         },
       },
       validation: {
+        optionalInteger: '請輸入有效範圍內的整數，或留白使用預設值。',
         invalidField: '請填寫有效值。',
         editConflict: '記錄已變更、已刪除或無法唯一比對。請重新載入後再編輯。',
         runtimeChanged: '正在編輯的設定已在伺服器更新。請重新載入後再編輯。',

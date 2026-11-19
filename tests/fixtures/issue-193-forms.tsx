@@ -340,6 +340,60 @@ if (scenario === 'oauth-alias-channel-edit') {
   await edit(names()[0], 'model-c')
   assert.equal(hasFeedback(), false)
   assert.equal(save.disabled, false)
+} else if (scenario === 'cpa-server-token') {
+  const original = 'fixture-saved-token'
+  const replacement = original + '-replacement'
+  await renderConfig({ server: { 'github-token': original } })
+  const copy = en.common.configPage
+  const field = browser.document.getElementById('config-field-serverGithubToken')!
+  const control = field.querySelector('input')!
+  const save = button(copy.actions.save)
+  assert.equal(control.type, 'password')
+  assert.equal(control.value, '')
+  assert.equal(control.placeholder, copy.token.keep)
+  assert.ok(!field.outerHTML.includes(original))
+  assert.equal(save.disabled, true)
+
+  await edit(control, original)
+  assert.equal(control.value, original)
+  assert.equal(save.disabled, true)
+  await edit(control, replacement)
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const dialog = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(dialog.textContent.includes(copy.token.replacing))
+  assert.ok(dialog.textContent.includes('••••••••'))
+  assert.ok(!dialog.outerHTML.includes(original))
+  await click(button(en.common.close))
+  await edit(control, '')
+  assert.equal(save.disabled, true)
+  await click(button(copy.token.clear))
+  assert.equal(control.placeholder, copy.token.pendingClear)
+  assert.equal(save.disabled, false)
+  await click(button(copy.token.undoClear))
+  assert.equal(save.disabled, true)
+  assert.equal(control.value, '')
+
+  const limit = browser.document.querySelector<HTMLInputElement>(
+    '#config-field-serverMaxRequestBodyBytes input',
+  )!
+  await edit(limit, '0')
+  await click(button(copy.actions.viewChanges))
+  const unrelated = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(!unrelated.textContent.includes(copy.fields.serverGithubToken.label))
+  assert.ok(!unrelated.outerHTML.includes(original))
+  await click(button(en.common.close))
+
+  const managementKey = 'fixture-management-replacement'
+  const keyInput = browser.document.querySelector<HTMLInputElement>(
+    '#config-field-remoteManagementSecretKey input',
+  )!
+  await edit(keyInput, managementKey)
+  await click(button(copy.actions.viewChanges))
+  const combined = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(combined.textContent.includes(copy.fields.remoteManagementSecretKey.label))
+  assert.ok(combined.textContent.includes('••••••••'))
+  assert.ok(!combined.outerHTML.includes(managementKey))
 } else if (scenario === 'oauth-refresh-concurrency') {
   await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!
@@ -353,10 +407,10 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.equal(save.disabled, true)
   await edit(control, '-')
   assert.equal(save.disabled, true)
-  assert.ok(!field.textContent.includes(copy.fields.oauthAutoRefreshWorkers.invalid))
+  assert.ok(!field.textContent.includes(copy.validation.optionalInteger))
   await React.act(async () => control.blur())
   assert.equal(control.getAttribute('aria-invalid'), 'true')
-  assert.ok(field.textContent.includes(copy.fields.oauthAutoRefreshWorkers.invalid))
+  assert.ok(field.textContent.includes(copy.validation.optionalInteger))
   await React.act(async () => control.focus())
   for (const invalid of ['2.5', '1e2', '9007199254740993']) {
     await edit(control, invalid)
