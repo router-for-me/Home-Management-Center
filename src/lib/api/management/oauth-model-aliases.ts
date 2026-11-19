@@ -1,4 +1,5 @@
 import { sameConfigValue } from './config-edit'
+import { changedOAuthChannels, isOAuthChannelKey, oauthChannelValue } from './oauth-model-channels'
 
 type ConfigObject = Record<string, unknown>
 export type ModelAliasRule = {
@@ -8,18 +9,6 @@ export type ModelAliasRule = {
   fork?: boolean
   forceMapping?: boolean
   openapi?: boolean | null
-}
-
-export function isAliasChannel(channel: string) {
-  return (
-    channel.length > 0 &&
-    channel === channel.trim() &&
-    channel !== '.' &&
-    channel !== '..' &&
-    !channel.includes('/') &&
-    !channel.includes('\\') &&
-    !Array.from(channel).some((char) => char.charCodeAt(0) < 32)
-  )
 }
 
 export function canEditAliasRule(value: unknown, channel: string): value is ConfigObject {
@@ -71,22 +60,12 @@ export function serializeModelAliasRule(patch: ModelAliasRule, raw: ConfigObject
   return next
 }
 
-export function changedAliasChannels(before: ConfigObject, after: ConfigObject) {
-  return [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
-    (key) => !sameConfigValue(aliasChannelValue(before, key), aliasChannelValue(after, key)),
-  )
-}
-
-export function aliasChannelValue(map: ConfigObject, channel: string) {
-  return Object.hasOwn(map, channel) ? map[channel] : undefined
-}
-
 export function hasIncompleteAliasChanges(before: ConfigObject, after: ConfigObject) {
-  return changedAliasChannels(before, after).some((channel) => {
-    const rows = aliasChannelValue(after, channel)
+  return changedOAuthChannels(before, after).some((channel) => {
+    const rows = oauthChannelValue(after, channel)
     if (rows === undefined) return false
-    if (!isAliasChannel(channel) || !Array.isArray(rows)) return true
-    const original = aliasChannelValue(before, channel)
+    if (!isOAuthChannelKey(channel) || !Array.isArray(rows)) return true
+    const original = oauthChannelValue(before, channel)
     return rows.some((row) => {
       if (canEditAliasRule(row, channel)) {
         const { name, alias } = normalizeModelAliasRule(row)

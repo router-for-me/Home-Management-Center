@@ -88,6 +88,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
+import { OAuthModelSettingsEditor } from '@/features/config/oauth-model-settings-editor'
 import { PayloadFormField, PayloadReviewFieldContext } from '@/features/config/payload-form-field'
 import {
   type PayloadParamEntry,
@@ -116,10 +117,11 @@ import {
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
-  hasAliasChannelConflict,
+  hasOAuthChannelConflict,
   isReadOnlyConfigField,
 } from '@/lib/api/management/config'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
+import { hasInvalidModelSettingChanges } from '@/lib/api/management/oauth-model-settings'
 import {
   type PayloadReplaceIssueKey,
   canEditPayloadReplaceRule,
@@ -184,6 +186,7 @@ export {
 type JsonConfigFieldKey =
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'oauthModelSettingsJson'
   | 'pluginStoreSourcesJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
@@ -561,6 +564,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'oauthExcludedModelsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthModelAliasJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+      { key: 'oauthModelSettingsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthRequestScopedErrorsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
     ],
   },
@@ -752,6 +756,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
+  'oauthModelSettingsJson',
   'pluginStoreSourcesJson',
   'payloadRulesJson',
   'antigravitySensitiveWordsJson',
@@ -1491,6 +1496,7 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
     case 'oauthExcludedModelsJson':
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
+    case 'oauthModelSettingsJson':
       return isRecord(value)
     case 'pluginStoreSourcesJson':
       return canEditPluginStoreSources(value)
@@ -1621,9 +1627,15 @@ function getValidationErrors(
         try {
           const parsed: unknown = JSON.parse(String(value || '{}'))
           if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return true
-          if (field.key === 'oauthModelAliasJson' && saved && isRecord(parsed)) {
-            const original: unknown = JSON.parse(String(saved.oauthModelAliasJson))
-            return !isRecord(original) || hasIncompleteAliasChanges(original, parsed)
+          if (
+            (field.key === 'oauthModelAliasJson' || field.key === 'oauthModelSettingsJson') &&
+            isRecord(parsed)
+          ) {
+            const original: unknown = JSON.parse(String(saved?.[field.key] ?? '{}'))
+            if (!isRecord(original)) return true
+            return field.key === 'oauthModelAliasJson'
+              ? hasIncompleteAliasChanges(original, parsed)
+              : hasInvalidModelSettingChanges(original, parsed)
           }
           if (field.key === 'payloadRulesJson') {
             return !canEditPayloadConfig(parsed) || hasPayloadValidationErrors(parsed)
@@ -4468,6 +4480,14 @@ function StructuredJsonEditor({
           onChange={onChange}
         />
       )
+    case 'oauthModelSettingsJson':
+      return (
+        <OAuthModelSettingsEditor
+          value={value as Record<string, unknown>}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      )
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
@@ -5143,7 +5163,8 @@ function ConfigWorkbenchSession() {
     latest !== baseline &&
     changes.some((change) => {
       const current = getConfigChangeValue(change.key, latest.structured[change.key])
-      if (change.key === 'oauthModelAliasJson') return hasAliasChannelConflict(change, current)
+      if (change.key === 'oauthModelAliasJson' || change.key === 'oauthModelSettingsJson')
+        return hasOAuthChannelConflict(change, current)
       return (
         !areConfigValuesEqual(current, change.previousValue) &&
         !areConfigValuesEqual(current, change.nextValue)
