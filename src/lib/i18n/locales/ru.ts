@@ -3301,6 +3301,31 @@ export const ru = {
         detail: 'Удалить связь "{{name}}"?',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: 'CPA пропускает правила с пустым выражением.',
+      literalReplacements: 'Замена фраз',
+      patternReplacements: 'Замена по выражению',
+      literalHint: 'Укажите исходную фразу и текст замены. Пустая замена удаляет совпадение.',
+      patternHint:
+        'Используется синтаксис Go RE2. Порядок правил влияет на пересекающиеся совпадения. Для ссылки на группу используйте $1 или ${1}. Пустая замена удаляет совпадение.',
+      addLiteral: 'Добавить фразу',
+      addPattern: 'Добавить выражение',
+      literalRow: 'Исходная фраза {{index}}',
+      patternRow: 'Выражение {{index}}',
+      replacement: 'Заменить на',
+      replacementRow: 'Замена для правила {{index}}',
+      emptyDeletes: 'Оставьте пустым для удаления',
+      missing: 'Введите исходную фразу или выражение.',
+      duplicate: 'Такая фраза уже есть в другой строке. Каждая фраза должна быть уникальной.',
+      incomplete: 'Заполните правила замены и устраните дубликаты перед сохранением.',
+      unsupported:
+        'Редактор не поддерживает формат правил в этом поле. Остальные настройки можно сохранить.',
+      up: 'Выше',
+      down: 'Ниже',
+      remove: 'Удалить',
+      removeRow: 'Удалить правило {{index}}',
+      removeHint: 'Удаление вступит в силу после сохранения.',
+    },
     configPage: {
       compatibility: {
         unavailable:
@@ -3410,8 +3435,7 @@ export const ru = {
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description:
-            'Настройка правил обфускации чувствительных слов системного промпта для OAuth-провайдера Devin.',
+          description: 'Фильтрация строк и замена текста в системных инструкциях Devin.',
         },
         liveMediaRelay: {
           title: 'Codex · Ретрансляция живого медиа',
@@ -3469,8 +3493,7 @@ export const ru = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description:
-            'Настройка шлюза Antigravity, обфускации чувствительных слов, credits и пула соединений.',
+          description: 'Обработка системных инструкций, кредиты и пул соединений Antigravity.',
         },
         multimedia: {
           title: 'Мультимедиа',
@@ -3607,10 +3630,12 @@ export const ru = {
           description: 'Изменение параметров и текста сообщений по модели и протоколу.',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Замена фраз (Antigravity)' },
+        antigravityPatternReplacements: { label: 'Замена по выражению (Antigravity)' },
         antigravitySensitiveWordsJson: {
-          label: 'Обфускация чувствительных слов',
+          label: 'Вставка невидимых символов',
           description:
-            'Вставка символов нулевой ширины в совпадающие системные промпты Antigravity для снижения риска точного сопоставления ключевых слов на стороне upstream.',
+            'Antigravity вставляет символы нулевой ширины внутрь найденных слов в системных инструкциях.',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -4025,10 +4050,12 @@ export const ru = {
           description:
             'JSON-массив серверов STUN/TURN. Внимание: при чтении JSON маскирует username/credential; существующие ключи сохраняются только у записей с неизменными urls. При изменении urls ключи нужно ввести заново.',
         },
+        devinLiteralReplacements: { label: 'Замена фраз (Devin)' },
+        devinPatternReplacements: { label: 'Замена по выражению (Devin)' },
         devinSensitiveWordsJson: {
-          label: 'Обфускация чувствительных слов Devin',
+          label: 'Удаление строк с указанными словами',
           description:
-            'Вставка символов нулевой ширины в совпадающие системные промпты Devin для снижения точного сопоставления ключевых слов на стороне upstream.',
+            'Devin удаляет всю строку системной инструкции, если она содержит указанное слово, к которому не применилось правило замены.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Правила ошибок request-scoped',

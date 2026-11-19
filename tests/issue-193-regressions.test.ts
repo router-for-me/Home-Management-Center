@@ -330,6 +330,67 @@ describe('provider family replacements preserve persisted configuration', () => 
     expect(writes[0][0].keys[0].cloak).toEqual({ ...cloak, mode: 'always' })
   })
 
+  test('editing Claude replacement rules changes one key and preserves sibling and opaque cloak fields', async () => {
+    const sibling = {
+      id: 'B',
+      'api-key': 'fake-B',
+      cloak: { 'strict-mode': false, 'sensitive-words': ['existing'] },
+    }
+    const patterns = [
+      { pattern: '(?i)(label)', replacement: '$1' },
+      { pattern: '^omitted-replacement$' },
+      { pattern: '(?s)old.*', replacement: '' },
+    ]
+    const cloak = {
+      'sensitive-words-replace': { old: '', other: 'keep' },
+      'sensitive-patterns-replace': patterns,
+      extra: { enabled: false },
+    }
+    const { form, save, writes } = await setup(
+      groupWith([{ id: 'A', 'api-key': 'fake-A', cloak }, sibling]),
+      'claude',
+    )
+    expect(form.cloak!.patternReplacements).toEqual(patterns)
+    form.cloak!.patternReplacements = [...patterns].reverse()
+    form.cloak!.literalReplacements = [{ pattern: ' new\nphrase ', replacement: '' }]
+    await save(form)
+    expect(writes[0][0].keys).toEqual([
+      {
+        id: 'A',
+        'api-key': 'fake-A',
+        cloak: {
+          ...cloak,
+          'sensitive-words-replace': { ' new\nphrase ': '' },
+          'sensitive-patterns-replace': [...patterns].reverse(),
+        },
+      },
+      sibling,
+    ])
+    form.cloak!.literalReplacements = [
+      { pattern: 'same', replacement: 'a' },
+      { pattern: 'same', replacement: 'b' },
+    ]
+    await expect(save(form)).rejects.toThrow()
+    expect(writes).toHaveLength(1)
+  })
+
+  test('a newer Claude pattern shape is retained when the literal rules are edited', async () => {
+    const future = [{ pattern: 'old', replacement: '', flags: 'future' }]
+    const { form, save, writes } = await setup(
+      groupWith([
+        { id: 'A', 'api-key': 'fake-A', cloak: { 'sensitive-patterns-replace': future } },
+      ]),
+      'claude',
+    )
+    expect(form.cloak!.patternReplacements).toBeNull()
+    form.cloak!.literalReplacements = [{ pattern: 'x', replacement: '' }]
+    await save(form)
+    expect(writes[0][0].keys[0].cloak).toEqual({
+      'sensitive-patterns-replace': future,
+      'sensitive-words-replace': { x: '' },
+    })
+  })
+
   test('reordered and renamed duplicate model names keep their own protocol and thinking', async () => {
     const native = {
       name: 'shared',

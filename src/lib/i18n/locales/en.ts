@@ -3292,6 +3292,32 @@ export const en = {
         detail: 'Delete binding "{{name}}"?',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: 'CPA skips rules with an empty expression.',
+      literalReplacements: 'Literal replacements',
+      patternReplacements: 'Regex replacements',
+      literalHint:
+        'Replace each matched phrase with the text you enter. An empty replacement deletes the match.',
+      patternHint:
+        'Use Go RE2. Rule order affects overlapping matches. Use $1 or ${1} for a capture group and leave the replacement empty to delete a match.',
+      addLiteral: 'Add phrase',
+      addPattern: 'Add pattern',
+      literalRow: 'Find text {{index}}',
+      patternRow: 'Pattern {{index}}',
+      replacement: 'Replace with',
+      replacementRow: 'Replacement for rule {{index}}',
+      emptyDeletes: 'Leave empty to delete',
+      missing: 'Enter the text or pattern to match.',
+      duplicate: 'This text appears in more than one row. Each literal key must be unique.',
+      incomplete: 'Complete the replacement rules and resolve duplicate keys before saving.',
+      unsupported:
+        'This field contains rules the editor cannot represent. Other settings can still be saved.',
+      up: 'Move up',
+      down: 'Move down',
+      remove: 'Remove',
+      removeRow: 'Remove rule {{index}}',
+      removeHint: 'The removal takes effect when you save.',
+    },
     configPage: {
       compatibility: {
         unavailable:
@@ -3399,8 +3425,7 @@ export const en = {
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description:
-            'Configure system-prompt sensitive-word obfuscation rules for the Devin OAuth provider.',
+          description: 'Filter lines and replace text in Devin system prompts.',
         },
         liveMediaRelay: {
           title: 'Codex · Live media relay',
@@ -3459,7 +3484,7 @@ export const en = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Configure Antigravity gateway behavior, sensitive words obfuscation, credits, and the connection pool.',
+            'Configure system instruction text, credits, and the Antigravity connection pool.',
         },
         multimedia: {
           title: 'Multimedia',
@@ -3594,10 +3619,12 @@ export const en = {
           description: 'Rewrite request parameters and message text by model and protocol.',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Antigravity literal replacements' },
+        antigravityPatternReplacements: { label: 'Antigravity regex replacements' },
         antigravitySensitiveWordsJson: {
-          label: 'Sensitive words obfuscation',
+          label: 'Obfuscate matching words',
           description:
-            'Insert zero-width spaces into matching Antigravity system prompts to reduce exact keyword detection upstream.',
+            'Antigravity inserts zero-width characters within matching text in system instructions.',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -4007,10 +4034,12 @@ export const en = {
           description:
             'JSON array of STUN/TURN servers. Note: reading back JSON masks username/credential; only entries whose urls are unchanged keep their existing credentials. Changing urls requires re-entering the credentials.',
         },
+        devinLiteralReplacements: { label: 'Devin literal replacements' },
+        devinPatternReplacements: { label: 'Devin regex replacements' },
         devinSensitiveWordsJson: {
-          label: 'Devin sensitive words obfuscation',
+          label: 'Remove lines containing these words',
           description:
-            'Insert zero-width spaces into matching Devin system prompts to reduce exact keyword detection upstream.',
+            'Devin removes an entire system-prompt line when it contains a listed word that a replacement rule has not handled.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Request-scoped error rules',

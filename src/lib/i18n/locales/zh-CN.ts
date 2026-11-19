@@ -3131,6 +3131,30 @@ export const zhCN = {
         detail: '确认删除绑定 "{{name}}"？',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: '表达式为空时，CPA 会跳过这条规则。',
+      literalReplacements: '字面量替换',
+      patternReplacements: '正则替换',
+      literalHint: '将匹配到的原文替换为指定文本。替换内容留空会删除匹配片段。',
+      patternHint:
+        '使用 Go RE2 语法。规则顺序影响重叠匹配，用 $1 或 ${1} 引用捕获组，替换内容留空会删除匹配片段。',
+      addLiteral: '添加原文',
+      addPattern: '添加表达式',
+      literalRow: '第 {{index}} 条原文',
+      patternRow: '第 {{index}} 条正则表达式',
+      replacement: '替换为',
+      replacementRow: '第 {{index}} 条替换内容',
+      emptyDeletes: '留空即删除匹配片段',
+      missing: '请填写要匹配的原文或表达式。',
+      duplicate: '原文与其他行重复。每个原文只能配置一次。',
+      incomplete: '请补全替换规则并处理重复原文后再保存。',
+      unsupported: '此字段包含编辑器无法表示的规则。其他设置仍可保存。',
+      up: '上移',
+      down: '下移',
+      remove: '移除',
+      removeRow: '移除第 {{index}} 条规则',
+      removeHint: '保存后移除生效。',
+    },
     configPage: {
       compatibility: {
         unavailable: '此设置的管理接口不可用。请核对后端版本和代理路径，草稿已保留。',
@@ -3228,7 +3252,7 @@ export const zhCN = {
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description: '配置 Devin OAuth 提供商的系统提示词敏感词混淆规则。',
+          description: '过滤 Devin 系统提示词中的整行或替换匹配片段。',
         },
         liveMediaRelay: {
           title: 'Codex · 实时媒体中继',
@@ -3283,7 +3307,7 @@ export const zhCN = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '配置 Antigravity 反重力网关行为、敏感词混淆、额度与连接池。',
+          description: '配置 Antigravity 系统指令的文本处理规则、额度与连接池。',
         },
         multimedia: {
           title: '多媒体',
@@ -3412,9 +3436,11 @@ export const zhCN = {
           description: '按模型和协议改写请求参数与消息文本。',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Antigravity 字面量替换' },
+        antigravityPatternReplacements: { label: 'Antigravity 正则替换' },
         antigravitySensitiveWordsJson: {
-          label: '敏感词混淆',
-          description: '在 Antigravity 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+          label: '敏感词插入零宽字符',
+          description: 'Antigravity 会在系统指令中命中的词语内部插入零宽字符。',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -3786,9 +3812,12 @@ export const zhCN = {
           description:
             'JSON 数组配置 STUN/TURN 服务器。注意：JSON 读回会遮蔽 username/credential，只有 urls 完全不变的条目才保留既有密钥，改动 urls 需重新填写密钥。',
         },
+        devinLiteralReplacements: { label: 'Devin 字面量替换' },
+        devinPatternReplacements: { label: 'Devin 正则替换' },
         devinSensitiveWordsJson: {
-          label: 'Devin 敏感词混淆',
-          description: '在 Devin 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+          label: '按敏感词删除整行',
+          description:
+            'Devin 会删除系统提示词中包含这些词语的整行。已由替换规则处理的匹配片段不会触发删行。',
         },
         oauthRequestScopedErrorsJson: {
           label: '按请求范围错误规则',

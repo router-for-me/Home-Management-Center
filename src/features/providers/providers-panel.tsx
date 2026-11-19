@@ -23,6 +23,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { ProviderLogo } from '@/components/shared/provider-logo'
 import { RowActions } from '@/components/shared/row-actions'
+import { SensitiveReplacementEditor } from '@/components/shared/sensitive-replacement-editor'
 import { useSecondaryColumns } from '@/components/shared/table-columns'
 import {
   ContainedTable,
@@ -90,6 +91,7 @@ import {
   type ProviderRequestScopedErrorRule,
   type ProviderResource,
 } from '@/lib/api/management/providers'
+import { replacementIssues, replacementKinds } from '@/lib/api/management/sensitive-replacements'
 import { cn } from '@/lib/utils'
 import { useConsoleUiStore } from '@/stores/ui-store'
 
@@ -373,6 +375,13 @@ export function validateProviderForm(
   ) {
     generalError = t('providersPage.form.validation.requestScopedErrorInvalid')
   }
+
+  if (
+    !generalError &&
+    descriptor.supportsCloak &&
+    replacementKinds.some((kind) => replacementIssues(kind, form.cloak?.[kind] ?? []).some(Boolean))
+  )
+    generalError = t('sensitiveReplacements.incomplete')
 
   return { fieldErrors, generalError }
 }
@@ -3057,6 +3066,16 @@ export function ProviderFormPanel({
                   disabled={mutating}
                 />
               </label>
+              {replacementKinds.map((kind) => (
+                <SensitiveReplacementEditor
+                  key={kind}
+                  kind={kind}
+                  title={t(`sensitiveReplacements.${kind}`)}
+                  rows={form.cloak?.[kind]}
+                  disabled={mutating}
+                  onChange={(rows) => updateCloakField(kind, rows)}
+                />
+              ))}
             </CollapsibleContent>
           </Collapsible>
         ) : null}

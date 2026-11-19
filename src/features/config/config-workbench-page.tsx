@@ -53,6 +53,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
+import { SensitiveReplacementEditor } from '@/components/shared/sensitive-replacement-editor'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -129,6 +130,12 @@ import {
   serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
+import {
+  type ReplacementKind,
+  parseReplacementDraft,
+  replacementIssues,
+  serializeReplacementRows,
+} from '@/lib/api/management/sensitive-replacements'
 import { scrollElementIntoShell } from '@/lib/shell-scroll'
 import { cn } from '@/lib/utils'
 import { useSessionStore } from '@/stores/session-store'
@@ -156,6 +163,7 @@ type ConfigSectionId =
 type ConfigSubgroupId = 'devin' | 'liveMediaRelay' | 'antigravity'
 
 type ConfigFieldKind =
+  | ReplacementKind
   | 'boolean'
   | 'defaultOnBoolean'
   | 'number'
@@ -560,6 +568,18 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         groupId: 'devin',
       },
       {
+        key: 'devinLiteralReplacements',
+        kind: 'literalReplacements',
+        sectionId: 'oauthProviders',
+        groupId: 'devin',
+      },
+      {
+        key: 'devinPatternReplacements',
+        kind: 'patternReplacements',
+        sectionId: 'oauthProviders',
+        groupId: 'devin',
+      },
+      {
         key: 'liveMediaRelayEnabled',
         kind: 'boolean',
         sectionId: 'oauthProviders',
@@ -605,6 +625,18 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       {
         key: 'antigravitySensitiveWordsJson',
         kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityLiteralReplacements',
+        kind: 'literalReplacements',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityPatternReplacements',
+        kind: 'patternReplacements',
         sectionId: 'oauthProviders',
         groupId: 'antigravity',
       },
@@ -1557,6 +1589,10 @@ function getValidationErrors(
       }
       if (field.kind === 'nullableBoolean' || field.kind === 'defaultOnBoolean') {
         return value !== null && typeof value !== 'boolean'
+      }
+      if (field.kind === 'literalReplacements' || field.kind === 'patternReplacements') {
+        const rows = parseReplacementDraft(value)
+        return !rows || replacementIssues(field.kind, rows).some(Boolean)
       }
       if (field.kind === 'jsonArray') {
         try {
@@ -4543,7 +4579,15 @@ function StructuredWorkspace({
         aria-label={t(`configPage.fields.${field.key}.label`)}
         aria-describedby={fieldError ? fieldId + '-feedback' : undefined}
       >
-        {isJsonConfigFieldKey(field.key) ? (
+        {field.kind === 'literalReplacements' || field.kind === 'patternReplacements' ? (
+          <SensitiveReplacementEditor
+            kind={field.kind}
+            title={t(`configPage.fields.${field.key}.label`)}
+            rows={parseReplacementDraft(draft[field.key])}
+            disabled={disabled}
+            onChange={(rows) => onChange(field.key, stringifyJson(rows))}
+          />
+        ) : isJsonConfigFieldKey(field.key) ? (
           <JsonConfigField
             field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
             value={String(draft[field.key])}
@@ -4886,6 +4930,13 @@ function ConfigChangePreview({
     }
   }
   function formatValue(value: ConfigFieldValue) {
+    const kind = fieldDefinitionByKey[change.key].kind
+    if (kind === 'literalReplacements' || kind === 'patternReplacements') {
+      const rows = parseReplacementDraft(value)
+      if (!rows) return t('sensitiveReplacements.unsupported')
+      if (replacementIssues(kind, rows).some(Boolean)) return t('sensitiveReplacements.incomplete')
+      return JSON.stringify(serializeReplacementRows(kind, rows))
+    }
     if (fieldDefinitionByKey[change.key].kind === 'defaultOnBoolean') {
       if (value === null) return t('configPage.nullableBoolean.defaultOn')
       return t(`configPage.nullableBoolean.${nullableBooleanOptionFromValue(value)}`)
