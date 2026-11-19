@@ -66,6 +66,7 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -99,8 +100,8 @@ import {
 } from '@/features/config/payload-param-value'
 import {
   type PayloadReplaceDraft,
-  PayloadReplaceFields,
   PayloadReplacePreview,
+  PayloadReplacementSteps,
 } from '@/features/config/payload-replace-fields'
 import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
@@ -122,7 +123,9 @@ import {
   canEditPayloadReplaceRule,
   describeReadOnlyPayloadReplace,
   getPayloadReplaceIssues,
+  getPayloadReplaceTargetIssue,
   normalizePayloadReplaceContent,
+  payloadReplaceTargetModes,
   serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
@@ -202,7 +205,7 @@ type PayloadHeaderEntry = {
   value: string
 }
 
-type PayloadConditionEntry = PayloadParamEntry & { id: number }
+type PayloadConditionEntry = PayloadParamEntry & { id: number; sourceGroup?: number }
 
 type PayloadModelEntry = {
   id: number
@@ -229,10 +232,14 @@ type PayloadFilterRule = PayloadRuleTarget & {
   params: { id: number; path: string }[]
 }
 
-type PayloadReplaceRule = PayloadRuleTarget & PayloadReplaceDraft
+type PayloadReplaceRule = PayloadRuleTarget &
+  PayloadReplaceDraft & {
+    savedModels?: unknown[]
+    savedTarget?: Record<string, unknown>
+  }
 
 type ReadOnlyPayloadRule = PayloadRuleTarget & {
-  original: Record<string, unknown>
+  original: unknown
   details: ReturnType<typeof describeReadOnlyPayloadReplace>
 }
 
@@ -920,13 +927,14 @@ function normalizePayloadConditions(value: unknown): PayloadConditionEntry[] {
   if (!Array.isArray(value)) return []
 
   return value
-    .flatMap((item) => {
+    .flatMap((item, sourceGroup) => {
       if (!isRecord(item)) return []
 
       return Object.entries(item).map(([path, conditionValue]) => {
         const parsed = parsePayloadParamValue(conditionValue)
 
         return {
+          sourceGroup,
           path,
           valueType: parsed.valueType,
           value: parsed.value,
@@ -998,15 +1006,17 @@ function normalizePayloadConfig(value: unknown): PayloadRulesConfig {
     override: overrides,
     'override-raw': normalizePayloadRules(record['override-raw'], true, overrides.length),
     replace: Array.isArray(record.replace)
-      ? record.replace.map((item, index) => {
+      ? record.replace.map((item: unknown, index) => {
           const rule = isRecord(item) ? item : {}
           const target = { displayNumber: index + 1, models: normalizePayloadModels(rule.models) }
           if (!canEditPayloadReplaceRule(rule)) {
-            return { ...target, original: rule, details: describeReadOnlyPayloadReplace(rule) }
+            return { ...target, original: item, details: describeReadOnlyPayloadReplace(rule) }
           }
           const content = normalizePayloadReplaceContent(rule)
           return {
             ...target,
+            savedModels: rule.models,
+            savedTarget: rule.target,
             target: content.target,
             replacements: content.replacements.map((entry, id) => ({ ...entry, id })),
           }
@@ -1068,15 +1078,28 @@ function serializePayloadHeaders(headers: PayloadHeaderEntry[]) {
   }, {})
 }
 
-function serializePayloadConditions(conditions: PayloadParamEntry[]) {
-  return conditions
-    .map((condition) => {
-      const path = condition.path.trim()
-      if (!path) return null
-
-      return { [path]: serializePayloadParamValue(condition) }
-    })
-    .filter((condition): condition is Record<string, unknown> => Boolean(condition))
+function serializePayloadConditions(conditions: PayloadConditionEntry[]) {
+  const result: Record<string, unknown>[] = []
+  let lastGroup: number | undefined
+  for (const condition of conditions) {
+    const path = condition.path.trim()
+    if (!path) continue
+    const last = result[result.length - 1]
+    const entry = { [path]: serializePayloadParamValue(condition) }
+    // Preserve saved multi-path condition maps. A new or repeated path gets its own map.
+    if (
+      condition.sourceGroup !== undefined &&
+      condition.sourceGroup === lastGroup &&
+      last &&
+      !Object.hasOwn(last, path)
+    ) {
+      result[result.length - 1] = { ...last, ...entry }
+    } else {
+      result.push(entry)
+    }
+    lastGroup = condition.sourceGroup
+  }
+  return result
 }
 
 function serializePayloadStringList(items: string[]) {
@@ -1123,8 +1146,9 @@ function serializePayloadConfig(config: PayloadRulesConfig) {
       'original' in rule
         ? rule.original
         : {
-            models: serializePayloadModels(rule.models),
+            models: rule.savedModels ?? serializePayloadModels(rule.models),
             ...serializePayloadReplaceContent(rule),
+            ...(rule.savedTarget && { target: rule.savedTarget }),
           },
     ),
     filter: serializePayloadFilterRules(config.filter),
@@ -1149,9 +1173,9 @@ function clonePayloadFilterRule(rule: PayloadFilterRule): PayloadFilterRule {
 
 function clonePayloadReplaceRule(rule: PayloadReplaceRule): PayloadReplaceRule {
   return {
-    displayNumber: rule.displayNumber,
+    ...rule,
     models: rule.models.map(clonePayloadModel),
-    target: { ...rule.target },
+    target: { ...rule.target, paths: [...rule.target.paths] },
     replacements: rule.replacements.map((entry) => ({ ...entry })),
   }
 }
@@ -2479,8 +2503,8 @@ function createPayloadReplaceRule(displayNumber: number): PayloadReplaceRule {
   return {
     displayNumber,
     models: [createPayloadModel()],
-    target: { all: false, positions: '1' },
-    replacements: [{ id: 0, from: '', to: '' }],
+    target: { mode: 'user', all: false, positions: '1', paths: [] },
+    replacements: [{ id: 0, kind: 'literal', from: '', to: '' }],
   }
 }
 
@@ -2839,12 +2863,14 @@ function PayloadPathListRows({
   emptyLabel,
   paths,
   disabled,
+  required = false,
   onChange,
 }: {
   title: string
   emptyLabel: string
   paths: string[]
   disabled: boolean
+  required?: boolean
   onChange: (paths: string[]) => void
 }) {
   const { t } = useTranslation()
@@ -2865,10 +2891,11 @@ function PayloadPathListRows({
           variant="outline"
           size="md"
           disabled={disabled || hasBlankPath}
+          data-draft-missing={(required && !paths.length) || undefined}
           onClick={addPath}
         >
           <Plus className="size-3.5" aria-hidden="true" />
-          {t('configPage.payload.addPath')}
+          {t(required ? 'configPage.payload.replace.addPath' : 'configPage.payload.addPath')}
         </Button>
       </div>
       {hasBlankPath ? (
@@ -2883,7 +2910,7 @@ function PayloadPathListRows({
           <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto]">
             <TableHeaderCell
               label={t('configPage.payload.conditionPath')}
-              description={t('configPage.payload.conditionPathHelp')}
+              description={required ? undefined : t('configPage.payload.conditionPathHelp')}
               fieldLabel
             />
             <div aria-hidden="true" />
@@ -2891,24 +2918,54 @@ function PayloadPathListRows({
           {paths.map((path, index) => (
             <div key={index} className="grid gap-1.5">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <label className={fieldClassName}>
-                  <span className="text-label sm:sr-only">
-                    {t('configPage.payload.conditionPath')}
-                  </span>
-                  <Input
-                    value={path}
-                    disabled={disabled}
-                    className="font-mono"
-                    aria-label={t('configPage.payload.conditionPath')}
-                    placeholder={t('configPage.payload.conditionPathPlaceholder')}
-                    onChange={(event) => updatePath(index, event.target.value)}
-                  />
-                </label>
+                {required ? (
+                  <PayloadFormField
+                    label={t('configPage.payload.replace.pathEntry', { index: index + 1 })}
+                    labelClassName="sm:sr-only"
+                    required
+                    error={
+                      !path.trim()
+                        ? t('configPage.payload.ruleIssues.replacePathsRequired')
+                        : undefined
+                    }
+                  >
+                    {(control) => (
+                      <Textarea
+                        {...control}
+                        rows={1}
+                        value={path}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder="metadata.description"
+                        onChange={(event) => updatePath(index, event.target.value)}
+                      />
+                    )}
+                  </PayloadFormField>
+                ) : (
+                  <label className={fieldClassName}>
+                    <span className="text-label sm:sr-only">
+                      {t('configPage.payload.conditionPath')}
+                    </span>
+                    <Input
+                      value={path}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.conditionPath')}
+                      placeholder={t('configPage.payload.conditionPathPlaceholder')}
+                      onChange={(event) => updatePath(index, event.target.value)}
+                    />
+                  </label>
+                )}
                 <Button
                   type="button"
                   variant="text"
                   size="lg"
                   disabled={disabled}
+                  aria-label={
+                    required
+                      ? t('configPage.payload.replace.removePath', { index: index + 1 })
+                      : undefined
+                  }
                   onClick={() => removePath(index)}
                 >
                   {t('configPage.payload.remove')}
@@ -2917,6 +2974,108 @@ function PayloadPathListRows({
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadReplaceTargetFields({
+  target,
+  disabled,
+  onChange,
+}: {
+  target: PayloadReplaceDraft['target']
+  disabled: boolean
+  onChange: (target: PayloadReplaceDraft['target']) => void
+}) {
+  const { t } = useTranslation()
+  const issue = getPayloadReplaceTargetIssue(target)
+  return (
+    <div className="grid min-w-0 gap-3 border-t pt-4">
+      <PayloadFormField
+        label={t('configPage.payload.replace.target')}
+        hint={
+          target.mode === 'paths'
+            ? t('configPage.payload.replace.pathsHint')
+            : target.mode !== 'user'
+              ? t('configPage.payload.replace.systemHint')
+              : undefined
+        }
+      >
+        {(control) => (
+          <Select
+            disabled={disabled}
+            value={target.mode}
+            onValueChange={(next) => {
+              const mode = payloadReplaceTargetModes.find((option) => option === next)
+              if (mode)
+                onChange({
+                  ...target,
+                  mode,
+                  paths: mode === 'paths' && !target.paths.length ? [''] : target.paths,
+                })
+            }}
+          >
+            <SelectTrigger {...control} className="sm:max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {payloadReplaceTargetModes.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {t(`configPage.payload.replace.targets.${mode}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </PayloadFormField>
+      {target.mode === 'paths' ? (
+        <PayloadPathListRows
+          title={t('configPage.payload.replace.targets.paths')}
+          emptyLabel={t('configPage.payload.ruleIssues.replacePathsRequired')}
+          paths={target.paths}
+          disabled={disabled}
+          required
+          onChange={(paths) => onChange({ ...target, paths })}
+        />
+      ) : (
+        <>
+          <RadioGroup
+            value={target.all ? 'all' : 'positions'}
+            disabled={disabled}
+            aria-label={t('configPage.payload.replace.messageScope')}
+            className="flex flex-col gap-2 sm:flex-row sm:gap-4"
+            onValueChange={(mode) => onChange({ ...target, all: mode === 'all' })}
+          >
+            <label className="text-body min-h-control-lg flex items-center gap-2">
+              <RadioGroupItem value="positions" />
+              {t('configPage.payload.replace.selectedPositions')}
+            </label>
+            <label className="text-body min-h-control-lg flex items-center gap-2">
+              <RadioGroupItem value="all" />
+              {t('configPage.payload.replace.allMessages')}
+            </label>
+          </RadioGroup>
+          {!target.all ? (
+            <PayloadFormField
+              label={t('configPage.payload.replace.positions')}
+              required
+              error={issue && t(`configPage.payload.ruleIssues.${issue}`)}
+              hint={t('configPage.payload.replace.positionsHint')}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  value={target.positions}
+                  disabled={disabled}
+                  className="font-mono sm:max-w-xs"
+                  placeholder={t('configPage.payload.replace.positionsPlaceholder')}
+                  onChange={(event) => onChange({ ...target, positions: event.target.value })}
+                />
+              )}
+            </PayloadFormField>
+          ) : null}
+        </>
       )}
     </div>
   )
@@ -3797,7 +3956,7 @@ function PayloadRulesEditor({
                   {rule.details.scope}
                 </code>
               ) : null}
-              {readOnly && rule.details.regex ? <code className="text-code">RE2</code> : null}
+              {first?.kind === 'regex' ? <code className="text-code">RE2</code> : null}
               {sectionKey === 'replace' && value.replace.length > 1 ? (
                 <span>
                   {t('configPage.payload.workspace.executionPosition', { position: index + 1 })}
@@ -3805,11 +3964,19 @@ function PayloadRulesEditor({
               ) : null}
               {replacement ? (
                 <span>
-                  {replacement.target.all
-                    ? t('configPage.payload.replace.allUsers')
-                    : t('configPage.payload.workspace.selectedUsers', {
-                        positions: replacement.target.positions,
-                      })}
+                  {replacement.target.mode === 'paths'
+                    ? t('configPage.payload.replace.pathSummary', {
+                        count: replacement.target.paths.length,
+                      })
+                    : t(
+                        replacement.target.all
+                          ? 'configPage.payload.replace.allRoleMessages'
+                          : 'configPage.payload.replace.rolePositions',
+                        {
+                          role: replacement.target.mode,
+                          positions: replacement.target.positions,
+                        },
+                      )}
                 </span>
               ) : null}
               {issueCount > 0 ? <span>{t('configPage.payload.workspace.incomplete')}</span> : null}
@@ -3878,24 +4045,47 @@ function PayloadRulesEditor({
             <PayloadModelRows
               models={rule.models}
               disabled={disabled}
-              onChange={(models) => updateRule(sectionKey, index, { ...rule, models })}
+              onChange={(models) =>
+                updateRule(
+                  sectionKey,
+                  index,
+                  replacement
+                    ? { ...replacement, models, savedModels: undefined }
+                    : { ...rule, models },
+                )
+              }
             />
             {sectionKey === 'replace' ? (
-              <>
-                <PayloadReplaceFields
-                  value={rule as PayloadReplaceRule}
-                  disabled={disabled}
-                  onChange={(content) => updateRule(sectionKey, index, { ...rule, ...content })}
-                />
-                <PayloadReplacePreview
-                  rule={rule as PayloadReplaceRule}
-                  disabled={disabled}
-                  text={previewTexts[identity.id] ?? ''}
-                  onTextChange={(text) =>
-                    setPreviewTexts((current) => ({ ...current, [identity.id]: text }))
-                  }
-                />
-              </>
+              replacement && (
+                <>
+                  <PayloadReplaceTargetFields
+                    target={replacement.target}
+                    disabled={disabled}
+                    onChange={(target) =>
+                      updateRule(sectionKey, index, {
+                        ...replacement,
+                        target,
+                        savedTarget: undefined,
+                      })
+                    }
+                  />
+                  <PayloadReplacementSteps
+                    value={replacement.replacements}
+                    disabled={disabled}
+                    onChange={(replacements) =>
+                      updateRule(sectionKey, index, { ...replacement, replacements })
+                    }
+                  />
+                  <PayloadReplacePreview
+                    rule={replacement}
+                    disabled={disabled}
+                    text={previewTexts[identity.id] ?? ''}
+                    onTextChange={(text) =>
+                      setPreviewTexts((current) => ({ ...current, [identity.id]: text }))
+                    }
+                  />
+                </>
+              )
             ) : sectionKey === 'filter' ? (
               <PayloadFilterParamRows
                 params={(rule as PayloadFilterRule).params}
@@ -4662,6 +4852,35 @@ function ConfigChangePreview({
           {issue
             ? t(`configPage.payload.ruleIssues.${issue}`)
             : t('configPage.payload.workspace.incomplete')}
+        </span>
+      )
+    }
+    const before = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.previousValue))
+    if (before.ok && isRecord(before.value) && isRecord(parsed.value)) {
+      const previous = before.value
+      const next = parsed.value
+      const sections = payloadSectionKeys.filter(
+        (key) => JSON.stringify(previous[key]) !== JSON.stringify(next[key]),
+      )
+      return (
+        <span className="grid min-w-0 gap-2">
+          {(
+            [
+              ['savedConfig', previous],
+              ['pendingConfig', next],
+            ] as const
+          ).map(([label, config]) => (
+            <span key={label} className="grid min-w-0 gap-1">
+              <span className="text-label">{t(`configPage.payload.replace.${label}`)}</span>
+              <code className="bg-muted/30 text-code block rounded p-2 break-words whitespace-pre-wrap">
+                {JSON.stringify(
+                  Object.fromEntries(sections.map((key) => [key, config[key] ?? []])),
+                  null,
+                  2,
+                )}
+              </code>
+            </span>
+          ))}
         </span>
       )
     }

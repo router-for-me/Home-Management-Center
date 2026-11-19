@@ -85,8 +85,8 @@ test('raw numbers survive mode changes and typed entries cannot silently lose pr
 
 test('the local preview applies literal steps in order and bounds all intermediate output', () => {
   const entries = [
-    { from: 'aa', to: '$&' },
-    { from: '$&', to: '' },
+    { kind: 'literal' as const, from: 'aa', to: '$&' },
+    { kind: 'literal' as const, from: '$&', to: '' },
   ]
   expect(getPayloadReplacePreview('aaaa b', entries)).toEqual({
     status: 'ready',
@@ -97,22 +97,43 @@ test('the local preview applies literal steps in order and bounds all intermedia
     ],
   })
   expect(getPayloadReplacePreview('', entries).status).toBe('empty')
-  expect(getPayloadReplacePreview('a', [{ from: '', to: 'b' }]).status).toBe('incomplete')
-  expect(getPayloadReplacePreview('a'.repeat(40000), [{ from: 'a', to: 'aa' }]).status).toBe(
-    'tooLarge',
-  )
+  expect(
+    getPayloadReplacePreview('a', [{ kind: 'literal' as const, from: '', to: 'b' }]).status,
+  ).toBe('incomplete')
+  expect(
+    getPayloadReplacePreview('a'.repeat(40000), [{ kind: 'literal' as const, from: 'a', to: 'aa' }])
+      .status,
+  ).toBe('tooLarge')
   expect(
     getPayloadReplacePreview('a'.repeat(40000), [
-      { from: 'x', to: 'y' },
-      { from: 'x', to: 'y' },
+      { kind: 'literal' as const, from: 'x', to: 'y' },
+      { kind: 'literal' as const, from: 'x', to: 'y' },
     ]).status,
   ).toBe('tooLarge')
   expect(
     getPayloadReplacePreview('a'.repeat(40000), [
-      { from: 'x', to: 'y' },
-      { from: 'a', to: '' },
+      { kind: 'literal' as const, from: 'x', to: 'y' },
+      { kind: 'literal' as const, from: 'a', to: '' },
     ]).status,
   ).toBe('ready')
+})
+
+test('a mixed sample stops at the first RE2 step and never reports a guessed final result', () => {
+  const steps = [
+    { kind: 'literal', from: 'A', to: 'first' },
+    { kind: 'regex', from: '(?i)(first)', to: '$1!' },
+    { kind: 'literal', from: '!', to: 'last' },
+  ] as const
+  expect(getPayloadReplacePreview('AA', [...steps])).toEqual({
+    status: 'requiresCPA',
+    position: 2,
+    steps: [{ result: 'firstfirst', changed: true }],
+  })
+  expect(getPayloadReplacePreview('AA', [steps[1], steps[2]])).toEqual({
+    status: 'requiresCPA',
+    position: 1,
+    steps: [],
+  })
 })
 
 test('an untouched field stays quiet until blur or explicit review and clears its accessible error when fixed', async () => {
