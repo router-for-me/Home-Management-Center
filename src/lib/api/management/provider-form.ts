@@ -8,6 +8,7 @@ import {
   type ProviderModelEntryInput,
   type ProviderRequestScopedErrorRule,
   type ProviderResource,
+  type VertexExecutionOptions,
 } from './providers'
 import { readReplacementRows } from './sensitive-replacements'
 
@@ -79,6 +80,14 @@ function readStringField(record: UnknownRecord, key: string): string {
   return typeof value === 'string' ? value : ''
 }
 
+export function readVertexOptions(raw?: UnknownRecord): VertexExecutionOptions {
+  return {
+    interactions: typeof raw?.interactions === 'boolean' ? raw.interactions : null,
+    openapi: typeof raw?.openapi === 'boolean' ? raw.openapi : null,
+    location: typeof raw?.['openapi-location'] === 'string' ? raw['openapi-location'] : '',
+  }
+}
+
 export function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[] {
   const models = raw.models
   if (!Array.isArray(models)) return []
@@ -102,6 +111,7 @@ export function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[
       alias: readStringField(model, 'alias'),
       displayName: readStringField(model, 'display-name'),
       forceMapping: model['force-mapping'] === true,
+      openapi: typeof model.openapi === 'boolean' ? model.openapi : null,
       maxContextLength:
         typeof model['max-context-length'] === 'number' &&
         Number.isFinite(model['max-context-length'])
@@ -114,6 +124,10 @@ export function readProviderModels(raw: UnknownRecord): ProviderModelEntryInput[
       outputModalitiesText: outputModalities.join(', '),
       useMaxCompletionTokens: model['use-max-completion-tokens'] === true,
       thinkingEnabled: thinking !== null,
+      thinkingDisableType:
+        thinking && Object.hasOwn(thinking, 'disable-type')
+          ? readStringField(thinking, 'disable-type')
+          : undefined,
       thinkingLevels,
       thinkingMin:
         typeof thinking?.min === 'number' && Number.isFinite(thinking.min)
@@ -239,6 +253,7 @@ export function createFormState(
   if (!resource) {
     return {
       ...emptyForm,
+      groupVertexOptions: providerId === 'vertex' ? readVertexOptions() : undefined,
       baseUrl: descriptor?.defaultBaseUrl ?? '',
       groupConnectionPool: readConnectionPool(),
       keyConnectionPool: providerId === 'openaiCompatibility' ? undefined : readConnectionPool(),
@@ -261,6 +276,12 @@ export function createFormState(
   return {
     apiKey: '',
     name: resource.name ?? '',
+    groupVertexOptions:
+      providerId === 'vertex' ? readVertexOptions(resource.source?.group) : undefined,
+    keyVertexOptions:
+      providerId === 'vertex'
+        ? readVertexOptions(resource.source ? resource.source.key : raw)
+        : undefined,
     groupConnectionPool: readConnectionPool(resource.source?.group['connection-pool']),
     keyConnectionPool:
       providerId === 'openaiCompatibility'

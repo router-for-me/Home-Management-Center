@@ -9,7 +9,12 @@ import type { ManagementSessionInput, RuntimeMode } from '@/lib/api/management/t
 
 import { ConfigEditConflict, mergeConfigEdits, sameConfigValue } from './config-edit'
 import { type ProviderConnectionPool, withConnectionPool } from './provider-connection-pool'
-import { createFormState, readProviderModels, readRequestScopedErrors } from './provider-form'
+import {
+  createFormState,
+  readProviderModels,
+  readRequestScopedErrors,
+  readVertexOptions,
+} from './provider-form'
 import type { ProviderErrorRuleAction } from './provider-form'
 import { type ReplacementRow, serializeReplacementRows } from './sensitive-replacements'
 
@@ -84,7 +89,15 @@ export type ProviderDescriptor = {
   supportsRichModelAliases: boolean
 }
 
+export type VertexExecutionOptions = {
+  interactions: boolean | null
+  openapi: boolean | null
+  location: string
+}
+
 export type ProviderEntryFormInput = {
+  groupVertexOptions?: VertexExecutionOptions
+  keyVertexOptions?: VertexExecutionOptions
   groupConnectionPool?: ProviderConnectionPool
   keyConnectionPool?: ProviderConnectionPool
   apiKey: string
@@ -128,6 +141,7 @@ export type ProviderModelEntryInput = {
   alias: string
   displayName: string
   forceMapping: boolean
+  openapi?: boolean | null
   maxContextLength?: string
   isCompat?: boolean
   supportConfigurationUpdate?: boolean
@@ -139,6 +153,7 @@ export type ProviderModelEntryInput = {
   thinkingLevels?: string[]
   thinkingMin?: string
   thinkingMax?: string
+  thinkingDisableType?: string
   thinkingZeroAllowed?: boolean
   thinkingDynamicAllowed?: boolean
   raw?: UnknownRecord | null
@@ -991,6 +1006,12 @@ function buildModelThinkingPayload(
     }
   }
 
+  if (entry.thinkingDisableType !== undefined) {
+    const type = entry.thinkingDisableType.trim()
+    if (type) nextThinking['disable-type'] = type
+    else delete nextThinking['disable-type']
+  }
+
   // An explicit empty object suppresses backend defaults; omission inherits them.
   return nextThinking
 }
@@ -1068,6 +1089,11 @@ function serializeModelEntry(
     } else {
       delete payload['force-mapping']
     }
+  }
+
+  if (descriptor.id === 'vertex' && entry.openapi !== undefined) {
+    if (entry.openapi === null) delete payload.openapi
+    else payload.openapi = entry.openapi
   }
 
   if (descriptor.id !== 'vertex') {
@@ -1253,13 +1279,37 @@ const nativeSharedFields = [
   'connection-pool',
 ]
 
+function vertexOptionsPayload(options?: VertexExecutionOptions): UnknownRecord {
+  if (!options) return {}
+  return {
+    ...(options.interactions != null && { interactions: options.interactions }),
+    ...(options.openapi != null && { openapi: options.openapi }),
+    ...(options.location.trim() && { 'openapi-location': options.location.trim() }),
+  }
+}
+
+function applyNativeGroupSettings(
+  group: UnknownRecord,
+  descriptor: ProviderDescriptor,
+  input: ProviderEntryFormInput,
+) {
+  const next = withConnectionPool(group, input.groupConnectionPool)
+  if (descriptor.id !== 'vertex' || !input.groupVertexOptions) return next
+  return mergeConfigEdits(
+    next,
+    vertexOptionsPayload(readVertexOptions(group)),
+    vertexOptionsPayload(input.groupVertexOptions),
+  )
+}
+
 function createNativeKeyPayload(
   descriptor: ProviderDescriptor,
   input: ProviderEntryFormInput,
   existingKey?: UnknownRecord,
 ) {
   const existing = existingKey ?? {}
-  const payload: UnknownRecord = {}
+  const payload: UnknownRecord =
+    descriptor.id === 'vertex' ? vertexOptionsPayload(input.keyVertexOptions) : {}
 
   // `id` is the credential identity; keeping it preserves the binding on edit.
   const id = readString(existing, 'id') ?? readString(existing, 'uuid')
@@ -1451,7 +1501,7 @@ function createEntryPayload(descriptor: ProviderDescriptor, input: ProviderEntry
   const key = withConnectionPool(createNativeKeyPayload(descriptor, input), input.keyConnectionPool)
 
   return {
-    ...withConnectionPool(createNativeGroupPayload(descriptor, input), input.groupConnectionPool),
+    ...applyNativeGroupSettings(createNativeGroupPayload(descriptor, input), descriptor, input),
     keys: readString(key, 'api-key') ? [key] : [],
   }
 }
@@ -1560,8 +1610,8 @@ function replaceNativeCredential(
   const models = Array.isArray(resource.raw.models) ? resource.raw.models.filter(isRecord) : []
   const before = createNativeGroupPayload(descriptor, form, models)
   const after = createNativeGroupPayload(descriptor, draft, models)
-  const pooledGroup = withConnectionPool(group, input.groupConnectionPool)
-  if (source && !sameConfigValue(group['connection-pool'], pooledGroup['connection-pool'])) {
+  const scopedGroup = applyNativeGroupSettings(group, descriptor, input)
+  if (source && !sameConfigValue(group, scopedGroup)) {
     // A group edit affects its siblings. Verify the membership the operator opened.
     const identity = (item: UnknownRecord) =>
       item.id ?? item.uuid ?? readAuthIndex(item) ?? item['api-key'] ?? item
@@ -1611,13 +1661,13 @@ function replaceNativeCredential(
     delete groupBefore[field]
     delete groupAfter[field]
   }
-  const nextGroup = mergeConfigEdits(pooledGroup, groupBefore, groupAfter)
+  const nextGroup = mergeConfigEdits(scopedGroup, groupBefore, groupAfter)
   const result = family.slice()
   if (keys.length > 1 && !sameConfigValue(group['base-url'], nextGroup['base-url'])) {
     result.splice(
       location.groupIndex,
       1,
-      { ...pooledGroup, keys: keys.filter((_, i) => i !== location.keyIndex) },
+      { ...scopedGroup, keys: keys.filter((_, i) => i !== location.keyIndex) },
       { ...nextGroup, keys: [nextKey] },
     )
   } else {
