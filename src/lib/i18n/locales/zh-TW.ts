@@ -3311,7 +3311,7 @@ export const zhTW = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '設定 Antigravity 系統指令的文字處理規則、額度與連線池。',
+          description: '設定違反服務條款後的暫停時間、系統指令的文字處理規則、額度與連線池。',
         },
         multimedia: {
           title: '多媒體',
@@ -3842,6 +3842,13 @@ export const zhTW = {
           description:
             '按 provider 鍵控的錯誤處理規則，每條規則形狀為 {status, match[], match-regexr[], action}。',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: '違反服務條款後的暫停時間',
+          description:
+            '只有當 Google RPC 傳回 403 PERMISSION_DENIED，且 ErrorInfo.reason 為 TOS_VIOLATION 時，Home 才會依此時間暫停調度整個 Antigravity 憑證池。可填入 30m 或 1h30m，填入 0 關閉，留空恢復預設。',
+          placeholder: '0（預設關閉）',
+          invalid: '請輸入有效的正時長，例如 30m 或 1h30m，或填入 0 關閉。',
         },
         antigravityCredits: {
           label: 'Antigravity 額度',

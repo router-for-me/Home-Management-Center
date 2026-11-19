@@ -3493,7 +3493,8 @@ export const ru = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: 'Обработка системных инструкций, кредиты и пул соединений Antigravity.',
+          description:
+            'Длительность паузы при нарушении условий, обработка системных инструкций, кредиты и пул соединений.',
         },
         multimedia: {
           title: 'Мультимедиа',
@@ -4077,6 +4078,14 @@ export const ru = {
           description:
             'Правила обработки ошибок, сгруппированные по provider. Каждое правило имеет форму {status, match[], match-regexr[], action}.',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'Длительность паузы при нарушении условий',
+          description:
+            'Home приостанавливает выдачу учётных данных из всего пула Antigravity на этот срок, если Google RPC вернёт 403 PERMISSION_DENIED с причиной TOS_VIOLATION в поле ErrorInfo.reason. Укажите срок, например 30m или 1h30m, либо 0 для отключения. Пустое поле восстанавливает значение по умолчанию.',
+          placeholder: '0 (по умолчанию отключено)',
+          invalid:
+            'Введите допустимую положительную длительность, например 30m или 1h30m, либо 0 для отключения.',
         },
         antigravityCredits: {
           label: 'Antigravity credits',

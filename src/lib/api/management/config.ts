@@ -146,6 +146,7 @@ export type ConfigFieldKey =
   | 'devinLiteralReplacements'
   | 'devinPatternReplacements'
   | 'oauthRequestScopedErrorsJson'
+  | 'antigravityTosPauseWindow'
   | 'antigravityCredits'
   | 'antigravitySignatureCacheEnabled'
   | 'antigravitySignatureBypassStrict'
@@ -485,6 +486,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const oauthCodexHeaders = toRecord(oauthCodex['header-defaults'])
   const liveMediaRelay = toRecord(oauthCodex['live-media-relay'])
   const antigravity = toRecord(oauthProviders.antigravity)
+  const pauseWindow = antigravity['tos-pause-window']
   const antigravityConnPool = toRecord(antigravity['connection-pool'])
   const devin = toRecord(oauthProviders.devin)
   const multimedia = toRecord(rawConfig.multimedia)
@@ -631,6 +633,10 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
       2,
     ),
     oauthRequestScopedErrorsJson: stringifyJsonObject(oauth['request-scoped-errors']),
+    antigravityTosPauseWindow:
+      typeof pauseWindow === 'string' || pauseWindow === 0 || pauseWindow === false
+        ? String(pauseWindow).trim()
+        : '',
     antigravityCredits: readBoolean(antigravity, 'antigravity-credits'),
     antigravitySignatureCacheEnabled: readNullableBoolean(antigravity, 'signature-cache-enabled'),
     antigravitySignatureBypassStrict: readNullableBoolean(antigravity, 'signature-bypass-strict'),
@@ -917,6 +923,10 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   },
   devinSensitiveWordsJson: { path: 'oauth/providers/devin/sensitive-words', kind: 'stringList' },
   oauthRequestScopedErrorsJson: { path: 'oauth/request-scoped-errors', kind: 'jsonObject' },
+  antigravityTosPauseWindow: {
+    path: 'oauth/providers/antigravity/tos-pause-window',
+    kind: 'string',
+  },
   antigravityCredits: { path: 'oauth/providers/antigravity/antigravity-credits', kind: 'boolean' },
   antigravitySignatureCacheEnabled: {
     path: 'oauth/providers/antigravity/signature-cache-enabled',

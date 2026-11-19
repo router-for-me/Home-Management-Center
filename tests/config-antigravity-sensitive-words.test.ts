@@ -2,6 +2,7 @@ import axios, { type AxiosAdapter, type AxiosRequestConfig } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import { sectionDefinitions } from '../src/features/config/config-workbench-page'
+import { isValidAntigravityPauseWindow } from '../src/lib/api/management/antigravity-pause-window'
 import {
   applyConfigChange,
   fetchConfigSnapshot,
@@ -64,6 +65,53 @@ function createManagementAdapter(responseFor: (method: string, pathname: string)
     },
   }
 }
+
+describe('Antigravity TOS pause window', () => {
+  test('accepts Home disable values and positive Go durations', () => {
+    for (const value of [
+      '',
+      '  ',
+      '0',
+      ' OFF ',
+      'false',
+      'None',
+      'DISABLED',
+      '30m',
+      '1h30m',
+      '+.5h',
+      '1.s',
+      '1ns',
+      '1us',
+      '1µs',
+      '1μs',
+      '0.000001ms',
+      '2562047h47m16.854775807s',
+    ]) {
+      expect(isValidAntigravityPauseWindow(value)).toBe(true)
+    }
+  })
+
+  test('rejects malformed, nonpositive, sub-nanosecond and overflowing durations', () => {
+    for (const value of [
+      '6',
+      '-1h',
+      '+0',
+      '0s',
+      '0.5ns0.5ns',
+      '1d',
+      '1 h',
+      '1e3s',
+      '1m30',
+      '.s',
+      '1s!',
+      'off1s',
+      '9223372036854775808ns',
+      '2562047h47m16.854775808s',
+    ]) {
+      expect(isValidAntigravityPauseWindow(value)).toBe(false)
+    }
+  })
+})
 
 describe('Antigravity sensitive words configuration', () => {
   test('normalizeConfigValues extracts oauth.providers.antigravity.sensitive-words as JSON array', () => {
@@ -293,6 +341,7 @@ describe('Antigravity sensitive words configuration', () => {
       'liveMediaRelayIceServersJson',
     ])
     expect(antigravityFields?.map((field) => field.key)).toEqual([
+      'antigravityTosPauseWindow',
       'antigravitySensitiveWordsJson',
       'antigravityLiteralReplacements',
       'antigravityPatternReplacements',

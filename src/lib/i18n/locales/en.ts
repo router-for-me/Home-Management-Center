@@ -3484,7 +3484,7 @@ export const en = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Configure system instruction text, credits, and the Antigravity connection pool.',
+            'Set the TOS pause duration, system instruction text rules, credits, and connection pool options.',
         },
         multimedia: {
           title: 'Multimedia',
@@ -4061,6 +4061,13 @@ export const en = {
           description:
             'Error handling rules keyed by provider. Each rule has the shape {status, match[], match-regexr[], action}.',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'Pause duration after a TOS violation',
+          description:
+            'Home pauses dispatch from the entire Antigravity credential pool for this duration when Google RPC returns 403 PERMISSION_DENIED with ErrorInfo.reason set to TOS_VIOLATION. Enter a duration such as 30m or 1h30m, enter 0 to disable, or leave blank for the default.',
+          placeholder: '0 (off by default)',
+          invalid: 'Enter a valid positive duration such as 30m or 1h30m, or enter 0 to disable.',
         },
         antigravityCredits: {
           label: 'Antigravity credits',
