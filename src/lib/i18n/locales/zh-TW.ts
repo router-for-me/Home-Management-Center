@@ -3287,7 +3287,7 @@ export const zhTW = {
         oauthRules: {
           title: 'OAuth 模型規則',
           shortTitle: 'OAuth 規則',
-          description: '設定 OAuth 與檔案憑證的排除模型、用戶端可見模型別名和按請求範圍錯誤規則。',
+          description: '設定 OAuth 與檔案憑證的模型排除規則、別名、上下文視窗及請求錯誤規則。',
         },
         oauthProviders: {
           title: 'OAuth 提供商',
@@ -3469,6 +3469,11 @@ export const zhTW = {
           label: '模型停用',
           description: '選擇認證通道並勾選需要從 OAuth 或檔案憑證中排除的模型。',
           placeholder: '{"claude":["claude-opus-4.5"]}',
+        },
+        oauthModelSettingsJson: {
+          label: 'OAuth 模型設定',
+          description:
+            '為 OAuth 模型設定上下文上限。符合既有別名的設定優先於僅符合原模型名稱的設定。API Key 模型使用各自的設定。',
         },
         oauthModelAliasJson: {
           label: '模型別名',
@@ -4360,6 +4365,18 @@ export const zhTW = {
         runtimeChanged: '正在編輯的設定已在伺服器更新。請重新載入後再編輯。',
         jsonParseError: 'JSON 無法解析：{{message}}',
         summary: '{{count}} 個欄位需要處理',
+      },
+      modelSettings: {
+        provider: 'OAuth 供應商',
+        add: '新增模型設定',
+        empty: '{{provider}} 尚未設定模型。',
+        name: '原模型名稱',
+        nameRequired: '請輸入原模型名稱。',
+        alias: '既有別名（選填）',
+        limit: '上下文上限（token）',
+        defaultLimit: '留白或填 0 使用模型預設值',
+        invalidLimit: '請輸入有效範圍內的非負整數。',
+        removeRow: '移除 {{model}} 的模型設定',
       },
       json: {
         remove: '移除',

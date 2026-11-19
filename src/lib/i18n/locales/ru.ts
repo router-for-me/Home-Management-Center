@@ -3473,7 +3473,7 @@ export const ru = {
           title: 'Правила моделей OAuth',
           shortTitle: 'OAuth rules',
           description:
-            'Настройка исключенных моделей, клиентских алиасов и request-scoped правил ошибок для OAuth и file-backed credentials.',
+            'Настройте исключения, псевдонимы, контекстные окна моделей и правила обработки ошибок для OAuth и файловых учётных данных.',
         },
         oauthProviders: {
           title: 'Провайдеры OAuth',
@@ -3667,6 +3667,11 @@ export const ru = {
           description:
             'Выберите auth channel и модели, которые нужно исключить из OAuth или file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
+        },
+        oauthModelSettingsJson: {
+          label: 'Настройки моделей OAuth',
+          description:
+            'Задайте размер контекстного окна для моделей OAuth. Совпадение по существующему псевдониму имеет приоритет перед совпадением по исходному имени. У моделей с API-ключами свои настройки.',
         },
         oauthModelAliasJson: {
           label: 'Model aliases',
@@ -4634,6 +4639,18 @@ export const ru = {
           'Изменяемая настройка обновлена на сервере. Загрузите конфигурацию заново перед редактированием.',
         jsonParseError: 'JSON не удалось разобрать: {{message}}',
         summary: 'Полей требуют внимания: {{count}}',
+      },
+      modelSettings: {
+        provider: 'Провайдер OAuth',
+        add: 'Добавить настройку модели',
+        empty: 'У провайдера {{provider}} пока нет настроек моделей.',
+        name: 'Исходное имя модели',
+        nameRequired: 'Введите исходное имя модели.',
+        alias: 'Существующий псевдоним (необязательно)',
+        limit: 'Контекстное окно (токены)',
+        defaultLimit: 'Пусто или 0 — значение модели',
+        invalidLimit: 'Введите неотрицательное целое число в допустимом диапазоне.',
+        removeRow: 'Удалить настройку модели {{model}}',
       },
       json: {
         remove: 'Удалить',

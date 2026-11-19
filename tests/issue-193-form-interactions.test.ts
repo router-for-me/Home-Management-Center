@@ -18,6 +18,7 @@ for (const scenario of [
   'provider-multiline-rule',
   'provider-thinking-level',
   'oauth-alias-channel-edit',
+  'oauth-model-setting-validation',
 ]) {
   test(`issue #193 real form: ${scenario}`, () => {
     const result = spawnSync(process.execPath, [fixture, scenario], {

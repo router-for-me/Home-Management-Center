@@ -21,12 +21,11 @@ import {
 } from '@/components/ui/select'
 import {
   type ModelAliasRule,
-  aliasChannelValue,
   canEditAliasRule,
-  isAliasChannel,
   normalizeModelAliasRule,
   serializeModelAliasRule,
 } from '@/lib/api/management/oauth-model-aliases'
+import { isOAuthChannelKey, oauthChannelValue } from '@/lib/api/management/oauth-model-channels'
 
 type AliasMap = Record<string, unknown>
 
@@ -62,9 +61,9 @@ export function ModelAliasEditor({
     ...new Set([...Object.keys(value), ...availableChannels, ...(channel ? [channel] : [])]),
   ]
   const selected = channel ?? custom.trim()
-  const stored = aliasChannelValue(value, selected)
+  const stored = oauthChannelValue(value, selected)
   const rows: unknown[] | null = stored === undefined ? [] : Array.isArray(stored) ? stored : null
-  const writable = isAliasChannel(selected) && rows !== null && !disabled
+  const writable = isOAuthChannelKey(selected) && rows !== null && !disabled
 
   function selectChannel(next: string | null) {
     setChannel(next)
@@ -87,10 +86,10 @@ export function ModelAliasEditor({
   }
 
   const destination = move?.destination.trim() ?? ''
-  const existingDestination = aliasChannelValue(value, destination)
+  const existingDestination = oauthChannelValue(value, destination)
   const canMove =
     writable &&
-    isAliasChannel(destination) &&
+    isOAuthChannelKey(destination) &&
     destination !== selected &&
     (existingDestination === undefined || Array.isArray(existingDestination))
   const moveRow = () => {

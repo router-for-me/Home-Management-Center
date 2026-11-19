@@ -3458,7 +3458,7 @@ export const en = {
           title: 'OAuth model rules',
           shortTitle: 'OAuth rules',
           description:
-            'Configure excluded models, client-visible aliases, and request-scoped error rules for OAuth and file-backed credentials.',
+            'Configure model exclusions, aliases, context windows and request-scoped error rules for OAuth and file-backed credentials.',
         },
         oauthProviders: {
           title: 'OAuth providers',
@@ -3650,6 +3650,11 @@ export const en = {
           description:
             'Choose an auth channel and select models to exclude from OAuth or file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
+        },
+        oauthModelSettingsJson: {
+          label: 'OAuth model settings',
+          description:
+            'Set the context window for OAuth models. A match on an existing alias takes priority over a match on the upstream name alone. API key models use their own settings.',
         },
         oauthModelAliasJson: {
           label: 'Model aliases',
@@ -4605,6 +4610,18 @@ export const en = {
           'A setting you edited changed on the server. Reload before editing it again.',
         jsonParseError: 'JSON could not be parsed: {{message}}',
         summary: '{{count}} fields need attention',
+      },
+      modelSettings: {
+        provider: 'OAuth provider',
+        add: 'Add model setting',
+        empty: 'No model settings for {{provider}}.',
+        name: 'Upstream model name',
+        nameRequired: 'Enter the upstream model name.',
+        alias: 'Existing alias (optional)',
+        limit: 'Context window (tokens)',
+        defaultLimit: 'Model default if blank or 0',
+        invalidLimit: 'Enter a nonnegative whole number within the supported range.',
+        removeRow: 'Remove model setting for {{model}}',
       },
       json: {
         remove: 'Remove',

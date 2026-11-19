@@ -13,12 +13,9 @@ import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
 
 import { ConfigEditConflict, sameConfigValue } from './config-edit'
-import {
-  aliasChannelValue,
-  changedAliasChannels,
-  hasIncompleteAliasChanges,
-  isAliasChannel,
-} from './oauth-model-aliases'
+import { hasIncompleteAliasChanges } from './oauth-model-aliases'
+import { changedOAuthChannels, isOAuthChannelKey, oauthChannelValue } from './oauth-model-channels'
+import { hasInvalidModelSettingChanges } from './oauth-model-settings'
 import {
   type ReplacementKind,
   parseReplacementDraft,
@@ -56,6 +53,7 @@ export type ConfigFieldKey =
   | 'routingStrategy'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'oauthModelSettingsJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
   | 'antigravityLiteralReplacements'
@@ -514,6 +512,7 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     routingStrategy: readManagementRoutingStrategy(rawConfig),
     oauthExcludedModelsJson: stringifyJsonObject(oauth['excluded-models']),
     oauthModelAliasJson: stringifyJsonObject(oauth['model-alias']),
+    oauthModelSettingsJson: JSON.stringify(oauth.settings ?? {}, null, 2),
     payloadRulesJson: stringifyPayload(requests.payload),
     antigravitySensitiveWordsJson: stringifyJsonArray(antigravity['sensitive-words']),
     antigravityLiteralReplacements: JSON.stringify(
@@ -691,6 +690,7 @@ export async function fetchConfigSnapshot(
 type ConfigWriteKind =
   | ReplacementKind
   | 'alias'
+  | 'modelSettings'
   | 'payload'
   | 'imageGeneration'
   | 'boolean'
@@ -709,6 +709,7 @@ type ConfigWriteTarget = {
 
 const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'alias' },
+  oauthModelSettingsJson: { path: 'oauth/settings', kind: 'modelSettings' },
   payloadRulesJson: { path: 'requests/payload', kind: 'payload' },
   multimediaDisableImageGeneration: {
     path: 'multimedia/disable-image-generation',
@@ -961,15 +962,16 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   },
 }
 
-export function hasAliasChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
+export function hasOAuthChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
   const before = parseJsonObjectText(change.previousValue)
   const after = parseJsonObjectText(change.nextValue)
-  const latest = parseJsonObjectText(current)
-  return changedAliasChannels(before, after).some((channel) => {
-    const value = aliasChannelValue(latest, channel)
+  const latest = typeof current === 'string' && current.trim() ? parseJsonText(current) : {}
+  if (!isRecord(latest)) return true
+  return changedOAuthChannels(before, after).some((channel) => {
+    const value = oauthChannelValue(latest, channel)
     return (
-      !sameConfigValue(value, aliasChannelValue(before, channel)) &&
-      !sameConfigValue(value, aliasChannelValue(after, channel))
+      !sameConfigValue(value, oauthChannelValue(before, channel)) &&
+      !sameConfigValue(value, oauthChannelValue(after, channel))
     )
   })
 }
@@ -989,17 +991,20 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   const target = configWriteTargets[change.key]
   const url = `/config/${target.path}`
 
-  if (target.kind === 'alias') {
+  if (target.kind === 'alias' || target.kind === 'modelSettings') {
     const before = parseJsonObjectText(change.previousValue)
     const after = parseJsonObjectText(change.nextValue)
-    const channels = changedAliasChannels(before, after)
-    if (
-      hasIncompleteAliasChanges(before, after) ||
-      channels.some((channel) => !isAliasChannel(channel))
-    ) {
-      throw new Error('Invalid OAuth model alias')
+    const channels = changedOAuthChannels(before, after)
+    const invalid =
+      target.kind === 'alias'
+        ? hasIncompleteAliasChanges(before, after)
+        : hasInvalidModelSettingChanges(before, after)
+    if (invalid || channels.some((channel) => !isOAuthChannelKey(channel))) {
+      throw new Error(
+        target.kind === 'alias' ? 'Invalid OAuth model alias' : 'Invalid OAuth model setting',
+      )
     }
-    const pending: { path: string; value: unknown; shrinks: boolean }[] = []
+    const pending: { path: string; channel: string; value: unknown; shrinks: boolean }[] = []
     for (const channel of channels) {
       const path = url + '/' + encodeURIComponent(channel)
       let current: unknown
@@ -1008,19 +1013,39 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
       } catch (error) {
         if (!isMissingConfigPath(error)) throw error
       }
-      const next = aliasChannelValue(after, channel)
+      const next = oauthChannelValue(after, channel)
       if (sameConfigValue(current, next)) continue
-      if (!sameConfigValue(current, aliasChannelValue(before, channel)))
+      if (!sameConfigValue(current, oauthChannelValue(before, channel)))
         throw new ConfigEditConflict()
       pending.push({
         path,
+        channel,
         value: next,
         shrinks: Array.isArray(current) && Array.isArray(next) && next.length < current.length,
       })
     }
     // Store destinations before deleting sources when a rule moves to another channel.
     pending.sort((left, right) => Number(left.shrinks) - Number(right.shrinks))
-    for (const { path, value } of pending) if (value !== undefined) await putJson(path, value)
+    for (const { path, channel, value } of pending) {
+      if (value === undefined) continue
+      try {
+        await putJson(path, value)
+      } catch (error) {
+        const { status, backendCode } = toManagementApiError(error)
+        if (
+          target.kind !== 'modelSettings' ||
+          oauthChannelValue(before, channel) !== undefined ||
+          status !== 400 ||
+          backendCode !== 'invalid_path'
+        )
+          throw error
+        // A child PUT cannot traverse an explicitly null mapping. A V8 PATCH
+        // initializes it while merging just this provider into the OAuth tree.
+        const { data: oauth } = await client.get<unknown>('/config/oauth')
+        if (oauth !== null && !(isRecord(oauth) && oauth.settings === null)) throw error
+        await client.patch('/config/oauth', { settings: { [channel]: value } })
+      }
+    }
     for (const { path, value } of pending) if (value === undefined) await deleteOptional(path)
     return
   }

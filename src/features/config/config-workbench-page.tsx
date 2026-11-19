@@ -88,6 +88,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
+import {
+  ModelSettingFeedbackContext,
+  type ModelSettingIssue,
+  OAuthModelSettingsEditor,
+} from '@/features/config/oauth-model-settings-editor'
 import { PayloadFormField, PayloadReviewFieldContext } from '@/features/config/payload-form-field'
 import {
   type PayloadParamEntry,
@@ -116,10 +121,11 @@ import {
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
-  hasAliasChannelConflict,
+  hasOAuthChannelConflict,
   isReadOnlyConfigField,
 } from '@/lib/api/management/config'
 import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
+import { hasInvalidModelSettingChanges } from '@/lib/api/management/oauth-model-settings'
 import {
   type PayloadReplaceIssueKey,
   canEditPayloadReplaceRule,
@@ -184,6 +190,7 @@ export {
 type JsonConfigFieldKey =
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'oauthModelSettingsJson'
   | 'pluginStoreSourcesJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
@@ -561,6 +568,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'oauthExcludedModelsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthModelAliasJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+      { key: 'oauthModelSettingsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthRequestScopedErrorsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
     ],
   },
@@ -752,6 +760,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
+  'oauthModelSettingsJson',
   'pluginStoreSourcesJson',
   'payloadRulesJson',
   'antigravitySensitiveWordsJson',
@@ -1491,6 +1500,7 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
     case 'oauthExcludedModelsJson':
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
+    case 'oauthModelSettingsJson':
       return isRecord(value)
     case 'pluginStoreSourcesJson':
       return canEditPluginStoreSources(value)
@@ -1621,9 +1631,15 @@ function getValidationErrors(
         try {
           const parsed: unknown = JSON.parse(String(value || '{}'))
           if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return true
-          if (field.key === 'oauthModelAliasJson' && saved && isRecord(parsed)) {
-            const original: unknown = JSON.parse(String(saved.oauthModelAliasJson))
-            return !isRecord(original) || hasIncompleteAliasChanges(original, parsed)
+          if (
+            (field.key === 'oauthModelAliasJson' || field.key === 'oauthModelSettingsJson') &&
+            isRecord(parsed)
+          ) {
+            const original: unknown = JSON.parse(String(saved?.[field.key] ?? '{}'))
+            if (!isRecord(original)) return true
+            return field.key === 'oauthModelAliasJson'
+              ? hasIncompleteAliasChanges(original, parsed)
+              : hasInvalidModelSettingChanges(original, parsed)
           }
           if (field.key === 'payloadRulesJson') {
             return !canEditPayloadConfig(parsed) || hasPayloadValidationErrors(parsed)
@@ -4468,6 +4484,14 @@ function StructuredJsonEditor({
           onChange={onChange}
         />
       )
+    case 'oauthModelSettingsJson':
+      return (
+        <OAuthModelSettingsEditor
+          value={value as Record<string, unknown>}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      )
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
@@ -5115,6 +5139,8 @@ function ConfigWorkbenchSession() {
   const structuredDraft = edits?.values ?? baseline?.structured
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
+  const modelSettingFeedback = useState<ModelSettingIssue[]>([])
+  const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
   const [saveError, setSaveError] = useState<ConfigFieldSaveError | null>(null)
@@ -5143,7 +5169,8 @@ function ConfigWorkbenchSession() {
     latest !== baseline &&
     changes.some((change) => {
       const current = getConfigChangeValue(change.key, latest.structured[change.key])
-      if (change.key === 'oauthModelAliasJson') return hasAliasChannelConflict(change, current)
+      if (change.key === 'oauthModelAliasJson' || change.key === 'oauthModelSettingsJson')
+        return hasOAuthChannelConflict(change, current)
       return (
         !areConfigValuesEqual(current, change.previousValue) &&
         !areConfigValuesEqual(current, change.nextValue)
@@ -5157,7 +5184,9 @@ function ConfigWorkbenchSession() {
   )
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
-    (key) => key !== 'payloadRulesJson' || !payloadDraft,
+    (key) =>
+      (key !== 'payloadRulesJson' || !payloadDraft) &&
+      (key !== 'oauthModelSettingsJson' || modelSettingIssues.length > 0),
   )
   const isDirty = changes.length > 0
   const saveDisabled =
@@ -5204,6 +5233,7 @@ function ConfigWorkbenchSession() {
   const reloadFromRuntime = () => {
     setSaveError(null)
     setPayloadDraft(null)
+    setModelSettingIssues([])
     setEdits(null)
     workbench.refetch()
   }
@@ -5226,6 +5256,7 @@ function ConfigWorkbenchSession() {
       setSaveError(null)
       setEdits(null)
       setPayloadDraft(null)
+      setModelSettingIssues([])
       toast.success(t('configPage.toast.saved'))
     } catch (error) {
       if (!(error instanceof ConfigFieldSaveError)) {
@@ -5306,20 +5337,23 @@ function ConfigWorkbenchSession() {
           setDraft: setPayloadDraft,
         }}
       >
-        <StructuredWorkspace
-          draft={structuredDraft}
-          saveError={saveError}
-          onDiscardField={(key) => {
-            if (key === 'payloadRulesJson') setPayloadDraft(null)
-            setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
-            setSaveError(null)
-          }}
-          changes={changes}
-          validationErrors={visibleValidationErrors}
-          disabled={workbench.mutating}
-          oauthModelCatalog={oauthModelCatalog}
-          onChange={handleStructuredChange}
-        />
+        <ModelSettingFeedbackContext.Provider value={modelSettingFeedback}>
+          <StructuredWorkspace
+            draft={structuredDraft}
+            saveError={saveError}
+            onDiscardField={(key) => {
+              if (key === 'payloadRulesJson') setPayloadDraft(null)
+              if (key === 'oauthModelSettingsJson') setModelSettingIssues([])
+              setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
+              setSaveError(null)
+            }}
+            changes={changes}
+            validationErrors={visibleValidationErrors}
+            disabled={workbench.mutating}
+            oauthModelCatalog={oauthModelCatalog}
+            onChange={handleStructuredChange}
+          />
+        </ModelSettingFeedbackContext.Provider>
       </PayloadSnapshotContext.Provider>
     </section>
   )
