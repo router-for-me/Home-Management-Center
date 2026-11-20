@@ -32,6 +32,7 @@ export type CapabilityKey =
   | 'credentialInFlightSnapshotCursor'
   | 'credentialConcurrencyLimits'
   | 'credentialCooldownReset'
+  | 'antigravityTosPauseStatus'
 
 export type CapabilityMap = Record<CapabilityKey, boolean>
 

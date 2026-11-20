@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  type AntigravityPauseObservation,
+  fetchAntigravityPauseStatus,
+} from '@/lib/api/management/antigravity-pause-window'
+import { toManagementApiError } from '@/lib/api/management/client'
+import {
   type ConfigChange,
   ConfigFieldSaveError,
   applyConfigChanges,
@@ -36,6 +41,44 @@ function useManagementSession() {
     checking: status === 'checking',
     runtimeMode,
   }
+}
+
+const pauseStatusKey = (baseUrl: string, connectedAt: string | null) =>
+  ['management-antigravity-tos-pause', baseUrl, connectedAt] as const
+
+const pausePollMs = 30_000
+
+function pauseDuration(observation: AntigravityPauseObservation | null | undefined) {
+  // Both timestamps come from Home, independently of the browser's wall clock.
+  return observation?.resumeAt == null ? Infinity : observation.resumeAt - observation.observedAt
+}
+
+function pauseAccessStatus(error: unknown) {
+  const status = error ? toManagementApiError(error).status : undefined
+  return status === 401 || status === 403 ? status : undefined
+}
+
+export function useAntigravityPauseStatus() {
+  const { session, connected, connectedAt } = useManagementSession()
+  const supported = useCapabilityStore((state) => state.capabilities.antigravityTosPauseStatus)
+  const enabled = connected && Boolean(session.managementKey) && supported
+  const query = useQuery<AntigravityPauseObservation | null>({
+    queryKey: pauseStatusKey(session.baseUrl, connectedAt),
+    enabled: ({ state }) => enabled && !pauseAccessStatus(state.error),
+    queryFn: ({ signal }) => fetchAntigravityPauseStatus(session, signal),
+    retry: false,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
+    refetchIntervalInBackground: false,
+    // Keep confirmed data visible during routine polls, up to the deadline or a missed cycle.
+    staleTime: ({ state }) => Math.min(pauseDuration(state.data), 2 * pausePollMs),
+    refetchInterval: ({ state }) => {
+      if (state.status === 'error') return pausePollMs
+      if (state.data === null) return false
+      return Math.max(1_000, Math.min(pausePollMs, pauseDuration(state.data)))
+    },
+  })
+  return { enabled, query, accessStatus: pauseAccessStatus(query.error) }
 }
 
 export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
@@ -78,7 +121,10 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
     },
   })
 
-  const invalidate = async () => {
+  const invalidate = async (keys: ConfigChange['key'][]) => {
+    if (keys.includes('antigravityTosPauseWindow')) {
+      void queryClient.invalidateQueries({ queryKey: pauseStatusKey(session.baseUrl, connectedAt) })
+    }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ['management-dashboard-overview'] }),
@@ -92,10 +138,10 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
         error instanceof ConfigFieldSaveError &&
         (error.savedKeys.length || error.reason === 'conflict' || error.reason === 'failed')
       ) {
-        await invalidate()
+        await invalidate(error.savedKeys)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: (_, changes) => invalidate(changes.map((change) => change.key)),
   })
 
   return {
