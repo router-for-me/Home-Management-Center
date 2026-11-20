@@ -3524,6 +3524,17 @@ export const en = {
           description:
             'For Codex Responses sessions using a Claude upstream, CPA can restore missing search results when the client replays its history.',
         },
+        claudeExecution: {
+          title: 'Claude execution',
+          shortTitle: 'Claude execution',
+          description: 'Configure how CPA handles model refusals and dates in Claude sessions.',
+        },
+        claudeRequestHeaders: {
+          title: 'Claude request headers',
+          shortTitle: 'Claude headers',
+          description:
+            'Configure how CPA recognizes native Claude Code clients and prepares requests to Claude.',
+        },
         codexTransport: {
           title: 'Codex transport compression',
           shortTitle: 'Codex compression',
@@ -4038,6 +4049,56 @@ export const en = {
           label: 'Codex response steering',
           description: 'Allow steering directives on Codex responses.',
         },
+        clientClaudeShowCodexCommentary: {
+          label: 'Show Codex progress in Claude clients',
+          description:
+            'Show public Codex progress messages as visible text and preserve them for conversation replay. Reasoning summaries stay in thinking blocks.',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: 'Server-side refusal fallback',
+          description:
+            'Let Anthropic try a fallback when a supported model refuses a cloaked request. Existing fallbacks supplied by the request or payload rules take precedence.',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: 'Session date pin (days)',
+          description:
+            'Home KV persists session dates and ignores this setting. With in-memory storage, a blank value pins dates for 7 days. Zero or a negative value pins them for 1 hour.',
+          placeholder: 'In-memory default (7 days)',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: 'Additional native entrypoints',
+          description:
+            'Extend the built-in entrypoint list. CPA also checks other client signals before treating a request as native Claude Code.',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: 'Remove Anthropic-Beta flags',
+          description: 'CPA removes these flags from the header before applying the append list.',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: 'Append Anthropic-Beta flags',
+          description:
+            'CPA appends missing flags at the end of the header in list order. Credential-level Anthropic-Beta headers take precedence on custom gateways.',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: 'Inject diagnostics',
+          description:
+            'By default, CPA adds diagnostics to the body of compatible cloaked requests to Anthropic and includes the corresponding cache-diagnosis beta flag.',
+        },
+        upstreamClaudeClientRequestId: {
+          label: 'Client request ID',
+          description:
+            'Control x-client-request-id on requests to Claude. A credential-level header takes precedence.',
+          placeholder: 'Default (generate request ID)',
+          description_on:
+            'By default, CPA generates an ID for each first-party CLI request. Recognized native clients keep the incoming ID. A credential-level header takes precedence.',
+          description_passthrough:
+            'Forward the incoming ID only when present. A credential-level header takes precedence.',
+          description_off: 'Omit the default request ID. A credential-level header still applies.',
+          description_unknown:
+            'Home returned a value this console does not recognize. It stays saved until you choose another mode or restore the default.',
+          unknown: 'Saved value “{{value}}”',
+          options: { on: 'Generate request ID', passthrough: 'Forward existing ID', off: 'Off' },
+        },
         clientCodexEnableApplyPatch: {
           label: 'Extend apply_patch support',
           description:
@@ -4294,6 +4355,21 @@ export const en = {
         disabled: 'Disabled',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: 'One entrypoint per line. Matching is case-insensitive.',
+          count: 'Entrypoints: {{count}}',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: 'One flag per line. Names are exact and case-sensitive.',
+          count: 'Flags: {{count}}',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: 'One flag per line. Case and order are preserved.',
+          count: 'Flags: {{count}}',
+        },
         serverAllowHostJson: {
           placeholder: '192.0.2.10\n2001:db8::10',
           hint: 'Enter one IPv4 or IPv6 address per line.',

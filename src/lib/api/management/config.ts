@@ -123,6 +123,14 @@ export type ConfigFieldKey =
   | 'upstreamCodexResponseSteering'
   | 'upstreamCodexStreamBootstrapTimeout'
   | 'upstreamClaudeModelLevelCooling'
+  | 'clientClaudeShowCodexCommentary'
+  | 'upstreamClaudeServerSideFallback'
+  | 'upstreamClaudeSessionDatePinDays'
+  | 'upstreamClaudeNativeEntrypointsJson'
+  | 'upstreamClaudeAnthropicBetaStripJson'
+  | 'upstreamClaudeAnthropicBetaAppendJson'
+  | 'upstreamClaudeInjectDiagnostics'
+  | 'upstreamClaudeClientRequestId'
   | 'upstreamClaudeToolSearch'
   | 'upstreamClaudeDisableCloakMode'
   | 'upstreamClaudeDisableCloakingModelList'
@@ -276,6 +284,31 @@ function parseJsonText(value: string): unknown {
 
 function stringifyJsonArray(value: unknown) {
   return JSON.stringify(Array.isArray(value) ? value : [], null, 2)
+}
+
+function stringifyOptionalList(value: unknown) {
+  return value === undefined ? null : JSON.stringify(value, null, 2)
+}
+
+// Blank items and embedded newlines cannot round-trip through a one-name-per-line editor.
+export function isEditableHeaderList(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item: unknown) => typeof item === 'string' && item.trim().length > 0 && !/[\r\n]/.test(item),
+    )
+  )
+}
+
+export const claudeClientRequestIdModes = ['on', 'passthrough', 'off']
+
+function readClientRequestId(value: unknown): ConfigFieldValue {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const mode = value.trim().toLowerCase()
+    return claudeClientRequestIdModes.includes(mode) ? mode : value
+  }
+  return typeof value === 'boolean' || typeof value === 'number' ? value : JSON.stringify(value)
 }
 
 function stringifyJsonObject(value: unknown) {
@@ -649,6 +682,26 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     upstreamCodexStreamBootstrapTimeout: readString(upstreamCodex, 'stream-bootstrap-timeout'),
     upstreamClaudeModelLevelCooling: readBoolean(upstreamClaude, 'model-level-cooling'),
     upstreamClaudeToolSearch: readBoolean(upstreamClaude, 'tool-search'),
+    clientClaudeShowCodexCommentary: readNullableBoolean(
+      toRecord(client.claude),
+      'show-codex-commentary',
+    ),
+    upstreamClaudeServerSideFallback: readNullableBoolean(upstreamClaude, 'server-side-fallback'),
+    upstreamClaudeSessionDatePinDays: readNumber(upstreamClaude, 'session-date-pin-days', null),
+    upstreamClaudeNativeEntrypointsJson: stringifyOptionalList(
+      upstreamClaudeHeaders['native-entrypoints'],
+    ),
+    upstreamClaudeAnthropicBetaStripJson: stringifyOptionalList(
+      upstreamClaudeHeaders['anthropic-beta-strip'],
+    ),
+    upstreamClaudeAnthropicBetaAppendJson: stringifyOptionalList(
+      upstreamClaudeHeaders['anthropic-beta-append'],
+    ),
+    upstreamClaudeInjectDiagnostics: readNullableBoolean(
+      upstreamClaudeHeaders,
+      'inject-diagnostics',
+    ),
+    upstreamClaudeClientRequestId: readClientRequestId(upstreamClaudeHeaders['client-request-id']),
     upstreamClaudeDisableCloakMode: readBoolean(upstreamClaude, 'disable-claude-cloak-mode'),
     upstreamClaudeDisableCloakingModelList: readBoolean(
       upstreamClaude,
@@ -782,6 +835,8 @@ type ConfigWriteKind =
   | 'optionalBoolean'
   | 'nullableBoolean'
   | 'stringList'
+  | 'optionalStringList'
+  | 'clientRequestId'
   | 'jsonObject'
   | 'jsonArray'
 
@@ -939,6 +994,38 @@ const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
   },
   upstreamClaudeModelLevelCooling: { path: 'upstream/claude/model-level-cooling', kind: 'boolean' },
   upstreamClaudeToolSearch: { path: 'upstream/claude/tool-search', kind: 'boolean' },
+  clientClaudeShowCodexCommentary: {
+    path: 'client/claude/show-codex-commentary',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeServerSideFallback: {
+    path: 'upstream/claude/server-side-fallback',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeSessionDatePinDays: {
+    path: 'upstream/claude/session-date-pin-days',
+    kind: 'optionalInteger',
+  },
+  upstreamClaudeNativeEntrypointsJson: {
+    path: 'upstream/claude/header-defaults/native-entrypoints',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeAnthropicBetaStripJson: {
+    path: 'upstream/claude/header-defaults/anthropic-beta-strip',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeAnthropicBetaAppendJson: {
+    path: 'upstream/claude/header-defaults/anthropic-beta-append',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeInjectDiagnostics: {
+    path: 'upstream/claude/header-defaults/inject-diagnostics',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeClientRequestId: {
+    path: 'upstream/claude/header-defaults/client-request-id',
+    kind: 'clientRequestId',
+  },
   upstreamClaudeDisableCloakMode: {
     path: 'upstream/claude/disable-claude-cloak-mode',
     kind: 'boolean',
@@ -1244,6 +1331,31 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     case 'optionalBoolean':
       await writeOptional(change.nextValue)
       return
+    case 'clientRequestId': {
+      const mode = change.nextValue
+      if (mode !== null && (typeof mode !== 'string' || !claudeClientRequestIdModes.includes(mode)))
+        throw new Error('Invalid Claude client request ID mode')
+      await writeOptional(mode)
+      return
+    }
+    case 'optionalStringList': {
+      const before =
+        change.previousValue === null ? undefined : parseJsonText(String(change.previousValue))
+      const next = change.nextValue === null ? undefined : parseJsonText(String(change.nextValue))
+      if (next !== undefined && !isEditableHeaderList(next))
+        throw new Error('Expected a list of single-line names')
+      let current: unknown
+      try {
+        current = (await client.get<unknown>(url)).data
+      } catch (error) {
+        if (!isMissingConfigPath(error)) throw error
+      }
+      if (sameConfigValue(current, next)) return
+      if (!sameConfigValue(current, before)) throw new ConfigEditConflict()
+      if (next === undefined) await deleteOptional(url)
+      else await putJson(url, next)
+      return
+    }
     case 'nullableBoolean':
       await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))
       return

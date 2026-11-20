@@ -3350,6 +3350,16 @@ export const zhTW = {
           description:
             'Codex Responses 工作階段透過 Claude 上游執行搜尋時，CPA 可補回對話記錄中缺少的搜尋結果。',
         },
+        claudeExecution: {
+          title: 'Claude 執行設定',
+          shortTitle: 'Claude 執行',
+          description: '設定 CPA 如何處理 Claude 拒答及工作階段中的日期。',
+        },
+        claudeRequestHeaders: {
+          title: 'Claude 請求標頭策略',
+          shortTitle: 'Claude 請求標頭',
+          description: '調整 CPA 如何辨識原生 Claude Code 用戶端，以及傳送給 Claude 的預設請求。',
+        },
         codexTransport: {
           title: 'Codex 傳輸壓縮',
           shortTitle: 'Codex 壓縮',
@@ -3827,6 +3837,54 @@ export const zhTW = {
           label: 'Codex 回應引導',
           description: '開啟後允許對 Codex 回應施加 steering 指令。',
         },
+        clientClaudeShowCodexCommentary: {
+          label: '向 Claude 用戶端顯示 Codex 進度',
+          description:
+            '啟用後，Claude 用戶端可看到 Codex 的公開進度訊息，並在後續對話中重播。推理摘要仍顯示為思考內容。',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: '伺服器端拒答後援',
+          description:
+            'Claude 模型拒答時，允許 Anthropic 為支援此功能的偽裝請求嘗試後援。若請求或酬載規則已提供 fallbacks，則沿用原有設定。',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: '工作階段日期固定天數',
+          description:
+            'Home KV 會持久保存工作階段日期，忽略此值。CPA 使用記憶體時，留空為 7 天，0 或負數為 1 小時。',
+          placeholder: '記憶體模式預設 7 天',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: '附加原生入口',
+          description:
+            '在內建入口之外新增名稱。CPA 也會檢查其他用戶端特徵，確認為原生 Claude Code 後才會直接轉送。',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: '移除的 Anthropic-Beta 標記',
+          description: 'CPA 先從請求標頭移除指定標記，再處理附加清單。',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: '附加的 Anthropic-Beta 標記',
+          description:
+            'CPA 依清單順序將缺少的標記加到標頭末尾。自訂閘道上的憑證層級 Anthropic-Beta 標頭優先。',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: '注入診斷欄位',
+          description:
+            '預設在相容的 Anthropic 官方偽裝請求本文加入 diagnostics，並附加對應的 cache-diagnosis 標記。',
+        },
+        upstreamClaudeClientRequestId: {
+          label: '用戶端請求 ID',
+          description: '控制傳送給 Claude 的 x-client-request-id。憑證中個別設定的標頭優先。',
+          placeholder: '預設（產生請求 ID）',
+          description_on:
+            '預設在官方 CLI 請求中產生新 ID，已辨識的原生用戶端保留傳入的 ID。憑證層級標頭優先。',
+          description_passthrough: '只轉送既有請求 ID。請求沒有 ID 時留空。憑證層級標頭優先。',
+          description_off: '省略預設請求 ID。憑證中個別設定的標頭仍然生效。',
+          description_unknown:
+            '目前的介面無法辨識 Home 儲存的值。編輯其他設定時會保留原值，也可在此選取新模式或還原預設值。',
+          unknown: '已儲存「{{value}}」',
+          options: { on: '產生請求 ID', passthrough: '僅轉送', off: '關閉' },
+        },
         clientCodexEnableApplyPatch: {
           label: '擴充 apply_patch 工具支援',
           description:
@@ -4065,6 +4123,21 @@ export const zhTW = {
         disabled: '停用',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: '每行一個入口名稱，比對時忽略大小寫。',
+          count: '{{count}} 個入口',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: '每行一個標記，依名稱精確比對，區分大小寫。',
+          count: '{{count}} 個標記',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: '每行一個標記，保留大小寫及順序。',
+          count: '{{count}} 個標記',
+        },
         serverAllowHostJson: {
           placeholder: '192.0.2.10\n2001:db8::10',
           hint: '每行輸入一個 IPv4 或 IPv6 位址。',

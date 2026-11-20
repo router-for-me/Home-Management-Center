@@ -26,9 +26,43 @@ function put(
 
 const cache = 'client/codex/web-search-result-cache'
 const cases: Case[] = [
+  ...['on', 'passthrough', 'off'].map((mode) =>
+    put(
+      `writes Claude request ID mode ${mode} as text`,
+      'upstreamClaudeClientRequestId',
+      mode,
+      'upstream/claude/header-defaults/client-request-id',
+    ),
+  ),
+  {
+    name: 'restores only the client request ID policy',
+    key: 'upstreamClaudeClientRequestId',
+    path: 'upstream/claude/header-defaults/client-request-id',
+    method: 'DELETE',
+    value: null,
+  },
+  ...['0', '-1', '7'].map((days) =>
+    put(
+      `writes session date pin ${days} as an integer`,
+      'upstreamClaudeSessionDatePinDays',
+      days,
+      'upstream/claude/session-date-pin-days',
+      Number(days),
+    ),
+  ),
+  {
+    name: 'removes only the session date pin',
+    key: 'upstreamClaudeSessionDatePinDays',
+    value: null,
+    path: 'upstream/claude/session-date-pin-days',
+    method: 'DELETE',
+  },
   ...(
     [
       ['clientCodexEnableApplyPatch', 'client/codex/enable-apply-patch'],
+      ['clientClaudeShowCodexCommentary', 'client/claude/show-codex-commentary'],
+      ['upstreamClaudeServerSideFallback', 'upstream/claude/server-side-fallback'],
+      ['upstreamClaudeInjectDiagnostics', 'upstream/claude/header-defaults/inject-diagnostics'],
       ['upstreamCodexRequestCompression', 'upstream/codex/upstream-request-compression'],
       ['upstreamCodexWebsocketCompression', 'upstream/codex/websocket-compression'],
     ] as const
