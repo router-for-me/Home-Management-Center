@@ -192,4 +192,4 @@ function TechnicalTextViewer({
   )
 }
 
-export { DiagnosticDetailField, TechnicalTextViewer }
+export { CopyValueButton, DiagnosticDetailField, TechnicalTextViewer }

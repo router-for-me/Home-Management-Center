@@ -12,6 +12,7 @@ import {
 
 import {
   AlertTriangle,
+  AppWindow,
   ArrowDown,
   ArrowUp,
   CheckCircle2,
@@ -53,6 +54,7 @@ import { TableEmptyState } from '@/components/shared/empty-state'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { PageHeader } from '@/components/shared/page-header'
 import { RowActions } from '@/components/shared/row-actions'
+import { SensitiveReplacementEditor } from '@/components/shared/sensitive-replacement-editor'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +68,7 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -85,6 +88,12 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
+import {
+  ModelSettingFeedbackContext,
+  type ModelSettingIssue,
+  OAuthModelSettingsEditor,
+} from '@/features/config/oauth-model-settings-editor'
 import { PayloadFormField, PayloadReviewFieldContext } from '@/features/config/payload-form-field'
 import {
   type PayloadParamEntry,
@@ -98,28 +107,47 @@ import {
 } from '@/features/config/payload-param-value'
 import {
   type PayloadReplaceDraft,
-  PayloadReplaceFields,
   PayloadReplacePreview,
+  PayloadReplacementSteps,
 } from '@/features/config/payload-replace-fields'
 import { ProxyPoolsPanel } from '@/features/config/proxy-pools-panel'
 import { useConfigWorkbench } from '@/features/config/use-config-workbench'
+import { isValidAntigravityPauseWindow } from '@/lib/api/management/antigravity-pause-window'
 import {
   type ConfigChange,
   type ConfigFieldKey,
+  ConfigFieldSaveError,
   type ConfigFieldValue,
+  type ConfigSnapshot,
   type ConfigStructuredValues,
   type WritableConfigFieldKey,
   canEditPayloadConfig,
+  claudeClientRequestIdModes,
+  hasOAuthChannelConflict,
+  isEditableHeaderList,
+  isReadOnlyConfigField,
+  parseCodexCacheTtl,
+  parseOptionalInteger,
 } from '@/lib/api/management/config'
+import { hasIncompleteAliasChanges } from '@/lib/api/management/oauth-model-aliases'
+import { hasInvalidModelSettingChanges } from '@/lib/api/management/oauth-model-settings'
 import {
   type PayloadReplaceIssueKey,
   canEditPayloadReplaceRule,
   describeReadOnlyPayloadReplace,
   getPayloadReplaceIssues,
+  getPayloadReplaceTargetIssue,
   normalizePayloadReplaceContent,
+  payloadReplaceTargetModes,
   serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
 import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
+import {
+  type ReplacementKind,
+  parseReplacementDraft,
+  replacementIssues,
+  serializeReplacementRows,
+} from '@/lib/api/management/sensitive-replacements'
 import { scrollElementIntoShell } from '@/lib/shell-scroll'
 import { cn } from '@/lib/utils'
 import { useSessionStore } from '@/stores/session-store'
@@ -139,27 +167,55 @@ type ConfigSectionId =
   | 'streaming'
   | 'credentialConcurrency'
   | 'credentialInFlight'
+  | 'client'
   | 'upstream'
   | 'headers'
   | 'payload'
   | 'multimedia'
 
-type ConfigSubgroupId = 'devin' | 'liveMediaRelay' | 'antigravity'
+type ConfigSubgroupId =
+  | 'cpaServer'
+  | 'codexSearchCache'
+  | 'codexTransport'
+  | 'claudeExecution'
+  | 'claudeRequestHeaders'
+  | 'devin'
+  | 'liveMediaRelay'
+  | 'antigravity'
 
 type ConfigFieldKind =
+  | ReplacementKind
   | 'boolean'
+  | 'optionalSwitch'
+  | 'optionalInteger'
+  | 'optionalText'
   | 'number'
   | 'text'
   | 'sensitiveText'
+  | 'writeOnlySecret'
   | 'select'
   | 'duration'
   | 'nullableBoolean'
   | 'jsonArray'
+  | 'optionalStringList'
   | 'jsonObject'
 
+export {
+  normalizeModelAliasRule,
+  serializeModelAliasRule,
+} from '@/lib/api/management/oauth-model-aliases'
+
+const claudeHeaderListKeys = [
+  'upstreamClaudeNativeEntrypointsJson',
+  'upstreamClaudeAnthropicBetaStripJson',
+  'upstreamClaudeAnthropicBetaAppendJson',
+] as const
+
 type JsonConfigFieldKey =
+  | (typeof claudeHeaderListKeys)[number]
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'oauthModelSettingsJson'
   | 'pluginStoreSourcesJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
@@ -184,23 +240,13 @@ type OAuthModelCatalogState = {
   onRetry: () => void
 }
 
-type AliasRule = {
-  name?: string
-  alias?: string
-  displayName?: string
-  'display-name'?: string
-  fork?: boolean
-  forceMapping?: boolean
-  'force-mapping'?: boolean
-}
-
 type PayloadHeaderEntry = {
   id: number
   name: string
   value: string
 }
 
-type PayloadConditionEntry = PayloadParamEntry & { id: number }
+type PayloadConditionEntry = PayloadParamEntry & { id: number; sourceGroup?: number }
 
 type PayloadModelEntry = {
   id: number
@@ -227,10 +273,14 @@ type PayloadFilterRule = PayloadRuleTarget & {
   params: { id: number; path: string }[]
 }
 
-type PayloadReplaceRule = PayloadRuleTarget & PayloadReplaceDraft
+type PayloadReplaceRule = PayloadRuleTarget &
+  PayloadReplaceDraft & {
+    savedModels?: unknown[]
+    savedTarget?: Record<string, unknown>
+  }
 
 type ReadOnlyPayloadRule = PayloadRuleTarget & {
-  original: Record<string, unknown>
+  original: unknown
   details: ReturnType<typeof describeReadOnlyPayloadReplace>
 }
 
@@ -295,6 +345,8 @@ type ConfigFieldDefinition = {
   kind: ConfigFieldKind
   sectionId: ConfigSectionId
   groupId?: ConfigSubgroupId
+  defaultChecked?: boolean
+  defaultOption?: string
   min?: number
   max?: number
   options?: string[]
@@ -314,6 +366,37 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'serverAllowHostJson', kind: 'jsonArray', sectionId: 'server' },
       { key: 'serverTrustedProxiesJson', kind: 'jsonArray', sectionId: 'server' },
       { key: 'serverCommercialMode', kind: 'boolean', sectionId: 'server' },
+      {
+        key: 'serverMaxRequestBodyBytes',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverResponseCompressionEnabled',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverResponseCompressionMinBytes',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverShutdownTimeout',
+        kind: 'optionalInteger',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
+      {
+        key: 'serverGithubToken',
+        kind: 'writeOnlySecret',
+        sectionId: 'server',
+        groupId: 'cpaServer',
+      },
     ],
   },
   {
@@ -325,8 +408,12 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'discoverySubtypesJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesIncludeJson', kind: 'jsonArray', sectionId: 'discovery' },
       { key: 'discoveryInterfacesExcludeJson', kind: 'jsonArray', sectionId: 'discovery' },
-      { key: 'discoveryAuthRequired', kind: 'boolean', sectionId: 'discovery' },
-      { key: 'discoveryAdvertiseManagement', kind: 'boolean', sectionId: 'discovery' },
+      {
+        key: 'discoveryAuthRequired',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'discovery',
+      },
     ],
   },
   {
@@ -384,6 +471,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'debug', kind: 'boolean', sectionId: 'system' },
       { key: 'requestLog', kind: 'boolean', sectionId: 'system' },
       { key: 'loggingToFile', kind: 'boolean', sectionId: 'system' },
+      { key: 'usageStatisticsEnabled', kind: 'boolean', sectionId: 'system' },
       { key: 'logsMaxTotalSizeMb', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'errorLogsMaxFiles', kind: 'number', sectionId: 'system', min: 0 },
       { key: 'pprofEnable', kind: 'boolean', sectionId: 'system' },
@@ -419,8 +507,19 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         options: ['round-robin', 'weighted-round-robin', 'fill-first'],
       },
       { key: 'sessionAffinity', kind: 'boolean', sectionId: 'streaming' },
+      {
+        key: 'sessionAffinityRebindOn',
+        kind: 'select',
+        sectionId: 'streaming',
+        options: ['any', 'quota', 'never'],
+      },
       { key: 'sessionAffinityTtl', kind: 'duration', sectionId: 'streaming' },
-      { key: 'sessionAffinitySubagents', kind: 'boolean', sectionId: 'streaming' },
+      {
+        key: 'sessionAffinitySubagents',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'streaming',
+      },
       { key: 'streamingKeepaliveSeconds', kind: 'number', sectionId: 'streaming', min: 0 },
       { key: 'streamingSendKeepaliveBeforeFt', kind: 'boolean', sectionId: 'streaming' },
       { key: 'streamingBootstrapRetries', kind: 'number', sectionId: 'streaming', min: 0 },
@@ -493,6 +592,33 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     ],
   },
   {
+    id: 'client',
+    fields: [
+      { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'client' },
+      { key: 'clientCodexEnableApplyPatch', kind: 'optionalSwitch', sectionId: 'client' },
+      { key: 'clientClaudeShowCodexCommentary', kind: 'optionalSwitch', sectionId: 'client' },
+      {
+        key: 'clientCodexWebSearchCacheEnabled',
+        kind: 'optionalSwitch',
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+      {
+        key: 'clientCodexWebSearchCacheTtl',
+        kind: 'optionalText',
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+      {
+        key: 'clientCodexWebSearchCacheLimit',
+        kind: 'optionalInteger',
+        min: 0,
+        sectionId: 'client',
+        groupId: 'codexSearchCache',
+      },
+    ],
+  },
+  {
     id: 'upstream',
     fields: [
       { key: 'upstreamCodexDisableCloaking', kind: 'boolean', sectionId: 'upstream' },
@@ -501,9 +627,39 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'upstreamCodexOrphanDelegationCompatibility', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamCodexModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamCodexResponseSteering', kind: 'boolean', sectionId: 'upstream' },
-      { key: 'clientCodexOptimizeMultiAgentV2', kind: 'boolean', sectionId: 'upstream' },
+      {
+        key: 'upstreamCodexRequestCompression',
+        kind: 'optionalSwitch',
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
+      {
+        key: 'upstreamCodexRequestCompressionMinBytes',
+        kind: 'optionalInteger',
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
+      {
+        key: 'upstreamCodexWebsocketCompression',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'upstream',
+        groupId: 'codexTransport',
+      },
       { key: 'upstreamClaudeModelLevelCooling', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeToolSearch', kind: 'boolean', sectionId: 'upstream' },
+      {
+        key: 'upstreamClaudeServerSideFallback',
+        kind: 'optionalSwitch',
+        sectionId: 'upstream',
+        groupId: 'claudeExecution',
+      },
+      {
+        key: 'upstreamClaudeSessionDatePinDays',
+        kind: 'optionalInteger',
+        sectionId: 'upstream',
+        groupId: 'claudeExecution',
+      },
       { key: 'upstreamClaudeDisableCloakMode', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamClaudeDisableCloakingModelList', kind: 'boolean', sectionId: 'upstream' },
       { key: 'upstreamXaiInjectXSearch', kind: 'boolean', sectionId: 'upstream' },
@@ -526,6 +682,30 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       },
       { key: 'oauthCodexHeaderUserAgent', kind: 'text', sectionId: 'headers' },
       { key: 'oauthCodexHeaderBetaFeatures', kind: 'text', sectionId: 'headers' },
+      ...claudeHeaderListKeys.map(
+        (key) =>
+          ({
+            key,
+            kind: 'optionalStringList',
+            sectionId: 'headers',
+            groupId: 'claudeRequestHeaders',
+          }) as const,
+      ),
+      {
+        key: 'upstreamClaudeInjectDiagnostics',
+        kind: 'optionalSwitch',
+        defaultChecked: true,
+        sectionId: 'headers',
+        groupId: 'claudeRequestHeaders',
+      },
+      {
+        key: 'upstreamClaudeClientRequestId',
+        kind: 'select',
+        options: claudeClientRequestIdModes,
+        defaultOption: 'on',
+        sectionId: 'headers',
+        groupId: 'claudeRequestHeaders',
+      },
     ],
   },
   {
@@ -537,6 +717,7 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     fields: [
       { key: 'oauthExcludedModelsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthModelAliasJson', kind: 'jsonObject', sectionId: 'oauthRules' },
+      { key: 'oauthModelSettingsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
       { key: 'oauthRequestScopedErrorsJson', kind: 'jsonObject', sectionId: 'oauthRules' },
     ],
   },
@@ -544,9 +725,23 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
     id: 'oauthProviders',
     fields: [
       { key: 'oauthAuthDir', kind: 'text', sectionId: 'oauthProviders' },
+      { key: 'oauthAutoRefreshWorkers', kind: 'optionalInteger', sectionId: 'oauthProviders' },
+      { key: 'oauthCodexSigninIdentifier', kind: 'optionalText', sectionId: 'oauthProviders' },
       {
         key: 'devinSensitiveWordsJson',
         kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'devin',
+      },
+      {
+        key: 'devinLiteralReplacements',
+        kind: 'literalReplacements',
+        sectionId: 'oauthProviders',
+        groupId: 'devin',
+      },
+      {
+        key: 'devinPatternReplacements',
+        kind: 'patternReplacements',
         sectionId: 'oauthProviders',
         groupId: 'devin',
       },
@@ -594,8 +789,26 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
         groupId: 'liveMediaRelay',
       },
       {
+        key: 'antigravityTosPauseWindow',
+        kind: 'duration',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
         key: 'antigravitySensitiveWordsJson',
         kind: 'jsonArray',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityLiteralReplacements',
+        kind: 'literalReplacements',
+        sectionId: 'oauthProviders',
+        groupId: 'antigravity',
+      },
+      {
+        key: 'antigravityPatternReplacements',
+        kind: 'patternReplacements',
         sectionId: 'oauthProviders',
         groupId: 'antigravity',
       },
@@ -689,6 +902,7 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
   streaming: Route,
   credentialConcurrency: Hourglass,
   credentialInFlight: Layers,
+  client: AppWindow,
   upstream: CloudUpload,
   headers: PanelTop,
   payload: Code2,
@@ -696,8 +910,10 @@ const sectionIcons: Record<ConfigSectionId, typeof ServerCog> = {
 }
 
 const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
+  ...claudeHeaderListKeys,
   'oauthExcludedModelsJson',
   'oauthModelAliasJson',
+  'oauthModelSettingsJson',
   'pluginStoreSourcesJson',
   'payloadRulesJson',
   'antigravitySensitiveWordsJson',
@@ -712,6 +928,7 @@ const jsonConfigFieldKeys = new Set<ConfigFieldKey>([
 ])
 
 const stringListConfigFieldKeys = new Set<JsonConfigFieldKey>([
+  ...claudeHeaderListKeys,
   'serverAllowHostJson',
   'serverTrustedProxiesJson',
   'discoverySubtypesJson',
@@ -723,11 +940,6 @@ const stringListConfigFieldKeys = new Set<JsonConfigFieldKey>([
 const defaultJsonEditorFieldKeys = new Set<JsonConfigFieldKey>([
   'oauthRequestScopedErrorsJson',
   'liveMediaRelayIceServersJson',
-])
-
-const readOnlyConfigFieldKeys = new Set<ConfigFieldKey>([
-  'concurrencyLifecycleConfigRevision',
-  'concurrencyObservationBarrierRevision',
 ])
 
 const durationPattern = /^(\d+(\.\d+)?(ns|us|µs|ms|s|m|h))+$/
@@ -771,10 +983,13 @@ function isJsonConfigFieldKey(key: ConfigFieldKey): key is JsonConfigFieldKey {
 }
 
 function parseJsonDraft(field: ConfigFieldDefinition, value: string): JsonParseResult {
-  const text = value.trim() || (field.kind === 'jsonArray' ? '[]' : '{}')
+  const text =
+    value.trim() ||
+    (field.kind === 'jsonArray' || field.kind === 'optionalStringList' ? '[]' : '{}')
 
   try {
     const parsed = JSON.parse(text) as unknown
+    if (field.kind === 'optionalStringList' && parsed === null) return { ok: true, value: [] }
 
     if (field.kind === 'jsonArray' && !Array.isArray(parsed)) {
       return { ok: false, message: 'Expected a JSON array' }
@@ -797,98 +1012,11 @@ function stringifyJson(value: unknown) {
   return JSON.stringify(value, null, 2)
 }
 
-function hasOnlyKeys(record: Record<string, unknown>, keys: string[]) {
-  const allowed = new Set(keys)
-  return Object.keys(record).every((key) => allowed.has(key))
-}
-
 function canEditExcludedModels(value: unknown): value is Record<string, string[]> {
   if (!isRecord(value)) return false
 
   return Object.values(value).every(
     (models) => Array.isArray(models) && models.every((model) => typeof model === 'string'),
-  )
-}
-
-function canEditModelAliases(value: unknown) {
-  if (!isRecord(value)) return false
-
-  return Object.values(value).every(
-    (items) =>
-      Array.isArray(items) &&
-      items.every(
-        (item) =>
-          isRecord(item) &&
-          hasOnlyKeys(item, [
-            'name',
-            'alias',
-            'display-name',
-            'displayName',
-            'fork',
-            'force-mapping',
-            'forceMapping',
-          ]) &&
-          (item.name === undefined || typeof item.name === 'string') &&
-          (item.alias === undefined || typeof item.alias === 'string') &&
-          (item['display-name'] === undefined || typeof item['display-name'] === 'string') &&
-          (item.displayName === undefined || typeof item.displayName === 'string') &&
-          (item.fork === undefined || typeof item.fork === 'boolean') &&
-          (item['force-mapping'] === undefined || typeof item['force-mapping'] === 'boolean') &&
-          (item.forceMapping === undefined || typeof item.forceMapping === 'boolean'),
-      ),
-  )
-}
-
-export function normalizeModelAliasRule(rule: Record<string, unknown>): AliasRule {
-  const displayName = rule['display-name'] ?? rule.displayName
-  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
-
-  return {
-    ...(typeof rule.name === 'string' ? { name: rule.name } : {}),
-    ...(typeof rule.alias === 'string' ? { alias: rule.alias } : {}),
-    ...(typeof displayName === 'string' ? { displayName } : {}),
-    ...(typeof rule.fork === 'boolean' ? { fork: rule.fork } : {}),
-    ...(typeof forceMapping === 'boolean' ? { forceMapping } : {}),
-  }
-}
-
-function normalizeModelAliases(value: unknown): Record<string, AliasRule[]> {
-  if (!isRecord(value)) return {}
-
-  return Object.entries(value).reduce<Record<string, AliasRule[]>>(
-    (nextValue, [channel, rules]) => {
-      if (!Array.isArray(rules)) return nextValue
-
-      return {
-        ...nextValue,
-        [channel]: rules.filter(isRecord).map((rule) => normalizeModelAliasRule(rule)),
-      }
-    },
-    {},
-  )
-}
-
-export function serializeModelAliasRule(rule: AliasRule) {
-  const nextRule: Record<string, string | boolean> = {}
-  const displayName = (rule['display-name'] ?? rule.displayName)?.trim()
-  const forceMapping = rule['force-mapping'] ?? rule.forceMapping
-
-  if (rule.name !== undefined) nextRule.name = rule.name
-  if (rule.alias !== undefined) nextRule.alias = rule.alias
-  if (displayName) nextRule['display-name'] = displayName
-  if (typeof rule.fork === 'boolean') nextRule.fork = rule.fork
-  if (forceMapping === true) nextRule['force-mapping'] = true
-
-  return nextRule
-}
-
-function serializeModelAliases(value: Record<string, AliasRule[]>) {
-  return Object.entries(value).reduce<Record<string, ReturnType<typeof serializeModelAliasRule>[]>>(
-    (nextValue, [channel, rules]) => ({
-      ...nextValue,
-      [channel]: rules.map(serializeModelAliasRule),
-    }),
-    {},
   )
 }
 
@@ -920,12 +1048,12 @@ function canEditAntigravitySensitiveWords(value: unknown): value is string[] {
   return value.every((item) => typeof item === 'string')
 }
 
-function normalizeStringList(value: unknown) {
+function normalizeStringList(value: unknown, preservePadding = false) {
   if (!Array.isArray(value)) return []
 
   return value
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter((item) => item.length > 0)
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => (preservePadding ? item : item.trim()))
 }
 
 function canEditStringList(value: unknown): value is string[] {
@@ -937,7 +1065,7 @@ function canEditStringList(value: unknown): value is string[] {
 function isWritableConfigField(
   field: ConfigFieldDefinition,
 ): field is ConfigFieldDefinition & { key: WritableConfigFieldKey } {
-  return !readOnlyConfigFieldKeys.has(field.key)
+  return !isReadOnlyConfigField(field.key)
 }
 
 function selectOptionFromValue(value: ConfigStructuredValues[ConfigFieldKey]) {
@@ -1010,13 +1138,14 @@ function normalizePayloadConditions(value: unknown): PayloadConditionEntry[] {
   if (!Array.isArray(value)) return []
 
   return value
-    .flatMap((item) => {
+    .flatMap((item, sourceGroup) => {
       if (!isRecord(item)) return []
 
       return Object.entries(item).map(([path, conditionValue]) => {
         const parsed = parsePayloadParamValue(conditionValue)
 
         return {
+          sourceGroup,
           path,
           valueType: parsed.valueType,
           value: parsed.value,
@@ -1088,15 +1217,17 @@ function normalizePayloadConfig(value: unknown): PayloadRulesConfig {
     override: overrides,
     'override-raw': normalizePayloadRules(record['override-raw'], true, overrides.length),
     replace: Array.isArray(record.replace)
-      ? record.replace.map((item, index) => {
+      ? record.replace.map((item: unknown, index) => {
           const rule = isRecord(item) ? item : {}
           const target = { displayNumber: index + 1, models: normalizePayloadModels(rule.models) }
           if (!canEditPayloadReplaceRule(rule)) {
-            return { ...target, original: rule, details: describeReadOnlyPayloadReplace(rule) }
+            return { ...target, original: item, details: describeReadOnlyPayloadReplace(rule) }
           }
           const content = normalizePayloadReplaceContent(rule)
           return {
             ...target,
+            savedModels: rule.models,
+            savedTarget: rule.target,
             target: content.target,
             replacements: content.replacements.map((entry, id) => ({ ...entry, id })),
           }
@@ -1158,15 +1289,28 @@ function serializePayloadHeaders(headers: PayloadHeaderEntry[]) {
   }, {})
 }
 
-function serializePayloadConditions(conditions: PayloadParamEntry[]) {
-  return conditions
-    .map((condition) => {
-      const path = condition.path.trim()
-      if (!path) return null
-
-      return { [path]: serializePayloadParamValue(condition) }
-    })
-    .filter((condition): condition is Record<string, unknown> => Boolean(condition))
+function serializePayloadConditions(conditions: PayloadConditionEntry[]) {
+  const result: Record<string, unknown>[] = []
+  let lastGroup: number | undefined
+  for (const condition of conditions) {
+    const path = condition.path.trim()
+    if (!path) continue
+    const last = result[result.length - 1]
+    const entry = { [path]: serializePayloadParamValue(condition) }
+    // Preserve saved multi-path condition maps. A new or repeated path gets its own map.
+    if (
+      condition.sourceGroup !== undefined &&
+      condition.sourceGroup === lastGroup &&
+      last &&
+      !Object.hasOwn(last, path)
+    ) {
+      result[result.length - 1] = { ...last, ...entry }
+    } else {
+      result.push(entry)
+    }
+    lastGroup = condition.sourceGroup
+  }
+  return result
 }
 
 function serializePayloadStringList(items: string[]) {
@@ -1213,8 +1357,9 @@ function serializePayloadConfig(config: PayloadRulesConfig) {
       'original' in rule
         ? rule.original
         : {
-            models: serializePayloadModels(rule.models),
+            models: rule.savedModels ?? serializePayloadModels(rule.models),
             ...serializePayloadReplaceContent(rule),
+            ...(rule.savedTarget && { target: rule.savedTarget }),
           },
     ),
     filter: serializePayloadFilterRules(config.filter),
@@ -1239,9 +1384,9 @@ function clonePayloadFilterRule(rule: PayloadFilterRule): PayloadFilterRule {
 
 function clonePayloadReplaceRule(rule: PayloadReplaceRule): PayloadReplaceRule {
   return {
-    displayNumber: rule.displayNumber,
+    ...rule,
     models: rule.models.map(clonePayloadModel),
-    target: { ...rule.target },
+    target: { ...rule.target, paths: [...rule.target.paths] },
     replacements: rule.replacements.map((entry) => ({ ...entry })),
   }
 }
@@ -1505,6 +1650,8 @@ function getModelDisplayName(model: ProviderModelDefinition) {
 }
 
 function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
+  if (fieldDefinitionByKey[fieldKey].kind === 'optionalStringList')
+    return isEditableHeaderList(value)
   if (stringListConfigFieldKeys.has(fieldKey)) return canEditStringList(value)
   if (defaultJsonEditorFieldKeys.has(fieldKey)) return true
 
@@ -1512,7 +1659,8 @@ function canEditJsonField(fieldKey: JsonConfigFieldKey, value: unknown) {
     case 'oauthExcludedModelsJson':
       return canEditExcludedModels(value)
     case 'oauthModelAliasJson':
-      return canEditModelAliases(value)
+    case 'oauthModelSettingsJson':
+      return isRecord(value)
     case 'pluginStoreSourcesJson':
       return canEditPluginStoreSources(value)
     case 'payloadRulesJson':
@@ -1552,7 +1700,13 @@ function areConfigValuesEqual(
   left: ConfigStructuredValues[ConfigFieldKey],
   right: ConfigStructuredValues[ConfigFieldKey],
 ) {
+  if (left === null || right === null) return left === right
   return String(left) === String(right)
+}
+
+// The form only receives a presence flag for the saved token. Text in the control is user input.
+function createConfigDraftValues(saved: ConfigStructuredValues): ConfigStructuredValues {
+  return { ...saved, serverGithubToken: saved.serverGithubToken ? true : null }
 }
 
 function getStructuredChanges(
@@ -1565,7 +1719,10 @@ function getStructuredChanges(
     .map((field) => ({
       key: field.key,
       previousValue: getConfigChangeValue(field.key, baseline[field.key]),
-      nextValue: getConfigChangeValue(field.key, draft[field.key]),
+      nextValue:
+        field.kind === 'writeOnlySecret' && draft[field.key] === true
+          ? baseline[field.key]
+          : getConfigChangeValue(field.key, draft[field.key], baseline[field.key]),
     }))
     .filter(
       (change) =>
@@ -1574,7 +1731,23 @@ function getStructuredChanges(
     )
 }
 
-function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): ConfigFieldValue {
+function getConfigChangeValue(
+  key: ConfigFieldKey,
+  value: ConfigFieldValue,
+  previous: ConfigFieldValue = value,
+): ConfigFieldValue {
+  if (key === 'clientCodexWebSearchCacheTtl') {
+    const ttl = parseCodexCacheTtl(value, previous)
+    return ttl === undefined ? value : ttl
+  }
+  if (fieldDefinitionByKey[key].kind === 'optionalInteger') {
+    const integer = parseOptionalInteger(value)
+    return integer === undefined ? value : integer
+  }
+  if (fieldDefinitionByKey[key].kind === 'optionalText' && typeof value === 'string')
+    return value.trim() || null
+  if (key === 'serverGithubToken' && typeof value === 'string') return value.trim()
+  if (key === 'antigravityTosPauseWindow') return String(value ?? '').trim()
   if (key !== 'payloadRulesJson') return value
   try {
     const parsed: unknown = JSON.parse(String(value))
@@ -1589,18 +1762,28 @@ function getConfigChangeValue(key: ConfigFieldKey, value: ConfigFieldValue): Con
 
 function getValidationErrors(
   draft: ConfigStructuredValues,
-  savedPayload: ConfigFieldValue | undefined,
+  saved: ConfigStructuredValues | undefined,
   hasPayloadDrafts: boolean | null,
 ) {
   return fieldDefinitions
     .filter((field) => {
-      if (readOnlyConfigFieldKeys.has(field.key)) return false
+      if (isReadOnlyConfigField(field.key)) return false
 
       const value = draft[field.key]
+      if (
+        saved &&
+        value === saved[field.key] &&
+        !(field.key === 'payloadRulesJson' && hasPayloadDrafts)
+      )
+        return false
       if (field.key === 'payloadRulesJson') {
         if (hasPayloadDrafts !== null) return hasPayloadDrafts
-        if (value === savedPayload) return false
+        if (value === saved?.payloadRulesJson) return false
       }
+      if (field.kind === 'optionalInteger')
+        return parseOptionalInteger(value, field.min) === undefined
+      if (field.key === 'clientCodexWebSearchCacheTtl')
+        return parseCodexCacheTtl(value) === undefined
       if (field.kind === 'number') {
         const num = typeof value === 'number' ? value : Number(value)
         if (typeof value !== 'number' || Number.isNaN(value) || !Number.isInteger(num)) return true
@@ -1609,19 +1792,27 @@ function getValidationErrors(
         return false
       }
       if (field.kind === 'select') {
+        if (field.defaultOption && value === null) return false
         return !field.options?.includes(String(value))
       }
       if (field.kind === 'duration') {
         const text = typeof value === 'string' ? value.trim() : ''
+        if (field.key === 'antigravityTosPauseWindow') return !isValidAntigravityPauseWindow(text)
         return text.length > 0 && !durationPattern.test(text)
       }
-      if (field.kind === 'nullableBoolean') {
+      if (field.kind === 'nullableBoolean' || field.kind === 'optionalSwitch') {
         return value !== null && typeof value !== 'boolean'
       }
-      if (field.kind === 'jsonArray') {
+      if (field.kind === 'literalReplacements' || field.kind === 'patternReplacements') {
+        const rows = parseReplacementDraft(value)
+        return !rows || replacementIssues(field.kind, rows).some(Boolean)
+      }
+      if (field.kind === 'jsonArray' || field.kind === 'optionalStringList') {
         try {
           const parsed: unknown = JSON.parse(String(value || '[]'))
-          return !Array.isArray(parsed)
+          return field.kind === 'optionalStringList'
+            ? !isEditableHeaderList(parsed)
+            : !Array.isArray(parsed)
         } catch {
           return true
         }
@@ -1630,6 +1821,16 @@ function getValidationErrors(
         try {
           const parsed: unknown = JSON.parse(String(value || '{}'))
           if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return true
+          if (
+            (field.key === 'oauthModelAliasJson' || field.key === 'oauthModelSettingsJson') &&
+            isRecord(parsed)
+          ) {
+            const original: unknown = JSON.parse(String(saved?.[field.key] ?? '{}'))
+            if (!isRecord(original)) return true
+            return field.key === 'oauthModelAliasJson'
+              ? hasIncompleteAliasChanges(original, parsed)
+              : hasInvalidModelSettingChanges(original, parsed)
+          }
           if (field.key === 'payloadRulesJson') {
             return !canEditPayloadConfig(parsed) || hasPayloadValidationErrors(parsed)
           }
@@ -1641,10 +1842,6 @@ function getValidationErrors(
       return false
     })
     .map((field) => field.key)
-}
-
-function formatConfigValue(value: ConfigChange['nextValue'], emptyLabel: string) {
-  return value === '' || value === null ? emptyLabel : String(value)
 }
 
 function ConfigDisconnectedState() {
@@ -1828,25 +2025,93 @@ function BooleanControl({
   )
 }
 
+function OptionalConfigSwitch({
+  label,
+  value,
+  defaultChecked,
+  disabled,
+  descriptionId,
+  onChange,
+}: {
+  label: string
+  value: boolean | null
+  defaultChecked: boolean
+  disabled: boolean
+  descriptionId?: string
+  onChange: (value: boolean | null) => void
+}) {
+  const { t } = useTranslation()
+  const switchRef = useRef<HTMLButtonElement>(null)
+
+  return (
+    <div className="flex min-w-0 items-center gap-2 md:flex-row-reverse">
+      <Switch
+        ref={switchRef}
+        aria-label={label}
+        aria-describedby={descriptionId}
+        checked={value ?? defaultChecked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
+      {value !== null ? (
+        <Button
+          type="button"
+          variant="text"
+          size="sm"
+          disabled={disabled}
+          onClick={() => {
+            switchRef.current?.focus({ preventScroll: true })
+            onChange(null)
+          }}
+        >
+          {t('configPage.actions.restoreDefault')}
+        </Button>
+      ) : null}
+    </div>
+  )
+}
+
 function ConfigField({
   field,
   value,
+  hasStoredSecret,
   disabled,
   invalid,
+  onEditingFieldChange,
   onChange,
 }: {
   field: ConfigFieldDefinition
   value: ConfigStructuredValues[ConfigFieldKey]
+  hasStoredSecret: boolean
   disabled: boolean
   invalid: boolean
+  onEditingFieldChange: (key: ConfigFieldKey | null) => void
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
 }) {
   const { t, i18n } = useTranslation()
+  const optionalInput = useRef<HTMLInputElement>(null)
+  const selectTrigger = useRef<HTMLButtonElement>(null)
   const [sensitiveVisible, setSensitiveVisible] = useState(false)
-  const locked = readOnlyConfigFieldKeys.has(field.key)
+  const locked = isReadOnlyConfigField(field.key)
   const controlDisabled = disabled || locked
+  const descriptionId = `config-field-${field.key}-description`
+  const errorId = `config-field-${field.key}-error`
   const placeholderKey = `configPage.fields.${field.key}.placeholder`
   const placeholder = i18n.exists(placeholderKey) ? t(placeholderKey) : undefined
+  const optionLabelKey =
+    field.key === 'routingStrategy'
+      ? 'configPage.routingStrategies'
+      : `configPage.fields.${field.key}.options`
+  const selectedOption = selectOptionFromValue(value ?? field.defaultOption ?? null)
+  const unknownOption =
+    field.defaultOption && value !== null && !field.options?.includes(selectedOption)
+  const optionTranslation = unknownOption
+    ? `configPage.fields.${field.key}.unknown`
+    : `${optionLabelKey}.${selectedOption}`
+  const selectedLabel =
+    field.kind === 'select'
+      ? t(optionTranslation, { defaultValue: selectedOption, value: String(value) })
+      : ''
 
   return (
     <div
@@ -1857,22 +2122,71 @@ function ConfigField({
     >
       <div className="min-w-0">
         <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
-        <p className="text-muted-foreground mt-1 text-xs leading-5">
-          {t(`configPage.fields.${field.key}.description`)}
+        <p id={descriptionId} className="text-muted-foreground mt-1 text-xs leading-5">
+          {t(`configPage.fields.${field.key}.description`, {
+            context:
+              field.kind === 'select' ? (unknownOption ? 'unknown' : selectedOption) : undefined,
+          })}
         </p>
         {invalid ? (
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            {t('configPage.validation.invalidField')}
+          <p id={errorId} className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            {t([
+              `configPage.fields.${field.key}.invalid`,
+              field.kind === 'optionalInteger'
+                ? 'configPage.validation.optionalInteger'
+                : 'configPage.validation.invalidField',
+            ])}
           </p>
         ) : null}
       </div>
       <div className="flex min-w-0 justify-start md:justify-end">
-        {field.kind === 'boolean' ? (
+        {field.kind === 'boolean' && locked ? (
+          <span className="text-sm font-medium">
+            {typeof value === 'boolean'
+              ? t(value ? 'configPage.status.enabled' : 'configPage.status.disabled')
+              : t('configPage.status.unknown')}
+          </span>
+        ) : null}
+        {field.kind === 'boolean' && !locked ? (
           <BooleanControl
             checked={Boolean(value)}
             disabled={controlDisabled}
             onChange={(nextValue) => onChange(field.key, nextValue)}
           />
+        ) : null}
+        {field.kind === 'optionalInteger' || field.kind === 'optionalText' ? (
+          <div className="flex w-full min-w-0 items-center gap-2 md:max-w-80">
+            <Input
+              ref={optionalInput}
+              inputMode={field.kind === 'optionalInteger' ? 'numeric' : undefined}
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={invalid ? `${descriptionId} ${errorId}` : descriptionId}
+              aria-invalid={invalid || undefined}
+              value={String(value ?? '')}
+              placeholder={placeholder}
+              disabled={controlDisabled}
+              className="min-w-0 flex-1"
+              onChange={(event) => {
+                if (!invalid) onEditingFieldChange(field.key)
+                onChange(field.key, event.target.value)
+              }}
+              onBlur={() => onEditingFieldChange(null)}
+            />
+            {String(value ?? '').trim() !== '' && (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={controlDisabled}
+                onClick={() => {
+                  optionalInput.current?.focus({ preventScroll: true })
+                  onChange(field.key, null)
+                }}
+              >
+                {t('configPage.actions.restoreDefault')}
+              </Button>
+            )}
+          </div>
         ) : null}
         {field.kind === 'number' ? (
           <Input
@@ -1888,12 +2202,51 @@ function ConfigField({
         ) : null}
         {field.kind === 'text' || field.kind === 'duration' ? (
           <Input
+            aria-label={t(`configPage.fields.${field.key}.label`)}
+            aria-describedby={invalid ? `${descriptionId} ${errorId}` : descriptionId}
+            aria-invalid={invalid || undefined}
             value={String(value)}
             disabled={controlDisabled}
             className="md:max-w-80"
             placeholder={placeholder}
             onChange={(event) => onChange(field.key, event.target.value)}
           />
+        ) : null}
+        {field.kind === 'writeOnlySecret' ? (
+          <div className="flex w-full min-w-0 items-center gap-2 md:max-w-80">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              spellCheck={false}
+              aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={descriptionId}
+              value={typeof value === 'string' ? value : ''}
+              placeholder={t(
+                hasStoredSecret
+                  ? value === null
+                    ? 'configPage.token.pendingClear'
+                    : 'configPage.token.keep'
+                  : 'configPage.token.enter',
+              )}
+              disabled={controlDisabled}
+              className="min-w-0 flex-1"
+              onChange={(event) => {
+                const text = event.target.value
+                onChange(field.key, text.trim() ? text : hasStoredSecret || null)
+              }}
+            />
+            {hasStoredSecret && (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                disabled={controlDisabled}
+                onClick={() => onChange(field.key, value === null ? true : null)}
+              >
+                {t(value === null ? 'configPage.token.undoClear' : 'configPage.token.clear')}
+              </Button>
+            )}
+          </div>
         ) : null}
         {field.kind === 'sensitiveText' ? (
           <div className="relative min-w-0 md:w-full md:max-w-80">
@@ -1927,29 +2280,57 @@ function ConfigField({
           </div>
         ) : null}
         {field.kind === 'select' ? (
-          <Select
-            value={selectOptionFromValue(value)}
-            disabled={controlDisabled}
-            onValueChange={(nextValue) => onChange(field.key, selectValueFromOption(nextValue))}
-          >
-            <SelectTrigger
-              className="md:w-56"
-              aria-label={t(`configPage.fields.${field.key}.label`)}
+          <>
+            <Select
+              value={field.defaultOption && value === null ? '' : selectedOption}
+              disabled={controlDisabled}
+              onValueChange={(nextValue) => onChange(field.key, selectValueFromOption(nextValue))}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {field.key === 'routingStrategy'
-                    ? t(`configPage.routingStrategies.${option}`)
-                    : t(`configPage.fields.${field.key}.options.${option}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                ref={selectTrigger}
+                className="min-w-0 md:w-56"
+                aria-label={t(`configPage.fields.${field.key}.label`)}
+                aria-describedby={descriptionId}
+              >
+                <SelectValue placeholder={value === null ? placeholder : selectedLabel}>
+                  {selectedLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {field.options?.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {t(`${optionLabelKey}.${option}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {field.defaultOption && value !== null ? (
+              <Button
+                type="button"
+                variant="text"
+                size="sm"
+                className="ms-2 shrink-0"
+                disabled={controlDisabled}
+                onClick={() => {
+                  selectTrigger.current?.focus({ preventScroll: true })
+                  onChange(field.key, null)
+                }}
+              >
+                {t('configPage.actions.restoreDefault')}
+              </Button>
+            ) : null}
+          </>
         ) : null}
-        {field.kind === 'nullableBoolean' ? (
+        {field.kind === 'optionalSwitch' ? (
+          <OptionalConfigSwitch
+            defaultChecked={field.defaultChecked ?? false}
+            label={t(`configPage.fields.${field.key}.label`)}
+            value={typeof value === 'boolean' ? value : null}
+            disabled={controlDisabled}
+            descriptionId={descriptionId}
+            onChange={(nextValue) => onChange(field.key, nextValue)}
+          />
+        ) : field.kind === 'nullableBoolean' ? (
           <Select
             value={nullableBooleanOptionFromValue(value)}
             disabled={controlDisabled}
@@ -1960,6 +2341,7 @@ function ConfigField({
             <SelectTrigger
               className="md:w-56"
               aria-label={t(`configPage.fields.${field.key}.label`)}
+              aria-describedby={descriptionId}
             >
               <SelectValue />
             </SelectTrigger>
@@ -2003,9 +2385,7 @@ function JsonEditorFrame({
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
-          </div>
+          <p className="text-sm font-medium">{t(`configPage.fields.${field.key}.label`)}</p>
           <p className="text-muted-foreground mt-1 max-w-3xl text-xs leading-5">
             {t(`configPage.fields.${field.key}.description`)}
           </p>
@@ -2288,210 +2668,6 @@ function ExcludedModelsEditor({
   )
 }
 
-function ModelAliasEditor({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: Record<string, AliasRule[]>
-  disabled: boolean
-  onChange: (value: Record<string, AliasRule[]>) => void
-}) {
-  const { t } = useTranslation()
-  const channels = Object.entries(value)
-  const rows = channels.flatMap(([channel, aliases]) =>
-    aliases.map((item, index) => ({
-      channel,
-      index,
-      item,
-    })),
-  )
-  const columnsClass =
-    'lg:grid-cols-[minmax(8rem,0.7fr)_minmax(11rem,1fr)_minmax(10rem,0.9fr)_minmax(10rem,0.9fr)_minmax(7rem,auto)_minmax(9rem,auto)_auto]'
-
-  const updateRow = (rowIndex: number, patch: Partial<{ channel: string; item: AliasRule }>) => {
-    const nextRows = rows.map((row, index) => ({
-      channel: index === rowIndex ? (patch.channel ?? row.channel) : row.channel,
-      item: index === rowIndex ? { ...row.item, ...patch.item } : row.item,
-    }))
-
-    const nextValue = nextRows.reduce<Record<string, AliasRule[]>>((nextRecord, row) => {
-      return {
-        ...nextRecord,
-        [row.channel]: [...(nextRecord[row.channel] ?? []), row.item],
-      }
-    }, {})
-
-    onChange(nextValue)
-  }
-
-  const addAlias = () => {
-    const defaultChannel = channels.at(-1)?.[0] ?? 'claude'
-    onChange({
-      ...value,
-      [defaultChannel]: [...(value[defaultChannel] ?? []), { name: '', alias: '', fork: false }],
-    })
-  }
-
-  const removeAlias = (rowIndex: number) => {
-    const nextRows = rows.filter((_, index) => index !== rowIndex)
-    const nextValue = nextRows.reduce<Record<string, AliasRule[]>>((nextRecord, row) => {
-      return {
-        ...nextRecord,
-        [row.channel]: [...(nextRecord[row.channel] ?? []), row.item],
-      }
-    }, {})
-
-    onChange(nextValue)
-  }
-
-  return (
-    <div className="grid gap-3">
-      <div className="flex justify-start lg:justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          className="w-fit"
-          disabled={disabled}
-          onClick={addAlias}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {t('configPage.json.addAlias')}
-        </Button>
-      </div>
-
-      {rows.length === 0 ? (
-        <EmptyJsonRows label={t('configPage.json.emptyRows')} />
-      ) : (
-        <div className="overflow-hidden rounded-md border">
-          <div className={cn('bg-muted/45 hidden border-b lg:grid', columnsClass)}>
-            <TableHeaderCell
-              label={t('configPage.json.columns.channel')}
-              description={t('configPage.json.columnDescriptions.channel')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.name')}
-              description={t('configPage.json.columnDescriptions.name')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.alias')}
-              description={t('configPage.json.columnDescriptions.alias')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.displayName')}
-              description={t('configPage.json.columnDescriptions.displayName')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.fork')}
-              description={t('configPage.json.columnDescriptions.fork')}
-            />
-            <TableHeaderCell
-              label={t('configPage.json.columns.forceMapping')}
-              description={t('configPage.json.columnDescriptions.forceMapping')}
-            />
-            <TableHeaderCell label={t('configPage.json.columns.actions')} />
-          </div>
-
-          <div className="divide-y">
-            {rows.map(({ channel, item }, rowIndex) => (
-              <div
-                key={rowIndex}
-                className={cn('grid gap-2 px-3 py-3 lg:items-start', columnsClass)}
-              >
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.channel')}
-                  </span>
-                  <Input
-                    value={channel}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.channel')}
-                    placeholder={t('configPage.json.placeholders.channel')}
-                    onChange={(event) => updateRow(rowIndex, { channel: event.target.value })}
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.name')}
-                  </span>
-                  <Input
-                    value={item.name ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.name')}
-                    placeholder={t('configPage.json.placeholders.name')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { name: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.alias')}
-                  </span>
-                  <Input
-                    value={item.alias ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.alias')}
-                    placeholder={t('configPage.json.placeholders.alias')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { alias: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className={fieldClassName}>
-                  <span className="text-muted-foreground text-xs font-medium lg:hidden">
-                    {t('configPage.json.columns.displayName')}
-                  </span>
-                  <Input
-                    value={item.displayName ?? item['display-name'] ?? ''}
-                    disabled={disabled}
-                    aria-label={t('configPage.json.columns.displayName')}
-                    placeholder={t('configPage.json.placeholders.displayName')}
-                    onChange={(event) =>
-                      updateRow(rowIndex, { item: { displayName: event.target.value } })
-                    }
-                  />
-                </label>
-                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(item.fork)}
-                    disabled={disabled}
-                    onCheckedChange={(checked) =>
-                      updateRow(rowIndex, { item: { fork: checked === true } })
-                    }
-                  />
-                  <span>{t('configPage.json.columns.fork')}</span>
-                </label>
-                <label className="border-input bg-background flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
-                  <Checkbox
-                    checked={Boolean(item.forceMapping ?? item['force-mapping'])}
-                    disabled={disabled}
-                    onCheckedChange={(checked) =>
-                      updateRow(rowIndex, { item: { forceMapping: checked === true } })
-                    }
-                  />
-                  <span>{t('configPage.json.columns.forceMapping')}</span>
-                </label>
-                <Button
-                  type="button"
-                  variant="text"
-                  size="lg"
-                  className="justify-start lg:justify-center"
-                  disabled={disabled}
-                  onClick={() => removeAlias(rowIndex)}
-                >
-                  {t('configPage.json.remove')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
 function PluginStoreSourcesEditor({
   value,
   disabled,
@@ -2611,41 +2787,35 @@ function AntigravitySensitiveWordsEditor({
 function StringListEditor({
   value,
   disabled,
+  label,
+  preservePadding,
   placeholder,
   hint,
   countLabel,
+  onReset,
   onChange,
 }: {
   value: string[]
   disabled: boolean
+  label: string
+  preservePadding: boolean
   placeholder: string
   hint: string
   countLabel: string
+  onReset?: () => void
   onChange: (value: string[]) => void
 }) {
-  const normalizedValue = normalizeStringList(value).join('\n')
+  const { t } = useTranslation()
+  const hintId = useId()
+  const textarea = useRef<HTMLTextAreaElement>(null)
+  const normalizedValue = value.join('\n')
   const [draft, setDraft] = useState(normalizedValue)
-
+  const normalizedDraft = normalizeStringList(draft.split('\n'), preservePadding).join('\n')
   useEffect(() => {
-    const normalizedDraft = draft
-      .split('\n')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
-      .join('\n')
-
     if (normalizedDraft !== normalizedValue) {
       setDraft(normalizedValue)
     }
-  }, [draft, normalizedValue])
-
-  const commitDraft = (nextDraft: string) => {
-    onChange(
-      nextDraft
-        .split('\n')
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0),
-    )
-  }
+  }, [normalizedDraft, normalizedValue])
 
   return (
     <div className="grid gap-3">
@@ -2654,14 +2824,35 @@ function StringListEditor({
         disabled={disabled}
         className="min-h-28 font-mono text-sm"
         placeholder={placeholder}
+        ref={textarea}
+        aria-label={label}
+        aria-describedby={hintId}
         onChange={(event) => {
-          setDraft(event.target.value)
-          commitDraft(event.target.value)
+          const text = event.target.value
+          setDraft(text)
+          onChange(normalizeStringList(text.split('\n'), preservePadding))
         }}
       />
       <div className="text-muted-foreground flex flex-col gap-1 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between">
-        <span>{hint}</span>
-        <span>{countLabel}</span>
+        <span id={hintId}>{hint}</span>
+        <div className="flex shrink-0 items-center gap-2">
+          <span>{countLabel}</span>
+          {onReset && (
+            <Button
+              type="button"
+              variant="text"
+              size="sm"
+              disabled={disabled}
+              onClick={() => {
+                setDraft('')
+                textarea.current?.focus({ preventScroll: true })
+                onReset()
+              }}
+            >
+              {t('configPage.actions.restoreDefault')}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -2705,8 +2896,8 @@ function createPayloadReplaceRule(displayNumber: number): PayloadReplaceRule {
   return {
     displayNumber,
     models: [createPayloadModel()],
-    target: { all: false, positions: '1' },
-    replacements: [{ id: 0, from: '', to: '' }],
+    target: { mode: 'user', all: false, positions: '1', paths: [] },
+    replacements: [{ id: 0, kind: 'literal', from: '', to: '' }],
   }
 }
 
@@ -3065,12 +3256,14 @@ function PayloadPathListRows({
   emptyLabel,
   paths,
   disabled,
+  required = false,
   onChange,
 }: {
   title: string
   emptyLabel: string
   paths: string[]
   disabled: boolean
+  required?: boolean
   onChange: (paths: string[]) => void
 }) {
   const { t } = useTranslation()
@@ -3091,10 +3284,11 @@ function PayloadPathListRows({
           variant="outline"
           size="md"
           disabled={disabled || hasBlankPath}
+          data-draft-missing={(required && !paths.length) || undefined}
           onClick={addPath}
         >
           <Plus className="size-3.5" aria-hidden="true" />
-          {t('configPage.payload.addPath')}
+          {t(required ? 'configPage.payload.replace.addPath' : 'configPage.payload.addPath')}
         </Button>
       </div>
       {hasBlankPath ? (
@@ -3109,7 +3303,7 @@ function PayloadPathListRows({
           <div className="hidden gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto]">
             <TableHeaderCell
               label={t('configPage.payload.conditionPath')}
-              description={t('configPage.payload.conditionPathHelp')}
+              description={required ? undefined : t('configPage.payload.conditionPathHelp')}
               fieldLabel
             />
             <div aria-hidden="true" />
@@ -3117,24 +3311,54 @@ function PayloadPathListRows({
           {paths.map((path, index) => (
             <div key={index} className="grid gap-1.5">
               <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <label className={fieldClassName}>
-                  <span className="text-label sm:sr-only">
-                    {t('configPage.payload.conditionPath')}
-                  </span>
-                  <Input
-                    value={path}
-                    disabled={disabled}
-                    className="font-mono"
-                    aria-label={t('configPage.payload.conditionPath')}
-                    placeholder={t('configPage.payload.conditionPathPlaceholder')}
-                    onChange={(event) => updatePath(index, event.target.value)}
-                  />
-                </label>
+                {required ? (
+                  <PayloadFormField
+                    label={t('configPage.payload.replace.pathEntry', { index: index + 1 })}
+                    labelClassName="sm:sr-only"
+                    required
+                    error={
+                      !path.trim()
+                        ? t('configPage.payload.ruleIssues.replacePathsRequired')
+                        : undefined
+                    }
+                  >
+                    {(control) => (
+                      <Textarea
+                        {...control}
+                        rows={1}
+                        value={path}
+                        disabled={disabled}
+                        className="font-mono"
+                        placeholder="metadata.description"
+                        onChange={(event) => updatePath(index, event.target.value)}
+                      />
+                    )}
+                  </PayloadFormField>
+                ) : (
+                  <label className={fieldClassName}>
+                    <span className="text-label sm:sr-only">
+                      {t('configPage.payload.conditionPath')}
+                    </span>
+                    <Input
+                      value={path}
+                      disabled={disabled}
+                      className="font-mono"
+                      aria-label={t('configPage.payload.conditionPath')}
+                      placeholder={t('configPage.payload.conditionPathPlaceholder')}
+                      onChange={(event) => updatePath(index, event.target.value)}
+                    />
+                  </label>
+                )}
                 <Button
                   type="button"
                   variant="text"
                   size="lg"
                   disabled={disabled}
+                  aria-label={
+                    required
+                      ? t('configPage.payload.replace.removePath', { index: index + 1 })
+                      : undefined
+                  }
                   onClick={() => removePath(index)}
                 >
                   {t('configPage.payload.remove')}
@@ -3143,6 +3367,108 @@ function PayloadPathListRows({
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
+
+function PayloadReplaceTargetFields({
+  target,
+  disabled,
+  onChange,
+}: {
+  target: PayloadReplaceDraft['target']
+  disabled: boolean
+  onChange: (target: PayloadReplaceDraft['target']) => void
+}) {
+  const { t } = useTranslation()
+  const issue = getPayloadReplaceTargetIssue(target)
+  return (
+    <div className="grid min-w-0 gap-3 border-t pt-4">
+      <PayloadFormField
+        label={t('configPage.payload.replace.target')}
+        hint={
+          target.mode === 'paths'
+            ? t('configPage.payload.replace.pathsHint')
+            : target.mode !== 'user'
+              ? t('configPage.payload.replace.systemHint')
+              : undefined
+        }
+      >
+        {(control) => (
+          <Select
+            disabled={disabled}
+            value={target.mode}
+            onValueChange={(next) => {
+              const mode = payloadReplaceTargetModes.find((option) => option === next)
+              if (mode)
+                onChange({
+                  ...target,
+                  mode,
+                  paths: mode === 'paths' && !target.paths.length ? [''] : target.paths,
+                })
+            }}
+          >
+            <SelectTrigger {...control} className="sm:max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {payloadReplaceTargetModes.map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  {t(`configPage.payload.replace.targets.${mode}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </PayloadFormField>
+      {target.mode === 'paths' ? (
+        <PayloadPathListRows
+          title={t('configPage.payload.replace.targets.paths')}
+          emptyLabel={t('configPage.payload.ruleIssues.replacePathsRequired')}
+          paths={target.paths}
+          disabled={disabled}
+          required
+          onChange={(paths) => onChange({ ...target, paths })}
+        />
+      ) : (
+        <>
+          <RadioGroup
+            value={target.all ? 'all' : 'positions'}
+            disabled={disabled}
+            aria-label={t('configPage.payload.replace.messageScope')}
+            className="flex flex-col gap-2 sm:flex-row sm:gap-4"
+            onValueChange={(mode) => onChange({ ...target, all: mode === 'all' })}
+          >
+            <label className="text-body min-h-control-lg flex items-center gap-2">
+              <RadioGroupItem value="positions" />
+              {t('configPage.payload.replace.selectedPositions')}
+            </label>
+            <label className="text-body min-h-control-lg flex items-center gap-2">
+              <RadioGroupItem value="all" />
+              {t('configPage.payload.replace.allMessages')}
+            </label>
+          </RadioGroup>
+          {!target.all ? (
+            <PayloadFormField
+              label={t('configPage.payload.replace.positions')}
+              required
+              error={issue && t(`configPage.payload.ruleIssues.${issue}`)}
+              hint={t('configPage.payload.replace.positionsHint')}
+            >
+              {(control) => (
+                <Input
+                  {...control}
+                  value={target.positions}
+                  disabled={disabled}
+                  className="font-mono sm:max-w-xs"
+                  placeholder={t('configPage.payload.replace.positionsPlaceholder')}
+                  onChange={(event) => onChange({ ...target, positions: event.target.value })}
+                />
+              )}
+            </PayloadFormField>
+          ) : null}
+        </>
       )}
     </div>
   )
@@ -4023,7 +4349,7 @@ function PayloadRulesEditor({
                   {rule.details.scope}
                 </code>
               ) : null}
-              {readOnly && rule.details.regex ? <code className="text-code">RE2</code> : null}
+              {first?.kind === 'regex' ? <code className="text-code">RE2</code> : null}
               {sectionKey === 'replace' && value.replace.length > 1 ? (
                 <span>
                   {t('configPage.payload.workspace.executionPosition', { position: index + 1 })}
@@ -4031,11 +4357,19 @@ function PayloadRulesEditor({
               ) : null}
               {replacement ? (
                 <span>
-                  {replacement.target.all
-                    ? t('configPage.payload.replace.allUsers')
-                    : t('configPage.payload.workspace.selectedUsers', {
-                        positions: replacement.target.positions,
-                      })}
+                  {replacement.target.mode === 'paths'
+                    ? t('configPage.payload.replace.pathSummary', {
+                        count: replacement.target.paths.length,
+                      })
+                    : t(
+                        replacement.target.all
+                          ? 'configPage.payload.replace.allRoleMessages'
+                          : 'configPage.payload.replace.rolePositions',
+                        {
+                          role: replacement.target.mode,
+                          positions: replacement.target.positions,
+                        },
+                      )}
                 </span>
               ) : null}
               {issueCount > 0 ? <span>{t('configPage.payload.workspace.incomplete')}</span> : null}
@@ -4104,24 +4438,47 @@ function PayloadRulesEditor({
             <PayloadModelRows
               models={rule.models}
               disabled={disabled}
-              onChange={(models) => updateRule(sectionKey, index, { ...rule, models })}
+              onChange={(models) =>
+                updateRule(
+                  sectionKey,
+                  index,
+                  replacement
+                    ? { ...replacement, models, savedModels: undefined }
+                    : { ...rule, models },
+                )
+              }
             />
             {sectionKey === 'replace' ? (
-              <>
-                <PayloadReplaceFields
-                  value={rule as PayloadReplaceRule}
-                  disabled={disabled}
-                  onChange={(content) => updateRule(sectionKey, index, { ...rule, ...content })}
-                />
-                <PayloadReplacePreview
-                  rule={rule as PayloadReplaceRule}
-                  disabled={disabled}
-                  text={previewTexts[identity.id] ?? ''}
-                  onTextChange={(text) =>
-                    setPreviewTexts((current) => ({ ...current, [identity.id]: text }))
-                  }
-                />
-              </>
+              replacement && (
+                <>
+                  <PayloadReplaceTargetFields
+                    target={replacement.target}
+                    disabled={disabled}
+                    onChange={(target) =>
+                      updateRule(sectionKey, index, {
+                        ...replacement,
+                        target,
+                        savedTarget: undefined,
+                      })
+                    }
+                  />
+                  <PayloadReplacementSteps
+                    value={replacement.replacements}
+                    disabled={disabled}
+                    onChange={(replacements) =>
+                      updateRule(sectionKey, index, { ...replacement, replacements })
+                    }
+                  />
+                  <PayloadReplacePreview
+                    rule={replacement}
+                    disabled={disabled}
+                    text={previewTexts[identity.id] ?? ''}
+                    onTextChange={(text) =>
+                      setPreviewTexts((current) => ({ ...current, [identity.id]: text }))
+                    }
+                  />
+                </>
+              )
             ) : sectionKey === 'filter' ? (
               <PayloadFilterParamRows
                 params={(rule as PayloadFilterRule).params}
@@ -4409,24 +4766,30 @@ function StructuredJsonEditor({
   value,
   disabled,
   oauthModelCatalog,
+  onReset,
   onChange,
 }: {
   fieldKey: JsonConfigFieldKey
   value: unknown
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
+  onReset?: () => void
   onChange: (value: unknown) => void
 }) {
   const { t } = useTranslation()
   const payload = useContext(PayloadSnapshotContext)
 
   if (stringListConfigFieldKeys.has(fieldKey)) {
-    const items = normalizeStringList(value)
+    const preservePadding = fieldDefinitionByKey[fieldKey].kind === 'optionalStringList'
+    const items = normalizeStringList(value, preservePadding)
 
     return (
       <StringListEditor
         value={items}
+        preservePadding={preservePadding}
         disabled={disabled}
+        label={t(`configPage.fields.${fieldKey}.label`)}
+        onReset={onReset}
         placeholder={t(`configPage.stringList.${fieldKey}.placeholder`)}
         hint={t(`configPage.stringList.${fieldKey}.hint`)}
         countLabel={t(`configPage.stringList.${fieldKey}.count`, { count: items.length })}
@@ -4445,12 +4808,21 @@ function StructuredJsonEditor({
           onChange={onChange}
         />
       )
+    case 'oauthModelSettingsJson':
+      return (
+        <OAuthModelSettingsEditor
+          value={value as Record<string, unknown>}
+          disabled={disabled}
+          onChange={onChange}
+        />
+      )
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
-          value={normalizeModelAliases(value)}
+          availableChannels={modelDefinitionChannels}
+          value={value as Record<string, unknown>}
           disabled={disabled}
-          onChange={(nextValue) => onChange(serializeModelAliases(nextValue))}
+          onChange={onChange}
         />
       )
     case 'pluginStoreSourcesJson':
@@ -4530,6 +4902,11 @@ function JsonConfigField({
           value={parsed.value}
           disabled={disabled}
           oauthModelCatalog={oauthModelCatalog}
+          onReset={
+            field.kind === 'optionalStringList' && value !== ''
+              ? () => onChange(field.key, null)
+              : undefined
+          }
           onChange={(nextValue) => onChange(field.key, stringifyJson(nextValue))}
         />
       ) : (
@@ -4546,15 +4923,23 @@ function JsonConfigField({
 
 function StructuredWorkspace({
   draft,
+  hasStoredGithubToken,
+  saveError,
+  onDiscardField,
   changes,
   validationErrors,
+  onEditingFieldChange,
   disabled,
   oauthModelCatalog,
   onChange,
 }: {
   draft: ConfigStructuredValues
+  hasStoredGithubToken: boolean
+  saveError: ConfigFieldSaveError | null
+  onDiscardField: (key: WritableConfigFieldKey) => void
   changes: ConfigChange[]
   validationErrors: ConfigFieldKey[]
+  onEditingFieldChange: (key: ConfigFieldKey | null) => void
   disabled: boolean
   oauthModelCatalog: OAuthModelCatalogState | null
   onChange: (key: ConfigFieldKey, value: ConfigFieldValue) => void
@@ -4562,27 +4947,72 @@ function StructuredWorkspace({
   const { t } = useTranslation()
   const [networkPanel, setNetworkPanel] = useState<NetworkProxyPanel>('current')
 
-  const renderField = (field: ConfigFieldDefinition) =>
-    isJsonConfigFieldKey(field.key) ? (
-      <JsonConfigField
+  const renderField = (field: ConfigFieldDefinition) => {
+    const fieldError = saveError?.key === field.key ? saveError : null
+    const fieldId = `config-field-${field.key}`
+    return (
+      <div
         key={field.key}
-        field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
-        value={String(draft[field.key])}
-        disabled={disabled}
-        invalid={validationErrors.includes(field.key)}
-        oauthModelCatalog={oauthModelCatalog}
-        onChange={onChange}
-      />
-    ) : (
-      <ConfigField
-        key={field.key}
-        field={field}
-        value={draft[field.key]}
-        disabled={disabled}
-        invalid={validationErrors.includes(field.key)}
-        onChange={onChange}
-      />
+        id={fieldId}
+        className="min-w-0"
+        role="group"
+        aria-label={t(`configPage.fields.${field.key}.label`)}
+        aria-describedby={fieldError ? fieldId + '-feedback' : undefined}
+      >
+        {field.kind === 'literalReplacements' || field.kind === 'patternReplacements' ? (
+          <SensitiveReplacementEditor
+            kind={field.kind}
+            title={t(`configPage.fields.${field.key}.label`)}
+            rows={parseReplacementDraft(draft[field.key])}
+            disabled={disabled}
+            onChange={(rows) => onChange(field.key, stringifyJson(rows))}
+          />
+        ) : isJsonConfigFieldKey(field.key) ? (
+          <JsonConfigField
+            field={field as ConfigFieldDefinition & { key: JsonConfigFieldKey }}
+            value={String(draft[field.key] ?? '')}
+            disabled={disabled}
+            invalid={validationErrors.includes(field.key)}
+            oauthModelCatalog={oauthModelCatalog}
+            onChange={onChange}
+          />
+        ) : (
+          <ConfigField
+            field={field}
+            hasStoredSecret={field.key === 'serverGithubToken' && hasStoredGithubToken}
+            value={draft[field.key]}
+            disabled={disabled}
+            invalid={validationErrors.includes(field.key)}
+            onEditingFieldChange={onEditingFieldChange}
+            onChange={onChange}
+          />
+        )}
+        {fieldError ? (
+          <div id={fieldId + '-feedback'} className="mt-1 flex flex-wrap items-center gap-x-2">
+            <p role="alert" className="text-destructive text-sm">
+              {fieldError.reason === 'conflict'
+                ? t('configPage.validation.editConflict')
+                : t(`configPage.compatibility.${fieldError.reason}`)}
+            </p>
+            {fieldError.status ? (
+              <span className="text-meta text-muted-foreground">HTTP {fieldError.status}</span>
+            ) : null}
+            {changes.some((change) => change.key === fieldError.key) ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="text"
+                disabled={disabled}
+                onClick={() => onDiscardField(fieldError.key)}
+              >
+                {t('configPage.compatibility.discardField')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
     )
+  }
 
   return (
     <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
@@ -4637,18 +5067,7 @@ function StructuredWorkspace({
                 </div>
 
                 {networkPanel === 'current' ? (
-                  <div className="grid gap-3">
-                    {section.fields.map((field) => (
-                      <ConfigField
-                        key={field.key}
-                        field={field}
-                        value={draft[field.key]}
-                        disabled={disabled}
-                        invalid={validationErrors.includes(field.key)}
-                        onChange={onChange}
-                      />
-                    ))}
-                  </div>
+                  <div className="grid gap-3">{section.fields.map(renderField)}</div>
                 ) : (
                   <ProxyPoolsPanel enabled={networkPanel === 'pool'} />
                 )}
@@ -4841,6 +5260,19 @@ function ConfigChangePreview({
   payloadDraft: PayloadRulesConfig | null
 }) {
   const { t } = useTranslation()
+  if (fieldDefinitionByKey[change.key].kind === 'writeOnlySecret') {
+    const action =
+      change.nextValue === null
+        ? 'configPage.token.removing'
+        : change.previousValue
+          ? 'configPage.token.replacing'
+          : 'configPage.token.setting'
+    return (
+      <span className="text-muted-foreground text-meta">
+        {t(action)} <span aria-hidden="true">••••••••</span>
+      </span>
+    )
+  }
   if (change.key === 'payloadRulesJson') {
     const parsed = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.nextValue))
     if (!parsed.ok || !canEditPayloadConfig(parsed.value)) {
@@ -4862,14 +5294,75 @@ function ConfigChangePreview({
         </span>
       )
     }
+    const before = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.previousValue))
+    if (before.ok && isRecord(before.value) && isRecord(parsed.value)) {
+      const previous = before.value
+      const next = parsed.value
+      const sections = payloadSectionKeys.filter(
+        (key) => JSON.stringify(previous[key]) !== JSON.stringify(next[key]),
+      )
+      return (
+        <span className="grid min-w-0 gap-2">
+          {(
+            [
+              ['savedConfig', previous],
+              ['pendingConfig', next],
+            ] as const
+          ).map(([label, config]) => (
+            <span key={label} className="grid min-w-0 gap-1">
+              <span className="text-label">{t(`configPage.payload.replace.${label}`)}</span>
+              <code className="bg-muted/30 text-code block rounded p-2 break-words whitespace-pre-wrap">
+                {JSON.stringify(
+                  Object.fromEntries(sections.map((key) => [key, config[key] ?? []])),
+                  null,
+                  2,
+                )}
+              </code>
+            </span>
+          ))}
+        </span>
+      )
+    }
   }
+  function formatValue(value: ConfigFieldValue) {
+    if (change.key === 'antigravityTosPauseWindow' && value === '')
+      return t('configPage.fields.antigravityTosPauseWindow.placeholder')
+    const kind = fieldDefinitionByKey[change.key].kind
+    if (kind === 'optionalStringList' && value === null)
+      return t('configPage.nullableBoolean.unset')
+    if (change.key === 'upstreamClaudeClientRequestId') {
+      const label = 'configPage.fields.upstreamClaudeClientRequestId'
+      if (value === null) return t(`${label}.placeholder`)
+      return typeof value === 'string' && claudeClientRequestIdModes.includes(value)
+        ? t(`${label}.options.${value}`)
+        : t(`${label}.unknown`, { value: String(value) })
+    }
+    if (kind === 'sensitiveText' && value) return '••••••••'
+    if ((kind === 'optionalInteger' || kind === 'optionalText') && value === null)
+      return t(`configPage.fields.${change.key}.placeholder`)
+    if (kind === 'literalReplacements' || kind === 'patternReplacements') {
+      const rows = parseReplacementDraft(value)
+      if (!rows) return t('sensitiveReplacements.unsupported')
+      if (replacementIssues(kind, rows).some(Boolean)) return t('sensitiveReplacements.incomplete')
+      return JSON.stringify(serializeReplacementRows(kind, rows))
+    }
+    if (kind === 'optionalSwitch') {
+      if (value === null)
+        return t(
+          fieldDefinitionByKey[change.key].defaultChecked
+            ? 'configPage.nullableBoolean.defaultOn'
+            : 'configPage.nullableBoolean.defaultOff',
+        )
+      return t(`configPage.nullableBoolean.${nullableBooleanOptionFromValue(value)}`)
+    }
+    return value === '' || value === null ? t('configPage.status.emptyValue') : String(value)
+  }
+
   return (
     <span className="text-muted-foreground text-code min-w-0 break-all whitespace-normal">
-      {formatConfigValue(change.previousValue, t('configPage.status.emptyValue'))}
+      {formatValue(change.previousValue)}
       {' → '}
-      <span className="text-foreground">
-        {formatConfigValue(change.nextValue, t('configPage.status.emptyValue'))}
-      </span>
+      <span className="text-foreground">{formatValue(change.nextValue)}</span>
     </span>
   )
 }
@@ -4891,7 +5384,10 @@ function ChangeDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full max-w-full overflow-hidden sm:max-w-xl">
+      <SheetContent
+        className="w-full max-w-full overflow-hidden sm:max-w-xl"
+        closeLabel={t('close')}
+      >
         <SheetHeader className="border-b">
           <SheetTitle>{t('configPage.diff.title')}</SheetTitle>
           <SheetDescription>
@@ -4925,7 +5421,7 @@ function ChangeDetailSheet({
                         {t(`configPage.fields.${change.key}.label`)}
                       </span>
                       <span className="text-muted-foreground shrink-0 text-xs">
-                        {t(`configPage.sections.${field.sectionId}.shortTitle`)}
+                        {t(`configPage.sections.${field.groupId ?? field.sectionId}.shortTitle`)}
                       </span>
                     </span>
                     <ConfigChangePreview change={change} payloadDraft={payloadDraft} />
@@ -4983,21 +5479,43 @@ export function ConfigWorkbenchPage() {
   return <ConfigWorkbenchSession key={JSON.stringify([baseUrl, connectedAt])} />
 }
 
+type ConfigDraft = { baseline: ConfigSnapshot; values: ConfigStructuredValues }
+
+export function reconcileSavedConfigFields(
+  current: ConfigDraft | null,
+  keys: readonly WritableConfigFieldKey[],
+  reported?: ConfigStructuredValues,
+): ConfigDraft | null {
+  if (!current) return null
+  const structured = { ...current.baseline.structured }
+  const values = { ...current.values }
+  for (const key of keys) {
+    const savedValue = reported ? reported[key] : current.values[key]
+    structured[key] = savedValue
+    values[key] = key === 'serverGithubToken' && savedValue ? true : savedValue
+  }
+  return { values, baseline: { ...current.baseline, structured } }
+}
+
 function ConfigWorkbenchSession() {
   const { t } = useTranslation()
   const [oauthModelChannel, setOauthModelChannel] = useState<ProviderModelChannel>('claude')
   const [oauthModelFilter, setOauthModelFilter] = useState('')
   const workbench = useConfigWorkbench(oauthModelChannel)
-  const [edits, setEdits] = useState<{
-    baseline: NonNullable<typeof workbench.snapshot>
-    values: ConfigStructuredValues
-  } | null>(null)
+  const [edits, setEdits] = useState<ConfigDraft | null>(null)
   const baseline = edits?.baseline ?? workbench.snapshot
-  const structuredDraft = edits?.values ?? baseline?.structured
+  const structuredDraft = useMemo(
+    () => edits?.values ?? (baseline && createConfigDraftValues(baseline.structured)),
+    [edits, baseline],
+  )
   // An operator can temporarily enter the same JSON path in two rows before completing the second path.
   const [payloadDraft, setPayloadDraft] = useState<PayloadRulesConfig | null>(null)
+  const [editingField, setEditingField] = useState<ConfigFieldKey | null>(null)
+  const modelSettingFeedback = useState<ModelSettingIssue[]>([])
+  const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
   const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
+  const [saveError, setSaveError] = useState<ConfigFieldSaveError | null>(null)
 
   const draftCount = useMemo(() => {
     if (payloadDraft) return countPayloadConfigDrafts(payloadDraft)
@@ -5023,21 +5541,25 @@ function ConfigWorkbenchSession() {
     latest !== baseline &&
     changes.some((change) => {
       const current = getConfigChangeValue(change.key, latest.structured[change.key])
+      if (change.key === 'oauthModelAliasJson' || change.key === 'oauthModelSettingsJson')
+        return hasOAuthChannelConflict(change, current)
       return (
         !areConfigValuesEqual(current, change.previousValue) &&
         !areConfigValuesEqual(current, change.nextValue)
       )
     }),
   )
-  const savedPayload = baseline?.structured.payloadRulesJson
+  const saved = baseline?.structured
   const validationErrors = useMemo(
-    () =>
-      structuredDraft ? getValidationErrors(structuredDraft, savedPayload, hasPayloadDrafts) : [],
-    [structuredDraft, savedPayload, hasPayloadDrafts],
+    () => (structuredDraft ? getValidationErrors(structuredDraft, saved, hasPayloadDrafts) : []),
+    [structuredDraft, saved, hasPayloadDrafts],
   )
   // Editable payload rules report unfinished fields inline and in the draft indicator.
   const visibleValidationErrors = validationErrors.filter(
-    (key) => key !== 'payloadRulesJson' || !payloadDraft,
+    (key) =>
+      key !== editingField &&
+      (key !== 'payloadRulesJson' || !payloadDraft) &&
+      (key !== 'oauthModelSettingsJson' || modelSettingIssues.length > 0),
   )
   const isDirty = changes.length > 0
   const saveDisabled =
@@ -5074,26 +5596,26 @@ function ConfigWorkbenchSession() {
   }
 
   const handleStructuredChange = (key: ConfigFieldKey, value: ConfigFieldValue) => {
+    setSaveError((current) => (current?.key === key ? null : current))
     setEdits((current) => ({
       baseline: current?.baseline ?? latest,
-      values: { ...(current?.values ?? latest.structured), [key]: value },
+      values: { ...(current?.values ?? structuredDraft), [key]: value },
     }))
   }
 
+  const reloadFromRuntime = () => {
+    setSaveError(null)
+    setPayloadDraft(null)
+    setModelSettingIssues([])
+    setEdits(null)
+    workbench.refetch()
+  }
   const handleReload = () => {
     if (isDirty) {
       setConfirmation({ type: 'reload' })
       return
     }
-    setPayloadDraft(null)
-    setEdits(null)
-    workbench.refetch()
-  }
-
-  const reloadFromRuntime = () => {
-    setPayloadDraft(null)
-    setEdits(null)
-    workbench.refetch()
+    reloadFromRuntime()
   }
 
   const handleSave = async () => {
@@ -5104,11 +5626,29 @@ function ConfigWorkbenchSession() {
         return
       }
       await workbench.saveStructured(changes)
+      setSaveError(null)
       setEdits(null)
       setPayloadDraft(null)
+      setModelSettingIssues([])
       toast.success(t('configPage.toast.saved'))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : String(error))
+      if (!(error instanceof ConfigFieldSaveError)) {
+        toast.error(error instanceof Error ? error.message : String(error))
+        return
+      }
+      setSaveError(error)
+      // Keep failed and unattempted edits. A retry must not resend completed fields.
+      if (error.savedKeys.length) {
+        const refreshed = workbench.getCachedSnapshot()
+        const reported = refreshed && refreshed !== latest ? refreshed.structured : undefined
+        setEdits((current) => reconcileSavedConfigFields(current, error.savedKeys, reported))
+      }
+      toast.error(
+        t('configPage.compatibility.saveFailed', {
+          field: t(`configPage.fields.${error.key}.label`),
+        }),
+      )
+      window.requestAnimationFrame(() => scrollToConfigTarget(`config-field-${error.key}`))
     }
   }
 
@@ -5170,14 +5710,25 @@ function ConfigWorkbenchSession() {
           setDraft: setPayloadDraft,
         }}
       >
-        <StructuredWorkspace
-          draft={structuredDraft}
-          changes={changes}
-          validationErrors={visibleValidationErrors}
-          disabled={workbench.mutating}
-          oauthModelCatalog={oauthModelCatalog}
-          onChange={handleStructuredChange}
-        />
+        <ModelSettingFeedbackContext.Provider value={modelSettingFeedback}>
+          <StructuredWorkspace
+            draft={structuredDraft}
+            hasStoredGithubToken={Boolean(baseline.structured.serverGithubToken)}
+            saveError={saveError}
+            onDiscardField={(key) => {
+              if (key === 'payloadRulesJson') setPayloadDraft(null)
+              if (key === 'oauthModelSettingsJson') setModelSettingIssues([])
+              setEdits((current) => reconcileSavedConfigFields(current, [key], latest.structured))
+              setSaveError(null)
+            }}
+            changes={changes}
+            validationErrors={visibleValidationErrors}
+            onEditingFieldChange={setEditingField}
+            disabled={workbench.mutating}
+            oauthModelCatalog={oauthModelCatalog}
+            onChange={handleStructuredChange}
+          />
+        </ModelSettingFeedbackContext.Provider>
       </PayloadSnapshotContext.Provider>
     </section>
   )

@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, KeyRound, Loader2, LogOut } from 'lucide-react
 import { useTranslation } from 'react-i18next'
 
 import { PublicAccessShell } from '@/components/public/public-access-shell'
+import { ManagementConnectionError } from '@/components/session/management-connection-error'
 import { ManagementEndpointField } from '@/components/session/management-endpoint-field'
 import { fieldClassName } from '@/components/shared/form-layout'
 import { Button } from '@/components/ui/button'
@@ -155,11 +156,7 @@ export function AdminConnectPage() {
               </div>
             ) : null}
 
-            {localError || error ? (
-              <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm">
-                {localError ?? error?.message}
-              </div>
-            ) : null}
+            <ManagementConnectionError inputError={localError} error={error} />
 
             <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-between">
               {connected ? (

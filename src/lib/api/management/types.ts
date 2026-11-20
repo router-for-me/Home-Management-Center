@@ -26,6 +26,7 @@ export type CapabilityKey =
   | 'users'
   | 'userPeriodLimits'
   | 'accessGroups'
+  | 'channelGroupCredentialCandidates'
   | 'modelChannelBindings'
   | 'credentialInFlight'
   | 'credentialInFlightSnapshotCursor'
@@ -64,6 +65,7 @@ export type ManagementApiFieldError = {
 
 export type ManagementApiError = {
   message: string
+  configVersion?: number
   status?: number
   code?: 'network' | 'auth' | 'not-found' | 'server' | 'unknown'
   backendCode?: string

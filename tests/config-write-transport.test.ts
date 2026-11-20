@@ -9,7 +9,8 @@ type Case = {
   key: WritableConfigFieldKey
   value: ConfigFieldValue
   path: string
-  method: 'PUT' | 'DELETE'
+  method: 'PUT' | 'PATCH' | 'DELETE'
+  previousValue?: ConfigFieldValue
   expected?: unknown
 }
 
@@ -23,7 +24,183 @@ function put(
   return { name, key, value, path, method: 'PUT', expected }
 }
 
+const cache = 'client/codex/web-search-result-cache'
 const cases: Case[] = [
+  ...['on', 'passthrough', 'off'].map((mode) =>
+    put(
+      `writes Claude request ID mode ${mode} as text`,
+      'upstreamClaudeClientRequestId',
+      mode,
+      'upstream/claude/header-defaults/client-request-id',
+    ),
+  ),
+  {
+    name: 'restores only the client request ID policy',
+    key: 'upstreamClaudeClientRequestId',
+    path: 'upstream/claude/header-defaults/client-request-id',
+    method: 'DELETE',
+    value: null,
+  },
+  ...['0', '-1', '7'].map((days) =>
+    put(
+      `writes session date pin ${days} as an integer`,
+      'upstreamClaudeSessionDatePinDays',
+      days,
+      'upstream/claude/session-date-pin-days',
+      Number(days),
+    ),
+  ),
+  {
+    name: 'removes only the session date pin',
+    key: 'upstreamClaudeSessionDatePinDays',
+    value: null,
+    path: 'upstream/claude/session-date-pin-days',
+    method: 'DELETE',
+  },
+  ...(
+    [
+      ['clientCodexEnableApplyPatch', 'client/codex/enable-apply-patch'],
+      ['clientClaudeShowCodexCommentary', 'client/claude/show-codex-commentary'],
+      ['upstreamClaudeServerSideFallback', 'upstream/claude/server-side-fallback'],
+      ['upstreamClaudeInjectDiagnostics', 'upstream/claude/header-defaults/inject-diagnostics'],
+      ['upstreamCodexRequestCompression', 'upstream/codex/upstream-request-compression'],
+      ['upstreamCodexWebsocketCompression', 'upstream/codex/websocket-compression'],
+    ] as const
+  ).flatMap(([key, path]) => [
+    put(`preserves the explicit false override at ${path}`, key, false, path),
+    { name: `removes only ${path}`, key, path, value: null, method: 'DELETE' as const },
+  ]),
+  put(
+    'saves zero as the Codex request compression threshold',
+    'upstreamCodexRequestCompressionMinBytes',
+    '0',
+    'upstream/codex/upstream-request-compression-min-bytes',
+    0,
+  ),
+  put(
+    'saves a JSON-looking Codex sign-in identifier as a string',
+    'oauthCodexSigninIdentifier',
+    ' false ',
+    'oauth/providers/codex/signin-with-chatgpt-identifier',
+    'false',
+  ),
+  {
+    name: 'clears the sign-in identifier without writing OAuth siblings',
+    key: 'oauthCodexSigninIdentifier',
+    value: null,
+    path: 'oauth/providers/codex/signin-with-chatgpt-identifier',
+    method: 'DELETE',
+  },
+  {
+    name: 'merges an explicit false into a nullable web search cache',
+    key: 'clientCodexWebSearchCacheEnabled',
+    value: false,
+    path: cache,
+    method: 'PATCH',
+    expected: { enabled: false },
+  },
+  {
+    name: 'merges a zero entry limit independently of cache enablement',
+    key: 'clientCodexWebSearchCacheLimit',
+    value: '0',
+    path: cache,
+    method: 'PATCH',
+    expected: { limit: 0 },
+  },
+  {
+    name: 'stores new cache seconds as a bare integer including zero',
+    key: 'clientCodexWebSearchCacheTtl',
+    value: '0',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: 0 },
+  },
+  {
+    name: 'keeps a previously quoted seconds value quoted when edited',
+    key: 'clientCodexWebSearchCacheTtl',
+    previousValue: '1800',
+    value: '7200',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: '7200' },
+  },
+  {
+    name: 'stores a unit-bearing cache duration as text',
+    key: 'clientCodexWebSearchCacheTtl',
+    previousValue: 60,
+    value: '1h30m',
+    path: cache,
+    method: 'PATCH',
+    expected: { ttl: '1h30m' },
+  },
+  ...(
+    [
+      ['clientCodexWebSearchCacheEnabled', 'enabled'],
+      ['clientCodexWebSearchCacheTtl', 'ttl'],
+      ['clientCodexWebSearchCacheLimit', 'limit'],
+    ] as const
+  ).map(([key, member]) => ({
+    name: `restores just the cache ${member} default`,
+    key,
+    value: null,
+    path: cache + '/' + member,
+    method: 'DELETE' as const,
+  })),
+  ...(
+    [
+      ['serverMaxRequestBodyBytes', 'server/max-request-body-bytes'],
+      ['serverResponseCompressionMinBytes', 'server/response-compression/min-bytes'],
+      ['serverShutdownTimeout', 'server/shutdown-timeout'],
+    ] as const
+  ).flatMap(([key, path]) => [
+    put(`preserves explicit zero at ${path}`, key, '0', path, 0),
+    put(`writes a positive integer at ${path}`, key, '2048', path, 2048),
+    { name: `restores the default at ${path}`, key, value: null, path, method: 'DELETE' as const },
+  ]),
+  put(
+    'disables only the CPA compression switch',
+    'serverResponseCompressionEnabled',
+    false,
+    'server/response-compression/enabled',
+  ),
+  {
+    name: 'restores the default without removing the CPA compression threshold',
+    key: 'serverResponseCompressionEnabled',
+    value: null,
+    path: 'server/response-compression/enabled',
+    method: 'DELETE',
+  },
+  ...['3', '0', '-2', '+016'].map((text) =>
+    put(
+      `writes OAuth refresh concurrency ${text} as a JSON integer`,
+      'oauthAutoRefreshWorkers',
+      text,
+      'oauth/auth-auto-refresh-workers',
+      Number(text),
+    ),
+  ),
+  {
+    name: 'restores the default OAuth refresh concurrency by deleting its override',
+    key: 'oauthAutoRefreshWorkers',
+    value: null,
+    path: 'oauth/auth-auto-refresh-workers',
+    method: 'DELETE',
+  },
+  ...['0', 'false', 'off', 'none', 'disabled', '1h30m'].map((value) =>
+    put(
+      `writes the Antigravity TOS pause window ${value} as a JSON string`,
+      'antigravityTosPauseWindow',
+      value,
+      'oauth/providers/antigravity/tos-pause-window',
+    ),
+  ),
+  {
+    name: 'restores the default TOS pause window by deleting only that field',
+    key: 'antigravityTosPauseWindow',
+    value: '  ',
+    path: 'oauth/providers/antigravity/tos-pause-window',
+    method: 'DELETE',
+  },
   put(
     'writes a quoted public IP',
     'liveMediaRelayPublicIp',
@@ -81,6 +258,44 @@ const cases: Case[] = [
     null,
     'oauth/providers/antigravity/signature-cache-enabled',
   ),
+  ...[false, true].map((value) =>
+    put(
+      `writes an explicit subagent session affinity override of ${value}`,
+      'sessionAffinitySubagents',
+      value,
+      'routing/session-affinity-subagents',
+    ),
+  ),
+  ...['any', 'quota', 'never'].map((value) =>
+    put(
+      `writes the ${value} session rebinding policy as a single routing field`,
+      'sessionAffinityRebindOn',
+      value,
+      'routing/session-affinity-rebind-on',
+    ),
+  ),
+  {
+    name: 'restores default subagent affinity by deleting only its override',
+    key: 'sessionAffinitySubagents',
+    value: null,
+    path: 'routing/session-affinity-subagents',
+    method: 'DELETE',
+  },
+  ...[false, true].map((value) =>
+    put(
+      `writes only the discovery auth flag when explicitly set to ${value}`,
+      'discoveryAuthRequired',
+      value,
+      'server/discovery/auth-required',
+    ),
+  ),
+  {
+    name: 'restores the default discovery auth flag without replacing the discovery subtree',
+    key: 'discoveryAuthRequired',
+    value: null,
+    path: 'server/discovery/auth-required',
+    method: 'DELETE',
+  },
   put(
     'preserves nullable false',
     'antigravitySignatureBypassStrict',
@@ -181,7 +396,11 @@ beforeAll(() => {
   const fixture = fileURLToPath(new URL('./fixtures/config-xhr-transport.ts', import.meta.url))
   const child = spawnSync(process.execPath, [fixture], {
     input: JSON.stringify(
-      cases.map(({ key, value }) => ({ key, nextValue: value, previousValue: null })),
+      cases.map(({ key, value, previousValue = null }) => ({
+        key,
+        nextValue: value,
+        previousValue,
+      })),
     ),
     encoding: 'utf8',
     timeout: 10_000,

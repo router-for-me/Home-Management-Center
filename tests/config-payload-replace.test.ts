@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 
 import { canEditPayloadConfig, normalizeConfigValues } from '../src/lib/api/management/config'
 import {
+  canEditPayloadReplaceRule,
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
   serializePayloadReplaceContent,
@@ -51,7 +52,7 @@ function writePayloads(payloads: unknown[], previous: unknown = {}) {
   }>
 }
 
-describe('payload user text replacement', () => {
+describe('payload text replacement', () => {
   test('existing payload edits omit an empty replace field for older Home SDKs', () => {
     const override = [{ models: [{ name: '*' }], params: { temperature: 0.2 } }]
     for (const result of writePayloads([{ override }, { override, replace: [] }])) {
@@ -92,30 +93,123 @@ describe('payload user text replacement', () => {
     expect(JSON.parse(result!.requests[0]!.body).replace).toEqual([rule])
   })
 
-  test('editing a literal rule preserves saved role, regex and path rules in order', () => {
-    const system = { ...rule, target: { role: 'system', all: true } }
-    const regex = { ...rule, replacements: [{ pattern: '(item)-([0-9]+)', replacement: '$1_$2' }] }
-    const paths = { ...rule, target: { paths: ['metadata.description'] } }
-    const previous = { replace: [system, rule, regex, paths, system] }
-    const edited = { ...rule, replacements: [{ before: 'after' }] }
-    const next = { replace: [system, edited, regex, paths, system] }
-    const [result] = writePayloads([next], previous)
-    expect(result!.error).toBeNull()
-    expect(JSON.parse(result!.requests[0]!.body).replace).toEqual(next.replace)
-
-    const [modified] = writePayloads(
-      [{ replace: [{ ...paths, replacements: [{ a: 'b' }] }] }],
-      previous,
-    )
-    expect(modified!.error).not.toBeNull()
-    expect(modified!.requests).toEqual([])
-    for (const result of writePayloads(
-      [{ replace: [edited] }, { replace: [...next.replace, system] }],
-      previous,
-    )) {
-      expect(result.error).not.toBeNull()
-      expect(result.requests).toEqual([])
+  test('creates and edits every role and path target with mixed, ordered replacement steps', () => {
+    const paths = [
+      'tools.#(type=="function")#.description',
+      'metadata.description',
+      'metadata.description',
+    ]
+    const replacements = [
+      { pattern: 'literal text for the key named pattern' },
+      { pattern: '(?i)(user)-(\\d+)', replacement: 'account-${2}' },
+      { replacement: '' },
+      { pattern: '(?s)<debug>.*?</debug>', replacement: '' },
+      { pattern: '(', replacement: '$1' },
+      { pattern: '', replacement: 'skipped by CPA' },
+    ]
+    const models = [
+      {
+        ...rule.models[0],
+        match: [{ 'metadata.label': 'alpha', 'metadata.count': 0 }],
+        'not-match': [{ hidden: false }],
+      },
+    ]
+    const targets = [
+      ...['user', 'system', 'developer'].flatMap((role) => [
+        { role, all: true },
+        { role, positions: [3, 1, 3] },
+      ]),
+      { paths },
+    ]
+    const rules = targets.map((target) => ({ models, target, replacements }))
+    for (const item of rules) {
+      expect(canEditPayloadReplaceRule(item)).toBe(true)
+      const draft = normalizePayloadReplaceContent(item)
+      expect(draft.replacements.map((entry) => entry.kind)).toEqual([
+        'literal',
+        'regex',
+        'literal',
+        'regex',
+        'regex',
+        'regex',
+      ])
+      expect(serializePayloadReplaceContent(draft)).toEqual({ target: item.target, replacements })
     }
+    const edited = [...rules]
+      .reverse()
+      .map((item) => ({ ...item, replacements: [...item.replacements].reverse() }))
+    for (const [result, expected] of [
+      [writePayloads([{ replace: rules }])[0]!, rules],
+      [writePayloads([{ replace: edited }], { replace: rules })[0]!, edited],
+    ] as const) {
+      expect(result.error).toBeNull()
+      expect(JSON.parse(result.requests[0]!.body).replace).toEqual(expected)
+    }
+  })
+
+  test('editing replacement steps preserves explicit target defaults and empty model conditions', () => {
+    const saved = {
+      models: [
+        {
+          name: 'm',
+          headers: {},
+          match: [{}, { 'metadata.enabled': false, 'metadata.count': 0 }],
+          'not-match': [],
+          'not-exist': [],
+        },
+      ],
+      target: { role: 'system', all: false, positions: [1] },
+      replacements: [{ before: 'after' }],
+    }
+    const sibling = { ...saved, target: { role: 'developer', all: true, positions: [] } }
+    const edited = { ...saved, replacements: [{ pattern: '(a)', replacement: '$1' }] }
+    const [result] = writePayloads([{ replace: [edited, sibling] }], { replace: [saved, sibling] })
+    expect(result!.error).toBeNull()
+    expect(JSON.parse(result!.requests[0]!.body).replace).toEqual([edited, sibling])
+  })
+
+  test('future rules survive sibling edits in order, and cannot be added, changed or dropped by the form', () => {
+    const future = {
+      ...rule,
+      target: { role: 'future-role', all: true },
+      'new-field': { flag: false },
+    }
+    const futureEntry = {
+      ...rule,
+      replacements: [{ pattern: 'abc', replacement: '$1', flags: 'new' }],
+    }
+    const opaque = [future, null, futureEntry, future]
+    const previous = { replace: [rule, ...opaque] }
+    const edited = { ...rule, target: { role: 'system', all: true } }
+    const [saved] = writePayloads([{ replace: [edited, ...opaque] }], previous)
+    expect(saved!.error).toBeNull()
+    expect(JSON.parse(saved!.requests[0]!.body).replace).toEqual([edited, ...opaque])
+    for (const bad of [
+      opaque.slice(1),
+      [...opaque, future],
+      [...opaque].reverse(),
+      [{ ...future, extra: true }, ...opaque.slice(1)],
+    ]) {
+      const [blocked] = writePayloads([{ replace: [edited, ...bad] }], previous)
+      expect(blocked!.error).not.toBeNull()
+      expect(blocked!.requests).toEqual([])
+    }
+  })
+
+  test('switching target modes serializes only active fields and retains the other draft', () => {
+    const base = normalizePayloadReplaceContent(rule)
+    const paths = ['metadata.name', 'tools.#(type=="function")#.description']
+    const pathDraft = {
+      ...base,
+      target: { ...base.target, mode: 'paths' as const, paths, positions: '2, 4' },
+    }
+    expect(serializePayloadReplaceContent(pathDraft).target).toEqual({ paths })
+    const roleDraft = { ...pathDraft, target: { ...pathDraft.target, mode: 'developer' as const } }
+    expect(serializePayloadReplaceContent(roleDraft).target).toEqual({
+      role: 'developer',
+      positions: [2, 4],
+    })
+    expect(roleDraft.target.paths).toEqual(paths)
   })
 
   test('the wire representation uses only the selected target and leaves the editor draft intact', () => {
@@ -186,6 +280,10 @@ describe('payload user text replacement', () => {
   test('invalid target and replacement shapes fail before making any request', () => {
     const invalidRules = [
       { ...rule, target: { role: 'assistant', positions: [1] } },
+      ...[[], ['  '], ['a', ''], [null]].map((paths) => ({ ...rule, target: { paths } })),
+      { ...rule, target: { paths: ['a'], role: 'system', all: true } },
+      { ...rule, target: { paths: ['a'], positions: [1] } },
+      { ...rule, replacements: [{ pattern: 'abc', replacement: null }] },
       { ...rule, target: { role: 'user', all: true, positions: [1] } },
       ...[[], [0], [-1], [1.5], [Number.MAX_SAFE_INTEGER + 1]].map((positions) => ({
         ...rule,
@@ -206,22 +304,37 @@ describe('payload user text replacement', () => {
   test('invalid position drafts block save; whitespace sources and empty destinations remain valid', () => {
     const content = normalizePayloadReplaceContent(rule)
     for (const positions of ['0', '-1', '1.5', '1e2', '1, invalid']) {
-      expect(getPayloadReplaceIssues({ ...content, target: { all: false, positions } })).toContain(
-        'replacePositionsInvalid',
-      )
+      expect(
+        getPayloadReplaceIssues({
+          ...content,
+          target: { ...content.target, all: false, positions },
+        }),
+      ).toContain('replacePositionsInvalid')
     }
     expect(
-      getPayloadReplaceIssues({ ...content, target: { all: false, positions: '' } }),
+      getPayloadReplaceIssues({
+        ...content,
+        target: { ...content.target, all: false, positions: '' },
+      }),
     ).toContain('replacePositionsRequired')
     expect(
-      getPayloadReplaceIssues({ ...content, replacements: [{ from: ' \n', to: '' }] }),
+      getPayloadReplaceIssues({
+        ...content,
+        replacements: [{ kind: 'literal', from: ' \n', to: '' }],
+      }),
     ).toEqual([])
     expect(
-      getPayloadReplaceIssues({ ...content, replacements: [{ from: '', to: 'text' }] }),
+      getPayloadReplaceIssues({
+        ...content,
+        replacements: [{ kind: 'literal', from: '', to: 'text' }],
+      }),
     ).toContain('replaceSourceRequired')
     const invalidDraft = {
       models: rule.models,
-      ...serializePayloadReplaceContent({ ...content, target: { all: false, positions: '1.5' } }),
+      ...serializePayloadReplaceContent({
+        ...content,
+        target: { ...content.target, all: false, positions: '1.5' },
+      }),
     }
     expect(writePayloads([{ replace: [invalidDraft] }])[0]!.requests).toEqual([])
   })

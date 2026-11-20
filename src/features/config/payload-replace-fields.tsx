@@ -16,15 +16,19 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { PayloadFormField } from '@/features/config/payload-form-field'
 import { getPayloadReplacePreview } from '@/features/config/payload-replace-preview'
 import {
   type PayloadReplaceContent,
   type PayloadReplacementEntry,
-  getPayloadReplaceIssues,
 } from '@/lib/api/management/payload-replace'
 import { cn } from '@/lib/utils'
 
@@ -33,92 +37,37 @@ type PayloadReplaceDraft = {
   replacements: (PayloadReplacementEntry & { id: number })[]
 }
 
-function PayloadReplaceFields({
+function PayloadReplacementSteps({
   value,
   disabled,
   onChange,
 }: {
-  value: PayloadReplaceDraft
+  value: PayloadReplaceDraft['replacements']
   disabled: boolean
-  onChange: (value: PayloadReplaceDraft) => void
+  onChange: (value: PayloadReplaceDraft['replacements']) => void
 }) {
   const { t } = useTranslation()
   const id = useId()
   const [removingIndex, setRemovingIndex] = useState<number | null>(null)
   const afterRemovalFocus = useRef<string | null>(null)
   const [orderFeedback, setOrderFeedback] = useState('')
-  const multipleSteps = value.replacements.length > 1
-  const positionIssue = getPayloadReplaceIssues(value).find((issue) =>
-    issue.startsWith('replacePositions'),
-  )
+  const multipleSteps = value.length > 1
   const updateEntry = (index: number, patch: Partial<PayloadReplacementEntry>) => {
-    onChange({
-      ...value,
-      replacements: value.replacements.map((entry, entryIndex) =>
-        entryIndex === index ? { ...entry, ...patch } : entry,
-      ),
-    })
+    onChange(
+      value.map((entry, entryIndex) => (entryIndex === index ? { ...entry, ...patch } : entry)),
+    )
   }
   const moveEntry = (index: number, direction: number) => {
     const nextIndex = index + direction
-    if (nextIndex < 0 || nextIndex >= value.replacements.length) return
-    const replacements = [...value.replacements]
+    if (nextIndex < 0 || nextIndex >= value.length) return
+    const replacements = [...value]
     ;[replacements[index], replacements[nextIndex]] = [replacements[nextIndex], replacements[index]]
-    onChange({ ...value, replacements })
+    onChange(replacements)
     setOrderFeedback(t('configPage.payload.replace.stepMoved', { position: nextIndex + 1 }))
   }
 
   return (
     <>
-      <div className="grid min-w-0 gap-3 border-t pt-4">
-        <p className="text-label">{t('configPage.payload.replace.target')}</p>
-        <RadioGroup
-          value={value.target.all ? 'all' : 'positions'}
-          disabled={disabled}
-          aria-label={t('configPage.payload.replace.target')}
-          className="flex flex-col gap-2 sm:flex-row sm:gap-4"
-          onValueChange={(mode) =>
-            onChange({ ...value, target: { ...value.target, all: mode === 'all' } })
-          }
-        >
-          <label
-            htmlFor={`${id}-positions`}
-            className="text-body min-h-control-lg flex items-center gap-2"
-          >
-            <RadioGroupItem value="positions" id={`${id}-positions`} />
-            {t('configPage.payload.replace.selectedPositions')}
-          </label>
-          <label
-            htmlFor={`${id}-all`}
-            className="text-body min-h-control-lg flex items-center gap-2"
-          >
-            <RadioGroupItem value="all" id={`${id}-all`} />
-            {t('configPage.payload.replace.allUsers')}
-          </label>
-        </RadioGroup>
-        {!value.target.all ? (
-          <PayloadFormField
-            label={t('configPage.payload.replace.positions')}
-            required
-            error={positionIssue && t(`configPage.payload.ruleIssues.${positionIssue}`)}
-            hint={t('configPage.payload.replace.positionsHint')}
-          >
-            {(control) => (
-              <Input
-                {...control}
-                value={value.target.positions}
-                disabled={disabled}
-                className="font-mono sm:max-w-xs"
-                placeholder={t('configPage.payload.replace.positionsPlaceholder')}
-                onChange={(event) =>
-                  onChange({ ...value, target: { ...value.target, positions: event.target.value } })
-                }
-              />
-            )}
-          </PayloadFormField>
-        ) : null}
-      </div>
-
       <div className="grid min-w-0 gap-3 border-t pt-4">
         <div className="grid gap-1">
           <p className="text-label">{t('configPage.payload.replace.replacements')}</p>
@@ -134,7 +83,7 @@ function PayloadReplaceFields({
         >
           {multipleSteps && orderFeedback}
         </p>
-        {value.replacements.map((entry, index) => {
+        {value.map((entry, index) => {
           const entryLabel = t('configPage.payload.replace.entryTitle', { index: index + 1 })
           return (
             <div
@@ -146,6 +95,27 @@ function PayloadReplaceFields({
               <div className="flex items-center justify-between gap-2">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="text-label">{entryLabel}</span>
+                  <Select
+                    value={entry.kind}
+                    disabled={disabled}
+                    onValueChange={(kind) => {
+                      if (kind === 'literal' || kind === 'regex') updateEntry(index, { kind })
+                    }}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="w-auto max-w-full"
+                      aria-label={t('configPage.payload.replace.entryKind', { index: index + 1 })}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="literal">
+                        {t('configPage.payload.replace.literal')}
+                      </SelectItem>
+                      <SelectItem value="regex">{t('configPage.payload.replace.regex')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {entry.to.length === 0 && entry.from.length > 0 ? (
                     <span className="bg-muted text-muted-foreground text-meta rounded px-2 py-1">
                       {t('configPage.payload.replace.deletesText')}
@@ -170,7 +140,7 @@ function PayloadReplaceFields({
                         index: index + 1,
                       }),
                       icon: ArrowDown,
-                      disabled: disabled || index === value.replacements.length - 1,
+                      disabled: disabled || index === value.length - 1,
                       onSelect: () => moveEntry(index, 1),
                     },
                     {
@@ -188,15 +158,24 @@ function PayloadReplaceFields({
               <div className={cn(formGridClassName, 'items-start')}>
                 <PayloadFormField
                   controlId={`${id}-replacement-${index}`}
-                  label={t('configPage.payload.replace.from')}
-                  required
+                  label={t(
+                    entry.kind === 'regex'
+                      ? 'configPage.payload.replace.pattern'
+                      : 'configPage.payload.replace.from',
+                  )}
+                  required={entry.kind === 'literal'}
                   error={
-                    !entry.from.length
+                    entry.kind === 'literal' && !entry.from.length
                       ? t('configPage.payload.ruleIssues.replaceSourceRequired')
                       : null
                   }
-                  hint={index === 0 ? t('configPage.payload.replace.literalHint') : undefined}
-                  hintId={`${id}-literal-hint`}
+                  hint={
+                    entry.kind === 'regex'
+                      ? t('configPage.payload.replace.regexHint')
+                      : index === 0
+                        ? t('configPage.payload.replace.literalHint')
+                        : undefined
+                  }
                 >
                   {(control) => (
                     <Textarea
@@ -205,8 +184,17 @@ function PayloadReplaceFields({
                       disabled={disabled}
                       rows={2}
                       className="font-mono"
-                      aria-label={t('configPage.payload.replace.entryFrom', { index: index + 1 })}
-                      placeholder={t('configPage.payload.replace.fromPlaceholder')}
+                      aria-label={t(
+                        entry.kind === 'regex'
+                          ? 'configPage.payload.replace.entryPattern'
+                          : 'configPage.payload.replace.entryFrom',
+                        { index: index + 1 },
+                      )}
+                      placeholder={
+                        entry.kind === 'regex'
+                          ? '(item)-([0-9]+)'
+                          : t('configPage.payload.replace.fromPlaceholder')
+                      }
                       onChange={(event) => updateEntry(index, { from: event.target.value })}
                     />
                   )}
@@ -233,11 +221,13 @@ function PayloadReplaceFields({
           variant="outline"
           size="md"
           className="w-full sm:w-fit"
-          disabled={disabled || value.replacements.some((entry) => entry.from.length === 0)}
-          data-draft-missing={value.replacements.length === 0 || undefined}
+          disabled={
+            disabled || value.some((entry) => entry.kind === 'literal' && entry.from.length === 0)
+          }
+          data-draft-missing={value.length === 0 || undefined}
           onClick={() => {
-            const id = value.replacements.reduce((next, row) => Math.max(next, row.id + 1), 0)
-            onChange({ ...value, replacements: [...value.replacements, { id, from: '', to: '' }] })
+            const id = value.reduce((next, row) => Math.max(next, row.id + 1), 0)
+            onChange([...value, { id, kind: 'literal', from: '', to: '' }])
           }}
         >
           <Plus aria-hidden="true" />
@@ -279,13 +269,10 @@ function PayloadReplaceFields({
               onClick={() => {
                 if (removingIndex !== null) {
                   afterRemovalFocus.current =
-                    value.replacements.length > 1
-                      ? `${id}-replacement-${Math.min(removingIndex, value.replacements.length - 2)}`
+                    value.length > 1
+                      ? `${id}-replacement-${Math.min(removingIndex, value.length - 2)}`
                       : `${id}-add-replacement`
-                  onChange({
-                    ...value,
-                    replacements: value.replacements.filter((_, index) => index !== removingIndex),
-                  })
+                  onChange(value.filter((_, index) => index !== removingIndex))
                 }
                 setRemovingIndex(null)
               }}
@@ -313,6 +300,8 @@ function PayloadReplacePreview({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const preview = open ? getPayloadReplacePreview(text, rule.replacements) : null
+  const steps =
+    preview?.status === 'ready' || preview?.status === 'requiresCPA' ? preview.steps : []
   const messages = {
     incomplete: 'previewIncomplete',
     empty: 'previewEmpty',
@@ -358,11 +347,13 @@ function PayloadReplacePreview({
               {preview &&
                 (preview.status === 'ready'
                   ? preview.result || t('configPage.payload.replace.emptyResult')
-                  : t(`configPage.payload.replace.${messages[preview.status]}`))}
+                  : preview.status === 'requiresCPA'
+                    ? t('configPage.payload.replace.previewRegex', { index: preview.position })
+                    : t(`configPage.payload.replace.${messages[preview.status]}`))}
             </output>
           </div>
         </div>
-        {preview?.status === 'ready' ? (
+        {steps.length > 0 ? (
           <details className="group/steps">
             <summary className="text-label min-h-control-lg flex w-fit cursor-pointer items-center">
               <ChevronDown className="mr-2 size-4 group-open/steps:rotate-180" aria-hidden="true" />
@@ -372,7 +363,7 @@ function PayloadReplacePreview({
               className="mt-2 grid min-w-0 gap-3"
               aria-label={t('configPage.payload.replace.showSteps')}
             >
-              {preview.steps.map((step, index) => (
+              {steps.map((step, index) => (
                 <li key={index} className="grid min-w-0 gap-1">
                   <p className="text-meta flex flex-wrap gap-2">
                     <span>{t('configPage.payload.replace.entryTitle', { index: index + 1 })}</span>
@@ -395,4 +386,4 @@ function PayloadReplacePreview({
   )
 }
 
-export { type PayloadReplaceDraft, PayloadReplaceFields, PayloadReplacePreview }
+export { type PayloadReplaceDraft, PayloadReplacementSteps, PayloadReplacePreview }

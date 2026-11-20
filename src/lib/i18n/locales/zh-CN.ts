@@ -159,11 +159,12 @@ export const zhCN = {
       connectedAs: '已连接到 {{mode}}。',
       errors: {
         managementKeyRequired: '必须填写 management key。',
-        unsupportedApiVersion: {
-          title: '后端 Management API 版本过旧',
-          description:
-            '该后端仅提供旧版 Management API。请将 CLIProxyAPIHome 升级到支持 V8 Management API 的版本后重试。',
-        },
+        legacyApi: '此地址响应旧版管理 API。请连接提供 V8 管理接口的后端，或升级 CLIProxyAPIHome。',
+        routeUnavailable:
+          'V8 管理路由不可用。请核对服务地址和反向代理路径，并确认 Home 已配置管理密钥。',
+        unexpectedResponse: '此地址返回的内容无法识别为 V8 配置。请核对后端地址和反向代理路径。',
+        incompatibleConfigVersion: '后端报告的配置版本为 {{version}}，此控制台需要版本 8。',
+        unreachable: '无法连接管理服务。请检查主机、端口和网络连接。',
       },
     },
     embeddedPortal: {
@@ -1602,6 +1603,44 @@ export const zhCN = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Vertex 执行选项',
+        key: '当前密钥',
+        group: '分组默认值',
+        groupHint: '组内共 {{count}} 把密钥。每项设置会应用到继承该项的密钥。',
+        credentialProtocol: '凭据协议',
+        modelProtocol: '模型协议',
+        protocolHint: '模型协议为“自动”时沿用此设置。两者均为“自动”时，由 CPA 选择路由。',
+        location: 'OpenAPI 区域',
+        interactions: 'Interactions 请求',
+        nativeInteractions: '原生 Interactions',
+        bridge: '协议转换',
+        cpaDefault: 'CPA 默认（协议转换）',
+        inherit: '继承分组（{{value}}）',
+      },
+      pool: {
+        groupSize: '此分组共有 {{total}} 把密钥。',
+        group: '分组连接池',
+        key: '此密钥的连接池',
+        inherit: '沿用分组设置',
+        unconfigured: '未配置',
+        on: '启用连接池',
+        off: '关闭连接池',
+        parameters: '按字段覆盖',
+        forceOn: '对此密钥启用',
+        optOut: '对此密钥关闭',
+        groupHint: '影响组内所有沿用此设置的密钥。CPA 为每把密钥单独复用连接。',
+        defaults: '留空时使用 CPA 默认值，空闲超时为 300 秒，每台主机最多保留 2 条空闲连接。',
+        keyHint: '留空的字段沿用分组值。分组也留空时，使用 CPA 默认值。',
+        defaultOptIn: '分组未配置时，按字段覆盖会启用连接池。',
+        nonpositive: '任一字段为零或负数时，停止复用连接。',
+        timeout: '空闲超时',
+        maxIdle: '每台主机的最大空闲连接数',
+        unsupported: 'Home 返回的连接池配置格式无法识别，保存时会保留原值。',
+        invalidTimeout: '请输入时长，例如 45s、1m30s 或 0。',
+        invalidCount: '请输入有效范围内的整数。',
+        invalidSettings: '请检查标出的连接池字段。',
+      },
       disconnected: {
         title: '连接管理端运行时',
         description: '模型密钥来自 Management API。连接运行时后，才能查看或编辑模型服务密钥。',
@@ -1732,6 +1771,9 @@ export const zhCN = {
         modelSupportConfigUpdateHint: '允许此模型使用 Responses configuration_update。',
         modelImageSupportHint: '在模型目录中将此模型标记为图像模型。',
         modelUseMaxCompletionTokensHint: '向上游发送 max_completion_tokens，而不是 max_tokens。',
+        modelThinkingDisableType: '关闭思考时的 Claude thinking.type',
+        modelThinkingDisableHint:
+          '留空时使用 disabled。claude-sonnet-5-5 等模型使用 between_tools。',
         modelThinkingEnabled: '自定义思考能力',
         modelThinkingHint: '关闭时使用后端默认能力；开启后仅采用下方配置的能力。',
         requestScopedErrorAction: '处理动作',
@@ -1757,7 +1799,7 @@ export const zhCN = {
         disabled: '禁用',
         disabledHint: '停用后，该条目不会被网关用于上游请求。',
         disableCooling: '禁用冷却调度',
-        disableCoolingHint: '开启后，该模型密钥不会参与配额冷却调度。',
+        disableCoolingHint: '启用后，此凭据跳过常规冷却。匹配 force_cooldown 的错误仍会触发冷却。',
         disableCoolingModeInherit: '继承全局',
         disableCoolingModeEnabled: '开启（禁用冷却）',
         disableCoolingModeDisabled: '关闭（参与冷却）',
@@ -2482,7 +2524,8 @@ export const zhCN = {
         usingApi: '使用官方 API（using_api）',
         usingApiHint: '开启后使用 xAI 官方 API；关闭时使用 Grok CLI chat-proxy。',
         coolingSchedule: '冷却调度',
-        coolingScheduleHint: '配置该凭证在配额受限时是否参与冷却调度，或继承全局策略。',
+        coolingScheduleHint:
+          '选择此凭据的常规冷却策略，或继承全局设置。匹配 force_cooldown 的错误仍会触发冷却。',
         coolingModeInherit: '继承全局策略',
         coolingModeEnabled: '参与冷却调度 (disable_cooling = false)',
         coolingModeDisabled: '禁用冷却调度 (disable_cooling = true)',
@@ -2925,15 +2968,29 @@ export const zhCN = {
         group: '范围',
         groupPlaceholder: '选择范围',
         credential: '账号凭证',
-        credentialSearchPlaceholder: '搜索凭证名称、Provider 或 ID',
+        copyCredentialId: '复制凭证 ID {{id}}',
+        credentialIdCopied: '凭证 ID 已复制',
+        credentialState: {
+          disabled: '已禁用',
+          unavailable: '暂不可用',
+          deleted: '凭证已删除',
+          unresolved: '无法确认凭证',
+        },
+        channelSearchPlaceholder: '搜索范围、凭证名称、提供商或 ID',
+        channelSearchEmpty: '没有匹配的凭证范围。',
+        modelGroupSearchEmpty: '没有匹配的模型范围。',
+        credentialCandidatesDenied: '当前连接无权读取可绑定的凭证。',
+        credentialCandidatesFailed: '暂时无法读取可绑定的凭证。',
+        loadingCredentialMetadata: '正在读取凭证名称和状态…',
+        credentialMetadataUnavailable: '凭证名称和状态暂时无法读取，仍可按 ID 管理绑定。',
+        credentialSearchPlaceholder: '搜索凭证名称、提供商或 ID',
         credentialEmpty: '当前没有可选择的账号凭证。',
         credentialSearchEmpty: '没有匹配的账号凭证。',
         credentialAlreadyBound: '已绑定',
         credentialUnavailable: '不可用',
         credentialSelectedCount: '已选 {{count}} 个凭证',
         credentialFilteredCount: '当前 {{count}} 个结果',
-        credentialSelectHint:
-          '可一次选择多个凭证；列表仅展示具有明确 Auth ID 的凭证。已绑定或不可用的凭证不可重复选择。',
+        credentialSelectHint: '可一次选择多个凭证。已绑定、已禁用或暂不可用的凭证无法选择。',
         authId: '凭证 ID',
         model: '模型',
         modelId: '模型 ID',
@@ -2959,7 +3016,6 @@ export const zhCN = {
         channelEmpty: '当前没有凭证范围。',
         modelEmpty: '当前没有模型范围。',
         detailCount: '{{count}} 个绑定',
-        groupId: '范围 ID：{{id}}',
         noDetails: '尚未添加绑定。',
         detailChannels: '凭证范围',
         detailChannelsHint:
@@ -3112,10 +3168,43 @@ export const zhCN = {
         user: '确认删除用户 "{{name}}"？这不会自动删除全局凭证。',
         key: '确认删除客户端密钥 {{name}}？关联客户端会立即失效。',
         group: '确认删除范围 "{{name}}"？已绑定的密钥会失去该范围引用。',
+        credentialBinding: '从「{{group}}」移除凭证「{{name}}」的绑定？',
         detail: '确认删除绑定 "{{name}}"？',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: '表达式为空时，CPA 会跳过这条规则。',
+      literalReplacements: '字面量替换',
+      patternReplacements: '正则替换',
+      literalHint: '将匹配到的原文替换为指定文本。替换内容留空会删除匹配片段。',
+      patternHint:
+        '使用 Go RE2 语法。规则顺序影响重叠匹配，用 $1 或 ${1} 引用捕获组，替换内容留空会删除匹配片段。',
+      addLiteral: '添加原文',
+      addPattern: '添加表达式',
+      literalRow: '第 {{index}} 条原文',
+      patternRow: '第 {{index}} 条正则表达式',
+      replacement: '替换为',
+      replacementRow: '第 {{index}} 条替换内容',
+      emptyDeletes: '留空即删除匹配片段',
+      missing: '请填写要匹配的原文或表达式。',
+      duplicate: '原文与其他行重复。每个原文只能配置一次。',
+      incomplete: '请补全替换规则并处理重复原文后再保存。',
+      unsupported: '此字段包含编辑器无法表示的规则。其他设置仍可保存。',
+      up: '上移',
+      down: '下移',
+      remove: '移除',
+      removeRow: '移除第 {{index}} 条规则',
+      removeHint: '保存后移除生效。',
+    },
     configPage: {
+      compatibility: {
+        unavailable: '此设置的管理接口不可用。请核对后端版本和代理路径，草稿已保留。',
+        unsupported: '当前后端不支持此项更改，草稿已保留。',
+        rejected: '后端拒绝了此值。草稿已保留，请检查后重试。',
+        failed: '未能确认保存结果，草稿已保留，可重试。',
+        discardField: '撤销此项更改',
+        saveFailed: '未能保存「{{field}}」，草稿已保留。',
+      },
       disconnected: {
         title: '连接管理端运行时',
         description: '系统配置来自 Management API。连接运行时后，才能读取、编辑和保存配置。',
@@ -3140,10 +3229,12 @@ export const zhCN = {
         reload: '重新加载',
         save: '保存',
         viewChanges: '查看变更',
+        restoreDefault: '恢复默认',
         showSensitive: '显示敏感字段',
         hideSensitive: '隐藏敏感字段',
       },
       status: {
+        unknown: '未知',
         clean: '无未保存修改',
         visualChangeCount: '{{count}} 项可视化变更',
         enabled: '已启用',
@@ -3161,12 +3252,18 @@ export const zhCN = {
         server: {
           title: '服务运行',
           shortTitle: '服务',
-          description: '配置监听端口、绑定地址、主机名校验、可信代理和商业版模式等基础服务行为。',
+          description: '配置监听端口、绑定地址、RESP 客户端 IP 白名单、可信代理和商业版模式。',
+        },
+        cpaServer: {
+          title: 'CPA 节点服务设置',
+          shortTitle: 'CPA 节点',
+          description: 'Home 将这些设置下发给连接的 CPA 节点。',
         },
         discovery: {
           title: '服务发现',
           shortTitle: '发现',
-          description: '配置 mDNS 服务发现广播：服务名、服务类型、子类型、网卡范围与接入控制。',
+          description:
+            'Home 将这些设置下发给 CPA 节点。节点只广播模型 API，管理端点始终不参与广播。',
         },
         tls: {
           title: 'TLS',
@@ -3191,17 +3288,18 @@ export const zhCN = {
         oauthRules: {
           title: 'OAuth 模型规则',
           shortTitle: 'OAuth 规则',
-          description: '配置 OAuth 与文件凭证的排除模型、客户端可见模型别名和按请求范围错误规则。',
+          description: '配置 OAuth 与文件凭证的模型排除规则、别名、上下文窗口和请求错误规则。',
         },
         oauthProviders: {
           title: 'OAuth 提供商',
           shortTitle: '提供商',
-          description: '配置 OAuth 凭证目录及 Codex、Antigravity、Devin 等提供商专属参数。',
+          description:
+            '配置 OAuth 凭证目录、自动刷新并发数及 Codex、Antigravity、Devin 等提供商专属参数。',
         },
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description: '配置 Devin OAuth 提供商的系统提示词敏感词混淆规则。',
+          description: '过滤 Devin 系统提示词中的整行或替换匹配片段。',
         },
         liveMediaRelay: {
           title: 'Codex · 实时媒体中继',
@@ -3213,7 +3311,7 @@ export const zhCN = {
           title: '日志与统计',
           shortTitle: '日志',
           description:
-            '控制 Debug 诊断、请求日志、文件日志、用量统计、日志保留、pprof 和 Redis 用量队列。',
+            '配置 Debug 诊断、请求日志、文件日志、日志保留、pprof 和 Redis 用量队列，并查看用量统计状态。',
         },
         network: {
           title: '网络代理',
@@ -3237,10 +3335,36 @@ export const zhCN = {
           description:
             '控制在途请求观测快照的采集频率与内存上限；stale-after 必须不小于 snapshot-interval 的 3 倍。',
         },
+        client: {
+          title: '客户端兼容性',
+          shortTitle: '客户端',
+          description: '配置 CPA 节点为客户端提供的模型工具和会话回放行为。',
+        },
+        codexSearchCache: {
+          title: 'Codex 网页搜索缓存',
+          shortTitle: '搜索缓存',
+          description:
+            'Codex Responses 会话经 Claude 上游执行搜索时，CPA 可补回对话历史中缺失的搜索结果。',
+        },
+        claudeExecution: {
+          title: 'Claude 执行设置',
+          shortTitle: 'Claude 执行',
+          description: '设置 CPA 如何处理 Claude 拒答和会话中的日期。',
+        },
+        claudeRequestHeaders: {
+          title: 'Claude 请求头策略',
+          shortTitle: 'Claude 请求头',
+          description: '调整 CPA 如何识别原生 Claude Code 客户端，以及发往 Claude 的默认请求。',
+        },
+        codexTransport: {
+          title: 'Codex 传输压缩',
+          shortTitle: 'Codex 压缩',
+          description: '分别控制 CPA 发给上游的 HTTP 请求体压缩和 WebSocket 连接的压缩协商。',
+        },
         upstream: {
           title: '上游行为',
           shortTitle: '上游',
-          description: '控制发往 Codex、Claude、xAI 上游的请求伪装、冷却与流式行为。',
+          description: '配置发往 Codex、Claude、xAI 上游的请求伪装、压缩、冷却和流式行为。',
         },
         headers: {
           title: '请求头伪装',
@@ -3256,7 +3380,7 @@ export const zhCN = {
         antigravity: {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
-          description: '配置 Antigravity 反重力网关行为、敏感词混淆、额度与连接池。',
+          description: '设置 TOS 违规后的暂停时长、系统指令的文本处理规则、额度与连接池。',
         },
         multimedia: {
           title: '多媒体',
@@ -3274,6 +3398,10 @@ export const zhCN = {
           description:
             '下发给下游 CPA 节点的监听端口（1~65535）。修改后会持久化并下发，已运行的 CPA 需重启进程后生效。',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: '用量统计',
+          description: 'Home 固定启用用量统计。这里显示当前后端回读的状态。',
         },
         loggingToFile: {
           label: '文件日志',
@@ -3353,8 +3481,9 @@ export const zhCN = {
             '冷却凭证恢复的最大等待时间（秒）。当所有凭证都在冷却时，最多等待该时间以让最早恢复的凭证重新可用并进入下一轮重试。',
         },
         disableCooling: {
-          label: '禁用冷却调度',
-          description: '开启后全局禁用认证与模型失败后的冷却窗口；所有凭证跳过失败退避调度。',
+          label: '禁用常规冷却',
+          description:
+            '开启后，Home 跳过由请求错误和额度限制触发的常规冷却。供应商或凭据可覆盖此设置。匹配 force_cooldown 的错误仍会触发冷却。',
         },
         forceModelPrefix: {
           label: '强制模型前缀匹配',
@@ -3369,6 +3498,11 @@ export const zhCN = {
           description: '选择认证通道并勾选需要从 OAuth 或文件凭证中排除的模型。',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
+        oauthModelSettingsJson: {
+          label: 'OAuth 模型设置',
+          description:
+            '为 OAuth 模型设置上下文上限。匹配已有别名的设置优先于仅匹配原模型名的设置。API Key 模型使用各自的配置。',
+        },
         oauthModelAliasJson: {
           label: '模型别名',
           description: '按通道配置客户端可见模型别名，以及别名对应的上游模型名。',
@@ -3380,9 +3514,11 @@ export const zhCN = {
           description: '按模型和协议改写请求参数与消息文本。',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Antigravity 字面量替换' },
+        antigravityPatternReplacements: { label: 'Antigravity 正则替换' },
         antigravitySensitiveWordsJson: {
-          label: '敏感词混淆',
-          description: '在 Antigravity 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+          label: '敏感词插入零宽字符',
+          description: 'Antigravity 会在系统指令中命中的词语内部插入零宽字符。',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -3391,8 +3527,9 @@ export const zhCN = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: '允许的 Host 请求头',
-          description: '逐行填写允许访问的 HTTP Host；空数组表示不限制。',
+          label: 'RESP 客户端 IP 白名单',
+          description:
+            '限制哪些客户端 IP 可以连接 Home 的 RESP 服务。留空允许任意 IP，所有连接都必须通过双向 TLS（mTLS）认证。',
         },
         serverTrustedProxiesJson: {
           label: '受信代理',
@@ -3403,23 +3540,50 @@ export const zhCN = {
           label: '商业化模式',
           description: '开启后启用面向商业部署的服务端行为约束。',
         },
+        serverMaxRequestBodyBytes: {
+          label: '请求体上限（字节）',
+          description: '超过上限的请求会收到 HTTP 413。留空或设为 0 及以下表示不限大小。',
+          placeholder: '默认（不限大小）',
+        },
+        serverResponseCompressionEnabled: {
+          label: '响应压缩',
+          description:
+            '默认开启。客户端支持时，CPA 使用 zstd 或 gzip 压缩 HTTP 响应，包括 SSE 流。WebSocket 升级请求跳过这项 HTTP 压缩。',
+        },
+        serverResponseCompressionMinBytes: {
+          label: '压缩门槛（字节）',
+          description:
+            '此门槛仅用于非流式响应，小于门槛时直接发送。留空或设为 0 及以下使用 1024 字节。',
+          placeholder: '默认（1024 字节）',
+        },
+        serverShutdownTimeout: {
+          label: '关闭等待时间（秒）',
+          description:
+            'CPA 收到退出信号后，最多等待这么久让进行中的 HTTP 请求完成。留空或设为 0 及以下会立即关闭。',
+          placeholder: '默认（立即关闭）',
+        },
+        serverGithubToken: {
+          label: 'GitHub 令牌',
+          description:
+            '受信任的 CPA 节点使用此令牌访问 GitHub。清除后，节点可使用环境变量 GITHUB_TOKEN。',
+        },
         discoveryEnabled: {
           label: '启用服务发现',
-          description: '开启后通过 mDNS 广播本实例，便于局域网内的 CPA 自动发现。',
+          description: '允许局域网客户端通过 mDNS 发现 CPA 节点的 API。',
         },
         discoveryServiceName: {
           label: '服务名',
-          description: 'mDNS 广播使用的服务实例名。',
-          placeholder: 'CLIProxyAPIHome',
+          description: '节点会在名称后附加短 ID。留空时使用 CPA 前缀，例如 CPA-8F3B。',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: '服务类型',
           description: 'mDNS 服务类型（service type），通常保持默认值。',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: '服务子类型',
-          description: '逐行填写附加的 mDNS subtype，用于更细粒度的发现过滤。',
+          description: '选择要广播的 API 协议子类型。留空使用 CPA 的默认列表。',
         },
         discoveryInterfacesIncludeJson: {
           label: '网卡包含列表',
@@ -3430,12 +3594,9 @@ export const zhCN = {
           description: '逐行填写不参与广播的网卡名。',
         },
         discoveryAuthRequired: {
-          label: '发现需要认证',
-          description: '开启后在发现响应中标记需要认证才能接入。',
-        },
-        discoveryAdvertiseManagement: {
-          label: '广播管理端',
-          description: '开启后在发现广播中附带管理端接入信息。',
+          label: '在广播中声明 API 需要认证',
+          description:
+            '默认开启。CPA 在发现记录中用 auth=1 提示客户端需要凭据，关闭后广播 auth=0。此设置只改变广播内容。',
         },
         managementBaseUrl: {
           label: '管理端 Base URL',
@@ -3590,6 +3751,20 @@ export const zhCN = {
           label: '粘性会话',
           description: '开启后同一会话优先路由到同一凭证。',
         },
+        sessionAffinityRebindOn: {
+          label: '会话重绑定策略',
+          description: '此策略仅在粘性会话开启时生效。',
+          description_any: '开启粘性会话后，故障切换时会将会话绑定到新凭证。后续请求沿用新凭证。',
+          description_quota:
+            '开启粘性会话后，临时故障只让当前请求换用其他凭证，后续请求仍沿用原绑定。额度、鉴权或模型支持问题可触发重绑。',
+          description_never:
+            '开启粘性会话后，绑定有效期间只使用原凭证。凭证不可用时，Home 会重试该凭证或返回错误。绑定过期后可重新选择。',
+          options: {
+            any: '切换即重绑（默认）',
+            quota: '按错误类型重绑',
+            never: '保持原绑定',
+          },
+        },
         sessionAffinityTtl: {
           label: '粘性会话有效期',
           description: '粘性会话绑定的有效时长（Go duration）；留空恢复后端默认。',
@@ -3597,7 +3772,8 @@ export const zhCN = {
         },
         sessionAffinitySubagents: {
           label: '子代理粘性会话',
-          description: '开启后子代理请求也参与粘性会话路由。',
+          description:
+            '默认开启，仅在主粘性会话开启时生效。未绑定的子会话可继承父会话在同一供应商、同一模型上的凭证。Guardian 可跨模型继承父会话最近选用且仍可用的凭证。关闭后，未绑定的子会话按常规方式选择凭证，Home 停止为 Guardian 记录新的父会话选择。已有子会话绑定和 fork 行为继续生效。',
         },
         streamingKeepaliveSeconds: {
           label: '流式保活间隔 (秒)',
@@ -3657,6 +3833,97 @@ export const zhCN = {
           label: 'Codex 响应引导',
           description: '开启后允许对 Codex 响应施加 steering 指令。',
         },
+        clientClaudeShowCodexCommentary: {
+          label: '向 Claude 客户端显示 Codex 进度',
+          description:
+            '开启后，Claude 客户端可看到 Codex 的公开进度消息，并在后续对话中回放。推理摘要仍显示为思考内容。',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: '服务端拒答回退',
+          description:
+            'Claude 模型拒答时，允许 Anthropic 为支持此功能的伪装请求尝试回退。请求或载荷规则已提供 fallbacks 时，沿用已有设置。',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: '会话日期固定天数',
+          description:
+            'Home KV 会持久保存会话日期，忽略此值。CPA 使用内存时，留空为 7 天，0 或负数为 1 小时。',
+          placeholder: '内存模式默认 7 天',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: '附加原生入口',
+          description:
+            '在内置入口之外添加名称。CPA 还会检查其他客户端特征，确认是原生 Claude Code 后才会透传。',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: '移除的 Anthropic-Beta 标记',
+          description: 'CPA 先从请求头移除指定标记，再处理追加列表。',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: '追加的 Anthropic-Beta 标记',
+          description:
+            'CPA 按列表顺序将缺少的标记追加到请求头末尾。自定义网关上的凭据级 Anthropic-Beta 请求头优先。',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: '注入诊断字段',
+          description:
+            '默认向兼容的 Anthropic 官方伪装请求体写入 diagnostics，并附加对应的 cache-diagnosis 标记。',
+        },
+        upstreamClaudeClientRequestId: {
+          label: '客户端请求 ID',
+          description: '控制发往 Claude 的 x-client-request-id。凭据中单独设置的请求头优先。',
+          placeholder: '默认（生成请求 ID）',
+          description_on:
+            '默认在官方 CLI 请求中生成新 ID，已识别的原生客户端保留传入的 ID。凭据级请求头优先。',
+          description_passthrough: '只转发现有的请求 ID。请求没有 ID 时留空。凭据级请求头优先。',
+          description_off: '省略默认请求 ID。凭据中单独设置的请求头仍然生效。',
+          description_unknown:
+            '当前界面无法识别 Home 保存的值。编辑其他设置时会保留原值，也可在这里选择新模式或恢复默认。',
+          unknown: '已保存「{{value}}」',
+          options: { on: '生成请求 ID', passthrough: '仅透传', off: '关闭' },
+        },
+        clientCodexEnableApplyPatch: {
+          label: '扩展 apply_patch 工具支持',
+          description:
+            '默认向 Codex 客户端标注模型原生的 freeform 能力。开启后，还会标注所有候选执行器都支持 apply_patch 的模型。',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: '缓存搜索结果',
+          description: '默认关闭。开启后，CPA 会保存当前会话的搜索结果，供后续回放。',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: '缓存有效期',
+          description:
+            '命中后重新计时。可填整数秒或时长，例如 1800、30m 或 1h30m。留空或填 0 使用 24 小时。',
+          placeholder: '默认（24 小时）',
+          invalid: '请输入非负整数秒或有效时长，例如 1800 或 30m。',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: '内存缓存条数上限',
+          description:
+            '留空或填 0 使用 1024 条。此上限用于 CPA 内存缓存，Home KV 按有效期清理记录。',
+          placeholder: '默认（1024 条）',
+          invalid: '请输入非负整数，或留空恢复默认。',
+        },
+        upstreamCodexRequestCompression: {
+          label: '压缩 Codex 上游请求体',
+          description:
+            '默认关闭。发往官方 ChatGPT Codex 接口的常规 OAuth 请求可使用 zstd。API Key、自定义上游及「使用 ChatGPT 登录」请求使用原始请求体。遇到 HTTP 400 或 415 时会以原始请求体重试一次。',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: '请求体压缩门槛（字节）',
+          description: '达到门槛才压缩。留空、0 或负数使用 1024 字节。',
+          placeholder: '默认（1024 字节）',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'WebSocket 压缩',
+          description: '默认开启。CPA 在 Codex 的上下游 WebSocket 连接上协商 permessage-deflate。',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Codex 登录标识',
+          description:
+            'CPA 将此值用于「使用 ChatGPT 登录」的 agent_name_hint 和 API 请求的 User-Agent 前缀。留空使用 CLIProxyAPI。',
+          placeholder: '默认（CLIProxyAPI）',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: '多代理优化 V2',
           description: '开启后客户端对 Codex 多代理请求应用 V2 优化。',
@@ -3713,6 +3980,12 @@ export const zhCN = {
           label: 'xAI 注入 X Search',
           description: '开启后向 xAI 上游请求注入 X Search 能力。',
         },
+        oauthAutoRefreshWorkers: {
+          label: 'OAuth 自动刷新并发数',
+          description:
+            'Home 同时自动刷新的 OAuth 凭证数。留空、0 或负整数使用默认值 16。保存后立即生效，正在进行的刷新会继续完成。',
+          placeholder: '默认（16）',
+        },
         oauthAuthDir: {
           label: 'OAuth 凭证目录',
           description: 'OAuth 文件凭证的存储目录。',
@@ -3755,15 +4028,25 @@ export const zhCN = {
           description:
             'JSON 数组配置 STUN/TURN 服务器。注意：JSON 读回会遮蔽 username/credential，只有 urls 完全不变的条目才保留既有密钥，改动 urls 需重新填写密钥。',
         },
+        devinLiteralReplacements: { label: 'Devin 字面量替换' },
+        devinPatternReplacements: { label: 'Devin 正则替换' },
         devinSensitiveWordsJson: {
-          label: 'Devin 敏感词混淆',
-          description: '在 Devin 系统提示词匹配项中插入零宽字符，降低上游精确关键词检测。',
+          label: '按敏感词删除整行',
+          description:
+            'Devin 会删除系统提示词中包含这些词语的整行。已由替换规则处理的匹配片段不会触发删行。',
         },
         oauthRequestScopedErrorsJson: {
           label: '按请求范围错误规则',
           description:
             '按 provider 键控的错误处理规则，每条规则形状为 {status, match[], match-regexr[], action}。',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'TOS 违规后的暂停时长',
+          description:
+            '仅当 Google RPC 返回 403 PERMISSION_DENIED 且 ErrorInfo.reason 为 TOS_VIOLATION 时，Home 才按此时长暂停调度整个 Antigravity 凭证池。可填 30m 或 1h30m，填 0 关闭，留空恢复默认。',
+          placeholder: '0（默认关闭）',
+          invalid: '请输入有效的正时长，如 30m 或 1h30m，或填 0 关闭。',
         },
         antigravityCredits: {
           label: 'Antigravity 额度',
@@ -3817,16 +4100,43 @@ export const zhCN = {
         'fill-first': '优先填满',
         unknown: '未知',
       },
+      token: {
+        keep: '已设置，留空保留',
+        enter: '输入令牌',
+        pendingClear: '保存后清除',
+        clear: '清除令牌',
+        undoClear: '撤销清除',
+        setting: '设置令牌',
+        replacing: '替换令牌',
+        removing: '清除已保存的令牌',
+      },
       nullableBoolean: {
+        defaultOff: '默认关闭',
+        defaultOn: '默认开启',
         unset: '未设置（默认）',
         enabled: '启用',
         disabled: '禁用',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: '每行一个入口名称，匹配时忽略大小写。',
+          count: '{{count}} 个入口',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: '每行一个标记，按名称精确匹配，区分大小写。',
+          count: '{{count}} 个标记',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: '每行一个标记，保留大小写和顺序。',
+          count: '{{count}} 个标记',
+        },
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: '每行一个允许的 Host，保存时会过滤空行。',
-          count: '已配置 {{count}} 个 Host',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: '每行填写一个 IPv4 或 IPv6 地址。',
+          count: '已配置 {{count}} 个 IP 地址',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -3834,7 +4144,7 @@ export const zhCN = {
           count: '已配置 {{count}} 个受信代理',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: '每行一个 mDNS subtype，保存时会过滤空行。',
           count: '已配置 {{count}} 个子类型',
         },
@@ -3996,7 +4306,7 @@ export const zhCN = {
         booleanTrue: 'true',
         booleanFalse: 'false',
         addRuleTitle: '选择请求改写意图',
-        addRuleDescription: '选择填充、覆写、用户文本替换或移除；已有规则时可进入对应分区。',
+        addRuleDescription: '选择填充、覆写、替换文本或移除参数。',
         addRule: '添加另一条规则',
         draftBlockingHint: '完成当前规则后，可继续添加新的规则。',
         viewExistingRules: '查看已有 {{count}} 条',
@@ -4044,7 +4354,6 @@ export const zhCN = {
           discardTitle: '放弃新增规则？',
           discardDescription: '本条规则尚未保存，放弃后可重新添加。',
           executionPosition: '第 {{position}} 个执行',
-          selectedUsers: '用户消息序号 {{positions}}',
           valueMode: '参数填写方式',
           typedMode: '按类型填写',
           rawMode: '按 JSON 填写',
@@ -4086,6 +4395,34 @@ export const zhCN = {
           pathRequired: '路径不能为空。',
         },
         replace: {
+          targets: {
+            user: '用户消息（user）',
+            system: '系统消息（system）',
+            developer: '开发者消息（developer）',
+            paths: 'GJSON 路径',
+          },
+          addPath: '添加 GJSON 路径',
+          removePath: '移除第 {{index}} 条 GJSON 路径',
+          pendingConfig: '待保存的配置',
+          savedConfig: '已保存的配置',
+          previewRegex: '第 {{index}} 步使用 Go RE2。此步及后续结果请在 CPA 的实际请求中验证。',
+          regexHint:
+            '使用 Go RE2 语法，替换文本可用 $1 或 ${1} 引用捕获组。CPA 会跳过空表达式或无效表达式所在的步骤。',
+          entryPattern: '第 {{index}} 步正则表达式',
+          pattern: '正则表达式',
+          regex: 'Go RE2 正则',
+          literal: '字面量',
+          entryKind: '第 {{index}} 步匹配方式',
+          rolePositions: '{{role}} · 第 {{positions}} 条消息',
+          allRoleMessages: '{{role}} · 全部消息',
+          pathSummary: 'GJSON 路径（{{count}} 条）',
+          pathEntry: '第 {{index}} 条 GJSON 路径',
+          pathsHint:
+            '路径从上游请求根节点开始。CPA 只处理已有的字符串字段，每条规则对同一实际路径只处理一次。',
+          systemHint:
+            '顶层系统指令算作一条 system 消息。已合并到系统消息的 developer 文本应选择 system。',
+          allMessages: '该角色的全部消息',
+          messageScope: '消息范围',
           actionSummary: '{{from}} → {{to}}',
           deleteSummary: '删除 {{from}}',
           moveStepUp: '提前一步',
@@ -4096,12 +4433,12 @@ export const zhCN = {
           showSteps: '查看逐步结果',
           unchanged: '本步未改变文本',
 
-          target: '目标用户消息',
+          target: '替换目标',
           selectedPositions: '按序号选择',
-          allUsers: '全部用户消息',
           positions: '消息序号',
           positionsPlaceholder: '例如 1, 2',
-          positionsHint: '按最终上游请求中的用户消息从 1 编号。没有可替换文本的消息也计入。',
+          positionsHint:
+            '在最终上游请求中，从 1 开始按该角色的消息计数。没有可替换文本的消息也计入。',
           replacements: '替换内容',
           entryTitle: '第 {{index}} 步',
           deletesText: '删除匹配文本',
@@ -4115,19 +4452,20 @@ export const zhCN = {
           entryFrom: '第 {{index}} 步查找文本',
           entryTo: '第 {{index}} 步替换为',
           fromPlaceholder: '要精确匹配的文字',
-          toPlaceholder: '留空删除匹配文字，保留消息',
+          toPlaceholder: '留空删除匹配的文本',
           addEntry: '添加一项替换',
           literalHint: '按字面匹配，区分大小写，保留空格和换行。',
           deleteDescription: '保存配置后生效。',
           confirmDelete: '确认删除',
-          previewTitle: '预览替换效果',
-          previewHint: '仅预览本条规则，忽略模型、协议和消息序号。',
+          previewTitle: '用样例文本试算',
+          previewHint:
+            '样例按顺序计算字面量替换。模型条件、消息角色、序号和 GJSON 路径由 CPA 在实际请求中匹配。',
           previewRule: '测试规则',
           previewInput: '示例文本',
-          previewOutput: '替换后文本',
+          previewOutput: '样例结果',
           previewPlaceholder: '输入示例文本',
           previewTooLarge: '预览内容过长。请缩短示例文本或减少替换步骤。',
-          previewIncomplete: '先填写所有查找文本，再查看预览。',
+          previewIncomplete: '请补全字面量查找文本，再试算样例。',
           previewEmpty: '输入示例文本查看结果。',
           emptyResult: '（空文本）',
           ruleSummary: '{{models}} 个模型 · {{count}} 个替换步骤',
@@ -4139,7 +4477,8 @@ export const zhCN = {
             '规则与替换项均从上到下执行，后一步会继续处理前一步的结果。不同匹配范围请添加另一条规则。',
         },
         ruleIssues: {
-          replacePositionsRequired: '请填写消息序号，或选择全部用户消息。',
+          replacePathsRequired: '请为每行填写非空的 GJSON 路径。',
+          replacePositionsRequired: '请填写消息序号，或选择该角色的全部消息。',
           replacePositionsInvalid: '请修正消息序号，使用从 1 开始的整数，例如 1, 2。',
           replaceReplacementRequired: '至少添加一个替换步骤。',
           replaceSourceRequired: '请填写查找文本。',
@@ -4149,7 +4488,7 @@ export const zhCN = {
           paramPathRequired: '请输入参数的 JSON 路径。',
         },
         addRuleActions: {
-          replace: '替换用户文本',
+          replace: '替换文本',
           default: '按类型填写',
           'default-raw': 'Raw JSON',
           override: '按类型填写',
@@ -4172,8 +4511,9 @@ export const zhCN = {
         },
         sections: {
           replace: {
-            title: '用户文本替换',
-            description: '修改最终上游请求中 user 的已有文本，在覆写后、移除参数前执行。',
+            title: '文本替换',
+            description:
+              '替换最终上游请求中指定消息或字符串字段的文本，在参数覆写之后、参数移除之前执行。',
           },
           default: {
             title: '默认填充',
@@ -4198,15 +4538,34 @@ export const zhCN = {
         },
       },
       validation: {
+        optionalInteger: '请输入有效范围内的整数，或留空使用默认值。',
         invalidField: '请填写有效值。',
+        editConflict: '记录已变更、已删除或无法唯一匹配。请重新加载后再编辑。',
         runtimeChanged: '正在编辑的配置已在服务端更新。请重新加载后再编辑。',
         jsonParseError: 'JSON 无法解析：{{message}}',
         summary: '{{count}} 个字段需要处理',
+      },
+      modelSettings: {
+        provider: 'OAuth 提供商',
+        add: '添加模型设置',
+        empty: '{{provider}} 尚未配置模型设置。',
+        name: '原模型名',
+        nameRequired: '请输入原模型名。',
+        alias: '已有别名（可选）',
+        limit: '上下文上限（token）',
+        defaultLimit: '留空或填 0 使用模型默认值',
+        invalidLimit: '请输入有效范围内的非负整数。',
+        removeRow: '移除 {{model}} 的模型设置',
       },
       json: {
         remove: '移除',
         unsupportedStructure: '当前配置包含暂不支持可视化编辑的结构。',
         emptyRows: '当前没有规则。',
+        aliasChannel: '别名通道',
+        customChannel: '自定义渠道',
+        moveAlias: '移动别名',
+        vertexProtocol: 'Vertex 协议',
+        vertexModes: { auto: '自动', native: '原生', openapi: 'OpenAPI' },
         addAlias: '添加别名',
         columns: {
           channel: 'Channel',

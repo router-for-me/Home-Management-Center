@@ -222,8 +222,327 @@ const credentialForm = () =>
     ),
   )
 
+async function renderConfig(rawConfig: Record<string, unknown>) {
+  const { ConfigWorkbenchPage } = await import('../../src/features/config/config-workbench-page')
+  const { normalizeConfigValues } = await import('../../src/lib/api/management/config')
+  const { TooltipProvider } = await import('../../src/components/ui/tooltip')
+  client.setQueryData(['management-config', 'http://forms.test', 'forms-session'], {
+    fetchedAt: '2026-01-01T00:00:00Z',
+    rawConfig,
+    structured: normalizeConfigValues(rawConfig),
+  })
+  await render(React.createElement(TooltipProvider, {}, React.createElement(ConfigWorkbenchPage)))
+}
+
 const scenario = process.argv[2]
-if (scenario === 'plugin-loading') {
+if (scenario === 'oauth-alias-channel-edit') {
+  const { ModelAliasEditor } = await import('../../src/features/config/oauth-model-alias-editor')
+  const initial = {
+    claude: [{ name: 'upstream', alias: 'client' }],
+    vertex: [
+      { name: 'same', alias: 'native', openapi: false, fork: false, extra: 0 },
+      { name: 'same', alias: 'compat', openapi: true },
+    ],
+    plugin: { future: [] },
+  }
+  let draft: Record<string, unknown> = initial
+  function Editor() {
+    const [value, setValue] = React.useState(draft)
+    return React.createElement(ModelAliasEditor, {
+      value,
+      availableChannels: ['claude', 'vertex'],
+      disabled: false,
+      onChange: (next) => {
+        draft = next
+        setValue(next)
+      },
+    })
+  }
+  const labels = en.common.configPage.json
+  await render(React.createElement(Editor))
+  await edit(input(labels.placeholders.alias), 'changed-claude')
+  assert.deepEqual(draft, { ...initial, claude: [{ name: 'upstream', alias: 'changed-claude' }] })
+  await select(labels.aliasChannel, 'vertex')
+  await edit(input(labels.placeholders.alias), 'changed-native')
+  assert.deepEqual(draft.vertex, [
+    { ...initial.vertex[0], alias: 'changed-native' },
+    initial.vertex[1],
+  ])
+  await select(labels.vertexProtocol, labels.vertexModes.auto)
+  assert.deepEqual(draft.vertex, [
+    { name: 'same', alias: 'changed-native', fork: false, extra: 0 },
+    initial.vertex[1],
+  ])
+  await select(labels.aliasChannel, 'plugin')
+  assert.equal(button(labels.addAlias).disabled, true)
+  assert.deepEqual(draft.plugin, initial.plugin)
+} else if (scenario === 'oauth-model-setting-validation') {
+  await renderConfig({ 'config-version': 8 })
+  const field = browser.document.getElementById('config-field-oauthModelSettingsJson')!
+  const toolbar = browser.document.querySelector('[data-config-sticky]')!
+  const copy = en.common.configPage
+  const summary = i18n.t('configPage.validation.summary', { count: 1 })
+  const save = button(copy.actions.save)
+  const add = button(copy.modelSettings.add)
+  const names = () => [...field.querySelectorAll('input[required]')]
+  const hasFeedback = () => toolbar.textContent.includes(summary)
+  const focus = async (input: { focus: () => void }) => React.act(async () => input.focus())
+
+  await click(add)
+  const first = names()[0]
+  assert.equal(browser.document.activeElement, first)
+  assert.equal(field.querySelector('[aria-invalid="true"]'), null)
+  assert.ok(!field.textContent.includes(copy.validation.invalidField))
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, true)
+  const limit = input(copy.modelSettings.defaultLimit)
+  await focus(limit)
+  assert.equal(hasFeedback(), true)
+  assert.equal(
+    browser.document.getElementById(first.getAttribute('aria-describedby')!)?.textContent,
+    copy.modelSettings.nameRequired,
+  )
+  await focus(first)
+  await edit(first, 'model-a')
+  assert.equal(first.hasAttribute('aria-describedby'), false)
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+
+  await focus(limit)
+  await edit(limit, '2.5')
+  assert.equal(save.disabled, true)
+  assert.equal(hasFeedback(), false)
+  await focus(add)
+  assert.ok(field.textContent.includes(copy.modelSettings.invalidLimit))
+  assert.equal(hasFeedback(), true)
+  await click(add)
+  assert.equal(browser.document.activeElement, names()[1])
+  assert.notEqual(names()[1].getAttribute('aria-invalid'), 'true')
+  assert.equal(hasFeedback(), true)
+  await edit(names()[1], 'model-b')
+  await click(button(i18n.t('configPage.modelSettings.removeRow', { model: 'model-a' })))
+  assert.equal(names()[0].value, 'model-b')
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+
+  await click(add)
+  await focus(add)
+  await select(copy.modelSettings.provider, 'vertex')
+  await click(add)
+  assert.notEqual(names()[0].getAttribute('aria-invalid'), 'true')
+  await edit(names()[0], 'vertex-a')
+  assert.equal(hasFeedback(), true)
+  assert.equal(save.disabled, true)
+  await select(copy.modelSettings.provider, 'codex')
+  assert.equal(names()[1].getAttribute('aria-invalid'), 'true')
+  await click(button(i18n.t('configPage.modelSettings.removeRow', { model: 'model-b' })))
+  assert.equal(names()[0].getAttribute('aria-invalid'), 'true')
+  await edit(names()[0], 'model-c')
+  assert.equal(hasFeedback(), false)
+  assert.equal(save.disabled, false)
+} else if (scenario === 'cpa-server-token') {
+  const original = 'fixture-saved-token'
+  const replacement = original + '-replacement'
+  await renderConfig({ server: { 'github-token': original } })
+  const copy = en.common.configPage
+  const field = browser.document.getElementById('config-field-serverGithubToken')!
+  const control = field.querySelector('input')!
+  const save = button(copy.actions.save)
+  assert.equal(control.type, 'password')
+  assert.equal(control.value, '')
+  assert.equal(control.placeholder, copy.token.keep)
+  assert.ok(!field.outerHTML.includes(original))
+  assert.equal(save.disabled, true)
+
+  await edit(control, original)
+  assert.equal(control.value, original)
+  assert.equal(save.disabled, true)
+  await edit(control, replacement)
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const dialog = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(dialog.textContent.includes(copy.token.replacing))
+  assert.ok(dialog.textContent.includes('••••••••'))
+  assert.ok(!dialog.outerHTML.includes(original))
+  await click(button(en.common.close))
+  await edit(control, '')
+  assert.equal(save.disabled, true)
+  await click(button(copy.token.clear))
+  assert.equal(control.placeholder, copy.token.pendingClear)
+  assert.equal(save.disabled, false)
+  await click(button(copy.token.undoClear))
+  assert.equal(save.disabled, true)
+  assert.equal(control.value, '')
+
+  const limit = browser.document.querySelector<HTMLInputElement>(
+    '#config-field-serverMaxRequestBodyBytes input',
+  )!
+  await edit(limit, '0')
+  await click(button(copy.actions.viewChanges))
+  const unrelated = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(!unrelated.textContent.includes(copy.fields.serverGithubToken.label))
+  assert.ok(!unrelated.outerHTML.includes(original))
+  await click(button(en.common.close))
+
+  const managementKey = 'fixture-management-replacement'
+  const keyInput = browser.document.querySelector<HTMLInputElement>(
+    '#config-field-remoteManagementSecretKey input',
+  )!
+  await edit(keyInput, managementKey)
+  await click(button(copy.actions.viewChanges))
+  const combined = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(combined.textContent.includes(copy.fields.remoteManagementSecretKey.label))
+  assert.ok(combined.textContent.includes('••••••••'))
+  assert.ok(!combined.outerHTML.includes(managementKey))
+} else if (scenario === 'claude-execution-settings') {
+  await renderConfig({
+    upstream: {
+      claude: {
+        'header-defaults': {
+          'native-entrypoints': ['two\nlines'],
+          'anthropic-beta-strip': ['Flag-B', ' flag-A '],
+        },
+      },
+    },
+  })
+  const copy = en.common.configPage
+  const field = (key: string) => browser.document.getElementById('config-field-' + key)!
+  const save = button(copy.actions.save)
+  const mode = field('upstreamClaudeClientRequestId')
+  const modeCopy = copy.fields.upstreamClaudeClientRequestId
+  const trigger = mode.querySelector('[role="combobox"]')!
+  assert.equal(trigger.textContent.trim(), modeCopy.placeholder)
+  assert.equal(field('upstreamClaudeNativeEntrypointsJson').querySelector('textarea'), null)
+  assert.equal(
+    field('upstreamClaudeInjectDiagnostics')
+      .querySelector('[role="switch"]')
+      ?.getAttribute('aria-checked'),
+    'true',
+  )
+  assert.equal(save.disabled, true)
+  for (const option of Object.values(modeCopy.options)) {
+    await select(modeCopy.label, option)
+    assert.equal(trigger.textContent.trim(), option)
+    assert.equal(save.disabled, false)
+  }
+  await click(
+    [...mode.querySelectorAll('button')].find(
+      (node) => node.textContent.trim() === copy.actions.restoreDefault,
+    ),
+  )
+  assert.equal(browser.document.activeElement, trigger)
+  assert.equal(save.disabled, true)
+  const strip = field('upstreamClaudeAnthropicBetaStripJson').querySelector('textarea')!
+  assert.equal(strip.value, 'Flag-B\n flag-A ')
+  await edit(strip, '')
+  const appendField = field('upstreamClaudeAnthropicBetaAppendJson')
+  const append = appendField.querySelector('textarea')!
+  await edit(append, 'Flag-Z\nflag-a\nFlag-Z')
+  await click(button(copy.actions.viewChanges))
+  const diff = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(diff.textContent.includes('[]'))
+  assert.ok(diff.textContent.indexOf('Flag-Z') < diff.textContent.indexOf('flag-a'))
+  await click(button(en.common.close))
+  await click(appendField.querySelector('button')!)
+  assert.equal(browser.document.activeElement, append)
+  assert.equal(append.value, '')
+  await edit(strip, 'Flag-B\n flag-A ')
+  assert.equal(save.disabled, true)
+} else if (scenario === 'codex-execution-settings') {
+  await renderConfig({ client: { codex: { 'web-search-result-cache': null } } })
+  const copy = en.common.configPage
+  const field = (key: string) => browser.document.getElementById('config-field-' + key)!
+  const save = button(copy.actions.save)
+  const cache = field('clientCodexWebSearchCacheEnabled')
+  const toggle = cache.querySelector('[role="switch"]')!
+  assert.equal(toggle.getAttribute('aria-checked'), 'false')
+  assert.equal(
+    field('upstreamCodexWebsocketCompression')
+      .querySelector('[role="switch"]')
+      ?.getAttribute('aria-checked'),
+    'true',
+  )
+  assert.equal(save.disabled, true)
+  await click(toggle)
+  await click(toggle)
+  assert.equal(toggle.getAttribute('aria-checked'), 'false')
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const diff = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(diff.textContent.includes(copy.nullableBoolean.defaultOff))
+  assert.ok(diff.textContent.includes(copy.nullableBoolean.disabled))
+  await click(button(en.common.close))
+  await click(button(copy.actions.restoreDefault))
+  assert.equal(save.disabled, true)
+
+  const ttl = field('clientCodexWebSearchCacheTtl').querySelector('input')!
+  const limit = field('clientCodexWebSearchCacheLimit').querySelector('input')!
+  await React.act(async () => ttl.focus())
+  await edit(ttl, '1h3')
+  assert.equal(ttl.getAttribute('aria-invalid'), null)
+  assert.equal(save.disabled, true)
+  await React.act(async () => ttl.blur())
+  assert.equal(ttl.getAttribute('aria-invalid'), 'true')
+  assert.ok(
+    field('clientCodexWebSearchCacheTtl').textContent.includes(
+      copy.fields.clientCodexWebSearchCacheTtl.invalid,
+    ),
+  )
+  await edit(ttl, '+01800')
+  assert.equal(save.disabled, false)
+  await click(button(copy.actions.viewChanges))
+  const seconds = browser.document.querySelector('[role="dialog"]')!
+  assert.ok(seconds.textContent.includes('1800'))
+  assert.ok(!seconds.textContent.includes('+01800'))
+  await click(button(en.common.close))
+  await edit(ttl, '1h30m')
+  assert.equal(save.disabled, false)
+  await edit(limit, '-1')
+  await React.act(async () => {
+    limit.focus()
+    limit.blur()
+  })
+  assert.equal(limit.getAttribute('aria-invalid'), 'true')
+  await edit(limit, '0')
+  assert.equal(save.disabled, false)
+  await click(field('clientCodexWebSearchCacheLimit').querySelector('button')!)
+  await click(field('clientCodexWebSearchCacheTtl').querySelector('button')!)
+  assert.equal(browser.document.activeElement, ttl)
+  assert.equal(save.disabled, true)
+} else if (scenario === 'oauth-refresh-concurrency') {
+  await renderConfig({ 'config-version': 8 })
+  const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!
+  const control = field.querySelector('input')!
+  const copy = en.common.configPage
+  const save = button(copy.actions.save)
+  assert.equal(control.value, '')
+  await React.act(async () => control.focus())
+  await edit(control, 'null')
+  assert.equal(button(copy.actions.viewChanges).disabled, false)
+  assert.equal(save.disabled, true)
+  await edit(control, '-')
+  assert.equal(save.disabled, true)
+  assert.ok(!field.textContent.includes(copy.validation.optionalInteger))
+  await React.act(async () => control.blur())
+  assert.equal(control.getAttribute('aria-invalid'), 'true')
+  assert.ok(field.textContent.includes(copy.validation.optionalInteger))
+  await React.act(async () => control.focus())
+  for (const invalid of ['2.5', '1e2', '9007199254740993']) {
+    await edit(control, invalid)
+    assert.equal(save.disabled, true)
+    assert.equal(control.value, invalid)
+  }
+  await edit(control, '-2')
+  assert.equal(control.getAttribute('aria-invalid'), null)
+  assert.equal(save.disabled, false)
+  await click(field.querySelector('button')!)
+  assert.equal(browser.document.activeElement, control)
+  assert.equal(control.value, '')
+  assert.equal(field.querySelector('button'), null)
+  assert.equal(save.disabled, true)
+  await edit(control, '0')
+  assert.equal(save.disabled, false)
+} else if (scenario === 'plugin-loading') {
   await render(pluginForm())
   assert.ok(button(en.common.pluginPage.config.save).disabled)
   assert.ok(browser.document.querySelector('[role="status"]'))

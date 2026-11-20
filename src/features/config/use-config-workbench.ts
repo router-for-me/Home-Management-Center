@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   type ConfigChange,
+  ConfigFieldSaveError,
   applyConfigChanges,
   fetchConfigSnapshot,
   toConfigApiError,
@@ -85,11 +86,13 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
   }
 
   const structuredMutation = useMutation({
-    mutationFn: async (changes: ConfigChange[]) => {
-      try {
-        await applyConfigChanges(session, changes)
-      } catch (error) {
-        throw toThrowableError(error)
+    mutationFn: (changes: ConfigChange[]) => applyConfigChanges(session, changes),
+    onError: async (error) => {
+      if (
+        error instanceof ConfigFieldSaveError &&
+        (error.savedKeys.length || error.reason === 'conflict' || error.reason === 'failed')
+      ) {
+        await invalidate()
       }
     },
     onSuccess: invalidate,
@@ -100,6 +103,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
     checking,
     runtimeMode,
     snapshot: query.data,
+    getCachedSnapshot: () => queryClient.getQueryData<NonNullable<typeof query.data>>(queryKey),
     isPending: query.isPending,
     isFetching: query.isFetching,
     isError: query.isError,

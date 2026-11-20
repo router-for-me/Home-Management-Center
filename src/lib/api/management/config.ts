@@ -1,13 +1,28 @@
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  createManagementClient,
+  isMissingConfigPath,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import {
   canEditPayloadModel,
   canEditPayloadReplaceRule,
   getPayloadReplaceIssues,
   normalizePayloadReplaceContent,
-  serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
 import { readManagementRoutingStrategy } from '@/lib/api/management/routing'
 import type { ManagementApiError, ManagementSessionInput } from '@/lib/api/management/types'
+import { parseGoDurationNanos } from '@/lib/go-duration'
+
+import { ConfigEditConflict, sameConfigValue } from './config-edit'
+import { hasIncompleteAliasChanges } from './oauth-model-aliases'
+import { changedOAuthChannels, isOAuthChannelKey, oauthChannelValue } from './oauth-model-channels'
+import { hasInvalidModelSettingChanges } from './oauth-model-settings'
+import {
+  type ReplacementKind,
+  parseReplacementDraft,
+  readReplacementRows,
+  serializeReplacementRows,
+} from './sensitive-replacements'
 
 type UnknownRecord = Record<string, unknown>
 
@@ -20,6 +35,7 @@ export type ConfigFieldKey =
   | 'pluginsDir'
   | 'pluginStoreSourcesJson'
   | 'loggingToFile'
+  | 'usageStatisticsEnabled'
   | 'logsMaxTotalSizeMb'
   | 'errorLogsMaxFiles'
   | 'tlsEnable'
@@ -38,17 +54,24 @@ export type ConfigFieldKey =
   | 'routingStrategy'
   | 'oauthExcludedModelsJson'
   | 'oauthModelAliasJson'
+  | 'oauthModelSettingsJson'
   | 'payloadRulesJson'
   | 'antigravitySensitiveWordsJson'
+  | 'antigravityLiteralReplacements'
+  | 'antigravityPatternReplacements'
   | 'serverHost'
   | 'serverAllowHostJson'
   | 'serverTrustedProxiesJson'
   | 'serverCommercialMode'
+  | 'serverMaxRequestBodyBytes'
+  | 'serverResponseCompressionEnabled'
+  | 'serverResponseCompressionMinBytes'
+  | 'serverShutdownTimeout'
+  | 'serverGithubToken'
   | 'discoveryEnabled'
   | 'discoveryServiceName'
   | 'discoveryServiceType'
   | 'discoveryAuthRequired'
-  | 'discoveryAdvertiseManagement'
   | 'discoverySubtypesJson'
   | 'discoveryInterfacesIncludeJson'
   | 'discoveryInterfacesExcludeJson'
@@ -85,6 +108,7 @@ export type ConfigFieldKey =
   | 'inFlightMaxDetails'
   | 'inFlightMaxStringBytes'
   | 'sessionAffinity'
+  | 'sessionAffinityRebindOn'
   | 'sessionAffinityTtl'
   | 'sessionAffinitySubagents'
   | 'streamingKeepaliveSeconds'
@@ -99,6 +123,14 @@ export type ConfigFieldKey =
   | 'upstreamCodexResponseSteering'
   | 'upstreamCodexStreamBootstrapTimeout'
   | 'upstreamClaudeModelLevelCooling'
+  | 'clientClaudeShowCodexCommentary'
+  | 'upstreamClaudeServerSideFallback'
+  | 'upstreamClaudeSessionDatePinDays'
+  | 'upstreamClaudeNativeEntrypointsJson'
+  | 'upstreamClaudeAnthropicBetaStripJson'
+  | 'upstreamClaudeAnthropicBetaAppendJson'
+  | 'upstreamClaudeInjectDiagnostics'
+  | 'upstreamClaudeClientRequestId'
   | 'upstreamClaudeToolSearch'
   | 'upstreamClaudeDisableCloakMode'
   | 'upstreamClaudeDisableCloakingModelList'
@@ -112,7 +144,16 @@ export type ConfigFieldKey =
   | 'upstreamClaudeHeaderStabilizeDeviceProfile'
   | 'upstreamXaiInjectXSearch'
   | 'clientCodexOptimizeMultiAgentV2'
+  | 'clientCodexEnableApplyPatch'
+  | 'clientCodexWebSearchCacheEnabled'
+  | 'clientCodexWebSearchCacheTtl'
+  | 'clientCodexWebSearchCacheLimit'
+  | 'upstreamCodexRequestCompression'
+  | 'upstreamCodexRequestCompressionMinBytes'
+  | 'upstreamCodexWebsocketCompression'
+  | 'oauthCodexSigninIdentifier'
   | 'oauthAuthDir'
+  | 'oauthAutoRefreshWorkers'
   | 'oauthCodexHeaderUserAgent'
   | 'oauthCodexHeaderBetaFeatures'
   | 'liveMediaRelayEnabled'
@@ -123,7 +164,10 @@ export type ConfigFieldKey =
   | 'liveMediaRelayPublicIp'
   | 'liveMediaRelayIceServersJson'
   | 'devinSensitiveWordsJson'
+  | 'devinLiteralReplacements'
+  | 'devinPatternReplacements'
   | 'oauthRequestScopedErrorsJson'
+  | 'antigravityTosPauseWindow'
   | 'antigravityCredits'
   | 'antigravitySignatureCacheEnabled'
   | 'antigravitySignatureBypassStrict'
@@ -137,9 +181,17 @@ export type ConfigFieldKey =
   | 'pprofAddr'
   | 'redisUsageQueueRetentionSeconds'
 
-export type ReadOnlyConfigFieldKey =
-  | 'concurrencyLifecycleConfigRevision'
-  | 'concurrencyObservationBarrierRevision'
+const readOnlyFields = [
+  'concurrencyLifecycleConfigRevision',
+  'concurrencyObservationBarrierRevision',
+  'usageStatisticsEnabled',
+] as const satisfies readonly ConfigFieldKey[]
+
+export type ReadOnlyConfigFieldKey = (typeof readOnlyFields)[number]
+
+export function isReadOnlyConfigField(key: ConfigFieldKey): key is ReadOnlyConfigFieldKey {
+  return readOnlyFields.some((field) => field === key)
+}
 
 export type WritableConfigFieldKey = Exclude<ConfigFieldKey, ReadOnlyConfigFieldKey>
 
@@ -151,7 +203,7 @@ export type ConfigChange = {
   nextValue: ConfigFieldValue
 }
 
-type ConfigSnapshot = {
+export type ConfigSnapshot = {
   fetchedAt: string
   rawConfig: UnknownRecord
   structured: ConfigStructuredValues
@@ -174,8 +226,46 @@ function readNullableBoolean(record: UnknownRecord, key: string): boolean | null
   return typeof value === 'boolean' ? value : null
 }
 
-function readNumber(record: UnknownRecord, key: string, fallback = 0) {
+function readNumber(record: UnknownRecord, key: string, fallback: number | null = 0) {
   return typeof record[key] === 'number' && Number.isFinite(record[key]) ? record[key] : fallback
+}
+
+// Blank input removes the override. Invalid text must stay in the draft.
+export function parseOptionalInteger(
+  value: ConfigFieldValue,
+  min?: number,
+): number | null | undefined {
+  if (value === null) return null
+  if (typeof value === 'string') {
+    const text = value.trim()
+    if (!text) return null
+    if (!/^[+-]?\d+$/.test(text)) return undefined
+    value = Number(text)
+  }
+  return typeof value === 'number' &&
+    Number.isSafeInteger(value) &&
+    (min === undefined || value >= min)
+    ? value
+    : undefined
+}
+
+const integerSeconds = /^[+-]?\d+$/
+
+export function parseCodexCacheTtl(
+  value: ConfigFieldValue,
+  previous?: ConfigFieldValue,
+): string | number | null | undefined {
+  if (value === null) return null
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined
+  const text = String(value).trim()
+  if (!text) return null
+  const seconds = integerSeconds.test(text)
+  const nanos = parseGoDurationNanos(seconds ? text + 's' : text)
+  if (nanos === null || nanos < 0n) return undefined
+  // Home accepts both integer seconds and quoted seconds. Preserve an existing quoted representation.
+  if (seconds && !(typeof previous === 'string' && integerSeconds.test(previous.trim())))
+    return Number(text)
+  return text
 }
 
 function readString(record: UnknownRecord, key: string, fallback = '') {
@@ -196,6 +286,31 @@ function stringifyJsonArray(value: unknown) {
   return JSON.stringify(Array.isArray(value) ? value : [], null, 2)
 }
 
+function stringifyOptionalList(value: unknown) {
+  return value === undefined ? null : JSON.stringify(value, null, 2)
+}
+
+// Blank items and embedded newlines cannot round-trip through a one-name-per-line editor.
+export function isEditableHeaderList(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item: unknown) => typeof item === 'string' && item.trim().length > 0 && !/[\r\n]/.test(item),
+    )
+  )
+}
+
+export const claudeClientRequestIdModes = ['on', 'passthrough', 'off']
+
+function readClientRequestId(value: unknown): ConfigFieldValue {
+  if (value == null) return null
+  if (typeof value === 'string') {
+    const mode = value.trim().toLowerCase()
+    return claudeClientRequestIdModes.includes(mode) ? mode : value
+  }
+  return typeof value === 'boolean' || typeof value === 'number' ? value : JSON.stringify(value)
+}
+
 function stringifyJsonObject(value: unknown) {
   return JSON.stringify(isRecord(value) ? value : {}, null, 2)
 }
@@ -214,8 +329,8 @@ export function canEditPayloadConfig(value: unknown) {
   return Object.entries(value).every(([key, rules]) => {
     if (!payloadSectionKeys.includes(key) || !Array.isArray(rules)) return false
     return rules.every((rule: unknown) => {
+      if (key === 'replace') return true // Preserve opaque saved entries at their original positions.
       if (!isRecord(rule)) return false
-      if (key === 'replace') return true // Saved advanced rules can be carried through unchanged.
       if (!Object.keys(rule).every((field) => field === 'models' || field === 'params'))
         return false
       if (!Array.isArray(rule.models) || !rule.models.every(canEditPayloadModel)) return false
@@ -273,15 +388,13 @@ function sanitizePayloadStringMap(value: unknown) {
 function sanitizePayloadConditions(value: unknown) {
   if (!Array.isArray(value)) return []
 
-  return value.flatMap((item) => {
+  return value.flatMap((item: unknown) => {
     if (!isRecord(item)) return []
 
-    return Object.entries(item).flatMap(([path, conditionValue]) => {
-      const normalizedPath = path.trim()
-      if (!normalizedPath) return []
-
-      return [{ [normalizedPath]: conditionValue }]
-    })
+    const entries = Object.entries(item)
+      .map(([path, conditionValue]) => [path.trim(), conditionValue] as const)
+      .filter(([path]) => path.length > 0)
+    return entries.length ? [Object.fromEntries(entries)] : []
   })
 }
 
@@ -379,34 +492,53 @@ function sanitizePayloadReplaceSection(value: unknown, previous: unknown) {
   if (!Array.isArray(rules)) throw new Error('Invalid requests.payload.replace')
 
   // A subtree PUT must carry through saved rules that the visual form can't represent.
-  const savedReadOnly = (Array.isArray(previous) ? previous : []).filter(
-    (rule): rule is UnknownRecord => isRecord(rule) && !canEditPayloadReplaceRule(rule),
+  const savedReadOnly: unknown[] = (Array.isArray(previous) ? previous : []).filter(
+    (rule: unknown) => !isRecord(rule) || !canEditPayloadReplaceRule(rule),
   )
   let preserved = 0
   const result = rules.map((rule: unknown) => {
-    if (!isRecord(rule)) throw new Error('Invalid requests.payload.replace rule')
-    if (!canEditPayloadReplaceRule(rule)) {
-      const saved = savedReadOnly[preserved++]
-      if (!saved || JSON.stringify(saved) !== JSON.stringify(rule)) {
+    if (!isRecord(rule) || !canEditPayloadReplaceRule(rule)) {
+      if (
+        preserved >= savedReadOnly.length ||
+        JSON.stringify(savedReadOnly[preserved]) !== JSON.stringify(rule)
+      ) {
         throw new Error('Invalid requests.payload.replace rule')
       }
-      return saved
+      return savedReadOnly[preserved++]
     }
     const models = sanitizePayloadModels(rule.models)
     const content = normalizePayloadReplaceContent(rule)
     if (getPayloadReplaceIssues(content).length > 0) {
       throw new Error('Invalid requests.payload.replace rule')
     }
-    return { models, ...serializePayloadReplaceContent(content) }
+    return {
+      // Saved model objects can contain explicit defaults and grouped conditions.
+      models: rule.models.map((model, index) => (isRecord(model) ? model : models[index])),
+      target: rule.target,
+      replacements: rule.replacements,
+    }
   })
   if (preserved !== savedReadOnly.length)
     throw new Error('Missing saved requests.payload.replace rule')
   return result
 }
 
+export function readObservabilityFlags(config: UnknownRecord) {
+  const observability = toRecord(config.observability)
+  const logs = toRecord(observability.logs)
+  const usage = toRecord(observability.usage)
+  return {
+    debug: readBoolean(logs, 'debug'),
+    requestLog: readBoolean(logs, 'request-log'),
+    loggingToFile: readBoolean(logs, 'logging-to-file'),
+    usageStatisticsEnabled: readNullableBoolean(usage, 'usage-statistics-enabled'),
+  }
+}
+
 export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructuredValues {
   const server = toRecord(rawConfig.server)
   const serverTls = toRecord(server.tls)
+  const compression = toRecord(server['response-compression'])
   const discovery = toRecord(server.discovery)
   const discoveryInterfaces = toRecord(discovery.interfaces)
   const management = toRecord(rawConfig.management)
@@ -433,23 +565,24 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
   const upstreamXai = toRecord(upstream.xai)
   const client = toRecord(rawConfig.client)
   const clientCodex = toRecord(client.codex)
+  const searchCache = toRecord(clientCodex['web-search-result-cache'])
   const oauth = toRecord(rawConfig.oauth)
   const oauthProviders = toRecord(oauth.providers)
   const oauthCodex = toRecord(oauthProviders.codex)
   const oauthCodexHeaders = toRecord(oauthCodex['header-defaults'])
   const liveMediaRelay = toRecord(oauthCodex['live-media-relay'])
   const antigravity = toRecord(oauthProviders.antigravity)
+  const pauseWindow = antigravity['tos-pause-window']
   const antigravityConnPool = toRecord(antigravity['connection-pool'])
   const devin = toRecord(oauthProviders.devin)
   const multimedia = toRecord(rawConfig.multimedia)
 
   return {
-    debug: readBoolean(observabilityLogs, 'debug'),
+    ...readObservabilityFlags(rawConfig),
     port: readNumber(server, 'port', 8317),
     pluginsEnabled: readBoolean(plugins, 'enabled'),
     pluginsDir: readString(plugins, 'dir', 'plugins'),
     pluginStoreSourcesJson: stringifyJsonArray(plugins['store-sources']),
-    loggingToFile: readBoolean(observabilityLogs, 'logging-to-file'),
     logsMaxTotalSizeMb: readNumber(observabilityLogs, 'logs-max-total-size-mb'),
     errorLogsMaxFiles: readNumber(observabilityLogs, 'error-logs-max-files', 10),
     tlsEnable: readBoolean(serverTls, 'enable'),
@@ -459,7 +592,6 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     remoteManagementSecretKey: readString(management, 'secret-key'),
     remoteManagementDisableControlPanel: readBoolean(management, 'disable-control-panel'),
     proxyUrl: readString(requests, 'proxy-url'),
-    requestLog: readBoolean(observabilityLogs, 'request-log'),
     requestRetry: readNumber(routingRetry, 'request-retry'),
     maxRetryCredentials: readNumber(routingRetry, 'max-retry-credentials'),
     maxRetryInterval: readNumber(routingRetry, 'max-retry-interval'),
@@ -468,17 +600,32 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     routingStrategy: readManagementRoutingStrategy(rawConfig),
     oauthExcludedModelsJson: stringifyJsonObject(oauth['excluded-models']),
     oauthModelAliasJson: stringifyJsonObject(oauth['model-alias']),
+    oauthModelSettingsJson: JSON.stringify(oauth.settings ?? {}, null, 2),
     payloadRulesJson: stringifyPayload(requests.payload),
     antigravitySensitiveWordsJson: stringifyJsonArray(antigravity['sensitive-words']),
+    antigravityLiteralReplacements: JSON.stringify(
+      readReplacementRows('literalReplacements', antigravity['sensitive-words-replace']),
+      null,
+      2,
+    ),
+    antigravityPatternReplacements: JSON.stringify(
+      readReplacementRows('patternReplacements', antigravity['sensitive-patterns-replace']),
+      null,
+      2,
+    ),
     serverHost: readString(server, 'host'),
     serverAllowHostJson: stringifyJsonArray(server['allow-host']),
     serverTrustedProxiesJson: stringifyJsonArray(server['trusted-proxies']),
     serverCommercialMode: readBoolean(server, 'commercial-mode'),
+    serverMaxRequestBodyBytes: readNumber(server, 'max-request-body-bytes', null),
+    serverResponseCompressionEnabled: readNullableBoolean(compression, 'enabled'),
+    serverResponseCompressionMinBytes: readNumber(compression, 'min-bytes', null),
+    serverShutdownTimeout: readNumber(server, 'shutdown-timeout', null),
+    serverGithubToken: readString(server, 'github-token').trim() || null,
     discoveryEnabled: readBoolean(discovery, 'enabled'),
     discoveryServiceName: readString(discovery, 'service-name'),
     discoveryServiceType: readString(discovery, 'service-type'),
-    discoveryAuthRequired: readBoolean(discovery, 'auth-required'),
-    discoveryAdvertiseManagement: readBoolean(discovery, 'advertise-management'),
+    discoveryAuthRequired: readNullableBoolean(discovery, 'auth-required'),
     discoverySubtypesJson: stringifyJsonArray(discovery.subtypes),
     discoveryInterfacesIncludeJson: stringifyJsonArray(discoveryInterfaces.include),
     discoveryInterfacesExcludeJson: stringifyJsonArray(discoveryInterfaces.exclude),
@@ -515,8 +662,10 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     inFlightMaxDetails: readNumber(inFlight, 'max-details', 10_000),
     inFlightMaxStringBytes: readNumber(inFlight, 'max-string-bytes', 256),
     sessionAffinity: readBoolean(routing, 'session-affinity'),
+    sessionAffinityRebindOn:
+      readString(routing, 'session-affinity-rebind-on').trim().toLowerCase() || 'any',
     sessionAffinityTtl: readString(routing, 'session-affinity-ttl'),
-    sessionAffinitySubagents: readBoolean(routing, 'session-affinity-subagents'),
+    sessionAffinitySubagents: readNullableBoolean(routing, 'session-affinity-subagents'),
     streamingKeepaliveSeconds: readNumber(requestsStreaming, 'keepalive-seconds'),
     streamingSendKeepaliveBeforeFt: readBoolean(requestsStreaming, 'send-keepalive-before-ft'),
     streamingBootstrapRetries: readNumber(requestsStreaming, 'bootstrap-retries'),
@@ -533,6 +682,26 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     upstreamCodexStreamBootstrapTimeout: readString(upstreamCodex, 'stream-bootstrap-timeout'),
     upstreamClaudeModelLevelCooling: readBoolean(upstreamClaude, 'model-level-cooling'),
     upstreamClaudeToolSearch: readBoolean(upstreamClaude, 'tool-search'),
+    clientClaudeShowCodexCommentary: readNullableBoolean(
+      toRecord(client.claude),
+      'show-codex-commentary',
+    ),
+    upstreamClaudeServerSideFallback: readNullableBoolean(upstreamClaude, 'server-side-fallback'),
+    upstreamClaudeSessionDatePinDays: readNumber(upstreamClaude, 'session-date-pin-days', null),
+    upstreamClaudeNativeEntrypointsJson: stringifyOptionalList(
+      upstreamClaudeHeaders['native-entrypoints'],
+    ),
+    upstreamClaudeAnthropicBetaStripJson: stringifyOptionalList(
+      upstreamClaudeHeaders['anthropic-beta-strip'],
+    ),
+    upstreamClaudeAnthropicBetaAppendJson: stringifyOptionalList(
+      upstreamClaudeHeaders['anthropic-beta-append'],
+    ),
+    upstreamClaudeInjectDiagnostics: readNullableBoolean(
+      upstreamClaudeHeaders,
+      'inject-diagnostics',
+    ),
+    upstreamClaudeClientRequestId: readClientRequestId(upstreamClaudeHeaders['client-request-id']),
     upstreamClaudeDisableCloakMode: readBoolean(upstreamClaude, 'disable-claude-cloak-mode'),
     upstreamClaudeDisableCloakingModelList: readBoolean(
       upstreamClaude,
@@ -551,7 +720,27 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     ),
     upstreamXaiInjectXSearch: readBoolean(upstreamXai, 'inject-x-search'),
     clientCodexOptimizeMultiAgentV2: readBoolean(clientCodex, 'optimize-multi-agent-v2'),
+    clientCodexEnableApplyPatch: readNullableBoolean(clientCodex, 'enable-apply-patch'),
+    clientCodexWebSearchCacheEnabled: readNullableBoolean(searchCache, 'enabled'),
+    clientCodexWebSearchCacheTtl:
+      typeof searchCache.ttl === 'number' || typeof searchCache.ttl === 'string'
+        ? searchCache.ttl
+        : null,
+    clientCodexWebSearchCacheLimit: readNumber(searchCache, 'limit', null),
+    upstreamCodexRequestCompression: readNullableBoolean(
+      upstreamCodex,
+      'upstream-request-compression',
+    ),
+    upstreamCodexRequestCompressionMinBytes: readNumber(
+      upstreamCodex,
+      'upstream-request-compression-min-bytes',
+      null,
+    ),
+    upstreamCodexWebsocketCompression: readNullableBoolean(upstreamCodex, 'websocket-compression'),
+    oauthCodexSigninIdentifier:
+      readString(oauthCodex, 'signin-with-chatgpt-identifier').trim() || null,
     oauthAuthDir: readString(oauth, 'auth-dir'),
+    oauthAutoRefreshWorkers: readNumber(oauth, 'auth-auto-refresh-workers', null),
     oauthCodexHeaderUserAgent: readString(oauthCodexHeaders, 'user-agent'),
     oauthCodexHeaderBetaFeatures: readString(oauthCodexHeaders, 'beta-features'),
     liveMediaRelayEnabled: readBoolean(liveMediaRelay, 'enabled'),
@@ -565,7 +754,21 @@ export function normalizeConfigValues(rawConfig: UnknownRecord): ConfigStructure
     liveMediaRelayPublicIp: readString(liveMediaRelay, 'public-ip'),
     liveMediaRelayIceServersJson: stringifyJsonArray(liveMediaRelay['ice-servers']),
     devinSensitiveWordsJson: stringifyJsonArray(devin['sensitive-words']),
+    devinLiteralReplacements: JSON.stringify(
+      readReplacementRows('literalReplacements', devin['sensitive-words-replace']),
+      null,
+      2,
+    ),
+    devinPatternReplacements: JSON.stringify(
+      readReplacementRows('patternReplacements', devin['sensitive-patterns-replace']),
+      null,
+      2,
+    ),
     oauthRequestScopedErrorsJson: stringifyJsonObject(oauth['request-scoped-errors']),
+    antigravityTosPauseWindow:
+      typeof pauseWindow === 'string' || pauseWindow === 0 || pauseWindow === false
+        ? String(pauseWindow).trim()
+        : '',
     antigravityCredits: readBoolean(antigravity, 'antigravity-credits'),
     antigravitySignatureCacheEnabled: readNullableBoolean(antigravity, 'signature-cache-enabled'),
     antigravitySignatureBypassStrict: readNullableBoolean(antigravity, 'signature-bypass-strict'),
@@ -618,25 +821,42 @@ export async function fetchConfigSnapshot(
 }
 
 type ConfigWriteKind =
+  | ReplacementKind
+  | 'alias'
+  | 'modelSettings'
+  | 'payload'
+  | 'imageGeneration'
   | 'boolean'
   | 'number'
+  | 'optionalInteger'
+  | 'codexCacheTtl'
+  | 'secret'
   | 'string'
+  | 'optionalBoolean'
   | 'nullableBoolean'
   | 'stringList'
+  | 'optionalStringList'
+  | 'clientRequestId'
   | 'jsonObject'
   | 'jsonArray'
 
 type ConfigWriteTarget = {
   path: string
   kind: ConfigWriteKind
+  member?: string
+  min?: number
 }
 
-type ConfigWriteTargetKey = Exclude<
-  WritableConfigFieldKey,
-  'payloadRulesJson' | 'multimediaDisableImageGeneration'
->
+const codexCachePath = 'client/codex/web-search-result-cache'
 
-const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
+const configWriteTargets: Record<WritableConfigFieldKey, ConfigWriteTarget> = {
+  oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'alias' },
+  oauthModelSettingsJson: { path: 'oauth/settings', kind: 'modelSettings' },
+  payloadRulesJson: { path: 'requests/payload', kind: 'payload' },
+  multimediaDisableImageGeneration: {
+    path: 'multimedia/disable-image-generation',
+    kind: 'imageGeneration',
+  },
   debug: { path: 'observability/logs/debug', kind: 'boolean' },
   port: { path: 'server/port', kind: 'number' },
   pluginsEnabled: { path: 'plugins/enabled', kind: 'boolean' },
@@ -663,7 +883,14 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   disableCooling: { path: 'routing/cooldown/disable-cooling', kind: 'boolean' },
   routingStrategy: { path: 'routing/strategy', kind: 'string' },
   oauthExcludedModelsJson: { path: 'oauth/excluded-models', kind: 'jsonObject' },
-  oauthModelAliasJson: { path: 'oauth/model-alias', kind: 'jsonObject' },
+  antigravityLiteralReplacements: {
+    path: 'oauth/providers/antigravity/sensitive-words-replace',
+    kind: 'literalReplacements',
+  },
+  antigravityPatternReplacements: {
+    path: 'oauth/providers/antigravity/sensitive-patterns-replace',
+    kind: 'patternReplacements',
+  },
   antigravitySensitiveWordsJson: {
     path: 'oauth/providers/antigravity/sensitive-words',
     kind: 'stringList',
@@ -672,11 +899,21 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   serverAllowHostJson: { path: 'server/allow-host', kind: 'stringList' },
   serverTrustedProxiesJson: { path: 'server/trusted-proxies', kind: 'stringList' },
   serverCommercialMode: { path: 'server/commercial-mode', kind: 'boolean' },
+  serverMaxRequestBodyBytes: { path: 'server/max-request-body-bytes', kind: 'optionalInteger' },
+  serverResponseCompressionEnabled: {
+    path: 'server/response-compression/enabled',
+    kind: 'optionalBoolean',
+  },
+  serverResponseCompressionMinBytes: {
+    path: 'server/response-compression/min-bytes',
+    kind: 'optionalInteger',
+  },
+  serverShutdownTimeout: { path: 'server/shutdown-timeout', kind: 'optionalInteger' },
+  serverGithubToken: { path: 'server/github-token', kind: 'secret' },
   discoveryEnabled: { path: 'server/discovery/enabled', kind: 'boolean' },
   discoveryServiceName: { path: 'server/discovery/service-name', kind: 'string' },
   discoveryServiceType: { path: 'server/discovery/service-type', kind: 'string' },
-  discoveryAuthRequired: { path: 'server/discovery/auth-required', kind: 'boolean' },
-  discoveryAdvertiseManagement: { path: 'server/discovery/advertise-management', kind: 'boolean' },
+  discoveryAuthRequired: { path: 'server/discovery/auth-required', kind: 'optionalBoolean' },
   discoverySubtypesJson: { path: 'server/discovery/subtypes', kind: 'stringList' },
   discoveryInterfacesIncludeJson: {
     path: 'server/discovery/interfaces/include',
@@ -729,8 +966,9 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   inFlightMaxDetails: { path: 'credentials/in-flight/max-details', kind: 'number' },
   inFlightMaxStringBytes: { path: 'credentials/in-flight/max-string-bytes', kind: 'number' },
   sessionAffinity: { path: 'routing/session-affinity', kind: 'boolean' },
+  sessionAffinityRebindOn: { path: 'routing/session-affinity-rebind-on', kind: 'string' },
   sessionAffinityTtl: { path: 'routing/session-affinity-ttl', kind: 'string' },
-  sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'boolean' },
+  sessionAffinitySubagents: { path: 'routing/session-affinity-subagents', kind: 'optionalBoolean' },
   streamingKeepaliveSeconds: { path: 'requests/streaming/keepalive-seconds', kind: 'number' },
   streamingSendKeepaliveBeforeFt: {
     path: 'requests/streaming/send-keepalive-before-ft',
@@ -756,6 +994,38 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   },
   upstreamClaudeModelLevelCooling: { path: 'upstream/claude/model-level-cooling', kind: 'boolean' },
   upstreamClaudeToolSearch: { path: 'upstream/claude/tool-search', kind: 'boolean' },
+  clientClaudeShowCodexCommentary: {
+    path: 'client/claude/show-codex-commentary',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeServerSideFallback: {
+    path: 'upstream/claude/server-side-fallback',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeSessionDatePinDays: {
+    path: 'upstream/claude/session-date-pin-days',
+    kind: 'optionalInteger',
+  },
+  upstreamClaudeNativeEntrypointsJson: {
+    path: 'upstream/claude/header-defaults/native-entrypoints',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeAnthropicBetaStripJson: {
+    path: 'upstream/claude/header-defaults/anthropic-beta-strip',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeAnthropicBetaAppendJson: {
+    path: 'upstream/claude/header-defaults/anthropic-beta-append',
+    kind: 'optionalStringList',
+  },
+  upstreamClaudeInjectDiagnostics: {
+    path: 'upstream/claude/header-defaults/inject-diagnostics',
+    kind: 'optionalBoolean',
+  },
+  upstreamClaudeClientRequestId: {
+    path: 'upstream/claude/header-defaults/client-request-id',
+    kind: 'clientRequestId',
+  },
   upstreamClaudeDisableCloakMode: {
     path: 'upstream/claude/disable-claude-cloak-mode',
     kind: 'boolean',
@@ -788,11 +1058,41 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
     kind: 'nullableBoolean',
   },
   upstreamXaiInjectXSearch: { path: 'upstream/xai/inject-x-search', kind: 'boolean' },
+  clientCodexEnableApplyPatch: { path: 'client/codex/enable-apply-patch', kind: 'optionalBoolean' },
+  clientCodexWebSearchCacheEnabled: {
+    path: codexCachePath,
+    member: 'enabled',
+    kind: 'optionalBoolean',
+  },
+  clientCodexWebSearchCacheTtl: { path: codexCachePath, member: 'ttl', kind: 'codexCacheTtl' },
+  clientCodexWebSearchCacheLimit: {
+    path: codexCachePath,
+    member: 'limit',
+    kind: 'optionalInteger',
+    min: 0,
+  },
+  upstreamCodexRequestCompression: {
+    path: 'upstream/codex/upstream-request-compression',
+    kind: 'optionalBoolean',
+  },
+  upstreamCodexRequestCompressionMinBytes: {
+    path: 'upstream/codex/upstream-request-compression-min-bytes',
+    kind: 'optionalInteger',
+  },
+  upstreamCodexWebsocketCompression: {
+    path: 'upstream/codex/websocket-compression',
+    kind: 'optionalBoolean',
+  },
+  oauthCodexSigninIdentifier: {
+    path: 'oauth/providers/codex/signin-with-chatgpt-identifier',
+    kind: 'string',
+  },
   clientCodexOptimizeMultiAgentV2: {
     path: 'client/codex/optimize-multi-agent-v2',
     kind: 'boolean',
   },
   oauthAuthDir: { path: 'oauth/auth-dir', kind: 'string' },
+  oauthAutoRefreshWorkers: { path: 'oauth/auth-auto-refresh-workers', kind: 'optionalInteger' },
   oauthCodexHeaderUserAgent: {
     path: 'oauth/providers/codex/header-defaults/user-agent',
     kind: 'string',
@@ -829,8 +1129,20 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
     path: 'oauth/providers/codex/live-media-relay/ice-servers',
     kind: 'jsonArray',
   },
+  devinLiteralReplacements: {
+    path: 'oauth/providers/devin/sensitive-words-replace',
+    kind: 'literalReplacements',
+  },
+  devinPatternReplacements: {
+    path: 'oauth/providers/devin/sensitive-patterns-replace',
+    kind: 'patternReplacements',
+  },
   devinSensitiveWordsJson: { path: 'oauth/providers/devin/sensitive-words', kind: 'stringList' },
   oauthRequestScopedErrorsJson: { path: 'oauth/request-scoped-errors', kind: 'jsonObject' },
+  antigravityTosPauseWindow: {
+    path: 'oauth/providers/antigravity/tos-pause-window',
+    kind: 'string',
+  },
   antigravityCredits: { path: 'oauth/providers/antigravity/antigravity-credits', kind: 'boolean' },
   antigravitySignatureCacheEnabled: {
     path: 'oauth/providers/antigravity/signature-cache-enabled',
@@ -865,14 +1177,101 @@ const configWriteTargets: Record<ConfigWriteTargetKey, ConfigWriteTarget> = {
   },
 }
 
+export function hasOAuthChannelConflict(change: ConfigChange, current: ConfigFieldValue) {
+  const before = parseJsonObjectText(change.previousValue)
+  const after = parseJsonObjectText(change.nextValue)
+  const latest = typeof current === 'string' && current.trim() ? parseJsonText(current) : {}
+  if (!isRecord(latest)) return true
+  return changedOAuthChannels(before, after).some((channel) => {
+    const value = oauthChannelValue(latest, channel)
+    return (
+      !sameConfigValue(value, oauthChannelValue(before, channel)) &&
+      !sameConfigValue(value, oauthChannelValue(after, channel))
+    )
+  })
+}
+
 export async function applyConfigChange(session: ManagementSessionInput, change: ConfigChange) {
   const client = createManagementClient(session)
   // Keep false/0/null as request bodies and JSON-looking strings as strings.
   const putJson = (url: string, value: unknown) =>
     client.put(url, JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } })
-  const key = change.key
+  const deleteOptional = async (path: string) => {
+    try {
+      await client.delete(path)
+    } catch (error) {
+      if (!isMissingConfigPath(error)) throw error
+    }
+  }
+  const target = configWriteTargets[change.key]
+  const url = `/config/${target.path}`
+  const writeOptional = (value: string | number | boolean | null) => {
+    if (value === null) return deleteOptional(target.member ? url + '/' + target.member : url)
+    // A single-member PATCH also initializes an explicitly null cache mapping.
+    if (target.member) return client.patch(url, { [target.member]: value })
+    return putJson(url, value)
+  }
 
-  if (key === 'payloadRulesJson') {
+  if (target.kind === 'alias' || target.kind === 'modelSettings') {
+    const before = parseJsonObjectText(change.previousValue)
+    const after = parseJsonObjectText(change.nextValue)
+    const channels = changedOAuthChannels(before, after)
+    const invalid =
+      target.kind === 'alias'
+        ? hasIncompleteAliasChanges(before, after)
+        : hasInvalidModelSettingChanges(before, after)
+    if (invalid || channels.some((channel) => !isOAuthChannelKey(channel))) {
+      throw new Error(
+        target.kind === 'alias' ? 'Invalid OAuth model alias' : 'Invalid OAuth model setting',
+      )
+    }
+    const pending: { path: string; channel: string; value: unknown; shrinks: boolean }[] = []
+    for (const channel of channels) {
+      const path = url + '/' + encodeURIComponent(channel)
+      let current: unknown
+      try {
+        current = (await client.get<unknown>(path)).data
+      } catch (error) {
+        if (!isMissingConfigPath(error)) throw error
+      }
+      const next = oauthChannelValue(after, channel)
+      if (sameConfigValue(current, next)) continue
+      if (!sameConfigValue(current, oauthChannelValue(before, channel)))
+        throw new ConfigEditConflict()
+      pending.push({
+        path,
+        channel,
+        value: next,
+        shrinks: Array.isArray(current) && Array.isArray(next) && next.length < current.length,
+      })
+    }
+    // Store destinations before deleting sources when a rule moves to another channel.
+    pending.sort((left, right) => Number(left.shrinks) - Number(right.shrinks))
+    for (const { path, channel, value } of pending) {
+      if (value === undefined) continue
+      try {
+        await putJson(path, value)
+      } catch (error) {
+        const { status, backendCode } = toManagementApiError(error)
+        if (
+          target.kind !== 'modelSettings' ||
+          oauthChannelValue(before, channel) !== undefined ||
+          status !== 400 ||
+          backendCode !== 'invalid_path'
+        )
+          throw error
+        // A child PUT cannot traverse an explicitly null mapping. A V8 PATCH
+        // initializes it while merging just this provider into the OAuth tree.
+        const { data: oauth } = await client.get<unknown>('/config/oauth')
+        if (oauth !== null && !(isRecord(oauth) && oauth.settings === null)) throw error
+        await client.patch('/config/oauth', { settings: { [channel]: value } })
+      }
+    }
+    for (const { path, value } of pending) if (value === undefined) await deleteOptional(path)
+    return
+  }
+
+  if (target.kind === 'payload') {
     const payload = sanitizePayloadForWrite(
       parseJsonObjectText(change.nextValue),
       parseJsonObjectText(change.previousValue),
@@ -882,43 +1281,105 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
     )
 
     if (hasRules) {
-      await putJson('/config/requests/payload', payload)
+      await putJson(url, payload)
       return
     }
 
-    await client.delete('/config/requests/payload')
+    await deleteOptional(url)
     return
   }
 
-  if (key === 'multimediaDisableImageGeneration') {
+  if (target.kind === 'imageGeneration') {
     const value = change.nextValue
 
     if (typeof value === 'string' && !value.trim()) {
-      await client.delete('/config/multimedia/disable-image-generation')
+      await deleteOptional(url)
       return
     }
 
-    await putJson('/config/multimedia/disable-image-generation', value)
+    await putJson(url, value)
     return
   }
 
-  const target = configWriteTargets[key]
-  const url = `/config/${target.path}`
-
   switch (target.kind) {
+    case 'literalReplacements':
+    case 'patternReplacements':
+      await putJson(
+        url,
+        serializeReplacementRows(target.kind, parseReplacementDraft(change.nextValue)),
+      )
+      return
     case 'boolean':
       await putJson(url, change.nextValue)
       return
     case 'number':
       await putJson(url, Number(change.nextValue))
       return
+    case 'optionalInteger': {
+      const value = parseOptionalInteger(change.nextValue, target.min)
+      if (value === undefined) throw new Error('Expected a whole number within the supported range')
+      await writeOptional(value)
+      return
+    }
+    case 'codexCacheTtl': {
+      const ttl = parseCodexCacheTtl(change.nextValue, change.previousValue)
+      if (ttl === undefined)
+        throw new Error('Expected nonnegative integer seconds or a Go duration')
+      await writeOptional(ttl)
+      return
+    }
+    case 'optionalBoolean':
+      await writeOptional(change.nextValue)
+      return
+    case 'clientRequestId': {
+      const mode = change.nextValue
+      if (mode !== null && (typeof mode !== 'string' || !claudeClientRequestIdModes.includes(mode)))
+        throw new Error('Invalid Claude client request ID mode')
+      await writeOptional(mode)
+      return
+    }
+    case 'optionalStringList': {
+      const before =
+        change.previousValue === null ? undefined : parseJsonText(String(change.previousValue))
+      const next = change.nextValue === null ? undefined : parseJsonText(String(change.nextValue))
+      if (next !== undefined && !isEditableHeaderList(next))
+        throw new Error('Expected a list of single-line names')
+      let current: unknown
+      try {
+        current = (await client.get<unknown>(url)).data
+      } catch (error) {
+        if (!isMissingConfigPath(error)) throw error
+      }
+      if (sameConfigValue(current, next)) return
+      if (!sameConfigValue(current, before)) throw new ConfigEditConflict()
+      if (next === undefined) await deleteOptional(url)
+      else await putJson(url, next)
+      return
+    }
     case 'nullableBoolean':
       await putJson(url, change.nextValue === null ? null : Boolean(change.nextValue))
       return
+    case 'secret': {
+      const next = change.nextValue
+      if (next !== null && (typeof next !== 'string' || !next.trim())) return
+      const desired = typeof next === 'string' ? next.trim() : null
+      let current: unknown = null
+      try {
+        const { data } = await client.get<unknown>(url)
+        current = typeof data === 'string' ? data.trim() || null : data
+      } catch (error) {
+        if (!isMissingConfigPath(error)) throw error
+      }
+      if (current === desired) return
+      if (current !== change.previousValue) throw new ConfigEditConflict()
+      if (desired === null) await deleteOptional(url)
+      else await putJson(url, desired)
+      return
+    }
     case 'string': {
       const value = typeof change.nextValue === 'string' ? change.nextValue.trim() : ''
       if (!value) {
-        await client.delete(url)
+        await deleteOptional(url)
         return
       }
       await putJson(url, value)
@@ -940,9 +1401,46 @@ export async function applyConfigChange(session: ManagementSessionInput, change:
   }
 }
 
+// Home's V8 validator and older yaml.v3 KnownFields decoders report unknown keys differently.
+const unknownConfigField =
+  /^(?:unknown (?:configuration field|field|v8 configuration section|API-key provider)\b|removed configuration field\b|legacy field\b|api-keys\.\S+: unsupported group field\b)|^\s*(?:line \d+: )?field [\w.-]+ not found in type \S+/im
+
+export class ConfigFieldSaveError extends Error {
+  readonly key: WritableConfigFieldKey
+  readonly savedKeys: WritableConfigFieldKey[]
+  readonly reason: 'unavailable' | 'unsupported' | 'rejected' | 'conflict' | 'failed'
+  readonly status?: number
+
+  constructor(key: WritableConfigFieldKey, savedKeys: WritableConfigFieldKey[], cause: unknown) {
+    const apiError = toManagementApiError(cause)
+    super(apiError.message, { cause })
+    this.key = key
+    this.savedKeys = savedKeys
+    const { status, backendCode, message } = apiError
+    this.status = status
+    if (cause instanceof ConfigEditConflict) this.reason = 'conflict'
+    else if (status === 405 || status === 501 || (status === 404 && !backendCode))
+      this.reason = 'unavailable'
+    else if (
+      (status === 400 || status === 422) &&
+      backendCode === 'invalid_config' &&
+      unknownConfigField.test(message)
+    )
+      this.reason = 'unsupported'
+    else if (status === 400 || status === 422) this.reason = 'rejected'
+    else this.reason = 'failed'
+  }
+}
+
 export async function applyConfigChanges(session: ManagementSessionInput, changes: ConfigChange[]) {
+  const savedKeys: WritableConfigFieldKey[] = []
   for (const change of changes) {
-    await applyConfigChange(session, change)
+    try {
+      await applyConfigChange(session, change)
+      savedKeys.push(change.key)
+    } catch (error) {
+      throw new ConfigFieldSaveError(change.key, savedKeys, error)
+    }
   }
 }
 

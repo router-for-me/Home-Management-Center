@@ -16,7 +16,16 @@ const cases: Array<[ConfigFieldKey, string]> = [
   ['antigravityCredits', 'antigravity'],
   ['antigravityConnPoolMaxIdleConnsPerHost', 'antigravity'],
   ['oauthAuthDir', 'oauthProviders'],
+  ['clientCodexOptimizeMultiAgentV2', 'client'],
+  ['clientCodexEnableApplyPatch', 'client'],
+  ['clientClaudeShowCodexCommentary', 'client'],
+  ['upstreamClaudeSessionDatePinDays', 'claudeExecution'],
+  ['upstreamClaudeAnthropicBetaAppendJson', 'claudeRequestHeaders'],
+  ['clientCodexWebSearchCacheLimit', 'codexSearchCache'],
+  ['upstreamCodexWebsocketCompression', 'codexTransport'],
+  ['oauthCodexSigninIdentifier', 'oauthProviders'],
   ['port', 'server'],
+  ['serverGithubToken', 'cpaServer'],
   ['proxyUrl', 'network'],
 ]
 

@@ -161,11 +161,16 @@ export const en = {
       connectedAs: 'Connected to {{mode}}.',
       errors: {
         managementKeyRequired: 'Management key is required.',
-        unsupportedApiVersion: {
-          title: 'Unsupported Management API version',
-          description:
-            'This backend only serves a legacy Management API. Upgrade CLIProxyAPIHome to a release that supports the V8 Management API, then try again.',
-        },
+        legacyApi:
+          'This address responds to the legacy Management API. Connect to a backend serving V8 or upgrade CLIProxyAPIHome.',
+        routeUnavailable:
+          'The V8 management route is unavailable. Check the address, reverse-proxy path, and whether Home has a management key configured.',
+        unexpectedResponse:
+          'This address returned an unexpected response to the V8 config request. Check the backend address and reverse-proxy path.',
+        incompatibleConfigVersion:
+          'The backend reports config version {{version}}. This console requires version 8.',
+        unreachable:
+          'Could not reach the management endpoint. Check the host, port, and network connection.',
       },
     },
     embeddedPortal: {
@@ -1667,6 +1672,47 @@ export const en = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Vertex execution options',
+        key: 'This key',
+        group: 'Group defaults',
+        groupHint: 'Keys in this group ({{count}}) inherit each setting unless they override it.',
+        credentialProtocol: 'Credential protocol',
+        modelProtocol: 'Model protocol',
+        protocolHint:
+          'Models set to Auto use this protocol. If both are Auto, CPA selects the route.',
+        location: 'OpenAPI location',
+        interactions: 'Interactions requests',
+        nativeInteractions: 'Native Interactions',
+        bridge: 'Protocol translation',
+        cpaDefault: 'CPA default (protocol translation)',
+        inherit: 'Use group setting ({{value}})',
+      },
+      pool: {
+        groupSize: 'This group contains {{total}} keys.',
+        group: 'Group connection pool',
+        key: 'Connection pool for this key',
+        inherit: 'Use group settings',
+        unconfigured: 'Unconfigured',
+        on: 'Enable pooling',
+        off: 'Disable pooling',
+        parameters: 'Override individual fields',
+        forceOn: 'Enable for this key',
+        optOut: 'Disable for this key',
+        groupHint:
+          'Applies to every key in this group that inherits the setting. CPA reuses connections separately for each key.',
+        defaults:
+          'Leave fields blank to use CPA defaults of 300 seconds and 2 idle connections per host.',
+        keyHint: 'Blank fields inherit the group value or fall back to the CPA default.',
+        defaultOptIn: 'Overriding fields enables pooling when the group is unconfigured.',
+        nonpositive: 'A zero or negative value in either field disables connection reuse.',
+        timeout: 'Idle timeout',
+        maxIdle: 'Max idle connections per host',
+        unsupported: 'Home returned an unrecognized pool setting. Its stored value is preserved.',
+        invalidTimeout: 'Enter a duration such as 45s, 1m30s or 0.',
+        invalidCount: 'Enter a whole number within the supported integer range.',
+        invalidSettings: 'Check the highlighted connection pool fields.',
+      },
       disconnected: {
         title: 'Connect a management runtime',
         description:
@@ -1801,6 +1847,9 @@ export const en = {
         modelImageSupportHint: 'Publish this model as an image model in the model catalog.',
         modelUseMaxCompletionTokensHint:
           'Send max_completion_tokens instead of max_tokens to the upstream.',
+        modelThinkingDisableType: 'Claude thinking.type when off',
+        modelThinkingDisableHint:
+          'Leave blank for disabled. Models such as claude-sonnet-5-5 use between_tools.',
         modelThinkingEnabled: 'Override thinking capabilities',
         modelThinkingHint:
           'When off, use backend defaults. When on, use only the capabilities configured below.',
@@ -1827,7 +1876,8 @@ export const en = {
         disabled: 'Disabled',
         disabledHint: 'When disabled, this entry will not be used for upstream requests.',
         disableCooling: 'Disable cooling',
-        disableCoolingHint: 'Exclude this model key from quota cooldown scheduling.',
+        disableCoolingHint:
+          'Skip ordinary cooldowns for this credential. Errors matching force_cooldown still trigger a cooldown.',
         disableCoolingModeInherit: 'Inherit global',
         disableCoolingModeEnabled: 'Enabled (disable cooling)',
         disableCoolingModeDisabled: 'Disabled (allow cooling)',
@@ -2599,7 +2649,7 @@ export const en = {
           'Use the official xAI API when enabled; use Grok CLI chat-proxy when disabled.',
         coolingSchedule: 'Cooling schedule',
         coolingScheduleHint:
-          'Configure whether this credential participates in quota cooldown scheduling or inherits the global policy.',
+          'Set the ordinary cooldown policy for this credential or inherit the global setting. Errors matching force_cooldown still trigger a cooldown.',
         coolingModeInherit: 'Inherit global policy',
         coolingModeEnabled: 'Participate in cooling (disable_cooling = false)',
         coolingModeDisabled: 'Disable cooling (disable_cooling = true)',
@@ -3068,6 +3118,23 @@ export const en = {
         group: 'Scope',
         groupPlaceholder: 'Select a scope',
         credential: 'Account credential',
+        copyCredentialId: 'Copy credential ID {{id}}',
+        credentialIdCopied: 'Credential ID copied',
+        credentialState: {
+          disabled: 'Disabled',
+          unavailable: 'Temporarily unavailable',
+          deleted: 'Credential deleted',
+          unresolved: 'Unconfirmed credential',
+        },
+        channelSearchPlaceholder: 'Search scopes, credentials, providers, or IDs',
+        channelSearchEmpty: 'No credential scopes match your search.',
+        modelGroupSearchEmpty: 'No model scopes match your search.',
+        credentialCandidatesDenied:
+          'This connection does not have permission to list credentials for binding.',
+        credentialCandidatesFailed: 'Could not load credentials for binding.',
+        loadingCredentialMetadata: 'Loading credential names and states…',
+        credentialMetadataUnavailable:
+          'Credential names and states are unavailable. You can still manage bindings by ID.',
         credentialSearchPlaceholder: 'Search credential name, provider, or ID',
         credentialEmpty: 'No account credentials are available for selection.',
         credentialSearchEmpty: 'No account credentials match your search.',
@@ -3076,7 +3143,7 @@ export const en = {
         credentialSelectedCount: '{{count}} credentials selected',
         credentialFilteredCount: '{{count}} current results',
         credentialSelectHint:
-          'Select one or more credentials. Only credentials with an explicit Auth ID are listed. Bound or unavailable credentials cannot be selected again.',
+          'Select one or more credentials. Bound, disabled, and temporarily unavailable credentials cannot be selected.',
         authId: 'Credential ID',
         model: 'Model',
         modelId: 'Model ID',
@@ -3102,7 +3169,6 @@ export const en = {
         channelEmpty: 'No credential scopes yet.',
         modelEmpty: 'No model scopes yet.',
         detailCount: '{{count}} bindings',
-        groupId: 'Scope ID: {{id}}',
         noDetails: 'No bindings yet.',
         detailChannels: 'Credential scope',
         detailChannelsHint:
@@ -3266,10 +3332,47 @@ export const en = {
         user: 'Delete user "{{name}}"? This will not automatically delete global credentials.',
         key: 'Delete client key {{name}}? Linked clients will stop working immediately.',
         group: 'Delete scope "{{name}}"? Bound keys will lose this scope reference.',
+        credentialBinding: 'Remove the binding for “{{name}}” from “{{group}}”?',
         detail: 'Delete binding "{{name}}"?',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: 'CPA skips rules with an empty expression.',
+      literalReplacements: 'Literal replacements',
+      patternReplacements: 'Regex replacements',
+      literalHint:
+        'Replace each matched phrase with the text you enter. An empty replacement deletes the match.',
+      patternHint:
+        'Use Go RE2. Rule order affects overlapping matches. Use $1 or ${1} for a capture group and leave the replacement empty to delete a match.',
+      addLiteral: 'Add phrase',
+      addPattern: 'Add pattern',
+      literalRow: 'Find text {{index}}',
+      patternRow: 'Pattern {{index}}',
+      replacement: 'Replace with',
+      replacementRow: 'Replacement for rule {{index}}',
+      emptyDeletes: 'Leave empty to delete',
+      missing: 'Enter the text or pattern to match.',
+      duplicate: 'This text appears in more than one row. Each literal key must be unique.',
+      incomplete: 'Complete the replacement rules and resolve duplicate keys before saving.',
+      unsupported:
+        'This field contains rules the editor cannot represent. Other settings can still be saved.',
+      up: 'Move up',
+      down: 'Move down',
+      remove: 'Remove',
+      removeRow: 'Remove rule {{index}}',
+      removeHint: 'The removal takes effect when you save.',
+    },
     configPage: {
+      compatibility: {
+        unavailable:
+          'The management route for this setting is unavailable. Check the backend version and proxy path. Your draft is preserved.',
+        unsupported: 'This backend does not support this change. Your draft is preserved.',
+        rejected:
+          'The backend rejected this value. Review the setting and retry. Your draft is preserved.',
+        failed: 'Could not confirm the save. Your draft is available to retry.',
+        discardField: 'Discard this change',
+        saveFailed: 'Could not save {{field}}. Your draft is preserved.',
+      },
       disconnected: {
         title: 'Connect a management runtime',
         description:
@@ -3296,10 +3399,12 @@ export const en = {
         reload: 'Reload',
         save: 'Save',
         viewChanges: 'View changes',
+        restoreDefault: 'Restore default',
         showSensitive: 'Show sensitive field',
         hideSensitive: 'Hide sensitive field',
       },
       status: {
+        unknown: 'Unknown',
         clean: 'No unsaved changes',
         visualChangeCount: '{{count}} visual changes',
         enabled: 'Enabled',
@@ -3318,13 +3423,18 @@ export const en = {
           title: 'Server runtime',
           shortTitle: 'Server',
           description:
-            'Configure the listen port, bind address, host allowlist, trusted proxies, and commercial mode.',
+            'Configure the listen port, bind address, RESP client IP allowlist, trusted proxies, and commercial mode.',
+        },
+        cpaServer: {
+          title: 'CPA node server settings',
+          shortTitle: 'CPA nodes',
+          description: 'Home distributes these settings to connected CPA nodes.',
         },
         discovery: {
           title: 'Service discovery',
           shortTitle: 'Discovery',
           description:
-            'Configure mDNS service discovery broadcast: service name, service type, subtypes, interface scope, and access control.',
+            'Home sends these settings to CPA nodes. Nodes advertise only model APIs. Management endpoints are never advertised.',
         },
         tls: {
           title: 'TLS',
@@ -3353,19 +3463,18 @@ export const en = {
           title: 'OAuth model rules',
           shortTitle: 'OAuth rules',
           description:
-            'Configure excluded models, client-visible aliases, and request-scoped error rules for OAuth and file-backed credentials.',
+            'Configure model exclusions, aliases, context windows and request-scoped error rules for OAuth and file-backed credentials.',
         },
         oauthProviders: {
           title: 'OAuth providers',
           shortTitle: 'Providers',
           description:
-            'Configure the OAuth credential directory and provider-specific settings for Codex, Antigravity, and Devin.',
+            'Configure the OAuth credential directory, refresh concurrency and provider-specific settings for Codex, Antigravity and Devin.',
         },
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description:
-            'Configure system-prompt sensitive-word obfuscation rules for the Devin OAuth provider.',
+          description: 'Filter lines and replace text in Devin system prompts.',
         },
         liveMediaRelay: {
           title: 'Codex · Live media relay',
@@ -3377,7 +3486,7 @@ export const en = {
           title: 'Logs and usage',
           shortTitle: 'Logs',
           description:
-            'Control debug diagnostics, request logs, file logs, usage statistics, log retention, pprof, and the Redis usage queue.',
+            'Configure debug diagnostics, request and file logs, retention, pprof, and the Redis usage queue. View the current usage statistics status.',
         },
         network: {
           title: 'Network proxy',
@@ -3403,11 +3512,40 @@ export const en = {
           description:
             'Control in-flight request observation cadence and memory limits. stale-after must be at least 3× snapshot-interval.',
         },
+        client: {
+          title: 'Client compatibility',
+          shortTitle: 'Clients',
+          description:
+            'Configure the model tools and conversation replay behavior CPA nodes offer to clients.',
+        },
+        codexSearchCache: {
+          title: 'Codex web search cache',
+          shortTitle: 'Search cache',
+          description:
+            'For Codex Responses sessions using a Claude upstream, CPA can restore missing search results when the client replays its history.',
+        },
+        claudeExecution: {
+          title: 'Claude execution',
+          shortTitle: 'Claude execution',
+          description: 'Configure how CPA handles model refusals and dates in Claude sessions.',
+        },
+        claudeRequestHeaders: {
+          title: 'Claude request headers',
+          shortTitle: 'Claude headers',
+          description:
+            'Configure how CPA recognizes native Claude Code clients and prepares requests to Claude.',
+        },
+        codexTransport: {
+          title: 'Codex transport compression',
+          shortTitle: 'Codex compression',
+          description:
+            'Configure outgoing HTTP request compression and WebSocket compression negotiation on CPA nodes.',
+        },
         upstream: {
           title: 'Upstream behavior',
           shortTitle: 'Upstream',
           description:
-            'Control request cloaking, cooling, and streaming behavior for Codex, Claude, and xAI upstreams.',
+            'Control request cloaking, compression, cooling, and streaming behavior for Codex, Claude, and xAI upstreams.',
         },
         headers: {
           title: 'Header spoofing',
@@ -3424,7 +3562,7 @@ export const en = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Configure Antigravity gateway behavior, sensitive words obfuscation, credits, and the connection pool.',
+            'Set the TOS pause duration, system instruction text rules, credits, and connection pool options.',
         },
         multimedia: {
           title: 'Multimedia',
@@ -3442,6 +3580,11 @@ export const en = {
           description:
             'Listening port distributed to downstream CPA nodes (1–65535). Changes are persisted and broadcast immediately, but running CPA instances must be restarted to rebind.',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: 'Usage statistics',
+          description:
+            'Home keeps usage statistics enabled. This status comes from the connected backend.',
         },
         loggingToFile: {
           label: 'File logging',
@@ -3523,9 +3666,9 @@ export const en = {
             'Maximum wait time (in seconds) for cooling credentials to recover. When all credentials are in cooldown, the server waits up to this duration for the earliest recovering credential before proceeding to the next round.',
         },
         disableCooling: {
-          label: 'Disable cooldown scheduling',
+          label: 'Disable ordinary cooldowns',
           description:
-            'Disable auth and model failure cooldown windows globally; all credentials skip failure backoff scheduling.',
+            'When enabled, Home skips ordinary cooldowns for request errors and quota limits. A provider or credential can override this setting. Errors matching force_cooldown still trigger a cooldown.',
         },
         forceModelPrefix: {
           label: 'Require model prefix match',
@@ -3542,6 +3685,11 @@ export const en = {
             'Choose an auth channel and select models to exclude from OAuth or file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
+        oauthModelSettingsJson: {
+          label: 'OAuth model settings',
+          description:
+            'Set the context window for OAuth models. A match on an existing alias takes priority over a match on the upstream name alone. API key models use their own settings.',
+        },
         oauthModelAliasJson: {
           label: 'Model aliases',
           description:
@@ -3554,10 +3702,12 @@ export const en = {
           description: 'Rewrite request parameters and message text by model and protocol.',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Antigravity literal replacements' },
+        antigravityPatternReplacements: { label: 'Antigravity regex replacements' },
         antigravitySensitiveWordsJson: {
-          label: 'Sensitive words obfuscation',
+          label: 'Obfuscate matching words',
           description:
-            'Insert zero-width spaces into matching Antigravity system prompts to reduce exact keyword detection upstream.',
+            'Antigravity inserts zero-width characters within matching text in system instructions.',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -3566,8 +3716,9 @@ export const en = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: 'Allowed Host headers',
-          description: 'One allowed HTTP Host per line. An empty array means no restriction.',
+          label: 'RESP client IP allowlist',
+          description:
+            'Restrict which client IPs can connect to Home over RESP. An empty list allows any IP. Every connection requires mutual TLS (mTLS).',
         },
         serverTrustedProxiesJson: {
           label: 'Trusted proxies',
@@ -3578,23 +3729,53 @@ export const en = {
           label: 'Commercial mode',
           description: 'Enable server behavior constraints intended for commercial deployments.',
         },
+        serverMaxRequestBodyBytes: {
+          label: 'Request body limit (bytes)',
+          description:
+            'CPA rejects larger requests with HTTP 413. Leave blank or enter zero or less for unlimited size.',
+          placeholder: 'Default (unlimited)',
+        },
+        serverResponseCompressionEnabled: {
+          label: 'Response compression',
+          description:
+            'Enabled by default. CPA uses zstd or gzip when the client supports it, including for SSE streams. HTTP compression skips WebSocket upgrades.',
+        },
+        serverResponseCompressionMinBytes: {
+          label: 'Compression threshold (bytes)',
+          description:
+            'This threshold applies to non-streaming responses. CPA sends smaller responses uncompressed. A blank, zero or negative value uses 1024 bytes.',
+          placeholder: 'Default (1024 bytes)',
+        },
+        serverShutdownTimeout: {
+          label: 'Shutdown timeout (seconds)',
+          description:
+            'How long CPA waits for in-flight HTTP requests after a shutdown signal. A blank, zero or negative value closes connections immediately.',
+          placeholder: 'Default (immediate)',
+        },
+        serverGithubToken: {
+          label: 'GitHub token',
+          description:
+            'Trusted CPA nodes use this token to access GitHub. Clearing it lets each node use its GITHUB_TOKEN environment variable.',
+        },
         discoveryEnabled: {
           label: 'Enable service discovery',
-          description: 'Broadcast this instance over mDNS so LAN CPA nodes can discover it.',
+          description: 'Let clients on the local network discover CPA node APIs over mDNS.',
         },
         discoveryServiceName: {
           label: 'Service name',
-          description: 'Service instance name used in the mDNS broadcast.',
-          placeholder: 'CLIProxyAPIHome',
+          description:
+            'The node adds its short ID to the name. An empty name uses the CPA prefix, for example CPA-8F3B.',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: 'Service type',
           description: 'mDNS service type. Usually keep the default.',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: 'Service subtypes',
-          description: 'One additional mDNS subtype per line for finer discovery filtering.',
+          description:
+            'Choose which API protocol subtypes to advertise. An empty list uses the CPA defaults.',
         },
         discoveryInterfacesIncludeJson: {
           label: 'Included interfaces',
@@ -3606,12 +3787,9 @@ export const en = {
           description: 'One interface name per line; these interfaces do not broadcast.',
         },
         discoveryAuthRequired: {
-          label: 'Discovery requires auth',
-          description: 'Mark discovery responses as requiring authentication to join.',
-        },
-        discoveryAdvertiseManagement: {
-          label: 'Advertise management',
-          description: 'Include management access information in the discovery broadcast.',
+          label: 'Advertise that the API requires credentials',
+          description:
+            'On by default. CPA advertises auth=1 to tell clients they need credentials. Turning this off advertises auth=0. This setting only changes the discovery record.',
         },
         managementBaseUrl: {
           label: 'Management base URL',
@@ -3781,6 +3959,21 @@ export const en = {
           label: 'Session affinity',
           description: 'Route the same session to the same credential when possible.',
         },
+        sessionAffinityRebindOn: {
+          label: 'Session rebinding policy',
+          description: 'This policy applies when session affinity is on.',
+          description_any:
+            'With session affinity on, each failover binds the session to the new credential for subsequent requests.',
+          description_quota:
+            'With session affinity on, a transient failure switches credentials for this request only. Quota, authentication, or model-support failures can move the binding to a new credential.',
+          description_never:
+            'With session affinity on, a live binding keeps its credential. If it is unavailable, Home retries it or returns an error. Home can select a new credential once the binding expires.',
+          options: {
+            any: 'Any failover (default)',
+            quota: 'Selected failures',
+            never: 'Keep original binding',
+          },
+        },
         sessionAffinityTtl: {
           label: 'Session affinity TTL',
           description:
@@ -3789,7 +3982,8 @@ export const en = {
         },
         sessionAffinitySubagents: {
           label: 'Subagent session affinity',
-          description: 'Include subagent requests in session affinity routing.',
+          description:
+            'On by default. Requires session affinity. An unbound child can inherit its parent’s credential for the same provider and model. Guardian can reuse the parent’s latest eligible credential across models. Turning this off restores normal selection for unbound children and stops adding parent credential choices to Guardian history. Existing child bindings and forks still work.',
         },
         streamingKeepaliveSeconds: {
           label: 'Stream keepalive interval (seconds)',
@@ -3855,6 +4049,101 @@ export const en = {
           label: 'Codex response steering',
           description: 'Allow steering directives on Codex responses.',
         },
+        clientClaudeShowCodexCommentary: {
+          label: 'Show Codex progress in Claude clients',
+          description:
+            'Show public Codex progress messages as visible text and preserve them for conversation replay. Reasoning summaries stay in thinking blocks.',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: 'Server-side refusal fallback',
+          description:
+            'Let Anthropic try a fallback when a supported model refuses a cloaked request. Existing fallbacks supplied by the request or payload rules take precedence.',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: 'Session date pin (days)',
+          description:
+            'Home KV persists session dates and ignores this setting. With in-memory storage, a blank value pins dates for 7 days. Zero or a negative value pins them for 1 hour.',
+          placeholder: 'In-memory default (7 days)',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: 'Additional native entrypoints',
+          description:
+            'Extend the built-in entrypoint list. CPA also checks other client signals before treating a request as native Claude Code.',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: 'Remove Anthropic-Beta flags',
+          description: 'CPA removes these flags from the header before applying the append list.',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: 'Append Anthropic-Beta flags',
+          description:
+            'CPA appends missing flags at the end of the header in list order. Credential-level Anthropic-Beta headers take precedence on custom gateways.',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: 'Inject diagnostics',
+          description:
+            'By default, CPA adds diagnostics to the body of compatible cloaked requests to Anthropic and includes the corresponding cache-diagnosis beta flag.',
+        },
+        upstreamClaudeClientRequestId: {
+          label: 'Client request ID',
+          description:
+            'Control x-client-request-id on requests to Claude. A credential-level header takes precedence.',
+          placeholder: 'Default (generate request ID)',
+          description_on:
+            'By default, CPA generates an ID for each first-party CLI request. Recognized native clients keep the incoming ID. A credential-level header takes precedence.',
+          description_passthrough:
+            'Forward the incoming ID only when present. A credential-level header takes precedence.',
+          description_off: 'Omit the default request ID. A credential-level header still applies.',
+          description_unknown:
+            'Home returned a value this console does not recognize. It stays saved until you choose another mode or restore the default.',
+          unknown: 'Saved value “{{value}}”',
+          options: { on: 'Generate request ID', passthrough: 'Forward existing ID', off: 'Off' },
+        },
+        clientCodexEnableApplyPatch: {
+          label: 'Extend apply_patch support',
+          description:
+            'By default, Codex sees freeform support on models that declare it natively. Enable this to advertise it for models supported by every candidate executor.',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: 'Cache search results',
+          description: 'Off by default. CPA stores search results for replay in the same session.',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: 'Cache lifetime',
+          description:
+            'A cache hit renews the lifetime. Enter whole seconds or a duration such as 1800, 30m or 1h30m. Blank or zero uses 24 hours.',
+          placeholder: 'Default (24 hours)',
+          invalid: 'Enter nonnegative whole seconds or a valid duration such as 1800 or 30m.',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: 'In-memory entry limit',
+          description:
+            'Blank or zero uses 1024 entries in CPA memory. Home KV expires entries by their lifetime.',
+          placeholder: 'Default (1024 entries)',
+          invalid: 'Enter a nonnegative whole number or leave blank for the default.',
+        },
+        upstreamCodexRequestCompression: {
+          label: 'Compress upstream Codex request bodies',
+          description:
+            'Off by default. Standard OAuth requests to the official ChatGPT Codex backend can use zstd. API keys, custom upstreams and Sign in with ChatGPT requests use the original body. CPA retries once with the original body after HTTP 400 or 415.',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: 'Request compression threshold (bytes)',
+          description:
+            'Compress request bodies at or above this size. Blank, zero or a negative value uses 1024 bytes.',
+          placeholder: 'Default (1024 bytes)',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'WebSocket compression',
+          description:
+            'On by default. CPA negotiates permessage-deflate on upstream and downstream Codex WebSocket connections.',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Codex sign-in identifier',
+          description:
+            'CPA uses this value for the Sign in with ChatGPT agent_name_hint and the User-Agent prefix on its API requests. Blank uses CLIProxyAPI.',
+          placeholder: 'Default (CLIProxyAPI)',
+        },
         clientCodexOptimizeMultiAgentV2: {
           label: 'Multi-agent optimization V2',
           description: 'Apply V2 optimizations to Codex multi-agent requests from the client.',
@@ -3919,6 +4208,12 @@ export const en = {
           label: 'xAI inject X Search',
           description: 'Inject X Search capability into xAI upstream requests.',
         },
+        oauthAutoRefreshWorkers: {
+          label: 'OAuth auto-refresh concurrency',
+          description:
+            'How many OAuth credentials Home can refresh at once. Blank, zero or a negative integer uses the default of 16. Changes apply on save and active refreshes run to completion.',
+          placeholder: 'Default (16)',
+        },
         oauthAuthDir: {
           label: 'OAuth auth directory',
           description: 'Storage directory for OAuth file credentials.',
@@ -3966,16 +4261,25 @@ export const en = {
           description:
             'JSON array of STUN/TURN servers. Note: reading back JSON masks username/credential; only entries whose urls are unchanged keep their existing credentials. Changing urls requires re-entering the credentials.',
         },
+        devinLiteralReplacements: { label: 'Devin literal replacements' },
+        devinPatternReplacements: { label: 'Devin regex replacements' },
         devinSensitiveWordsJson: {
-          label: 'Devin sensitive words obfuscation',
+          label: 'Remove lines containing these words',
           description:
-            'Insert zero-width spaces into matching Devin system prompts to reduce exact keyword detection upstream.',
+            'Devin removes an entire system-prompt line when it contains a listed word that a replacement rule has not handled.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Request-scoped error rules',
           description:
             'Error handling rules keyed by provider. Each rule has the shape {status, match[], match-regexr[], action}.',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'Pause duration after a TOS violation',
+          description:
+            'Home pauses dispatch from the entire Antigravity credential pool for this duration when Google RPC returns 403 PERMISSION_DENIED with ErrorInfo.reason set to TOS_VIOLATION. Enter a duration such as 30m or 1h30m, enter 0 to disable, or leave blank for the default.',
+          placeholder: '0 (off by default)',
+          invalid: 'Enter a valid positive duration such as 30m or 1h30m, or enter 0 to disable.',
         },
         antigravityCredits: {
           label: 'Antigravity credits',
@@ -4033,16 +4337,43 @@ export const en = {
         'fill-first': 'Fill first',
         unknown: 'Unknown',
       },
+      token: {
+        keep: 'Configured, leave blank to keep',
+        enter: 'Enter a token',
+        pendingClear: 'Will clear on save',
+        clear: 'Clear token',
+        undoClear: 'Undo clear',
+        setting: 'Set token',
+        replacing: 'Replace token',
+        removing: 'Clear stored token',
+      },
       nullableBoolean: {
+        defaultOff: 'Default (off)',
+        defaultOn: 'Default (on)',
         unset: 'Unset (default)',
         enabled: 'Enabled',
         disabled: 'Disabled',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: 'One entrypoint per line. Matching is case-insensitive.',
+          count: 'Entrypoints: {{count}}',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: 'One flag per line. Names are exact and case-sensitive.',
+          count: 'Flags: {{count}}',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: 'One flag per line. Case and order are preserved.',
+          count: 'Flags: {{count}}',
+        },
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: 'One allowed Host per line. Empty lines are dropped when saving.',
-          count: '{{count}} Hosts configured',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: 'Enter one IPv4 or IPv6 address per line.',
+          count: 'IP addresses configured: {{count}}',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -4050,7 +4381,7 @@ export const en = {
           count: '{{count}} trusted proxies configured',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: 'One mDNS subtype per line. Empty lines are dropped when saving.',
           count: '{{count}} subtypes configured',
         },
@@ -4220,8 +4551,7 @@ export const en = {
         booleanTrue: 'true',
         booleanFalse: 'false',
         addRuleTitle: 'Choose a request rewrite intent',
-        addRuleDescription:
-          'Choose fill, override, user text replacement or removal. Open the corresponding section to review existing rules.',
+        addRuleDescription: 'Choose a rule to fill, override, replace text, or remove a parameter.',
         addRule: 'Add another rule',
         draftBlockingHint: 'Complete the current rule before adding another rule.',
         viewExistingRules: 'View {{count}} existing',
@@ -4272,7 +4602,6 @@ export const en = {
           discardDescription:
             'This rule has not been saved. You can add it again after discarding it.',
           executionPosition: 'Runs {{position}}',
-          selectedUsers: 'User message positions · {{positions}}',
           valueMode: 'Parameter entry mode',
           typedMode: 'Typed values',
           rawMode: 'JSON values',
@@ -4316,6 +4645,35 @@ export const en = {
           pathRequired: 'Path cannot be empty.',
         },
         replace: {
+          targets: {
+            user: 'User messages',
+            system: 'System messages',
+            developer: 'Developer messages',
+            paths: 'GJSON paths',
+          },
+          addPath: 'Add GJSON path',
+          removePath: 'Remove GJSON path {{index}}',
+          pendingConfig: 'Configuration to save',
+          savedConfig: 'Saved configuration',
+          previewRegex:
+            'Step {{index}} uses Go RE2. Verify this step and the remaining output in CPA.',
+          regexHint:
+            'Use Go RE2 syntax. A replacement can reference captures with $1 or ${1}. CPA skips a step with an empty or invalid pattern.',
+          entryPattern: 'Step {{index}} regex pattern',
+          pattern: 'Pattern',
+          regex: 'Go RE2 regex',
+          literal: 'Literal text',
+          entryKind: 'Step {{index}} matching method',
+          rolePositions: '{{role}} · positions {{positions}}',
+          allRoleMessages: '{{role}} · all messages',
+          pathSummary: 'GJSON paths ({{count}})',
+          pathEntry: 'GJSON path {{index}}',
+          pathsHint:
+            'Paths start at the upstream request root. CPA edits existing string fields and processes each resolved path once per rule.',
+          systemHint:
+            'A top-level system instruction counts as one system message. Choose system for developer text merged into a system message.',
+          allMessages: 'All messages of this role',
+          messageScope: 'Messages to include',
           actionSummary: '{{from}} → {{to}}',
           deleteSummary: 'Delete {{from}}',
           moveStepUp: 'One step earlier',
@@ -4326,13 +4684,12 @@ export const en = {
           showSteps: 'View step results',
           unchanged: 'Text unchanged in this step',
 
-          target: 'Target user messages',
+          target: 'Replacement target',
           selectedPositions: 'Select by position',
-          allUsers: 'All user messages',
           positions: 'Message positions',
           positionsPlaceholder: 'For example 1, 2',
           positionsHint:
-            'Count user messages from 1 in the final upstream request, including messages with no replaceable text.',
+            'Count messages of this role from 1 in the final upstream request, including messages without editable text.',
           replacements: 'Replacements',
           entryTitle: 'Step {{index}}',
           deletesText: 'Deletes matched text',
@@ -4346,21 +4703,21 @@ export const en = {
           entryFrom: 'Step {{index}} find text',
           entryTo: 'Step {{index}} replacement text',
           fromPlaceholder: 'Exact text to find',
-          toPlaceholder: 'Leave empty to delete the match and keep the message',
+          toPlaceholder: 'Leave empty to delete matched text',
           addEntry: 'Add a replacement',
           literalHint: 'Matches exact text, including case, spaces and line breaks.',
           deleteDescription: 'Takes effect when you save the configuration.',
           confirmDelete: 'Confirm deletion',
-          previewTitle: 'Preview replacements',
+          previewTitle: 'Test with sample text',
           previewHint:
-            'Tests this rule’s text only. Model, protocol and message position are skipped.',
+            'This sample shows literal text replacements in order. CPA evaluates model conditions, roles, positions and GJSON paths on the actual request.',
           previewRule: 'Rule to test',
           previewInput: 'Sample text',
-          previewOutput: 'Text after replacement',
+          previewOutput: 'Sample result',
           previewPlaceholder: 'Enter sample text',
           previewTooLarge:
             'This preview is too large. Shorten the sample text or use fewer replacements.',
-          previewIncomplete: 'Complete every find-text field to preview replacements.',
+          previewIncomplete: 'Complete the literal search text to test the sample.',
           previewEmpty: 'Enter sample text to see the result.',
           emptyResult: '(Empty text)',
           ruleSummary: 'Models: {{models}} · Steps: {{count}}',
@@ -4372,7 +4729,8 @@ export const en = {
             'Rules and replacements run from top to bottom. Each step processes the previous step’s result. Add another rule for a different matching scope.',
         },
         ruleIssues: {
-          replacePositionsRequired: 'Enter a position or select all user messages.',
+          replacePathsRequired: 'Enter a non-empty GJSON path for each row.',
+          replacePositionsRequired: 'Enter a position or select all messages of this role.',
           replacePositionsInvalid: 'Use whole message positions starting at 1, for example 1, 2.',
           replaceReplacementRequired: 'Add at least one replacement step.',
           replaceSourceRequired: 'Enter the text to find.',
@@ -4382,7 +4740,7 @@ export const en = {
           paramPathRequired: 'Enter a JSON path for this parameter.',
         },
         addRuleActions: {
-          replace: 'Replace user text',
+          replace: 'Replace text',
           default: 'Typed value',
           'default-raw': 'Raw JSON',
           override: 'Typed value',
@@ -4405,9 +4763,9 @@ export const en = {
         },
         sections: {
           replace: {
-            title: 'User text replacement',
+            title: 'Text replacement',
             description:
-              'Edit existing user text in the final upstream request, after overrides and before parameter removal.',
+              'Replace text in selected messages or string fields in the final upstream request. Rules run after overrides and before parameter removal.',
           },
           default: {
             title: 'Default fill',
@@ -4434,17 +4792,38 @@ export const en = {
         },
       },
       validation: {
+        optionalInteger:
+          'Enter a whole number within the supported range or leave it blank for the default.',
         invalidField: 'Enter a valid value.',
+        editConflict:
+          'The selected record changed, was removed, or could not be uniquely identified. Reload before saving.',
         runtimeChanged:
           'A setting you edited changed on the server. Reload before editing it again.',
         jsonParseError: 'JSON could not be parsed: {{message}}',
         summary: '{{count}} fields need attention',
+      },
+      modelSettings: {
+        provider: 'OAuth provider',
+        add: 'Add model setting',
+        empty: 'No model settings for {{provider}}.',
+        name: 'Upstream model name',
+        nameRequired: 'Enter the upstream model name.',
+        alias: 'Existing alias (optional)',
+        limit: 'Context window (tokens)',
+        defaultLimit: 'Model default if blank or 0',
+        invalidLimit: 'Enter a nonnegative whole number within the supported range.',
+        removeRow: 'Remove model setting for {{model}}',
       },
       json: {
         remove: 'Remove',
         unsupportedStructure:
           'This config contains a structure that is not supported by the visual editor.',
         emptyRows: 'No rules configured.',
+        aliasChannel: 'Alias channel',
+        customChannel: 'Custom channel',
+        moveAlias: 'Move alias',
+        vertexProtocol: 'Vertex protocol',
+        vertexModes: { auto: 'Automatic', native: 'Native', openapi: 'OpenAPI' },
         addAlias: 'Add alias',
         columns: {
           channel: 'Channel',

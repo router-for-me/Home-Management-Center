@@ -33,6 +33,7 @@ const capabilityRequests: Record<
     | 'credentialCooldownReset'
     | 'quotaRecollect'
     | 'modelChannelBindings'
+    | 'channelGroupCredentialCandidates'
   >,
   {
     path: string
@@ -109,6 +110,7 @@ const emptyCapabilities: CapabilityMap = {
   users: false,
   userPeriodLimits: false,
   accessGroups: false,
+  channelGroupCredentialCandidates: false,
   modelChannelBindings: false,
   credentialInFlight: false,
   credentialInFlightSnapshotCursor: false,
@@ -465,31 +467,69 @@ async function probeCapability(client: AxiosInstance, key: ProbedCapabilityKey) 
     validateStatus: () => true,
   })
 
-  if (response.status === 404) return false
-  if (response.status === 405) return false
-  return true
+  if (key === 'userPeriodLimits' && response.status === 400) {
+    return isRecord(response.data) && response.data.error === 'invalid id'
+  }
+  return (
+    response.status >= 200 &&
+    response.status < 300 &&
+    (isRecord(response.data) || Array.isArray(response.data))
+  )
 }
 
 const SUPPORTED_CONFIG_VERSION = 8
 
-function createUnsupportedApiVersionError() {
-  const error = new Error(
-    'The connected backend only serves a legacy Management API. Upgrade CLIProxyAPIHome to a release that supports the V8 Management API.',
-  ) as Error & { backendCode: string }
-  error.backendCode = 'unsupported-api-version'
-  return error
+async function hasLegacyManagementApi(client: AxiosInstance) {
+  // Probe a single scalar on the same deployment, including any reverse-proxy prefix.
+  try {
+    const legacy = await client.get<unknown>('/debug', {
+      baseURL: client.defaults.baseURL?.replace(/\/v8\/management$/, '/v0/management'),
+      validateStatus: () => true,
+    })
+    if (!isRecord(legacy.data)) return false
+    if (legacy.status === 200) return typeof legacy.data.debug === 'boolean'
+    const { homeVersion, cpaVersion } = readServerInfo(legacy)
+    return (
+      Boolean(homeVersion || cpaVersion) &&
+      (legacy.status === 401 || legacy.status === 403) &&
+      typeof legacy.data.error === 'string' &&
+      /^(?:missing management key|invalid management key|remote management disabled|remote management key not set|IP banned due to too many failed attempts\b)/i.test(
+        legacy.data.error,
+      )
+    )
+  } catch {
+    return false
+  }
 }
 
 async function getVersionedConfig(client: AxiosInstance) {
   try {
-    return await client.get<unknown>('/config')
-  } catch (error) {
-    // A runtime without the /v8/management route tree answers 404 here; that
-    // means a legacy backend, not a missing session.
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      throw createUnsupportedApiVersionError()
+    const response = await client.get<unknown>('/config')
+    const version = isRecord(response.data) ? response.data['config-version'] : undefined
+    if (version === SUPPORTED_CONFIG_VERSION) return response
+    if (typeof version === 'number' && Number.isInteger(version)) {
+      throw Object.assign(new Error(`Unsupported management config version ${version}.`), {
+        backendCode: 'incompatible-config-version',
+        configVersion: version,
+      })
     }
-    throw error
+    throw Object.assign(
+      new Error('The management endpoint returned an unexpected config response.'),
+      {
+        backendCode: 'unexpected-management-response',
+      },
+    )
+  } catch (error) {
+    if (!axios.isAxiosError(error) || ![404, 405].includes(error.response?.status ?? 0)) throw error
+    if (await hasLegacyManagementApi(client)) {
+      throw Object.assign(new Error('The endpoint serves the legacy Management API.'), {
+        backendCode: 'unsupported-api-version',
+      })
+    }
+    throw Object.assign(new Error('The V8 management route is unavailable.'), {
+      backendCode: 'management-route-unavailable',
+      status: error.response?.status,
+    })
   }
 }
 
@@ -498,14 +538,8 @@ export async function probeManagementRuntime(
 ): Promise<CapabilityProbeResult> {
   const client = createManagementClient(session)
   const configResponse = await getVersionedConfig(client)
-  const configVersion = isRecord(configResponse.data)
-    ? configResponse.data['config-version']
-    : undefined
-  if (configVersion !== SUPPORTED_CONFIG_VERSION) {
-    throw createUnsupportedApiVersionError()
-  }
 
-  const capabilitiesPayload = await readCapabilitiesPayload(client)
+  const capabilitiesPayload = await readCapabilitiesPayload(client).catch(() => null)
   const capabilitySource = capabilitiesPayload ?? configResponse.data
   const serverInfo = mergeServerInfo(
     readServerInfo(configResponse),
@@ -597,17 +631,23 @@ export async function probeManagementRuntime(
     ? readDeclaredCredentialCooldownResetCapability(capabilitySource)
     : null
 
-  const capabilityKeysToProbe: ProbedCapabilityKey[] = capabilitiesPayload
-    ? [
-        ...(declaredTopology === null ? (['topology'] as const) : []),
-        ...(declaredTopology !== true && declaredNodes === null ? (['nodes'] as const) : []),
-        ...(declaredRequestEvents === null ? (['requestEvents'] as const) : []),
-        ...(declaredRequestEventFilters === null ? (['requestEventFilters'] as const) : []),
-        'users',
-        ...(declaredUserPeriodLimits === null ? (['userPeriodLimits'] as const) : []),
-        'accessGroups',
-      ]
-    : (Object.keys(capabilityRequests) as ProbedCapabilityKey[])
+  const declarations: Record<ProbedCapabilityKey, boolean | null> = {
+    topology: declaredTopology,
+    nodes: declaredNodes,
+    usage: declaredUsage,
+    usageOverview: declaredUsageOverview,
+    usageRecords: declaredUsageRecords,
+    requestEvents: declaredRequestEvents,
+    requestEventFilters: declaredRequestEventFilters,
+    requestErrorLogs: declaredRequestErrorLogs,
+    users: declaredUsers,
+    userPeriodLimits: declaredUserPeriodLimits,
+    accessGroups: declaredAccessGroups,
+    quotaSnapshots: declaredQuotaSnapshots,
+  }
+  const capabilityKeysToProbe = (Object.keys(capabilityRequests) as ProbedCapabilityKey[]).filter(
+    (key) => declarations[key] === null && !(key === 'nodes' && declaredTopology === true),
+  )
 
   const probedCapabilityEntries = await Promise.all(
     capabilityKeysToProbe.map(async (key) => {
@@ -666,6 +706,10 @@ export async function probeManagementRuntime(
     logs: declaredLogs ?? declaredUsage ?? probedCapabilities.usage,
     requestErrorLogs: declaredRequestErrorLogs ?? probedCapabilities.requestErrorLogs,
     accessGroups: declaredAccessGroups ?? probedCapabilities.accessGroups,
+    channelGroupCredentialCandidates:
+      capabilitiesPayload !== null &&
+      readDeclaredCapabilityValue(capabilitySource, ['channel_group_credential_candidates']) ===
+        true,
     // The model-group-details routes predate per-model channel bindings, so an HTTP
     // status probe cannot detect support; only the declared capability bit can.
     modelChannelBindings: declaredModelChannelBindings ?? false,

@@ -161,11 +161,16 @@ export const ru = {
       connectedAs: 'Подключено к {{mode}}.',
       errors: {
         managementKeyRequired: 'Management key обязателен.',
-        unsupportedApiVersion: {
-          title: 'Неподдерживаемая версия Management API',
-          description:
-            'Этот backend обслуживает только устаревший Management API. Обновите CLIProxyAPIHome до версии с поддержкой V8 Management API и повторите попытку.',
-        },
+        legacyApi:
+          'По этому адресу отвечает прежний API управления. Укажите адрес сервера с API V8 или обновите CLIProxyAPIHome.',
+        routeUnavailable:
+          'Маршрут API управления V8 недоступен. Проверьте адрес, путь обратного прокси и наличие ключа управления в настройках Home.',
+        unexpectedResponse:
+          'По этому адресу получен неожиданный ответ на запрос конфигурации V8. Проверьте адрес сервера и путь обратного прокси.',
+        incompatibleConfigVersion:
+          'Сервер сообщает версию конфигурации {{version}}. Для этой консоли нужна версия 8.',
+        unreachable:
+          'Не удалось подключиться к API управления. Проверьте адрес, порт и сетевое соединение.',
       },
     },
     embeddedPortal: {
@@ -1665,6 +1670,52 @@ export const ru = {
       },
     },
     providersPage: {
+      vertex: {
+        title: 'Параметры выполнения Vertex',
+        key: 'Текущий ключ',
+        group: 'Настройки группы',
+        groupHint:
+          'Ключей в группе — {{count}}. Каждый ключ наследует параметры, для которых у него нет своих значений.',
+        credentialProtocol: 'Протокол ключа',
+        modelProtocol: 'Протокол модели',
+        protocolHint:
+          'В режиме «Авто» модель использует протокол ключа. Если оба значения автоматические, маршрут выбирает CPA.',
+        location: 'Регион OpenAPI',
+        interactions: 'Запросы Interactions',
+        nativeInteractions: 'Нативный Interactions',
+        bridge: 'Преобразование протокола',
+        cpaDefault: 'По умолчанию в CPA (преобразование)',
+        inherit: 'Как в группе ({{value}})',
+      },
+      pool: {
+        groupSize: 'Ключей в группе — {{total}}.',
+        group: 'Пул соединений группы',
+        key: 'Пул соединений этого ключа',
+        inherit: 'Как в группе',
+        unconfigured: 'Не настроен',
+        on: 'Включить пул',
+        off: 'Отключить пул',
+        parameters: 'Переопределить отдельные поля',
+        forceOn: 'Включить для этого ключа',
+        optOut: 'Отключить для этого ключа',
+        groupHint:
+          'Настройка действует для всех ключей, наследующих её в этой группе. CPA повторно использует соединения отдельно для каждого ключа.',
+        defaults:
+          'Пустые поля используют значения CPA по умолчанию — 300 секунд и 2 простаивающих соединения на узел.',
+        keyHint:
+          'Пустые поля наследуют значения группы. Если в группе значение не задано, применяется значение CPA по умолчанию.',
+        defaultOptIn:
+          'Если пул группы не настроен, переопределение полей включает пул для этого ключа.',
+        nonpositive:
+          'Нулевое или отрицательное значение в любом поле отключает повторное использование соединений.',
+        timeout: 'Тайм-аут простоя',
+        maxIdle: 'Максимум простаивающих соединений на узел',
+        unsupported:
+          'Формат настройки пула от Home не распознан. При сохранении исходное значение сохранится.',
+        invalidTimeout: 'Введите длительность, например 45s, 1m30s или 0.',
+        invalidCount: 'Введите целое число в допустимом диапазоне.',
+        invalidSettings: 'Проверьте выделенные поля пула соединений.',
+      },
       disconnected: {
         title: 'Подключите management runtime',
         description:
@@ -1801,6 +1852,9 @@ export const ru = {
         modelImageSupportHint: 'Отмечать эту модель как модель изображений в каталоге.',
         modelUseMaxCompletionTokensHint:
           'Отправлять серверу max_completion_tokens вместо max_tokens.',
+        modelThinkingDisableType: 'Значение Claude thinking.type при отключении',
+        modelThinkingDisableHint:
+          'Пустое поле означает disabled. Для таких моделей, как claude-sonnet-5-5, используется between_tools.',
         modelThinkingEnabled: 'Переопределить возможности рассуждения',
         modelThinkingHint:
           'Если выключено, используются настройки сервера. Если включено — только возможности, заданные ниже.',
@@ -1827,7 +1881,8 @@ export const ru = {
         disabled: 'Отключено',
         disabledHint: 'Отключенная запись не используется для upstream requests.',
         disableCooling: 'Отключить cooling',
-        disableCoolingHint: 'Исключает модельный ключ из quota cooldown scheduling.',
+        disableCoolingHint:
+          'Пропускать обычные паузы для этих учётных данных. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         disableCoolingModeInherit: 'Наследовать глобальный',
         disableCoolingModeEnabled: 'Включено (отключить cooling)',
         disableCoolingModeDisabled: 'Выключено (разрешить cooling)',
@@ -2603,7 +2658,7 @@ export const ru = {
           'Если включено, используется официальный API xAI; если выключено — Grok CLI chat-proxy.',
         coolingSchedule: 'Расписание охлаждения',
         coolingScheduleHint:
-          'Настройте, участвует ли эта учетная запись в расписании охлаждения квот или наследует глобальную политику.',
+          'Задайте политику обычных пауз для этих учётных данных или используйте глобальную настройку. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         coolingModeInherit: 'Наследовать глобальную политику',
         coolingModeEnabled: 'Участвовать в охлаждении (disable_cooling = false)',
         coolingModeDisabled: 'Отключить охлаждение (disable_cooling = true)',
@@ -3073,7 +3128,24 @@ export const ru = {
         group: 'Область',
         groupPlaceholder: 'Выберите область',
         credential: 'Учетные данные аккаунта',
-        credentialSearchPlaceholder: 'Поиск по названию, provider или ID',
+        copyCredentialId: 'Копировать ID учётных данных {{id}}',
+        credentialIdCopied: 'ID учётных данных скопирован',
+        credentialState: {
+          disabled: 'Отключены',
+          unavailable: 'Временно недоступны',
+          deleted: 'Учётные данные удалены',
+          unresolved: 'Учётные данные не подтверждены',
+        },
+        channelSearchPlaceholder: 'Поиск по области, учётным данным, провайдеру или ID',
+        channelSearchEmpty: 'Подходящих областей учётных данных нет.',
+        modelGroupSearchEmpty: 'Подходящих областей моделей нет.',
+        credentialCandidatesDenied:
+          'У этого подключения нет прав на просмотр учётных данных для привязки.',
+        credentialCandidatesFailed: 'Не удалось загрузить учётные данные для привязки.',
+        loadingCredentialMetadata: 'Загрузка названий и состояний учётных данных…',
+        credentialMetadataUnavailable:
+          'Названия и состояния учётных данных недоступны. Связями по-прежнему можно управлять по ID.',
+        credentialSearchPlaceholder: 'Поиск по названию, провайдеру или ID',
         credentialEmpty: 'Нет учетных данных аккаунта, доступных для выбора.',
         credentialSearchEmpty: 'Нет учетных данных аккаунта по условиям поиска.',
         credentialAlreadyBound: 'Связано',
@@ -3081,7 +3153,7 @@ export const ru = {
         credentialSelectedCount: 'Выбрано учетных данных: {{count}}',
         credentialFilteredCount: 'Текущих результатов: {{count}}',
         credentialSelectHint:
-          'Можно выбрать одни или несколько учетных данных. Показаны только записи с явным Auth ID. Уже связанные или недоступные учетные данные нельзя выбрать повторно.',
+          'Можно выбрать несколько записей. Уже привязанные, отключённые и временно недоступные учётные данные выбрать нельзя.',
         authId: 'Credential ID',
         model: 'Модель',
         modelId: 'Model ID',
@@ -3107,7 +3179,6 @@ export const ru = {
         channelEmpty: 'Областей учетных данных пока нет.',
         modelEmpty: 'Областей моделей пока нет.',
         detailCount: 'Связей: {{count}}',
-        groupId: 'ID области: {{id}}',
         noDetails: 'Связей пока нет.',
         detailChannels: 'Область учетных данных',
         detailChannelsHint:
@@ -3275,10 +3346,47 @@ export const ru = {
         user: 'Удалить пользователя "{{name}}"? Это не удалит глобальные учетные данные автоматически.',
         key: 'Удалить клиентский ключ {{name}}? Связанные клиенты сразу перестанут работать.',
         group: 'Удалить область "{{name}}"? Назначенные ключи потеряют ссылку на эту область.',
+        credentialBinding: 'Удалить привязку «{{name}}» из области «{{group}}»?',
         detail: 'Удалить связь "{{name}}"?',
       },
     },
+    sensitiveReplacements: {
+      blankPattern: 'CPA пропускает правила с пустым выражением.',
+      literalReplacements: 'Замена фраз',
+      patternReplacements: 'Замена по выражению',
+      literalHint: 'Укажите исходную фразу и текст замены. Пустая замена удаляет совпадение.',
+      patternHint:
+        'Используется синтаксис Go RE2. Порядок правил влияет на пересекающиеся совпадения. Для ссылки на группу используйте $1 или ${1}. Пустая замена удаляет совпадение.',
+      addLiteral: 'Добавить фразу',
+      addPattern: 'Добавить выражение',
+      literalRow: 'Исходная фраза {{index}}',
+      patternRow: 'Выражение {{index}}',
+      replacement: 'Заменить на',
+      replacementRow: 'Замена для правила {{index}}',
+      emptyDeletes: 'Оставьте пустым для удаления',
+      missing: 'Введите исходную фразу или выражение.',
+      duplicate: 'Такая фраза уже есть в другой строке. Каждая фраза должна быть уникальной.',
+      incomplete: 'Заполните правила замены и устраните дубликаты перед сохранением.',
+      unsupported:
+        'Редактор не поддерживает формат правил в этом поле. Остальные настройки можно сохранить.',
+      up: 'Выше',
+      down: 'Ниже',
+      remove: 'Удалить',
+      removeRow: 'Удалить правило {{index}}',
+      removeHint: 'Удаление вступит в силу после сохранения.',
+    },
     configPage: {
+      compatibility: {
+        unavailable:
+          'Маршрут API для этого параметра недоступен. Проверьте версию сервера и путь прокси. Черновик остался в форме.',
+        unsupported: 'Сервер не поддерживает это изменение. Черновик сохранён в форме.',
+        rejected:
+          'Сервер отклонил значение. Черновик сохранён в форме. Проверьте параметр и повторите попытку.',
+        failed:
+          'Не удалось подтвердить сохранение. Черновик остался в форме для повторной попытки.',
+        discardField: 'Отменить это изменение',
+        saveFailed: 'Не удалось сохранить «{{field}}». Черновик остался в форме.',
+      },
       disconnected: {
         title: 'Подключите management runtime',
         description:
@@ -3306,10 +3414,12 @@ export const ru = {
         reload: 'Перезагрузить',
         save: 'Сохранить',
         viewChanges: 'Показать изменения',
+        restoreDefault: 'Вернуть по умолчанию',
         showSensitive: 'Показать чувствительное поле',
         hideSensitive: 'Скрыть чувствительное поле',
       },
       status: {
+        unknown: 'Неизвестно',
         clean: 'Нет несохраненных изменений',
         visualChangeCount: 'Визуальных изменений: {{count}}',
         enabled: 'Включено',
@@ -3328,13 +3438,18 @@ export const ru = {
           title: 'Runtime сервера',
           shortTitle: 'Сервер',
           description:
-            'Настройка порта прослушивания, адреса привязки, списка разрешённых хостов, доверенных proxy и коммерческого режима.',
+            'Настройте порт, адрес привязки, список разрешённых IP-адресов клиентов RESP, доверенные прокси и коммерческий режим.',
+        },
+        cpaServer: {
+          title: 'Настройки сервера на узлах CPA',
+          shortTitle: 'Узлы CPA',
+          description: 'Home передаёт эти настройки подключённым узлам CPA.',
         },
         discovery: {
           title: 'Обнаружение сервиса',
           shortTitle: 'Discovery',
           description:
-            'Настройка mDNS broadcast: имя сервиса, тип сервиса, подтипы, диапазон интерфейсов и контроль доступа.',
+            'Home передаёт эти настройки узлам CPA. Узлы публикуют только API моделей. Адреса интерфейса управления в объявления не включаются.',
         },
         tls: {
           title: 'TLS',
@@ -3363,19 +3478,18 @@ export const ru = {
           title: 'Правила моделей OAuth',
           shortTitle: 'OAuth rules',
           description:
-            'Настройка исключенных моделей, клиентских алиасов и request-scoped правил ошибок для OAuth и file-backed credentials.',
+            'Настройте исключения, псевдонимы, контекстные окна моделей и правила обработки ошибок для OAuth и файловых учётных данных.',
         },
         oauthProviders: {
           title: 'Провайдеры OAuth',
           shortTitle: 'Провайдеры',
           description:
-            'Настройка каталога учётных данных OAuth и параметров провайдеров Codex, Antigravity и Devin.',
+            'Настройка каталога учётных данных OAuth, числа одновременных обновлений и параметров провайдеров Codex, Antigravity и Devin.',
         },
         devin: {
           title: 'Devin',
           shortTitle: 'Devin',
-          description:
-            'Настройка правил обфускации чувствительных слов системного промпта для OAuth-провайдера Devin.',
+          description: 'Фильтрация строк и замена текста в системных инструкциях Devin.',
         },
         liveMediaRelay: {
           title: 'Codex · Ретрансляция живого медиа',
@@ -3387,7 +3501,7 @@ export const ru = {
           title: 'Журналы и usage',
           shortTitle: 'Журналы',
           description:
-            'Управление диагностикой debug, request logs, file logs, usage statistics, хранением журналов, pprof и Redis usage queue.',
+            'Настройка отладки, журналов запросов, записи журналов в файлы, сроков хранения, pprof и очереди Redis. Здесь также показано состояние сбора статистики.',
         },
         network: {
           title: 'Сетевой proxy',
@@ -3413,11 +3527,41 @@ export const ru = {
           description:
             'Частота наблюдения in-flight запросов и лимиты памяти. stale-after должен быть не меньше 3× snapshot-interval.',
         },
+        client: {
+          title: 'Совместимость с клиентами',
+          shortTitle: 'Клиенты',
+          description:
+            'Настройте инструменты моделей и воспроизведение истории диалога на узлах CPA.',
+        },
+        codexSearchCache: {
+          title: 'Кеш веб-поиска Codex',
+          shortTitle: 'Кеш поиска',
+          description:
+            'Когда сеанс Codex Responses использует Claude, CPA может восстанавливать отсутствующие результаты поиска при повторной передаче истории.',
+        },
+        claudeExecution: {
+          title: 'Выполнение запросов Claude',
+          shortTitle: 'Выполнение Claude',
+          description:
+            'Настройте обработку отказов модели и фиксацию даты в сеансах Claude на узлах CPA.',
+        },
+        claudeRequestHeaders: {
+          title: 'Заголовки запросов Claude',
+          shortTitle: 'Заголовки Claude',
+          description:
+            'Настройте распознавание штатных клиентов Claude Code и подготовку запросов к Claude.',
+        },
+        codexTransport: {
+          title: 'Сжатие при передаче Codex',
+          shortTitle: 'Сжатие Codex',
+          description:
+            'Настройте сжатие исходящих HTTP-запросов и согласование сжатия WebSocket на узлах CPA.',
+        },
         upstream: {
           title: 'Поведение upstream',
           shortTitle: 'Upstream',
           description:
-            'Управление маскировкой запросов, охлаждением и поведением стриминга для upstream Codex, Claude и xAI.',
+            'Управление маскировкой запросов, сжатием, охлаждением и поведением стриминга для upstream Codex, Claude и xAI.',
         },
         headers: {
           title: 'Подмена заголовков',
@@ -3434,7 +3578,7 @@ export const ru = {
           title: 'Antigravity',
           shortTitle: 'Antigravity',
           description:
-            'Настройка шлюза Antigravity, обфускации чувствительных слов, credits и пула соединений.',
+            'Длительность паузы при нарушении условий, обработка системных инструкций, кредиты и пул соединений.',
         },
         multimedia: {
           title: 'Мультимедиа',
@@ -3453,6 +3597,11 @@ export const ru = {
           description:
             'Порт прослушивания, распространяемый на узлы CPA (1–65535). Изменения сохраняются и передаются сразу, но запущенные процессы CPA необходимо перезапустить для применения.',
           placeholder: '8317',
+        },
+        usageStatisticsEnabled: {
+          label: 'Статистика использования',
+          description:
+            'Home всегда включает сбор статистики. Здесь показано состояние, полученное от сервера.',
         },
         loggingToFile: {
           label: 'Файловые журналы',
@@ -3535,9 +3684,9 @@ export const ru = {
             'Максимальное время ожидания (в секундах) для восстановления охлаждающихся учетных данных. Когда все учетные данные находятся на охлаждении, сервер ожидает до этого времени восстановления ближайших данных перед переходом к следующему раунду.',
         },
         disableCooling: {
-          label: 'Отключить планирование cooldown',
+          label: 'Отключить обычные паузы',
           description:
-            'Глобально отключает окна охлаждения при ошибках аутентификации и моделей; все учетные данные пропускают задержку повторов.',
+            'При включении Home пропускает обычные паузы при ошибках запросов и исчерпании квоты. Настройки провайдера или учётных данных могут переопределить этот выбор. Ошибка с признаком force_cooldown всё равно вызывает паузу.',
         },
         forceModelPrefix: {
           label: 'Требовать совпадение prefix модели',
@@ -3554,6 +3703,11 @@ export const ru = {
             'Выберите auth channel и модели, которые нужно исключить из OAuth или file-backed credentials.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
+        oauthModelSettingsJson: {
+          label: 'Настройки моделей OAuth',
+          description:
+            'Задайте размер контекстного окна для моделей OAuth. Совпадение по существующему псевдониму имеет приоритет перед совпадением по исходному имени. У моделей с API-ключами свои настройки.',
+        },
         oauthModelAliasJson: {
           label: 'Model aliases',
           description:
@@ -3566,10 +3720,12 @@ export const ru = {
           description: 'Изменение параметров и текста сообщений по модели и протоколу.',
           placeholder: '{"override":[]}',
         },
+        antigravityLiteralReplacements: { label: 'Замена фраз (Antigravity)' },
+        antigravityPatternReplacements: { label: 'Замена по выражению (Antigravity)' },
         antigravitySensitiveWordsJson: {
-          label: 'Обфускация чувствительных слов',
+          label: 'Вставка невидимых символов',
           description:
-            'Вставка символов нулевой ширины в совпадающие системные промпты Antigravity для снижения риска точного сопоставления ключевых слов на стороне upstream.',
+            'Antigravity вставляет символы нулевой ширины внутрь найденных слов в системных инструкциях.',
           placeholder: 'proxy\nAPI',
         },
         serverHost: {
@@ -3579,9 +3735,9 @@ export const ru = {
           placeholder: '0.0.0.0',
         },
         serverAllowHostJson: {
-          label: 'Разрешенные заголовки Host',
+          label: 'Разрешённые IP-адреса клиентов RESP',
           description:
-            'По одному разрешенному HTTP Host на строку. Пустой массив означает без ограничений.',
+            'Ограничивает IP-адреса клиентов, которые могут подключаться к Home по RESP. Пустой список разрешает любой IP-адрес. Для каждого подключения требуется взаимная аутентификация TLS (mTLS).',
         },
         serverTrustedProxiesJson: {
           label: 'Доверенные proxy',
@@ -3592,25 +3748,53 @@ export const ru = {
           label: 'Коммерческий режим',
           description: 'Включает ограничения поведения сервера для коммерческих развертываний.',
         },
+        serverMaxRequestBodyBytes: {
+          label: 'Лимит тела запроса (байты)',
+          description:
+            'Если тело запроса превышает лимит, CPA возвращает HTTP 413. Пустое поле, ноль или отрицательное число снимают ограничение.',
+          placeholder: 'По умолчанию (без лимита)',
+        },
+        serverResponseCompressionEnabled: {
+          label: 'Сжатие ответов',
+          description:
+            'По умолчанию включено. Если клиент поддерживает zstd или gzip, CPA сжимает HTTP-ответы, включая потоки SSE. При переходе на WebSocket это HTTP-сжатие пропускается.',
+        },
+        serverResponseCompressionMinBytes: {
+          label: 'Порог сжатия (байты)',
+          description:
+            'Порог применяется только к непотоковым ответам. CPA передаёт ответы меньшего размера без сжатия. При пустом поле, нуле или отрицательном числе используется 1024 байта.',
+          placeholder: 'По умолчанию (1024 байта)',
+        },
+        serverShutdownTimeout: {
+          label: 'Ожидание при остановке (секунды)',
+          description:
+            'Сколько времени CPA ждёт завершения текущих HTTP-запросов после сигнала остановки. При пустом поле, нуле или отрицательном числе соединения закрываются сразу.',
+          placeholder: 'По умолчанию (сразу)',
+        },
+        serverGithubToken: {
+          label: 'Токен GitHub',
+          description:
+            'Доверенные узлы CPA используют этот токен для доступа к GitHub. После его удаления узел может использовать переменную среды GITHUB_TOKEN.',
+        },
         discoveryEnabled: {
           label: 'Включить обнаружение сервиса',
-          description:
-            'Транслировать этот экземпляр по mDNS, чтобы узлы CPA в LAN могли его найти.',
+          description: 'Разрешить клиентам в локальной сети находить API узлов CPA через mDNS.',
         },
         discoveryServiceName: {
           label: 'Имя сервиса',
-          description: 'Имя экземпляра сервиса в mDNS broadcast.',
-          placeholder: 'CLIProxyAPIHome',
+          description:
+            'Узел добавляет к имени свой короткий ID. Если имя пустое, используется префикс CPA, например CPA-8F3B.',
+          placeholder: 'office',
         },
         discoveryServiceType: {
           label: 'Тип сервиса',
           description: 'Тип сервиса mDNS (service type). Обычно оставьте значение по умолчанию.',
-          placeholder: '_cliproxyapi._tcp',
+          placeholder: '_ai-gateway._tcp',
         },
         discoverySubtypesJson: {
           label: 'Подтипы сервиса',
           description:
-            'По одному дополнительному mDNS subtype на строку для более точной фильтрации обнаружения.',
+            'Выберите подтипы протоколов API для публикации. Если список пуст, CPA использует подтипы по умолчанию.',
         },
         discoveryInterfacesIncludeJson: {
           label: 'Включаемые интерфейсы',
@@ -3623,12 +3807,9 @@ export const ru = {
             'По одному имени интерфейса на строку; эти интерфейсы не участвуют в broadcast.',
         },
         discoveryAuthRequired: {
-          label: 'Обнаружение требует аутентификации',
-          description: 'Помечать ответы обнаружения как требующие аутентификации для подключения.',
-        },
-        discoveryAdvertiseManagement: {
-          label: 'Анонсировать management',
-          description: 'Включать информацию о доступе к management в broadcast обнаружения.',
+          label: 'Сообщать, что API требует аутентификации',
+          description:
+            'По умолчанию включено. Значение auth=1 сообщает клиентам, что нужны учётные данные. При отключении CPA публикует auth=0. Меняется только запись обнаружения.',
         },
         managementBaseUrl: {
           label: 'Base URL панели управления',
@@ -3801,6 +3982,21 @@ export const ru = {
           label: 'Session affinity',
           description: 'По возможности направлять одну и ту же сессию на один и тот же credential.',
         },
+        sessionAffinityRebindOn: {
+          label: 'Повторная привязка сессии',
+          description: 'Политика действует при включённом Session affinity.',
+          description_any:
+            'При включённом Session affinity переключение после сбоя привязывает сессию к новым учётным данным. Их используют и последующие запросы.',
+          description_quota:
+            'При включённом Session affinity временный сбой переключает учётные данные только для текущего запроса. Ошибки квоты, аутентификации или поддержки модели могут изменить привязку сессии.',
+          description_never:
+            'При включённом Session affinity сессия сохраняет исходные учётные данные до истечения привязки. Если они недоступны, Home повторяет попытку с ними или возвращает ошибку. После истечения привязки Home может выбрать другие данные.',
+          options: {
+            any: 'При сбое (по умолчанию)',
+            quota: 'При отдельных ошибках',
+            never: 'Сохранять привязку',
+          },
+        },
         sessionAffinityTtl: {
           label: 'TTL session affinity',
           description:
@@ -3809,7 +4005,8 @@ export const ru = {
         },
         sessionAffinitySubagents: {
           label: 'Session affinity для subagent',
-          description: 'Включать запросы subagent в маршрутизацию session affinity.',
+          description:
+            'По умолчанию включено. Действует при включённом Session affinity. Дочерняя сессия без привязки может унаследовать учётные данные родительской сессии для того же провайдера и модели. Guardian может использовать последние подходящие учётные данные родителя и для другой модели. При отключении для сессий без привязки действует обычный выбор, а Home перестаёт записывать выбор родителя в историю Guardian. Существующие привязки дочерних сессий и поведение fork сохраняются.',
         },
         streamingKeepaliveSeconds: {
           label: 'Интервал keepalive потока (сек)',
@@ -3873,6 +4070,104 @@ export const ru = {
         upstreamCodexResponseSteering: {
           label: 'Response steering Codex',
           description: 'Разрешить steering-директивы для ответов Codex.',
+        },
+        clientClaudeShowCodexCommentary: {
+          label: 'Показывать ход работы Codex в клиентах Claude',
+          description:
+            'Клиент увидит открытые сообщения Codex о ходе работы в тексте ответа и при воспроизведении диалога. Сводки рассуждений останутся в блоках размышлений.',
+        },
+        upstreamClaudeServerSideFallback: {
+          label: 'Резервный ответ при отказе модели',
+          description:
+            'Разрешить Anthropic попробовать запасной вариант, если поддерживаемая модель отказалась отвечать на замаскированный запрос. Параметр fallbacks из запроса или правил тела имеет приоритет.',
+        },
+        upstreamClaudeSessionDatePinDays: {
+          label: 'Фиксация даты сеанса в днях',
+          description:
+            'Home KV хранит дату сеанса постоянно и игнорирует это значение. При хранении в памяти пустое поле означает 7 дней, а ноль или отрицательное число — 1 час.',
+          placeholder: 'По умолчанию в памяти (7 дней)',
+        },
+        upstreamClaudeNativeEntrypointsJson: {
+          label: 'Дополнительные точки входа',
+          description:
+            'Дополняет встроенный список точек входа. CPA проверяет и другие признаки клиента, прежде чем считать запрос штатным для Claude Code.',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          label: 'Удаляемые флаги Anthropic-Beta',
+          description: 'CPA удаляет перечисленные флаги из заголовка перед добавлением новых.',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          label: 'Добавляемые флаги Anthropic-Beta',
+          description:
+            'CPA добавляет недостающие флаги в конец заголовка в указанном порядке. На сторонних шлюзах заголовок Anthropic-Beta из учётных данных имеет приоритет.',
+        },
+        upstreamClaudeInjectDiagnostics: {
+          label: 'Добавлять поле диагностики',
+          description:
+            'По умолчанию CPA добавляет поле diagnostics в тело совместимых замаскированных запросов к Anthropic и соответствующий флаг cache-diagnosis.',
+        },
+        upstreamClaudeClientRequestId: {
+          label: 'Идентификатор запроса клиента',
+          description:
+            'Управляет заголовком x-client-request-id в запросах к Claude. Заголовок из учётных данных имеет приоритет.',
+          placeholder: 'По умолчанию (создавать ID)',
+          description_on:
+            'По умолчанию CPA создаёт новый ID для каждого запроса CLI к Anthropic. Для распознанных штатных клиентов сохраняется входящий ID. Заголовок из учётных данных имеет приоритет.',
+          description_passthrough:
+            'Передаёт входящий ID, только если он задан. Заголовок из учётных данных имеет приоритет.',
+          description_off:
+            'По умолчанию ID не отправляется. Заголовок из учётных данных продолжает действовать.',
+          description_unknown:
+            'Консоль не распознаёт значение, сохранённое в Home. Оно сохраняется при других правках. Здесь можно выбрать режим или восстановить значение по умолчанию.',
+          unknown: 'Сохранено «{{value}}»',
+          options: { on: 'Создавать ID', passthrough: 'Передавать входящий ID', off: 'Выкл.' },
+        },
+        clientCodexEnableApplyPatch: {
+          label: 'Расширить поддержку apply_patch',
+          description:
+            'По умолчанию Codex видит возможность freeform у моделей, которые объявляют её сами. Включите параметр, чтобы объявлять её и для моделей, поддерживаемых всеми подходящими исполнителями.',
+        },
+        clientCodexWebSearchCacheEnabled: {
+          label: 'Кешировать результаты поиска',
+          description:
+            'По умолчанию выключено. CPA сохраняет результаты поиска для повторного использования в том же сеансе.',
+        },
+        clientCodexWebSearchCacheTtl: {
+          label: 'Срок хранения',
+          description:
+            'Попадание в кеш продлевает срок хранения. Введите целые секунды или длительность, например 1800, 30m или 1h30m. Пустое поле или ноль задают 24 часа.',
+          placeholder: 'По умолчанию (24 часа)',
+          invalid:
+            'Введите неотрицательное целое число секунд или длительность, например 1800 или 30m.',
+        },
+        clientCodexWebSearchCacheLimit: {
+          label: 'Лимит записей в памяти',
+          description:
+            'Пустое поле или ноль задают лимит в 1024 записи в памяти CPA. В Home KV записи удаляются по истечении срока хранения.',
+          placeholder: 'По умолчанию (1024 записи)',
+          invalid: 'Введите неотрицательное целое число или оставьте поле пустым.',
+        },
+        upstreamCodexRequestCompression: {
+          label: 'Сжимать тела запросов к Codex',
+          description:
+            'По умолчанию выключено. Обычные OAuth-запросы к официальному серверу ChatGPT Codex могут использовать zstd. Для API-ключей, других серверов и входа через ChatGPT отправляется исходное тело. После HTTP 400 или 415 CPA повторяет запрос один раз с исходным телом.',
+        },
+        upstreamCodexRequestCompressionMinBytes: {
+          label: 'Порог сжатия запроса (байты)',
+          description:
+            'Сжатие применяется начиная с этого размера. Пустое поле, ноль или отрицательное число задают порог в 1024 байта.',
+          placeholder: 'По умолчанию (1024 байта)',
+        },
+        upstreamCodexWebsocketCompression: {
+          label: 'Сжатие WebSocket',
+          description:
+            'По умолчанию включено. CPA согласует permessage-deflate на входящих и исходящих соединениях Codex WebSocket.',
+        },
+        oauthCodexSigninIdentifier: {
+          label: 'Идентификатор входа Codex',
+          description:
+            'CPA использует это значение для agent_name_hint при входе через ChatGPT и как префикс User-Agent в запросах к API. Пустое поле задаёт CLIProxyAPI.',
+          placeholder: 'По умолчанию (CLIProxyAPI)',
         },
         clientCodexOptimizeMultiAgentV2: {
           label: 'Оптимизация multi-agent V2',
@@ -3938,6 +4233,12 @@ export const ru = {
           label: 'Внедрение X Search в xAI',
           description: 'Внедрять возможность X Search в запросы upstream xAI.',
         },
+        oauthAutoRefreshWorkers: {
+          label: 'Параллельное автообновление OAuth',
+          description:
+            'Сколько учётных данных OAuth Home может обновлять одновременно. При пустом поле, нуле или отрицательном целом числе используется 16. Изменения применяются при сохранении. Текущие обновления завершаются.',
+          placeholder: 'По умолчанию (16)',
+        },
         oauthAuthDir: {
           label: 'Каталог OAuth auth',
           description: 'Каталог хранения OAuth file credentials.',
@@ -3986,16 +4287,26 @@ export const ru = {
           description:
             'JSON-массив серверов STUN/TURN. Внимание: при чтении JSON маскирует username/credential; существующие ключи сохраняются только у записей с неизменными urls. При изменении urls ключи нужно ввести заново.',
         },
+        devinLiteralReplacements: { label: 'Замена фраз (Devin)' },
+        devinPatternReplacements: { label: 'Замена по выражению (Devin)' },
         devinSensitiveWordsJson: {
-          label: 'Обфускация чувствительных слов Devin',
+          label: 'Удаление строк с указанными словами',
           description:
-            'Вставка символов нулевой ширины в совпадающие системные промпты Devin для снижения точного сопоставления ключевых слов на стороне upstream.',
+            'Devin удаляет всю строку системной инструкции, если она содержит указанное слово, к которому не применилось правило замены.',
         },
         oauthRequestScopedErrorsJson: {
           label: 'Правила ошибок request-scoped',
           description:
             'Правила обработки ошибок, сгруппированные по provider. Каждое правило имеет форму {status, match[], match-regexr[], action}.',
           placeholder: '{}',
+        },
+        antigravityTosPauseWindow: {
+          label: 'Длительность паузы при нарушении условий',
+          description:
+            'Home приостанавливает выдачу учётных данных из всего пула Antigravity на этот срок, если Google RPC вернёт 403 PERMISSION_DENIED с причиной TOS_VIOLATION в поле ErrorInfo.reason. Укажите срок, например 30m или 1h30m, либо 0 для отключения. Пустое поле восстанавливает значение по умолчанию.',
+          placeholder: '0 (по умолчанию отключено)',
+          invalid:
+            'Введите допустимую положительную длительность, например 30m или 1h30m, либо 0 для отключения.',
         },
         antigravityCredits: {
           label: 'Antigravity credits',
@@ -4053,16 +4364,43 @@ export const ru = {
         'fill-first': 'Fill first',
         unknown: 'Неизвестно',
       },
+      token: {
+        keep: 'Задан, оставьте поле пустым',
+        enter: 'Введите токен',
+        pendingClear: 'Будет удалён при сохранении',
+        clear: 'Удалить токен',
+        undoClear: 'Отменить удаление',
+        setting: 'Задать токен',
+        replacing: 'Заменить токен',
+        removing: 'Удалить сохранённый токен',
+      },
       nullableBoolean: {
+        defaultOff: 'По умолчанию (выкл.)',
+        defaultOn: 'По умолчанию включено',
         unset: 'Не задано (по умолчанию)',
         enabled: 'Включено',
         disabled: 'Отключено',
       },
       stringList: {
+        upstreamClaudeNativeEntrypointsJson: {
+          placeholder: 'my-ide\nci-runner',
+          hint: 'По одной точке входа на строку. Регистр при сопоставлении игнорируется.',
+          count: 'Точек входа — {{count}}',
+        },
+        upstreamClaudeAnthropicBetaStripJson: {
+          placeholder: 'interleaved-thinking-2025-05-14',
+          hint: 'По одному флагу на строку. Имена сопоставляются точно с учётом регистра.',
+          count: 'Флагов — {{count}}',
+        },
+        upstreamClaudeAnthropicBetaAppendJson: {
+          placeholder: 'fine-grained-tool-streaming-2025-05-14',
+          hint: 'По одному флагу на строку. Регистр и порядок сохраняются.',
+          count: 'Флагов — {{count}}',
+        },
         serverAllowHostJson: {
-          placeholder: 'example.com\nadmin.example.com',
-          hint: 'По одному разрешенному Host на строку. Пустые строки удаляются при сохранении.',
-          count: 'Настроено Host: {{count}}',
+          placeholder: '192.0.2.10\n2001:db8::10',
+          hint: 'Введите по одному адресу IPv4 или IPv6 в строке.',
+          count: 'Всего IP-адресов в списке: {{count}}',
         },
         serverTrustedProxiesJson: {
           placeholder: '10.0.0.0/8\n192.168.1.10',
@@ -4070,7 +4408,7 @@ export const ru = {
           count: 'Настроено доверенных proxy: {{count}}',
         },
         discoverySubtypesJson: {
-          placeholder: '_home\n_management',
+          placeholder: '_chat-completions\n_responses',
           hint: 'По одному mDNS subtype на строку. Пустые строки удаляются при сохранении.',
           count: 'Настроено подтипов: {{count}}',
         },
@@ -4242,7 +4580,7 @@ export const ru = {
         booleanFalse: 'false',
         addRuleTitle: 'Выберите действие для запроса',
         addRuleDescription:
-          'Выберите заполнение, переопределение, замену текста user или удаление. Существующие правила доступны в соответствующем разделе.',
+          'Выберите заполнение, переопределение, замену текста или удаление параметра.',
         addRule: 'Добавить еще одно правило',
         draftBlockingHint: 'Завершите текущее правило, затем можно добавить новое.',
         viewExistingRules: 'Открыть существующие: {{count}}',
@@ -4296,7 +4634,6 @@ export const ru = {
           discardDescription:
             'Это правило ещё не сохранено. После отмены его можно добавить заново.',
           executionPosition: 'Порядок: {{position}}',
-          selectedUsers: 'Номера сообщений пользователя · {{positions}}',
           valueMode: 'Способ ввода параметров',
           typedMode: 'Значения по типам',
           rawMode: 'Ввод в JSON',
@@ -4341,6 +4678,35 @@ export const ru = {
           pathRequired: 'Path не может быть пустым.',
         },
         replace: {
+          targets: {
+            user: 'Сообщения пользователя (user)',
+            system: 'Системные сообщения (system)',
+            developer: 'Сообщения разработчика (developer)',
+            paths: 'Пути GJSON',
+          },
+          addPath: 'Добавить путь GJSON',
+          removePath: 'Удалить путь GJSON {{index}}',
+          pendingConfig: 'Конфигурация для сохранения',
+          savedConfig: 'Сохранённая конфигурация',
+          previewRegex:
+            'Шаг {{index}} использует Go RE2. Проверьте этот шаг и результат последующих замен в CPA.',
+          regexHint:
+            'Используйте синтаксис Go RE2. В тексте замены $1 или ${1} вставляет группу захвата. CPA пропускает шаг с пустым или недопустимым выражением.',
+          entryPattern: 'Выражение Go RE2 на шаге {{index}}',
+          pattern: 'Регулярное выражение',
+          regex: 'Выражение Go RE2',
+          literal: 'Точный текст',
+          entryKind: 'Способ поиска на шаге {{index}}',
+          rolePositions: '{{role}} · позиции {{positions}}',
+          allRoleMessages: '{{role}} · все сообщения',
+          pathSummary: 'Пути GJSON ({{count}})',
+          pathEntry: 'Путь GJSON {{index}}',
+          pathsHint:
+            'Пути отсчитываются от корня запроса. CPA изменяет существующие строковые поля и обрабатывает каждый найденный путь один раз на правило.',
+          systemHint:
+            'Системная инструкция верхнего уровня считается одним сообщением system. Если текст developer включён в системное сообщение, выберите system.',
+          allMessages: 'Все сообщения этой роли',
+          messageScope: 'Выбор сообщений',
           actionSummary: '{{from}} → {{to}}',
           deleteSummary: 'Удалить {{from}}',
           moveStepUp: 'На шаг раньше',
@@ -4351,13 +4717,12 @@ export const ru = {
           showSteps: 'Показать результаты шагов',
           unchanged: 'Текст на этом шаге не изменился',
 
-          target: 'Сообщения пользователя',
+          target: 'Где заменять текст',
           selectedPositions: 'Выбрать по номеру',
-          allUsers: 'Все сообщения пользователя',
           positions: 'Номера сообщений',
           positionsPlaceholder: 'Например 1, 2',
           positionsHint:
-            'Нумерация сообщений пользователя в итоговом запросе начинается с 1. Учитываются и сообщения без текста для замены.',
+            'Позиции отсчитываются с 1 среди сообщений этой роли в итоговом запросе. Учитываются и сообщения без доступного для замены текста.',
           replacements: 'Замены',
           entryTitle: 'Шаг {{index}}',
           deletesText: 'Удаляет найденный текст',
@@ -4371,21 +4736,21 @@ export const ru = {
           entryFrom: 'Шаг {{index}}: найти текст',
           entryTo: 'Шаг {{index}}: заменить на',
           fromPlaceholder: 'Точный текст для поиска',
-          toPlaceholder: 'Оставьте пустым, чтобы удалить текст и сохранить сообщение',
+          toPlaceholder: 'Оставьте пустым, чтобы удалить найденный текст',
           addEntry: 'Добавить замену',
           literalHint: 'Точное совпадение с учётом регистра, пробелов и переносов строк.',
           deleteDescription: 'Изменение вступит в силу после сохранения настроек.',
           confirmDelete: 'Подтвердить удаление',
-          previewTitle: 'Посмотреть результат замены',
+          previewTitle: 'Проверить на примере',
           previewHint:
-            'Проверяется только замена текста. Модель, протокол и номер сообщения не учитываются.',
+            'На примере последовательно выполняются точные замены текста. CPA проверяет условия модели, роли, позиции и пути GJSON в реальном запросе.',
           previewRule: 'Правило для проверки',
           previewInput: 'Пример текста',
-          previewOutput: 'Текст после замены',
+          previewOutput: 'Результат для примера',
           previewPlaceholder: 'Введите пример текста',
           previewTooLarge:
             'Предпросмотр слишком велик. Сократите пример текста или уменьшите число замен.',
-          previewIncomplete: 'Заполните все поля поиска для предпросмотра.',
+          previewIncomplete: 'Заполните текст для точного поиска, чтобы проверить пример.',
           previewEmpty: 'Введите пример текста, чтобы увидеть результат.',
           emptyResult: '(Пустой текст)',
           ruleSummary: 'Моделей: {{models}} · шагов замены: {{count}}',
@@ -4397,7 +4762,8 @@ export const ru = {
             'Правила и замены выполняются сверху вниз. Каждый шаг обрабатывает результат предыдущего. Для другой области сопоставления добавьте отдельное правило.',
         },
         ruleIssues: {
-          replacePositionsRequired: 'Укажите номер или выберите все сообщения пользователя.',
+          replacePathsRequired: 'Укажите непустой путь GJSON в каждой строке.',
+          replacePositionsRequired: 'Укажите позицию или выберите все сообщения этой роли.',
           replacePositionsInvalid: 'Укажите целые номера сообщений от 1, например 1, 2.',
           replaceReplacementRequired: 'Добавьте хотя бы один шаг замены.',
           replaceSourceRequired: 'Введите текст для поиска.',
@@ -4407,7 +4773,7 @@ export const ru = {
           paramPathRequired: 'Введите путь JSON для параметра.',
         },
         addRuleActions: {
-          replace: 'Заменить текст user',
+          replace: 'Заменить текст',
           default: 'Типизированное значение',
           'default-raw': 'Raw JSON',
           override: 'Типизированное значение',
@@ -4430,9 +4796,9 @@ export const ru = {
         },
         sections: {
           replace: {
-            title: 'Замена текста user',
+            title: 'Замена текста',
             description:
-              'Изменяет существующий текст user в конечном запросе к upstream после переопределения и до удаления параметров.',
+              'Замена текста в выбранных сообщениях или строковых полях итогового запроса к провайдеру. Выполняется после переопределений и до удаления параметров.',
           },
           default: {
             title: 'Заполнение по умолчанию',
@@ -4459,17 +4825,38 @@ export const ru = {
         },
       },
       validation: {
+        optionalInteger:
+          'Введите целое число в допустимом диапазоне или оставьте поле пустым для значения по умолчанию.',
         invalidField: 'Введите корректное значение.',
+        editConflict:
+          'Запись изменилась, была удалена или не может быть однозначно определена. Обновите данные перед сохранением.',
         runtimeChanged:
           'Изменяемая настройка обновлена на сервере. Загрузите конфигурацию заново перед редактированием.',
         jsonParseError: 'JSON не удалось разобрать: {{message}}',
         summary: 'Полей требуют внимания: {{count}}',
+      },
+      modelSettings: {
+        provider: 'Провайдер OAuth',
+        add: 'Добавить настройку модели',
+        empty: 'У провайдера {{provider}} пока нет настроек моделей.',
+        name: 'Исходное имя модели',
+        nameRequired: 'Введите исходное имя модели.',
+        alias: 'Существующий псевдоним (необязательно)',
+        limit: 'Контекстное окно (токены)',
+        defaultLimit: 'Пусто или 0 — значение модели',
+        invalidLimit: 'Введите неотрицательное целое число в допустимом диапазоне.',
+        removeRow: 'Удалить настройку модели {{model}}',
       },
       json: {
         remove: 'Удалить',
         unsupportedStructure:
           'Эта config содержит структуру, которую visual editor пока не поддерживает.',
         emptyRows: 'Правила не настроены.',
+        aliasChannel: 'Канал псевдонимов',
+        customChannel: 'Другой канал',
+        moveAlias: 'Переместить псевдоним',
+        vertexProtocol: 'Протокол Vertex',
+        vertexModes: { auto: 'Автоматически', native: 'Нативный', openapi: 'OpenAPI' },
         addAlias: 'Добавить alias',
         columns: {
           channel: 'Channel',

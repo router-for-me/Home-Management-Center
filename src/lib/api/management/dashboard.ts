@@ -5,7 +5,11 @@ import {
   normalizeAccessKey,
   readEntries,
 } from '@/lib/api/management/access-keys'
-import { createManagementClient, toManagementApiError } from '@/lib/api/management/client'
+import {
+  createManagementClient,
+  isMissingConfigPath,
+  toManagementApiError,
+} from '@/lib/api/management/client'
 import { fetchModelsSnapshot } from '@/lib/api/management/models'
 import type { CapabilityMap, ManagementSessionInput, RuntimeMode } from '@/lib/api/management/types'
 import { type UsageOverview, fetchUsageOverview } from '@/lib/api/management/usage-logs'
@@ -279,7 +283,7 @@ async function fetchProviderSummary(
     // Absent provider families are pruned from the persisted v8 config view
     // and read back as 404; that means zero configured entries, not a failed
     // or unsupported request.
-    if (toManagementApiError(error).status === 404) {
+    if (isMissingConfigPath(error)) {
       return { ...descriptor, total: 0, active: 0, disabled: 0 }
     }
     throw error
