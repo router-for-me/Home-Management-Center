@@ -72,7 +72,9 @@ useCapabilityStore.setState({
     Object.keys(useCapabilityStore.getState().capabilities).map((key) => [key, false]),
   ) as any,
 })
-const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } },
+})
 type PendingRequest = { config: any; resolve: (value: any) => void; reject: (error: Error) => void }
 const pending: PendingRequest[] = []
 axios.defaults.adapter = (config) =>
@@ -509,6 +511,53 @@ if (scenario === 'oauth-alias-channel-edit') {
   await click(field('clientCodexWebSearchCacheTtl').querySelector('button')!)
   assert.equal(browser.document.activeElement, ttl)
   assert.equal(save.disabled, true)
+} else if (scenario === 'antigravity-pause-status') {
+  const config = (duration: string) => ({
+    oauth: { providers: { antigravity: { 'tos-pause-window': duration } } },
+  })
+  await renderConfig(config('6h'))
+  await respond('/config', config('6h'))
+  const field = browser.document.getElementById('config-field-antigravityTosPauseWindow')!
+  const control = field.querySelector('input')!
+  const status = () => field.querySelector('[role="status"]')?.textContent
+  const copy = en.common.configPage.antigravityPauseStatus
+  const save = button(en.common.configPage.actions.save)
+  const route = '/routing/antigravity/tos-pause'
+  const observed_at = '2026-11-20T02:00:00Z'
+  assert.equal(control.value, '6h')
+  assert.equal(status(), undefined)
+  assert.ok(!pending.some(({ config }) => config.url === route))
+  await edit(control, '30m')
+  assert.equal(save.disabled, false)
+  await React.act(async () =>
+    useCapabilityStore.setState((state) => ({
+      capabilities: { ...state.capabilities, antigravityTosPauseStatus: true },
+    })),
+  )
+  assert.equal(status(), copy.loading)
+  await respond(route, { paused: false, resume_at: null, observed_at })
+  assert.equal(status(), copy.idle)
+  await click(button(copy.refresh))
+  await respond(route, { paused: true, resume_at: '2026-11-20T02:30:00Z', observed_at })
+  assert.ok(status()?.startsWith(copy.paused.split('{{time}}')[0]))
+  assert.ok(status()?.includes('2026'))
+  await click(button(copy.refresh))
+  await respond(route, null, true)
+  assert.equal(status(), copy.failed)
+  assert.equal(control.value, '30m')
+  assert.equal(save.disabled, false)
+  await click(button(copy.refresh))
+  await respond(route, { paused: false, resume_at: null, observed_at })
+  assert.equal(status(), copy.idle)
+  await click(save)
+  await respond('/config/oauth/providers/antigravity/tos-pause-window', {})
+  await respond('/config', config('30m'))
+  assert.ok(pending.some((request) => request.config.url === route))
+  await edit(control, '1h')
+  assert.equal(save.disabled, false)
+  await respond(route, null, true)
+  assert.equal(control.value, '1h')
+  assert.equal(status(), copy.failed)
 } else if (scenario === 'oauth-refresh-concurrency') {
   await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!

@@ -20,6 +20,7 @@ for (const scenario of [
   'oauth-alias-channel-edit',
   'oauth-model-setting-validation',
   'oauth-refresh-concurrency',
+  'antigravity-pause-status',
   'cpa-server-token',
   'codex-execution-settings',
   'claude-execution-settings',

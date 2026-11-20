@@ -88,6 +88,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { AntigravityPauseStatus } from '@/features/config/antigravity-pause-status'
 import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
 import {
   ModelSettingFeedbackContext,
@@ -2128,6 +2129,7 @@ function ConfigField({
               field.kind === 'select' ? (unknownOption ? 'unknown' : selectedOption) : undefined,
           })}
         </p>
+        {field.key === 'antigravityTosPauseWindow' && <AntigravityPauseStatus />}
         {invalid ? (
           <p id={errorId} className="mt-1 text-xs text-amber-700 dark:text-amber-300">
             {t([

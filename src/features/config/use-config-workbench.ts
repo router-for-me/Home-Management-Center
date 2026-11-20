@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { fetchAntigravityPauseStatus } from '@/lib/api/management/antigravity-pause-window'
 import {
   type ConfigChange,
   ConfigFieldSaveError,
@@ -36,6 +37,32 @@ function useManagementSession() {
     checking: status === 'checking',
     runtimeMode,
   }
+}
+
+const pauseStatusKey = (baseUrl: string, connectedAt: string | null) =>
+  ['management-antigravity-tos-pause', baseUrl, connectedAt] as const
+
+export function useAntigravityPauseStatus() {
+  const { session, connected, connectedAt } = useManagementSession()
+  const supported = useCapabilityStore((state) => state.capabilities.antigravityTosPauseStatus)
+  const enabled = connected && Boolean(session.managementKey) && supported
+  const query = useQuery({
+    queryKey: pauseStatusKey(session.baseUrl, connectedAt),
+    enabled,
+    queryFn: ({ signal }) => fetchAntigravityPauseStatus(session, signal),
+    retry: false,
+    refetchOnWindowFocus: 'always',
+    refetchIntervalInBackground: false,
+    refetchInterval: ({ state }) => {
+      if (state.status === 'error') return 30_000
+      const observation = state.data
+      if (observation === null) return false
+      if (observation?.resumeAt == null) return 30_000
+      // Use Home's clock to recheck the deadline, including when the browser's clock is skewed.
+      return Math.max(1_000, Math.min(30_000, observation.resumeAt - observation.observedAt))
+    },
+  })
+  return { enabled, query }
 }
 
 export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
@@ -78,7 +105,10 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
     },
   })
 
-  const invalidate = async () => {
+  const invalidate = async (keys: ConfigChange['key'][]) => {
+    if (keys.includes('antigravityTosPauseWindow')) {
+      void queryClient.invalidateQueries({ queryKey: pauseStatusKey(session.baseUrl, connectedAt) })
+    }
     await Promise.all([
       queryClient.invalidateQueries({ queryKey }),
       queryClient.invalidateQueries({ queryKey: ['management-dashboard-overview'] }),
@@ -92,10 +122,10 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
         error instanceof ConfigFieldSaveError &&
         (error.savedKeys.length || error.reason === 'conflict' || error.reason === 'failed')
       ) {
-        await invalidate()
+        await invalidate(error.savedKeys)
       }
     },
-    onSuccess: invalidate,
+    onSuccess: (_, changes) => invalidate(changes.map((change) => change.key)),
   })
 
   return {

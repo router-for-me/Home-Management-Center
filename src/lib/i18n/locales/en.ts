@@ -4347,6 +4347,14 @@ export const en = {
         replacing: 'Replace token',
         removing: 'Clear stored token',
       },
+      antigravityPauseStatus: {
+        loading: 'Checking the pool status…',
+        idle: 'The Antigravity pool is not paused.',
+        paused: 'Pool paused. Dispatch is scheduled to resume at {{time}}.',
+        failed: 'Unable to confirm the current pool status.',
+        unsupported: 'This Home endpoint does not provide the live pool status.',
+        refresh: 'Refresh status',
+      },
       nullableBoolean: {
         defaultOff: 'Default (off)',
         defaultOn: 'Default (on)',
