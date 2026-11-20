@@ -537,7 +537,7 @@ describe('UpstreamQuotaCell rendering', () => {
     expect(markup).toContain('$42.00')
   })
 
-  test('renders the weekly limit with a disabled on-demand row when only the weekly window exists', () => {
+  test('keeps on-demand unknown when response headers provide only weekly usage', () => {
     const weekly = createXaiWeeklyWindow()
     const productWindow = createWindow({
       id: 'xai-product-grokbuild',
@@ -573,19 +573,20 @@ describe('UpstreamQuotaCell rendering', () => {
     const detail = renderWithI18n(<GrokQuotaDetail entry={entry} />)
     expect(detail).toContain('Usage breakdown (shared quota)')
     expect(detail).toContain('GrokBuild usage')
-    expect(detail).toContain('GrokBuild usage')
     expect(detail).toContain('1%')
     expect(markup).toContain('On-demand')
-    expect(markup).toContain('Disabled')
+    expect(markup).toContain('Not provided')
+    expect(markup).not.toContain('Disabled')
     expect(markup).not.toContain('Monthly')
   })
 
-  test('marks on-demand as disabled when the monthly window exists without an on-demand window', () => {
-    const monthly = createXaiEntry().primaryWindows[0]!
+  test('marks on-demand as disabled after a successful probe returns only a monthly window', () => {
+    const monthly = { ...createXaiEntry().primaryWindows[0]!, source: 'active_probe' as const }
     const entry = createQuotaEntry({
       id: 'xai-01',
       authIndex: 'xai-01',
       provider: 'xai',
+      source: 'active_probe',
       primaryWindows: [monthly],
       windows: [monthly],
       windowCount: 1,
@@ -1382,29 +1383,38 @@ describe('UpstreamQuotaDetail rendering', () => {
 })
 
 describe('GrokQuotaDetail rendering', () => {
-  test('marks on-demand as disabled when weekly or monthly windows exist without one', async () => {
-    await testI18n.changeLanguage('en')
-    const weekly = createXaiWeeklyWindow()
-    const entry = createQuotaEntry({
-      provider: 'xai',
-      plan: { name: 'SuperGrok', premium: false },
-      primaryWindows: [weekly],
-      windows: [weekly],
-      windowCount: 1,
-    })
+  test.each([
+    ['response_header', 'Response header', 'Not provided'],
+    ['active_probe', 'Active probe', 'Disabled'],
+  ] as const)(
+    'describes a missing on-demand window from %s',
+    async (source, sourceLabel, status) => {
+      await testI18n.changeLanguage('en')
+      const weekly = { ...createXaiWeeklyWindow(), source }
+      const entry = createQuotaEntry({
+        provider: 'xai',
+        source,
+        plan: { name: 'SuperGrok', premium: false },
+        primaryWindows: [weekly],
+        windows: [weekly],
+        windowCount: 1,
+      })
 
-    const markup = renderWithI18n(
-      <GrokQuotaDetail entry={entry} headerAction={<button type="button">Refresh quota</button>} />,
-    )
-    expect(markup).toContain('data-provider-icon="xai"')
-    expect(markup).toContain('SuperGrok')
-    expect(markup).toContain('Refresh quota')
-    expect(markup).toContain('Response header')
-    expect(markup).toContain('On-demand')
-    expect(markup).toContain('Disabled')
-    expect(markup).not.toContain('Not provided')
-    expect(markup).toContain('84%')
-  })
+      const markup = renderWithI18n(
+        <GrokQuotaDetail
+          entry={entry}
+          headerAction={<button type="button">Refresh quota</button>}
+        />,
+      )
+      expect(markup).toContain('data-provider-icon="xai"')
+      expect(markup).toContain('SuperGrok')
+      expect(markup).toContain('Refresh quota')
+      expect(markup).toContain(sourceLabel)
+      expect(markup).toContain('On-demand')
+      expect(markup).toContain(status)
+      expect(markup).toContain('84%')
+    },
+  )
 
   test('keeps on-demand as not provided when no known window exists', async () => {
     await testI18n.changeLanguage('en')
