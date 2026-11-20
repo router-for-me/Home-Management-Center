@@ -9,7 +9,7 @@ export function isValidAntigravityPauseWindow(input: string) {
   return (parseGoDurationNanos(value) ?? 0n) > 0n
 }
 
-type AntigravityPauseObservation = { observedAt: number; resumeAt: number | null }
+export type AntigravityPauseObservation = { observedAt: number; resumeAt: number | null }
 
 function timestamp(value: unknown) {
   return typeof value === 'string' &&

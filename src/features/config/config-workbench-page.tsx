@@ -1985,7 +1985,7 @@ function SectionNavigation({
 
       <div
         data-config-sticky
-        className="bg-background/95 sticky top-[calc(var(--config-action-height,10.125rem)-1rem)] z-10 -mx-1 overflow-x-auto border-y px-1 py-2 backdrop-blur md:top-[calc(var(--config-action-height,5.125rem)-1.5rem)] xl:hidden"
+        className="bg-background/95 sticky top-[max(0px,calc(var(--config-action-height,10.125rem)-1rem))] z-10 -mx-1 min-w-0 overflow-x-auto border-y px-1 py-2 backdrop-blur md:top-[max(0px,calc(var(--config-action-height,5.125rem)-1.5rem))] xl:hidden"
       >
         <div className="flex min-w-max gap-2">
           {sectionDefinitions.map((section) => (
@@ -2117,7 +2117,7 @@ function ConfigField({
   return (
     <div
       className={cn(
-        'grid gap-3 rounded-md border px-3 py-3 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)] md:items-center',
+        'grid grid-cols-1 gap-3 rounded-md border p-3 @max-[16rem]/workbench:px-2 md:@min-[28rem]/config-fields:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)] md:@min-[28rem]/config-fields:items-center',
         invalid ? 'border-amber-500/40 bg-amber-500/5' : null,
       )}
     >
@@ -2141,7 +2141,7 @@ function ConfigField({
           </p>
         ) : null}
       </div>
-      <div className="flex min-w-0 justify-start md:justify-end">
+      <div className="flex min-w-0 justify-start md:@min-[28rem]/config-fields:justify-end">
         {field.kind === 'boolean' && locked ? (
           <span className="text-sm font-medium">
             {typeof value === 'boolean'
@@ -5017,14 +5017,14 @@ function StructuredWorkspace({
   }
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+    <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
       <SectionNavigation changes={changes} validationErrors={validationErrors} />
       <div className="grid min-w-0 gap-4">
         {sectionDefinitions.map((section) => (
           <section
             key={section.id}
             id={`config-section-${section.id}`}
-            className="bg-card min-w-0 scroll-mt-24 rounded-lg border p-4 shadow-sm"
+            className="bg-card @container/config-fields min-w-0 scroll-mt-24 rounded-lg border p-4 shadow-sm @max-[16rem]/workbench:px-2"
           >
             {(() => {
               const SectionIcon = sectionIcons[section.id]
@@ -5155,28 +5155,35 @@ function ConfigActionBar({
   const { t } = useTranslation()
   const dirty = changeCount > 0
   const barRef = useRef<HTMLDivElement>(null)
+  const [pinned, setPinned] = useState(true)
 
   useLayoutEffect(() => {
     const bar = barRef.current
     const workspace = bar?.closest<HTMLElement>('[data-config-workbench]')
     if (!bar || !workspace) return
-    // Localized badges can add rows; the outline must follow the whole bar.
-    const syncHeight = () =>
-      workspace.style.setProperty(
-        '--config-action-height',
-        `${bar.getBoundingClientRect().height}px`,
-      )
+    const scrollport = workspace.closest<HTMLElement>('[data-scroll-restoration-id]')
+    // Leave room for the outline and editable fields when zoom or translations add toolbar rows.
+    const syncHeight = () => {
+      const height = bar.getBoundingClientRect().height
+      const fits = !scrollport?.clientHeight || height <= scrollport.clientHeight / 3
+      setPinned(fits)
+      workspace.style.setProperty('--config-action-height', `${fits ? height : 0}px`)
+    }
     syncHeight()
     const observer = new ResizeObserver(syncHeight)
     observer.observe(bar)
+    if (scrollport) observer.observe(scrollport)
     return () => observer.disconnect()
   }, [])
 
   return (
     <div
       ref={barRef}
-      data-config-sticky
-      className="bg-background/95 sticky -top-4 z-[var(--z-page-sticky)] -mx-4 px-4 py-3 backdrop-blur md:-top-6 md:-mx-6 md:px-6"
+      data-config-sticky={pinned ? '' : undefined}
+      className={cn(
+        'bg-background/95 -mx-4 min-w-0 px-4 py-3 md:-mx-6 md:px-6',
+        pinned && 'sticky -top-4 z-[var(--z-page-sticky)] backdrop-blur md:-top-6',
+      )}
     >
       <div className="bg-card rounded-lg border p-3 shadow-sm">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -5222,13 +5229,22 @@ function ConfigActionBar({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <Button variant="outline" size="md" disabled={!dirty} onClick={onOpenChanges}>
+            <Button
+              variant="outline"
+              size="md"
+              title={t('configPage.actions.viewChanges')}
+              disabled={!dirty}
+              onClick={onOpenChanges}
+            >
               <FileDiff className="size-4" aria-hidden="true" />
-              {t('configPage.actions.viewChanges')}
+              <span className="@max-[16rem]/workbench:sr-only">
+                {t('configPage.actions.viewChanges')}
+              </span>
             </Button>
             <Button
               variant="outline"
               size="md"
+              title={t('configPage.actions.reload')}
               disabled={isFetching || mutating}
               onClick={onReload}
             >
@@ -5237,15 +5253,22 @@ function ConfigActionBar({
               ) : (
                 <RefreshCw className="size-4" aria-hidden="true" />
               )}
-              {t('configPage.actions.reload')}
+              <span className="@max-[16rem]/workbench:sr-only">
+                {t('configPage.actions.reload')}
+              </span>
             </Button>
-            <Button size="md" disabled={saveDisabled} onClick={onSave}>
+            <Button
+              size="md"
+              title={t('configPage.actions.save')}
+              disabled={saveDisabled}
+              onClick={onSave}
+            >
               {mutating ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : (
                 <Save className="size-4" aria-hidden="true" />
               )}
-              {t('configPage.actions.save')}
+              <span className="@max-[16rem]/workbench:sr-only">{t('configPage.actions.save')}</span>
             </Button>
           </div>
         </div>
@@ -5666,7 +5689,10 @@ function ConfigWorkbenchSession() {
   }
 
   return (
-    <section data-config-workbench className="grid w-full gap-4">
+    <section
+      data-config-workbench
+      className="@container/workbench grid w-full min-w-0 grid-cols-1 gap-4 wrap-anywhere"
+    >
       <PageHeader
         className="p-4"
         title={t('configPage.header.title')}

@@ -21,6 +21,7 @@ for (const scenario of [
   'oauth-model-setting-validation',
   'oauth-refresh-concurrency',
   'antigravity-pause-status',
+  'antigravity-status-revalidation',
   'cpa-server-token',
   'codex-execution-settings',
   'claude-execution-settings',

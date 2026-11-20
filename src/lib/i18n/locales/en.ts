@@ -4352,6 +4352,8 @@ export const en = {
         idle: 'The Antigravity pool is not paused.',
         paused: 'Pool paused. Dispatch is scheduled to resume at {{time}}.',
         failed: 'Unable to confirm the current pool status.',
+        unauthorized: 'Reconnect to Home to check the pool status.',
+        forbidden: 'Access to the pool status was denied. Check your management permissions.',
         unsupported: 'This Home endpoint does not provide the live pool status.',
         refresh: 'Refresh status',
       },

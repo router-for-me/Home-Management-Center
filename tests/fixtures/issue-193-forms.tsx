@@ -147,14 +147,25 @@ async function submit() {
     form.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })),
   )
 }
-async function respond(url: string, data: unknown, fail = false) {
+async function respond(url: string, data: unknown, fail: boolean | number = false) {
   const index = pending.findIndex((request) => request.config.url === url)
   assert.ok(index >= 0, `Missing pending request: ${url}`)
   const request = pending.splice(index, 1)[0]
   await React.act(async () => {
-    if (fail) request.reject(new Error('Fixture connection failed'))
-    else
-      request.resolve({ data, config: request.config, status: 200, statusText: 'OK', headers: {} })
+    const status = typeof fail === 'number' ? fail : 200
+    const response = {
+      data,
+      config: request.config,
+      status,
+      statusText: String(status),
+      headers: {},
+    }
+    if (typeof fail === 'number')
+      request.reject(
+        new axios.AxiosError('HTTP ' + status, undefined, request.config, undefined, response),
+      )
+    else if (fail) request.reject(new Error('Fixture connection failed'))
+    else request.resolve(response)
   })
   assert.deepEqual(uncaught, [])
 }
@@ -558,6 +569,73 @@ if (scenario === 'oauth-alias-channel-edit') {
   await respond(route, null, true)
   assert.equal(control.value, '1h')
   assert.equal(status(), copy.failed)
+} else if (scenario === 'antigravity-status-revalidation') {
+  const { AntigravityPauseStatus } =
+    await import('../../src/features/config/antigravity-pause-status')
+  const { focusManager } = await import('@tanstack/react-query')
+  const key = ['management-antigravity-tos-pause', 'http://forms.test', 'forms-session']
+  const route = '/routing/antigravity/tos-pause'
+  const copy = en.common.configPage.antigravityPauseStatus
+  const view = React.createElement(AntigravityPauseStatus)
+  const status = () => browser.document.querySelector('[role="status"]')?.textContent
+  const idle = { observed_at: '2020-01-01T12:00:00Z', resume_at: null, paused: false }
+  const active = { ...idle, resume_at: '2020-01-01T12:00:20Z', paused: true }
+  useCapabilityStore.setState((state) => ({
+    capabilities: { ...state.capabilities, antigravityTosPauseStatus: true },
+  }))
+  await render(view)
+  await respond(route, idle)
+  await render(null)
+  await render(view)
+  assert.equal(status(), copy.loading)
+  await respond(route, active)
+  assert.ok(status()?.includes('2020'))
+  const refresh = button(copy.refresh)
+  await React.act(async () => refresh.focus())
+  await click(refresh)
+  await click(refresh)
+  assert.equal(pending.length, 1)
+  assert.equal(refresh.disabled, false)
+  assert.equal(refresh.getAttribute('aria-disabled'), 'true')
+  assert.equal(browser.document.activeElement, refresh)
+  assert.ok(status()?.includes('2020'))
+  // Move the local receipt time beyond the lifetime reported by Home while the read is pending.
+  await React.act(async () =>
+    client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - 21_000 }),
+  )
+  assert.equal(status(), copy.loading)
+  await respond(route, idle)
+  assert.equal(status(), copy.idle)
+  assert.equal(browser.document.activeElement, refresh)
+  for (const [code, message] of [
+    [401, copy.unauthorized],
+    [403, copy.forbidden],
+  ] as const) {
+    await click(button(copy.refresh))
+    await respond(route, {}, code)
+    assert.equal(status(), message)
+    await render(null)
+    await render(view)
+    await React.act(async () => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+      void client.invalidateQueries({ queryKey: key })
+    })
+    assert.equal(status(), message)
+    assert.equal(pending.length, 0)
+  }
+  // A new connection can read immediately; a transient failure on it can retry automatically.
+  await React.act(async () => useSessionStore.setState({ connectedAt: 'reconnected' }))
+  assert.equal(status(), copy.loading)
+  await respond(route, {}, 503)
+  assert.equal(status(), copy.failed)
+  await React.act(async () => {
+    focusManager.setFocused(false)
+    focusManager.setFocused(true)
+  })
+  assert.equal(status(), copy.loading)
+  await respond(route, idle)
+  assert.equal(status(), copy.idle)
 } else if (scenario === 'oauth-refresh-concurrency') {
   await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!

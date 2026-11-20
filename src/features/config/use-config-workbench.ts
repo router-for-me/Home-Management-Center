@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { fetchAntigravityPauseStatus } from '@/lib/api/management/antigravity-pause-window'
+import {
+  type AntigravityPauseObservation,
+  fetchAntigravityPauseStatus,
+} from '@/lib/api/management/antigravity-pause-window'
+import { toManagementApiError } from '@/lib/api/management/client'
 import {
   type ConfigChange,
   ConfigFieldSaveError,
@@ -42,27 +46,39 @@ function useManagementSession() {
 const pauseStatusKey = (baseUrl: string, connectedAt: string | null) =>
   ['management-antigravity-tos-pause', baseUrl, connectedAt] as const
 
+const pausePollMs = 30_000
+
+function pauseDuration(observation: AntigravityPauseObservation | null | undefined) {
+  // Both timestamps come from Home, independently of the browser's wall clock.
+  return observation?.resumeAt == null ? Infinity : observation.resumeAt - observation.observedAt
+}
+
+function pauseAccessStatus(error: unknown) {
+  const status = error ? toManagementApiError(error).status : undefined
+  return status === 401 || status === 403 ? status : undefined
+}
+
 export function useAntigravityPauseStatus() {
   const { session, connected, connectedAt } = useManagementSession()
   const supported = useCapabilityStore((state) => state.capabilities.antigravityTosPauseStatus)
   const enabled = connected && Boolean(session.managementKey) && supported
-  const query = useQuery({
+  const query = useQuery<AntigravityPauseObservation | null>({
     queryKey: pauseStatusKey(session.baseUrl, connectedAt),
-    enabled,
+    enabled: ({ state }) => enabled && !pauseAccessStatus(state.error),
     queryFn: ({ signal }) => fetchAntigravityPauseStatus(session, signal),
     retry: false,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: 'always',
     refetchIntervalInBackground: false,
+    // Keep confirmed data visible during routine polls, up to the deadline or a missed cycle.
+    staleTime: ({ state }) => Math.min(pauseDuration(state.data), 2 * pausePollMs),
     refetchInterval: ({ state }) => {
-      if (state.status === 'error') return 30_000
-      const observation = state.data
-      if (observation === null) return false
-      if (observation?.resumeAt == null) return 30_000
-      // Use Home's clock to recheck the deadline, including when the browser's clock is skewed.
-      return Math.max(1_000, Math.min(30_000, observation.resumeAt - observation.observedAt))
+      if (state.status === 'error') return pausePollMs
+      if (state.data === null) return false
+      return Math.max(1_000, Math.min(pausePollMs, pauseDuration(state.data)))
     },
   })
-  return { enabled, query }
+  return { enabled, query, accessStatus: pauseAccessStatus(query.error) }
 }
 
 export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel) {

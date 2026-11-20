@@ -4116,10 +4116,12 @@ export const zhTW = {
         removing: '清除已儲存的權杖',
       },
       antigravityPauseStatus: {
-        loading: '正在讀取憑證池狀態…',
+        loading: '正在確認憑證池狀態…',
         idle: 'Antigravity 憑證池目前未暫停。',
         paused: '憑證池已暫停，預計於 {{time}} 恢復調度。',
         failed: '暫時無法確認憑證池的暫停狀態。',
+        unauthorized: '請重新連線至 Home 以查看憑證池狀態。',
+        forbidden: '目前的連線無權查看憑證池狀態，請檢查管理權限。',
         unsupported: '此 Home 端點未提供即時暫停狀態。',
         refresh: '重新整理狀態',
       },

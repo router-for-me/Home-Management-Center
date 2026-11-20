@@ -7,16 +7,21 @@ import { cn } from '@/lib/utils'
 
 export function AntigravityPauseStatus() {
   const { t, i18n } = useTranslation()
-  const { enabled, query } = useAntigravityPauseStatus()
+  const { enabled, query, accessStatus } = useAntigravityPauseStatus()
   if (!enabled) return null
 
   const resumeAt = query.data?.resumeAt
   const unavailable = query.isError || query.isPaused
+  const checking =
+    query.isPending || !query.isFetchedAfterMount || (query.data != null && query.isStale)
+  const showResumeTime = !unavailable && !checking && resumeAt != null
   let message
-  if (unavailable) message = t('configPage.antigravityPauseStatus.failed')
-  else if (query.isPending) message = t('configPage.antigravityPauseStatus.loading')
+  if (accessStatus === 401) message = t('configPage.antigravityPauseStatus.unauthorized')
+  else if (accessStatus === 403) message = t('configPage.antigravityPauseStatus.forbidden')
+  else if (unavailable) message = t('configPage.antigravityPauseStatus.failed')
+  else if (checking) message = t('configPage.antigravityPauseStatus.loading')
   else if (query.data === null) message = t('configPage.antigravityPauseStatus.unsupported')
-  else if (resumeAt != null) {
+  else if (showResumeTime) {
     const time = new Intl.DateTimeFormat(i18n.resolvedLanguage || i18n.language, {
       year: 'numeric',
       month: 'short',
@@ -30,12 +35,12 @@ export function AntigravityPauseStatus() {
   } else message = t('configPage.antigravityPauseStatus.idle')
 
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+    <div className="@container/pause mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
       <p
         role="status"
         className={cn(
           'text-muted-foreground text-xs leading-5',
-          !unavailable && resumeAt != null && 'font-medium text-amber-700 dark:text-amber-300',
+          showResumeTime && 'font-medium text-amber-700 dark:text-amber-300',
         )}
       >
         {message}
@@ -44,13 +49,17 @@ export function AntigravityPauseStatus() {
         type="button"
         variant="text"
         size="sm"
-        disabled={query.isFetching}
+        className="aria-disabled:opacity-50"
+        title={t('configPage.antigravityPauseStatus.refresh')}
+        aria-disabled={query.isFetching || undefined}
         onClick={() => {
-          void query.refetch({ cancelRefetch: false })
+          if (!query.isFetching) void query.refetch({ cancelRefetch: false })
         }}
       >
         <RefreshCw aria-hidden="true" />
-        {t('configPage.antigravityPauseStatus.refresh')}
+        <span className="@max-[10rem]/pause:sr-only">
+          {t('configPage.antigravityPauseStatus.refresh')}
+        </span>
       </Button>
     </div>
   )
