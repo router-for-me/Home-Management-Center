@@ -4418,8 +4418,6 @@ export const zhTW = {
           },
           addPath: '新增 GJSON 路徑',
           removePath: '移除第 {{index}} 條 GJSON 路徑',
-          pendingConfig: '待儲存的設定',
-          savedConfig: '已儲存的設定',
           previewRegex: '第 {{index}} 步使用 Go RE2。請在 CPA 的實際請求中驗證此步驟與後續結果。',
           regexHint:
             '使用 Go RE2 語法。替換文字可用 $1 或 ${1} 引用擷取群組。CPA 會略過表示式為空或無效的步驟。',
@@ -4632,7 +4630,15 @@ export const zhTW = {
       diff: {
         title: '儲存前變更',
         empty: '目前沒有待儲存的設定變更。',
-        visualDescription: '目前有 {{count}} 項未儲存的視覺化變更。點擊項目可跳轉到對應設定區。',
+        visualDescription: '有 {{count}} 項設定待儲存',
+        removed: '原值',
+        added: '新值',
+        goToSection: '前往「{{section}}」設定區',
+        expandLines: '展開 {{count}} 行未變更的內容',
+        collapseLines: '收合 {{count}} 行未變更的內容',
+        fullValues: '變更較多，以下顯示完整的原值與新值。',
+        sameValue: 'JSON 格式已變更，設定值相同。',
+        replaceSecret: '儲存後取代金鑰',
       },
       confirm: {
         reload: '目前存在未儲存修改，確認重新載入並丟棄本機修改？',

@@ -15,6 +15,7 @@ import {
   AppWindow,
   ArrowDown,
   ArrowUp,
+  ArrowUpRight,
   CheckCircle2,
   ChevronDown,
   CloudUpload,
@@ -78,10 +79,12 @@ import {
 } from '@/components/ui/select'
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
+  SheetTrigger,
 } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
@@ -89,6 +92,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AntigravityPauseStatus } from '@/features/config/antigravity-pause-status'
+import { ConfigValueDiff } from '@/features/config/config-value-diff'
 import { ModelAliasEditor } from '@/features/config/oauth-model-alias-editor'
 import {
   ModelSettingFeedbackContext,
@@ -5135,7 +5139,6 @@ function ConfigActionBar({
   fetchedAt,
   saveDisabled,
   hasConflictingChanges,
-  onOpenChanges,
   onReload,
   onSave,
 }: {
@@ -5148,7 +5151,6 @@ function ConfigActionBar({
   fetchedAt: string
   saveDisabled: boolean
   hasConflictingChanges: boolean
-  onOpenChanges: () => void
   onReload: () => void
   onSave: () => void
 }) {
@@ -5229,18 +5231,19 @@ function ConfigActionBar({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <Button
-              variant="outline"
-              size="md"
-              title={t('configPage.actions.viewChanges')}
-              disabled={!dirty}
-              onClick={onOpenChanges}
-            >
-              <FileDiff className="size-4" aria-hidden="true" />
-              <span className="@max-[16rem]/workbench:sr-only">
-                {t('configPage.actions.viewChanges')}
-              </span>
-            </Button>
+            <SheetTrigger asChild>
+              <Button
+                variant="outline"
+                size="md"
+                title={t('configPage.actions.viewChanges')}
+                disabled={!dirty}
+              >
+                <FileDiff className="size-4" aria-hidden="true" />
+                <span className="@max-[16rem]/workbench:sr-only">
+                  {t('configPage.actions.viewChanges')}
+                </span>
+              </Button>
+            </SheetTrigger>
             <Button
               variant="outline"
               size="md"
@@ -5285,76 +5288,99 @@ function ConfigChangePreview({
   payloadDraft: PayloadRulesConfig | null
 }) {
   const { t } = useTranslation()
-  if (fieldDefinitionByKey[change.key].kind === 'writeOnlySecret') {
+  const field = fieldDefinitionByKey[change.key]
+  const { kind } = field
+  if (
+    kind === 'writeOnlySecret' ||
+    (kind === 'sensitiveText' && change.previousValue && change.nextValue)
+  ) {
     const action =
-      change.nextValue === null
-        ? 'configPage.token.removing'
-        : change.previousValue
-          ? 'configPage.token.replacing'
-          : 'configPage.token.setting'
+      kind === 'sensitiveText'
+        ? 'configPage.diff.replaceSecret'
+        : change.nextValue === null
+          ? 'configPage.token.removing'
+          : change.previousValue
+            ? 'configPage.token.replacing'
+            : 'configPage.token.setting'
     return (
-      <span className="text-muted-foreground text-meta">
+      <p className="text-muted-foreground text-meta px-3 py-2">
         {t(action)} <span aria-hidden="true">••••••••</span>
-      </span>
+      </p>
     )
   }
-  if (change.key === 'payloadRulesJson') {
-    const parsed = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.nextValue))
-    if (!parsed.ok || !canEditPayloadConfig(parsed.value)) {
-      return <span className="text-meta">{t('configPage.json.unsupportedStructure')}</span>
+  if (isJsonConfigFieldKey(change.key)) {
+    const previous = parseJsonDraft(field, String(change.previousValue))
+    const parsed = parseJsonDraft(field, String(change.nextValue))
+    if (change.key === 'payloadRulesJson') {
+      if (!parsed.ok || !canEditPayloadConfig(parsed.value)) {
+        return <p className="text-meta px-3 py-2">{t('configPage.json.unsupportedStructure')}</p>
+      }
+      const draft = findPayloadDraft(payloadDraft ?? normalizePayloadConfig(parsed.value))
+      if (draft) {
+        const [issue] = getPayloadRuleIssueKeys(draft.rule, draft.sectionKey)
+        return (
+          <p className="text-meta px-3 py-2">
+            {t(`configPage.payload.intentOptions.${getPayloadRuleIntent(draft.sectionKey)}.title`)}
+            {' · '}
+            {t('configPage.payload.ruleTitle', { index: draft.rule.displayNumber })}
+            {getPayloadRuleModel(draft.rule) && ` · ${getPayloadRuleModel(draft.rule)}`}
+            {' · '}
+            {issue
+              ? t(`configPage.payload.ruleIssues.${issue}`)
+              : t('configPage.payload.workspace.incomplete')}
+          </p>
+        )
+      }
     }
-    const draft = findPayloadDraft(payloadDraft ?? normalizePayloadConfig(parsed.value))
-    if (draft) {
-      const [issue] = getPayloadRuleIssueKeys(draft.rule, draft.sectionKey)
-      return (
-        <span className="text-meta">
-          {t(`configPage.payload.intentOptions.${getPayloadRuleIntent(draft.sectionKey)}.title`)}
-          {' · '}
-          {t('configPage.payload.ruleTitle', { index: draft.rule.displayNumber })}
-          {getPayloadRuleModel(draft.rule) && ` · ${getPayloadRuleModel(draft.rule)}`}
-          {' · '}
-          {issue
-            ? t(`configPage.payload.ruleIssues.${issue}`)
-            : t('configPage.payload.workspace.incomplete')}
-        </span>
+    function formatJson(value: ConfigFieldValue, result: JsonParseResult) {
+      if (kind === 'optionalStringList' && value === null)
+        return t('configPage.nullableBoolean.unset')
+      const source = String(value)
+      if (!result.ok) return source
+      // Parsing can round a large number or discard a duplicate key. Keep the draft literal in that case.
+      const compact = source.replace(/"(?:\\.|[^"\\])*"|\s+/g, (part) =>
+        part.startsWith('"') ? part : '',
       )
+      if (compact && compact !== JSON.stringify(result.value)) return source
+      return stringifyJson(result.value)
     }
-    const before = parseJsonDraft(fieldDefinitionByKey[change.key], String(change.previousValue))
-    if (before.ok && isRecord(before.value) && isRecord(parsed.value)) {
-      const previous = before.value
-      const next = parsed.value
-      const sections = payloadSectionKeys.filter(
-        (key) => JSON.stringify(previous[key]) !== JSON.stringify(next[key]),
-      )
-      return (
-        <span className="grid min-w-0 gap-2">
-          {(
-            [
-              ['savedConfig', previous],
-              ['pendingConfig', next],
-            ] as const
-          ).map(([label, config]) => (
-            <span key={label} className="grid min-w-0 gap-1">
-              <span className="text-label">{t(`configPage.payload.replace.${label}`)}</span>
-              <code className="bg-muted/30 text-code block rounded p-2 break-words whitespace-pre-wrap">
-                {JSON.stringify(
-                  Object.fromEntries(sections.map((key) => [key, config[key] ?? []])),
-                  null,
-                  2,
-                )}
-              </code>
-            </span>
-          ))}
-        </span>
-      )
+    return (
+      <>
+        {!parsed.ok && (
+          <p className="text-destructive text-meta px-3 py-2">
+            {t('configPage.validation.jsonParseError', { message: parsed.message })}
+          </p>
+        )}
+        <ConfigValueDiff
+          before={formatJson(change.previousValue, previous)}
+          after={formatJson(change.nextValue, parsed)}
+          format={previous.ok && parsed.ok ? 'json' : 'text'}
+        />
+      </>
+    )
+  }
+  if (kind === 'literalReplacements' || kind === 'patternReplacements') {
+    const formatRules = (value: ConfigFieldValue) => {
+      const rows = parseReplacementDraft(value)
+      if (!rows) return { error: t('sensitiveReplacements.unsupported') }
+      if (replacementIssues(kind, rows).some(Boolean))
+        return { error: t('sensitiveReplacements.incomplete') }
+      return { text: stringifyJson(serializeReplacementRows(kind, rows)) }
     }
+    const after = formatRules(change.nextValue)
+    if (after.text === undefined) return <p className="text-meta px-3 py-2">{after.error}</p>
+    const before = formatRules(change.previousValue)
+    return (
+      <ConfigValueDiff
+        before={before.text ?? before.error}
+        after={after.text}
+        format={before.text === undefined ? 'text' : 'json'}
+      />
+    )
   }
   function formatValue(value: ConfigFieldValue) {
     if (change.key === 'antigravityTosPauseWindow' && value === '')
       return t('configPage.fields.antigravityTosPauseWindow.placeholder')
-    const kind = fieldDefinitionByKey[change.key].kind
-    if (kind === 'optionalStringList' && value === null)
-      return t('configPage.nullableBoolean.unset')
     if (change.key === 'upstreamClaudeClientRequestId') {
       const label = 'configPage.fields.upstreamClaudeClientRequestId'
       if (value === null) return t(`${label}.placeholder`)
@@ -5365,16 +5391,10 @@ function ConfigChangePreview({
     if (kind === 'sensitiveText' && value) return '••••••••'
     if ((kind === 'optionalInteger' || kind === 'optionalText') && value === null)
       return t(`configPage.fields.${change.key}.placeholder`)
-    if (kind === 'literalReplacements' || kind === 'patternReplacements') {
-      const rows = parseReplacementDraft(value)
-      if (!rows) return t('sensitiveReplacements.unsupported')
-      if (replacementIssues(kind, rows).some(Boolean)) return t('sensitiveReplacements.incomplete')
-      return JSON.stringify(serializeReplacementRows(kind, rows))
-    }
     if (kind === 'optionalSwitch') {
       if (value === null)
         return t(
-          fieldDefinitionByKey[change.key].defaultChecked
+          field.defaultChecked
             ? 'configPage.nullableBoolean.defaultOn'
             : 'configPage.nullableBoolean.defaultOff',
         )
@@ -5384,80 +5404,125 @@ function ConfigChangePreview({
   }
 
   return (
-    <span className="text-muted-foreground text-code min-w-0 break-all whitespace-normal">
-      {formatValue(change.previousValue)}
-      {' → '}
-      <span className="text-foreground">{formatValue(change.nextValue)}</span>
-    </span>
+    <ConfigValueDiff
+      before={formatValue(change.previousValue)}
+      after={formatValue(change.nextValue)}
+    />
   )
 }
 
 function ChangeDetailSheet({
   payloadDraft,
-  open,
   changes,
-  onOpenChange,
   onJumpToField,
 }: {
   payloadDraft: PayloadRulesConfig | null
-  open: boolean
   changes: ConfigChange[]
-  onOpenChange: (open: boolean) => void
   onJumpToField: (key: ConfigFieldKey) => void
 }) {
   const { t } = useTranslation()
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const jumpAfterClose = useRef<ConfigFieldKey | null>(null)
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="w-full max-w-full overflow-hidden sm:max-w-xl"
-        closeLabel={t('close')}
-      >
-        <SheetHeader className="border-b">
-          <SheetTitle>{t('configPage.diff.title')}</SheetTitle>
-          <SheetDescription>
-            {t('configPage.diff.visualDescription', { count: changes.length })}
-          </SheetDescription>
-        </SheetHeader>
+    <SheetContent
+      className="max-h-dvh w-full gap-0 overflow-hidden sm:max-w-2xl"
+      closeLabel={t('close')}
+      onOpenAutoFocus={(event) => {
+        event.preventDefault()
+        titleRef.current?.focus({ preventScroll: true })
+      }}
+      onCloseAutoFocus={(event) => {
+        // Focus restoration runs after unmount. An operator may already be editing another field.
+        const focused = document.activeElement
+        if (
+          focused &&
+          focused !== document.body &&
+          event.target instanceof HTMLElement &&
+          !event.target.contains(focused)
+        ) {
+          event.preventDefault()
+        }
+        if (jumpAfterClose.current) onJumpToField(jumpAfterClose.current)
+        jumpAfterClose.current = null
+      }}
+    >
+      <SheetHeader className="shrink-0 border-b">
+        <SheetTitle ref={titleRef} tabIndex={-1} className="outline-none">
+          {t('configPage.diff.title')}
+        </SheetTitle>
+        <SheetDescription>
+          {t('configPage.diff.visualDescription', { count: changes.length })}
+        </SheetDescription>
+        {changes.length > 0 && (
+          <div className="text-meta mt-1 flex flex-wrap gap-x-4 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="bg-destructive/10 inline-grid size-5 place-items-center rounded font-mono font-semibold text-red-800 dark:text-red-300"
+              >
+                −
+              </span>
+              {t('configPage.diff.removed')}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="bg-success/12 inline-grid size-5 place-items-center rounded font-mono font-semibold text-emerald-800 dark:text-emerald-300"
+              >
+                +
+              </span>
+              {t('configPage.diff.added')}
+            </span>
+          </div>
+        )}
+      </SheetHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-          {changes.length === 0 ? (
-            <div className="text-muted-foreground rounded-md border px-3 py-3 text-sm">
-              {t('configPage.diff.empty')}
-            </div>
-          ) : (
-            <div className="grid gap-2">
-              {changes.map((change) => {
-                const field = fieldDefinitionByKey[change.key]
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {changes.length === 0 ? (
+          <div className="text-muted-foreground rounded-md border px-3 py-3 text-sm">
+            {t('configPage.diff.empty')}
+          </div>
+        ) : (
+          <ul className="grid gap-3">
+            {changes.map((change) => {
+              const field = fieldDefinitionByKey[change.key]
+              const section = t(
+                `configPage.sections.${field.groupId ?? field.sectionId}.shortTitle`,
+              )
+              const jump = t('configPage.diff.goToSection', { section })
 
-                return (
-                  <Button
-                    key={change.key}
-                    type="button"
-                    variant="ghost"
-                    className="grid h-auto w-full min-w-0 justify-stretch gap-2 rounded-md border px-3 py-2 text-left whitespace-normal"
-                    onClick={() => {
-                      onOpenChange(false)
-                      onJumpToField(change.key)
-                    }}
-                  >
-                    <span className="flex min-w-0 items-center justify-between gap-2">
-                      <span className="min-w-0 truncate font-medium">
-                        {t(`configPage.fields.${change.key}.label`)}
-                      </span>
-                      <span className="text-muted-foreground shrink-0 text-xs">
-                        {t(`configPage.sections.${field.groupId ?? field.sectionId}.shortTitle`)}
-                      </span>
-                    </span>
-                    <ConfigChangePreview change={change} payloadDraft={payloadDraft} />
-                  </Button>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+              return (
+                <li key={change.key} className="min-w-0 overflow-hidden rounded-md border">
+                  <div className="bg-muted/40 flex min-w-0 items-center justify-between gap-2 border-b py-1 pr-1 pl-3">
+                    <h3 className="text-label min-w-0 wrap-anywhere">
+                      {t(`configPage.fields.${change.key}.label`)}
+                    </h3>
+                    <SheetClose asChild>
+                      <Button
+                        type="button"
+                        variant="text"
+                        size="sm"
+                        className="max-w-1/2 shrink-0"
+                        aria-label={jump}
+                        title={jump}
+                        onClick={() => {
+                          jumpAfterClose.current = change.key
+                        }}
+                      >
+                        <span className="truncate">{section}</span>
+                        <ArrowUpRight aria-hidden="true" />
+                      </Button>
+                    </SheetClose>
+                  </div>
+                  <ConfigChangePreview change={change} payloadDraft={payloadDraft} />
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+    </SheetContent>
   )
 }
 
@@ -5538,7 +5603,6 @@ function ConfigWorkbenchSession() {
   const [editingField, setEditingField] = useState<ConfigFieldKey | null>(null)
   const modelSettingFeedback = useState<ModelSettingIssue[]>([])
   const [modelSettingIssues, setModelSettingIssues] = modelSettingFeedback
-  const [changeSheetOpen, setChangeSheetOpen] = useState(false)
   const [confirmation, setConfirmation] = useState<PendingConfigConfirmation | null>(null)
   const [saveError, setSaveError] = useState<ConfigFieldSaveError | null>(null)
 
@@ -5699,30 +5763,29 @@ function ConfigWorkbenchSession() {
         description={t('configPage.header.description')}
       />
 
-      <ConfigActionBar
-        changeCount={changes.length}
-        validationCount={visibleValidationErrors.length}
-        draftCount={draftCount}
-        isFetching={workbench.isFetching}
-        mutating={workbench.mutating}
-        runtimeMode={workbench.runtimeMode}
-        fetchedAt={latest.fetchedAt}
-        saveDisabled={saveDisabled}
-        hasConflictingChanges={hasConflictingChanges}
-        onOpenChanges={() => setChangeSheetOpen(true)}
-        onReload={handleReload}
-        onSave={() => void handleSave()}
-      />
+      <Sheet>
+        <ConfigActionBar
+          changeCount={changes.length}
+          validationCount={visibleValidationErrors.length}
+          draftCount={draftCount}
+          isFetching={workbench.isFetching}
+          mutating={workbench.mutating}
+          runtimeMode={workbench.runtimeMode}
+          fetchedAt={latest.fetchedAt}
+          saveDisabled={saveDisabled}
+          hasConflictingChanges={hasConflictingChanges}
+          onReload={handleReload}
+          onSave={() => void handleSave()}
+        />
 
-      <ChangeDetailSheet
-        payloadDraft={payloadDraft}
-        open={changeSheetOpen}
-        changes={changes}
-        onOpenChange={setChangeSheetOpen}
-        onJumpToField={(key) => {
-          window.requestAnimationFrame(() => scrollToField(key))
-        }}
-      />
+        <ChangeDetailSheet
+          payloadDraft={payloadDraft}
+          changes={changes}
+          onJumpToField={(key) => {
+            window.requestAnimationFrame(() => scrollToField(key))
+          }}
+        />
+      </Sheet>
 
       <ConfigConfirmationDialog
         confirmation={confirmation}

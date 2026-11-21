@@ -23,6 +23,7 @@ for (const scenario of [
   'antigravity-pause-status',
   'antigravity-status-revalidation',
   'cpa-server-token',
+  'config-change-preview',
   'codex-execution-settings',
   'claude-execution-settings',
 ]) {
