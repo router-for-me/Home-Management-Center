@@ -31,6 +31,7 @@ const capabilityRequests: Record<
     | 'credentialInFlightSnapshotCursor'
     | 'credentialConcurrencyLimits'
     | 'credentialCooldownReset'
+    | 'antigravityTosPauseStatus'
     | 'quotaRecollect'
     | 'modelChannelBindings'
     | 'channelGroupCredentialCandidates'
@@ -116,6 +117,7 @@ const emptyCapabilities: CapabilityMap = {
   credentialInFlightSnapshotCursor: false,
   credentialConcurrencyLimits: false,
   credentialCooldownReset: false,
+  antigravityTosPauseStatus: false,
 }
 
 type ProbedCapabilityKey = keyof typeof capabilityRequests
@@ -717,6 +719,8 @@ export async function probeManagementRuntime(
     credentialInFlightSnapshotCursor: declaredCredentialInFlightSnapshotCursor ?? false,
     credentialConcurrencyLimits: declaredCredentialConcurrencyLimits ?? false,
     credentialCooldownReset: declaredCredentialCooldownReset ?? false,
+    antigravityTosPauseStatus:
+      readDeclaredCapabilityValue(capabilitiesPayload, ['antigravity_tos_pause_status']) === true,
   }
 
   return {

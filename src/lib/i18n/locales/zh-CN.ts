@@ -4110,6 +4110,16 @@ export const zhCN = {
         replacing: '替换令牌',
         removing: '清除已保存的令牌',
       },
+      antigravityPauseStatus: {
+        loading: '正在确认凭证池状态…',
+        idle: 'Antigravity 凭证池当前未暂停。',
+        paused: '凭证池已暂停，预计 {{time}} 恢复调度。',
+        failed: '暂时无法确认凭证池的暂停状态。',
+        unauthorized: '请重新连接 Home，以查看凭证池状态。',
+        forbidden: '当前连接无权查看凭证池状态，请检查管理权限。',
+        unsupported: '此 Home 接口未提供实时暂停状态。',
+        refresh: '刷新状态',
+      },
       nullableBoolean: {
         defaultOff: '默认关闭',
         defaultOn: '默认开启',

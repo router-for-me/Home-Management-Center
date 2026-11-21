@@ -72,7 +72,9 @@ useCapabilityStore.setState({
     Object.keys(useCapabilityStore.getState().capabilities).map((key) => [key, false]),
   ) as any,
 })
-const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { gcTime: Infinity } },
+})
 type PendingRequest = { config: any; resolve: (value: any) => void; reject: (error: Error) => void }
 const pending: PendingRequest[] = []
 axios.defaults.adapter = (config) =>
@@ -145,14 +147,25 @@ async function submit() {
     form.dispatchEvent(new browser.Event('submit', { bubbles: true, cancelable: true })),
   )
 }
-async function respond(url: string, data: unknown, fail = false) {
+async function respond(url: string, data: unknown, fail: boolean | number = false) {
   const index = pending.findIndex((request) => request.config.url === url)
   assert.ok(index >= 0, `Missing pending request: ${url}`)
   const request = pending.splice(index, 1)[0]
   await React.act(async () => {
-    if (fail) request.reject(new Error('Fixture connection failed'))
-    else
-      request.resolve({ data, config: request.config, status: 200, statusText: 'OK', headers: {} })
+    const status = typeof fail === 'number' ? fail : 200
+    const response = {
+      data,
+      config: request.config,
+      status,
+      statusText: String(status),
+      headers: {},
+    }
+    if (typeof fail === 'number')
+      request.reject(
+        new axios.AxiosError('HTTP ' + status, undefined, request.config, undefined, response),
+      )
+    else if (fail) request.reject(new Error('Fixture connection failed'))
+    else request.resolve(response)
   })
   assert.deepEqual(uncaught, [])
 }
@@ -509,6 +522,120 @@ if (scenario === 'oauth-alias-channel-edit') {
   await click(field('clientCodexWebSearchCacheTtl').querySelector('button')!)
   assert.equal(browser.document.activeElement, ttl)
   assert.equal(save.disabled, true)
+} else if (scenario === 'antigravity-pause-status') {
+  const config = (duration: string) => ({
+    oauth: { providers: { antigravity: { 'tos-pause-window': duration } } },
+  })
+  await renderConfig(config('6h'))
+  await respond('/config', config('6h'))
+  const field = browser.document.getElementById('config-field-antigravityTosPauseWindow')!
+  const control = field.querySelector('input')!
+  const status = () => field.querySelector('[role="status"]')?.textContent
+  const copy = en.common.configPage.antigravityPauseStatus
+  const save = button(en.common.configPage.actions.save)
+  const route = '/routing/antigravity/tos-pause'
+  const observed_at = '2026-11-20T02:00:00Z'
+  assert.equal(control.value, '6h')
+  assert.equal(status(), undefined)
+  assert.ok(!pending.some(({ config }) => config.url === route))
+  await edit(control, '30m')
+  assert.equal(save.disabled, false)
+  await React.act(async () =>
+    useCapabilityStore.setState((state) => ({
+      capabilities: { ...state.capabilities, antigravityTosPauseStatus: true },
+    })),
+  )
+  assert.equal(status(), copy.loading)
+  await respond(route, { paused: false, resume_at: null, observed_at })
+  assert.equal(status(), copy.idle)
+  await click(button(copy.refresh))
+  await respond(route, { paused: true, resume_at: '2026-11-20T02:30:00Z', observed_at })
+  assert.ok(status()?.startsWith(copy.paused.split('{{time}}')[0]))
+  assert.ok(status()?.includes('2026'))
+  await click(button(copy.refresh))
+  await respond(route, null, true)
+  assert.equal(status(), copy.failed)
+  assert.equal(control.value, '30m')
+  assert.equal(save.disabled, false)
+  await click(button(copy.refresh))
+  await respond(route, { paused: false, resume_at: null, observed_at })
+  assert.equal(status(), copy.idle)
+  await click(save)
+  await respond('/config/oauth/providers/antigravity/tos-pause-window', {})
+  await respond('/config', config('30m'))
+  assert.ok(pending.some((request) => request.config.url === route))
+  await edit(control, '1h')
+  assert.equal(save.disabled, false)
+  await respond(route, null, true)
+  assert.equal(control.value, '1h')
+  assert.equal(status(), copy.failed)
+} else if (scenario === 'antigravity-status-revalidation') {
+  const { AntigravityPauseStatus } =
+    await import('../../src/features/config/antigravity-pause-status')
+  const { focusManager } = await import('@tanstack/react-query')
+  const key = ['management-antigravity-tos-pause', 'http://forms.test', 'forms-session']
+  const route = '/routing/antigravity/tos-pause'
+  const copy = en.common.configPage.antigravityPauseStatus
+  const view = React.createElement(AntigravityPauseStatus)
+  const status = () => browser.document.querySelector('[role="status"]')?.textContent
+  const idle = { observed_at: '2020-01-01T12:00:00Z', resume_at: null, paused: false }
+  const active = { ...idle, resume_at: '2020-01-01T12:00:20Z', paused: true }
+  useCapabilityStore.setState((state) => ({
+    capabilities: { ...state.capabilities, antigravityTosPauseStatus: true },
+  }))
+  await render(view)
+  await respond(route, idle)
+  await render(null)
+  await render(view)
+  assert.equal(status(), copy.loading)
+  await respond(route, active)
+  assert.ok(status()?.includes('2020'))
+  const refresh = button(copy.refresh)
+  await React.act(async () => refresh.focus())
+  await click(refresh)
+  await click(refresh)
+  assert.equal(pending.length, 1)
+  assert.equal(refresh.disabled, false)
+  assert.equal(refresh.getAttribute('aria-disabled'), 'true')
+  assert.equal(browser.document.activeElement, refresh)
+  assert.ok(status()?.includes('2020'))
+  // Move the local receipt time beyond the lifetime reported by Home while the read is pending.
+  await React.act(async () =>
+    client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - 21_000 }),
+  )
+  assert.equal(status(), copy.loading)
+  await respond(route, idle)
+  assert.equal(status(), copy.idle)
+  assert.equal(browser.document.activeElement, refresh)
+  for (const [code, message] of [
+    [401, copy.unauthorized],
+    [403, copy.forbidden],
+  ] as const) {
+    await click(button(copy.refresh))
+    await respond(route, {}, code)
+    assert.equal(status(), message)
+    await render(null)
+    await render(view)
+    await React.act(async () => {
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+      void client.invalidateQueries({ queryKey: key })
+    })
+    assert.equal(status(), message)
+    assert.equal(pending.length, 0)
+  }
+  // A new connection can read immediately; a transient failure on it can retry automatically.
+  await React.act(async () => useSessionStore.setState({ connectedAt: 'reconnected' }))
+  assert.equal(status(), copy.loading)
+  await respond(route, {}, 503)
+  assert.equal(status(), copy.failed)
+  await React.act(async () => {
+    focusManager.setFocused(false)
+    focusManager.setFocused(true)
+  })
+  assert.equal(status(), copy.loading)
+  await respond(route, idle)
+  assert.equal(status(), copy.idle)
 } else if (scenario === 'oauth-refresh-concurrency') {
   await renderConfig({ 'config-version': 8 })
   const field = browser.document.getElementById('config-field-oauthAutoRefreshWorkers')!

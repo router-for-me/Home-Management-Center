@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios'
 import { afterEach, describe, expect, test } from 'bun:test'
 
 import { reconcileSavedConfigFields } from '../src/features/config/config-workbench-page'
+import { fetchAntigravityPauseStatus } from '../src/lib/api/management/antigravity-pause-window'
 import { toManagementApiError } from '../src/lib/api/management/client'
 import {
   type ConfigChange,
@@ -16,6 +17,7 @@ import { fetchProviderSnapshot } from '../src/lib/api/management/providers'
 
 const session = { baseUrl: 'https://home.test/tenant/v8/management', managementKey: 'fixture' }
 const v8 = '/tenant/v8/management/'
+const pauseEndpoint = v8 + 'routing/antigravity/tos-pause'
 const legacy = '/tenant/v0/management/debug'
 const originalAdapter = axios.defaults.adapter
 afterEach(() => {
@@ -99,7 +101,13 @@ describe('management login and capability detection', () => {
     const requests = serve((path) => {
       if (path === v8 + 'config') return ok({ 'config-version': 8 })
       if (path === v8 + 'capabilities')
-        return ok({ capabilities: { usage_records: false, access_groups: true } })
+        return ok({
+          capabilities: {
+            usage_records: false,
+            access_groups: true,
+            antigravity_tos_pause_status: true,
+          },
+        })
       if (path === v8 + 'quota/credentials') return ok({ items: [] })
       return missingRoute
     })
@@ -108,10 +116,12 @@ describe('management login and capability detection', () => {
       usageRecords: false,
       accessGroups: true,
       quotaSnapshots: true,
+      antigravityTosPauseStatus: true,
     })
     expect(requests).not.toContain('GET ' + v8 + 'usage/records')
     expect(requests).not.toContain('GET ' + v8 + 'channel-groups')
     expect(requests).toContain('GET ' + v8 + 'quota/credentials')
+    expect(requests).not.toContain('GET ' + pauseEndpoint)
   })
 
   test('an older V8 can log in without capabilities and probes only establish usable features', async () => {
@@ -130,9 +140,53 @@ describe('management login and capability detection', () => {
       topology: false,
       users: false,
       userPeriodLimits: true,
+      antigravityTosPauseStatus: false,
       accessGroups: true,
     })
     expect(requests).not.toContain('GET ' + legacy)
+    expect(requests).not.toContain('GET ' + pauseEndpoint)
+  })
+})
+
+describe('Antigravity pool pause observations', () => {
+  const observed = '2026-11-20T01:00:00.123456789Z'
+  const resume = '2026-11-20T10:15:00+08:00'
+  test('reads active and idle observations using the Home clock', async () => {
+    let deadline: string | null = resume
+    const requests = serve(() =>
+      ok({ paused: deadline !== null, resume_at: deadline, observed_at: observed }),
+    )
+    expect(await fetchAntigravityPauseStatus(session)).toEqual({
+      observedAt: Date.parse(observed),
+      resumeAt: Date.parse(resume),
+    })
+    deadline = null
+    expect(await fetchAntigravityPauseStatus(session)).toEqual({
+      observedAt: Date.parse(observed),
+      resumeAt: null,
+    })
+    expect(requests).toEqual(['GET ' + pauseEndpoint, 'GET ' + pauseEndpoint])
+  })
+
+  test.each([404, 405, 501])('handles HTTP %i as an unavailable route', async (status) => {
+    serve(() => ({ status, data: {} }))
+    expect(await fetchAntigravityPauseStatus(session)).toBeNull()
+  })
+
+  test.each([401, 403, 503])('keeps HTTP %i distinct from an idle observation', async (status) => {
+    serve(() => ({ status, data: {} }))
+    await expect(fetchAntigravityPauseStatus(session)).rejects.toThrow()
+  })
+
+  test.each([
+    { paused: true, resume_at: null, observed_at: observed },
+    { paused: true, resume_at: '2026-11-20T00:59:59Z', observed_at: observed },
+    { paused: false, resume_at: resume, observed_at: observed },
+    { paused: false, observed_at: observed },
+    { paused: false, resume_at: null, observed_at: '2026-11-20T01:00:00' },
+  ])('rejects a contradictory or incomplete observation %j', async (data) => {
+    serve(() => ok(data))
+    await expect(fetchAntigravityPauseStatus(session)).rejects.toThrow()
   })
 })
 
