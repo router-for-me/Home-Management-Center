@@ -407,6 +407,47 @@ if (scenario === 'oauth-alias-channel-edit') {
   assert.ok(combined.textContent.includes(copy.fields.remoteManagementSecretKey.label))
   assert.ok(combined.textContent.includes('••••••••'))
   assert.ok(!combined.outerHTML.includes(managementKey))
+} else if (scenario === 'config-change-preview') {
+  const matches = Array.from({ length: 18 }, (_, index) => `error-${index}`)
+  const saved = { vertex: [{ status: 400, match: matches, action: 'stop' }] }
+  await renderConfig({ oauth: { 'request-scoped-errors': saved } })
+  const copy = en.common.configPage
+  const input = browser.document.querySelector<HTMLTextAreaElement>(
+    '#config-field-oauthRequestScopedErrorsJson textarea',
+  )!
+  const draft = structuredClone(saved)
+  draft.vertex[0].match[9] = 'updated-error'
+  draft.vertex[0].match.push('new-error')
+  draft.vertex[0].action = 'continue'
+  await edit(input, JSON.stringify(draft))
+  await click(button(copy.actions.viewChanges))
+  const dialog = browser.document.querySelector('[role="dialog"]')!
+  const lines = (selector: string) =>
+    [...dialog.querySelectorAll(selector)].map((line) => line.textContent.trim())
+  assert.deepEqual(lines('del'), ['"error-9",', '"action": "stop"'])
+  assert.deepEqual(lines('ins'), ['"updated-error",', '"new-error"', '"action": "continue"'])
+  assert.ok(lines('del mark').includes('stop'))
+  assert.ok(lines('ins mark').includes('continue'))
+  assert.ok(!dialog.textContent.includes('"error-0"'))
+  const fold = dialog.querySelector('button[aria-expanded="false"]')!
+  await click(fold)
+  assert.equal(fold.getAttribute('aria-expanded'), 'true')
+  assert.ok(dialog.textContent.includes('"error-0"'))
+  await click(fold)
+  assert.ok(!dialog.textContent.includes('"error-0"'))
+  await click(dialog.querySelector('ins'))
+  assert.ok(dialog.isConnected)
+  await click(button(en.common.close))
+
+  await edit(input, JSON.stringify(saved))
+  await click(button(copy.actions.viewChanges))
+  assert.ok(
+    browser.document.querySelector('[role="dialog"]')!.textContent.includes(copy.diff.sameValue),
+  )
+  await click(button(en.common.close))
+  await edit(input, '{"vertex":')
+  await click(button(copy.actions.viewChanges))
+  assert.equal(browser.document.querySelector('[role="dialog"] ins')!.textContent, '{"vertex":')
 } else if (scenario === 'claude-execution-settings') {
   await renderConfig({
     upstream: {

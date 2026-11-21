@@ -4413,8 +4413,6 @@ export const zhCN = {
           },
           addPath: '添加 GJSON 路径',
           removePath: '移除第 {{index}} 条 GJSON 路径',
-          pendingConfig: '待保存的配置',
-          savedConfig: '已保存的配置',
           previewRegex: '第 {{index}} 步使用 Go RE2。此步及后续结果请在 CPA 的实际请求中验证。',
           regexHint:
             '使用 Go RE2 语法，替换文本可用 $1 或 ${1} 引用捕获组。CPA 会跳过空表达式或无效表达式所在的步骤。',
@@ -4627,7 +4625,15 @@ export const zhCN = {
       diff: {
         title: '保存前变更',
         empty: '当前没有待保存的配置变更。',
-        visualDescription: '当前有 {{count}} 项未保存的可视化变更。点击条目可跳转到对应配置区。',
+        visualDescription: '{{count}} 项配置待保存',
+        removed: '原值',
+        added: '新值',
+        goToSection: '前往「{{section}}」配置区',
+        expandLines: '展开 {{count}} 行未变更内容',
+        collapseLines: '收起 {{count}} 行未变更内容',
+        fullValues: '变更较多，以下显示完整的原值和新值。',
+        sameValue: 'JSON 格式有变化，配置值相同。',
+        replaceSecret: '保存后替换密钥',
       },
       confirm: {
         reload: '当前存在未保存修改，确认重新加载并丢弃本地修改？',

@@ -4663,8 +4663,6 @@ export const en = {
           },
           addPath: 'Add GJSON path',
           removePath: 'Remove GJSON path {{index}}',
-          pendingConfig: 'Configuration to save',
-          savedConfig: 'Saved configuration',
           previewRegex:
             'Step {{index}} uses Go RE2. Verify this step and the remaining output in CPA.',
           regexHint:
@@ -4887,8 +4885,15 @@ export const en = {
       diff: {
         title: 'Changes before save',
         empty: 'There are no config changes to save.',
-        visualDescription:
-          'There are {{count}} unsaved visual changes. Select an item to jump to its config section.',
+        visualDescription: 'Settings with unsaved changes ({{count}})',
+        removed: 'Previous value',
+        added: 'New value',
+        goToSection: 'Go to the {{section}} section',
+        expandLines: 'Show unchanged lines ({{count}})',
+        collapseLines: 'Hide unchanged lines ({{count}})',
+        fullValues: 'This change is large. Both values are shown in full.',
+        sameValue: 'Only JSON formatting changed.',
+        replaceSecret: 'Replace stored secret',
       },
       confirm: {
         reload: 'Discard unsaved local changes and reload?',
