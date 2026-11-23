@@ -197,13 +197,25 @@ export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
   const modelSource = readString(record, ['model_source', 'modelSource'])
   const priceModelSource = readString(record, ['price_model_source', 'priceModelSource'])
   const source = readString(record, ['service_tier_source', 'serviceTierSource'])
+  const responseTierFallback = [
+    record.response_tier_fallback,
+    record.responseTierFallback,
+    record.response_service_tier_fallback,
+    record.responseServiceTierFallback,
+  ].find((value) => typeof value === 'boolean')
   const tokenBucketsRecord = toRecord(record.token_buckets ?? record.tokenBuckets)
   return {
     schemaVersion: readNumber(record, ['schema_version', 'schemaVersion']),
     provider: readString(record, ['provider']) ?? '',
     model: readString(record, ['model', 'model_id', 'modelId']) ?? '',
-    serviceTier: readString(record, ['service_tier', 'serviceTier']) ?? '',
-    minInputTokens: readNumber(record, ['min_input_tokens', 'minInputTokens']) ?? 0,
+    serviceTier:
+      readString(record, [
+        'matched_service_tier',
+        'matchedServiceTier',
+        'service_tier',
+        'serviceTier',
+      ]) ?? '',
+    minInputTokens: readNumber(record, ['min_input_tokens', 'minInputTokens']),
     inputPricePerMillion:
       readNumber(record, ['input_price_per_million', 'inputPricePerMillion']) ?? 0,
     outputPricePerMillion:
@@ -219,13 +231,14 @@ export function normalizePriceSnapshot(value: unknown): ModelPriceSnapshot {
     responseServiceTier: readString(record, ['response_service_tier', 'responseServiceTier']),
     serviceTierSource: source === 'request' || source === 'response' ? source : null,
     effectiveServiceTier: readString(record, ['effective_service_tier', 'effectiveServiceTier']),
-    responseServiceTierFallback:
-      typeof record.response_service_tier_fallback === 'boolean'
-        ? record.response_service_tier_fallback
-        : typeof record.responseServiceTierFallback === 'boolean'
-          ? record.responseServiceTierFallback
-          : null,
-    inputTokensForBand: readNumber(record, ['input_tokens_for_band', 'inputTokensForBand']) ?? 0,
+    responseServiceTierFallback: responseTierFallback ?? null,
+    inputTokensForBand:
+      readNumber(record, [
+        'context_input_tokens',
+        'contextInputTokens',
+        'input_tokens_for_band',
+        'inputTokensForBand',
+      ]) ?? 0,
     uncachedInputTokens:
       readNumber(record, ['uncached_input_tokens', 'uncachedInputTokens']) ??
       readNumber(tokenBucketsRecord, ['uncached_input', 'uncachedInput']) ??

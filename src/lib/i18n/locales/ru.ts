@@ -1119,6 +1119,7 @@ export const ru = {
           standard: 'Standard',
           flex: 'Flex',
           priority: 'Priority',
+          ultrafast: 'Ultrafast',
         },
         scope: {
           baseContext: 'Базовый контекст',
@@ -1801,6 +1802,8 @@ export const ru = {
           aistudio: 'AI Studio',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          copilot: 'GitHub Copilot',
+          devin: 'Devin',
           xai: 'xAI',
           meta: 'Meta',
         },
@@ -3700,7 +3703,7 @@ export const ru = {
         oauthExcludedModelsJson: {
           label: 'Disabled models',
           description:
-            'Выберите auth channel и модели, которые нужно исключить из OAuth или file-backed credentials.',
+            'Выберите модели, которые нужно исключить для OAuth или файловых учётных данных каждого канала.',
           placeholder: '{"claude":["claude-opus-4.5"]}',
         },
         oauthModelSettingsJson: {
@@ -4895,13 +4898,14 @@ export const ru = {
         channelLabel: 'Auth channel',
         reloadModels: 'Перезагрузить модели',
         searchPlaceholder: 'Искать model ID, name или owner',
-        selectedCount: 'Выбрано моделей: {{count}}',
+        selectedCount: 'Правил: {{count}}',
         clearChannel: 'Очистить channel',
         emptyModels: 'Для этого channel пока нет model definitions.',
         emptyFiltered: 'Нет подходящих моделей.',
-        customTitle: 'Custom provider rules',
-        customDescription:
-          'Эти providers не входят в текущий visual channel list и не могут редактироваться здесь.',
+        rulesPlaceholder: 'Один ID модели или шаблон на строку',
+        catalogHint: 'Введите по одному ID модели или шаблону на строку либо выберите модели ниже.',
+        manualHint:
+          'У этого канала нет статического каталога. Введите по одному ID модели или шаблону на строку.',
         channels: {
           claude: 'Claude',
           gemini: 'Gemini',
@@ -4911,6 +4915,8 @@ export const ru = {
           codex: 'Codex',
           kimi: 'Kimi',
           antigravity: 'Antigravity',
+          copilot: 'GitHub Copilot',
+          devin: 'Devin',
           xai: 'xAI',
           meta: 'Meta',
         },
