@@ -13,8 +13,8 @@ import {
   toConfigApiError,
 } from '@/lib/api/management/config'
 import {
-  type ProviderModelChannel,
   fetchProviderModelDefinitions,
+  getProviderModelDefinitionChannels,
 } from '@/lib/api/management/providers'
 import { useCapabilityStore } from '@/stores/capability-store'
 import { useSessionStore } from '@/stores/session-store'
@@ -81,9 +81,12 @@ export function useAntigravityPauseStatus() {
   return { enabled, query, accessStatus: pauseAccessStatus(query.error) }
 }
 
-export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel) {
+export function useConfigWorkbench(oauthRuleChannel?: string) {
   const queryClient = useQueryClient()
   const { session, connected, checking, connectedAt, runtimeMode } = useManagementSession()
+  const modelDefinitionChannel = getProviderModelDefinitionChannels(runtimeMode).find(
+    (channel) => channel === oauthRuleChannel,
+  )
   const queryKey = ['management-config', session.baseUrl, connectedAt]
   const modelDefinitionsQueryKey = [
     'management-config-model-definitions',
@@ -116,6 +119,8 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
       try {
         return await fetchProviderModelDefinitions(session, modelDefinitionChannel)
       } catch (error) {
+        const { status } = toManagementApiError(error)
+        if (status === 400 || status === 404) return null
         throw toThrowableError(error)
       }
     },
@@ -158,6 +163,7 @@ export function useConfigWorkbench(modelDefinitionChannel?: ProviderModelChannel
       void query.refetch()
     },
     saveStructured: structuredMutation.mutateAsync,
+    hasModelCatalog: Boolean(modelDefinitionChannel) && modelDefinitionsQuery.data !== null,
     refetchModelDefinitions: () => {
       void modelDefinitionsQuery.refetch()
     },

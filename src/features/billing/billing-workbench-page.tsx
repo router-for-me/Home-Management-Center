@@ -263,12 +263,23 @@ function formatContextBand(value: number, t: ReturnType<typeof useTranslation>['
   return t('billingPage.prices.scope.fromTokens', { count: formatNumber(value) })
 }
 
+const modelPriceServiceTiers = ['*', 'standard', 'flex', 'priority', 'ultrafast']
+
 function formatServiceTier(value: string, t: ReturnType<typeof useTranslation>['t']) {
   if (value === '*') return t('billingPage.prices.tiers.wildcard')
-  if (value === 'standard' || value === 'flex' || value === 'priority') {
+  if (modelPriceServiceTiers.includes(value)) {
     return t(`billingPage.prices.tiers.${value}`)
   }
   return value
+}
+
+function ModelPriceTierOptions() {
+  const { t } = useTranslation()
+  return modelPriceServiceTiers.map((tier) => (
+    <SelectItem key={tier} value={tier}>
+      {formatServiceTier(tier, t)}
+    </SelectItem>
+  ))
 }
 
 function formatModelPriceIdentity(resource: ModelPrice, t: ReturnType<typeof useTranslation>['t']) {
@@ -1132,9 +1143,7 @@ function ModelPricesTab({
   const [confirmTierSourceChange, setConfirmTierSourceChange] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [priceSearch, setPriceSearch] = useState('')
-  const [tierFilter, setTierFilter] = useState<'all' | '*' | 'standard' | 'flex' | 'priority'>(
-    'all',
-  )
+  const [tierFilter, setTierFilter] = useState('all')
   const [sourceFilter, setSourceFilter] = useState<'all' | ModelPriceSource>('all')
   const [stateFilter, setStateFilter] = useState<'all' | 'enabled' | 'disabled'>('all')
   const savedModelSource = workbench.billingSettings?.modelSource ?? 'request'
@@ -1369,10 +1378,7 @@ function ModelPricesTab({
                 onChange={(event) => setPriceSearch(event.target.value)}
               />
             </div>
-            <Select
-              value={tierFilter}
-              onValueChange={(value) => setTierFilter(value as typeof tierFilter)}
-            >
+            <Select value={tierFilter} onValueChange={setTierFilter}>
               <SelectTrigger
                 className={cn('w-full sm:w-40')}
                 size="md"
@@ -1382,10 +1388,7 @@ function ModelPricesTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('billingPage.prices.filters.allTiers')}</SelectItem>
-                <SelectItem value="*">{t('billingPage.prices.tiers.wildcard')}</SelectItem>
-                <SelectItem value="standard">{t('billingPage.prices.tiers.standard')}</SelectItem>
-                <SelectItem value="flex">{t('billingPage.prices.tiers.flex')}</SelectItem>
-                <SelectItem value="priority">{t('billingPage.prices.tiers.priority')}</SelectItem>
+                <ModelPriceTierOptions />
               </SelectContent>
             </Select>
             <Select
@@ -1868,7 +1871,7 @@ function ChargeDetailSheet({ record, users }: { record: ChargeRecord; users: Use
     [t('billingPage.chargeDetail.selectedTier'), record.priceSnapshot.serviceTier, false],
     [
       t('billingPage.chargeDetail.selectedBand'),
-      record.priceSnapshot.schemaVersion == null
+      record.priceSnapshot.minInputTokens == null || !record.priceSnapshot.serviceTier
         ? null
         : formatContextBand(record.priceSnapshot.minInputTokens, t),
       false,
@@ -2542,15 +2545,8 @@ function ModelPriceSheet({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="*">{t('billingPage.prices.tiers.wildcard')}</SelectItem>
-                    <SelectItem value="standard">
-                      {t('billingPage.prices.tiers.standard')}
-                    </SelectItem>
-                    <SelectItem value="flex">{t('billingPage.prices.tiers.flex')}</SelectItem>
-                    <SelectItem value="priority">
-                      {t('billingPage.prices.tiers.priority')}
-                    </SelectItem>
-                    {!['*', 'standard', 'flex', 'priority'].includes(input.serviceTier) ? (
+                    <ModelPriceTierOptions />
+                    {input.serviceTier && !modelPriceServiceTiers.includes(input.serviceTier) ? (
                       <SelectItem value={input.serviceTier}>{input.serviceTier}</SelectItem>
                     ) : null}
                   </SelectContent>

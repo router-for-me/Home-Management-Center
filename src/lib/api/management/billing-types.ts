@@ -41,7 +41,7 @@ export type ModelPriceSnapshot = {
   provider: string
   model: string
   serviceTier: string
-  minInputTokens: number
+  minInputTokens: number | null
   inputPricePerMillion: number
   outputPricePerMillion: number
   cacheReadPricePerMillion: number
