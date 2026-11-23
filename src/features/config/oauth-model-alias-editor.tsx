@@ -48,7 +48,7 @@ export function ModelAliasEditor({
   onChange,
 }: {
   value: AliasMap
-  availableChannels: string[]
+  availableChannels: readonly string[]
   disabled: boolean
   onChange: (value: AliasMap) => void
 }) {

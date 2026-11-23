@@ -31,17 +31,21 @@ export type ProviderId =
   | 'meta'
   | 'vertex'
   | 'openaiCompatibility'
-export type ProviderModelChannel =
-  | 'claude'
-  | 'gemini'
-  | 'gemini-interactions'
-  | 'vertex'
-  | 'aistudio'
-  | 'codex'
-  | 'kimi'
-  | 'antigravity'
-  | 'xai'
-  | 'meta'
+export const oauthModelChannels = [
+  'gemini',
+  'gemini-interactions',
+  'claude',
+  'codex',
+  'vertex',
+  'aistudio',
+  'kimi',
+  'antigravity',
+  'xai',
+  'meta',
+  'copilot',
+  'devin',
+] as const
+export type ProviderModelChannel = (typeof oauthModelChannels)[number]
 
 export const PROVIDER_THINKING_LEVELS = [
   'none',
@@ -255,23 +259,12 @@ type ProviderModelDefinitionsSnapshot = {
   models: ProviderModelDefinition[]
 }
 
-const providerModelDefinitionChannels: ProviderModelChannel[] = [
-  'gemini',
-  'gemini-interactions',
-  'claude',
-  'codex',
-  'vertex',
-  'aistudio',
-  'kimi',
-  'antigravity',
-  'xai',
-  'meta',
-]
-
 export function getProviderModelDefinitionChannels(runtimeMode: RuntimeMode) {
-  return runtimeMode === 'cpa'
-    ? providerModelDefinitionChannels.filter((channel) => channel !== 'xai')
-    : providerModelDefinitionChannels
+  return oauthModelChannels.filter((channel) => {
+    if (channel === 'copilot') return runtimeMode === 'cpa'
+    if (channel === 'xai') return runtimeMode !== 'cpa'
+    return true
+  })
 }
 
 const providerDescriptors: ProviderDescriptor[] = [

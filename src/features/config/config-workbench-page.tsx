@@ -25,7 +25,6 @@ import {
   Eye,
   EyeOff,
   FileDiff,
-  Filter,
   Hourglass,
   Image,
   Info,
@@ -146,7 +145,7 @@ import {
   payloadReplaceTargetModes,
   serializePayloadReplaceContent,
 } from '@/lib/api/management/payload-replace'
-import type { ProviderModelChannel, ProviderModelDefinition } from '@/lib/api/management/providers'
+import { type ProviderModelDefinition, oauthModelChannels } from '@/lib/api/management/providers'
 import {
   type ReplacementKind,
   parseReplacementDraft,
@@ -234,13 +233,13 @@ type JsonConfigFieldKey =
   | 'liveMediaRelayIceServersJson'
 
 type OAuthModelCatalogState = {
-  channel: ProviderModelChannel
+  channel: string
+  hasModelCatalog: boolean
   models: ProviderModelDefinition[]
-  fetchedAt: string | null
   loading: boolean
   errorMessage: string | null
   filter: string
-  onChannelChange: (channel: ProviderModelChannel) => void
+  onChannelChange: (channel: string) => void
   onFilterChange: (filter: string) => void
   onRetry: () => void
 }
@@ -869,19 +868,6 @@ export const sectionDefinitions: ConfigSectionDefinition[] = [
       { key: 'multimediaVideoResultAuthCacheTtl', kind: 'duration', sectionId: 'multimedia' },
     ],
   },
-]
-
-const modelDefinitionChannels: ProviderModelChannel[] = [
-  'claude',
-  'gemini',
-  'gemini-interactions',
-  'vertex',
-  'aistudio',
-  'codex',
-  'kimi',
-  'antigravity',
-  'xai',
-  'meta',
 ]
 
 const fieldDefinitions = sectionDefinitions.flatMap((section) => section.fields)
@@ -2473,11 +2459,15 @@ function ExcludedModelsEditor({
 }) {
   const { t } = useTranslation()
   const channel = catalog?.channel ?? 'claude'
-  const selectedModels = value[channel] ?? []
+  const selectedModels = Object.hasOwn(value, channel) ? value[channel] : []
   const selectedModelSet = new Set(selectedModels)
-  const customEntries = Object.entries(value).filter(
-    ([provider]) => !modelDefinitionChannels.includes(provider as ProviderModelChannel),
-  )
+  const channels = [
+    ...new Set([...Object.keys(value).filter(Boolean), ...oauthModelChannels, channel]),
+  ]
+  const channelName = (key: string) =>
+    oauthModelChannels.some((known) => known === key)
+      ? t(`configPage.oauthExcluded.channels.${key}`)
+      : key
   const normalizedFilter = catalog?.filter.trim().toLowerCase() ?? ''
   const filteredModels = catalog
     ? catalog.models.filter((model) =>
@@ -2495,91 +2485,93 @@ function ExcludedModelsEditor({
       )
     : []
 
-  const removeProvider = (provider: string) => {
-    const nextValue = { ...value }
-    delete nextValue[provider]
+  const setModels = (nextModels: string[]) => {
+    const nextValue = { ...value, [channel]: nextModels }
+    if (nextModels.length === 0) {
+      delete nextValue[channel]
+    }
     onChange(nextValue)
   }
 
   const toggleModel = (modelId: string) => {
-    const nextValue = { ...value }
-    const nextModels = selectedModelSet.has(modelId)
-      ? selectedModels.filter((item) => item !== modelId)
-      : [...selectedModels, modelId]
-
-    if (nextModels.length === 0) {
-      delete nextValue[channel]
-    } else {
-      nextValue[channel] = nextModels
-    }
-
-    onChange(nextValue)
-  }
-
-  const clearChannel = () => {
-    removeProvider(channel)
+    setModels(
+      selectedModelSet.has(modelId)
+        ? selectedModels.filter((item) => item !== modelId)
+        : [...selectedModels, modelId],
+    )
   }
 
   return (
     <div className="grid gap-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Select
-            value={channel}
-            disabled={disabled || !catalog}
-            onValueChange={(nextChannel) => {
-              catalog?.onChannelChange(nextChannel as ProviderModelChannel)
-            }}
+        <Select
+          value={channel}
+          disabled={disabled || !catalog}
+          onValueChange={catalog?.onChannelChange}
+        >
+          <SelectTrigger
+            className="sm:w-44"
+            aria-label={t('configPage.oauthExcluded.channelLabel')}
           >
-            <SelectTrigger
-              className="sm:w-44"
-              aria-label={t('configPage.oauthExcluded.channelLabel')}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {modelDefinitionChannels.map((nextChannel) => (
-                <SelectItem key={nextChannel} value={nextChannel}>
-                  {t(`configPage.oauthExcluded.channels.${nextChannel}`)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs">
-            <Filter className="size-3" aria-hidden="true" />
-            {t('configPage.oauthExcluded.selectedCount', {
-              count: selectedModels.length,
-            })}
-          </span>
-          {selectedModels.length > 0 ? (
-            <Button
-              type="button"
-              variant="text"
-              size="xs"
-              disabled={disabled}
-              onClick={clearChannel}
-            >
-              {t('configPage.oauthExcluded.clearChannel')}
-            </Button>
-          ) : null}
-        </div>
+            <SelectValue>{channelName(channel)}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {channels.map((key) => (
+              <SelectItem key={key} value={key} textValue={channelName(key)}>
+                {channelName(key)}
+                {Object.hasOwn(value, key) && value[key].length > 0 && (
+                  <span className="text-muted-foreground ml-2">
+                    {t('configPage.oauthExcluded.selectedCount', { count: value[key].length })}
+                  </span>
+                )}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {selectedModels.length > 0 ? (
+          <Button
+            type="button"
+            variant="text"
+            size="xs"
+            disabled={disabled}
+            onClick={() => setModels([])}
+          >
+            {t('configPage.oauthExcluded.clearChannel')}
+          </Button>
+        ) : null}
       </div>
 
-      <div className="relative min-w-0 lg:w-80">
-        <Search
-          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-          aria-hidden="true"
-        />
-        <Input
-          className="pl-9"
-          value={catalog?.filter ?? ''}
-          disabled={disabled || !catalog}
-          placeholder={t('configPage.oauthExcluded.searchPlaceholder')}
-          onChange={(event) => catalog?.onFilterChange(event.target.value)}
-        />
-      </div>
+      <StringListEditor
+        key={channel}
+        value={selectedModels}
+        disabled={disabled}
+        label={t('configPage.fields.oauthExcludedModelsJson.label')}
+        preservePadding={false}
+        placeholder={t('configPage.oauthExcluded.rulesPlaceholder')}
+        hint={t(
+          catalog?.hasModelCatalog
+            ? 'configPage.oauthExcluded.catalogHint'
+            : 'configPage.oauthExcluded.manualHint',
+        )}
+        countLabel={t('configPage.oauthExcluded.selectedCount', { count: selectedModels.length })}
+        onChange={setModels}
+      />
+
+      {catalog?.hasModelCatalog && (
+        <div className="relative min-w-0 lg:w-80">
+          <Search
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            className="pl-9"
+            value={catalog.filter}
+            disabled={disabled}
+            placeholder={t('configPage.oauthExcluded.searchPlaceholder')}
+            onChange={(event) => catalog.onFilterChange(event.target.value)}
+          />
+        </div>
+      )}
 
       {catalog?.errorMessage ? (
         <div className="flex flex-col gap-3 rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-3 text-sm leading-6 text-amber-800 sm:flex-row sm:items-center sm:justify-between dark:text-amber-200">
@@ -2637,7 +2629,7 @@ function ExcludedModelsEditor({
             )
           })}
         </div>
-      ) : (
+      ) : catalog?.hasModelCatalog && !catalog.errorMessage ? (
         <EmptyJsonRows
           label={
             normalizedFilter
@@ -2645,30 +2637,6 @@ function ExcludedModelsEditor({
               : t('configPage.oauthExcluded.emptyModels')
           }
         />
-      )}
-
-      {customEntries.length > 0 ? (
-        <div className="grid gap-2 rounded-md border border-amber-500/35 bg-amber-500/5 px-3 py-3">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            {t('configPage.oauthExcluded.customTitle')}
-          </p>
-          <p className="text-muted-foreground text-xs leading-5">
-            {t('configPage.oauthExcluded.customDescription')}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {customEntries.map(([provider, models]) => (
-              <span
-                key={provider}
-                className="bg-background inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-xs"
-              >
-                <span className="font-mono">{provider}</span>
-                <span className="text-muted-foreground">
-                  {t('configPage.oauthExcluded.selectedCount', { count: models.length })}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
       ) : null}
     </div>
   )
@@ -4825,7 +4793,7 @@ function StructuredJsonEditor({
     case 'oauthModelAliasJson':
       return (
         <ModelAliasEditor
-          availableChannels={modelDefinitionChannels}
+          availableChannels={oauthModelChannels}
           value={value as Record<string, unknown>}
           disabled={disabled}
           onChange={onChange}
@@ -5589,7 +5557,7 @@ export function reconcileSavedConfigFields(
 
 function ConfigWorkbenchSession() {
   const { t } = useTranslation()
-  const [oauthModelChannel, setOauthModelChannel] = useState<ProviderModelChannel>('claude')
+  const [oauthModelChannel, setOauthModelChannel] = useState('claude')
   const [oauthModelFilter, setOauthModelFilter] = useState('')
   const workbench = useConfigWorkbench(oauthModelChannel)
   const [edits, setEdits] = useState<ConfigDraft | null>(null)
@@ -5656,7 +5624,7 @@ function ConfigWorkbenchSession() {
   const oauthModelCatalog: OAuthModelCatalogState = {
     channel: oauthModelChannel,
     models: workbench.modelDefinitions?.models ?? [],
-    fetchedAt: workbench.modelDefinitions?.fetchedAt ?? null,
+    hasModelCatalog: workbench.hasModelCatalog,
     loading: workbench.isFetchingModelDefinitions,
     errorMessage: workbench.modelDefinitionsErrorMessage,
     filter: oauthModelFilter,

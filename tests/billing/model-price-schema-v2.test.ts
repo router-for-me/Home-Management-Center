@@ -20,6 +20,14 @@ describe('billing model price schema v2 adapter', () => {
     expect(result.items).toEqual([])
   })
 
+  test('distinguishes a recorded base context band from a missing legacy band', () => {
+    expect(
+      normalizePriceSnapshot({ matched_service_tier: 'ultrafast', min_input_tokens: 0 })
+        .minInputTokens,
+    ).toBe(0)
+    expect(normalizePriceSnapshot({}).minInputTokens).toBeNull()
+  })
+
   test('builds unique fallback identities for multiple tier and context rules', () => {
     const result = normalizeModelPriceListResponse({
       price_rule_schema_version: 2,
@@ -73,6 +81,43 @@ describe('billing model price schema v2 adapter', () => {
     expect(legacy).not.toHaveProperty('min_input_tokens')
     expect(legacy).not.toHaveProperty('cache_write_price_configured')
   })
+
+  test('round-trips an ultrafast price independently of a wildcard price for the same model', () => {
+    const { items } = normalizeModelPriceListResponse({
+      price_rule_schema_version: 2,
+      items: ['ultrafast', '*'].map((tier) => ({
+        provider: 'codex',
+        model: 'gpt-5.5',
+        service_tier: tier,
+        min_input_tokens: 0,
+      })),
+    })
+    expect(items.map((item) => item.id)).toEqual(['codex:gpt-5.5:ultrafast:0', 'codex:gpt-5.5:*:0'])
+    expect(items.map((item) => toModelPricePayload(item).service_tier)).toEqual(['ultrafast', '*'])
+  })
+
+  test.each(['ultrafast', '*'])(
+    'reads the actual matched %s rule from Home charge evidence',
+    (tier) => {
+      const snapshot = normalizePriceSnapshot({
+        requested_service_tier: 'ultrafast',
+        effective_service_tier: 'ultrafast',
+        service_tier_source: 'response',
+        response_tier_fallback: true,
+        matched_service_tier: tier,
+        context_input_tokens: 300000,
+        min_input_tokens: 272001,
+      })
+      expect(snapshot).toMatchObject({
+        requestedServiceTier: 'ultrafast',
+        effectiveServiceTier: 'ultrafast',
+        serviceTier: tier,
+        responseServiceTierFallback: true,
+        inputTokensForBand: 300000,
+        minInputTokens: 272001,
+      })
+    },
+  )
 
   test('keeps positive cache-write prices and ignores legacy configured flags', () => {
     const payload = toModelPricePayload({

@@ -10,6 +10,10 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { ConfigWorkbenchPage } from '@/features/config/config-workbench-page'
 import * as workbench from '@/features/config/use-config-workbench'
 import { type ConfigFieldKey, normalizeConfigValues } from '@/lib/api/management/config'
+import {
+  getProviderModelDefinitionChannels,
+  oauthModelChannels,
+} from '@/lib/api/management/providers'
 import { en } from '@/lib/i18n/locales/en'
 
 type RenderField = (key: ConfigFieldKey, config: Record<string, unknown>) => HTMLElement
@@ -55,6 +59,27 @@ async function withConfigWorkbench(check: (renderField: RenderField) => void) {
     await browser.happyDOM.close()
   }
 }
+
+test('OAuth exclusion channels can have rules independently of a runtime catalog', () => {
+  for (const mode of ['home-standalone', 'home-cluster', 'cpa'] as const) {
+    const catalogs = getProviderModelDefinitionChannels(mode)
+    expect(catalogs).toContain('devin')
+    expect(catalogs.includes('copilot')).toBe(mode === 'cpa')
+  }
+  expect(oauthModelChannels).toContain('copilot')
+  expect(oauthModelChannels).toContain('devin')
+})
+
+test('saved OAuth exclusion rules remain editable without any model definitions', () =>
+  withConfigWorkbench((renderField) => {
+    const field = renderField('oauthExcludedModelsJson', {
+      oauth: { 'excluded-models': { claude: ['retired-model', 'legacy-*'], devin: ['devin-1'] } },
+    })
+    const editor = field.querySelector('textarea')
+    expect(editor?.value).toBe('retired-model\nlegacy-*')
+    expect(editor?.disabled).toBe(false)
+    expect(field.querySelector('[role="checkbox"]')).toBeNull()
+  }))
 
 test('an omitted optional switch has the same initial UI as its reported default', () =>
   withConfigWorkbench((renderField) => {
