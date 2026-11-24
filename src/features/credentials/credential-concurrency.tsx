@@ -1,7 +1,7 @@
 import { type Dispatch, type SetStateAction, useEffect, useState } from 'react'
 
 import type { TFunction } from 'i18next'
-import { Copy, Loader2, Plus, RefreshCw, TimerReset, X } from 'lucide-react'
+import { Copy, Loader2, Plus, RefreshCw, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -505,14 +505,7 @@ export function CredentialConcurrencyEditor({
 
   return (
     <section className="border-t pt-5">
-      <div className="flex items-start gap-3">
-        <span className="bg-muted text-muted-foreground flex size-8 shrink-0 items-center justify-center rounded-md">
-          <TimerReset className="size-4" aria-hidden="true" />
-        </span>
-        <div>
-          <h3 className="text-sm font-medium">{t('credentialsPage.concurrency.editTitle')}</h3>
-        </div>
-      </div>
+      <h3 className="text-label">{t('credentialsPage.concurrency.editTitle')}</h3>
       <label className="mt-4 grid gap-2 text-sm font-medium">
         <span>{t('credentialsPage.concurrency.totalLimit')}</span>
         <Input

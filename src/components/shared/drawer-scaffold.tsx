@@ -63,7 +63,7 @@ function DrawerScaffoldHeader({ back, className, children, ...props }: DrawerSca
           >
             <ChevronLeft className="size-5" aria-hidden="true" />
           </Button>
-          <div className="grid min-h-9 min-w-0 flex-1 content-center gap-1.5">{children}</div>
+          <div className="grid min-w-0 flex-1 content-center gap-1.5 self-stretch">{children}</div>
         </div>
       ) : (
         children

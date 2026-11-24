@@ -1,160 +1,103 @@
+<div align="center">
+
+<img src="src/assets/brand/logo.jpg" width="120" alt="" />
+
 # Home Management Center
 
-English | [中文](README_CN.md)
+**The admin console and user workspace for CLIProxyAPIHome**
 
-Home Management Center is a companion Web management console for [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome), the credential management, scheduling, and distribution service for CLIProxyAPI. It provides a professional browser-based control plane for service overview, model services, account credentials, client access keys, usage logs, system configuration, and diagnostics.
+Operators manage upstream credentials and monitor gateway traffic.<br />
+Users find available models, manage their API keys, and track usage.
+
+[![Bundled with official Home releases](docs/badges/deployment-en.svg)](https://github.com/router-for-me/CLIProxyAPIHome#deploying-an-official-release)
+[![Four interface languages](docs/badges/languages-en.svg)](#interface-languages)
+[![MIT License](docs/badges/license-en.svg)](LICENSE)
+
+**English** · <a href="README_CN.md" lang="zh-CN">简体中文</a>
+
+[Quick start](#quick-start) · [Features](#features) · [Development](#development)
+
+</div>
+
+---
+
+[![Administrator dashboard showing gateway readiness, token consumption, request volume, and request health](docs/screenshots/dashboard-en.png)](docs/screenshots/dashboard-en.png)
+
+_All screenshots use example data. Select an image to view it at full size._
+
+## Quick start
+
+1. Start Home using the official binary or Docker image. Both include the web console. [Install Home](https://github.com/router-for-me/CLIProxyAPIHome#deploying-an-official-release)
+2. Open Home in your browser. The default local address is `http://localhost:8327`.
+3. Choose the sign-in for your role.
+   - **Admin sign-in** · Enter your Home management key. [`/management.html`](http://localhost:8327/management.html)
+   - **User sign-in** · Sign in with your Home user account. [`/user.html`](http://localhost:8327/user.html)
+
+> [!NOTE]
+> To call a model from an application, create a **client API key** in the user workspace after signing in.
+
+<details>
+<summary>Remote access</summary>
+
+Open the same paths at your Home server’s HTTPS address. Keep the management key private and restrict access to the management endpoint. [Home authentication settings](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/docs/management/api.md#authentication)
+
+</details>
 
 ## Features
 
-- **Dashboard**: service overview, readiness status, model service coverage, credential status, client key status, and suggested actions.
-- **Model services**: manage provider keys, inspect configured model services, review model references, and create, edit, or delete model service entries.
-- **Account credentials**: manage OAuth and file-backed credentials, upload credential JSON files, import Vertex credentials, edit metadata, query available models, enable, disable, download, and delete credentials.
-- **Client access keys**: manage the keys used by downstream clients, including create, edit, replace, delete, copy, masked display, and bulk selection flows.
-- **Usage**: inspect request counts, tokens, cost, rankings, and credential attribution.
-- **Call diagnostics**: review realtime state, request health, health attribution, and request log files.
-- **Runtime logs**: inspect gateway runtime logs, request error log files, file downloads, and guarded log clearing.
-- **System configuration**: edit common settings through a visual workspace or update the full config file with diff preview, validation, reload, save, and replacement warnings.
-- **System information**: review runtime version, node state, config summary, diagnostic status, and guarded API call tools.
-- **Theme system**: light and dark modes.
+| Area                   | What you can do                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Check gateway readiness, request volume, token consumption, and success rate.                 |
+| **Upstream**           | Manage provider keys, add accounts via OAuth or file import, and check remaining quota.       |
+| **Users & Access**     | Issue client API keys and limit their access by channel group or model group.                 |
+| **Usage & Requests**   | Filter request records by provider, model, or status and inspect token usage.                 |
+| **Diagnostics & logs** | Investigate failed calls, read runtime logs, and download request error logs.                 |
+| **Billing & Reports**  | Set model prices, inspect individual charges, and review balance changes.                     |
+| **System**             | Preview configuration changes before saving, check node status, and manage supported plugins. |
+| **User workspace**     | Manage your keys, find models you can call, and review your spending and balance.             |
 
-## Internationalization
+### Console tour
 
-The interface currently supports four languages:
+#### Upstream → Account Credentials
 
-- Simplified Chinese
-- Traditional Chinese
-- English
-- Russian
+Read quota windows and in-flight request counts side by side for each account. Open a row to inspect its models or edit its metadata.
 
-The display language can follow the browser preference automatically, and it can also be changed manually from the sign-in screen or the top language menu.
+[![Upstream account credentials with provider names, enabled states, and quota remaining for each account](docs/screenshots/upstream-accounts-en.png)](docs/screenshots/upstream-accounts-en.png)
 
-## Browser Compatibility
+#### User workspace → Model catalog
 
-Home Management Center targets modern evergreen browsers and an `ES2020` build output:
+Search by model ID or filter by provider, input modality, or tool support. Signed-in users can compare published input and output prices for the models their keys can call.
 
-- Chrome / Chromium
-- Edge
-- Firefox
-- Safari
+[![User model catalog showing accessible models, context limits, supported inputs, and per-token pricing](docs/screenshots/model-catalog-en.png)](docs/screenshots/model-catalog-en.png)
 
-Responsive layouts are supported for desktop, tablet, and mobile access. For the best experience, use the latest stable version of your browser. Legacy browsers are not supported.
+### Interface languages
 
-## Requirements
-
-- Node.js 24 or newer
-- Bun 1.3 or newer
-- A running [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome) backend for live management data
-
-## Quick Start
-
-Install dependencies:
-
-```bash
-bun install
-```
-
-Start the development server:
-
-```bash
-bun run dev
-```
-
-Open:
-
-```txt
-http://localhost:3000
-```
+The interface supports English, Simplified Chinese, Traditional Chinese, and Russian. Choose a language or follow the browser setting. Light and dark themes are available on desktop and mobile in Chrome, Edge, Firefox, and Safari.
 
 ## Development
 
-```bash
-bun run dev              # start the Rsbuild dev server
-bun run routes:generate  # regenerate TanStack Router route tree
-bun run typecheck        # run TypeScript checks
-bun run lint             # run ESLint
-bun run format           # format files
-bun run format:check     # check formatting
-bun run build            # build production assets
-bun run preview          # preview the production build
-bun run knip             # check unused files, exports, and dependencies
+Use Node.js 24 or later, Bun 1.3 or later, and a running Home instance. Start the development server from this repository.
+
+```sh
+bun install --frozen-lockfile
+bun run dev
 ```
 
-## Tech Stack
+Open `http://localhost:3000/management.html` or `http://localhost:3000/user.html`. The development proxy points to `http://127.0.0.1:8327` by default.
 
-- React 19
-- TypeScript 5.9
-- Rsbuild 2
-- TanStack Router
-- TanStack Query
-- Zustand
-- shadcn/ui and Radix primitives
-- Tailwind CSS v4
-- TanStack Table and TanStack Virtual
-- React Hook Form and Zod
-- Recharts
-- Motion
-- i18next and react-i18next
-- Axios
-- Sonner
-- cmdk
-- Vaul
-- next-themes
+| Task                  | Command                                |
+| --------------------- | -------------------------------------- |
+| Check types and lint  | `bun run typecheck` and `bun run lint` |
+| Check formatting      | `bun run format:check`                 |
+| Build and preview     | `bun run build` and `bun run preview`  |
+| Build assets for Home | `bun run build:embedded`               |
 
-## Security Notes
+The frontend uses React 19, TypeScript, TanStack Router and Query, Tailwind CSS, and Rsbuild. The project scripts also cover route generation, formatting, and unused-code checks. [Scripts and dependencies](package.json)
 
-- Treat the management key as sensitive.
-- Prefer local or private-network management access.
-- Use HTTPS and strict server-side access control for remote management.
-- Do not expose a management endpoint publicly without understanding its authentication and network restrictions.
-- Browser storage is not a secret vault. Use a dedicated browser profile or private environment for sensitive operations when needed.
+Home's build guide explains how to package the contents of `dist/` with the backend. [Build Home with the console](https://github.com/router-for-me/CLIProxyAPIHome#building-and-releasing-the-bundled-frontend)
 
-## FAQ
-
-### Is this the backend service?
-
-No. This repository contains the frontend console. It requires a running CLIProxyAPIHome backend to provide management data and perform management operations.
-
-### Does this project proxy model requests?
-
-No. Model request forwarding is handled by the backend service. This project only provides the browser-based management interface.
-
-### Can I use it with a remote backend?
-
-Yes, if the backend enables remote management and is protected by appropriate network, HTTPS, and authentication settings.
-
-## Documentation
-
-- `PRODUCT.md`: product positioning, users, product jobs, and UX principles.
-- `DESIGN.md`: visual system, layout principles, component behavior, and UI quality rules.
-- `AGENTS.md`: coding-agent guidance for working in this repository.
-- `CLAUDE.md`: Claude Code guidance aligned with `AGENTS.md`.
-
-## Contributing
-
-Issues and pull requests are welcome.
-
-For bug reports, please include:
-
-- Backend version.
-- Browser and operating system.
-- Reproduction steps.
-- Screenshots or screen recordings for UI issues.
-- Console or network error details when relevant.
-
-For pull requests, please include:
-
-- A concise description of the change.
-- Screenshots for visible UI changes.
-- Notes about backend API compatibility.
-- Verification commands you ran, such as:
-
-```bash
-bun run typecheck
-bun run lint
-bun run format:check
-bun run build
-```
+For UI changes, include a screenshot and the checks you ran. For bug reports, include the Home version, browser, and steps to reproduce. [Product guide](PRODUCT.md) · [Design guide](DESIGN.md) · [Contributor instructions](AGENTS.md)
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+[MIT](LICENSE)
