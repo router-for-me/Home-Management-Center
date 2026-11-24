@@ -1,160 +1,108 @@
+<div align="center">
+
+<img src="src/assets/brand/logo.jpg" width="120" alt="" />
+
 # Home Management Center
 
-[English](README.md) | 中文
+**CLIProxyAPIHome 的管理控制台与用户工作台**
 
-Home Management Center 是面向 [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome) 的配套 Web 管理控制台。CLIProxyAPIHome 是用于 CLIProxyAPI 的凭证管理、调度与分发服务；本项目为其提供专业的浏览器控制台，覆盖服务总览、模型服务、账号凭证、客户端访问密钥、请求用量、调用诊断、运行日志、系统配置和诊断信息等管理能力。
+管理员维护上游凭证，监控网关流量。<br />
+用户查找可用模型，管理自己的 API 密钥并查看用量。
 
-## 功能特性
+[![Home 官方发行版内置控制台](docs/badges/deployment-zh-CN.svg)](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#部署正式发行版)
+[![四种界面语言](docs/badges/languages-zh-CN.svg)](#界面语言)
+[![MIT 许可证](docs/badges/license-zh-CN.svg)](LICENSE)
 
-- **仪表盘**：服务总览、就绪状态、模型服务覆盖、凭证状态、客户端密钥状态和建议操作。
-- **模型服务**：管理供应商密钥、检查已配置的模型服务、查看模型参考信息，并支持新建、编辑和删除模型服务条目。
-- **账号凭证**：管理 OAuth 和文件凭证、上传凭证 JSON、导入 Vertex 凭证、编辑元数据、查询可用模型、启用、禁用、下载和删除凭证。
-- **客户端访问密钥**：管理下游客户端使用的访问密钥，支持新建、编辑、替换、删除、复制、掩码展示和批量选择。
-- **请求用量**：查看请求量、Token、成本、聚合排行和执行凭证归因。
-- **调用诊断**：查看实时状态、请求健康、健康归因和请求日志文件。
-- **运行日志**：查看网关运行日志、请求错误日志文件、文件下载和受保护的清空操作。
-- **系统配置**：通过可视化工作台编辑常用配置，或在配置文件模式中使用 diff 预览、校验、重新加载、保存和完整覆盖提醒。
-- **系统信息**：查看运行时版本、节点状态、配置摘要、诊断状态和受保护的 API 调用工具。
-- **主题系统**：支持浅色和深色模式。
+<a href="README.md" lang="en">English</a> · **简体中文**
 
-## 国际化
+[快速开始](#快速开始) · [功能概览](#功能概览) · [本地开发](#本地开发)
 
-界面当前支持四种语言：
+</div>
 
-- 简体中文
-- 繁体中文
-- 英文
-- 俄语
+---
 
-界面语言可以根据浏览器设置自动切换，也可以在登录页或顶部语言菜单中手动切换。
+[![管理员仪表盘显示网关就绪状态、Token 消耗、请求量和请求健康度](docs/screenshots/dashboard-zh-CN.png)](docs/screenshots/dashboard-zh-CN.png)
 
-## 浏览器兼容性
-
-Home Management Center 面向现代浏览器，并以 `ES2020` 作为构建目标：
-
-- Chrome / Chromium
-- Edge
-- Firefox
-- Safari
-
-界面支持桌面端、平板和移动端的响应式布局。建议使用浏览器的最新稳定版本，旧版浏览器不在支持范围内。
-
-## 环境要求
-
-- Node.js 24 或更新版本
-- Bun 1.3 或更新版本
-- 一个正在运行的 [CLIProxyAPIHome](https://github.com/router-for-me/CLIProxyAPIHome) 后端，用于提供真实管理数据
+_截图均使用示例数据，点开可查看原图。_
 
 ## 快速开始
 
-安装依赖：
+1. 使用 Home 官方二进制或 Docker 镜像启动服务。两者均已内置控制台。[Home 安装说明](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#部署正式发行版)
+2. 在浏览器中打开默认本地地址 `http://localhost:8327`。
+3. 选择与你身份对应的登录入口。
+   - **管理员登录** · 输入 Home 管理密钥。[`/management.html`](http://localhost:8327/management.html)
+   - **用户登录** · 使用自己的 Home 账号。[`/user.html`](http://localhost:8327/user.html)
 
-```bash
-bun install
-```
+> [!NOTE]
+> 应用调用模型时使用**客户端 API 密钥**，可在用户工作台创建。
 
-启动开发服务：
+<details>
+<summary>访问远程实例</summary>
 
-```bash
+使用 Home 服务器的 HTTPS 地址打开相同路径。请妥善保管管理密钥，并限制管理端点的访问权限。[Home 认证设置](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/docs/management/api_CN.md#认证)
+
+</details>
+
+## 功能概览
+
+<table>
+  <thead>
+    <tr><th scope="col" nowrap>控制台模块</th><th scope="col" width="100%">常用操作</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row" align="left">仪表盘</th><td>确认网关能否接受模型请求，查看请求量、Token 消耗和成功率。</td></tr>
+    <tr><th scope="row" align="left">上游资源</th><td>管理供应商密钥，通过 OAuth 或导入凭证文件接入账号，查看剩余额度。</td></tr>
+    <tr><th scope="row" align="left">用户与访问</th><td>签发客户端 API 密钥，通过通道组和模型组限定每把密钥的访问范围。</td></tr>
+    <tr><th scope="row" align="left">用量与请求</th><td>按供应商、模型或状态筛选请求记录，查看 Token 用量。</td></tr>
+    <tr><th scope="row" align="left">诊断与日志</th><td>排查请求失败原因，查看运行日志，下载请求错误日志。</td></tr>
+    <tr><th scope="row" align="left">财务与报表</th><td>设置模型价格，核对单笔扣款和余额变动。</td></tr>
+    <tr><th scope="row" align="left">系统管理</th><td>保存前预览配置差异，查看节点状态，管理实例支持的插件。</td></tr>
+    <tr><th scope="row" align="left">用户工作台</th><td>管理自己的密钥，查找可调用的模型，查看消费记录和余额。</td></tr>
+  </tbody>
+</table>
+
+### 界面导览
+
+#### 上游资源 → 账号凭证
+
+列表中可以并排查看每个账号的额度窗口和当前并发请求数。点开一行即可查看该账号的可用模型或编辑元数据。
+
+[![上游账号凭证列表，按账号显示模型供应商、启用状态和剩余额度](docs/screenshots/upstream-accounts-zh-CN.png)](docs/screenshots/upstream-accounts-zh-CN.png)
+
+#### 用户工作台 → 模型目录
+
+按模型 ID 搜索，或按供应商、输入类型和工具调用能力筛选。登录后，可以查看自己的密钥能调用哪些模型，并比较这些模型已公布的输入和输出价格。
+
+[![用户模型目录显示密钥可用的模型、上下文上限、支持的输入类型和 Token 单价](docs/screenshots/model-catalog-zh-CN.png)](docs/screenshots/model-catalog-zh-CN.png)
+
+### 界面语言
+
+界面支持简体中文、繁体中文、英语和俄语，可跟随浏览器语言或手动切换。在桌面或移动设备上，可通过 Chrome、Edge、Firefox 和 Safari 使用浅色或深色主题。
+
+## 本地开发
+
+准备 Node.js 24 或更高版本、Bun 1.3 或更高版本，以及一个已启动的 Home 实例。在本仓库目录启动开发服务。
+
+```sh
+bun install --frozen-lockfile
 bun run dev
 ```
 
-打开：
+打开 `http://localhost:3000/management.html` 或 `http://localhost:3000/user.html`。开发代理默认连接 `http://127.0.0.1:8327`。
 
-```txt
-http://localhost:3000
-```
+| 任务                 | 命令                                  |
+| -------------------- | ------------------------------------- |
+| 类型检查和代码检查   | `bun run typecheck` 和 `bun run lint` |
+| 检查格式             | `bun run format:check`                |
+| 构建并预览           | `bun run build` 和 `bun run preview`  |
+| 为 Home 构建内嵌资源 | `bun run build:embedded`              |
 
-## 开发
+前端使用 React 19、TypeScript、TanStack Router 和 Query、Tailwind CSS 及 Rsbuild。仓库脚本还提供路由生成、格式化和未使用代码检查。[脚本和依赖](package.json)
 
-```bash
-bun run dev              # 启动 Rsbuild 开发服务
-bun run routes:generate  # 重新生成 TanStack Router route tree
-bun run typecheck        # 运行 TypeScript 检查
-bun run lint             # 运行 ESLint
-bun run format           # 格式化文件
-bun run format:check     # 检查格式
-bun run build            # 构建生产产物
-bun run preview          # 预览生产构建
-bun run knip             # 检查未使用文件、导出和依赖
-```
+如需将 `dist/` 的内容打包进后端，可参考 Home 的构建说明。[将控制台内嵌到 Home](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#前端内嵌构建与发布流程)
 
-## 技术栈
-
-- React 19
-- TypeScript 5.9
-- Rsbuild 2
-- TanStack Router
-- TanStack Query
-- Zustand
-- shadcn/ui 和 Radix primitives
-- Tailwind CSS v4
-- TanStack Table 和 TanStack Virtual
-- React Hook Form 和 Zod
-- Recharts
-- Motion
-- i18next 和 react-i18next
-- Axios
-- Sonner
-- cmdk
-- Vaul
-- next-themes
-
-## 安全说明
-
-- 请将 management key 视为敏感信息。
-- 优先使用本机或私有网络的管理访问。
-- 如果启用远程管理，请使用 HTTPS 和严格的服务端访问控制。
-- 不要在不了解认证和网络限制的情况下，将管理端点暴露到公网。
-- 浏览器存储不是密钥保险箱。处理敏感操作时，建议使用专用浏览器配置或私有环境。
-
-## 常见问题
-
-### 这是后端服务吗？
-
-不是。本仓库只包含前端控制台，需要一个正在运行的 CLIProxyAPIHome 后端来提供管理数据并执行管理操作。
-
-### 这个项目会转发模型请求吗？
-
-不会。模型请求转发由后端服务处理。本项目只提供基于浏览器的管理界面。
-
-### 可以连接远程后端吗？
-
-可以，前提是后端启用了远程管理，并通过合适的网络、HTTPS 和认证设置进行了保护。
-
-## 文档
-
-- `PRODUCT.md`：产品定位、用户、产品任务和 UX 原则。
-- `DESIGN.md`：视觉系统、布局原则、组件行为和 UI 质量规则。
-- `AGENTS.md`：Coding Agent 在本仓库工作时的指导文件。
-- `CLAUDE.md`：与 `AGENTS.md` 对齐的 Claude Code 指导文件。
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request。
-
-提交 bug 时，请尽量包含：
-
-- 后端版本。
-- 浏览器和操作系统。
-- 复现步骤。
-- UI 问题的截图或录屏。
-- 相关的 Console 或 Network 错误信息。
-
-提交 Pull Request 时，请尽量包含：
-
-- 简洁的变更说明。
-- 可见 UI 变更的截图。
-- 后端 API 兼容性说明。
-- 已运行的验证命令，例如：
-
-```bash
-bun run typecheck
-bun run lint
-bun run format:check
-bun run build
-```
+提交界面改动时，请附上截图和已运行的检查。报告问题时，请注明 Home 版本、浏览器和复现步骤。[产品说明](PRODUCT.md) · [设计规范](DESIGN.md) · [贡献指南](AGENTS.md)
 
 ## 许可证
 
-本项目基于 MIT License 开源。详情请参见 [LICENSE](LICENSE)。
+[MIT](LICENSE)
