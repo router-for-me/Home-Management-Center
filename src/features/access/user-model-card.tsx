@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { UserModelCapabilityStatus } from '@/lib/api/user/models'
 import { formatModelPrice } from '@/lib/billing/amount-format'
+import { cn } from '@/lib/utils'
 
 import type { UserCatalogModel } from './use-user-model-catalog'
 import {
@@ -47,6 +48,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
 
   const locale = i18n.language
   const entryPoint = pricingEntryPoint(model.pricing)
+  const hasProviders = model.providers.length > 0
   const contextLength = formatCompactTokens(model.contextLength, locale)
   const maxOutputTokens = formatCompactTokens(model.maxOutputTokens, locale)
 
@@ -68,7 +70,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
     // sat flush against the badges on whichever card happened to be tallest.
     <article className="bg-card hover:border-primary/40 focus-within:border-primary/40 flex h-full min-w-0 flex-col gap-3 rounded-lg border p-4 transition-colors">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 shrink-0">
+        <span className={cn('shrink-0', hasProviders ? 'mt-0.5' : 'self-center')}>
           <ModelLogo
             modelId={model.id}
             displayName={model.displayName}
@@ -81,7 +83,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
           />
         </span>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 self-center">
           <h3 className="min-w-0 text-sm leading-6 font-semibold">
             <button
               type="button"
@@ -96,7 +98,7 @@ export function UserModelCard({ model, authenticated, onOpenDetails }: UserModel
               />
             </button>
           </h3>
-          {model.providers.length > 0 ? (
+          {hasProviders ? (
             // Labelled rather than bare: under the model name and beside a
             // vendor mark, a loose `codex · glm` reads as a list of makers. The
             // label is the word usage, billing and the admin providers page
