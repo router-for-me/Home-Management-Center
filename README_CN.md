@@ -1,18 +1,25 @@
-<p align="center">
-  <img src="src/assets/brand/favicon.png" width="72" height="72" alt="" />
-</p>
+<div align="center">
 
-<h1 align="center">Home Management Center</h1>
+<img src="src/assets/brand/logo.jpg" width="120" alt="" />
 
-<p align="center">
-  <a href="https://github.com/router-for-me/CLIProxyAPIHome">CLIProxyAPIHome</a> 的 Web 控制台。<br />
-  管理员在这里管理网关和上游凭证，用户可以查找模型、管理自己的 API 密钥并查看用量。
-</p>
+# Home Management Center
 
-<p align="center">
-  <a href="README.md" lang="en">English</a> · <strong>简体中文</strong><br />
-  <a href="#快速开始">快速开始</a> · <a href="#界面导览">界面导览</a> · <a href="#本地开发">本地开发</a>
-</p>
+**CLIProxyAPIHome 的管理控制台与用户工作台**
+
+管理员维护上游凭证，监控网关流量。<br />
+用户查找可用模型，管理自己的 API 密钥并查看用量。
+
+[![Home 官方发行版内置控制台](docs/badges/deployment-zh-CN.svg)](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#部署正式发行版)
+[![四种界面语言](docs/badges/languages-zh-CN.svg)](#界面语言)
+[![MIT 许可证](docs/badges/license-zh-CN.svg)](LICENSE)
+
+<a href="README.md" lang="en">English</a> · **简体中文**
+
+[快速开始](#快速开始) · [界面导览](#界面导览) · [本地开发](#本地开发)
+
+</div>
+
+---
 
 [![管理员仪表盘显示网关就绪状态、Token 消耗、请求量和请求健康度](docs/screenshots/dashboard-zh-CN.png)](docs/screenshots/dashboard-zh-CN.png)
 
@@ -49,6 +56,8 @@ Home 的官方二进制和 Docker 镜像都已内置这两个工作区。启动 
 - **排查请求故障。** 从用量记录定位失败请求，通过调用诊断或运行日志追查原因。
 - **核对计费。** 设置模型价格，查看用量费用和报表。
 - **调整系统配置。** 编辑网关设置，在保存前核对差异。
+
+### 界面语言
 
 界面支持简体中文、繁体中文、英语和俄语，可跟随浏览器语言或手动切换。在桌面或移动设备上，可通过 Chrome、Edge、Firefox 和 Safari 使用浅色或深色主题。
 

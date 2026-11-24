@@ -1,18 +1,25 @@
-<p align="center">
-  <img src="src/assets/brand/favicon.png" width="72" height="72" alt="" />
-</p>
+<div align="center">
 
-<h1 align="center">Home Management Center</h1>
+<img src="src/assets/brand/logo.jpg" width="120" alt="" />
 
-<p align="center">
-  The web console for <a href="https://github.com/router-for-me/CLIProxyAPIHome">CLIProxyAPIHome</a>.<br />
-  Operators manage the gateway and its credentials. Users find models, manage their API keys, and track usage.
-</p>
+# Home Management Center
 
-<p align="center">
-  <strong>English</strong> · <a href="README_CN.md" lang="zh-CN">简体中文</a><br />
-  <a href="#quick-start">Quick start</a> · <a href="#console-tour">Console tour</a> · <a href="#development">Development</a>
-</p>
+**The admin console and user workspace for CLIProxyAPIHome**
+
+Operators manage upstream credentials and monitor gateway traffic.<br />
+Users find available models, manage their API keys, and track usage.
+
+[![Bundled with official Home releases](docs/badges/deployment-en.svg)](https://github.com/router-for-me/CLIProxyAPIHome#deploying-an-official-release)
+[![Four interface languages](docs/badges/languages-en.svg)](#interface-languages)
+[![MIT License](docs/badges/license-en.svg)](LICENSE)
+
+**English** · <a href="README_CN.md" lang="zh-CN">简体中文</a>
+
+[Quick start](#quick-start) · [Console tour](#console-tour) · [Development](#development)
+
+</div>
+
+---
 
 [![Administrator dashboard showing gateway readiness, token consumption, request volume, and request health](docs/screenshots/dashboard-en.png)](docs/screenshots/dashboard-en.png)
 
@@ -49,6 +56,8 @@ Users can search by model ID and filter by provider, input modality, or tool sup
 - **Investigate requests.** Follow a failed request from usage records into call diagnostics or runtime logs.
 - **Review billing.** Set model prices and review usage costs and reports.
 - **Change configuration.** Edit gateway settings and review the diff before saving.
+
+### Interface languages
 
 The interface supports English, Simplified Chinese, Traditional Chinese, and Russian. Choose a language or follow the browser setting. Light and dark themes are available on desktop and mobile in Chrome, Edge, Firefox, and Safari.
 
