@@ -15,7 +15,7 @@ Users find available models, manage their API keys, and track usage.
 
 **English** · <a href="README_CN.md" lang="zh-CN">简体中文</a>
 
-[Quick start](#quick-start) · [Console tour](#console-tour) · [Development](#development)
+[Quick start](#quick-start) · [Features](#features) · [Development](#development)
 
 </div>
 
@@ -27,35 +27,54 @@ _All screenshots use example data. Select an image to view it at full size._
 
 ## Quick start
 
-Official Home binaries and Docker images include both workspaces. Start Home, then open the entry for your role. [Home installation guide](https://github.com/router-for-me/CLIProxyAPIHome#deploying-an-official-release)
+1. Start Home using the official binary or Docker image. Both include the web console. [Install Home](https://github.com/router-for-me/CLIProxyAPIHome#deploying-an-official-release)
+2. Open Home in your browser. The default local address is `http://localhost:8327`.
+3. Choose the sign-in for your role.
+   - **Admin sign-in** · Enter your Home management key. [`/management.html`](http://localhost:8327/management.html)
+   - **User sign-in** · Sign in with your Home user account. [`/user.html`](http://localhost:8327/user.html)
 
-- **Administrator console** · Sign in with your Home management key.<br />
-  `http://localhost:8327/management.html`
-- **User workspace** · Sign in with your Home user account.<br />
-  `http://localhost:8327/user.html`
+> [!NOTE]
+> To call a model from an application, create a **client API key** in the user workspace after signing in.
 
-For a remote instance, use its hostname and port. Keep the management key private and protect remote administrative access with HTTPS and server-side access controls.
+<details>
+<summary>Remote access</summary>
 
-## Console tour
+Open the same paths at your Home server’s HTTPS address. Keep the management key private and restrict access to the management endpoint. [Home authentication settings](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/docs/management/api.md#authentication)
 
-### Upstream account credentials
+</details>
 
-Open **Upstream → Account Credentials** to see which accounts are enabled and how much quota remains. Add accounts through OAuth or import credential files. Select an account to inspect its models and edit its metadata. The adjacent **Model Providers** tab holds provider API keys.
+## Features
+
+| Area                   | What you can do                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| **Dashboard**          | Check gateway readiness, request volume, token consumption, and success rate.                 |
+| **Upstream**           | Manage provider keys, add accounts via OAuth or file import, and check remaining quota.       |
+| **Users & Access**     | Issue client API keys and limit their access by channel group or model group.                 |
+| **Usage & Requests**   | Filter request records by provider, model, or status and inspect token usage.                 |
+| **Diagnostics & logs** | Investigate failed calls, read runtime logs, and download request error logs.                 |
+| **Billing & Reports**  | Set model prices, inspect individual charges, and review balance changes.                     |
+| **System**             | Preview configuration changes before saving, check node status, and manage supported plugins. |
+| **User workspace**     | Manage your keys, find models you can call, and review your spending and balance.             |
+
+### Console tour
+
+<details>
+<summary><strong>Upstream → Account Credentials</strong></summary>
+
+Read quota windows and in-flight request counts side by side for each account. Open a row to inspect its models or edit its metadata.
 
 [![Upstream account credentials with provider names, enabled states, and quota remaining for each account](docs/screenshots/upstream-accounts-en.png)](docs/screenshots/upstream-accounts-en.png)
 
-### User model catalog
+</details>
 
-Users can search by model ID and filter by provider, input modality, or tool support. Once signed in, they can see which models their own keys can call and compare published input and output prices.
+<details>
+<summary><strong>User workspace → Model catalog</strong></summary>
+
+Search by model ID or filter by provider, input modality, or tool support. Signed-in users can compare published input and output prices for the models their keys can call.
 
 [![User model catalog showing accessible models, context limits, supported inputs, and per-token pricing](docs/screenshots/model-catalog-en.png)](docs/screenshots/model-catalog-en.png)
 
-### Other operator tasks
-
-- **Manage access.** Issue client keys and set access rules for users.
-- **Investigate requests.** Follow a failed request from usage records into call diagnostics or runtime logs.
-- **Review billing.** Set model prices and review usage costs and reports.
-- **Change configuration.** Edit gateway settings and review the diff before saving.
+</details>
 
 ### Interface languages
 

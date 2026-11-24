@@ -15,7 +15,7 @@
 
 <a href="README.md" lang="en">English</a> · **简体中文**
 
-[快速开始](#快速开始) · [界面导览](#界面导览) · [本地开发](#本地开发)
+[快速开始](#快速开始) · [功能概览](#功能概览) · [本地开发](#本地开发)
 
 </div>
 
@@ -27,35 +27,59 @@ _截图均使用示例数据，点开可查看原图。_
 
 ## 快速开始
 
-Home 的官方二进制和 Docker 镜像都已内置这两个工作区。启动 Home 后，按身份打开对应入口。[Home 安装说明](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#部署正式发行版)
+1. 使用 Home 官方二进制或 Docker 镜像启动服务。两者均已内置控制台。[Home 安装说明](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/README_CN.md#部署正式发行版)
+2. 在浏览器中打开默认本地地址 `http://localhost:8327`。
+3. 选择与你身份对应的登录入口。
+   - **管理员登录** · 输入 Home 管理密钥。[`/management.html`](http://localhost:8327/management.html)
+   - **用户登录** · 使用自己的 Home 账号。[`/user.html`](http://localhost:8327/user.html)
 
-- **管理员控制台** · 使用 Home 管理密钥登录。<br />
-  `http://localhost:8327/management.html`
-- **用户工作台** · 使用自己的 Home 用户账号登录。<br />
-  `http://localhost:8327/user.html`
+> [!NOTE]
+> 应用调用模型时使用**客户端 API 密钥**，可在用户工作台创建。
 
-访问远程实例时，将地址换成该实例的主机名和端口。请妥善保管管理密钥，远程管理入口应启用 HTTPS 和服务端访问控制。
+<details>
+<summary>访问远程实例</summary>
 
-## 界面导览
+使用 Home 服务器的 HTTPS 地址打开相同路径。请妥善保管管理密钥，并限制管理端点的访问权限。[Home 认证设置](https://github.com/router-for-me/CLIProxyAPIHome/blob/main/docs/management/api_CN.md#认证)
 
-### 上游账号凭证
+</details>
 
-打开 **上游资源 → 账号凭证**，可以查看哪些账号已启用、各账号还剩多少额度。可通过 OAuth 或导入凭证文件添加账号，点开已有账号可查看可用模型、编辑元数据。在 **模型供应商** 标签页可管理供应商 API 密钥。
+## 功能概览
+
+<table>
+  <thead>
+    <tr><th scope="col" nowrap>控制台模块</th><th scope="col" width="100%">常用操作</th></tr>
+  </thead>
+  <tbody>
+    <tr><th scope="row" align="left">仪表盘</th><td>确认网关能否接受模型请求，查看请求量、Token 消耗和成功率。</td></tr>
+    <tr><th scope="row" align="left">上游资源</th><td>管理供应商密钥，通过 OAuth 或导入凭证文件接入账号，查看剩余额度。</td></tr>
+    <tr><th scope="row" align="left">用户与访问</th><td>签发客户端 API 密钥，通过通道组和模型组限定每把密钥的访问范围。</td></tr>
+    <tr><th scope="row" align="left">用量与请求</th><td>按供应商、模型或状态筛选请求记录，查看 Token 用量。</td></tr>
+    <tr><th scope="row" align="left">诊断与日志</th><td>排查请求失败原因，查看运行日志，下载请求错误日志。</td></tr>
+    <tr><th scope="row" align="left">财务与报表</th><td>设置模型价格，核对单笔扣款和余额变动。</td></tr>
+    <tr><th scope="row" align="left">系统管理</th><td>保存前预览配置差异，查看节点状态，管理实例支持的插件。</td></tr>
+    <tr><th scope="row" align="left">用户工作台</th><td>管理自己的密钥，查找可调用的模型，查看消费记录和余额。</td></tr>
+  </tbody>
+</table>
+
+### 界面导览
+
+<details>
+<summary><strong>上游资源 → 账号凭证</strong></summary>
+
+列表中可以并排查看每个账号的额度窗口和当前并发请求数。点开一行即可查看该账号的可用模型或编辑元数据。
 
 [![上游账号凭证列表，按账号显示模型供应商、启用状态和剩余额度](docs/screenshots/upstream-accounts-zh-CN.png)](docs/screenshots/upstream-accounts-zh-CN.png)
 
-### 用户模型目录
+</details>
 
-用户可以按模型 ID 搜索，也可以按供应商、输入类型或工具调用能力筛选。登录后还能查看自己的密钥可调用哪些模型，并比较已公布的输入和输出价格。
+<details>
+<summary><strong>用户工作台 → 模型目录</strong></summary>
+
+按模型 ID 搜索，或按供应商、输入类型和工具调用能力筛选。登录后，可以查看自己的密钥能调用哪些模型，并比较这些模型已公布的输入和输出价格。
 
 [![用户模型目录显示密钥可用的模型、上下文上限、支持的输入类型和 Token 单价](docs/screenshots/model-catalog-zh-CN.png)](docs/screenshots/model-catalog-zh-CN.png)
 
-### 管理员的其他常用操作
-
-- **管理访问权限。** 签发客户端密钥，为用户设置访问规则。
-- **排查请求故障。** 从用量记录定位失败请求，通过调用诊断或运行日志追查原因。
-- **核对计费。** 设置模型价格，查看用量费用和报表。
-- **调整系统配置。** 编辑网关设置，在保存前核对差异。
+</details>
 
 ### 界面语言
 
