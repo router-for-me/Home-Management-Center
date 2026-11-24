@@ -63,23 +63,17 @@ _截图均使用示例数据，点开可查看原图。_
 
 ### 界面导览
 
-<details>
-<summary><strong>上游资源 → 账号凭证</strong></summary>
+#### 上游资源 → 账号凭证
 
 列表中可以并排查看每个账号的额度窗口和当前并发请求数。点开一行即可查看该账号的可用模型或编辑元数据。
 
 [![上游账号凭证列表，按账号显示模型供应商、启用状态和剩余额度](docs/screenshots/upstream-accounts-zh-CN.png)](docs/screenshots/upstream-accounts-zh-CN.png)
 
-</details>
-
-<details>
-<summary><strong>用户工作台 → 模型目录</strong></summary>
+#### 用户工作台 → 模型目录
 
 按模型 ID 搜索，或按供应商、输入类型和工具调用能力筛选。登录后，可以查看自己的密钥能调用哪些模型，并比较这些模型已公布的输入和输出价格。
 
 [![用户模型目录显示密钥可用的模型、上下文上限、支持的输入类型和 Token 单价](docs/screenshots/model-catalog-zh-CN.png)](docs/screenshots/model-catalog-zh-CN.png)
-
-</details>
 
 ### 界面语言
 

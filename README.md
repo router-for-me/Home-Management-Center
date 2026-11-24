@@ -58,23 +58,17 @@ Open the same paths at your Home server’s HTTPS address. Keep the management k
 
 ### Console tour
 
-<details>
-<summary><strong>Upstream → Account Credentials</strong></summary>
+#### Upstream → Account Credentials
 
 Read quota windows and in-flight request counts side by side for each account. Open a row to inspect its models or edit its metadata.
 
 [![Upstream account credentials with provider names, enabled states, and quota remaining for each account](docs/screenshots/upstream-accounts-en.png)](docs/screenshots/upstream-accounts-en.png)
 
-</details>
-
-<details>
-<summary><strong>User workspace → Model catalog</strong></summary>
+#### User workspace → Model catalog
 
 Search by model ID or filter by provider, input modality, or tool support. Signed-in users can compare published input and output prices for the models their keys can call.
 
 [![User model catalog showing accessible models, context limits, supported inputs, and per-token pricing](docs/screenshots/model-catalog-en.png)](docs/screenshots/model-catalog-en.png)
-
-</details>
 
 ### Interface languages
 
