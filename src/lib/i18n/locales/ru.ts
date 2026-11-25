@@ -1146,7 +1146,8 @@ export const ru = {
           candidateFailedEmpty:
             'Модели-кандидаты не загружены. Перезагрузите кандидатов или проверьте ответ Management API.',
           catalogReady: '{{source}}: загружено моделей — {{count}} ({{time}}).',
-          catalogFailed: 'Не удалось загрузить каталог цен.',
+          catalogFailed:
+            'Не удалось загрузить каталог цен. Нажмите «Обновить предпросмотр», чтобы повторить попытку.',
           serverPreviewBadge: 'Предпросмотр сервера',
           legacyPreviewBadge: 'Режим совместимости',
           serverPreviewFailed: 'Не удалось создать серверный предпросмотр.',
@@ -1232,6 +1233,9 @@ export const ru = {
           includeZeroCost: 'Разрешить нулевые официальные цены',
           previewTitle: 'Предпросмотр и подтверждение',
           previewHint: 'Выбрано {{selected}} / доступно {{selectable}} / всего {{total}}',
+          unmatchedModelHint:
+            'В каталоге нет цены для {{model}}. В разделе «Цены моделей» нажмите «{{action}}», чтобы задать её вручную.',
+          previewUnavailable: 'Предпросмотр временно недоступен.',
           summaryCreates: 'Создать',
           summaryUpdatesSync: 'Обновить sync',
           summaryOverwrites: 'Перезаписать',
@@ -1295,7 +1299,7 @@ export const ru = {
             skipped: 'Пропущено',
           },
           reasons: {
-            no_models_dev_match: 'Совпадение models.dev не найдено',
+            no_models_dev_match: 'В каталоге нет подходящей цены',
             zero_official_cost: 'Официальная цена нулевая; исключено политикой',
             zero_final_cost: 'Множитель обнуляет итоговую цену; исключено политикой',
             matched_preferred_alias: 'Совпадение по предпочтительному alias',
@@ -1389,6 +1393,7 @@ export const ru = {
           confirmOverwriteAcknowledgement:
             'Я понимаю, что выбранные manual/default правила станут source=sync, а их цены и примечание будут заменены значениями из предпросмотра.',
           confirmOverwriteAction: 'Применить выбранное',
+          confirmApplyLabel: 'Подтвердить',
           confirmApply: 'Подтвердить ({{count}})',
           complete: 'Готово',
           applied: 'Применено подтвержденных цен: {{count}}.',

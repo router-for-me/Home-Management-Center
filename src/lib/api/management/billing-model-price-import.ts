@@ -19,6 +19,7 @@ type ModelPriceImportErrorCode =
   | 'expired'
   | 'stale'
   | 'invalid'
+  | 'catalog_unavailable'
   | 'server'
   | 'network'
 
@@ -291,7 +292,7 @@ function summariesEqual(left: ModelPriceImportSummary, right: ModelPriceImportSu
 }
 
 function targetIdentity(provider: string, model: string) {
-  return `${provider.trim().toLowerCase()}::${model.trim().toLowerCase()}`
+  return `${provider.trim().toLowerCase()}::${model.trim()}`
 }
 
 function ruleScopeIdentity(
@@ -737,7 +738,9 @@ export function normalizeModelPriceImportOperationProgress(
 export function classifyModelPriceImportErrorStatus(
   status: number | null,
   operationAccepted = false,
+  backendCode?: string,
 ): ModelPriceImportErrorCode {
+  if (status === 502 && backendCode === 'models_dev_fetch_failed') return 'catalog_unavailable'
   if (operationAccepted && (status === 404 || status === 405)) return 'server'
   return status === 404 || status === 405
     ? 'unsupported'
@@ -758,11 +761,19 @@ function classifyError(error: unknown, operationAccepted = false) {
   if (error instanceof ModelPriceImportError) return error
   const status = axios.isAxiosError(error) ? (error.response?.status ?? null) : null
   const normalized = toManagementApiError(error)
-  const code = classifyModelPriceImportErrorStatus(status, operationAccepted)
+  const code = classifyModelPriceImportErrorStatus(
+    status,
+    operationAccepted,
+    normalized.backendCode,
+  )
   return new ModelPriceImportError(normalized.message, code, status, error)
 }
 
 export function toModelPriceImportPreviewPayload(input: ModelPriceImportPreviewInput) {
+  // The drawer keeps catalog matches when a target is filtered out or deselected.
+  const requestedTargets = new Set(
+    input.targets.map(({ provider, model }) => targetIdentity(provider, model)),
+  )
   return {
     source: input.source ?? 'models.dev',
     targets: input.targets.map((target) => ({
@@ -791,12 +802,16 @@ export function toModelPriceImportPreviewPayload(input: ModelPriceImportPreviewI
       include_cache_prices: input.policy.includeCachePrices,
       include_zero_cost: input.policy.includeZeroCost,
     },
-    match_overrides: input.matchOverrides.map((override) => ({
-      target_provider: override.targetProvider,
-      target_model: override.targetModel,
-      source_provider: override.sourceProvider,
-      source_model: override.sourceModel,
-    })),
+    match_overrides: input.matchOverrides
+      .filter((override) =>
+        requestedTargets.has(targetIdentity(override.targetProvider, override.targetModel)),
+      )
+      .map((override) => ({
+        target_provider: override.targetProvider,
+        target_model: override.targetModel,
+        source_provider: override.sourceProvider,
+        source_model: override.sourceModel,
+      })),
   }
 }
 

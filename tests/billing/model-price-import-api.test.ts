@@ -201,6 +201,47 @@ describe('model price import Management API contract', () => {
     })
   })
 
+  test('sends only matches for the requested batch and restores them when switching back', () => {
+    const copilot = { provider: 'copilot', model: 'shared-model' }
+    const devin = { provider: 'devin', model: 'shared-model' }
+    const swe = { provider: 'devin', model: 'devin/swe-2' }
+    const matchOverrides = [copilot, devin].map(({ provider, model }) => ({
+      targetProvider: provider,
+      targetModel: model,
+      sourceProvider: 'catalog',
+      sourceModel: `${provider}-match`,
+    }))
+    const preview = (targets: ModelPriceImportPreviewInput['targets']) => {
+      const input = createPreviewInput({ targets, matchOverrides })
+      return toModelPriceImportPreviewPayload(input).match_overrides.map(
+        (match) => match.source_model,
+      )
+    }
+
+    expect(preview([copilot, devin])).toEqual(['copilot-match', 'devin-match'])
+    expect(preview([devin, swe])).toEqual(['devin-match'])
+    expect(preview([swe])).toEqual([])
+    expect(preview([])).toEqual([])
+    expect(preview([copilot])).toEqual(['copilot-match'])
+    expect(preview([{ provider: ' Copilot ', model: ' shared-model ' }])).toEqual(['copilot-match'])
+    expect(preview([{ provider: 'copilot', model: 'Shared-Model' }])).toEqual([])
+  })
+
+  test('validates returned rows against matches for the exact target model ID', () => {
+    const input = createPreviewInput({
+      matchOverrides: [
+        {
+          targetProvider: 'openai',
+          targetModel: 'GPT-5.5',
+          sourceProvider: 'another-catalog',
+          sourceModel: 'another-model',
+        },
+      ],
+    })
+    const preview = normalizeModelPriceImportPreview(createPreviewResponse(), input)
+    expect(preview.rows.map((row) => row.matchedModel)).toEqual(['gpt-5.5', 'gpt-5.5'])
+  })
+
   test('accepts multiple context-band rows for one target', () => {
     const preview = normalizeModelPriceImportPreview(createPreviewResponse(), createPreviewInput())
 
@@ -340,6 +381,19 @@ describe('model price import Management API contract', () => {
     expect(classifyModelPriceImportErrorStatus(405, false)).toBe('unsupported')
     expect(classifyModelPriceImportErrorStatus(404, true)).toBe('server')
     expect(classifyModelPriceImportErrorStatus(405, true)).toBe('server')
+  })
+
+  test('identifies a catalog fetch failure by both HTTP status and Management API error code', () => {
+    expect(classifyModelPriceImportErrorStatus(502, false, 'models_dev_fetch_failed')).toBe(
+      'catalog_unavailable',
+    )
+    expect(classifyModelPriceImportErrorStatus(502)).toBe('server')
+    expect(classifyModelPriceImportErrorStatus(500, false, 'billing_import_preview_failed')).toBe(
+      'server',
+    )
+    expect(classifyModelPriceImportErrorStatus(422, false, 'models_dev_fetch_failed')).toBe(
+      'invalid',
+    )
   })
 })
 
