@@ -68,6 +68,10 @@ import {
   writeModelPriceImportPreferences,
 } from '@/lib/billing/model-price-import-preferences'
 import { createCompatibilityModelPriceImportPreview } from '@/lib/billing/model-price-import-preview'
+import {
+  type ModelPriceImportSelection,
+  resolveModelPriceImportSelection,
+} from '@/lib/billing/model-price-import-selection'
 import type {
   ModelPriceImportAliasRule,
   ModelPriceImportApplyInput,
@@ -160,9 +164,8 @@ function formatReason(t: ReturnType<typeof useTranslation>['t'], row: ModelPrice
 
 function summarizeSelection(
   rows: ModelPriceImportPreviewRow[],
-  selectedKeys: ReadonlySet<string>,
+  selected: ModelPriceImportPreviewRow[],
 ): SelectionSummary {
-  const selected = rows.filter((row) => row.applicable && selectedKeys.has(row.key))
   const overwrites = selected.filter((row) => row.action === 'overwrite')
   return {
     selected: selected.length,
@@ -374,7 +377,7 @@ export function ModelPriceImportSheet({
   const [serverPreviewSignature, setServerPreviewSignature] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [selection, setSelection] = useState<ModelPriceImportSelection | null>(null)
   const [applying, setApplying] = useState(false)
   const [progress, setProgress] = useState<ModelPriceImportProgress | null>(null)
   const [applyResult, setApplyResult] = useState<ModelPriceImportApplyResult | null>(null)
@@ -389,6 +392,7 @@ export function ModelPriceImportSheet({
   const [pendingApplyError, setPendingApplyError] = useState<string | null>(null)
   const [clock, setClock] = useState(() => Date.now())
   const initialPreviewSignatureRef = useRef<string | null>(null)
+  const previewRequestId = useRef(0)
   const applyResultRef = useRef<HTMLElement | null>(null)
 
   const supportsRuleScopes = (schemaVersion ?? 0) >= 2
@@ -540,42 +544,29 @@ export function ModelPriceImportSheet({
     })
   }, [catalog, existingPrices, matchOverrides, serverEnabled, overwriteMode, policy, targets])
 
-  const requestServerPreview = useCallback(
-    async (preferredSelection?: string[]) => {
-      if (!serverEnabled || previewInput.targets.length === 0 || pendingApply) return
-      setPreviewLoading(true)
-      setPreviewError(null)
-      setError(null)
-      try {
-        const next = await onPreview(previewInput)
-        setServerPreview(next)
-        setServerPreviewSignature(previewSignature)
-        setApplyResult(null)
-        setSelectedKeys(
-          new Set(
-            next.rows
-              .filter(
-                (row) =>
-                  row.applicable &&
-                  (preferredSelection
-                    ? preferredSelection.includes(row.key)
-                    : row.selectedByDefault && row.action !== 'overwrite'),
-              )
-              .map((row) => row.key),
-          ),
-        )
-      } catch (previewFailure) {
-        setPreviewError(
-          previewFailure instanceof Error
-            ? previewFailure.message
-            : t('billingPage.prices.import.serverPreviewFailed'),
-        )
-      } finally {
-        setPreviewLoading(false)
-      }
-    },
-    [serverEnabled, onPreview, pendingApply, previewInput, previewSignature, t],
-  )
+  const requestServerPreview = useCallback(async () => {
+    if (!serverEnabled || previewInput.targets.length === 0 || pendingApply) return
+    const requestId = ++previewRequestId.current
+    setPreviewLoading(true)
+    setPreviewError(null)
+    setError(null)
+    try {
+      const next = await onPreview(previewInput)
+      if (requestId !== previewRequestId.current) return
+      setServerPreview(next)
+      setServerPreviewSignature(previewSignature)
+      setApplyResult(null)
+    } catch (previewFailure) {
+      if (requestId !== previewRequestId.current) return
+      setPreviewError(
+        previewFailure instanceof Error
+          ? previewFailure.message
+          : t('billingPage.prices.import.serverPreviewFailed'),
+      )
+    } finally {
+      if (requestId === previewRequestId.current) setPreviewLoading(false)
+    }
+  }, [serverEnabled, onPreview, pendingApply, previewInput, previewSignature, t])
 
   useEffect(() => {
     if (
@@ -615,26 +606,10 @@ export function ModelPriceImportSheet({
   }, [preview?.expiresAt])
 
   const rows = useMemo(() => preview?.rows ?? [], [preview])
-  const previewSelectionKey = serverEnabled
-    ? `${preview?.id ?? 'none'}:${preview?.revision ?? 'none'}`
-    : previewSignature
-
-  useEffect(() => {
-    if (rows.length === 0) {
-      setSelectedKeys(new Set())
-      return
-    }
-    setSelectedKeys((current) => {
-      const allowed = new Set(rows.filter((row) => row.applicable).map((row) => row.key))
-      const preserved = new Set([...current].filter((key) => allowed.has(key)))
-      if (preserved.size > 0) return preserved
-      return new Set(
-        rows
-          .filter((row) => row.applicable && row.selectedByDefault && row.action !== 'overwrite')
-          .map((row) => row.key),
-      )
-    })
-  }, [previewSelectionKey, rows])
+  const selectedByKey = useMemo(
+    () => resolveModelPriceImportSelection(rows, selection),
+    [rows, selection],
+  )
 
   const filteredRows = useMemo(() => {
     const normalized = search.trim().toLowerCase()
@@ -656,16 +631,19 @@ export function ModelPriceImportSheet({
   }, [rows, search, statusFilter])
 
   const selectedRows = useMemo(
-    () => rows.filter((row) => row.applicable && selectedKeys.has(row.key)),
-    [rows, selectedKeys],
+    () => rows.filter((row) => selectedByKey.has(row.key)),
+    [rows, selectedByKey],
   )
   const selectedSummary = useMemo(
-    () => summarizeSelection(rows, selectedKeys),
-    [rows, selectedKeys],
+    () => summarizeSelection(rows, selectedRows),
+    [rows, selectedRows],
   )
   const potentialSummary = useMemo(
     () =>
-      summarizeSelection(rows, new Set(rows.filter((row) => row.applicable).map((row) => row.key))),
+      summarizeSelection(
+        rows,
+        rows.filter((row) => row.applicable),
+      ),
     [rows],
   )
 
@@ -677,12 +655,14 @@ export function ModelPriceImportSheet({
     Boolean(catalogError) ||
     Boolean(pendingApply)
 
-  const toggleRow = (row: ModelPriceImportPreviewRow, checked: boolean) => {
-    if (!row.applicable || applyBlocked) return
-    setSelectedKeys((current) => {
-      const next = new Set(current)
-      if (checked) next.add(row.key)
-      else next.delete(row.key)
+  const setRowsChecked = (changedRows: ModelPriceImportPreviewRow[], checked: boolean) => {
+    setSelection((current) => {
+      const next = new Map(current ?? selectedByKey)
+      for (const row of changedRows) {
+        if (!row.applicable) continue
+        if (checked) next.set(row.key, row.action)
+        else next.delete(row.key)
+      }
       return next
     })
   }
@@ -700,6 +680,7 @@ export function ModelPriceImportSheet({
   const setMatchOverride = (row: ModelPriceImportPreviewRow, candidate: string) => {
     const separator = candidate.indexOf('/')
     if (separator <= 0) return
+    setSelection((current) => new Map(current ?? selectedByKey).set(row.key, 'default'))
     setMatchOverrides((current) => [
       ...current.filter(
         (item) => item.targetProvider !== row.provider || item.targetModel !== row.model,
@@ -766,7 +747,7 @@ export function ModelPriceImportSheet({
         row.model,
         row.status,
         row.action,
-        selectedKeys.has(row.key),
+        selectedByKey.has(row.key),
         row.matchedProvider && row.matchedModel ? `${row.matchedProvider}/${row.matchedModel}` : '',
         row.multiplier,
         row.final?.input,
@@ -952,12 +933,12 @@ export function ModelPriceImportSheet({
 
   const retryFailedRows = () => {
     if (!applyResult) return
-    const keys = applyResult.rows
-      .filter((row) => row.status === 'failed' || row.status === 'conflict')
-      .map((row) => row.key)
+    const failedRows = applyResult.rows.filter(
+      (row) => row.status === 'failed' || row.status === 'conflict',
+    )
     setApplyResult(null)
-    setSelectedKeys(new Set(keys))
-    if (serverEnabled) void requestServerPreview(keys)
+    setSelection(new Map(failedRows.map((row) => [row.key, row.action])))
+    if (serverEnabled) void requestServerPreview()
     else void loadCatalog()
   }
 
@@ -1668,9 +1649,7 @@ export function ModelPriceImportSheet({
                 variant="outline"
                 size="md"
                 disabled={busy || targets.length === 0}
-                onClick={() =>
-                  void (serverEnabled ? requestServerPreview([...selectedKeys]) : loadCatalog())
-                }
+                onClick={() => void (serverEnabled ? requestServerPreview() : loadCatalog())}
               >
                 {previewLoading || catalogLoading ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -1824,16 +1803,8 @@ export function ModelPriceImportSheet({
               type="button"
               variant="outline"
               size="md"
-              disabled={busy || filteredRows.every((row) => !row.applicable)}
-              onClick={() =>
-                setSelectedKeys(
-                  (current) =>
-                    new Set([
-                      ...current,
-                      ...filteredRows.filter((row) => row.applicable).map((row) => row.key),
-                    ]),
-                )
-              }
+              disabled={busy || applyBlocked || filteredRows.every((row) => !row.applicable)}
+              onClick={() => setRowsChecked(filteredRows, true)}
             >
               {t('billingPage.prices.import.selectAll')}
             </Button>
@@ -1841,8 +1812,8 @@ export function ModelPriceImportSheet({
               type="button"
               variant="outline"
               size="md"
-              disabled={busy || selectedKeys.size === 0}
-              onClick={() => setSelectedKeys(new Set())}
+              disabled={busy || selectedByKey.size === 0}
+              onClick={() => setSelection(new Map())}
             >
               {t('billingPage.prices.import.clearSelection')}
             </Button>
@@ -1923,9 +1894,9 @@ export function ModelPriceImportSheet({
                     <TableRow key={row.key} variant="resource">
                       <TableCell className="align-top">
                         <Checkbox
-                          checked={selectedKeys.has(row.key)}
+                          checked={selectedByKey.has(row.key)}
                           disabled={!row.applicable || busy || applyBlocked}
-                          onCheckedChange={(checked) => toggleRow(row, checked === true)}
+                          onCheckedChange={(checked) => setRowsChecked([row], checked === true)}
                           aria-label={t('billingPage.prices.import.selectRow', {
                             model: row.model,
                             tier: tierLabel,
@@ -2004,9 +1975,7 @@ export function ModelPriceImportSheet({
                                   variant="outline"
                                   size="md"
                                   disabled={!override || busy}
-                                  onClick={() =>
-                                    void requestServerPreview([...selectedKeys, row.key])
-                                  }
+                                  onClick={() => void requestServerPreview()}
                                 >
                                   <RefreshCw className="size-3.5" />
                                   {t('billingPage.prices.import.applyMatchOverride')}
