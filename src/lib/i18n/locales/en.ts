@@ -1145,7 +1145,7 @@ export const en = {
           candidateFailedEmpty:
             'Candidate models could not be loaded. Reload candidates or check the Management API response.',
           catalogReady: '{{source}}: {{count}} models loaded ({{time}}).',
-          catalogFailed: 'Could not load the price catalog.',
+          catalogFailed: 'Could not load the price catalog. Select “Refresh preview” to try again.',
           serverPreviewBadge: 'Server preview',
           legacyPreviewBadge: 'Compatibility preview',
           serverPreviewFailed: 'The server preview could not be generated.',
@@ -1232,6 +1232,9 @@ export const en = {
           includeZeroCost: 'Allow zero official prices',
           previewTitle: 'Preview and confirm',
           previewHint: 'Selected {{selected}} / selectable {{selectable}} / total {{total}}',
+          unmatchedModelHint:
+            'The catalog has no matching price for {{model}}. Use “{{action}}” under Model prices to enter one manually.',
+          previewUnavailable: 'Preview unavailable.',
           summaryCreates: 'Create',
           summaryUpdatesSync: 'Update sync',
           summaryOverwrites: 'Overwrite',
@@ -1295,7 +1298,7 @@ export const en = {
             skipped: 'Skipped',
           },
           reasons: {
-            no_models_dev_match: 'No models.dev match found',
+            no_models_dev_match: 'No matching price in this catalog',
             zero_official_cost: 'Official price is zero; disabled by policy',
             zero_final_cost: 'The multiplier makes the final price zero; disabled by policy',
             matched_preferred_alias: 'Matched by preferred alias',
@@ -1391,6 +1394,7 @@ export const en = {
           confirmOverwriteAcknowledgement:
             'I understand that selected manual/default rules will become source=sync and their previewed prices and note will replace the current values.',
           confirmOverwriteAction: 'Apply selected rules',
+          confirmApplyLabel: 'Confirm apply',
           confirmApply: 'Confirm apply ({{count}})',
           complete: 'Done',
           applied: 'Applied {{count}} confirmed model prices.',

@@ -1099,7 +1099,7 @@ export const zhTW = {
           candidateFailedEmpty:
             '候選模型無法載入。請重新載入候選模型，或檢查 Management API 回應。',
           catalogReady: '{{source}}：已載入 {{count}} 個模型（{{time}}）。',
-          catalogFailed: '載入價格目錄失敗。',
+          catalogFailed: '暫時無法載入價格目錄。請點選「重新整理預覽」再試一次。',
           serverPreviewBadge: '服務端預覽',
           legacyPreviewBadge: '相容預覽',
           serverPreviewFailed: '無法產生服務端預覽。',
@@ -1183,6 +1183,9 @@ export const zhTW = {
           includeZeroCost: '允許官方價為 0',
           previewTitle: '預覽並確認',
           previewHint: '已選 {{selected}} / 可選 {{selectable}} / 總計 {{total}}',
+          unmatchedModelHint:
+            '目前目錄沒有 {{model}} 的相符價格。可在「模型價格」中點選「{{action}}」手動設定。',
+          previewUnavailable: '預覽暫時無法使用。',
           summaryCreates: '建立',
           summaryUpdatesSync: '更新 sync',
           summaryOverwrites: '覆蓋',
@@ -1245,7 +1248,7 @@ export const zhTW = {
             skipped: '已略過',
           },
           reasons: {
-            no_models_dev_match: '未找到 models.dev 匹配',
+            no_models_dev_match: '目前目錄沒有相符價格',
             zero_official_cost: '官方價格為 0，已被策略排除',
             zero_final_cost: '倍率使最終價格變為 0，已被策略排除',
             matched_preferred_alias: '透過優先別名匹配',
@@ -1331,6 +1334,7 @@ export const zhTW = {
           confirmOverwriteAcknowledgement:
             '我確認所選手動/預設規則將變為 source=sync，其價格與備註會依預覽結果替換。',
           confirmOverwriteAction: '套用所選規則',
+          confirmApplyLabel: '確認套用',
           confirmApply: '確認套用（{{count}}）',
           complete: '完成',
           applied: '已套用 {{count}} 條確認後的模型價格。',

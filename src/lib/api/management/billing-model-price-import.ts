@@ -19,6 +19,7 @@ type ModelPriceImportErrorCode =
   | 'expired'
   | 'stale'
   | 'invalid'
+  | 'catalog_unavailable'
   | 'server'
   | 'network'
 
@@ -737,7 +738,9 @@ export function normalizeModelPriceImportOperationProgress(
 export function classifyModelPriceImportErrorStatus(
   status: number | null,
   operationAccepted = false,
+  backendCode?: string,
 ): ModelPriceImportErrorCode {
+  if (status === 502 && backendCode === 'models_dev_fetch_failed') return 'catalog_unavailable'
   if (operationAccepted && (status === 404 || status === 405)) return 'server'
   return status === 404 || status === 405
     ? 'unsupported'
@@ -758,7 +761,11 @@ function classifyError(error: unknown, operationAccepted = false) {
   if (error instanceof ModelPriceImportError) return error
   const status = axios.isAxiosError(error) ? (error.response?.status ?? null) : null
   const normalized = toManagementApiError(error)
-  const code = classifyModelPriceImportErrorStatus(status, operationAccepted)
+  const code = classifyModelPriceImportErrorStatus(
+    status,
+    operationAccepted,
+    normalized.backendCode,
+  )
   return new ModelPriceImportError(normalized.message, code, status, error)
 }
 

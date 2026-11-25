@@ -1,6 +1,10 @@
 import { expect, test } from 'bun:test'
 
-import { resolveModelPriceImportSelection } from '../../src/lib/billing/model-price-import-selection'
+import { createBillingModelPriceCandidateId } from '../../src/lib/billing/model-price-candidates'
+import {
+  resolveModelPriceImportSelection,
+  selectModelPriceImportTargetDefaults,
+} from '../../src/lib/billing/model-price-import-selection'
 import type { ModelPriceImportPreviewAction } from '../../src/lib/billing/model-price-import-types'
 
 function row(
@@ -56,4 +60,34 @@ test('matching respects preview defaults and overwrites require an explicit sele
     ['mai', 'create'],
   ] as const)
   expect([...resolveModelPriceImportSelection(rows, explicit).keys()]).toEqual(['mai', 'a'])
+})
+
+test('checking a manual target after clearing selects only its recommended price bands', () => {
+  const target = { provider: 'Devin', model: 'devin/example' }
+  const rows = [
+    { ...target, ...row('opaque-base', 'create') },
+    { ...target, ...row('opaque-band', 'update_sync') },
+    { ...target, ...row('manual-price', 'overwrite', true) },
+    { ...target, ...row('opt-in', 'create', false) },
+    { ...target, ...row('unmatched', 'review') },
+    { provider: 'other', model: target.model, ...row('other-provider', 'create') },
+    { ...target, model: 'devin/Example', ...row('different-model', 'create') },
+  ]
+  const targetIds = new Set([createBillingModelPriceCandidateId('devin', 'devin/example')])
+  const cleared = new Map<string, 'overwrite'>()
+  const choices = selectModelPriceImportTargetDefaults(cleared, rows, targetIds)
+  expect([...resolveModelPriceImportSelection(rows, choices).keys()]).toEqual([
+    'opaque-base',
+    'opaque-band',
+  ])
+  expect(cleared.size).toBe(0)
+
+  const partial = new Map([['other-provider', 'create']] as const)
+  const extended = selectModelPriceImportTargetDefaults(partial, rows, targetIds)
+  expect([...resolveModelPriceImportSelection(rows, extended).keys()]).toEqual([
+    'opaque-base',
+    'opaque-band',
+    'other-provider',
+  ])
+  expect(selectModelPriceImportTargetDefaults(null, rows, targetIds)).toBeNull()
 })

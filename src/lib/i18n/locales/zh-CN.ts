@@ -1097,7 +1097,7 @@ export const zhCN = {
           candidateFailedEmpty:
             '候选模型无法加载。请重新加载候选模型，或检查 Management API 响应。',
           catalogReady: '{{source}}：已加载 {{count}} 个模型（{{time}}）。',
-          catalogFailed: '加载价格目录失败。',
+          catalogFailed: '暂时无法加载价格目录。请点击「刷新预览」重试。',
           serverPreviewBadge: '服务端预览',
           legacyPreviewBadge: '兼容预览',
           serverPreviewFailed: '无法生成服务端预览。',
@@ -1181,6 +1181,9 @@ export const zhCN = {
           includeZeroCost: '允许官方价为 0',
           previewTitle: '预览并确认',
           previewHint: '已选 {{selected}} / 可选 {{selectable}} / 总计 {{total}}',
+          unmatchedModelHint:
+            '当前目录没有 {{model}} 的匹配价格。可在「模型价格」中点击「{{action}}」手动设置。',
+          previewUnavailable: '预览暂不可用。',
           summaryCreates: '创建',
           summaryUpdatesSync: '更新 sync',
           summaryOverwrites: '覆盖',
@@ -1243,7 +1246,7 @@ export const zhCN = {
             skipped: '已跳过',
           },
           reasons: {
-            no_models_dev_match: '未找到 models.dev 匹配',
+            no_models_dev_match: '当前目录没有匹配价格',
             zero_official_cost: '官方价格为 0，已被策略排除',
             zero_final_cost: '倍率使最终价格变为 0，已被策略排除',
             matched_preferred_alias: '通过优先别名匹配',
@@ -1329,6 +1332,7 @@ export const zhCN = {
           confirmOverwriteAcknowledgement:
             '我确认所选手动/默认规则将变为 source=sync，其价格和备注会按预览结果替换。',
           confirmOverwriteAction: '应用所选规则',
+          confirmApplyLabel: '确认应用',
           confirmApply: '确认应用（{{count}}）',
           complete: '完成',
           applied: '已应用 {{count}} 条确认后的模型价格。',

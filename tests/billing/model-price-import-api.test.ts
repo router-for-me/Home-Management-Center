@@ -382,6 +382,19 @@ describe('model price import Management API contract', () => {
     expect(classifyModelPriceImportErrorStatus(404, true)).toBe('server')
     expect(classifyModelPriceImportErrorStatus(405, true)).toBe('server')
   })
+
+  test('identifies a catalog fetch failure by both HTTP status and Management API error code', () => {
+    expect(classifyModelPriceImportErrorStatus(502, false, 'models_dev_fetch_failed')).toBe(
+      'catalog_unavailable',
+    )
+    expect(classifyModelPriceImportErrorStatus(502)).toBe('server')
+    expect(classifyModelPriceImportErrorStatus(500, false, 'billing_import_preview_failed')).toBe(
+      'server',
+    )
+    expect(classifyModelPriceImportErrorStatus(422, false, 'models_dev_fetch_failed')).toBe(
+      'invalid',
+    )
+  })
 })
 
 describe('model price import compatibility preview', () => {

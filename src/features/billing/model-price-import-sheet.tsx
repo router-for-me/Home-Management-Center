@@ -62,6 +62,7 @@ import type {
   ModelPriceInput,
 } from '@/lib/api/management/billing-types'
 import { formatModelPrice } from '@/lib/billing/amount-format'
+import { createBillingModelPriceCandidateId } from '@/lib/billing/model-price-candidates'
 import {
   createDefaultModelPriceImportPreferences,
   readModelPriceImportPreferences,
@@ -71,6 +72,7 @@ import { createCompatibilityModelPriceImportPreview } from '@/lib/billing/model-
 import {
   type ModelPriceImportSelection,
   resolveModelPriceImportSelection,
+  selectModelPriceImportTargetDefaults,
 } from '@/lib/billing/model-price-import-selection'
 import type {
   ModelPriceImportAliasRule,
@@ -399,6 +401,7 @@ export function ModelPriceImportSheet({
   const [clock, setClock] = useState(() => Date.now())
   const initialPreviewSignatureRef = useRef<string | null>(null)
   const previewRequestId = useRef(0)
+  const pendingTargetDefaults = useRef(new Set<string>())
   const applyResultRef = useRef<HTMLElement | null>(null)
 
   const supportsRuleScopes = (schemaVersion ?? 0) >= 2
@@ -520,18 +523,31 @@ export function ModelPriceImportSheet({
   )
   const previewSignature = useMemo(() => JSON.stringify(previewInput), [previewInput])
 
+  const acceptTargetDefaults = useCallback(
+    (next: ModelPriceImportPreview, requested: ModelPriceImportTarget[]) => {
+      if (!pendingTargetDefaults.current.size) return
+      const targetIds = new Set<string>()
+      for (const { provider, model } of requested) {
+        const id = createBillingModelPriceCandidateId(provider, model)
+        if (pendingTargetDefaults.current.delete(id)) targetIds.add(id)
+      }
+      if (targetIds.size) {
+        setSelection((current) =>
+          selectModelPriceImportTargetDefaults(current, next.rows, targetIds),
+        )
+      }
+    },
+    [],
+  )
+
   const loadCatalog = useCallback(async () => {
     setCatalogLoading(true)
     setCatalogError(null)
     try {
       setCatalog(await fetchModelsDevCatalog())
-    } catch (loadError) {
+    } catch {
       setCatalog(null)
-      setCatalogError(
-        loadError instanceof Error
-          ? loadError.message
-          : t('billingPage.prices.import.catalogFailed'),
-      )
+      setCatalogError(t('billingPage.prices.import.catalogFailed'))
     } finally {
       setCatalogLoading(false)
     }
@@ -554,6 +570,10 @@ export function ModelPriceImportSheet({
     })
   }, [catalog, existingPrices, matchOverrides, serverEnabled, overwriteMode, policy, targets])
 
+  useEffect(() => {
+    if (compatibilityPreview) acceptTargetDefaults(compatibilityPreview, targets)
+  }, [acceptTargetDefaults, compatibilityPreview, targets])
+
   const requestServerPreview = useCallback(async () => {
     if (!serverEnabled || previewInput.targets.length === 0 || pendingApply) return
     const requestId = ++previewRequestId.current
@@ -563,6 +583,7 @@ export function ModelPriceImportSheet({
     try {
       const next = await onPreview(previewInput)
       if (requestId !== previewRequestId.current) return
+      acceptTargetDefaults(next, previewInput.targets)
       setServerPreview({ data: next, signature: previewSignature, targetSignature })
       setApplyResult(null)
     } catch (previewFailure) {
@@ -570,14 +591,26 @@ export function ModelPriceImportSheet({
       setServerPreviewError({
         signature: previewSignature,
         message:
-          previewFailure instanceof Error
-            ? previewFailure.message
-            : t('billingPage.prices.import.serverPreviewFailed'),
+          previewFailure instanceof ModelPriceImportError &&
+          previewFailure.code === 'catalog_unavailable'
+            ? t('billingPage.prices.import.catalogFailed')
+            : previewFailure instanceof Error
+              ? previewFailure.message
+              : t('billingPage.prices.import.serverPreviewFailed'),
       })
     } finally {
       if (requestId === previewRequestId.current) setPreviewLoading(false)
     }
-  }, [serverEnabled, onPreview, pendingApply, previewInput, previewSignature, targetSignature, t])
+  }, [
+    acceptTargetDefaults,
+    serverEnabled,
+    onPreview,
+    pendingApply,
+    previewInput,
+    previewSignature,
+    targetSignature,
+    t,
+  ])
 
   useEffect(() => {
     if (targets.length === 0) {
@@ -668,12 +701,25 @@ export function ModelPriceImportSheet({
   )
 
   const busy = mutating || applying || previewLoading || catalogLoading || candidatesBusy
+  const previewReady =
+    preview && !previewLoading && !catalogLoading && !previewError && !catalogError && !previewStale
   const applyBlocked =
     previewStale ||
     previewExpired ||
     Boolean(previewError) ||
     Boolean(catalogError) ||
     Boolean(pendingApply)
+
+  const setTargetChecked = (id: string, checked: boolean) => {
+    if (checked) pendingTargetDefaults.current.add(id)
+    else pendingTargetDefaults.current.delete(id)
+    setSelectedTargetKeys((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
 
   const setRowsChecked = (changedRows: ModelPriceImportPreviewRow[], checked: boolean) => {
     setSelection((current) => {
@@ -1218,12 +1264,7 @@ export function ModelPriceImportSheet({
                         checked={selectedTargetKeys.has(candidate.id)}
                         disabled={busy}
                         onCheckedChange={(checked) =>
-                          setSelectedTargetKeys((current) => {
-                            const next = new Set(current)
-                            if (checked === true) next.add(candidate.id)
-                            else next.delete(candidate.id)
-                            return next
-                          })
+                          setTargetChecked(candidate.id, checked === true)
                         }
                       />
                       <span className="min-w-0 truncate font-mono">{candidate.model}</span>
@@ -1634,14 +1675,28 @@ export function ModelPriceImportSheet({
                   </span>
                 ) : null}
               </div>
-              <p className="text-muted-foreground mt-1 text-xs leading-5">
-                {t('billingPage.prices.import.previewHint', {
-                  selected: selectedRows.length,
-                  selectable: rows.filter((row) => row.applicable).length,
-                  total: rows.length,
-                })}
-              </p>
-              {preview ? (
+              {previewReady || previewLoading || catalogLoading ? (
+                <p className="text-muted-foreground mt-1 text-xs leading-5" role="status">
+                  {previewReady
+                    ? t('billingPage.prices.import.previewHint', {
+                        selected: selectedRows.length,
+                        selectable: potentialSummary.selected,
+                        total: rows.length,
+                      })
+                    : t('billingPage.prices.import.loadingPreview')}
+                </p>
+              ) : null}
+              {previewReady &&
+              rows.length === 1 &&
+              rows[0].reasons.some((reason) => reason.code === 'no_models_dev_match') ? (
+                <p className="mt-1 text-xs leading-5">
+                  {t('billingPage.prices.import.unmatchedModelHint', {
+                    model: rows[0].model,
+                    action: t('billingPage.prices.actions.create'),
+                  })}
+                </p>
+              ) : null}
+              {previewReady ? (
                 <p className="text-muted-foreground mt-1 text-[11px]">
                   {t('billingPage.prices.import.catalogReady', {
                     source: t(
@@ -1733,7 +1788,10 @@ export function ModelPriceImportSheet({
             </p>
           ) : null}
           {previewError || catalogError ? (
-            <p className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-xs">
+            <p
+              role="alert"
+              className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-xs"
+            >
               {previewError || catalogError}
             </p>
           ) : null}
@@ -1758,20 +1816,25 @@ export function ModelPriceImportSheet({
             </div>
           ) : null}
 
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-y py-3 text-xs sm:grid-cols-5">
-            {[
-              [t('billingPage.prices.import.summaryCreates'), selectedSummary.creates],
-              [t('billingPage.prices.import.summaryUpdatesSync'), selectedSummary.updatesSync],
-              [t('billingPage.prices.import.summaryOverwrites'), selectedSummary.overwrites],
-              [t('billingPage.prices.import.summaryNotSelectable'), selectedSummary.notSelectable],
-              [t('billingPage.prices.import.summaryNotApplied'), selectedSummary.notApplied],
-            ].map(([label, value]) => (
-              <div key={String(label)}>
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="mt-0.5 text-base font-semibold tabular-nums">{value}</dd>
-              </div>
-            ))}
-          </dl>
+          {previewReady ? (
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 border-y py-3 text-xs sm:grid-cols-5">
+              {[
+                [t('billingPage.prices.import.summaryCreates'), selectedSummary.creates],
+                [t('billingPage.prices.import.summaryUpdatesSync'), selectedSummary.updatesSync],
+                [t('billingPage.prices.import.summaryOverwrites'), selectedSummary.overwrites],
+                [
+                  t('billingPage.prices.import.summaryNotSelectable'),
+                  selectedSummary.notSelectable,
+                ],
+                [t('billingPage.prices.import.summaryNotApplied'), selectedSummary.notApplied],
+              ].map(([label, value]) => (
+                <div key={String(label)}>
+                  <dt className="text-muted-foreground">{label}</dt>
+                  <dd className="mt-0.5 text-base font-semibold tabular-nums">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
           {selectedSummary.overwrites > 0 ? (
             <p className="text-warning text-xs leading-5">
               {t('billingPage.prices.import.selectedOverwriteWarning', {
@@ -1833,7 +1896,10 @@ export function ModelPriceImportSheet({
               variant="outline"
               size="md"
               disabled={busy || selectedByKey.size === 0}
-              onClick={() => setSelection(new Map())}
+              onClick={() => {
+                pendingTargetDefaults.current.clear()
+                setSelection(new Map())
+              }}
             >
               {t('billingPage.prices.import.clearSelection')}
             </Button>
@@ -1889,7 +1955,9 @@ export function ModelPriceImportSheet({
                       ? t('billingPage.prices.import.loadingPreview')
                       : candidatesError
                         ? t('billingPage.prices.import.candidateFailedEmpty')
-                        : t('billingPage.prices.import.emptyPreview')}
+                        : previewError || catalogError
+                          ? t('billingPage.prices.import.previewUnavailable')
+                          : t('billingPage.prices.import.emptyPreview')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -2216,7 +2284,9 @@ export function ModelPriceImportSheet({
               ) : (
                 <Check className="size-4" />
               )}
-              {t('billingPage.prices.import.confirmApply', { count: selectedRows.length })}
+              {previewReady
+                ? t('billingPage.prices.import.confirmApply', { count: selectedRows.length })
+                : t('billingPage.prices.import.confirmApplyLabel')}
             </Button>
           </>
         )}
