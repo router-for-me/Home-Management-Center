@@ -291,7 +291,7 @@ function summariesEqual(left: ModelPriceImportSummary, right: ModelPriceImportSu
 }
 
 function targetIdentity(provider: string, model: string) {
-  return `${provider.trim().toLowerCase()}::${model.trim().toLowerCase()}`
+  return `${provider.trim().toLowerCase()}::${model.trim()}`
 }
 
 function ruleScopeIdentity(
@@ -763,6 +763,10 @@ function classifyError(error: unknown, operationAccepted = false) {
 }
 
 export function toModelPriceImportPreviewPayload(input: ModelPriceImportPreviewInput) {
+  // The drawer keeps catalog matches when a target is filtered out or deselected.
+  const requestedTargets = new Set(
+    input.targets.map(({ provider, model }) => targetIdentity(provider, model)),
+  )
   return {
     source: input.source ?? 'models.dev',
     targets: input.targets.map((target) => ({
@@ -791,12 +795,16 @@ export function toModelPriceImportPreviewPayload(input: ModelPriceImportPreviewI
       include_cache_prices: input.policy.includeCachePrices,
       include_zero_cost: input.policy.includeZeroCost,
     },
-    match_overrides: input.matchOverrides.map((override) => ({
-      target_provider: override.targetProvider,
-      target_model: override.targetModel,
-      source_provider: override.sourceProvider,
-      source_model: override.sourceModel,
-    })),
+    match_overrides: input.matchOverrides
+      .filter((override) =>
+        requestedTargets.has(targetIdentity(override.targetProvider, override.targetModel)),
+      )
+      .map((override) => ({
+        target_provider: override.targetProvider,
+        target_model: override.targetModel,
+        source_provider: override.sourceProvider,
+        source_model: override.sourceModel,
+      })),
   }
 }
 

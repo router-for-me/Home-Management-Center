@@ -373,10 +373,16 @@ export function ModelPriceImportSheet({
   const [catalog, setCatalog] = useState<ModelsDevCatalog | null>(null)
   const [catalogLoading, setCatalogLoading] = useState(false)
   const [catalogError, setCatalogError] = useState<string | null>(null)
-  const [serverPreview, setServerPreview] = useState<ModelPriceImportPreview | null>(null)
-  const [serverPreviewSignature, setServerPreviewSignature] = useState<string | null>(null)
+  const [serverPreview, setServerPreview] = useState<{
+    data: ModelPriceImportPreview
+    signature: string
+    targetSignature: string
+  } | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
-  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [serverPreviewError, setServerPreviewError] = useState<{
+    signature: string
+    message: string
+  } | null>(null)
   const [selection, setSelection] = useState<ModelPriceImportSelection | null>(null)
   const [applying, setApplying] = useState(false)
   const [progress, setProgress] = useState<ModelPriceImportProgress | null>(null)
@@ -504,6 +510,10 @@ export function ModelPriceImportSheet({
       }))
   }, [baseExistingByTarget, candidates, providerFilter, selectedTargetKeys, targetFilter])
 
+  const targetSignature = useMemo(
+    () => JSON.stringify(targets.map(({ provider, model }) => [provider, model])),
+    [targets],
+  )
   const previewInput = useMemo(
     () => ({ source, targets, overwriteMode, policy, matchOverrides }),
     [matchOverrides, overwriteMode, policy, source, targets],
@@ -548,32 +558,36 @@ export function ModelPriceImportSheet({
     if (!serverEnabled || previewInput.targets.length === 0 || pendingApply) return
     const requestId = ++previewRequestId.current
     setPreviewLoading(true)
-    setPreviewError(null)
+    setServerPreviewError(null)
     setError(null)
     try {
       const next = await onPreview(previewInput)
       if (requestId !== previewRequestId.current) return
-      setServerPreview(next)
-      setServerPreviewSignature(previewSignature)
+      setServerPreview({ data: next, signature: previewSignature, targetSignature })
       setApplyResult(null)
     } catch (previewFailure) {
       if (requestId !== previewRequestId.current) return
-      setPreviewError(
-        previewFailure instanceof Error
-          ? previewFailure.message
-          : t('billingPage.prices.import.serverPreviewFailed'),
-      )
+      setServerPreviewError({
+        signature: previewSignature,
+        message:
+          previewFailure instanceof Error
+            ? previewFailure.message
+            : t('billingPage.prices.import.serverPreviewFailed'),
+      })
     } finally {
       if (requestId === previewRequestId.current) setPreviewLoading(false)
     }
-  }, [serverEnabled, onPreview, pendingApply, previewInput, previewSignature, t])
+  }, [serverEnabled, onPreview, pendingApply, previewInput, previewSignature, targetSignature, t])
 
   useEffect(() => {
+    if (targets.length === 0) {
+      initialPreviewSignatureRef.current = null
+      return
+    }
     if (
       !serverEnabled ||
       candidatesBusy ||
       candidatesError ||
-      targets.length === 0 ||
       pendingApply ||
       initialPreviewSignatureRef.current === previewSignature
     ) {
@@ -591,9 +605,15 @@ export function ModelPriceImportSheet({
     targets.length,
   ])
 
-  const preview = serverEnabled ? serverPreview : compatibilityPreview
+  const currentServerPreview =
+    serverPreview?.targetSignature === targetSignature ? serverPreview : null
+  const preview = serverEnabled ? (currentServerPreview?.data ?? null) : compatibilityPreview
   const previewStale =
-    serverEnabled && Boolean(preview) && serverPreviewSignature !== previewSignature
+    serverEnabled &&
+    currentServerPreview !== null &&
+    currentServerPreview.signature !== previewSignature
+  const previewError =
+    serverPreviewError?.signature === previewSignature ? serverPreviewError.message : null
   const previewExpired = Boolean(
     preview?.expiresAt && new Date(preview.expiresAt).getTime() <= clock,
   )
