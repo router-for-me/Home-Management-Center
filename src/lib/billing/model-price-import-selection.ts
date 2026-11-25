@@ -1,3 +1,4 @@
+import { createBillingModelPriceCandidateId } from './model-price-candidates'
 import type {
   ModelPriceImportPreviewAction,
   ModelPriceImportPreviewRow,
@@ -13,6 +14,25 @@ export type ModelPriceImportSelection = ReadonlyMap<
   string,
   ModelPriceImportPreviewAction | 'default'
 >
+
+export function selectModelPriceImportTargetDefaults(
+  selection: ModelPriceImportSelection | null,
+  rows: readonly Pick<ModelPriceImportPreviewRow, 'key' | 'provider' | 'model'>[],
+  targetIds: ReadonlySet<string>,
+) {
+  if (selection === null) return null
+  const next = new Map(selection)
+  for (const row of rows) {
+    if (
+      targetIds.has(
+        createBillingModelPriceCandidateId(row.provider.trim().toLowerCase(), row.model.trim()),
+      )
+    ) {
+      next.set(row.key, 'default')
+    }
+  }
+  return next
+}
 
 export function resolveModelPriceImportSelection(
   rows: readonly SelectionRow[],

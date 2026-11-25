@@ -17,6 +17,7 @@ import {
   updateModelPrice,
 } from '@/lib/api/management/billing'
 import {
+  ModelPriceImportError,
   applyModelPriceImport,
   previewModelPriceImport,
 } from '@/lib/api/management/billing-model-price-import'
@@ -260,6 +261,10 @@ export function useBillingWorkbench(
 
   const previewModelPriceImportMutation = useMutation({
     mutationFn: (input: ModelPriceImportPreviewInput) => previewModelPriceImport(session, input),
+    retry: (failures, error) =>
+      failures < 1 &&
+      error instanceof ModelPriceImportError &&
+      error.code === 'catalog_unavailable',
     onError: toError,
   })
 
